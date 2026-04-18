@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.evidence.view;
+package pl.mkn.incidenttracker.analysis.evidence;
 
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import org.springframework.util.StringUtils;
@@ -7,12 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class AnalysisEvidenceAttributes {
+public final class AnalysisEvidenceAttributes {
 
     private AnalysisEvidenceAttributes() {
     }
 
-    static Map<String, String> byName(List<AnalysisEvidenceAttribute> attributes) {
+    public static Map<String, String> byName(List<AnalysisEvidenceAttribute> attributes) {
         var values = new LinkedHashMap<String, String>();
 
         for (var attribute : attributes) {
@@ -26,7 +26,7 @@ final class AnalysisEvidenceAttributes {
         return Map.copyOf(values);
     }
 
-    static String text(Map<String, String> values, String key) {
+    public static String text(Map<String, String> values, String key) {
         var value = values.get(key);
         return StringUtils.hasText(value) ? value : null;
     }

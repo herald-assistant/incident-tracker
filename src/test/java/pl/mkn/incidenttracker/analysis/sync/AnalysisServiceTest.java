@@ -1,23 +1,26 @@
 package pl.mkn.incidenttracker.analysis.sync;
 
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.analysis.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogLoader;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogMatcher;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceMapper;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextProperties;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,7 +33,7 @@ class AnalysisServiceTest {
 
     private final AnalysisService analysisService = new AnalysisService(
             new AnalysisOrchestrator(
-                    new AnalysisEvidenceCollector(List.of(
+                    new AnalysisEvidenceCollector(
                             new ElasticLogEvidenceProvider(new TestElasticLogPort()),
                             new DeploymentContextEvidenceProvider(deploymentContextResolver),
                             new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
@@ -39,12 +42,13 @@ class AnalysisServiceTest {
                                     gitLabProperties,
                                     mock(GitLabSourceResolveService.class),
                                     deploymentContextResolver
-                            )
-                    )),
+                            ),
+                            disabledOperationalContextEvidenceProvider()
+                    ),
                     new TestAnalysisAiProvider(),
                     gitLabProperties
             )
-    );
+        );
 
     @Test
     void shouldReturnTimeoutAnalysisFromAiForTimeoutCorrelationId() {
@@ -143,6 +147,17 @@ class AnalysisServiceTest {
         var properties = new GitLabProperties();
         properties.setGroup("sample/runtime");
         return properties;
+    }
+
+    private static OperationalContextEvidenceProvider disabledOperationalContextEvidenceProvider() {
+        var properties = new OperationalContextProperties();
+        properties.setEnabled(false);
+        return new OperationalContextEvidenceProvider(
+                properties,
+                new OperationalContextCatalogLoader(properties),
+                new OperationalContextCatalogMatcher(properties),
+                new OperationalContextEvidenceMapper()
+        );
     }
 
 }

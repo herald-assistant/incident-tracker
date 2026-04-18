@@ -44,11 +44,12 @@ Przed wieksza zmiana zacznij od:
   Sekwencyjne zbieranie evidence.
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
   Generyczny kontrakt AI i model evidence.
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
+  Kroki pipeline evidence oparte o adaptery i wczesniej zebrany `AnalysisContext`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot`
   Integracja z GitHub Copilot Java SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab`
-  Capability GitLaba: config, REST, deterministic provider, MCP tools, source
-  resolver.
+  Capability GitLaba: config, REST i source resolver.
 - `src/main/resources/static`
   Starter frontend serwowany bezposrednio przez Spring Boot jako `html + js +
   scss + css`.
@@ -60,7 +61,8 @@ Przed wieksza zmiana zacznij od:
 ### Gdy dodajesz nowe zrodlo evidence
 
 - Dodaj typowany adapter i modele w pakiecie adaptera.
-- Dodaj `AnalysisEvidenceProvider`.
+- Dodaj `AnalysisEvidenceProvider` w `analysis.evidence.provider` albo module
+  domenowym, jesli provider nie jest adapter-backed.
 - Provider powinien zwracac `AnalysisEvidenceSection`.
 - Nie dopisuj centralnego mappera "provider == X".
 
@@ -109,4 +111,5 @@ W bardziej wrazliwych obszarach repo sa dodatkowe, bardziej szczegolowe pliki
 `AGENTS.md`:
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/AGENTS.md`

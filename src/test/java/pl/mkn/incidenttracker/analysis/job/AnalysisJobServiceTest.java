@@ -2,9 +2,7 @@ package pl.mkn.incidenttracker.analysis.job;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
@@ -13,15 +11,21 @@ import pl.mkn.incidenttracker.analysis.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
-import pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogLoader;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogMatcher;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceMapper;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
 
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +48,7 @@ class AnalysisJobServiceTest {
         assertNotNull(started.analysisId());
         assertEquals("timeout-123", started.correlationId());
         assertEquals("QUEUED", started.status());
-        assertEquals(5, started.steps().size());
+        assertEquals(6, started.steps().size());
         assertEquals("PENDING", started.steps().get(0).status());
         assertFalse(taskExecutor.isEmpty());
 
@@ -62,7 +66,7 @@ class AnalysisJobServiceTest {
         );
         assertNotNull(completed.result());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
-        assertEquals("COMPLETED", completed.steps().get(4).status());
+        assertEquals("COMPLETED", completed.steps().get(5).status());
     }
 
     @Test
@@ -77,7 +81,7 @@ class AnalysisJobServiceTest {
         assertEquals("NOT_FOUND", finished.status());
         assertEquals("ANALYSIS_DATA_NOT_FOUND", finished.errorCode());
         assertNull(finished.result());
-        assertEquals("SKIPPED", finished.steps().get(4).status());
+        assertEquals("SKIPPED", finished.steps().get(5).status());
     }
 
     @Test
@@ -100,13 +104,13 @@ class AnalysisJobServiceTest {
                 finished.preparedPrompt()
         );
         assertNull(finished.result());
-        assertEquals("FAILED", finished.steps().get(4).status());
+        assertEquals("FAILED", finished.steps().get(5).status());
     }
 
     private AnalysisJobService analysisJobService(AnalysisAiProvider analysisAiProvider, TaskExecutor taskExecutor) {
         return new AnalysisJobService(
                 new AnalysisOrchestrator(
-                        new AnalysisEvidenceCollector(List.of(
+                        new AnalysisEvidenceCollector(
                                 new ElasticLogEvidenceProvider(new TestElasticLogPort()),
                                 new DeploymentContextEvidenceProvider(deploymentContextResolver),
                                 new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
@@ -115,8 +119,9 @@ class AnalysisJobServiceTest {
                                         gitLabProperties,
                                         mock(GitLabSourceResolveService.class),
                                         deploymentContextResolver
-                                )
-                        )),
+                                ),
+                                disabledOperationalContextEvidenceProvider()
+                        ),
                         analysisAiProvider,
                         gitLabProperties
                 ),
@@ -128,6 +133,17 @@ class AnalysisJobServiceTest {
         var properties = new GitLabProperties();
         properties.setGroup("sample/runtime");
         return properties;
+    }
+
+    private static OperationalContextEvidenceProvider disabledOperationalContextEvidenceProvider() {
+        var properties = new OperationalContextProperties();
+        properties.setEnabled(false);
+        return new OperationalContextEvidenceProvider(
+                properties,
+                new OperationalContextCatalogLoader(properties),
+                new OperationalContextCatalogMatcher(properties),
+                new OperationalContextEvidenceMapper()
+        );
     }
 
     private static final class CapturingTaskExecutor implements TaskExecutor {

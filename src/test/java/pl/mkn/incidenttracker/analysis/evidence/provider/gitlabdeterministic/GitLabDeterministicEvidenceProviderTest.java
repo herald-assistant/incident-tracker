@@ -1,7 +1,6 @@
-package pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic;
+package pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
@@ -14,6 +13,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 
 import java.util.List;
 

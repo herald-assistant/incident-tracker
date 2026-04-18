@@ -3,10 +3,10 @@ package pl.mkn.incidenttracker.analysis.job;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.AnalysisResultResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.evidence.view.DeploymentContextEvidenceView;
 
 import java.time.Instant;
 import java.util.ArrayList;

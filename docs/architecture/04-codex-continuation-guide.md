@@ -40,7 +40,7 @@ Przy nowej sesji najlepiej zaczac od:
 
 - `analysis.adapter.gitlab`
 - `analysis.adapter.gitlab.source`
-- `analysis.adapter.gitlabdeterministic`
+- `analysis.evidence.provider.gitlabdeterministic`
 - `analysis.adapter.gitlabmcp`
 
 ### Za Elastica odpowiadaja glownie

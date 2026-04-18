@@ -1,19 +1,23 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogLoader;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogMatcher;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceMapper;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextProperties;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +29,7 @@ class AnalysisEvidenceCollectorTest {
     private final GitLabProperties gitLabProperties = gitLabProperties();
     private final DeploymentContextResolver deploymentContextResolver = new DeploymentContextResolver();
 
-    private final AnalysisEvidenceCollector analysisEvidenceCollector = new AnalysisEvidenceCollector(List.of(
+    private final AnalysisEvidenceCollector analysisEvidenceCollector = new AnalysisEvidenceCollector(
             new ElasticLogEvidenceProvider(new TestElasticLogPort()),
             new DeploymentContextEvidenceProvider(deploymentContextResolver),
             new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
@@ -34,12 +38,13 @@ class AnalysisEvidenceCollectorTest {
                     gitLabProperties,
                     mock(GitLabSourceResolveService.class),
                     deploymentContextResolver
-            )
-    ));
+            ),
+            disabledOperationalContextEvidenceProvider()
+    );
 
     @Test
     void shouldSkipDynatraceEvidenceForDevEnvironment() {
-        var context = analysisEvidenceCollector.collect("timeout-123");
+        var context = analysisEvidenceCollector.collect("timeout-123", AnalysisEvidenceCollectionListener.NO_OP);
         var evidenceSections = context.evidenceSections();
 
         assertEquals(2, evidenceSections.size());
@@ -66,15 +71,38 @@ class AnalysisEvidenceCollectorTest {
 
     @Test
     void shouldReturnEmptyListWhenNoEvidenceProviderHasData() {
-        var context = analysisEvidenceCollector.collect("not-found");
+        var context = analysisEvidenceCollector.collect("not-found", AnalysisEvidenceCollectionListener.NO_OP);
 
         assertTrue(context.evidenceSections().isEmpty());
+    }
+
+    @Test
+    void shouldExposeProviderDescriptorsInExplicitPipelineOrder() {
+        var descriptors = analysisEvidenceCollector.providerDescriptors();
+
+        assertEquals(5, descriptors.size());
+        assertEquals("ELASTICSEARCH_LOGS", descriptors.get(0).stepCode());
+        assertEquals("DEPLOYMENT_CONTEXT", descriptors.get(1).stepCode());
+        assertEquals("DYNATRACE_RUNTIME_SIGNALS", descriptors.get(2).stepCode());
+        assertEquals("GITLAB_RESOLVED_CODE", descriptors.get(3).stepCode());
+        assertEquals("OPERATIONAL_CONTEXT", descriptors.get(4).stepCode());
     }
 
     private static GitLabProperties gitLabProperties() {
         var properties = new GitLabProperties();
         properties.setGroup("sample/runtime");
         return properties;
+    }
+
+    private static OperationalContextEvidenceProvider disabledOperationalContextEvidenceProvider() {
+        var properties = new OperationalContextProperties();
+        properties.setEnabled(false);
+        return new OperationalContextEvidenceProvider(
+                properties,
+                new OperationalContextCatalogLoader(properties),
+                new OperationalContextCatalogMatcher(properties),
+                new OperationalContextEvidenceMapper()
+        );
     }
 
     private static Map<String, String> attributesByName(AnalysisEvidenceItem item) {
@@ -88,4 +116,3 @@ class AnalysisEvidenceCollectorTest {
     }
 
 }
-

@@ -2,6 +2,12 @@ package pl.mkn.incidenttracker.analysis.evidence;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceProvider;
 
 import java.util.List;
 
@@ -9,29 +15,42 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnalysisEvidenceCollector {
 
-    private final List<AnalysisEvidenceProvider> providers;
-
-    public AnalysisContext collect(String correlationId) {
-        return collect(correlationId, AnalysisEvidenceCollectionListener.NO_OP);
-    }
+    private final ElasticLogEvidenceProvider elasticLogEvidenceProvider;
+    private final DeploymentContextEvidenceProvider deploymentContextEvidenceProvider;
+    private final DynatraceEvidenceProvider dynatraceEvidenceProvider;
+    private final GitLabDeterministicEvidenceProvider gitLabDeterministicEvidenceProvider;
+    private final OperationalContextEvidenceProvider operationalContextEvidenceProvider;
 
     public AnalysisContext collect(String correlationId, AnalysisEvidenceCollectionListener listener) {
         var context = AnalysisContext.initialize(correlationId);
-
-        for (var provider : providers) {
-            listener.onProviderStarted(provider, context);
-            var section = provider.collect(context);
-            context = context.withSection(section);
-            listener.onProviderCompleted(provider, section, context);
-        }
-
+        context = runProvider(elasticLogEvidenceProvider, context, listener);
+        context = runProvider(deploymentContextEvidenceProvider, context, listener);
+        context = runProvider(dynatraceEvidenceProvider, context, listener);
+        context = runProvider(gitLabDeterministicEvidenceProvider, context, listener);
+        context = runProvider(operationalContextEvidenceProvider, context, listener);
         return context;
     }
 
     public List<AnalysisEvidenceProviderDescriptor> providerDescriptors() {
-        return providers.stream()
-                .map(AnalysisEvidenceProvider::descriptor)
-                .toList();
+        return List.of(
+                elasticLogEvidenceProvider.descriptor(),
+                deploymentContextEvidenceProvider.descriptor(),
+                dynatraceEvidenceProvider.descriptor(),
+                gitLabDeterministicEvidenceProvider.descriptor(),
+                operationalContextEvidenceProvider.descriptor()
+        );
+    }
+
+    private AnalysisContext runProvider(
+            AnalysisEvidenceProvider provider,
+            AnalysisContext context,
+            AnalysisEvidenceCollectionListener listener
+    ) {
+        listener.onProviderStarted(provider, context);
+        AnalysisEvidenceSection section = provider.collect(context);
+        var updatedContext = context.withSection(section);
+        listener.onProviderCompleted(provider, section, updatedContext);
+        return updatedContext;
     }
 
 }

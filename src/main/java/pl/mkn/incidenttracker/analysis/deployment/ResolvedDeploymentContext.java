@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.deployment;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.evidence.view.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.Locale;
 import java.util.Objects;

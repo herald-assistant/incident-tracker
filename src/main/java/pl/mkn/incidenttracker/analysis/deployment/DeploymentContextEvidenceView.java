@@ -1,10 +1,11 @@
-package pl.mkn.incidenttracker.analysis.evidence.view;
+package pl.mkn.incidenttracker.analysis.deployment;
 
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.deployment.ResolvedDeploymentContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
+import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceAttributes;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.ArrayList;
 import java.util.List;

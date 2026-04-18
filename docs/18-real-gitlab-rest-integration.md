@@ -40,7 +40,7 @@ Teraz rozdzielamy odpowiedzialnosci:
 - implementacja jest podzielona na:
   - `analysis.adapter.gitlab`
     generyczny adapter i source resolver,
-  - `analysis.adapter.gitlabdeterministic`
+  - `analysis.evidence.provider.gitlabdeterministic`
     mapping evidence -> GitLab,
   - `analysis.adapter.gitlabmcp`
     tool-e dla AI
@@ -55,7 +55,7 @@ To jest bardzo dobra zmiana, bo zmniejsza pole do halucynacji.
 3. `AnalysisService` buduje `AnalysisContext`
 4. GitLab deterministic provider korzysta z:
    - `group` z properties
-   - evidence z Elastic i Dynatrace
+   - evidence z Elastic i deployment context
    - heurystyk z `container.image.name` i `kubernetes.container.name`
 5. AI dostaje:
    - evidence sections
@@ -91,7 +91,7 @@ To jest bardzo dobra zmiana, bo zmniejsza pole do halucynacji.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisContext.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabProperties.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRestRepositoryAdapter.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/source/GitLabSourceResolveService.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpTools.java`
 

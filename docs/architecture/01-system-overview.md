@@ -94,11 +94,13 @@ Na dzisiaj projekt ma:
 - `pl.mkn.incidenttracker.analysis.adapter.elasticsearch.mcp`
   MCP tools Elastica.
 - `pl.mkn.incidenttracker.analysis.adapter.dynatrace`
-  Evidence provider i modele dla runtime signals Dynatrace
+  Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).
+- `pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace`
+  Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
 - `pl.mkn.incidenttracker.analysis.adapter.gitlab`
   Konfiguracja, porty, adapter REST oraz pomocnicze endpointy testowe GitLaba.
-- `pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic`
+- `pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.analysis.adapter.gitlabmcp`
   MCP tools GitLaba.

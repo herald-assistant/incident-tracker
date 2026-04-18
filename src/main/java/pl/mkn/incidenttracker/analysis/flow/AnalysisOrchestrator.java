@@ -9,10 +9,10 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollectionListener;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
-import pl.mkn.incidenttracker.analysis.evidence.view.DeploymentContextEvidenceView;
 
 import java.util.List;
 

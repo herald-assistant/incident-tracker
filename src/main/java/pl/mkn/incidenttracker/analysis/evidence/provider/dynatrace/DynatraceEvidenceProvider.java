@@ -1,20 +1,22 @@
-package pl.mkn.incidenttracker.analysis.adapter.dynatrace;
+package pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentEvidence;
+import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentPort;
+import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentQuery;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.evidence.view.DeploymentContextEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.view.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,7 +26,6 @@ import java.util.Locale;
 
 @Component
 @Slf4j
-@Order(20)
 @RequiredArgsConstructor
 public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 

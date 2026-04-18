@@ -1,6 +1,7 @@
-package pl.mkn.incidenttracker.analysis.evidence.view;
+package pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch;
 
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceAttributes;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 

@@ -1,7 +1,6 @@
 package pl.mkn.incidenttracker.analysis.deployment;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentQuery;
@@ -12,14 +11,13 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.evidence.view.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
 @Component
-@Order(15)
 @RequiredArgsConstructor
 public class DeploymentContextEvidenceProvider implements AnalysisEvidenceProvider {
 

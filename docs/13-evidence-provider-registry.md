@@ -70,12 +70,12 @@ To jest celowe uproszczenie:
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceProviderDescriptor.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceReference.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisStepPhase.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/view/`
 - `src/main/java/pl/mkn/incidenttracker/analysis/deployment/`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/elasticsearch/ElasticLogEvidenceView.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisOrchestrator.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/elasticsearch/ElasticLogEvidenceProvider.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/dynatrace/DynatraceEvidenceProvider.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/elasticsearch/ElasticLogEvidenceProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/dynatrace/DynatraceEvidenceProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/operationalcontext/`
 
 ## Jak to dziala teraz

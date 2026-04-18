@@ -2,21 +2,19 @@ package pl.mkn.incidenttracker.analysis.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.evidence.view.DeploymentContextEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.view.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.List;
 
 @Component
 @Slf4j
-@Order(40)
 @RequiredArgsConstructor
 public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvider {
 

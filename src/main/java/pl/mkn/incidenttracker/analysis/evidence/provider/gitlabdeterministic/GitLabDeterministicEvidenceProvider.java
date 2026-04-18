@@ -1,8 +1,7 @@
-package pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic;
+package pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
@@ -17,14 +16,14 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveSession;
+import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.deployment.ResolvedDeploymentContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.evidence.view.DeploymentContextEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.view.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,7 +35,6 @@ import java.util.regex.Pattern;
 
 @Component
 @Slf4j
-@Order(30)
 @RequiredArgsConstructor
 public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProvider {
 

@@ -1,12 +1,13 @@
-package pl.mkn.incidenttracker.analysis.adapter.elasticsearch;
+package pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
+import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-@Order(10)
 @RequiredArgsConstructor
 public class ElasticLogEvidenceProvider implements AnalysisEvidenceProvider {
 
