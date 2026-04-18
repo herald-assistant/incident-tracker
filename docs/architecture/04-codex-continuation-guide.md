@@ -24,9 +24,9 @@ Przy nowej sesji najlepiej zaczac od:
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
 - `AnalysisAiProvider`
-- `analysis.deployment`
-- `analysis.evidence.view`
-- `analysis.operationalcontext`
+- `analysis.evidence.provider.deployment`
+- `analysis.evidence.provider.elasticsearch`
+- `analysis.evidence.provider.operationalcontext`
 - `frontend/`
 - `src/main/resources/static`
 

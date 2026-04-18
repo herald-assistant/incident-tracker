@@ -1,15 +1,15 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 
 import java.util.List;
 

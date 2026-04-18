@@ -8,18 +8,18 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.analysis.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogLoader;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogMatcher;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogLoader;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalogMatcher;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceMapper;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextProperties;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

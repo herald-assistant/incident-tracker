@@ -5,7 +5,7 @@ import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentEviden
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 

@@ -1,7 +1,7 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.util.List;
 import java.util.Map;

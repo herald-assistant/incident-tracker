@@ -11,8 +11,8 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryProjectCan
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveMatch;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 
 import java.util.List;

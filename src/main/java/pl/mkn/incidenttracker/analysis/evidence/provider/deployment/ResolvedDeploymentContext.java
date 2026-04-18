@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.deployment;
+package pl.mkn.incidenttracker.analysis.evidence.provider.deployment;
 
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;

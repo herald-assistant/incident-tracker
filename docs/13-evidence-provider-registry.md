@@ -41,8 +41,8 @@ To jest szczegolnie wazne dla zaleznosci:
 - rozszerzone `AnalysisEvidenceProviderDescriptor`
 - jawne `consumedEvidence()` i `producedEvidence()` w providerach
 - `AnalysisOrchestrator`
-- `analysis.deployment`
-- `analysis.evidence.view`
+- `analysis.evidence.provider.deployment`
+- `analysis.evidence.provider.operationalcontext`
 - `DeploymentContextEvidenceProvider`
 - `OperationalContextEvidenceMapper`
 - `OperationalContextCatalogMatcher`
@@ -70,13 +70,13 @@ To jest celowe uproszczenie:
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceProviderDescriptor.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceReference.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisStepPhase.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/deployment/`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/deployment/`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/elasticsearch/ElasticLogEvidenceView.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisOrchestrator.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/elasticsearch/ElasticLogEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/dynatrace/DynatraceEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/operationalcontext/`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/operationalcontext/`
 
 ## Jak to dziala teraz
 

@@ -16,13 +16,13 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveSession;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
-import pl.mkn.incidenttracker.analysis.deployment.ResolvedDeploymentContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.ResolvedDeploymentContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.ArrayList;

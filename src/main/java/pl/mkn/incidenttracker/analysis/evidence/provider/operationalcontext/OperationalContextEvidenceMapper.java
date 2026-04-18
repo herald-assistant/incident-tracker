@@ -1,22 +1,22 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.mapList;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.textList;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.textAny;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.textListAny;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.mapList;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textAny;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textListAny;
 
 @Component
 public class OperationalContextEvidenceMapper {

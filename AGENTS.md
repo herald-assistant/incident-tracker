@@ -61,8 +61,7 @@ Przed wieksza zmiana zacznij od:
 ### Gdy dodajesz nowe zrodlo evidence
 
 - Dodaj typowany adapter i modele w pakiecie adaptera.
-- Dodaj `AnalysisEvidenceProvider` w `analysis.evidence.provider` albo module
-  domenowym, jesli provider nie jest adapter-backed.
+- Dodaj `AnalysisEvidenceProvider` w `analysis.evidence.provider`.
 - Provider powinien zwracac `AnalysisEvidenceSection`.
 - Nie dopisuj centralnego mappera "provider == X".
 

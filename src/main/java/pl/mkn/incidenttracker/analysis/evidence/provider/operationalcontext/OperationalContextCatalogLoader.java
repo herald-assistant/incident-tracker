@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.mapList;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.mapList;
 
 @Component
 @Slf4j

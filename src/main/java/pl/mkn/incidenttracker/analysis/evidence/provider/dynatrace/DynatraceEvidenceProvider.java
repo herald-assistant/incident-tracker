@@ -10,12 +10,13 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentEvidence;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentQuery;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
+import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.ResolvedDeploymentContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.time.Instant;
@@ -127,7 +128,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
     ) {
         if (!deploymentContext.isEmpty()) {
             return deploymentContext.deployments().stream()
-                    .map(pl.mkn.incidenttracker.analysis.deployment.ResolvedDeploymentContext::environment)
+                    .map(ResolvedDeploymentContext::environment)
                     .filter(StringUtils::hasText)
                     .anyMatch(environment -> environment.startsWith("dev"));
         }
@@ -135,7 +136,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
         return logEvidence.entries().stream()
                 .map(deploymentContextResolver::resolve)
                 .filter(java.util.Objects::nonNull)
-                .map(pl.mkn.incidenttracker.analysis.deployment.ResolvedDeploymentContext::environment)
+                .map(ResolvedDeploymentContext::environment)
                 .filter(StringUtils::hasText)
                 .anyMatch(environment -> environment.startsWith("dev"));
     }

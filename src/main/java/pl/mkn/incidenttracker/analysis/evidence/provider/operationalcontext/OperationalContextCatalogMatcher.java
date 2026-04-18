@@ -1,10 +1,10 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -12,17 +12,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.mapList;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.textList;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.anyOverlap;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.containsAnyId;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.containsId;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.genericSignals;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.matchedIds;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.textAny;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMatchingSupport.textListAny;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.mapList;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.anyOverlap;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsAnyId;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsId;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.genericSignals;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.matchedIds;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textAny;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textListAny;
 
 @Component
 @RequiredArgsConstructor

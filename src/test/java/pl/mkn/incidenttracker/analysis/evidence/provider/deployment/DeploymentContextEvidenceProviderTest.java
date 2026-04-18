@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.deployment;
+package pl.mkn.incidenttracker.analysis.evidence.provider.deployment;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;

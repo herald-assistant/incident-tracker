@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import lombok.Getter;
 import lombok.Setter;

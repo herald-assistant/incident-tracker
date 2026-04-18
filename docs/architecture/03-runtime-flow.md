@@ -178,7 +178,7 @@ Operational context provider:
 Implementacyjnie:
 
 - generyczny adapter i source resolver sa w `analysis.adapter.gitlab`,
-- deployment fact derivation jest w `analysis.deployment`,
+- deployment fact derivation jest w `analysis.evidence.provider.deployment`,
 - deterministic provider jest w `analysis.evidence.provider.gitlabdeterministic`.
 
 ### Krok 3: budowa requestu do AI

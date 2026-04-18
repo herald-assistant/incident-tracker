@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import org.springframework.util.StringUtils;
 
@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.textList;
 
 final class OperationalContextMatchingSupport {
 

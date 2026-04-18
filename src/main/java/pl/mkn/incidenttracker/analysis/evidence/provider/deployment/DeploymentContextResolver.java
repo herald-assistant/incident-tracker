@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.deployment;
+package pl.mkn.incidenttracker.analysis.evidence.provider.deployment;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

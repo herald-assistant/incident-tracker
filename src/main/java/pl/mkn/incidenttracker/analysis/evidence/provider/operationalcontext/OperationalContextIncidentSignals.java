@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.operationalcontext;
+package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
@@ -7,7 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
-import static pl.mkn.incidenttracker.analysis.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.normalize;
 
 record OperationalContextIncidentSignals(
         String corpus,

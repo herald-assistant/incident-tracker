@@ -118,10 +118,12 @@ W kodzie rozdzielamy to tez pakietowo:
 
 - `analysis.adapter.gitlab`
   generyczny adapter i source resolver,
-- `analysis.deployment`
+- `analysis.evidence.provider.deployment`
   rozpoznanie deployment context z logs,
 - `analysis.evidence.provider.gitlabdeterministic`
   mapping evidence -> GitLab code references,
+- `analysis.evidence.provider.operationalcontext`
+  enrichment katalogiem operacyjnym,
 - `analysis.adapter.gitlabmcp`
   AI-guided tools.
 

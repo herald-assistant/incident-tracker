@@ -74,13 +74,11 @@ Na dzisiaj projekt ma:
   Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
 - `pl.mkn.incidenttracker.analysis.evidence`
   Sekwencyjne zbieranie evidence przez providery i jawny opis krokow pipeline.
-- `pl.mkn.incidenttracker.analysis.evidence.view`
-  Typowane widoki do czytania sekcji evidence bez chodzenia po stringach.
-- `pl.mkn.incidenttracker.analysis.deployment`
+- `pl.mkn.incidenttracker.analysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
 - `pl.mkn.incidenttracker.analysis.ai`
   Generyczny kontrakt AI i model evidence przekazywany do AI.
-- `pl.mkn.incidenttracker.analysis.operationalcontext`
+- `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.preparation`
   Budowanie konfiguracji, promptu, skilli i requestu do Copilot SDK.
