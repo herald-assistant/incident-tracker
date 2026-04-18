@@ -38,20 +38,24 @@ Przed wieksza zmiana zacznij od:
 
 ## Gdzie czego szukac
 
-- `src/main/java/pl/mkn/incidenttracker/analysis`
-  Glowny flow analizy i kontrakt HTTP.
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow`
+  Glowna orkiestracja runtime analizy, request/response i listenery flow.
+- `src/main/java/pl/mkn/incidenttracker/analysis/sync`
+  Synchroniczny feature `POST /analysis`.
+- `src/main/java/pl/mkn/incidenttracker/analysis/job`
+  Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
-  Sekwencyjne zbieranie evidence.
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai`
-  Generyczny kontrakt AI i model evidence.
+  Sekwencyjne zbieranie evidence, `AnalysisContext` i jawny collector krokow.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
-  Kroki pipeline evidence oparte o adaptery i wczesniej zebrany `AnalysisContext`.
+  Konkretne kroki pipeline evidence oparte o adaptery i wczesniej zebrany
+  `AnalysisContext`.
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai`
+  Generyczny kontrakt AI i aktualna integracja Copilot SDK.
+- `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
+  Integracje zewnetrzne: Elasticsearch, Dynatrace, GitLab i helper endpointy.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
-  MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use case'ow.
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot`
-  Integracja z GitHub Copilot Java SDK.
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab`
-  Capability GitLaba: config, REST i source resolver.
+  MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
+  case'ow.
 - `src/main/resources/static`
   Starter frontend serwowany bezposrednio przez Spring Boot jako `html + js +
   scss + css`.
@@ -108,10 +112,13 @@ Podstawowe komendy:
 
 ## Lokalne AGENTS
 
-W bardziej wrazliwych obszarach repo sa dodatkowe, bardziej szczegolowe pliki
-`AGENTS.md`:
+W `analysis` utrzymujemy lokalne instrukcje na poziomie bezposrednich
+podkatalogow, zeby granice modulow byly czytelne i stabilne po refaktorach.
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/sync/AGENTS.md`
