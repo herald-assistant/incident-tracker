@@ -44,5 +44,5 @@ Nie obejmuje:
 
 - `docs/architecture/01-system-overview.md`
 - `docs/architecture/03-runtime-flow.md`
-- `docs/16-copilot-sdk-gitlab-tools.md`
-- `docs/17-copilot-incident-analysis-skill.md`
+- `docs/onboarding/09-spring-ai-and-mcp-tools.md`
+- `docs/onboarding/10-copilot-sdk-analysis-runtime.md`

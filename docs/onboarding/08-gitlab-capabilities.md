@@ -1,0 +1,68 @@
+# Krok 8: Trzy Capability GitLaba
+
+## Cel
+
+Zrozumiec najlatwiejsze do pomylenia miejsce w projekcie: GitLab wystepuje tu
+jako trzy rozne capability.
+
+## Po tym kroku rozumiesz
+
+- co nalezy do generycznego adaptera GitLaba,
+- co nalezy do deterministic evidence providera,
+- co nalezy do tools dla AI,
+- dlaczego `group` i `branch` pochodza z roznych zrodel.
+
+## Capability 1: generyczny adapter
+
+Pakiet: `analysis.adapter.gitlab`
+
+Odpowiada za:
+
+- konfiguracje,
+- porty i adapter REST,
+- repository search,
+- source resolve,
+- helper endpointy do recznego testowania.
+
+Nie powinien znac logiki `logs -> repo`.
+
+## Capability 2: deterministic evidence provider
+
+Pakiet: `analysis.evidence.provider.gitlabdeterministic`
+
+Odpowiada za:
+
+- mapowanie logow i deployment context na project hints,
+- znajdowanie code references,
+- pobieranie fragmentow kodu jako evidence do promptu.
+
+Tutaj wolno miec heurystyki incidentowe, bo to jest krok pipeline.
+
+## Capability 3: MCP tools
+
+Pakiet: `analysis.mcp.gitlab`
+
+Odpowiada za:
+
+- wyszukiwanie kandydatow repozytoriow,
+- czytanie pliku,
+- czytanie chunku pliku.
+
+Tool ma byc maly i reuse'owac adapter.
+
+## Dwie stale decyzje
+
+- `gitLabGroup` pochodzi z konfiguracji aplikacji,
+- `gitLabBranch` jest rozwiazywany z evidence, glownie z deployment context.
+
+## Przeczytaj w kodzie
+
+- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab`
+- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab`
+
+## Checkpoint
+
+- Gdzie dodasz nowa heurystyke mapowania `container -> project`?
+- Gdzie dodasz nowy endpoint do testowania source resolve?
+- Gdzie dodasz nowy tool czytajacy tylko metadata pliku?

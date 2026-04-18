@@ -12,7 +12,7 @@ Przy nowej sesji najlepiej zaczac od:
 1. `docs/architecture/01-system-overview.md`
 2. `docs/architecture/02-key-decisions.md`
 3. `docs/architecture/03-runtime-flow.md`
-4. `docs/learning-plan.md`
+4. `docs/onboarding/README.md`
 
 ## Co jest "source of truth"
 
@@ -208,5 +208,6 @@ Te dokumenty warto aktualizowac wtedy, gdy zmienia sie jedno z ponizszych:
 - podstawowe decyzje architektoniczne,
 - preferowany sposob rozbudowy capability.
 
-Dokumentow krokowych nie trzeba aktualizowac przy kazdej zmianie technicznej.
+Dokumenty onboardingowe aktualizuj wtedy, gdy zmienia sie model systemu,
+odpowiedzialnosc pakietow albo preferowany sposob rozwijania feature'ow.
 Dokumenty architektoniczne powinny pozostawac aktualne.

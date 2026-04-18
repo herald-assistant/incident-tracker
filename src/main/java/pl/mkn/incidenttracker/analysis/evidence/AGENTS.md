@@ -52,4 +52,4 @@ Nie obejmuje:
 - `docs/architecture/02-key-decisions.md`
 - `docs/architecture/03-runtime-flow.md`
 - `docs/architecture/04-codex-continuation-guide.md`
-- `docs/13-evidence-provider-registry.md`
+- `docs/onboarding/06-evidence-pipeline.md`

@@ -1,0 +1,61 @@
+# Krok 10: Runtime Copilot SDK
+
+## Cel
+
+Zrozumiec, jak projekt uzywa GitHub Copilot Java SDK do wykonania finalnej
+analizy.
+
+## Po tym kroku rozumiesz
+
+- jak wyglada preparation requestu do Copilota,
+- gdzie budowany jest prompt,
+- jak ladowane sa runtime skills,
+- jak odpowiedz modelu jest mapowana z powrotem na kontrakt aplikacji.
+
+## Trzy czesci runtime
+
+### Provider AI
+
+`CopilotSdkAnalysisAiProvider` jest implementacja `AnalysisAiProvider`.
+To glowna granica pomiedzy flow aplikacji a konkretnym SDK.
+
+### Preparation
+
+Buduje:
+
+- `CopilotClientOptions`,
+- `SessionConfig`,
+- `MessageOptions`,
+- prompt,
+- liste tool definitions,
+- skill directories.
+
+### Execution
+
+Uruchamia klienta, tworzy sesje, wysyla prompt i zbiera odpowiedz modelu.
+
+## Najwazniejsze klasy
+
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/CopilotSdkAnalysisAiProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/preparation/CopilotSdkPreparationService.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/execution/CopilotSdkExecutionGateway.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/tools/CopilotSdkToolBridge.java`
+
+## Skill
+
+Skill jest runtime resource aplikacji.
+Zrodlo prawdy lezy w `src/main/resources/copilot/skills`, a loader wypakowuje go
+do katalogu runtime dla sesji Copilota.
+
+## Co warto zapamietac
+
+- prompt niesie dane konkretnego incydentu,
+- skill niesie stale zasady pracy,
+- AI dostaje generyczne evidence, nie klasy adapter-specific,
+- parsing odpowiedzi modelu musi byc odporny na drobne roznice formatowania.
+
+## Checkpoint
+
+- Gdzie zmieniasz stale zasady pracy modelu?
+- Gdzie zmieniasz sam prompt dla jednego requestu analizy?
+- Dlaczego provider AI nie powinien znac klas adaptera Elasticsearch?

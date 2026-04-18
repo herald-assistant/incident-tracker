@@ -54,4 +54,5 @@ Nie obejmuje:
 - `docs/architecture/02-key-decisions.md`
 - `docs/architecture/03-runtime-flow.md`
 - `docs/architecture/04-codex-continuation-guide.md`
-- `docs/18-real-gitlab-rest-integration.md`
+- `docs/onboarding/07-adapters-and-external-systems.md`
+- `docs/onboarding/08-gitlab-capabilities.md`

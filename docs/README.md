@@ -1,37 +1,37 @@
 # Dokumentacja Projektu
 
-Ten katalog ma teraz dwa rodzaje dokumentow:
+Ten katalog ma trzy glowne obszary:
 
-1. dokumenty krok-po-kroku, ktore opisuja jak budowalismy projekt,
-2. dokumenty architektoniczne, ktore maja pomagac w dalszej pracy i kolejnych sesjach Codex.
+1. `onboarding/`
+   sciezka nauki aktualnego systemu krok po kroku,
+2. `architecture/`
+   stabilny opis architektury, decyzji i runtime flow,
+3. `operational-context/`
+   materialy pomocnicze do utrzymania katalogu operacyjnego.
 
 ## Od czego zaczac
 
-Jesli celem jest zrozumienie obecnego stanu projektu, czytaj w tej kolejnosci:
+Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 
-1. `architecture/01-system-overview.md`
-2. `architecture/02-key-decisions.md`
-3. `architecture/03-runtime-flow.md`
-4. `architecture/04-codex-continuation-guide.md`
-
-Jesli celem jest przejscie edukacyjne krok po kroku, czytaj:
-
-1. `learning-plan.md`
-2. `01-starter-spring-boot.md`
-3. kolejne pliki numerowane az do `18-real-gitlab-rest-integration.md`
+1. `onboarding/README.md`
+2. `architecture/01-system-overview.md`
+3. `architecture/02-key-decisions.md`
+4. `architecture/03-runtime-flow.md`
+5. `architecture/04-codex-continuation-guide.md`
 
 ## Co jest gdzie
 
-- `learning-plan.md`
-  Glowna sciezka edukacyjna i roadmapa malych krokow.
+- `onboarding/`
+  aktualna sciezka nauki dla mid developera, ktory zna Spring Boot, ale nie zna
+  jeszcze Spring AI i Copilot SDK.
 - `architecture/`
-  Stabilny opis systemu, decyzji, aktualnego flow i zasad dalszego rozwoju.
+  source of truth dla architektury i zasad dalszego rozwoju.
+- `operational-context/`
+  prompty i instrukcje utrzymania katalogu operacyjnego.
 - `../frontend`
-  Zrodlowy workspace Angular dla ekranu operacyjnego.
+  zrodlowy workspace Angular dla ekranu operacyjnego.
 - `../src/main/resources/static`
-  Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
-- `01-*.md` do `18-*.md`
-  Historia kolejnych iteracji, testow i decyzji podejmowanych po drodze.
+  wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 
 ## Frontend workflow
 
@@ -46,5 +46,6 @@ Jesli celem jest przejscie edukacyjne krok po kroku, czytaj:
 
 ## Jak czytac te dokumenty
 
-- Dokumenty krokowe odpowiadaja na pytanie: "jak doszlismy do obecnego miejsca?"
-- Dokumenty architektoniczne odpowiadaja na pytanie: "jak system wyglada teraz i jak go rozwijac dalej?"
+- `onboarding/` odpowiada na pytanie: "jak dziala system teraz i jak sie go nauczyc?"
+- `architecture/` odpowiada na pytanie: "jakie sa stale decyzje i granice odpowiedzialnosci?"
+- `operational-context/` odpowiada na pytanie: "jak utrzymywac katalog operacyjny uzywany przez analize?"
