@@ -45,7 +45,7 @@ Na razie to sa sztuczne scenariusze edukacyjne:
 ## Gdzie patrzec w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisService.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisResultResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisResultResponse.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/AnalysisServiceTest.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/AnalysisControllerTest.java`
 

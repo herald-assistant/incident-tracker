@@ -3,8 +3,6 @@ package pl.mkn.incidenttracker.analysis.flow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.AnalysisDataNotFoundException;
-import pl.mkn.incidenttracker.analysis.AnalysisResultResponse;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;

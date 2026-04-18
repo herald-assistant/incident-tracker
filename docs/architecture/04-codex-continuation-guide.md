@@ -41,12 +41,12 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.adapter.gitlab`
 - `analysis.adapter.gitlab.source`
 - `analysis.evidence.provider.gitlabdeterministic`
-- `analysis.adapter.gitlabmcp`
+- `analysis.mcp.gitlab`
 
 ### Za Elastica odpowiadaja glownie
 
 - `analysis.adapter.elasticsearch`
-- `analysis.adapter.elasticsearch.mcp`
+- `analysis.mcp.elasticsearch`
 
 ## Jak rozwijac projekt bez psucia kierunku
 

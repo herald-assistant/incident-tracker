@@ -22,7 +22,7 @@ Chcemy zrozumiec podstawowy przeplyw:
 ## Gdzie patrzec w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisController.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisRequest.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisRequest.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisAcceptedResponse.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/AnalysisControllerTest.java`
 

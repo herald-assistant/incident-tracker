@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.adapter.gitlabmcp.GitLabMcpTools;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.util.List;
 import java.util.Map;

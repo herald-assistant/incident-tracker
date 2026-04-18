@@ -16,7 +16,7 @@ Nie obejmuje:
 
 - deterministic mapowania evidence z Elastica do GitLaba
   (`../../evidence/provider/gitlabdeterministic`),
-- MCP tools dla Copilota (`../gitlabmcp`).
+- MCP tools dla Copilota (`../../mcp/gitlab`).
 
 ## Aktualne zalozenia architektoniczne
 
@@ -28,8 +28,8 @@ Nie obejmuje:
 - Source resolver pozostaje generycznym capability GitLaba i moze byc
   reuse'owany przez deterministic provider z pakietu
   `analysis.evidence.provider.gitlabdeterministic`.
-- AI-guided fetching jest realizowany przez tools z pakietu `gitlabmcp`, nie
-  przez kod w tym katalogu.
+- AI-guided fetching jest realizowany przez tools z pakietu
+  `analysis.mcp.gitlab`, nie przez kod w tym katalogu.
 - Source resolver jest osobnym use case'em pomocniczym, a nie glownym flow
   `/analysis`, chociaz deterministic provider moze go reuse'owac.
 
@@ -77,7 +77,7 @@ Nie obejmuje:
 - Dla kontrolerow preferuj `MockMvc`.
 - Gdy zmieniasz resolver albo kontrakty generycznego adaptera, sprawdz takze
   dokumentacje i pakiety siostrzane
-  `analysis.evidence.provider.gitlabdeterministic` oraz `gitlabmcp`.
+  `analysis.evidence.provider.gitlabdeterministic` oraz `analysis.mcp.gitlab`.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie
 

@@ -33,15 +33,15 @@ Brakuje jeszcze drugiej fazy pracy z repo:
 
 ## Gdzie patrzec w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpTools.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabSearchRepositoryCandidatesToolResponse.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabReadRepositoryFileToolResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpTools.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabSearchRepositoryCandidatesToolResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabReadRepositoryFileToolResponse.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRepositoryPort.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRepositoryFileContent.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRestRepositoryAdapter.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/TestGitLabRepositoryPort.java`
-- `src/test/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpToolsTest.java`
-- `src/test/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpToolsContextTest.java`
+- `src/test/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpToolsTest.java`
+- `src/test/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpToolsContextTest.java`
 
 ## Jakie tool-e wystawiamy
 

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.gitlabmcp;
+package pl.mkn.incidenttracker.analysis.mcp.gitlab;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;

@@ -46,6 +46,8 @@ Przed wieksza zmiana zacznij od:
   Generyczny kontrakt AI i model evidence.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
   Kroki pipeline evidence oparte o adaptery i wczesniej zebrany `AnalysisContext`.
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
+  MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use case'ow.
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot`
   Integracja z GitHub Copilot Java SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab`
@@ -111,4 +113,5 @@ W bardziej wrazliwych obszarach repo sa dodatkowe, bardziej szczegolowe pliki
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/AGENTS.md`

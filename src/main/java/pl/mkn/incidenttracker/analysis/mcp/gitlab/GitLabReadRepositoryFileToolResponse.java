@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.gitlabmcp;
+package pl.mkn.incidenttracker.analysis.mcp.gitlab;
 
 public record GitLabReadRepositoryFileToolResponse(
         String group,

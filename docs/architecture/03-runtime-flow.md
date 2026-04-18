@@ -244,7 +244,7 @@ Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
 To jest AI-guided repository exploration.
 Dynatrace nie ma tu osobnych tooli.
 
-Implementacyjnie te tool-e sa utrzymywane w `analysis.adapter.gitlabmcp` i
+Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.gitlab` i
 korzystaja z portow z `analysis.adapter.gitlab`.
 
 ### Krok 8: mapowanie odpowiedzi AI

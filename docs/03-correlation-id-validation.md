@@ -18,7 +18,7 @@ Naszym celem jest:
 ## Gdzie patrzec w kodzie
 
 - `pom.xml`
-- `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisRequest.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisRequest.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisController.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/AnalysisControllerTest.java`
 

@@ -6,12 +6,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.AnalysisDataNotFoundException;
-import pl.mkn.incidenttracker.analysis.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisExecutionListener;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
+import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 
 import java.util.Map;
 import java.util.UUID;

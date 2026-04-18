@@ -12,11 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.adapter.gitlabmcp.GitLabMcpTools;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.nio.file.Path;
 import java.util.List;

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.elasticsearch.mcp;
+package pl.mkn.incidenttracker.analysis.mcp.elasticsearch;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;

@@ -89,7 +89,7 @@ Na dzisiaj projekt ma:
 - `pl.mkn.incidenttracker.analysis.adapter.elasticsearch`
   Properties, porty, adapter REST, modele logow oraz endpoint testowy dla
   Elasticsearch/Kibana.
-- `pl.mkn.incidenttracker.analysis.adapter.elasticsearch.mcp`
+- `pl.mkn.incidenttracker.analysis.mcp.elasticsearch`
   MCP tools Elastica.
 - `pl.mkn.incidenttracker.analysis.adapter.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
@@ -100,7 +100,7 @@ Na dzisiaj projekt ma:
   Konfiguracja, porty, adapter REST oraz pomocnicze endpointy testowe GitLaba.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
-- `pl.mkn.incidenttracker.analysis.adapter.gitlabmcp`
+- `pl.mkn.incidenttracker.analysis.mcp.gitlab`
   MCP tools GitLaba.
 - `pl.mkn.incidenttracker.analysis.adapter.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.gitlabmcp;
+package pl.mkn.incidenttracker.analysis.mcp.elasticsearch;
 
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -6,12 +6,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class GitLabMcpToolConfiguration {
+public class ElasticMcpToolConfiguration {
 
     @Bean
-    ToolCallbackProvider gitLabToolCallbackProvider(GitLabMcpTools gitLabMcpTools) {
+    ToolCallbackProvider elasticToolCallbackProvider(ElasticMcpTools elasticMcpTools) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(gitLabMcpTools)
+                .toolObjects(elasticMcpTools)
                 .build();
     }
 

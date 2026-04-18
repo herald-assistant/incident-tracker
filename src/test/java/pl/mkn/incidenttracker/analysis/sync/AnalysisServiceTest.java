@@ -5,8 +5,6 @@ import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.incidenttracker.analysis.AnalysisDataNotFoundException;
-import pl.mkn.incidenttracker.analysis.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
@@ -19,6 +17,8 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.Oper
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextProperties;
+import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
+import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
 import org.junit.jupiter.api.Test;
 

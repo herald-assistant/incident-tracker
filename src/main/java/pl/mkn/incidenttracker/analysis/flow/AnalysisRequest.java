@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis;
+package pl.mkn.incidenttracker.analysis.flow;
 
 import jakarta.validation.constraints.NotBlank;
 

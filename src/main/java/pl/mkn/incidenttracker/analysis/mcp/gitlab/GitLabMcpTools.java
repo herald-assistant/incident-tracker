@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.gitlabmcp;
+package pl.mkn.incidenttracker.analysis.mcp.gitlab;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

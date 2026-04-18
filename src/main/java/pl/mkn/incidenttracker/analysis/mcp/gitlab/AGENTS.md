@@ -23,6 +23,8 @@ Nie obejmuje:
 - Kontrakty tooli maja pozostac jawne: `group`, `projectName`, `branch`,
   `filePath`.
 - Nie dodawaj tu heurystyk incidentowych ani mapowania logs -> repo.
+- Gdy dodajesz tool wysokiego poziomu, deleguj go do use case albo orchestratora,
+  zamiast sklejania flow bezposrednio w klasie `@Tool`.
 - Logowanie tooli powinno pozostac operacyjne: czytelne wejscie, skrot wyniku,
   bez zbednego dumpowania duzych payloadow.
 

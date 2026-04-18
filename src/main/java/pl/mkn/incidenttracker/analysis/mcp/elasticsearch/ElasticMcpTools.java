@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.elasticsearch.mcp;
+package pl.mkn.incidenttracker.analysis.mcp.elasticsearch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

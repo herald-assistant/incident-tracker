@@ -6,9 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.incidenttracker.analysis.AnalysisRequest;
-import pl.mkn.incidenttracker.analysis.AnalysisResultResponse;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
+import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
 
 import java.time.Instant;
 import java.util.List;

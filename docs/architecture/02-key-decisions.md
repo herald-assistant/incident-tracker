@@ -124,7 +124,7 @@ W kodzie rozdzielamy to tez pakietowo:
   mapping evidence -> GitLab code references,
 - `analysis.evidence.provider.operationalcontext`
   enrichment katalogiem operacyjnym,
-- `analysis.adapter.gitlabmcp`
+- `analysis.mcp.gitlab`
   AI-guided tools.
 
 ## 13. Read modele evidence sa typowane

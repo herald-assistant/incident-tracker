@@ -43,12 +43,12 @@ Dlatego dodajemy tool oparty o zakres linii.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRepositoryPort.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRepositoryFileChunk.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRestRepositoryAdapter.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpTools.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabReadRepositoryFileChunkToolResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpTools.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabReadRepositoryFileChunkToolResponse.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/TestGitLabRepositoryPort.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/adapter/SyntheticAdaptersTest.java`
-- `src/test/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpToolsTest.java`
-- `src/test/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpToolsContextTest.java`
+- `src/test/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpToolsTest.java`
+- `src/test/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpToolsContextTest.java`
 
 ## Jak dziala nowy tool
 

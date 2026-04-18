@@ -42,7 +42,7 @@ Teraz rozdzielamy odpowiedzialnosci:
     generyczny adapter i source resolver,
   - `analysis.evidence.provider.gitlabdeterministic`
     mapping evidence -> GitLab,
-  - `analysis.adapter.gitlabmcp`
+  - `analysis.mcp.gitlab`
     tool-e dla AI
 
 To jest bardzo dobra zmiana, bo zmniejsza pole do halucynacji.
@@ -85,15 +85,15 @@ To jest bardzo dobra zmiana, bo zmniejsza pole do halucynacji.
 
 ## Gdzie patrzec w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisRequest.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisResultResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisRequest.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisResultResponse.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisService.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisContext.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabProperties.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRestRepositoryAdapter.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/source/GitLabSourceResolveService.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlabmcp/GitLabMcpTools.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpTools.java`
 
 ## Jak dziala realny adapter REST
 

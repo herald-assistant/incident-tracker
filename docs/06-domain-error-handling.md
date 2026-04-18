@@ -36,7 +36,7 @@ sprawdzeniem danych.
 ## Gdzie patrzec w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisService.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/AnalysisDataNotFoundException.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisDataNotFoundException.java`
 - `src/main/java/pl/mkn/incidenttracker/api/ApiExceptionHandler.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/AnalysisServiceTest.java`
 - `src/test/java/pl/mkn/incidenttracker/analysis/AnalysisControllerTest.java`

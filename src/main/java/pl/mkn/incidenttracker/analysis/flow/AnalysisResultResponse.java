@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis;
+package pl.mkn.incidenttracker.analysis.flow;
 
 public record AnalysisResultResponse(
         String status,
