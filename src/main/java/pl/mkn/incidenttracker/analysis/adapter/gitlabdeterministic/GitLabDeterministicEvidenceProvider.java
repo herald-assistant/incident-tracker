@@ -389,9 +389,9 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     ) {
         var candidates = new LinkedHashSet<String>();
         addValue(candidates, logEntry.containerName());
-        addValue(candidates, deployment.projectName());
+        addValue(candidates, deployment.projectNameHint());
         addValue(candidates, normalizeProjectHint(logEntry.containerName()));
-        addValue(candidates, normalizeProjectHint(deployment.projectName()));
+        addValue(candidates, normalizeProjectHint(deployment.projectNameHint()));
         return List.copyOf(candidates);
     }
 
@@ -401,7 +401,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     ) {
         var hints = new LinkedHashSet<String>();
         addProjectHintVariants(hints, logEntry.containerName());
-        addProjectHintVariants(hints, deployment.projectName());
+        addProjectHintVariants(hints, deployment.projectNameHint());
         addProjectHintVariants(hints, logEntry.serviceName());
         return List.copyOf(hints);
     }

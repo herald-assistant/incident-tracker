@@ -8,11 +8,13 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.analysis.adapter.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.deployment.DeploymentContextResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,10 +57,11 @@ class AnalysisEvidenceCollectorTest {
         var deploymentSection = evidenceSections.get(1);
         assertEquals("deployment-context", deploymentSection.provider());
         assertEquals("resolved-deployment", deploymentSection.category());
-        assertEquals("environment", deploymentSection.items().get(0).attributes().get(0).name());
-        assertEquals("dev3", deploymentSection.items().get(0).attributes().get(0).value());
-        assertEquals("branch", deploymentSection.items().get(0).attributes().get(1).name());
-        assertEquals("dev/atlas", deploymentSection.items().get(0).attributes().get(1).value());
+        assertEquals("Wejście do lookupu Dynatrace", deploymentSection.items().get(0).title());
+        var deploymentAttributes = attributesByName(deploymentSection.items().get(1));
+        assertEquals("dev3", deploymentAttributes.get("environment"));
+        assertEquals("dev/atlas", deploymentAttributes.get("branch"));
+        assertEquals("backend", deploymentAttributes.get("projectNameHint"));
     }
 
     @Test
@@ -72,6 +75,16 @@ class AnalysisEvidenceCollectorTest {
         var properties = new GitLabProperties();
         properties.setGroup("sample/runtime");
         return properties;
+    }
+
+    private static Map<String, String> attributesByName(AnalysisEvidenceItem item) {
+        return item.attributes().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        attribute -> attribute.name(),
+                        attribute -> attribute.value(),
+                        (left, right) -> right,
+                        java.util.LinkedHashMap::new
+                ));
     }
 
 }

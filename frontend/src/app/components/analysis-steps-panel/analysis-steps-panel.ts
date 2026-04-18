@@ -741,8 +741,11 @@ function prepareDefaultEvidenceItem(
   itemIndex: number
 ): StepEvidenceItemView {
   const itemKey = buildEvidenceItemKey(section, item, itemIndex);
-  const compactAttributes = (item.attributes || []).filter((attribute) => !isLargeAttribute(attribute));
-  const blockAttributes = (item.attributes || []).filter(isLargeAttribute);
+  const normalizedAttributes = (item.attributes || []).map((attribute) =>
+    normalizeDefaultEvidenceAttribute(section, attribute)
+  );
+  const compactAttributes = normalizedAttributes.filter((attribute) => !isLargeAttribute(attribute));
+  const blockAttributes = normalizedAttributes.filter(isLargeAttribute);
 
   return {
     key: itemKey,
@@ -751,6 +754,24 @@ function prepareDefaultEvidenceItem(
     compactAttributes,
     blockAttributes
   };
+}
+
+function normalizeDefaultEvidenceAttribute(
+  section: AnalysisEvidenceSection,
+  attribute: AnalysisEvidenceAttribute
+): AnalysisEvidenceAttribute {
+  if (
+    section.provider === 'deployment-context' &&
+    section.category === 'resolved-deployment' &&
+    attribute.name === 'projectName'
+  ) {
+    return {
+      ...attribute,
+      name: 'projectNameHint'
+    };
+  }
+
+  return attribute;
 }
 
 function prepareElasticsearchLogRow(

@@ -34,7 +34,10 @@ public record DeploymentContextEvidenceView(
                 deployments.add(new ResolvedDeploymentContext(
                         AnalysisEvidenceAttributes.text(attributes, "environment"),
                         AnalysisEvidenceAttributes.text(attributes, "branch"),
-                        AnalysisEvidenceAttributes.text(attributes, "projectName"),
+                        firstNonBlank(
+                                AnalysisEvidenceAttributes.text(attributes, "projectNameHint"),
+                                AnalysisEvidenceAttributes.text(attributes, "projectName")
+                        ),
                         AnalysisEvidenceAttributes.text(attributes, "containerName"),
                         AnalysisEvidenceAttributes.text(attributes, "containerImage"),
                         AnalysisEvidenceAttributes.text(attributes, "commitSha")
@@ -74,6 +77,10 @@ public record DeploymentContextEvidenceView(
     private static boolean matches(AnalysisEvidenceSection section) {
         return EVIDENCE_REFERENCE.provider().equals(section.provider())
                 && EVIDENCE_REFERENCE.category().equals(section.category());
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        return StringUtils.hasText(first) ? first : second;
     }
 
 }

@@ -5,9 +5,11 @@ import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -26,10 +28,24 @@ class DeploymentContextEvidenceProviderTest {
 
         assertEquals("deployment-context", section.provider());
         assertEquals("resolved-deployment", section.category());
-        assertEquals(1, section.items().size());
-        assertEquals("dev3", section.items().get(0).attributes().get(0).value());
-        assertEquals("dev/atlas", section.items().get(0).attributes().get(1).value());
-        assertEquals("backend", section.items().get(0).attributes().get(2).value());
+        assertEquals(2, section.items().size());
+
+        var lookupItem = section.items().get(0);
+        assertEquals("Wejście do lookupu Dynatrace", lookupItem.title());
+        var lookupAttributes = attributesByName(lookupItem);
+        assertEquals("2026-04-11T20:57:33.285Z", lookupAttributes.get("incidentStart"));
+        assertEquals("2026-04-11T20:57:33.290Z", lookupAttributes.get("incidentEnd"));
+        assertEquals("ns", lookupAttributes.get("namespaces"));
+        assertEquals("pod", lookupAttributes.get("podNames"));
+        assertEquals("backend", lookupAttributes.get("containerNames"));
+        assertEquals("svc", lookupAttributes.get("serviceNames"));
+
+        var deploymentItem = section.items().get(1);
+        var deploymentAttributes = attributesByName(deploymentItem);
+        assertEquals("dev3", deploymentAttributes.get("environment"));
+        assertEquals("dev/atlas", deploymentAttributes.get("branch"));
+        assertEquals("backend", deploymentAttributes.get("projectNameHint"));
+        assertEquals("backend", deploymentAttributes.get("containerName"));
     }
 
     @Test
@@ -42,10 +58,33 @@ class DeploymentContextEvidenceProviderTest {
 
         assertEquals("deployment-context", section.provider());
         assertEquals("resolved-deployment", section.category());
-        assertEquals(1, section.items().size());
-        assertEquals("uat2", section.items().get(0).attributes().get(0).value());
-        assertEquals("release-candidate", section.items().get(0).attributes().get(1).value());
-        assertEquals("backend", section.items().get(0).attributes().get(2).value());
+        assertEquals(2, section.items().size());
+
+        var lookupItem = section.items().get(0);
+        var lookupAttributes = attributesByName(lookupItem);
+        assertEquals("2026-04-11T20:57:33.285Z", lookupAttributes.get("incidentStart"));
+        assertEquals("2026-04-11T20:57:33.285Z", lookupAttributes.get("incidentEnd"));
+        assertEquals("tenant-alpha-main-uat2", lookupAttributes.get("namespaces"));
+        assertEquals("backend-uat2", lookupAttributes.get("podNames"));
+        assertEquals("backend", lookupAttributes.get("containerNames"));
+        assertEquals("case-evaluation-service", lookupAttributes.get("serviceNames"));
+
+        var deploymentItem = section.items().get(1);
+        var deploymentAttributes = attributesByName(deploymentItem);
+        assertEquals("uat2", deploymentAttributes.get("environment"));
+        assertEquals("release-candidate", deploymentAttributes.get("branch"));
+        assertEquals("backend", deploymentAttributes.get("projectNameHint"));
+        assertEquals("backend", deploymentAttributes.get("containerName"));
+    }
+
+    private static Map<String, String> attributesByName(AnalysisEvidenceItem item) {
+        return item.attributes().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        attribute -> attribute.name(),
+                        attribute -> attribute.value(),
+                        (left, right) -> right,
+                        java.util.LinkedHashMap::new
+                ));
     }
 
     private static ElasticLogPort uatElasticLogPort() {

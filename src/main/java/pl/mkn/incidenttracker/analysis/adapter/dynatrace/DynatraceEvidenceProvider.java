@@ -53,7 +53,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             return emptySection();
         }
 
-        var query = buildQuery(context.correlationId(), logEvidence);
+        var query = DynatraceIncidentQuery.from(context.correlationId(), logEvidence);
         if (query == null) {
             return emptySection();
         }
@@ -137,48 +137,6 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
                 .map(pl.mkn.incidenttracker.analysis.deployment.ResolvedDeploymentContext::environment)
                 .filter(StringUtils::hasText)
                 .anyMatch(environment -> environment.startsWith("dev"));
-    }
-
-    private DynatraceIncidentQuery buildQuery(String correlationId, ElasticLogEvidenceView logEvidence) {
-        Instant incidentStart = null;
-        Instant incidentEnd = null;
-        var namespaces = new LinkedHashSet<String>();
-        var podNames = new LinkedHashSet<String>();
-        var containerNames = new LinkedHashSet<String>();
-        var serviceNames = new LinkedHashSet<String>();
-
-        for (var entry : logEvidence.entries()) {
-            addValue(namespaces, entry.namespace());
-            addValue(podNames, entry.podName());
-            addValue(containerNames, entry.containerName());
-            addValue(serviceNames, entry.serviceName());
-
-            var parsedTimestamp = parseInstant(entry.timestamp());
-            if (parsedTimestamp != null) {
-                incidentStart = incidentStart == null || parsedTimestamp.isBefore(incidentStart)
-                        ? parsedTimestamp
-                        : incidentStart;
-                incidentEnd = incidentEnd == null || parsedTimestamp.isAfter(incidentEnd)
-                        ? parsedTimestamp
-                        : incidentEnd;
-            }
-        }
-
-        if (incidentStart == null || incidentEnd == null) {
-            return null;
-        }
-
-        var query = new DynatraceIncidentQuery(
-                correlationId,
-                incidentStart,
-                incidentEnd,
-                List.copyOf(namespaces),
-                List.copyOf(podNames),
-                List.copyOf(containerNames),
-                List.copyOf(serviceNames)
-        );
-
-        return query.hasLookupSignals() ? query : null;
     }
 
     private List<AnalysisEvidenceItem> serviceMatchItems(
@@ -442,27 +400,9 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
         return value.length() <= 96 ? value : value.substring(0, 96) + "...";
     }
 
-    private Instant parseInstant(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-
-        try {
-            return Instant.parse(value);
-        } catch (RuntimeException exception) {
-            return null;
-        }
-    }
-
     private void addAttribute(List<AnalysisEvidenceAttribute> attributes, String name, String value) {
         if (StringUtils.hasText(value)) {
             attributes.add(new AnalysisEvidenceAttribute(name, value));
-        }
-    }
-
-    private void addValue(LinkedHashSet<String> values, String value) {
-        if (StringUtils.hasText(value)) {
-            values.add(value.trim());
         }
     }
 

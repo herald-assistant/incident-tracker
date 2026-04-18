@@ -9,7 +9,7 @@ import java.util.Objects;
 public record ResolvedDeploymentContext(
         String environment,
         String branch,
-        String projectName,
+        String projectNameHint,
         String containerName,
         String containerImage,
         String commitSha
@@ -20,7 +20,7 @@ public record ResolvedDeploymentContext(
                 "::",
                 Objects.toString(environment, ""),
                 Objects.toString(branch, ""),
-                Objects.toString(projectName, ""),
+                Objects.toString(projectNameHint, ""),
                 Objects.toString(containerName, ""),
                 Objects.toString(containerImage, "")
         );
