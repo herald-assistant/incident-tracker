@@ -1,0 +1,26 @@
+<section class="overview-card overview-card--top">
+  <div class="overview-card__summary">
+    <div class="response-header response-header--compact">
+      <div>
+        <p class="response-kicker">Analiza</p>
+        <h2>{{ jobTitle() }}</h2>
+      </div>
+      <span [attr.class]="'status-pill ' + statusClass()">
+        {{ statusLabel() }}
+      </span>
+    </div>
+
+    <div [attr.class]="'job-banner ' + bannerClass()">
+      {{ bannerMessage() }}
+    </div>
+  </div>
+
+  <div class="meta-strip meta-strip--compact">
+    @for (item of metaItems(); track item.label) {
+      <div class="meta-chip">
+        <span class="meta-chip__label">{{ item.label }}</span>
+        <span class="meta-chip__value">{{ item.value }}</span>
+      </div>
+    }
+  </div>
+</section>

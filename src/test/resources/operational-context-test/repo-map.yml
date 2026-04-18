@@ -1,0 +1,29 @@
+schemaVersion: 1
+
+repositories:
+  - id: app-core-repo
+    project: app-core-repo
+    group: example/platform
+    ownerTeamId: core-team
+    systems: [app-core]
+    processes: [main-process]
+    contexts: [core-context]
+    modules:
+      - id: core-module
+        name: Core Module
+        paths: [src/main/java/com/example/app/core]
+        packages: [com.example.app.core]
+        classHints: [SyncGateway]
+    signals:
+      projectNames: [app-core-repo]
+      serviceNames: [app-core]
+      containerNames: [app-core]
+      packagePrefixes: [com.example.app]
+      paths: [src/main/java/com/example/app]
+      endpoints: [/api/resources]
+      schemas: []
+    handoff:
+      target: core-team
+      requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]
+
+openQuestions: []

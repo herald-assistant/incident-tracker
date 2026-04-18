@@ -1,0 +1,29 @@
+schemaVersion: 1
+
+processes:
+  - id: main-process
+    name: Main Process
+    purpose: Handles the primary application flow.
+    ownerTeamId: core-team
+    partnerTeamIds: [integration-team]
+    systems: [app-core]
+    externalSystems: [partner-service]
+    repos: [app-core-repo]
+    contexts: [core-context]
+    steps:
+      - id: call-partner-service
+        name: Call Partner Service
+        ownerTeamId: integration-team
+        systems: [app-core, partner-service]
+        signals:
+          serviceNames: [app-core]
+          endpoints: [/partner/resource]
+          hosts: [api.partner.local]
+          queues: []
+          topics: []
+          events: []
+    completionSignals: [main-process-completed]
+    handoffHints:
+      - If the flow waits on the partner call, route first to the integration owner.
+
+openQuestions: []

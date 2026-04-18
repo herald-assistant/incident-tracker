@@ -1,0 +1,377 @@
+<div class="page-shell evidence-console">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark">IR</div>
+      <div>
+        <p class="brand-eyebrow">Incident Diagnostics</p>
+        <h1 class="brand-title">Incident Tracker</h1>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <nav class="topbar-nav" aria-label="Widoki aplikacji">
+        <a
+          class="topbar-link"
+          routerLink="/"
+          routerLinkActive="topbar-link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Analysis
+        </a>
+        <a class="topbar-link" routerLink="/evidence" routerLinkActive="topbar-link--active">
+          Evidence
+        </a>
+      </nav>
+      <div class="topbar-badge">Evidence Playground</div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="hero-card evidence-hero">
+      <div class="hero-main">
+        <div class="hero-copy">
+          <p class="section-eyebrow">Manualne testy adapterów</p>
+          <h2>Sprawdzaj helper endpointy Elastica i GitLaba bez wychodzenia z aplikacji.</h2>
+          <p class="hero-description">
+            Widok służy do ręcznego odpalania adapterów diagnostycznych. Każda karta wysyła
+            request do backendu i pokazuje sformatowaną odpowiedź JSON w polu tekstowym.
+          </p>
+        </div>
+
+        <div class="evidence-intro">
+          <div class="evidence-intro__chip-list">
+            <span class="panel-chip">JSON response preview</span>
+            <span class="panel-chip">Elastic log search</span>
+            <span class="panel-chip">GitLab repo mapping</span>
+            <span class="panel-chip">GitLab source resolve</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-side-panel">
+        <p class="panel-title">Przydatne scenariusze</p>
+        <ul class="mini-list">
+          <li>czy `correlationId` zwraca oczekiwane logi z Elastica</li>
+          <li>czy hint komponentu mapuje się na właściwe repozytorium GitLaba</li>
+          <li>czy symbol klasy rozwiązuje się do pliku i preview kodu</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="tool-grid">
+      <article class="analysis-card tool-card">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">Elasticsearch</p>
+            <h2>Log Search</h2>
+            <p class="field-hint">
+              Najprostszy helper: podajesz tylko `correlationId`, a backend używa swojej
+              konfiguracji połączenia i limitów odpowiedzi.
+            </p>
+          </div>
+          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/search</span>
+        </div>
+
+        <form class="tool-form" novalidate (submit)="submitElastic($event)">
+          <div class="form-grid form-grid--single">
+            <label class="form-field">
+              <span class="field-label">Correlation ID</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. timeout-123"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="elasticForm.controls.correlationId"
+              />
+            </label>
+          </div>
+
+          @if (controlInvalid(elasticForm.controls.correlationId)) {
+            <p class="form-error">Pole `correlationId` jest wymagane.</p>
+          }
+
+          <div class="tool-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="elasticState().status === 'loading'"
+            >
+              <span class="button-label">Uruchom Elastic</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="tool-status" [attr.data-status]="elasticState().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ elasticState().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (elasticState().statusCode !== null) {
+              <span class="tool-status__code">HTTP {{ elasticState().statusCode }}</span>
+            }
+            <span [class]="statusPillClass(elasticState().status)">
+              {{ statusLabel(elasticState().status) }}
+            </span>
+          </div>
+        </div>
+
+        <label class="field-label" for="elasticJsonResponse">JSON response</label>
+        <textarea
+          id="elasticJsonResponse"
+          class="json-output"
+          readonly
+          spellcheck="false"
+          [value]="elasticState().responseJson"
+        ></textarea>
+      </article>
+
+      <article class="analysis-card tool-card">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">GitLab</p>
+            <h2>Repository Search</h2>
+            <p class="field-hint">
+              Testuje mapowanie `component -> repo` i opcjonalne wyszukiwanie kandydatów plików
+              w skonfigurowanej grupie GitLaba i jej podgrupach.
+            </p>
+          </div>
+          <span class="panel-chip route-chip">POST /api/gitlab/repository/search</span>
+        </div>
+
+        <form class="tool-form" novalidate (submit)="submitGitLabRepository($event)">
+          <div class="form-grid">
+            <label class="form-field">
+              <span class="field-label">Correlation ID</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="opcjonalnie, np. agreement-123"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryForm.controls.correlationId"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Branch</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="opcjonalnie, np. release-candidate"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryForm.controls.branch"
+              />
+            </label>
+          </div>
+
+          <div class="form-grid form-grid--stacked">
+            <label class="form-field">
+              <span class="field-label">Project Hints</span>
+              <textarea
+                class="text-input text-input--textarea"
+                rows="4"
+                placeholder="np. agreement-process"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryForm.controls.projectHints"
+              ></textarea>
+              <span class="field-hint">Oddzielaj wartości przecinkiem albo nową linią.</span>
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Operation Names</span>
+              <textarea
+                class="text-input text-input--textarea"
+                rows="4"
+                placeholder="np. POST /agreements"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryForm.controls.operationNames"
+              ></textarea>
+              <span class="field-hint">Opcjonalne. Puste pole zwraca tylko kandydatów repozytoriów.</span>
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Keywords</span>
+              <textarea
+                class="text-input text-input--textarea"
+                rows="4"
+                placeholder="np. document, agreement"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryForm.controls.keywords"
+              ></textarea>
+              <span class="field-hint">Opcjonalne. Przydaje się do ręcznego testowania rankingu plików.</span>
+            </label>
+          </div>
+
+          @if (controlInvalid(gitLabRepositoryForm.controls.projectHints)) {
+            <p class="form-error">Pole `projectHints` jest wymagane.</p>
+          }
+
+          <div class="tool-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="gitLabRepositoryState().status === 'loading'"
+            >
+              <span class="button-label">Uruchom GitLab Search</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="tool-status" [attr.data-status]="gitLabRepositoryState().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ gitLabRepositoryState().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (gitLabRepositoryState().statusCode !== null) {
+              <span class="tool-status__code">HTTP {{ gitLabRepositoryState().statusCode }}</span>
+            }
+            <span [class]="statusPillClass(gitLabRepositoryState().status)">
+              {{ statusLabel(gitLabRepositoryState().status) }}
+            </span>
+          </div>
+        </div>
+
+        <label class="field-label" for="gitlabRepositoryJsonResponse">JSON response</label>
+        <textarea
+          id="gitlabRepositoryJsonResponse"
+          class="json-output"
+          readonly
+          spellcheck="false"
+          [value]="gitLabRepositoryState().responseJson"
+        ></textarea>
+      </article>
+
+      <article class="analysis-card tool-card">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">GitLab</p>
+            <h2>Source Resolve</h2>
+            <p class="field-hint">
+              Ręczny test rozwiązywania symbolu do pliku w repozytorium GitLaba. Możesz przełączać
+              pełny wynik i wariant `preview`.
+            </p>
+          </div>
+          <span class="panel-chip route-chip">POST /api/gitlab/source/resolve</span>
+        </div>
+
+        <form class="tool-form" novalidate (submit)="submitGitLabSource($event)">
+          <div class="form-grid">
+            <label class="form-field">
+              <span class="field-label">GitLab Base URL</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. https://gitlab.example.com"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabSourceForm.controls.gitlabBaseUrl"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Group Path</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. BANKING/PROCESSES"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabSourceForm.controls.groupPath"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Project Path</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. CREDIT_AGREEMENT_PROCESS"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabSourceForm.controls.projectPath"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Ref</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="HEAD"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabSourceForm.controls.ref"
+              />
+            </label>
+
+            <label class="form-field form-field--wide">
+              <span class="field-label">Symbol</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. pl.mkn.agreement.DocumentRemovalService"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabSourceForm.controls.symbol"
+              />
+            </label>
+          </div>
+
+          <label class="toggle-row">
+            <input type="checkbox" [formControl]="gitLabSourceForm.controls.preview" />
+            <span>Użyj `/resolve/preview` zamiast pełnego `/resolve`</span>
+          </label>
+
+          @if (
+            controlInvalid(gitLabSourceForm.controls.gitlabBaseUrl) ||
+            controlInvalid(gitLabSourceForm.controls.groupPath) ||
+            controlInvalid(gitLabSourceForm.controls.projectPath) ||
+            controlInvalid(gitLabSourceForm.controls.symbol)
+          ) {
+            <p class="form-error">
+              Pola `gitlabBaseUrl`, `groupPath`, `projectPath` i `symbol` są wymagane.
+            </p>
+          }
+
+          <div class="tool-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="gitLabSourceState().status === 'loading'"
+            >
+              <span class="button-label">Uruchom Source Resolve</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="tool-status" [attr.data-status]="gitLabSourceState().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ gitLabSourceState().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (gitLabSourceState().statusCode !== null) {
+              <span class="tool-status__code">HTTP {{ gitLabSourceState().statusCode }}</span>
+            }
+            <span [class]="statusPillClass(gitLabSourceState().status)">
+              {{ statusLabel(gitLabSourceState().status) }}
+            </span>
+          </div>
+        </div>
+
+        <label class="field-label" for="gitlabSourceJsonResponse">JSON response</label>
+        <textarea
+          id="gitlabSourceJsonResponse"
+          class="json-output"
+          readonly
+          spellcheck="false"
+          [value]="gitLabSourceState().responseJson"
+        ></textarea>
+      </article>
+    </section>
+  </main>
+</div>

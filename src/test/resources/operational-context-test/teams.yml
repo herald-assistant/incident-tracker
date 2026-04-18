@@ -1,0 +1,48 @@
+schemaVersion: 1
+
+teams:
+  - id: core-team
+    name: Core Team
+    purpose: Owns the main application flow.
+    owns:
+      systems: [app-core]
+      repos: [app-core-repo]
+      processes: [main-process]
+      contexts: [core-context]
+      integrations: []
+    signals:
+      serviceNames: [app-core]
+      containerNames: [app-core]
+      projectNames: [app-core-repo]
+      packagePrefixes: [com.example.app]
+      endpoints: [/api/resources]
+      hosts: []
+      queues: []
+      topics: []
+    handoff:
+      target: tech-lead
+      requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+
+  - id: integration-team
+    name: Integration Team
+    purpose: Owns cross-system contracts.
+    owns:
+      systems: []
+      repos: []
+      processes: [main-process]
+      contexts: []
+      integrations: [app-core-to-partner-sync]
+    signals:
+      serviceNames: []
+      containerNames: []
+      projectNames: []
+      packagePrefixes: []
+      endpoints: [/partner/resource]
+      hosts: [api.partner.local]
+      queues: []
+      topics: []
+    handoff:
+      target: integration-owner
+      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+
+openQuestions: []

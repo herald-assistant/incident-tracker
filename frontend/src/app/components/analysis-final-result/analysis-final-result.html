@@ -1,0 +1,46 @@
+@if (result(); as analysisResult) {
+  <section class="final-analysis">
+    <div class="panel-card__header panel-card__header--compact">
+      <div>
+        <p class="section-eyebrow">Wynik</p>
+        <h3>{{ status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza' }}</h3>
+      </div>
+    </div>
+
+    <div class="analysis-highlights">
+      @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
+        <div class="analysis-highlight">
+          <p class="result-card-label">Najbardziej prawdopodobny problem</p>
+          <code class="problem-badge">{{ analysisResult.detectedProblem }}</code>
+        </div>
+      }
+
+      @if (hasMeaningfulValue(analysisResult.rationale)) {
+        <div class="analysis-highlight">
+          <p class="result-card-label">Dlaczego ta diagnoza pasuje</p>
+          <app-markdown-content
+            [content]="analysisResult.rationale"
+            [compact]="true"
+          ></app-markdown-content>
+        </div>
+      }
+
+      @if (hasMeaningfulValue(analysisResult.recommendedAction)) {
+        <div class="analysis-highlight">
+          <p class="result-card-label">Rekomendowany kolejny krok lub handoff</p>
+          <app-markdown-content
+            [content]="analysisResult.recommendedAction"
+            [compact]="true"
+          ></app-markdown-content>
+        </div>
+      }
+    </div>
+
+    <div class="analysis-summary">
+      <p class="result-card-label">Podsumowanie operacyjne</p>
+      <app-markdown-content
+        [content]="analysisResult.summary || 'Brak podsumowania w odpowiedzi.'"
+      ></app-markdown-content>
+    </div>
+  </section>
+}

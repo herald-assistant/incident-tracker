@@ -1,0 +1,82 @@
+@let currentSection = activeSection();
+
+<section class="panel-card panel-card--evidence">
+  <div class="panel-card__header panel-card__header--compact">
+    <div>
+      <p class="section-eyebrow">Dane</p>
+      <h3>Dane źródłowe</h3>
+    </div>
+    <span class="panel-chip">
+      {{ currentSection ? currentSection.title : 'Brak sekcji' }}
+    </span>
+  </div>
+
+  @if (preparedSections().length > 1) {
+    <div class="evidence-nav">
+      @for (section of preparedSections(); track section.key) {
+        <button
+          class="evidence-tab"
+          type="button"
+          [class.evidence-tab--active]="currentSection && currentSection.key === section.key"
+          (click)="selectSection(section.key)"
+        >
+          <span class="evidence-tab__title">{{ section.title }}</span>
+          <span class="evidence-tab__meta">{{ section.itemCount }} pozycji</span>
+        </button>
+      }
+    </div>
+  }
+
+  <div class="evidence-sections">
+    @if (activeSection(); as section) {
+      <article class="evidence-section">
+        <div class="evidence-section__header">
+          <h4 class="evidence-section__title">{{ section.title }}</h4>
+          <span class="evidence-section__count">{{ section.itemCount }} pozycji</span>
+        </div>
+
+        <div class="evidence-section__items">
+          @if (section.items.length === 0) {
+            <div class="empty-state">Sekcja nie zawiera jeszcze pozycji evidence.</div>
+          } @else {
+            @for (item of section.items; track item.key) {
+              <details
+                class="evidence-item"
+                [attr.data-evidence-key]="item.key"
+                [open]="isExpanded(item.key)"
+                (toggle)="onItemToggle(item.key, $event)"
+              >
+                <summary class="evidence-item__summary">
+                  <span class="evidence-item__title">{{ item.title }}</span>
+                  <span class="evidence-item__meta">{{ item.attributeCount }} atrybutów</span>
+                </summary>
+
+                <div class="attribute-list">
+                  @if (item.compactAttributes.length > 0) {
+                    <div class="attribute-grid">
+                      @for (attribute of item.compactAttributes; track attribute.name + $index) {
+                        <span class="attribute-name">{{ attribute.name }}</span>
+                        <span class="attribute-value">{{ attribute.value }}</span>
+                      }
+                    </div>
+                  }
+
+                  @for (attribute of item.blockAttributes; track attribute.name + $index) {
+                    <div class="attribute-row attribute-row--block">
+                      <span class="attribute-name">{{ attribute.name }}</span>
+                      <pre class="attribute-block">{{ attribute.value }}</pre>
+                    </div>
+                  }
+                </div>
+              </details>
+            }
+          }
+        </div>
+      </article>
+    } @else {
+      <div class="empty-state">
+        Zebrane dane pojawią się tutaj po zakończeniu kolejnych kroków.
+      </div>
+    }
+  </div>
+</section>

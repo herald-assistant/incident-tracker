@@ -1,0 +1,824 @@
+<section class="panel-card panel-card--progress">
+  <div class="panel-card__header panel-card__header--compact">
+    <div>
+      <p class="section-eyebrow">Przebieg</p>
+      <h3>Przebieg analizy</h3>
+    </div>
+    <p class="analysis-stepper-card__hint">
+      Kliknij zakończony krok, aby podejrzeć dane z etapu i input, który zasilił analizę AI.
+    </p>
+  </div>
+
+  @if (preparedSteps().length === 0) {
+    <div class="empty-state">Lista kroków pojawi się po rozpoczęciu analizy.</div>
+  } @else {
+    <mat-stepper
+      class="analysis-stepper"
+      linear
+      [selectedIndex]="selectedIndex()"
+      (selectedIndexChange)="onSelectedIndexChange($event)"
+    >
+      <ng-template matStepperIcon="number" let-index="index">
+        <span class="analysis-stepper__icon">
+          {{ index + 1 }}
+        </span>
+      </ng-template>
+
+      <ng-template matStepperIcon="running">
+        <span class="analysis-stepper__icon analysis-stepper__icon--running" aria-hidden="true">
+          <span class="analysis-stepper__spinner"></span>
+        </span>
+        <span class="cdk-visually-hidden">Krok w trakcie</span>
+      </ng-template>
+
+      <ng-template matStepperIcon="edit">
+        <span class="analysis-stepper__icon analysis-stepper__icon--done">✓</span>
+      </ng-template>
+
+      <ng-template matStepperIcon="done">
+        <span class="analysis-stepper__icon analysis-stepper__icon--done">✓</span>
+      </ng-template>
+
+      <ng-template matStepperIcon="error">
+        <span class="analysis-stepper__icon analysis-stepper__icon--error">!</span>
+      </ng-template>
+
+      <ng-template matStepperIcon="skipped">
+        <span class="analysis-stepper__icon analysis-stepper__icon--skipped">-</span>
+      </ng-template>
+
+      @for (step of preparedSteps(); track step.key) {
+        <mat-step
+          [completed]="step.status === 'COMPLETED'"
+          [optional]="step.status === 'SKIPPED'"
+          [hasError]="step.status === 'FAILED'"
+          [editable]="step.status === 'COMPLETED'"
+          [state]="step.indicatorState"
+        >
+          <ng-template matStepLabel>
+            <span class="analysis-stepper__step-content">
+              <span class="analysis-stepper__step-label">{{ step.label }}</span>
+              <span class="analysis-stepper__step-meta">{{ step.headerMeta }}</span>
+            </span>
+          </ng-template>
+
+          <div class="stepper-detail">
+            <div class="stepper-detail__header">
+              <div>
+                <p class="result-card-label">Szczegóły kroku</p>
+                <h4 class="stepper-detail__title">{{ step.label }}</h4>
+              </div>
+              <span [attr.class]="'status-pill ' + step.statusClass">
+                {{ step.statusLabel }}
+              </span>
+            </div>
+
+            @if (step.meta.length > 0) {
+              <div class="step-item__meta">
+                @for (meta of step.meta; track meta) {
+                  <span>{{ meta }}</span>
+                }
+              </div>
+            }
+
+            <p class="step-item__message">{{ step.message }}</p>
+
+            @if (step.showResultPreview && result(); as analysisResult) {
+              <div class="stepper-result-preview">
+                @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
+                  <div class="analysis-highlight">
+                    <p class="result-card-label">Najbardziej prawdopodobny problem</p>
+                    <code class="problem-badge">{{ analysisResult.detectedProblem }}</code>
+                  </div>
+                }
+
+                <div class="analysis-summary">
+                  <p class="result-card-label">Podsumowanie operacyjne</p>
+                  <app-markdown-content
+                    [content]="analysisResult.summary || 'Brak podsumowania w odpowiedzi.'"
+                    [compact]="true"
+                  ></app-markdown-content>
+                </div>
+
+                @if (hasMeaningfulValue(analysisResult.rationale)) {
+                  <div class="analysis-highlight">
+                    <p class="result-card-label">Dlaczego ta diagnoza pasuje</p>
+                    <app-markdown-content
+                      [content]="analysisResult.rationale"
+                      [compact]="true"
+                    ></app-markdown-content>
+                  </div>
+                }
+
+                @if (hasMeaningfulValue(analysisResult.recommendedAction)) {
+                  <div class="analysis-highlight">
+                    <p class="result-card-label">Rekomendowany kolejny krok lub handoff</p>
+                    <app-markdown-content
+                      [content]="analysisResult.recommendedAction"
+                      [compact]="true"
+                    ></app-markdown-content>
+                  </div>
+                }
+
+              </div>
+            }
+
+            @if (step.showPreparedPromptView) {
+              <section class="prepared-prompt">
+                <div class="prepared-prompt__header">
+                  <div>
+                    <p class="result-card-label">Prompt do AI</p>
+                    <h5 class="prepared-prompt__title">{{ step.promptPanelTitle }}</h5>
+                    <p class="prepared-prompt__description">
+                      {{ step.promptPanelDescription }}
+                    </p>
+                  </div>
+
+                  <button
+                    class="secondary-button prepared-prompt__copy-button"
+                    type="button"
+                    (click)="copyPreparedPrompt(step)"
+                  >
+                    {{ copiedPromptKey() === step.key ? 'Skopiowano' : 'Kopiuj prompt' }}
+                  </button>
+                </div>
+
+                <textarea
+                  class="prepared-prompt__textarea"
+                  readonly
+                  spellcheck="false"
+                  wrap="off"
+                  [value]="step.preparedPrompt"
+                  aria-label="Prompt przygotowany do wysłania do AI"
+                ></textarea>
+              </section>
+            }
+
+            @if (step.detailSections.length > 0) {
+              <div class="stepper-detail__sections">
+                @for (section of step.detailSections; track section.key) {
+                  <article class="evidence-section">
+                    <div class="evidence-section__items">
+                      @if (section.variant === 'elasticsearch-log-table') {
+                        @if (section.logRows.length === 0) {
+                          <div class="empty-state">
+                            Ten krok zakończył się bez zebranych logów do wyświetlenia.
+                          </div>
+                        } @else {
+                          <div
+                            class="log-table"
+                            #logTableColumnsHost="appResizableColumnsHost"
+                            appResizableColumnsHost="analysis-elasticsearch-logs"
+                            [appResizableColumns]="logTableColumns"
+                          >
+                            <div class="log-table__header">
+                              <span
+                                class="log-table__header-cell"
+                                appResizableColumn="containerName"
+                                [appResizableColumnHost]="logTableColumnsHost"
+                              >
+                                containerName
+                              </span>
+                              <span
+                                class="log-table__header-cell"
+                                appResizableColumn="timestamp"
+                                [appResizableColumnHost]="logTableColumnsHost"
+                              >
+                                timestamp
+                              </span>
+                              <span
+                                class="log-table__header-cell"
+                                appResizableColumn="level"
+                                [appResizableColumnHost]="logTableColumnsHost"
+                              >
+                                level
+                              </span>
+                              <span
+                                class="log-table__header-cell"
+                                appResizableColumn="className"
+                                [appResizableColumnHost]="logTableColumnsHost"
+                              >
+                                className
+                              </span>
+                              <span
+                                class="log-table__header-cell"
+                                appResizableColumn="message"
+                                [appResizableColumnHost]="logTableColumnsHost"
+                              >
+                                message / exception
+                              </span>
+                              <span
+                                class="log-table__header-cell"
+                                appResizableColumn="details"
+                                [appResizableColumnHost]="logTableColumnsHost"
+                              >
+                                details
+                              </span>
+                            </div>
+
+                            @for (row of section.logRows; track row.key) {
+                              <div
+                                class="log-table__row"
+                                [class.log-table__row--error]="row.hasErrorStyling"
+                              >
+                                <span class="log-table__cell log-table__cell--container">
+                                  {{ row.containerName }}
+                                </span>
+                                <span class="log-table__cell log-table__cell--timestamp">
+                                  {{ row.timestamp }}
+                                </span>
+                                <span
+                                  class="log-table__cell log-table__cell--level"
+                                  [class.log-table__cell--level-error]="row.hasErrorStyling"
+                                >
+                                  {{ row.level }}
+                                </span>
+                                <span class="log-table__cell log-table__cell--class">
+                                  {{ row.className }}
+                                </span>
+                                <span class="log-table__cell log-table__cell--message">
+                                  @if (row.message) {
+                                    <span class="log-table__message-main">{{ row.message }}</span>
+                                  }
+
+                                  @if (row.exception) {
+                                    @if (row.message) {
+                                      <span class="log-table__message-exception">
+                                        <span class="log-table__message-exception-label">Exception</span>
+                                        <span class="log-table__message-exception-content">
+                                          {{ row.exception }}
+                                        </span>
+                                      </span>
+                                    } @else {
+                                      <span class="log-table__message-main">{{ row.exception }}</span>
+                                    }
+                                  }
+
+                                  @if (!row.message && !row.exception) {
+                                    <span class="log-table__message-main">Brak komunikatu.</span>
+                                  }
+                                </span>
+                                <span class="log-table__cell log-table__cell--details">
+                                  <span class="log-table__detail-actions">
+                                    <button
+                                      class="details-tooltip__trigger"
+                                      type="button"
+                                      [attr.aria-label]="'Pokaż pełne szczegóły logu ' + row.title"
+                                    [matTooltip]="row.detailsTooltip"
+                                    matTooltipPosition="above"
+                                    matTooltipClass="analysis-log-tooltip"
+                                    [matTooltipShowDelay]="100"
+                                  >
+                                    <mat-icon fontSet="material-symbols-outlined">info</mat-icon>
+                                  </button>
+
+                                    <button
+                                      class="details-tooltip__trigger details-tooltip__trigger--copy"
+                                      type="button"
+                                      [attr.aria-label]="'Kopiuj szczegóły logu ' + row.title"
+                                      [matTooltip]="copiedRowKey() === row.key ? 'Skopiowano' : 'Kopiuj do schowka'"
+                                      matTooltipPosition="above"
+                                      matTooltipClass="analysis-log-tooltip"
+                                      [matTooltipShowDelay]="100"
+                                      (click)="copyLogDetails(row)"
+                                    >
+                                      <mat-icon fontSet="material-symbols-outlined">
+                                        {{ copiedRowKey() === row.key ? 'task_alt' : 'content_copy' }}
+                                      </mat-icon>
+                                    </button>
+                                  </span>
+                                </span>
+                              </div>
+                            }
+                          </div>
+                        }
+                      } @else {
+                        <div class="evidence-section__header">
+                          <h4 class="evidence-section__title">{{ section.title }}</h4>
+                          <span class="evidence-section__count">{{ section.itemCount }} pozycji</span>
+                        </div>
+
+                        @if (section.variant === 'dynatrace-runtime-panels' && section.dynatraceRuntime; as runtime) {
+                          <div class="dynatrace-runtime">
+                            <div class="dynatrace-runtime__intro">
+                              <div>
+                                <p class="result-card-label">Co Dynatrace dołożył do analizy AI</p>
+                                <p class="dynatrace-runtime__description">
+                                  Ten krok pokazuje uproszczony opis danych runtime, które trafiły
+                                  do Copilota razem z logami z Elastica. Najpierw widać wnioski,
+                                  a dopiero niżej szczegóły techniczne.
+                                </p>
+                              </div>
+
+                              <div class="dynatrace-runtime__summary">
+                                <span class="dynatrace-runtime__badge">
+                                  Grupy usług {{ runtime.serviceGroups.length }}
+                                </span>
+                                <span class="dynatrace-runtime__badge">
+                                  Problemy {{ runtime.problems.length }}
+                                </span>
+                                <span class="dynatrace-runtime__badge">
+                                  Typy metryk {{ runtime.metricAggregates.length }}
+                                </span>
+                              </div>
+                            </div>
+
+                            <p class="dynatrace-runtime__volume">
+                              Źródło danych: {{ runtime.serviceMatches.length }} wpisów usługowych i
+                              {{ runtime.metrics.length }} technicznych serii metryk po agregacji
+                              pokazanych niżej jako krótsze grupy.
+                            </p>
+
+                            @if (runtime.takeaways.length > 0) {
+                              <section class="dynatrace-runtime__group">
+                                <div class="dynatrace-runtime__group-header">
+                                  <h5 class="dynatrace-runtime__group-title">Najważniejsze z Dynatrace</h5>
+                                </div>
+
+                                <div class="dynatrace-takeaways">
+                                  @for (takeaway of runtime.takeaways; track takeaway) {
+                                    <article class="dynatrace-takeaway">
+                                      <span class="dynatrace-takeaway__marker">1</span>
+                                      <p>{{ takeaway }}</p>
+                                    </article>
+                                  }
+                                </div>
+                              </section>
+                            }
+
+                            @if (runtime.serviceGroups.length > 0) {
+                              <section class="dynatrace-runtime__group">
+                                <div class="dynatrace-runtime__group-header">
+                                  <h5 class="dynatrace-runtime__group-title">Z czym Dynatrace skojarzył incydent</h5>
+                                  <span class="dynatrace-runtime__group-count">
+                                    {{ runtime.serviceGroups.length }}
+                                  </span>
+                                </div>
+
+                                <div class="dynatrace-card-grid dynatrace-card-grid--services">
+                                  @for (service of runtime.serviceGroups; track service.key) {
+                                    <article class="dynatrace-card dynatrace-card--service">
+                                      <div class="dynatrace-card__header">
+                                        <div>
+                                          <p class="dynatrace-card__eyebrow">Usługa logiczna</p>
+                                          <h6 class="dynatrace-card__title">{{ service.title }}</h6>
+                                        </div>
+                                        <span class="dynatrace-card__score">
+                                          Top score {{ service.topScore }}
+                                        </span>
+                                      </div>
+
+                                      <p class="dynatrace-card__summary">{{ service.summary }}</p>
+
+                                      <div class="dynatrace-signal-grid">
+                                        <div class="dynatrace-signal-group">
+                                          <span class="attribute-name">Liczba dopasowań technicznych</span>
+                                          <span class="attribute-value">{{ service.technicalMatchCount }}</span>
+                                        </div>
+
+                                        <div class="dynatrace-signal-group">
+                                          <span class="attribute-name">Okno incydentu</span>
+                                          <span class="attribute-value">{{ service.incidentWindow }}</span>
+                                        </div>
+
+                                        @if (service.namespaces.length > 0) {
+                                          <div class="dynatrace-signal-group">
+                                            <span class="attribute-name">Na podstawie namespace</span>
+                                            <div class="dynatrace-chip-list">
+                                              @for (namespace of service.namespaces; track namespace) {
+                                                <span class="dynatrace-chip">{{ namespace }}</span>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+
+                                        @if (service.pods.length > 0) {
+                                          <div class="dynatrace-signal-group">
+                                            <span class="attribute-name">Pody powiązane z grupą</span>
+                                            <div class="dynatrace-chip-list">
+                                              @for (pod of service.pods; track pod) {
+                                                <span class="dynatrace-chip">{{ pod }}</span>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+
+                                        @if (service.containers.length > 0) {
+                                          <div class="dynatrace-signal-group">
+                                            <span class="attribute-name">Kontenery w grupie</span>
+                                            <div class="dynatrace-chip-list">
+                                              @for (container of service.containers; track container) {
+                                                <span class="dynatrace-chip">{{ container }}</span>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+
+                                        @if (service.serviceNames.length > 0) {
+                                          <div class="dynatrace-signal-group">
+                                            <span class="attribute-name">Nazwy usług z logów</span>
+                                            <div class="dynatrace-chip-list">
+                                              @for (serviceName of service.serviceNames; track serviceName) {
+                                                <span class="dynatrace-chip">{{ serviceName }}</span>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+
+                                        @if (service.topOperations.length > 0) {
+                                          <div class="dynatrace-signal-group">
+                                            <span class="attribute-name">
+                                              Przykładowe endpointy lub kontrolery
+                                            </span>
+                                            <div class="dynatrace-chip-list">
+                                              @for (operation of service.topOperations; track operation) {
+                                                <span class="dynatrace-chip">{{ operation }}</span>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+                                      </div>
+
+                                      <details class="dynatrace-technical">
+                                        <summary>Szczegóły techniczne</summary>
+                                        <div class="attribute-grid">
+                                          <span class="attribute-name">Liczba wykrytych operacji</span>
+                                          <span class="attribute-value">{{ service.operationCount }}</span>
+                                          <span class="attribute-name">Najwyższy score</span>
+                                          <span class="attribute-value">{{ service.topScore }}</span>
+                                          <span class="attribute-name">Liczba podów</span>
+                                          <span class="attribute-value">{{ service.pods.length }}</span>
+                                          <span class="attribute-name">Liczba kontenerów</span>
+                                          <span class="attribute-value">{{ service.containers.length }}</span>
+                                        </div>
+                                      </details>
+                                    </article>
+                                  }
+                                </div>
+                              </section>
+                            }
+
+                            @if (runtime.problems.length > 0) {
+                              <section class="dynatrace-runtime__group">
+                                <div class="dynatrace-runtime__group-header">
+                                  <h5 class="dynatrace-runtime__group-title">Czy Dynatrace widział problem</h5>
+                                  <span class="dynatrace-runtime__group-count">
+                                    {{ runtime.problems.length }}
+                                  </span>
+                                </div>
+
+                                <div class="dynatrace-card-grid">
+                                  @for (problem of runtime.problems; track problem.key) {
+                                    <article class="dynatrace-card dynatrace-card--problem">
+                                      <div class="dynatrace-card__header dynatrace-card__header--stacked">
+                                        <div>
+                                          <p class="dynatrace-card__eyebrow">Problem</p>
+                                          <h6 class="dynatrace-card__title">{{ problem.title }}</h6>
+                                        </div>
+
+                                        <div class="dynatrace-card__badge-row">
+                                          <span class="dynatrace-runtime__badge dynatrace-runtime__badge--critical">
+                                            {{ problem.severityLabel }}
+                                          </span>
+                                          <span class="dynatrace-runtime__badge dynatrace-runtime__badge--neutral">
+                                            {{ problem.statusLabel }}
+                                          </span>
+                                          <span class="dynatrace-runtime__badge dynatrace-runtime__badge--neutral">
+                                            {{ problem.impactLabel }}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <p class="dynatrace-card__summary">{{ problem.summary }}</p>
+
+                                      <div class="attribute-grid">
+                                        <span class="attribute-name">Okno czasu</span>
+                                        <span class="attribute-value">{{ problem.timeWindow }}</span>
+                                        <span class="attribute-name">Najmocniej wskazany obszar</span>
+                                        <span class="attribute-value">{{ problem.rootCause }}</span>
+                                      </div>
+
+                                      @if (problem.signalCategories.length > 0) {
+                                        <div class="dynatrace-signal-group">
+                                          <span class="attribute-name">Najważniejsze sygnały do korelacji</span>
+                                          <div class="dynatrace-chip-list">
+                                            @for (category of problem.signalCategories; track category) {
+                                              <span class="dynatrace-chip">
+                                                {{ formatDynatraceSignalCategoryLabel(category) }}
+                                              </span>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
+
+                                      @if (problem.correlationHighlights.length > 0) {
+                                        <div class="dynatrace-evidence">
+                                          <span class="attribute-name">Sygnały ważne dla AI</span>
+                                          <ul class="dynatrace-evidence__list">
+                                            @for (highlight of problem.correlationHighlights; track highlight) {
+                                              <li>{{ highlight }}</li>
+                                            }
+                                          </ul>
+                                        </div>
+                                      }
+
+                                      @if (problem.affectedEntities.length > 0) {
+                                        <div class="dynatrace-signal-group">
+                                          <span class="attribute-name">Elementy bezpośrednio dotknięte</span>
+                                          <div class="dynatrace-chip-list">
+                                            @for (entity of problem.affectedEntities; track entity) {
+                                              <span class="dynatrace-chip">{{ entity }}</span>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
+
+                                      @if (problem.impactedEntities.length > 0) {
+                                        <div class="dynatrace-signal-group">
+                                          <span class="attribute-name">Elementy z widocznym wpływem</span>
+                                          <div class="dynatrace-chip-list">
+                                            @for (entity of problem.impactedEntities; track entity) {
+                                              <span class="dynatrace-chip">{{ entity }}</span>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
+
+                                      @if (problem.evidenceLines.length > 0) {
+                                        <div class="dynatrace-evidence">
+                                          <span class="attribute-name">Szczegóły z Dynatrace</span>
+                                          <ul class="dynatrace-evidence__list">
+                                            @for (line of problem.evidenceLines; track line) {
+                                              <li>{{ line }}</li>
+                                            }
+                                          </ul>
+                                        </div>
+                                      }
+
+                                      <details class="dynatrace-technical">
+                                        <summary>Szczegóły techniczne</summary>
+                                        <div class="attribute-grid">
+                                          <span class="attribute-name">displayId</span>
+                                          <span class="attribute-value">{{ problem.displayId }}</span>
+                                          <span class="attribute-name">severityLevel</span>
+                                          <span class="attribute-value">{{ problem.severityLevel }}</span>
+                                          <span class="attribute-name">status</span>
+                                          <span class="attribute-value">{{ problem.status }}</span>
+                                          <span class="attribute-name">impactLevel</span>
+                                          <span class="attribute-value">{{ problem.impactLevel }}</span>
+                                        </div>
+                                      </details>
+                                    </article>
+                                  }
+                                </div>
+                              </section>
+                            }
+
+                            @if (runtime.metricAggregates.length > 0) {
+                              <section class="dynatrace-runtime__group">
+                                <div class="dynatrace-runtime__group-header">
+                                  <h5 class="dynatrace-runtime__group-title">Jak zachowywała się usługa</h5>
+                                  <span class="dynatrace-runtime__group-count">
+                                    {{ runtime.metricAggregates.length }}
+                                  </span>
+                                </div>
+
+                                <div class="dynatrace-metric-grid">
+                                  @for (metric of runtime.metricAggregates; track metric.key) {
+                                    <article class="dynatrace-metric-card">
+                                      <div class="dynatrace-metric-card__header">
+                                        <div>
+                                          <h6 class="dynatrace-card__title">{{ metric.title }}</h6>
+                                          <p class="dynatrace-metric-card__subtitle">
+                                            {{ metric.summary }}
+                                          </p>
+                                        </div>
+                                        <span class="dynatrace-runtime__badge dynatrace-runtime__badge--neutral">
+                                          {{ metric.resolution }}
+                                        </span>
+                                      </div>
+
+                                      <div class="dynatrace-metric-card__stats">
+                                        <div class="dynatrace-stat">
+                                          <span class="attribute-name">{{ metric.worstValueLabel }}</span>
+                                          <strong>{{ metric.worstValue }}</strong>
+                                        </div>
+                                        <div class="dynatrace-stat">
+                                          <span class="attribute-name">{{ metric.averageValueLabel }}</span>
+                                          <strong>{{ metric.averageValue }}</strong>
+                                        </div>
+                                        <div class="dynatrace-stat">
+                                          <span class="attribute-name">{{ metric.latestValueLabel }}</span>
+                                          <strong>{{ metric.latestValue }}</strong>
+                                        </div>
+                                        <div class="dynatrace-stat">
+                                          <span class="attribute-name">Liczba serii</span>
+                                          <strong>{{ metric.technicalMetricCount }}</strong>
+                                        </div>
+                                      </div>
+
+                                      @if (metric.exampleOperations.length > 0) {
+                                        <div class="dynatrace-signal-group">
+                                          <span class="attribute-name">Gdzie było to widać</span>
+                                          <div class="dynatrace-chip-list">
+                                            @for (operation of metric.exampleOperations; track operation) {
+                                              <span class="dynatrace-chip">{{ operation }}</span>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
+
+                                      <details class="dynatrace-technical">
+                                        <summary>Szczegóły techniczne</summary>
+                                        <div class="attribute-grid">
+                                          <span class="attribute-name">Usługa logiczna</span>
+                                          <span class="attribute-value">{{ metric.serviceTitle }}</span>
+                                          <span class="attribute-name">Najgorszy kontekst</span>
+                                          <span class="attribute-value">{{ metric.worstContext }}</span>
+                                          <span class="attribute-name">Rozdzielczość</span>
+                                          <span class="attribute-value">{{ metric.resolution }}</span>
+                                          <span class="attribute-name">Jednostka</span>
+                                          <span class="attribute-value">{{ metric.unit }}</span>
+                                        </div>
+                                      </details>
+                                    </article>
+                                  }
+                                </div>
+                              </section>
+                            }
+
+                            @if (section.items.length > 0) {
+                              <section class="dynatrace-runtime__group">
+                                <div class="dynatrace-runtime__group-header">
+                                  <h5 class="dynatrace-runtime__group-title">Pozostałe sygnały</h5>
+                                  <span class="dynatrace-runtime__group-count">
+                                    {{ section.items.length }}
+                                  </span>
+                                </div>
+
+                                @for (item of section.items; track item.key; let itemIndex = $index) {
+                                  <details class="evidence-item" [open]="itemIndex === 0">
+                                    <summary class="evidence-item__summary">
+                                      <span class="evidence-item__title">{{ item.title }}</span>
+                                      <span class="evidence-item__meta">
+                                        {{ item.attributeCount }} atrybutów
+                                      </span>
+                                    </summary>
+
+                                    <div class="attribute-list">
+                                      @if (item.compactAttributes.length > 0) {
+                                        <div class="attribute-grid">
+                                          @for (attribute of item.compactAttributes; track attribute.name + $index) {
+                                            <span class="attribute-name">{{ attribute.name }}</span>
+                                            <span class="attribute-value">{{ attribute.value }}</span>
+                                          }
+                                        </div>
+                                      }
+
+                                      @for (attribute of item.blockAttributes; track attribute.name + $index) {
+                                        <div class="attribute-row attribute-row--block">
+                                          <span class="attribute-name">{{ attribute.name }}</span>
+                                          <pre class="attribute-block">{{ attribute.value }}</pre>
+                                        </div>
+                                      }
+                                    </div>
+                                  </details>
+                                }
+                              </section>
+                            }
+                          </div>
+                        } @else if (section.variant === 'gitlab-code-panels') {
+                          @if (section.codePanels.length === 0) {
+                            <div class="empty-state">
+                              Ten krok zakończył się bez zebranych danych repozytorium.
+                            </div>
+                          } @else {
+                            <mat-accordion class="repo-code-panels">
+                              @for (panel of section.codePanels; track panel.key) {
+                                <mat-expansion-panel class="repo-code-panel" hideToggle>
+                                  <mat-expansion-panel-header class="repo-code-panel__header">
+                                    <div class="repo-code-panel__header-main">
+                                      <span class="repo-code-panel__title">{{ panel.headerTitle }}</span>
+                                      <span class="repo-code-panel__subtitle">{{ panel.componentName }}</span>
+                                    </div>
+
+                                    <div class="repo-code-panel__header-actions">
+                                      @if (panel.highlightedLineNumber !== null) {
+                                        <span class="repo-code-panel__line-badge">
+                                          Linia {{ panel.highlightedLineNumber }}
+                                        </span>
+                                      }
+
+                                      <button
+                                        class="details-tooltip__trigger"
+                                        type="button"
+                                        [attr.aria-label]="'Pokaż pełne szczegóły wpisu repozytorium ' + panel.headerTitle"
+                                        [matTooltip]="panel.detailsTooltip"
+                                        matTooltipPosition="above"
+                                        matTooltipClass="analysis-log-tooltip"
+                                        [matTooltipShowDelay]="100"
+                                        (click)="$event.stopPropagation()"
+                                        (keydown)="$event.stopPropagation()"
+                                      >
+                                        <mat-icon fontSet="material-symbols-outlined">info</mat-icon>
+                                      </button>
+
+                                      <mat-icon
+                                        class="repo-code-panel__expand-icon"
+                                        fontSet="material-symbols-outlined"
+                                      >
+                                        expand_more
+                                      </mat-icon>
+                                    </div>
+                                  </mat-expansion-panel-header>
+
+                                  @if (panel.hasContent) {
+                                    <div class="repo-code-viewer">
+                                      @for (line of panel.codeLines; track line.lineNumber ?? $index) {
+                                        <div
+                                          class="repo-code-viewer__row"
+                                          [class.repo-code-viewer__row--highlight]="line.highlighted"
+                                        >
+                                          <span
+                                            class="repo-code-viewer__line-number"
+                                            [class.repo-code-viewer__line-number--highlight]="line.highlighted"
+                                          >
+                                            {{ line.lineNumber }}
+                                          </span>
+                                          <span class="repo-code-viewer__line-content">{{
+                                            line.content || ' '
+                                          }}</span>
+                                        </div>
+                                      }
+                                    </div>
+                                  } @else {
+                                    <div class="repo-code-panel__meta">
+                                      @if (panel.compactAttributes.length > 0) {
+                                        <div class="attribute-grid">
+                                          @for (attribute of panel.compactAttributes; track attribute.name + $index) {
+                                            <span class="attribute-name">{{ attribute.name }}</span>
+                                            <span class="attribute-value">{{ attribute.value }}</span>
+                                          }
+                                        </div>
+                                      }
+
+                                      @for (attribute of panel.blockAttributes; track attribute.name + $index) {
+                                        <div class="attribute-row attribute-row--block">
+                                          <span class="attribute-name">{{ attribute.name }}</span>
+                                          <pre class="attribute-block">{{ attribute.value }}</pre>
+                                        </div>
+                                      }
+                                    </div>
+                                  }
+                                </mat-expansion-panel>
+                              }
+                            </mat-accordion>
+                          }
+                        } @else if (section.items.length === 0) {
+                          <div class="empty-state">
+                            Ten krok zakończył się bez zebranych pozycji evidence.
+                          </div>
+                        } @else {
+                          @for (item of section.items; track item.key; let itemIndex = $index) {
+                            <details class="evidence-item" [open]="itemIndex === 0">
+                              <summary class="evidence-item__summary">
+                                <span class="evidence-item__title">{{ item.title }}</span>
+                                <span class="evidence-item__meta">
+                                  {{ item.attributeCount }} atrybutów
+                                </span>
+                              </summary>
+
+                              <div class="attribute-list">
+                                @if (item.compactAttributes.length > 0) {
+                                  <div class="attribute-grid">
+                                    @for (attribute of item.compactAttributes; track attribute.name + $index) {
+                                      <span class="attribute-name">{{ attribute.name }}</span>
+                                      <span class="attribute-value">{{ attribute.value }}</span>
+                                    }
+                                  </div>
+                                }
+
+                                @for (attribute of item.blockAttributes; track attribute.name + $index) {
+                                  <div class="attribute-row attribute-row--block">
+                                    <span class="attribute-name">{{ attribute.name }}</span>
+                                    <pre class="attribute-block">{{ attribute.value }}</pre>
+                                  </div>
+                                }
+                              </div>
+                            </details>
+                          }
+                        }
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
+            } @else if (step.emptyStateMessage) {
+              <div class="empty-state">{{ step.emptyStateMessage }}</div>
+            }
+          </div>
+        </mat-step>
+      }
+    </mat-stepper>
+  }
+</section>

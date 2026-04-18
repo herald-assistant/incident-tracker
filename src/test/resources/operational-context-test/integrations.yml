@@ -1,0 +1,28 @@
+schemaVersion: 1
+
+integrations:
+  - id: app-core-to-partner-sync
+    name: App Core -> Partner Service
+    from: app-core
+    to: partner-service
+    ownerTeamId: integration-team
+    partnerTeamIds: [core-team]
+    externalOwner: partner-owner
+    protocol: SOAP
+    type: sync
+    processes: [main-process]
+    contexts: [core-context, partner-context]
+    signals:
+      endpoints: [/partner/resource]
+      hosts: [api.partner.local]
+      queues: []
+      topics: []
+      schemas: []
+      spans: [SyncGateway.call]
+      markers: [PARTNER]
+      errors: [SOAPFault, Read timed out]
+    handoff:
+      target: Integration Team
+      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+
+openQuestions: []

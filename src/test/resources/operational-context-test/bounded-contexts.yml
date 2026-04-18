@@ -1,0 +1,23 @@
+schemaVersion: 1
+
+boundedContexts:
+  - id: core-context
+    name: Core Context
+    ownerTeamId: core-team
+    purpose: Owns the main internal semantics.
+    systems: [app-core]
+    repos: [app-core-repo]
+    processes: [main-process]
+    terms: [work-item]
+    signals:
+      packagePrefixes: [com.example.app]
+      endpoints: [/api/resources]
+      topics: []
+      schemas: []
+      markers: [APP_CORE]
+    relations:
+      - target: partner-context
+        type: conformist
+        via: [app-core-to-partner-sync]
+
+openQuestions: []

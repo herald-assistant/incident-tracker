@@ -1,0 +1,163 @@
+<div class="page-shell" [class.analysis-console--active]="hasActiveState()">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark">IR</div>
+      <div>
+        <p class="brand-eyebrow">Incident Diagnostics</p>
+        <h1 class="brand-title">Incident Tracker</h1>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <nav class="topbar-nav" aria-label="Widoki aplikacji">
+        <a
+          class="topbar-link"
+          routerLink="/"
+          routerLinkActive="topbar-link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Analysis
+        </a>
+        <a class="topbar-link" routerLink="/evidence" routerLinkActive="topbar-link--active">
+          Evidence
+        </a>
+      </nav>
+      <div class="topbar-badge">Analysis Console</div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="hero-card">
+      <div class="hero-main">
+        <div class="hero-copy">
+          <p class="section-eyebrow">Analiza incydentów</p>
+          <h2>Szybko identyfikuj przyczynę incydentu na podstawie correlationId.</h2>
+          <p class="hero-description">
+            Narzędzie zbiera dane diagnostyczne, śledzi postęp analizy i prezentuje logi,
+            sygnały runtime z Dynatrace, odniesienia do kodu oraz wynik końcowy w jednym widoku.
+          </p>
+        </div>
+
+        <form class="analysis-form analysis-form--inline" novalidate (submit)="submit($event)">
+          <div class="analysis-form__header">
+            <div>
+              <label class="field-label" for="correlationId">Correlation ID</label>
+              <p class="field-hint">
+                Postęp, zebrane dane i wynik końcowy pojawią się poniżej zaraz po starcie analizy.
+              </p>
+            </div>
+            <p class="analysis-actions__hint">
+              {{ analysisActionsHint() }}
+            </p>
+          </div>
+
+          <div class="analysis-toolbar">
+            <input
+              id="correlationId"
+              class="text-input"
+              type="text"
+              placeholder="np. timeout-123"
+              autocomplete="off"
+              spellcheck="false"
+              required
+              [formControl]="correlationIdControl"
+              (input)="clearFormError()"
+            />
+
+            <div class="analysis-toolbar__buttons">
+              <button
+                class="primary-button"
+                type="submit"
+                [disabled]="isLoading()"
+                [class.is-loading]="isLoading()"
+                [attr.aria-busy]="isLoading()"
+              >
+                <span class="button-label">Analizuj</span>
+                <span class="button-spinner" aria-hidden="true"></span>
+              </button>
+
+              <input
+                #importFileInput
+                type="file"
+                accept=".json,application/json"
+                hidden
+                (change)="importAnalysis($event)"
+              />
+              <button
+                class="secondary-button"
+                type="button"
+                (click)="triggerImport(importFileInput)"
+              >
+                Importuj wynik
+              </button>
+
+              @if (exportState()) {
+                <button
+                  class="secondary-button secondary-button--accent"
+                  type="button"
+                  (click)="exportAnalysis()"
+                >
+                  Eksportuj wynik
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (formError()) {
+            <p class="form-error">{{ formError() }}</p>
+          }
+        </form>
+      </div>
+
+      <div class="hero-side-panel">
+        <p class="panel-title">Zakres analizy</p>
+        <ul class="mini-list">
+          <li>logi i sygnały runtime powiązane z correlationId</li>
+          <li>odniesienia do kodu i dane z repozytorium</li>
+          <li>diagnoza AI i rekomendowany kolejny krok</li>
+        </ul>
+      </div>
+    </section>
+
+    <section #responsePanel class="response-panel" aria-live="polite">
+      @if (!job() && !transportError()) {
+        <div class="response-placeholder">
+          <p class="placeholder-kicker">{{ placeholderKicker() }}</p>
+          <h2>{{ placeholderTitle() }}</h2>
+          <p>
+            {{ placeholderDescription() }}
+          </p>
+        </div>
+      }
+
+      @if (transportError(); as error) {
+        <div class="response-error">
+          <div class="response-header">
+            <div>
+              <p class="response-kicker">Błąd</p>
+              <h2>{{ error.code }}</h2>
+            </div>
+            <span class="status-pill status-pill--error">Błąd</span>
+          </div>
+          <p class="error-message">{{ error.message }}</p>
+          <ul class="error-details">
+            @for (detail of error.details; track $index) {
+              <li>{{ detail }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (job(); as currentJob) {
+        <div class="response-content">
+          <app-analysis-overview-card [job]="currentJob"></app-analysis-overview-card>
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps"
+            [evidenceSections]="currentJob.evidenceSections"
+            [preparedPrompt]="currentJob.preparedPrompt"
+            [result]="currentJob.result"
+          ></app-analysis-steps-panel>
+        </div>
+      }
+    </section>
+  </main>
+</div>
