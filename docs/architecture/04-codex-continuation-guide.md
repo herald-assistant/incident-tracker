@@ -167,9 +167,9 @@ Mozliwe kierunki:
 
 ### 3. Wynik analizy bogatszy o uzasadnienie
 
-Obecnie `rationale` jest parsowane po stronie AI, ale nie wraca do glownej
-odpowiedzi API.
-To moze byc sensowne pole diagnostyczne lub debug mode.
+Obecnie `rationale` i wariant `Exploratory` wracaja juz do glownej odpowiedzi.
+Naturalnym kolejnym krokiem jest dopracowanie jak duzo conservative baseline ma
+byc pokazywane w exploratory oraz jak bardzo zwiezly ma pozostac diagram flow.
 
 ### 4. End-to-end i operational hardening
 

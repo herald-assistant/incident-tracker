@@ -8,6 +8,7 @@ import pl.mkn.incidenttracker.analysis.AnalysisProblemNature;
 import pl.mkn.incidenttracker.analysis.AnalysisVariantStatus;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPriorResult;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
@@ -16,7 +17,6 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollectionListen
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
-import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryFlowEvidenceView;
 
 import java.util.List;
 
@@ -50,32 +50,22 @@ public class AnalysisOrchestrator {
                 baseContext.evidenceSections()
         );
         var conservativeResponse = runAi(conservativeRequest, baseContext, listener);
-        var conservativeVariant = toCompletedVariant(AnalysisMode.CONSERVATIVE, conservativeResponse, null);
+        var conservativeVariant = toCompletedVariant(AnalysisMode.CONSERVATIVE, conservativeResponse);
         var exploratoryVariant = disabledVariant();
-        var finalContext = baseContext;
 
         if (exploratoryProperties.isEnabled()) {
             try {
-                finalContext = analysisEvidenceCollector.collectExploratory(baseContext, adaptEvidenceListener(listener));
-                var exploratoryView = ExploratoryFlowEvidenceView.from(finalContext);
-                if (exploratoryView.isEmpty()) {
-                    exploratoryVariant = skippedVariant();
-                } else {
-                    var exploratoryRequest = new AnalysisAiAnalysisRequest(
-                            correlationId,
-                            deploymentContext.environment(),
-                            deploymentContext.gitLabBranch(),
-                            gitLabProperties.getGroup(),
-                            AnalysisMode.EXPLORATORY,
-                            finalContext.evidenceSections()
-                    );
-                    var exploratoryResponse = runAi(exploratoryRequest, finalContext, listener);
-                    exploratoryVariant = toCompletedVariant(
-                            AnalysisMode.EXPLORATORY,
-                            exploratoryResponse,
-                            exploratoryView.toDiagram()
-                    );
-                }
+                var exploratoryRequest = new AnalysisAiAnalysisRequest(
+                        correlationId,
+                        deploymentContext.environment(),
+                        deploymentContext.gitLabBranch(),
+                        gitLabProperties.getGroup(),
+                        AnalysisMode.EXPLORATORY,
+                        baseContext.evidenceSections(),
+                        toPriorResult(conservativeResponse)
+                );
+                var exploratoryResponse = runAi(exploratoryRequest, baseContext, listener);
+                exploratoryVariant = toCompletedVariant(AnalysisMode.EXPLORATORY, exploratoryResponse);
             } catch (RuntimeException exception) {
                 exploratoryVariant = failedVariant(exception.getMessage());
             }
@@ -92,7 +82,7 @@ public class AnalysisOrchestrator {
                 )
         );
 
-        return new AnalysisExecution(finalContext, result);
+        return new AnalysisExecution(baseContext, result);
     }
 
     public List<AnalysisEvidenceProviderDescriptor> providerDescriptors() {
@@ -101,10 +91,6 @@ public class AnalysisOrchestrator {
 
     public boolean exploratoryEnabled() {
         return exploratoryProperties.isEnabled();
-    }
-
-    public AnalysisEvidenceProviderDescriptor exploratoryProviderDescriptor() {
-        return analysisEvidenceCollector.exploratoryProviderDescriptor();
     }
 
     private AnalysisEvidenceCollectionListener adaptEvidenceListener(AnalysisExecutionListener listener) {
@@ -158,8 +144,7 @@ public class AnalysisOrchestrator {
 
     private AnalysisVariantResultResponse toCompletedVariant(
             AnalysisMode mode,
-            AnalysisAiAnalysisResponse aiResponse,
-            AnalysisFlowDiagram diagram
+            AnalysisAiAnalysisResponse aiResponse
     ) {
         return new AnalysisVariantResultResponse(
                 mode,
@@ -171,7 +156,7 @@ public class AnalysisOrchestrator {
                 aiResponse.problemNature(),
                 aiResponse.confidence(),
                 aiResponse.prompt(),
-                diagram
+                aiResponse.diagram()
         );
     }
 
@@ -183,21 +168,6 @@ public class AnalysisOrchestrator {
                 "",
                 "",
                 "Tryb exploratory jest wyłączony w konfiguracji aplikacji.",
-                AnalysisProblemNature.HYPOTHESIS,
-                null,
-                null,
-                null
-        );
-    }
-
-    private AnalysisVariantResultResponse skippedVariant() {
-        return new AnalysisVariantResultResponse(
-                AnalysisMode.EXPLORATORY,
-                AnalysisVariantStatus.SKIPPED,
-                "",
-                "",
-                "",
-                "Nie udało się zrekonstruować dodatkowego flow ponad evidence konserwatywne.",
                 AnalysisProblemNature.HYPOTHESIS,
                 null,
                 null,
@@ -217,6 +187,17 @@ public class AnalysisOrchestrator {
                 null,
                 null,
                 null
+        );
+    }
+
+    private AnalysisAiPriorResult toPriorResult(AnalysisAiAnalysisResponse response) {
+        return new AnalysisAiPriorResult(
+                response.detectedProblem(),
+                response.summary(),
+                response.recommendedAction(),
+                response.rationale(),
+                response.problemNature(),
+                response.confidence()
         );
     }
 

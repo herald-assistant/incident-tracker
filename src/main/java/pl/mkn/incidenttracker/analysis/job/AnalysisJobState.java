@@ -58,8 +58,7 @@ final class AnalysisJobState {
             String analysisId,
             String correlationId,
             List<AnalysisEvidenceProviderDescriptor> providerDescriptors,
-            boolean exploratoryEnabled,
-            AnalysisEvidenceProviderDescriptor exploratoryProviderDescriptor
+            boolean exploratoryEnabled
     ) {
         this.analysisId = analysisId;
         this.correlationId = correlationId;
@@ -74,8 +73,7 @@ final class AnalysisJobState {
             steps.add(new StepState(descriptor, null));
         }
         steps.add(new StepState(AI_CONSERVATIVE_STEP_DESCRIPTOR, AnalysisMode.CONSERVATIVE));
-        if (exploratoryEnabled && exploratoryProviderDescriptor != null) {
-            steps.add(new StepState(exploratoryProviderDescriptor, null));
+        if (exploratoryEnabled) {
             steps.add(new StepState(AI_EXPLORATORY_STEP_DESCRIPTOR, AnalysisMode.EXPLORATORY));
         }
     }
@@ -121,7 +119,7 @@ final class AnalysisJobState {
         currentStepCode = step.code;
         currentStepLabel = step.label;
         step.markInProgress(mode == AnalysisMode.EXPLORATORY
-                ? "AI interpretuje exploratory flow i buduje wariant eksploracyjny."
+                ? "AI rozwija wariant exploratory o smielsze hipotezy i prosty diagram flow."
                 : "AI interpretuje bazowe evidence i buduje wariant conservative.");
         touch();
     }
@@ -162,23 +160,10 @@ final class AnalysisJobState {
 
         if (exploratoryEnabled && result.variants() != null && result.variants().exploratory() != null) {
             var exploratoryVariant = result.variants().exploratory();
-            if (exploratoryVariant.status() == AnalysisVariantStatus.SKIPPED) {
-                if (hasStep("EXPLORATORY_FLOW_RECONSTRUCTION")
-                        && step("EXPLORATORY_FLOW_RECONSTRUCTION").status == AnalysisJobStepStatus.PENDING) {
-                    step("EXPLORATORY_FLOW_RECONSTRUCTION").markSkipped(
-                            "Pominieto, bo nie udalo sie zbudowac dodatkowego flow."
-                    );
-                }
-                markAiSkipped(AnalysisMode.EXPLORATORY, "Pominieto, bo nie bylo dodatkowego flow do interpretacji.");
-            } else if (exploratoryVariant.status() == AnalysisVariantStatus.FAILED) {
-                if (hasStep(AI_EXPLORATORY_STEP_CODE)
-                        && step(AI_EXPLORATORY_STEP_CODE).status == AnalysisJobStepStatus.PENDING) {
-                    step(AI_EXPLORATORY_STEP_CODE).markSkipped(
-                            "Pominieto, bo exploratory flow zakonczyl sie bledem przed etapem AI."
-                    );
-                }
-            } else if (exploratoryVariant.status() == AnalysisVariantStatus.COMPLETED) {
+            if (exploratoryVariant.status() == AnalysisVariantStatus.COMPLETED) {
                 ensureStepCompleted(AI_EXPLORATORY_STEP_CODE, "Analiza exploratory zakonczona.");
+            } else if (exploratoryVariant.status() == AnalysisVariantStatus.SKIPPED) {
+                markAiSkipped(AnalysisMode.EXPLORATORY, "Pominieto wariant exploratory.");
             }
         }
 

@@ -15,7 +15,6 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentCo
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
-import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryFlowEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogLoader;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogMatcher;
@@ -48,8 +47,7 @@ class AnalysisServiceTest {
                                     mock(GitLabSourceResolveService.class),
                                     deploymentContextResolver
                             ),
-                            disabledOperationalContextEvidenceProvider(),
-                            disabledExploratoryFlowEvidenceProvider()
+                            disabledOperationalContextEvidenceProvider()
                     ),
                     new TestAnalysisAiProvider(),
                     gitLabProperties,
@@ -162,12 +160,7 @@ class AnalysisServiceTest {
                                         mock(GitLabSourceResolveService.class),
                                         deploymentContextResolver
                                 ),
-                                disabledOperationalContextEvidenceProvider(),
-                                new ExploratoryFlowEvidenceProvider(
-                                        new TestGitLabRepositoryPort(),
-                                        gitLabProperties,
-                                        exploratoryProperties
-                                )
+                                disabledOperationalContextEvidenceProvider()
                         ),
                         new TestAnalysisAiProvider(),
                         gitLabProperties,
@@ -179,7 +172,7 @@ class AnalysisServiceTest {
 
         assertEquals(AnalysisVariantStatus.COMPLETED, response.variants().exploratory().status());
         assertEquals(AnalysisMode.EXPLORATORY, response.variants().exploratory().mode());
-        assertEquals("RECONSTRUCTED_FLOW_HYPOTHESIS", response.variants().exploratory().detectedProblem());
+        assertEquals("EXPANDED_FLOW_HYPOTHESIS", response.variants().exploratory().detectedProblem());
         assertEquals(AnalysisMode.CONSERVATIVE, response.variants().conservative().mode());
         assertEquals(AnalysisMode.EXPLORATORY, response.variants().exploratory().mode());
         assertEquals(AnalysisVariantStatus.COMPLETED, response.variants().conservative().status());
@@ -213,11 +206,6 @@ class AnalysisServiceTest {
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );
-    }
-
-    private static ExploratoryFlowEvidenceProvider disabledExploratoryFlowEvidenceProvider() {
-        var properties = disabledExploratoryProperties();
-        return new ExploratoryFlowEvidenceProvider(mock(GitLabRepositoryPort.class), gitLabProperties(), properties);
     }
 
     private static ExploratoryAnalysisProperties disabledExploratoryProperties() {

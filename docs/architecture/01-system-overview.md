@@ -23,6 +23,9 @@ Na dzisiaj projekt ma:
   zapisu zakonczonej analizy jako JSON,
 - w ekranie `GET /` widok promptu przygotowanego dla AI, mozliwy do skopiowania
   nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
+- dwa warianty wyniku analizy:
+  `Conservative` jako wynik bazowy oraz opcjonalny `Exploratory` jako drugi
+  krok AI z odwazniejszymi hipotezami i prostym diagramem flow,
 - ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
   GitLaba,
 - glowne API `POST /analysis`,
@@ -127,6 +130,9 @@ Na dzisiaj projekt ma:
 - Flow synchroniczny i jobowy reuse'uja ta sama orchestration warstwe
   `AnalysisOrchestrator`.
 - Runtime AI providerem jest GitHub Copilot SDK.
+- Exploratory nie jest osobnym deterministic evidence providerem.
+  To opcjonalny drugi krok AI uruchamiany po `Conservative`, z tym samym
+  bazowym evidence i z conservative baseline przekazanym do promptu.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
   katalogu runtime.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego
@@ -148,11 +154,12 @@ flowchart LR
     G --> K["GitLab deterministic evidence provider"]
     G --> L["Operational context evidence provider"]
     L --> M["AnalysisContext"]
-    F --> N["AnalysisAiProvider"]
+    F --> N["Conservative AI"]
     N --> O["Copilot SDK"]
     O --> P["Elastic tools (optional during session)"]
     O --> R["GitLab tools (optional during session)"]
-    N --> S["AnalysisResultResponse"]
+    N --> S["Exploratory AI (optional)"]
+    S --> U["AnalysisResultResponse variants"]
     B --> T["GET /analysis/jobs/{analysisId}"]
     T --> D
 ```
