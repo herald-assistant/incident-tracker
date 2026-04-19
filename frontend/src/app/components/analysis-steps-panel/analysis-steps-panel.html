@@ -83,7 +83,7 @@
 
             <p class="step-item__message">{{ step.message }}</p>
 
-            @if (step.showResultPreview && result(); as analysisResult) {
+            @if (step.showResultPreview && step.resultPreview; as analysisResult) {
               <div class="stepper-result-preview">
                 @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
                   <div class="analysis-highlight">

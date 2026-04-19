@@ -150,10 +150,13 @@
       @if (job(); as currentJob) {
         <div class="response-content">
           <app-analysis-overview-card [job]="currentJob"></app-analysis-overview-card>
+          <app-analysis-final-result
+            [status]="currentJob.status"
+            [result]="currentJob.result"
+          ></app-analysis-final-result>
           <app-analysis-steps-panel
             [steps]="currentJob.steps"
             [evidenceSections]="currentJob.evidenceSections"
-            [preparedPrompt]="currentJob.preparedPrompt"
             [result]="currentJob.result"
           ></app-analysis-steps-panel>
         </div>

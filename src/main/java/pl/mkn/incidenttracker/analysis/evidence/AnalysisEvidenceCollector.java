@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryFlowEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 
@@ -20,6 +21,7 @@ public class AnalysisEvidenceCollector {
     private final DynatraceEvidenceProvider dynatraceEvidenceProvider;
     private final GitLabDeterministicEvidenceProvider gitLabDeterministicEvidenceProvider;
     private final OperationalContextEvidenceProvider operationalContextEvidenceProvider;
+    private final ExploratoryFlowEvidenceProvider exploratoryFlowEvidenceProvider;
 
     public AnalysisContext collect(String correlationId, AnalysisEvidenceCollectionListener listener) {
         var context = AnalysisContext.initialize(correlationId);
@@ -29,6 +31,10 @@ public class AnalysisEvidenceCollector {
         context = runProvider(gitLabDeterministicEvidenceProvider, context, listener);
         context = runProvider(operationalContextEvidenceProvider, context, listener);
         return context;
+    }
+
+    public AnalysisContext collectExploratory(AnalysisContext context, AnalysisEvidenceCollectionListener listener) {
+        return runProvider(exploratoryFlowEvidenceProvider, context, listener);
     }
 
     public List<AnalysisEvidenceProviderDescriptor> providerDescriptors() {
@@ -41,16 +47,25 @@ public class AnalysisEvidenceCollector {
         );
     }
 
+    public AnalysisEvidenceProviderDescriptor exploratoryProviderDescriptor() {
+        return exploratoryFlowEvidenceProvider.descriptor();
+    }
+
     private AnalysisContext runProvider(
             AnalysisEvidenceProvider provider,
             AnalysisContext context,
             AnalysisEvidenceCollectionListener listener
     ) {
         listener.onProviderStarted(provider, context);
-        AnalysisEvidenceSection section = provider.collect(context);
-        var updatedContext = context.withSection(section);
-        listener.onProviderCompleted(provider, section, updatedContext);
-        return updatedContext;
+        try {
+            AnalysisEvidenceSection section = provider.collect(context);
+            var updatedContext = context.withSection(section);
+            listener.onProviderCompleted(provider, section, updatedContext);
+            return updatedContext;
+        } catch (RuntimeException exception) {
+            listener.onProviderFailed(provider, exception, context);
+            throw exception;
+        }
     }
 
 }

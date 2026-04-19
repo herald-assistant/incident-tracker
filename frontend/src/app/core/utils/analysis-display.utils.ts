@@ -27,6 +27,7 @@ const SECTION_TITLES: Record<string, string> = {
   'deployment-context|resolved-deployment': 'Deployment · Kontekst deploymentu',
   'dynatrace|traces': 'Dynatrace · Trace',
   'dynatrace|runtime-signals': 'Dynatrace · Sygnały runtime',
+  'exploratory-flow|reconstructed-flow': 'Exploratory · Zrekonstruowany flow',
   'gitlab|resolved-code': 'GitLab · Kod źródłowy',
   'operational-context|matched-context': 'Kontekst operacyjny · Dopasowania'
 };

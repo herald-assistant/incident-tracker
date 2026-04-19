@@ -5,10 +5,6 @@ public record AnalysisResultResponse(
         String correlationId,
         String environment,
         String gitLabBranch,
-        String summary,
-        String detectedProblem,
-        String recommendedAction,
-        String rationale,
-        String prompt
+        AnalysisResultVariants variants
 ) {
 }

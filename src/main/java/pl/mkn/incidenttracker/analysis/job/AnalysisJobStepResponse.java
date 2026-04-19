@@ -14,6 +14,8 @@ public record AnalysisJobStepResponse(
         Integer itemCount,
         Instant startedAt,
         Instant completedAt,
+        String variantMode,
+        String preparedPrompt,
         List<AnalysisEvidenceReference> consumesEvidence,
         List<AnalysisEvidenceReference> producesEvidence
 ) {

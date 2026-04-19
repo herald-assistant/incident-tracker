@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.PermissionHandler;
 import com.github.copilot.sdk.json.PermissionRequest;
 import com.github.copilot.sdk.json.PermissionRequestResultKind;
+import pl.mkn.incidenttracker.analysis.AnalysisMode;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
@@ -60,6 +61,7 @@ class CopilotSdkPreparationServiceTest {
                 "dev3",
                 "release/2026.04",
                 "sample/runtime",
+                AnalysisMode.CONSERVATIVE,
                 List.of(new AnalysisEvidenceSection(
                         "elasticsearch",
                         "logs",
@@ -118,6 +120,7 @@ class CopilotSdkPreparationServiceTest {
         assertTrue(prepared.messageOptions().getPrompt().contains("environment: dev3"));
         assertTrue(prepared.messageOptions().getPrompt().contains("gitLabBranch: release/2026.04"));
         assertTrue(prepared.messageOptions().getPrompt().contains("gitLabGroup: sample/runtime"));
+        assertTrue(prepared.messageOptions().getPrompt().contains("mode: CONSERVATIVE"));
         assertTrue(prepared.messageOptions().getPrompt().contains("Available tools:"));
         assertTrue(prepared.messageOptions().getPrompt().contains("gitlab_read_repository_file_chunk"));
         assertTrue(prepared.messageOptions().getPrompt().contains("enterprise software incident analysis"));
@@ -135,6 +138,8 @@ class CopilotSdkPreparationServiceTest {
         assertTrue(prepared.messageOptions().getPrompt().contains("Return exactly these lines:"));
         assertTrue(prepared.messageOptions().getPrompt().contains("recommendedAction: <2-4 concise markdown bullet lines"));
         assertTrue(prepared.messageOptions().getPrompt().contains("rationale: <3-6 concise markdown bullet lines"));
+        assertTrue(prepared.messageOptions().getPrompt().contains("problemNature: <CONFIRMED or HYPOTHESIS>"));
+        assertTrue(prepared.messageOptions().getPrompt().contains("confidence: <HIGH or MEDIUM or LOW>"));
         assertTrue(prepared.messageOptions().getPrompt().contains("Provider: elasticsearch, category: logs"));
         assertTrue(prepared.messageOptions().getPrompt().contains("- billing-service log entry | level=ERROR | serviceName=billing-service | message=Read timed out while calling catalog-service"));
         assertTrue(prepared.messageOptions().getPrompt().contains("Provider: dynatrace, category: runtime-signals"));
@@ -160,6 +165,7 @@ class CopilotSdkPreparationServiceTest {
                 "dev1",
                 "main",
                 "sample/runtime",
+                AnalysisMode.CONSERVATIVE,
                 List.of()
         );
 
@@ -185,6 +191,7 @@ class CopilotSdkPreparationServiceTest {
                 "dev1",
                 "main",
                 "sample/runtime",
+                AnalysisMode.CONSERVATIVE,
                 List.of()
         );
 
@@ -216,6 +223,7 @@ class CopilotSdkPreparationServiceTest {
                 "dev1",
                 "main",
                 "sample/runtime",
+                AnalysisMode.CONSERVATIVE,
                 List.of()
         );
 
@@ -241,6 +249,7 @@ class CopilotSdkPreparationServiceTest {
                 "dev1",
                 "main",
                 "sample/runtime",
+                AnalysisMode.CONSERVATIVE,
                 List.of()
         );
 

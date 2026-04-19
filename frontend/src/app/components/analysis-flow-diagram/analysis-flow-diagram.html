@@ -1,0 +1,123 @@
+@if (!diagram()?.nodes?.length && !diagram()?.edges?.length) {
+  <div class="empty-state">Brak danych diagramu do narysowania dla tego wariantu.</div>
+} @else {
+  <div class="flow-diagram">
+    @if (leadingNode(); as firstNode) {
+      <article
+        class="flow-node"
+        [class.flow-node--hypothesis]="firstNode.factStatus === 'HYPOTHESIS'"
+        [class.flow-node--error]="firstNode.errorSource"
+      >
+        <div class="flow-node__header">
+          <div>
+            <p class="flow-node__eyebrow">{{ firstNode.kind || 'Component' }}</p>
+            <h4 class="flow-node__title">{{ firstNode.title || firstNode.componentName }}</h4>
+          </div>
+          <div class="flow-node__badges">
+            <span class="flow-node__badge">{{ firstNode.factStatus }}</span>
+            @if (firstNode.errorSource) {
+              <span class="flow-node__badge flow-node__badge--error">Błąd</span>
+            }
+          </div>
+        </div>
+
+        @if (firstNode.firstSeenAt) {
+          <p class="flow-node__timestamp">First seen: {{ firstNode.firstSeenAt }}</p>
+        }
+
+        @if (firstNode.metadata.length > 0) {
+          <div class="flow-node__meta">
+            @for (metadata of firstNode.metadata; track metadata.name + metadata.value) {
+              <span class="flow-node__chip">{{ metadata.name }}: {{ metadata.value }}</span>
+            }
+          </div>
+        }
+      </article>
+    }
+
+    @for (segment of segments(); track segment.edge.id) {
+      <div
+        class="flow-connector"
+        [class.flow-connector--hypothesis]="segment.edge.factStatus === 'HYPOTHESIS'"
+      >
+        <div class="flow-connector__line"></div>
+        <div class="flow-connector__card">
+          <span class="flow-connector__order">#{{ segment.edge.sequence }}</span>
+          <strong>{{ segment.edge.interactionType || 'UNKNOWN' }}</strong>
+          @if (segment.edge.startedAt) {
+            <span>{{ segment.edge.startedAt }}</span>
+          }
+          @if (segment.edge.durationMs !== null) {
+            <span>{{ segment.edge.durationMs }} ms</span>
+          }
+          @if (segment.edge.supportSummary) {
+            <p>{{ segment.edge.supportSummary }}</p>
+          }
+        </div>
+      </div>
+
+      @if (segment.toNode; as node) {
+        <article
+          class="flow-node"
+          [class.flow-node--hypothesis]="node.factStatus === 'HYPOTHESIS'"
+          [class.flow-node--error]="node.errorSource"
+        >
+          <div class="flow-node__header">
+            <div>
+              <p class="flow-node__eyebrow">{{ node.kind || 'Component' }}</p>
+              <h4 class="flow-node__title">{{ node.title || node.componentName }}</h4>
+            </div>
+            <div class="flow-node__badges">
+              <span class="flow-node__badge">{{ node.factStatus }}</span>
+              @if (node.errorSource) {
+                <span class="flow-node__badge flow-node__badge--error">Błąd</span>
+              }
+            </div>
+          </div>
+
+          @if (node.firstSeenAt) {
+            <p class="flow-node__timestamp">First seen: {{ node.firstSeenAt }}</p>
+          }
+
+          @if (node.metadata.length > 0) {
+            <div class="flow-node__meta">
+              @for (metadata of node.metadata; track metadata.name + metadata.value) {
+                <span class="flow-node__chip">{{ metadata.name }}: {{ metadata.value }}</span>
+              }
+            </div>
+          }
+        </article>
+      }
+    }
+
+    @if (orphanNodes().length > 0) {
+      <div class="flow-diagram__orphans">
+        @for (node of orphanNodes(); track node.id) {
+          <article
+            class="flow-node"
+            [class.flow-node--hypothesis]="node.factStatus === 'HYPOTHESIS'"
+            [class.flow-node--error]="node.errorSource"
+          >
+            <div class="flow-node__header">
+              <div>
+                <p class="flow-node__eyebrow">{{ node.kind || 'Component' }}</p>
+                <h4 class="flow-node__title">{{ node.title || node.componentName }}</h4>
+              </div>
+              <div class="flow-node__badges">
+                <span class="flow-node__badge">{{ node.factStatus }}</span>
+              </div>
+            </div>
+
+            @if (node.metadata.length > 0) {
+              <div class="flow-node__meta">
+                @for (metadata of node.metadata; track metadata.name + metadata.value) {
+                  <span class="flow-node__chip">{{ metadata.name }}: {{ metadata.value }}</span>
+                }
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
+  </div>
+}

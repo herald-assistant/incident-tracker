@@ -10,6 +10,8 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvid
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
+import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryFlowEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogLoader;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogMatcher;
@@ -39,7 +41,8 @@ class AnalysisEvidenceCollectorTest {
                     mock(GitLabSourceResolveService.class),
                     deploymentContextResolver
             ),
-            disabledOperationalContextEvidenceProvider()
+            disabledOperationalContextEvidenceProvider(),
+            disabledExploratoryFlowEvidenceProvider()
     );
 
     @Test
@@ -103,6 +106,14 @@ class AnalysisEvidenceCollectorTest {
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );
+    }
+
+    private static ExploratoryFlowEvidenceProvider disabledExploratoryFlowEvidenceProvider() {
+        var properties = new ExploratoryAnalysisProperties();
+        properties.setEnabled(false);
+        var gitLabProperties = new GitLabProperties();
+        gitLabProperties.setGroup("sample/runtime");
+        return new ExploratoryFlowEvidenceProvider(mock(GitLabRepositoryPort.class), gitLabProperties, properties);
     }
 
     private static Map<String, String> attributesByName(AnalysisEvidenceItem item) {

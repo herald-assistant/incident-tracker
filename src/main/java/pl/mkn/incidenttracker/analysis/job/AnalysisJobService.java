@@ -33,7 +33,11 @@ public class AnalysisJobService {
         var job = new AnalysisJobState(
                 analysisId,
                 request.correlationId(),
-                analysisOrchestrator.providerDescriptors()
+                analysisOrchestrator.providerDescriptors(),
+                analysisOrchestrator.exploratoryEnabled(),
+                analysisOrchestrator.exploratoryEnabled()
+                        ? analysisOrchestrator.exploratoryProviderDescriptor()
+                        : null
         );
 
         jobs.put(analysisId, job);
@@ -93,11 +97,20 @@ public class AnalysisJobService {
         }
 
         @Override
+        public void onProviderFailed(
+                AnalysisEvidenceProvider provider,
+                RuntimeException exception,
+                AnalysisContext context
+        ) {
+            job.markEvidenceStepFailed(provider.descriptor(), exception.getMessage());
+        }
+
+        @Override
         public void onAiStarted(
                 pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest request,
                 AnalysisContext context
         ) {
-            job.markAiStarted();
+            job.markAiStarted(request.mode());
         }
 
         @Override
@@ -106,7 +119,25 @@ public class AnalysisJobService {
                 String preparedPrompt,
                 AnalysisContext context
         ) {
-            job.markAiPromptPrepared(preparedPrompt);
+            job.markAiPromptPrepared(request.mode(), preparedPrompt);
+        }
+
+        @Override
+        public void onAiCompleted(
+                pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest request,
+                pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse response,
+                AnalysisContext context
+        ) {
+            job.markAiCompleted(request.mode());
+        }
+
+        @Override
+        public void onAiFailed(
+                pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest request,
+                RuntimeException exception,
+                AnalysisContext context
+        ) {
+            job.markAiFailed(request.mode(), exception.getMessage());
         }
     }
 

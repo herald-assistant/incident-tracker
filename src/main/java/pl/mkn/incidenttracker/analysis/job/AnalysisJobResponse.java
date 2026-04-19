@@ -21,7 +21,6 @@ public record AnalysisJobResponse(
         Instant completedAt,
         List<AnalysisJobStepResponse> steps,
         List<AnalysisEvidenceSection> evidenceSections,
-        String preparedPrompt,
         AnalysisResultResponse result
 ) {
 }
