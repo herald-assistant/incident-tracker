@@ -120,6 +120,10 @@ public class CopilotSdkPreparationService {
                 The real cause may still be in an external integration, downstream service, platform configuration, database state, messaging layer,
                 infrastructure, or an area owned by another team that is not directly visible here.
                 If the likely problem is outside our codebase or outside the telemetry currently available, say that explicitly.
+                If `operational-context` evidence contains matched processes, bounded contexts, teams, or handoff rules, use them to ground ownership and handoff decisions.
+                Do not name a specific process, bounded context, or team unless it is supported by matched operational-context evidence or by very strong corroborating runtime/code evidence.
+                If ownership is still ambiguous, write `nieustalone` for the affected process, bounded context, or team instead of guessing.
+                If you recommend a handoff, keep it aligned with the grounded `affectedTeam` value and explain briefly which operational-context evidence supports that owner.
                 Separate clearly:
                 - what is directly confirmed by the evidence,
                 - what is the best-supported hypothesis,
@@ -146,6 +150,9 @@ public class CopilotSdkPreparationService {
                 recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
                 rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, what the surrounding flow in our system appears to be, and what still requires confirmation or external access>
                 affectedFunction: <a short markdown block in Polish based on the broader GitLab exploration: one concise opening sentence and then 2-5 markdown bullet lines describing the affected system function, its role in the broader flow, key upstream/downstream collaborators, and where the incident interrupts that flow>
+                affectedProcess: <short Polish plain-text label for the most likely affected process, grounded in operational-context evidence when available; write `nieustalone` if the process is not grounded>
+                affectedBoundedContext: <short Polish plain-text label for the most likely affected bounded context, grounded in operational-context evidence when available; write `nieustalone` if the context is not grounded>
+                affectedTeam: <short Polish plain-text label for the team that should currently own or receive the handoff, grounded in operational-context evidence when available; write `nieustalone` if the owner is not grounded>
 
                 Attached artifacts:
                 %s

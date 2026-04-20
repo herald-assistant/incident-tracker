@@ -43,6 +43,44 @@
       ></app-markdown-content>
     </div>
 
+    @if (
+      hasMeaningfulValue(analysisResult.affectedProcess) ||
+      hasMeaningfulValue(analysisResult.affectedBoundedContext) ||
+      hasMeaningfulValue(analysisResult.affectedTeam)
+    ) {
+      <div class="analysis-highlights">
+        @if (hasMeaningfulValue(analysisResult.affectedProcess)) {
+          <div class="analysis-highlight">
+            <p class="result-card-label">Affected process</p>
+            <app-markdown-content
+              [content]="analysisResult.affectedProcess"
+              [compact]="true"
+            ></app-markdown-content>
+          </div>
+        }
+
+        @if (hasMeaningfulValue(analysisResult.affectedBoundedContext)) {
+          <div class="analysis-highlight">
+            <p class="result-card-label">Bounded context</p>
+            <app-markdown-content
+              [content]="analysisResult.affectedBoundedContext"
+              [compact]="true"
+            ></app-markdown-content>
+          </div>
+        }
+
+        @if (hasMeaningfulValue(analysisResult.affectedTeam)) {
+          <div class="analysis-highlight">
+            <p class="result-card-label">Team / handoff owner</p>
+            <app-markdown-content
+              [content]="analysisResult.affectedTeam"
+              [compact]="true"
+            ></app-markdown-content>
+          </div>
+        }
+      </div>
+    }
+
     @if (hasMeaningfulValue(analysisResult.affectedFunction)) {
       <div class="analysis-summary">
         <p class="result-card-label">Dotknięta funkcja systemu</p>

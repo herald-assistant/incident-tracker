@@ -24,6 +24,9 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
                     "Inspect recent HTTP client timeout changes, compare downstream latency percentiles, and add focused timeout diagnostics around the slow dependency.",
                     "The test AI provider correlated timeout signals from logs, Dynatrace runtime evidence, and recent GitLab change hints.",
                     "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
+                    "Billing catalog lookup",
+                    "Billing Context",
+                    "Core Integration Team",
                     syntheticPrompt(request)
             );
         }
@@ -36,6 +39,9 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
                     "Review transaction scope changes first, inspect blocked sessions, and narrow long-running write transactions in the affected persistence flow.",
                     "The test AI provider connected lock-related log and Dynatrace runtime signals with the recent GitLab persistence-layer hint.",
                     "The affected function is the order persistence write path that coordinates domain validation and database update steps before the flow can complete.",
+                    "Order persistence update",
+                    "Order Management Context",
+                    "Order Persistence Team",
                     syntheticPrompt(request)
             );
         }
@@ -46,6 +52,9 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
                 "UNKNOWN",
                 "Collect more evidence from logs, Dynatrace runtime signals, and recent code changes before proposing a code-level fix.",
                 "The test AI provider could not find a strong pattern in the available evidence.",
+                "",
+                "",
+                "",
                 "",
                 syntheticPrompt(request)
         );

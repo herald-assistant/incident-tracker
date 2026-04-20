@@ -93,6 +93,8 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("may be new to the affected area"));
             assertTrue(prompt.contains("The available evidence comes only from our system"));
             assertTrue(prompt.contains("If another team, admins, integration owners, or DB specialists are likely needed"));
+            assertTrue(prompt.contains("If `operational-context` evidence contains matched processes, bounded contexts, teams, or handoff rules"));
+            assertTrue(prompt.contains("write `nieustalone` for the affected process, bounded context, or team instead of guessing"));
             assertTrue(prompt.contains("Follow any loaded skills that are relevant for incident analysis and tool usage."));
             assertTrue(prompt.contains("keep the provided gitLabGroup and gitLabBranch unchanged"));
             assertTrue(prompt.contains("No Dynatrace tools are available during the session."));
@@ -108,6 +110,9 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("recommendedAction: <2-4 concise markdown bullet lines"));
             assertTrue(prompt.contains("rationale: <3-6 concise markdown bullet lines"));
             assertTrue(prompt.contains("affectedFunction: <a short markdown block in Polish based on the broader GitLab exploration"));
+            assertTrue(prompt.contains("affectedProcess: <short Polish plain-text label for the most likely affected process"));
+            assertTrue(prompt.contains("affectedBoundedContext: <short Polish plain-text label for the most likely affected bounded context"));
+            assertTrue(prompt.contains("affectedTeam: <short Polish plain-text label for the team that should currently own or receive the handoff"));
             assertFalse(prompt.contains("Read timed out while calling catalog-service"));
             assertFalse(prompt.contains("metricLabel=service.response.time.p95"));
             assertEquals(prompt, prepared.prompt());

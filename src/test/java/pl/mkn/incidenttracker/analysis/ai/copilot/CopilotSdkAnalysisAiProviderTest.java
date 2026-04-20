@@ -76,6 +76,9 @@ class CopilotSdkAnalysisAiProviderTest {
                 recommendedAction: Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.
                 rationale: Timeout signals appeared in both logs and traces and align with the recent GitLab hint.
                 affectedFunction: The affected function is the outbound inventory lookup used by the billing flow before it can finalize the response.
+                affectedProcess: Rozliczenie klienta
+                affectedBoundedContext: Billing Context
+                affectedTeam: Core Integration Team
                 """.trim());
 
         var response = provider.analyze(request);
@@ -101,6 +104,9 @@ class CopilotSdkAnalysisAiProviderTest {
                 "The affected function is the outbound inventory lookup used by the billing flow before it can finalize the response.",
                 response.affectedFunction()
         );
+        assertEquals("Rozliczenie klienta", response.affectedProcess());
+        assertEquals("Billing Context", response.affectedBoundedContext());
+        assertEquals("Core Integration Team", response.affectedTeam());
         assertEquals("Prepared prompt for timeout-123", response.prompt());
 
         verify(preparationService).prepare(request);
@@ -134,6 +140,9 @@ class CopilotSdkAnalysisAiProviderTest {
                 response.rationale()
         );
         assertEquals("", response.affectedFunction());
+        assertEquals("", response.affectedProcess());
+        assertEquals("", response.affectedBoundedContext());
+        assertEquals("", response.affectedTeam());
         assertEquals("Prepared prompt for corr-123", response.prompt());
     }
 
@@ -168,6 +177,9 @@ class CopilotSdkAnalysisAiProviderTest {
                 - Wejście przechodzi przez warstwę kontrolera i serwis zapytań.
                 - Krytyczny krok to pobranie rekordu z repozytorium domenowego po `caseId` i statusach aktywnych.
                 - Incydent przerywa flow dokładnie tam, gdzie system oczekuje istniejącego rekordu, ale go nie znajduje.
+                **affectedProcess:** Obsługa aktywnej sprawy
+                **affectedBoundedContext:** Case Management
+                **affectedTeam:** Zespół Case API
                 """.trim());
 
         var response = provider.analyze(request);
@@ -209,6 +221,9 @@ class CopilotSdkAnalysisAiProviderTest {
                         """.trim(),
                 response.affectedFunction()
         );
+        assertEquals("Obsługa aktywnej sprawy", response.affectedProcess());
+        assertEquals("Case Management", response.affectedBoundedContext());
+        assertEquals("Zespół Case API", response.affectedTeam());
         assertEquals("Prepared prompt for corr-456", response.prompt());
     }
 
@@ -264,6 +279,9 @@ class CopilotSdkAnalysisAiProviderTest {
                         """.trim(),
                 response.affectedFunction()
         );
+        assertEquals("", response.affectedProcess());
+        assertEquals("", response.affectedBoundedContext());
+        assertEquals("", response.affectedTeam());
     }
 
     @Test
@@ -288,6 +306,9 @@ class CopilotSdkAnalysisAiProviderTest {
 
         assertEquals("AI_UNSTRUCTURED_RESPONSE", response.detectedProblem());
         assertEquals("", response.affectedFunction());
+        assertEquals("", response.affectedProcess());
+        assertEquals("", response.affectedBoundedContext());
+        assertEquals("", response.affectedTeam());
     }
 
 }

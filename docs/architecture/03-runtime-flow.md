@@ -271,9 +271,15 @@ Provider Copilota mapuje tekst odpowiedzi modelu na:
 - `summary`
 - `recommendedAction`
 - `rationale`
+- `affectedFunction`
+- `affectedProcess`
+- `affectedBoundedContext`
+- `affectedTeam`
 
 Potem `AnalysisOrchestrator` buduje `AnalysisResultResponse`, ktory zwraca tez
-rozwiazane `environment` i `gitLabBranch`.
+rozwiazane `environment`, `gitLabBranch` oraz jawne pola wynikowe dla
+processu, bounded contextu i teamu, o ile analiza ma dla nich wystarczajace
+ugruntowanie w `operational-context`.
 
 ## Flow `POST /api/elasticsearch/logs/search`
 

@@ -60,6 +60,9 @@ public class AnalysisOrchestrator {
                 aiResponse.recommendedAction(),
                 aiResponse.rationale(),
                 aiResponse.affectedFunction(),
+                aiResponse.affectedProcess(),
+                aiResponse.affectedBoundedContext(),
+                aiResponse.affectedTeam(),
                 aiResponse.prompt()
         );
 

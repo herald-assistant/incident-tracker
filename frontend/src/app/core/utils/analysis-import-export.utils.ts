@@ -172,6 +172,9 @@ function normalizeResult(result: unknown): AnalysisResultResponse {
     recommendedAction: normalizeString(resultObject?.['recommendedAction']),
     rationale: normalizeString(resultObject?.['rationale']),
     affectedFunction: normalizeString(resultObject?.['affectedFunction']),
+    affectedProcess: normalizeString(resultObject?.['affectedProcess']),
+    affectedBoundedContext: normalizeString(resultObject?.['affectedBoundedContext']),
+    affectedTeam: normalizeString(resultObject?.['affectedTeam']),
     prompt: normalizeString(resultObject?.['prompt'])
   };
 }

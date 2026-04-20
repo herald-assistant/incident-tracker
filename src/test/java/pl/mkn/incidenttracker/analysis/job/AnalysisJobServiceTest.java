@@ -79,6 +79,9 @@ class AnalysisJobServiceTest {
                 "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
                 completed.result().affectedFunction()
         );
+        assertEquals("Billing catalog lookup", completed.result().affectedProcess());
+        assertEquals("Billing Context", completed.result().affectedBoundedContext());
+        assertEquals("Core Integration Team", completed.result().affectedTeam());
         assertEquals("COMPLETED", completed.steps().get(5).status());
     }
 
@@ -294,6 +297,9 @@ class AnalysisJobServiceTest {
                     "Inspect recent HTTP client timeout changes first.",
                     "The tool-fetched GitLab file confirms the timeout configuration.",
                     "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
+                    "Billing catalog lookup",
+                    "Billing Context",
+                    "Core Integration Team",
                     preparePrompt(request)
             );
         }

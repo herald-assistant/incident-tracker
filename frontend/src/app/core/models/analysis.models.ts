@@ -36,6 +36,9 @@ export interface AnalysisResultResponse {
   recommendedAction: string;
   rationale: string;
   affectedFunction: string;
+  affectedProcess: string;
+  affectedBoundedContext: string;
+  affectedTeam: string;
   prompt: string;
 }
 

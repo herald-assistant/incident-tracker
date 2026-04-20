@@ -10,6 +10,9 @@ public record AnalysisResultResponse(
         String recommendedAction,
         String rationale,
         String affectedFunction,
+        String affectedProcess,
+        String affectedBoundedContext,
+        String affectedTeam,
         String prompt
 ) {
 }

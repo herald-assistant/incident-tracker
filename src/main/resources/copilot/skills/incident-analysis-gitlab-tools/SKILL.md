@@ -41,6 +41,9 @@ Return exactly these fields when asked for a diagnosis:
 - `recommendedAction`
 - `rationale`
 - `affectedFunction`
+- `affectedProcess`
+- `affectedBoundedContext`
+- `affectedTeam`
 
 Do not invent extra top-level fields unless the caller explicitly asks for them.
 
@@ -61,6 +64,8 @@ Do not invent extra top-level fields unless the caller explicitly asks for them.
   next and what should be verified or changed.
   If escalation or handoff is likely needed, name the likely owner such as our
   team, another Tribe, admins, integration owners, or DBA.
+  If `operational-context` evidence names a team or handoff rule, keep the
+  handoff aligned with that evidence instead of inventing a new owner.
 - `rationale`
   Use short markdown bullets. Separate confirmed signals from hypotheses and
   from visibility limits.
@@ -78,6 +83,19 @@ Do not invent extra top-level fields unless the caller explicitly asks for them.
   where this function sits in the wider flow, what enters it, what it calls or
   coordinates, and where the incident interrupts that flow.
   Write this for a new analyst who may not know the area yet.
+- `affectedProcess`
+  Return a short Polish plain-text label for the most likely affected process.
+  Prefer a process matched in `operational-context` evidence. If the process is
+  not grounded, write `nieustalone`.
+- `affectedBoundedContext`
+  Return a short Polish plain-text label for the most likely affected bounded
+  context. Prefer a bounded context matched in `operational-context` evidence.
+  If the context is not grounded, write `nieustalone`.
+- `affectedTeam`
+  Return a short Polish plain-text label for the team that should currently own
+  the incident or receive the handoff.
+  Prefer a team matched in `operational-context` evidence or implied by a
+  matched handoff rule. If the owner is not grounded, write `nieustalone`.
 
 ## Enterprise Grounding Rules
 
@@ -90,6 +108,11 @@ Do not invent extra top-level fields unless the caller explicitly asks for them.
   why.
 - If direct access is missing, call that out and frame the next step as
   verification or escalation, not as a proven conclusion.
+- If `operational-context` evidence contains matched processes, bounded
+  contexts, teams, or handoff rules, use that evidence to ground ownership.
+- Do not name a specific process, bounded context, or team unless it is
+  supported by matched operational-context evidence or by very strong
+  corroborating runtime/code evidence.
 
 ## Evidence-first workflow
 

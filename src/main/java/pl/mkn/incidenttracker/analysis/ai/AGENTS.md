@@ -38,7 +38,8 @@ Nie obejmuje:
   nieczytelnego zachowania SDK.
 - Parsing odpowiedzi modelu ma pozostac odporny na formatowanie, ale kontrakt
   pol `detectedProblem`, `summary`, `recommendedAction`, `rationale`,
-  `affectedFunction` powinien pozostac stabilny dla flow i UI.
+  `affectedFunction`, `affectedProcess`, `affectedBoundedContext`,
+  `affectedTeam` powinien pozostac stabilny dla flow i UI.
 - Jesli kiedys dojda kolejne providery AI, trzymaj ich szczegoly lokalnie i nie
   rozlewaj zaleznosci SDK poza ten katalog.
 
