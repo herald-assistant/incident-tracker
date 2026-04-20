@@ -93,8 +93,8 @@ Do not invent extra top-level fields unless the caller explicitly asks for them.
 
 ## Evidence-first workflow
 
-1. Start from the provided evidence sections only.
-2. Form an initial hypothesis from logs, Dynatrace runtime signals, and already-provided GitLab candidates.
+1. Start from the attached artifacts only and read the manifest first when one is attached.
+2. Form an initial hypothesis from the attached logs, Dynatrace runtime signals, and already-provided GitLab candidates.
    Prefer code references resolved directly from stacktraces, class names, or
    file paths found in logs over generic keyword search.
    If Dynatrace problem evidence contains curated fields such as

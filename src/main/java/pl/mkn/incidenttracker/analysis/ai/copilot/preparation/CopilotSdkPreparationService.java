@@ -9,9 +9,6 @@ import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
 
@@ -25,9 +22,11 @@ public class CopilotSdkPreparationService {
     private final CopilotSdkProperties properties;
     private final CopilotSdkToolBridge toolBridge;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
+    private final CopilotAttachmentArtifactService attachmentArtifactService;
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
         var tools = toolBridge.buildToolDefinitions();
+        var artifactDescriptors = attachmentArtifactService.describe(request);
         var skillDirectories = skillRuntimeLoader.resolveSkillDirectories();
         var clientOptions = new CopilotClientOptions()
                 .setUseLoggedInUser(true)
@@ -39,7 +38,7 @@ public class CopilotSdkPreparationService {
 
         if (properties.getGithubToken() != null && !properties.getGithubToken().isBlank()) {
             clientOptions
-                    .setGithubToken(properties.getGithubToken())
+                    .setGitHubToken(properties.getGithubToken())
                     .setUseLoggedInUser(false);
         }
 
@@ -60,20 +59,39 @@ public class CopilotSdkPreparationService {
             sessionConfig.setReasoningEffort(properties.getReasoningEffort());
         }
 
-        String prompt = buildPrompt(request, tools);
-        var messageOptions = new MessageOptions()
-                .setPrompt(prompt);
+        String prompt = buildPrompt(request, tools, artifactDescriptors);
+        var attachmentArtifacts = attachmentArtifactService.create(request);
 
-        return new CopilotSdkPreparedRequest(
-                request.correlationId(),
-                clientOptions,
-                sessionConfig,
-                messageOptions,
-                prompt
-        );
+        try {
+            var messageOptions = new MessageOptions()
+                    .setPrompt(prompt)
+                    .setAttachments(attachmentArtifacts.attachments());
+
+            return new CopilotSdkPreparedRequest(
+                    request.correlationId(),
+                    clientOptions,
+                    sessionConfig,
+                    messageOptions,
+                    prompt,
+                    attachmentArtifacts
+            );
+        } catch (RuntimeException exception) {
+            attachmentArtifacts.close();
+            throw exception;
+        }
     }
 
-    private String buildPrompt(AnalysisAiAnalysisRequest request, List<ToolDefinition> tools) {
+    public String preparePrompt(AnalysisAiAnalysisRequest request) {
+        var tools = toolBridge.buildToolDefinitions();
+        var artifactDescriptors = attachmentArtifactService.describe(request);
+        return buildPrompt(request, tools, artifactDescriptors);
+    }
+
+    private String buildPrompt(
+            AnalysisAiAnalysisRequest request,
+            List<ToolDefinition> tools,
+            List<CopilotAttachmentArtifactService.AttachmentArtifactDescriptor> artifactDescriptors
+    ) {
         return """
                 You are helping with an enterprise software incident analysis.
                 Your answer will be read by an analyst, tester, or junior/mid developer who may need to triage the incident,
@@ -86,14 +104,15 @@ public class CopilotSdkPreparationService {
                 gitLabBranch: %s
                 gitLabGroup: %s
 
-                Analyze only the evidence below.
-                Do not assume facts that are not supported by the evidence.
+                Analyze the attached artifacts as the primary source of truth.
+                Read `00-incident-manifest.json` first and use it as the attachment index.
+                Do not assume facts that are not supported by the attached artifacts or tool results.
                 Follow any loaded skills that are relevant for incident analysis and tool usage.
                 When using GitLab tools, keep the provided gitLabGroup and gitLabBranch unchanged.
                 Treat Dynatrace evidence as initial runtime context only. No Dynatrace tools are available during the session.
                 If gitLabBranch is not resolved from logs, do not invent one.
                 Infer project names and file paths only from evidence and repository exploration.
-                If the evidence already contains a concrete exception stacktrace and matching GitLab code around the failing line, answer directly instead of calling more tools.
+                If the attached artifacts already contain a concrete exception stacktrace and matching GitLab code around the failing line, answer directly instead of calling more tools.
                 When GitLab exploration is needed, do not stop at the single failing line if understanding the surrounding functional or technical flow would materially improve the diagnosis, handoff, or next step.
                 If one focused code read is not enough for a newcomer to understand the incident, expand the exploration to the surrounding method, class, service flow, and a few directly collaborating files or integration points.
                 Prefer to explain where in the broader request or business flow the failure happens, what leads into that point, what happens immediately after it, and which downstream systems or components are involved.
@@ -128,18 +147,18 @@ public class CopilotSdkPreparationService {
                 rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, what the surrounding flow in our system appears to be, and what still requires confirmation or external access>
                 affectedFunction: <a short markdown block in Polish based on the broader GitLab exploration: one concise opening sentence and then 2-5 markdown bullet lines describing the affected system function, its role in the broader flow, key upstream/downstream collaborators, and where the incident interrupts that flow>
 
-                Available tools:
+                Attached artifacts:
                 %s
 
-                Evidence sections:
+                Available tools:
                 %s
                 """.formatted(
                 request.correlationId(),
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
-                formatAvailableTools(tools),
-                formatEvidenceSections(request.evidenceSections())
+                formatAttachedArtifacts(artifactDescriptors),
+                formatAvailableTools(tools)
         );
     }
 
@@ -176,6 +195,29 @@ public class CopilotSdkPreparationService {
         return gitLabBranch != null && !gitLabBranch.isBlank() ? gitLabBranch : "<not-resolved-from-logs>";
     }
 
+    private String formatAttachedArtifacts(
+            List<CopilotAttachmentArtifactService.AttachmentArtifactDescriptor> artifactDescriptors
+    ) {
+        var rendered = new StringBuilder();
+
+        for (var artifact : artifactDescriptors) {
+            if (rendered.length() > 0) {
+                rendered.append(System.lineSeparator());
+            }
+
+            rendered.append("- `")
+                    .append(artifact.displayName())
+                    .append("`: ")
+                    .append(artifact.role());
+
+            if (artifact.itemCount() != null) {
+                rendered.append(" (items: ").append(artifact.itemCount()).append(")");
+            }
+        }
+
+        return rendered.toString();
+    }
+
     private PermissionHandler permissionHandler() {
         return switch (properties.getPermissionMode()) {
             case DENY_ALL -> (request, invocation) -> CompletableFuture.completedFuture(
@@ -188,67 +230,4 @@ public class CopilotSdkPreparationService {
     private List<String> safeList(List<String> values) {
         return values != null ? values : List.of();
     }
-
-    private String formatEvidenceSections(Iterable<AnalysisEvidenceSection> sections) {
-        var rendered = new StringBuilder();
-
-        for (var section : sections) {
-            if (rendered.length() > 0) {
-                rendered.append(System.lineSeparator()).append(System.lineSeparator());
-            }
-
-            rendered.append("Provider: ")
-                    .append(section.provider())
-                    .append(", category: ")
-                    .append(section.category())
-                    .append(System.lineSeparator())
-                    .append(formatEvidenceItems(section.items()));
-        }
-
-        if (rendered.length() == 0) {
-            return "Provider: none, category: none" + System.lineSeparator() + "- none";
-        }
-
-        return rendered.toString();
-    }
-
-    private String formatEvidenceItems(Iterable<AnalysisEvidenceItem> items) {
-        var rendered = new StringBuilder();
-
-        for (var item : items) {
-            if (rendered.length() > 0) {
-                rendered.append(System.lineSeparator());
-            }
-            rendered.append("- ")
-                    .append(item.title())
-                    .append(" | ")
-                    .append(formatAttributes(item.attributes()));
-        }
-
-        if (rendered.length() == 0) {
-            return "- none";
-        }
-
-        return rendered.toString();
-    }
-
-    private String formatAttributes(Iterable<AnalysisEvidenceAttribute> attributes) {
-        var rendered = new StringBuilder();
-
-        for (var attribute : attributes) {
-            if (rendered.length() > 0) {
-                rendered.append(" | ");
-            }
-            rendered.append(attribute.name())
-                    .append("=")
-                    .append(attribute.value());
-        }
-
-        if (rendered.length() == 0) {
-            return "no-attributes";
-        }
-
-        return rendered.toString();
-    }
-
 }

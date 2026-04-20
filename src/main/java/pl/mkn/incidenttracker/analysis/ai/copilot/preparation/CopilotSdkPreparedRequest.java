@@ -9,6 +9,14 @@ public record CopilotSdkPreparedRequest(
         CopilotClientOptions clientOptions,
         SessionConfig sessionConfig,
         MessageOptions messageOptions,
-        String prompt
-) {
+        String prompt,
+        CopilotAttachmentArtifactBundle attachmentArtifacts
+) implements AutoCloseable {
+
+    @Override
+    public void close() {
+        if (attachmentArtifacts != null) {
+            attachmentArtifacts.close();
+        }
+    }
 }

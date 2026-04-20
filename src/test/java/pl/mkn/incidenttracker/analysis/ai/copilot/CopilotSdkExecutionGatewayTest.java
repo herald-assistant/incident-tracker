@@ -8,16 +8,22 @@ import com.github.copilot.sdk.json.CopilotClientOptions;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotAttachmentArtifactBundle;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -28,6 +34,9 @@ import static org.mockito.Mockito.when;
 
 class CopilotSdkExecutionGatewayTest {
 
+    @TempDir
+    Path tempDirectory;
+
     @Test
     void shouldUseDefaultSendAndWaitTimeoutFromProperties() {
         var properties = new CopilotSdkProperties();
@@ -37,7 +46,8 @@ class CopilotSdkExecutionGatewayTest {
                 new CopilotClientOptions(),
                 new SessionConfig(),
                 new MessageOptions().setPrompt("Diagnose incident"),
-                "Diagnose incident"
+                "Diagnose incident",
+                CopilotAttachmentArtifactBundle.empty()
         );
         var sessionRef = new AtomicReference<CopilotSession>();
 
@@ -70,7 +80,8 @@ class CopilotSdkExecutionGatewayTest {
                 new CopilotClientOptions(),
                 new SessionConfig(),
                 new MessageOptions().setPrompt("Diagnose incident"),
-                "Diagnose incident"
+                "Diagnose incident",
+                CopilotAttachmentArtifactBundle.empty()
         );
         var sessionRef = new AtomicReference<CopilotSession>();
 
@@ -91,6 +102,39 @@ class CopilotSdkExecutionGatewayTest {
             assertEquals("Configured timeout answer", response);
             verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(90_000L));
         }
+    }
+
+    @Test
+    void shouldCleanupAttachmentArtifactsAfterExecution() throws Exception {
+        var properties = new CopilotSdkProperties();
+        var gateway = new CopilotSdkExecutionGateway(properties);
+        var artifactDirectory = Files.createDirectory(tempDirectory.resolve("attachments"));
+        Files.writeString(artifactDirectory.resolve("00-incident-manifest.json"), "{}");
+
+        var preparedRequest = new CopilotSdkPreparedRequest(
+                "corr-cleanup",
+                new CopilotClientOptions(),
+                new SessionConfig(),
+                new MessageOptions().setPrompt("Diagnose incident"),
+                "Diagnose incident",
+                new CopilotAttachmentArtifactBundle(List.of(), artifactDirectory)
+        );
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(any(SessionConfig.class))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("session-cleanup");
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenReturn(CompletableFuture.completedFuture(assistantMessage("Structured answer")));
+        })) {
+            assertEquals("Structured answer", gateway.execute(preparedRequest));
+        }
+
+        assertFalse(Files.exists(artifactDirectory));
     }
 
     private AssistantMessageEvent assistantMessage(String content) {

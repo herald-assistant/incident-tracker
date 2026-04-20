@@ -32,7 +32,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
 
     @Override
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
-        return preparationService.prepare(request).prompt();
+        return preparationService.preparePrompt(request);
     }
 
     @Override
