@@ -6,15 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.incidenttracker.analysis.AnalysisConfidence;
-import pl.mkn.incidenttracker.analysis.AnalysisMode;
-import pl.mkn.incidenttracker.analysis.AnalysisProblemNature;
-import pl.mkn.incidenttracker.analysis.AnalysisVariantStatus;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisResultVariants;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisVariantResultResponse;
 
 import java.time.Instant;
 import java.util.List;
@@ -63,13 +57,12 @@ class AnalysisJobControllerTest {
                                         null,
                                         null,
                                         null,
-                                        null,
-                                        null,
                                         List.of(),
                                         List.of(new AnalysisEvidenceReference("elasticsearch", "logs"))
                                 )
                         ),
                         List.of(),
+                        null,
                         null
                 ));
 
@@ -108,12 +101,17 @@ class AnalysisJobControllerTest {
                         Instant.parse("2026-04-12T18:01:00Z"),
                         List.of(),
                         List.of(),
+                        "Prompt body for timeout-123",
                         new AnalysisResultResponse(
                                 "COMPLETED",
                                 "timeout-123",
                                 "dev3",
                                 "dev/atlas",
-                                completedVariants()
+                                "Structured evidence points to a downstream timeout in the catalog-service call chain.",
+                                "DOWNSTREAM_TIMEOUT",
+                                "Inspect recent HTTP client timeout changes first.",
+                                "Timeout signals align across logs and runtime evidence.",
+                                "Prompt body for timeout-123"
                         )
                 ));
 
@@ -121,9 +119,10 @@ class AnalysisJobControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisId").value("job-123"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
-                .andExpect(jsonPath("$.result.variants.conservative.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
-                .andExpect(jsonPath("$.result.variants.conservative.rationale").value("Timeout signals align across logs and runtime evidence."))
-                .andExpect(jsonPath("$.result.variants.conservative.prompt").value("Prompt body for timeout-123"));
+                .andExpect(jsonPath("$.preparedPrompt").value("Prompt body for timeout-123"))
+                .andExpect(jsonPath("$.result.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
+                .andExpect(jsonPath("$.result.rationale").value("Timeout signals align across logs and runtime evidence."))
+                .andExpect(jsonPath("$.result.prompt").value("Prompt body for timeout-123"));
 
         verify(analysisJobService).getAnalysis("job-123");
     }
@@ -137,35 +136,6 @@ class AnalysisJobControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(analysisJobService).getAnalysis("missing-job");
-    }
-
-    private static AnalysisResultVariants completedVariants() {
-        return new AnalysisResultVariants(
-                new AnalysisVariantResultResponse(
-                        AnalysisMode.CONSERVATIVE,
-                        AnalysisVariantStatus.COMPLETED,
-                        "DOWNSTREAM_TIMEOUT",
-                        "Structured evidence points to a downstream timeout in the catalog-service call chain.",
-                        "Inspect recent HTTP client timeout changes first.",
-                        "Timeout signals align across logs and runtime evidence.",
-                        AnalysisProblemNature.CONFIRMED,
-                        AnalysisConfidence.HIGH,
-                        "Prompt body for timeout-123",
-                        null
-                ),
-                new AnalysisVariantResultResponse(
-                        AnalysisMode.EXPLORATORY,
-                        AnalysisVariantStatus.DISABLED,
-                        "",
-                        "",
-                        "",
-                        "",
-                        AnalysisProblemNature.HYPOTHESIS,
-                        null,
-                        null,
-                        null
-                )
-        );
     }
 
 }

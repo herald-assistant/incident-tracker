@@ -1,107 +1,46 @@
 @if (result(); as analysisResult) {
-  <section class="panel-card final-analysis">
+  <section class="final-analysis">
     <div class="panel-card__header panel-card__header--compact">
       <div>
         <p class="section-eyebrow">Wynik</p>
-        <h3>{{ status() === 'COMPLETED' ? 'Analiza końcowa' : 'Ostatni dostępny wynik' }}</h3>
-      </div>
-
-      <div class="analysis-variant-toggle" role="tablist" aria-label="Wariant wyniku">
-        <button
-          class="analysis-variant-toggle__button"
-          type="button"
-          [class.analysis-variant-toggle__button--active]="activeModeValue() === 'CONSERVATIVE'"
-          (click)="selectMode('CONSERVATIVE')"
-        >
-          Conservative
-        </button>
-        <button
-          class="analysis-variant-toggle__button"
-          type="button"
-          [class.analysis-variant-toggle__button--active]="activeModeValue() === 'EXPLORATORY'"
-          (click)="selectMode('EXPLORATORY')"
-        >
-          Exploratory
-        </button>
+        <h3>{{ status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza' }}</h3>
       </div>
     </div>
 
-    @if (activeVariant(); as variant) {
-      <div class="analysis-variant-meta">
-        <span class="analysis-variant-meta__badge">
-          Status {{ badgeLabel(variant.status, 'UNKNOWN') }}
-        </span>
-        <span class="analysis-variant-meta__badge analysis-variant-meta__badge--muted">
-          Nature {{ badgeLabel(variant.problemNature, 'UNKNOWN') }}
-        </span>
-        @if (variant.confidence) {
-          <span class="analysis-variant-meta__badge analysis-variant-meta__badge--muted">
-            Confidence {{ variant.confidence }}
-          </span>
-        }
-      </div>
-
-      @if (isUnavailableVariant(variant)) {
-        <div class="empty-state">
-          @if (variant.status === 'DISABLED') {
-            Tryb exploratory jest wyłączony w konfiguracji backendu.
-          } @else if (variant.status === 'FAILED') {
-            Tryb exploratory zakończył się błędem i nie wygenerował kompletnego wyniku.
-          } @else {
-            Dla tego incydentu nie udało się zbudować dodatkowego exploratory flow.
-          }
+    <div class="analysis-highlights">
+      @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
+        <div class="analysis-highlight">
+          <p class="result-card-label">Najbardziej prawdopodobny problem</p>
+          <code class="problem-badge">{{ analysisResult.detectedProblem }}</code>
         </div>
+      }
 
-        @if (hasMeaningfulValue(variant.rationale)) {
-          <div class="analysis-summary">
-            <p class="result-card-label">Komentarz techniczny</p>
-            <app-markdown-content [content]="variant.rationale"></app-markdown-content>
-          </div>
-        }
-      } @else {
-        <div class="analysis-highlights">
-          @if (hasMeaningfulValue(variant.detectedProblem)) {
-            <div class="analysis-highlight">
-              <p class="result-card-label">Najbardziej prawdopodobny problem</p>
-              <code class="problem-badge">{{ variant.detectedProblem }}</code>
-            </div>
-          }
-
-          @if (hasMeaningfulValue(variant.rationale)) {
-            <div class="analysis-highlight">
-              <p class="result-card-label">Dlaczego ta diagnoza pasuje</p>
-              <app-markdown-content
-                [content]="variant.rationale"
-                [compact]="true"
-              ></app-markdown-content>
-            </div>
-          }
-
-          @if (hasMeaningfulValue(variant.recommendedAction)) {
-            <div class="analysis-highlight">
-              <p class="result-card-label">Rekomendowany kolejny krok lub handoff</p>
-              <app-markdown-content
-                [content]="variant.recommendedAction"
-                [compact]="true"
-              ></app-markdown-content>
-            </div>
-          }
-        </div>
-
-        <div class="analysis-summary">
-          <p class="result-card-label">Podsumowanie operacyjne</p>
+      @if (hasMeaningfulValue(analysisResult.rationale)) {
+        <div class="analysis-highlight">
+          <p class="result-card-label">Dlaczego ta diagnoza pasuje</p>
           <app-markdown-content
-            [content]="variant.summary || 'Brak podsumowania w odpowiedzi.'"
+            [content]="analysisResult.rationale"
+            [compact]="true"
           ></app-markdown-content>
         </div>
-
-        @if (activeModeValue() === 'EXPLORATORY') {
-          <div class="analysis-summary">
-            <p class="result-card-label">Diagram reconstructed flow</p>
-            <app-analysis-flow-diagram [diagram]="variant.diagram"></app-analysis-flow-diagram>
-          </div>
-        }
       }
-    }
+
+      @if (hasMeaningfulValue(analysisResult.recommendedAction)) {
+        <div class="analysis-highlight">
+          <p class="result-card-label">Rekomendowany kolejny krok lub handoff</p>
+          <app-markdown-content
+            [content]="analysisResult.recommendedAction"
+            [compact]="true"
+          ></app-markdown-content>
+        </div>
+      }
+    </div>
+
+    <div class="analysis-summary">
+      <p class="result-card-label">Podsumowanie operacyjne</p>
+      <app-markdown-content
+        [content]="analysisResult.summary || 'Brak podsumowania w odpowiedzi.'"
+      ></app-markdown-content>
+    </div>
   </section>
 }

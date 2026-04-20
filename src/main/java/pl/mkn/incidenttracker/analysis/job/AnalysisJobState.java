@@ -1,7 +1,6 @@
 package pl.mkn.incidenttracker.analysis.job;
 
-import pl.mkn.incidenttracker.analysis.AnalysisMode;
-import pl.mkn.incidenttracker.analysis.AnalysisVariantStatus;
+import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
@@ -15,22 +14,12 @@ import java.util.List;
 
 final class AnalysisJobState {
 
-    private static final String AI_CONSERVATIVE_STEP_CODE = "AI_ANALYSIS_CONSERVATIVE";
-    private static final String AI_CONSERVATIVE_STEP_LABEL = "Budowanie analizy conservative AI";
-    private static final String AI_EXPLORATORY_STEP_CODE = "AI_ANALYSIS_EXPLORATORY";
-    private static final String AI_EXPLORATORY_STEP_LABEL = "Budowanie analizy exploratory AI";
-    private static final AnalysisEvidenceProviderDescriptor AI_CONSERVATIVE_STEP_DESCRIPTOR =
+    private static final String AI_STEP_CODE = "AI_ANALYSIS";
+    private static final String AI_STEP_LABEL = "Budowanie koncowej analizy AI";
+    private static final AnalysisEvidenceProviderDescriptor AI_STEP_DESCRIPTOR =
             new AnalysisEvidenceProviderDescriptor(
-                    AI_CONSERVATIVE_STEP_CODE,
-                    AI_CONSERVATIVE_STEP_LABEL,
-                    AnalysisStepPhase.AI,
-                    List.of(),
-                    List.of()
-            );
-    private static final AnalysisEvidenceProviderDescriptor AI_EXPLORATORY_STEP_DESCRIPTOR =
-            new AnalysisEvidenceProviderDescriptor(
-                    AI_EXPLORATORY_STEP_CODE,
-                    AI_EXPLORATORY_STEP_LABEL,
+                    AI_STEP_CODE,
+                    AI_STEP_LABEL,
                     AnalysisStepPhase.AI,
                     List.of(),
                     List.of()
@@ -41,7 +30,6 @@ final class AnalysisJobState {
     private final Instant createdAt;
     private final List<StepState> steps;
     private final List<AnalysisEvidenceSection> evidenceSections;
-    private final boolean exploratoryEnabled;
 
     private AnalysisJobStatus status;
     private String currentStepCode;
@@ -50,17 +38,12 @@ final class AnalysisJobState {
     private String gitLabBranch;
     private String errorCode;
     private String errorMessage;
+    private String preparedPrompt;
     private Instant updatedAt;
     private Instant completedAt;
     private AnalysisResultResponse result;
 
-    AnalysisJobState(
-            String analysisId,
-            String correlationId,
-            List<AnalysisEvidenceProviderDescriptor> providerDescriptors,
-            boolean exploratoryEnabled,
-            AnalysisEvidenceProviderDescriptor exploratoryProviderDescriptor
-    ) {
+    AnalysisJobState(String analysisId, String correlationId, List<AnalysisEvidenceProviderDescriptor> providerDescriptors) {
         this.analysisId = analysisId;
         this.correlationId = correlationId;
         this.createdAt = Instant.now();
@@ -68,16 +51,11 @@ final class AnalysisJobState {
         this.status = AnalysisJobStatus.QUEUED;
         this.steps = new ArrayList<>();
         this.evidenceSections = new ArrayList<>();
-        this.exploratoryEnabled = exploratoryEnabled;
 
         for (var descriptor : providerDescriptors) {
-            steps.add(new StepState(descriptor, null));
+            steps.add(new StepState(descriptor));
         }
-        steps.add(new StepState(AI_CONSERVATIVE_STEP_DESCRIPTOR, AnalysisMode.CONSERVATIVE));
-        if (exploratoryEnabled && exploratoryProviderDescriptor != null) {
-            steps.add(new StepState(exploratoryProviderDescriptor, null));
-            steps.add(new StepState(AI_EXPLORATORY_STEP_DESCRIPTOR, AnalysisMode.EXPLORATORY));
-        }
+        steps.add(new StepState(AI_STEP_DESCRIPTOR));
     }
 
     synchronized void markEvidenceStepStarted(AnalysisEvidenceProviderDescriptor descriptor) {
@@ -107,45 +85,23 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized void markEvidenceStepFailed(
-            AnalysisEvidenceProviderDescriptor descriptor,
-            String message
-    ) {
-        step(descriptor.stepCode()).markFailed(defaultMessage(message, "Krok evidence zakonczyl sie bledem."));
-        touch();
-    }
-
-    synchronized void markAiStarted(AnalysisMode mode) {
-        var step = step(aiStepCode(mode));
+    synchronized void markAiStarted() {
         status = AnalysisJobStatus.ANALYZING;
-        currentStepCode = step.code;
-        currentStepLabel = step.label;
-        step.markInProgress(mode == AnalysisMode.EXPLORATORY
-                ? "AI interpretuje exploratory flow i buduje wariant eksploracyjny."
-                : "AI interpretuje bazowe evidence i buduje wariant conservative.");
+        currentStepCode = AI_STEP_CODE;
+        currentStepLabel = AI_STEP_LABEL;
+        step(AI_STEP_CODE).markInProgress("AI interpretuje zebrane dane i buduje diagnoze.");
         touch();
     }
 
-    synchronized void markAiPromptPrepared(AnalysisMode mode, String preparedPrompt) {
-        step(aiStepCode(mode)).preparedPrompt = normalizeBlank(preparedPrompt);
+    synchronized void markAiPromptPrepared(String preparedPrompt) {
+        this.preparedPrompt = StringUtils.hasText(preparedPrompt) ? preparedPrompt : null;
         touch();
     }
 
-    synchronized void markAiCompleted(AnalysisMode mode) {
-        step(aiStepCode(mode)).markCompleted("Analiza wariantu zakonczona.", null);
-        touch();
-    }
-
-    synchronized void markAiFailed(AnalysisMode mode, String message) {
-        step(aiStepCode(mode)).markFailed(defaultMessage(message, "Analiza wariantu zakonczyl sie bledem."));
-        touch();
-    }
-
-    synchronized void markAiSkipped(AnalysisMode mode, String message) {
-        if (!hasStep(aiStepCode(mode))) {
-            return;
-        }
-        step(aiStepCode(mode)).markSkipped(message);
+    synchronized void markAiSkipped(String message) {
+        step(AI_STEP_CODE).markSkipped(message);
+        currentStepCode = null;
+        currentStepLabel = null;
         touch();
     }
 
@@ -153,36 +109,14 @@ final class AnalysisJobState {
         this.result = result;
         this.environment = result.environment();
         this.gitLabBranch = result.gitLabBranch();
+        if (!StringUtils.hasText(preparedPrompt) && StringUtils.hasText(result.prompt())) {
+            this.preparedPrompt = result.prompt();
+        }
         this.status = AnalysisJobStatus.COMPLETED;
         this.currentStepCode = null;
         this.currentStepLabel = null;
         this.completedAt = Instant.now();
-
-        ensureStepCompleted(AI_CONSERVATIVE_STEP_CODE, "Analiza conservative zakonczona.");
-
-        if (exploratoryEnabled && result.variants() != null && result.variants().exploratory() != null) {
-            var exploratoryVariant = result.variants().exploratory();
-            if (exploratoryVariant.status() == AnalysisVariantStatus.SKIPPED) {
-                if (hasStep("EXPLORATORY_FLOW_RECONSTRUCTION")
-                        && step("EXPLORATORY_FLOW_RECONSTRUCTION").status == AnalysisJobStepStatus.PENDING) {
-                    step("EXPLORATORY_FLOW_RECONSTRUCTION").markSkipped(
-                            "Pominieto, bo nie udalo sie zbudowac dodatkowego flow."
-                    );
-                }
-                markAiSkipped(AnalysisMode.EXPLORATORY, "Pominieto, bo nie bylo dodatkowego flow do interpretacji.");
-            } else if (exploratoryVariant.status() == AnalysisVariantStatus.FAILED) {
-                if (hasStep(AI_EXPLORATORY_STEP_CODE)
-                        && step(AI_EXPLORATORY_STEP_CODE).status == AnalysisJobStepStatus.PENDING) {
-                    step(AI_EXPLORATORY_STEP_CODE).markSkipped(
-                            "Pominieto, bo exploratory flow zakonczyl sie bledem przed etapem AI."
-                    );
-                }
-            } else if (exploratoryVariant.status() == AnalysisVariantStatus.COMPLETED) {
-                ensureStepCompleted(AI_EXPLORATORY_STEP_CODE, "Analiza exploratory zakonczona.");
-            }
-        }
-
-        skipRemainingPendingSteps("Pominieto po zakonczeniu analizy.");
+        step(AI_STEP_CODE).markCompleted("Analiza zakonczona.", null);
         touch();
     }
 
@@ -193,7 +127,7 @@ final class AnalysisJobState {
         this.currentStepCode = null;
         this.currentStepLabel = null;
         this.completedAt = Instant.now();
-        skipRemainingPendingSteps("Pominieto, bo nie znaleziono danych diagnostycznych.");
+        step(AI_STEP_CODE).markSkipped("Pominieto, bo nie znaleziono danych diagnostycznych.");
         touch();
     }
 
@@ -203,15 +137,14 @@ final class AnalysisJobState {
         this.errorMessage = message;
         this.completedAt = Instant.now();
 
-        if (currentStepCode != null && hasStep(currentStepCode)) {
-            step(currentStepCode).markFailed(defaultMessage(message, "Analiza zakonczyl sie bledem."));
+        if (currentStepCode != null) {
+            step(currentStepCode).markFailed(message);
         } else {
-            ensureStepFailed(AI_CONSERVATIVE_STEP_CODE, defaultMessage(message, "Analiza zakonczyl sie bledem."));
+            step(AI_STEP_CODE).markFailed(message);
         }
 
         currentStepCode = null;
         currentStepLabel = null;
-        skipRemainingPendingSteps("Pominieto po bledzie analizy.");
         touch();
     }
 
@@ -231,6 +164,7 @@ final class AnalysisJobState {
                 completedAt,
                 steps.stream().map(StepState::snapshot).toList(),
                 List.copyOf(evidenceSections),
+                preparedPrompt,
                 result
         );
     }
@@ -238,10 +172,10 @@ final class AnalysisJobState {
     private void updateRuntimeFacts() {
         var deploymentContext = DeploymentContextEvidenceView.from(evidenceSections);
 
-        if (environment == null || environment.isBlank()) {
+        if (!StringUtils.hasText(environment)) {
             environment = deploymentContext.environment();
         }
-        if (gitLabBranch == null || gitLabBranch.isBlank()) {
+        if (!StringUtils.hasText(gitLabBranch)) {
             gitLabBranch = deploymentContext.gitLabBranch();
         }
     }
@@ -251,50 +185,6 @@ final class AnalysisJobState {
                 .filter(step -> step.code.equals(code))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown analysis step: " + code));
-    }
-
-    private boolean hasStep(String code) {
-        return steps.stream().anyMatch(step -> step.code.equals(code));
-    }
-
-    private void ensureStepCompleted(String code, String message) {
-        if (!hasStep(code)) {
-            return;
-        }
-        var step = step(code);
-        if (step.status == AnalysisJobStepStatus.PENDING || step.status == AnalysisJobStepStatus.IN_PROGRESS) {
-            step.markCompleted(message, step.itemCount);
-        }
-    }
-
-    private void ensureStepFailed(String code, String message) {
-        if (!hasStep(code)) {
-            return;
-        }
-        var step = step(code);
-        if (step.status == AnalysisJobStepStatus.PENDING || step.status == AnalysisJobStepStatus.IN_PROGRESS) {
-            step.markFailed(message);
-        }
-    }
-
-    private void skipRemainingPendingSteps(String message) {
-        for (var step : steps) {
-            if (step.status == AnalysisJobStepStatus.PENDING) {
-                step.markSkipped(message);
-            }
-        }
-    }
-
-    private String aiStepCode(AnalysisMode mode) {
-        return mode == AnalysisMode.EXPLORATORY ? AI_EXPLORATORY_STEP_CODE : AI_CONSERVATIVE_STEP_CODE;
-    }
-
-    private String normalizeBlank(String value) {
-        return value != null && !value.isBlank() ? value : null;
-    }
-
-    private String defaultMessage(String value, String fallback) {
-        return value != null && !value.isBlank() ? value : fallback;
     }
 
     private void touch() {
@@ -308,21 +198,18 @@ final class AnalysisJobState {
         private final AnalysisStepPhase phase;
         private final List<AnalysisEvidenceReference> consumesEvidence;
         private final List<AnalysisEvidenceReference> producesEvidence;
-        private final AnalysisMode variantMode;
         private AnalysisJobStepStatus status;
         private String message;
         private Integer itemCount;
         private Instant startedAt;
         private Instant completedAt;
-        private String preparedPrompt;
 
-        private StepState(AnalysisEvidenceProviderDescriptor descriptor, AnalysisMode variantMode) {
+        private StepState(AnalysisEvidenceProviderDescriptor descriptor) {
             this.code = descriptor.stepCode();
             this.label = descriptor.stepLabel();
             this.phase = descriptor.phase();
             this.consumesEvidence = List.copyOf(descriptor.consumesEvidence());
             this.producesEvidence = List.copyOf(descriptor.producesEvidence());
-            this.variantMode = variantMode;
             this.status = AnalysisJobStepStatus.PENDING;
         }
 
@@ -357,9 +244,7 @@ final class AnalysisJobState {
         private void markSkipped(String message) {
             this.status = AnalysisJobStepStatus.SKIPPED;
             this.message = message;
-            if (completedAt == null) {
-                completedAt = Instant.now();
-            }
+            completedAt = Instant.now();
         }
 
         private AnalysisJobStepResponse snapshot() {
@@ -372,8 +257,6 @@ final class AnalysisJobState {
                     itemCount,
                     startedAt,
                     completedAt,
-                    variantMode != null ? variantMode.name() : null,
-                    preparedPrompt,
                     consumesEvidence,
                     producesEvidence
             );

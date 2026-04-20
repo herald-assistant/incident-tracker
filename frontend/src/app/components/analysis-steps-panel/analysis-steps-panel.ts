@@ -6,13 +6,11 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
-  AnalysisMode,
   AnalysisEvidenceAttribute,
   AnalysisEvidenceReference,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse,
-  AnalysisResultResponse,
-  AnalysisVariantResultResponse
+  AnalysisResultResponse
 } from '../../core/models/analysis.models';
 import {
   ResizableColumnConfig,
@@ -203,7 +201,6 @@ interface StepView {
   message: string;
   canOpen: boolean;
   detailSections: StepEvidenceSectionView[];
-  resultPreview: AnalysisVariantResultResponse | null;
   showResultPreview: boolean;
   showPreparedPromptView: boolean;
   preparedPrompt: string;
@@ -219,7 +216,6 @@ const STEP_EVIDENCE_LINKS: Record<string, readonly StepEvidenceLink[]> = {
   DEPLOYMENT_CONTEXT: [{ provider: 'deployment-context', category: 'resolved-deployment' }],
   DYNATRACE_TRACES: [{ provider: 'dynatrace', category: 'traces' }],
   DYNATRACE_RUNTIME_SIGNALS: [{ provider: 'dynatrace', category: 'runtime-signals' }],
-  EXPLORATORY_FLOW_RECONSTRUCTION: [{ provider: 'exploratory-flow', category: 'reconstructed-flow' }],
   GITLAB_RESOLVED_CODE: [{ provider: 'gitlab', category: 'resolved-code' }],
   OPERATIONAL_CONTEXT: [{ provider: 'operational-context', category: 'matched-context' }]
 };
@@ -321,6 +317,7 @@ const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
 export class AnalysisStepsPanelComponent {
   readonly steps = input<AnalysisJobStepResponse[]>([]);
   readonly evidenceSections = input<AnalysisEvidenceSection[]>([]);
+  readonly preparedPrompt = input<string>('');
   readonly result = input<AnalysisResultResponse | null>(null);
 
   private readonly selectedStepKey = signal<string | null>(null);
@@ -332,12 +329,11 @@ export class AnalysisStepsPanelComponent {
   protected readonly preparedSteps = computed<StepView[]>(() =>
     this.steps().map((step, index) => {
       const detailSections = prepareEvidenceSections(resolveStepSections(step, this.evidenceSections()));
-      const resultPreview = resolveResultVariant(step, this.result());
-      const showResultPreview = resultPreview !== null;
+      const showResultPreview = step.code === 'AI_ANALYSIS' && this.result() !== null;
       const stepPreparedPrompt = resolvePreparedPrompt(
         step.code,
-        step.preparedPrompt ?? '',
-        resultPreview?.prompt ?? ''
+        this.preparedPrompt(),
+        this.result()?.prompt ?? ''
       );
       const showPreparedPromptView = Boolean(stepPreparedPrompt);
       const key = buildStepKey(step, index);
@@ -355,12 +351,11 @@ export class AnalysisStepsPanelComponent {
         message: step.message || buildFallbackStepMessage(step.status),
         canOpen: step.status === 'COMPLETED',
         detailSections,
-        resultPreview,
         showResultPreview,
         showPreparedPromptView,
         preparedPrompt: stepPreparedPrompt,
-        promptPanelTitle: buildPreparedPromptTitle(step),
-        promptPanelDescription: buildPreparedPromptDescription(step),
+        promptPanelTitle: buildPreparedPromptTitle(step.code),
+        promptPanelDescription: buildPreparedPromptDescription(step.code),
         emptyStateMessage: buildEmptyStateMessage(
           step,
           detailSections.length,
@@ -560,10 +555,6 @@ function inferStepEvidenceLinks(stepCode: string | null | undefined): StepEviden
     return [{ provider: 'gitlab', category: 'resolved-code' }];
   }
 
-  if (normalizedStepCode.includes('EXPLORATORY')) {
-    return [{ provider: 'exploratory-flow', category: 'reconstructed-flow' }];
-  }
-
   if (normalizedStepCode.includes('OPERATIONAL')) {
     return [{ provider: 'operational-context', category: 'matched-context' }];
   }
@@ -586,45 +577,23 @@ function resolvePreparedPrompt(
 
 function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean {
   const normalizedStepCode = String(stepCode || '').toUpperCase();
-  return (
-    normalizedStepCode === 'AI_ANALYSIS_CONSERVATIVE' ||
-    normalizedStepCode === 'AI_ANALYSIS_EXPLORATORY'
-  );
+  return normalizedStepCode === 'OPERATIONAL_CONTEXT' || normalizedStepCode === 'AI_ANALYSIS';
 }
 
-function buildPreparedPromptTitle(step: AnalysisJobStepResponse): string {
-  if (step.variantMode === 'EXPLORATORY') {
-    return 'Prompt wariantu exploratory';
+function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
+    return 'Prompt po dopasowaniu kontekstu operacyjnego';
   }
 
-  return 'Prompt wariantu conservative';
+  return 'Prompt przygotowany do wysłania do Copilota';
 }
 
-function buildPreparedPromptDescription(step: AnalysisJobStepResponse): string {
-  if (step.variantMode === 'EXPLORATORY') {
-    return 'To jest dokładny input dla wariantu exploratory. Widać tu szerszą politykę inferencji oraz evidence zrekonstruowanego flow.';
+function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
+    return 'To jest finalny prompt złożony z evidence i lokalnego kontekstu operacyjnego jeszcze przed wywołaniem AI. Jeśli Copilot nie odpowie, możesz skopiować go stąd i uruchomić we własnym narzędziu.';
   }
 
-  return 'To jest dokładny input, który zasila wariant conservative. Gdy sesja Copilota nie zadziała, prompt zostaje dostępny do ręcznego użycia.';
-}
-
-function resolveResultVariant(
-  step: AnalysisJobStepResponse,
-  result: AnalysisResultResponse | null
-): AnalysisVariantResultResponse | null {
-  if (!result?.variants) {
-    return null;
-  }
-
-  if (step.variantMode === 'EXPLORATORY' || String(step.code || '').toUpperCase() === 'AI_ANALYSIS_EXPLORATORY') {
-    return result.variants.exploratory;
-  }
-
-  if (step.variantMode === 'CONSERVATIVE' || String(step.code || '').toUpperCase() === 'AI_ANALYSIS_CONSERVATIVE') {
-    return result.variants.conservative;
-  }
-
-  return null;
+  return 'To jest dokładny input, który zasila końcową analizę AI. Gdy sesja Copilota nie zadziała, ten prompt zostaje dostępny do ręcznego użycia poza aplikacją.';
 }
 
 function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvidenceSectionView[] {

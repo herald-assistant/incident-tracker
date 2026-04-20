@@ -9,12 +9,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisResultVariants;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisVariantResultResponse;
-import pl.mkn.incidenttracker.analysis.AnalysisConfidence;
-import pl.mkn.incidenttracker.analysis.AnalysisMode;
-import pl.mkn.incidenttracker.analysis.AnalysisProblemNature;
-import pl.mkn.incidenttracker.analysis.AnalysisVariantStatus;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -42,7 +36,11 @@ class AnalysisControllerTest {
                         "timeout-123",
                         "dev3",
                         "dev/atlas",
-                        completedVariants()
+                        "Synthetic analysis detected a probable timeout in downstream communication.",
+                        "DOWNSTREAM_TIMEOUT",
+                        "Check downstream latency, timeout configuration, and retry policy.",
+                        "Timeout evidence is consistent across logs and runtime signals.",
+                        "Prompt body for timeout-123"
                 ));
 
         mockMvc.perform(post("/analysis")
@@ -57,12 +55,11 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.correlationId").value("timeout-123"))
                 .andExpect(jsonPath("$.environment").value("dev3"))
                 .andExpect(jsonPath("$.gitLabBranch").value("dev/atlas"))
-                .andExpect(jsonPath("$.variants.conservative.summary").value("Synthetic analysis detected a probable timeout in downstream communication."))
-                .andExpect(jsonPath("$.variants.conservative.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
-                .andExpect(jsonPath("$.variants.conservative.recommendedAction").value("Check downstream latency, timeout configuration, and retry policy."))
-                .andExpect(jsonPath("$.variants.conservative.rationale").value("Timeout evidence is consistent across logs and runtime signals."))
-                .andExpect(jsonPath("$.variants.conservative.prompt").value("Prompt body for timeout-123"))
-                .andExpect(jsonPath("$.variants.exploratory.status").value("DISABLED"));
+                .andExpect(jsonPath("$.summary").value("Synthetic analysis detected a probable timeout in downstream communication."))
+                .andExpect(jsonPath("$.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
+                .andExpect(jsonPath("$.recommendedAction").value("Check downstream latency, timeout configuration, and retry policy."))
+                .andExpect(jsonPath("$.rationale").value("Timeout evidence is consistent across logs and runtime signals."))
+                .andExpect(jsonPath("$.prompt").value("Prompt body for timeout-123"));
 
         verify(analysisService).analyze(new AnalysisRequest("timeout-123"));
     }
@@ -110,7 +107,11 @@ class AnalysisControllerTest {
                         "timeout-123",
                         "dev3",
                         "dev/atlas",
-                        completedVariants()
+                        "Synthetic analysis detected a probable timeout in downstream communication.",
+                        "DOWNSTREAM_TIMEOUT",
+                        "Check downstream latency, timeout configuration, and retry policy.",
+                        "Timeout evidence is consistent across logs and runtime signals.",
+                        "Prompt body for timeout-123"
                 ));
 
         mockMvc.perform(post("/analysis")
@@ -146,35 +147,6 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.fieldErrors").isEmpty());
 
         verify(analysisService).analyze(new AnalysisRequest("not-found"));
-    }
-
-    private static AnalysisResultVariants completedVariants() {
-        return new AnalysisResultVariants(
-                new AnalysisVariantResultResponse(
-                        AnalysisMode.CONSERVATIVE,
-                        AnalysisVariantStatus.COMPLETED,
-                        "DOWNSTREAM_TIMEOUT",
-                        "Synthetic analysis detected a probable timeout in downstream communication.",
-                        "Check downstream latency, timeout configuration, and retry policy.",
-                        "Timeout evidence is consistent across logs and runtime signals.",
-                        AnalysisProblemNature.CONFIRMED,
-                        AnalysisConfidence.HIGH,
-                        "Prompt body for timeout-123",
-                        null
-                ),
-                new AnalysisVariantResultResponse(
-                        AnalysisMode.EXPLORATORY,
-                        AnalysisVariantStatus.DISABLED,
-                        "",
-                        "",
-                        "",
-                        "",
-                        AnalysisProblemNature.HYPOTHESIS,
-                        null,
-                        null,
-                        null
-                )
-        );
     }
 
 }

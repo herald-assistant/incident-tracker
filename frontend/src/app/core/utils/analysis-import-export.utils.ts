@@ -1,26 +1,16 @@
 import {
-  AnalysisConfidence,
   AnalysisEvidenceAttribute,
-  AnalysisEvidenceReference,
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
   AnalysisExportEnvelope,
-  AnalysisFlowDiagram,
-  AnalysisFlowDiagramEdge,
-  AnalysisFlowDiagramMetadata,
-  AnalysisFlowDiagramNode,
   AnalysisJobResponse,
   AnalysisJobStepResponse,
-  AnalysisMode,
-  AnalysisProblemNature,
-  AnalysisResultResponse,
-  AnalysisResultVariants,
-  AnalysisVariantResultResponse
+  AnalysisResultResponse
 } from '../models/analysis.models';
 import { isTerminalStatus } from './analysis-display.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
-export const EXPORT_VERSION = 2;
+export const EXPORT_VERSION = 1;
 
 export function buildExportEnvelope(
   job: AnalysisJobResponse,
@@ -107,6 +97,7 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobResponse {
     evidenceSections: Array.isArray(jobObject['evidenceSections'])
       ? jobObject['evidenceSections'].map(normalizeEvidenceSection)
       : [],
+    preparedPrompt: normalizeString(jobObject['preparedPrompt']),
     result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
   };
 }
@@ -133,16 +124,7 @@ function normalizeStep(step: unknown): AnalysisJobStepResponse {
     message: normalizeString(stepObject?.['message']),
     itemCount: typeof stepObject?.['itemCount'] === 'number' ? stepObject['itemCount'] : null,
     startedAt: normalizeString(stepObject?.['startedAt']),
-    completedAt: normalizeString(stepObject?.['completedAt']),
-    phase: normalizeString(stepObject?.['phase']),
-    variantMode: normalizeMode(stepObject?.['variantMode']),
-    preparedPrompt: normalizeNullableString(stepObject?.['preparedPrompt']),
-    consumesEvidence: Array.isArray(stepObject?.['consumesEvidence'])
-      ? stepObject['consumesEvidence'].map(normalizeEvidenceReference)
-      : [],
-    producesEvidence: Array.isArray(stepObject?.['producesEvidence'])
-      ? stepObject['producesEvidence'].map(normalizeEvidenceReference)
-      : []
+    completedAt: normalizeString(stepObject?.['completedAt'])
   };
 }
 
@@ -182,114 +164,16 @@ function normalizeResult(result: unknown): AnalysisResultResponse {
     correlationId: normalizeString(resultObject?.['correlationId']),
     environment: normalizeString(resultObject?.['environment']),
     gitLabBranch: normalizeString(resultObject?.['gitLabBranch']),
-    variants: normalizeVariants(resultObject?.['variants'])
-  };
-}
-
-function normalizeVariants(value: unknown): AnalysisResultVariants {
-  const variantsObject = asObject(value);
-  return {
-    conservative: normalizeVariant(variantsObject?.['conservative'], 'CONSERVATIVE'),
-    exploratory: normalizeVariant(variantsObject?.['exploratory'], 'EXPLORATORY')
-  };
-}
-
-function normalizeVariant(
-  value: unknown,
-  fallbackMode: AnalysisMode
-): AnalysisVariantResultResponse {
-  const variantObject = asObject(value);
-  return {
-    mode: normalizeMode(variantObject?.['mode']) || fallbackMode,
-    status: normalizeString(variantObject?.['status']),
-    detectedProblem: normalizeString(variantObject?.['detectedProblem']),
-    summary: normalizeString(variantObject?.['summary']),
-    recommendedAction: normalizeString(variantObject?.['recommendedAction']),
-    rationale: normalizeString(variantObject?.['rationale']),
-    problemNature: normalizeProblemNature(variantObject?.['problemNature']),
-    confidence: normalizeConfidence(variantObject?.['confidence']),
-    prompt: normalizeString(variantObject?.['prompt']),
-    diagram: asObject(variantObject?.['diagram']) ? normalizeDiagram(variantObject?.['diagram']) : null
-  };
-}
-
-function normalizeDiagram(value: unknown): AnalysisFlowDiagram {
-  const diagramObject = asObject(value);
-  return {
-    nodes: Array.isArray(diagramObject?.['nodes'])
-      ? diagramObject['nodes'].map(normalizeDiagramNode)
-      : [],
-    edges: Array.isArray(diagramObject?.['edges'])
-      ? diagramObject['edges'].map(normalizeDiagramEdge)
-      : []
-  };
-}
-
-function normalizeDiagramNode(value: unknown): AnalysisFlowDiagramNode {
-  const nodeObject = asObject(value);
-  return {
-    id: normalizeString(nodeObject?.['id']),
-    kind: normalizeString(nodeObject?.['kind']),
-    title: normalizeString(nodeObject?.['title']),
-    componentName: normalizeString(nodeObject?.['componentName']),
-    factStatus: normalizeString(nodeObject?.['factStatus']),
-    firstSeenAt: normalizeString(nodeObject?.['firstSeenAt']),
-    metadata: Array.isArray(nodeObject?.['metadata'])
-      ? nodeObject['metadata'].map(normalizeDiagramMetadata)
-      : [],
-    errorSource: Boolean(nodeObject?.['errorSource'])
-  };
-}
-
-function normalizeDiagramEdge(value: unknown): AnalysisFlowDiagramEdge {
-  const edgeObject = asObject(value);
-  return {
-    id: normalizeString(edgeObject?.['id']),
-    fromNodeId: normalizeString(edgeObject?.['fromNodeId']),
-    toNodeId: normalizeString(edgeObject?.['toNodeId']),
-    sequence: typeof edgeObject?.['sequence'] === 'number' ? edgeObject['sequence'] : 0,
-    interactionType: normalizeString(edgeObject?.['interactionType']),
-    factStatus: normalizeString(edgeObject?.['factStatus']),
-    startedAt: normalizeString(edgeObject?.['startedAt']),
-    durationMs: typeof edgeObject?.['durationMs'] === 'number' ? edgeObject['durationMs'] : null,
-    supportSummary: normalizeString(edgeObject?.['supportSummary'])
-  };
-}
-
-function normalizeDiagramMetadata(value: unknown): AnalysisFlowDiagramMetadata {
-  const metadataObject = asObject(value);
-  return {
-    name: normalizeString(metadataObject?.['name']),
-    value: normalizeString(metadataObject?.['value'])
-  };
-}
-
-function normalizeEvidenceReference(value: unknown): AnalysisEvidenceReference {
-  const referenceObject = asObject(value);
-  return {
-    provider: normalizeString(referenceObject?.['provider']),
-    category: normalizeString(referenceObject?.['category'])
+    summary: normalizeString(resultObject?.['summary']),
+    detectedProblem: normalizeString(resultObject?.['detectedProblem']),
+    recommendedAction: normalizeString(resultObject?.['recommendedAction']),
+    rationale: normalizeString(resultObject?.['rationale']),
+    prompt: normalizeString(resultObject?.['prompt'])
   };
 }
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value : '';
-}
-
-function normalizeNullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null;
-}
-
-function normalizeMode(value: unknown): AnalysisMode {
-  return typeof value === 'string' ? value : '';
-}
-
-function normalizeProblemNature(value: unknown): AnalysisProblemNature {
-  return typeof value === 'string' ? value : '';
-}
-
-function normalizeConfidence(value: unknown): AnalysisConfidence | null {
-  return typeof value === 'string' ? value : null;
 }
 
 function sanitizeFileNamePart(value: string): string {

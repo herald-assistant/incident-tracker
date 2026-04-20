@@ -1,7 +1,6 @@
 package pl.mkn.incidenttracker.analysis.flow;
 
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
@@ -21,33 +20,12 @@ public interface AnalysisExecutionListener {
     ) {
     }
 
-    default void onProviderFailed(
-            AnalysisEvidenceProvider provider,
-            RuntimeException exception,
-            AnalysisContext context
-    ) {
-    }
-
     default void onAiStarted(AnalysisAiAnalysisRequest request, AnalysisContext context) {
     }
 
     default void onAiPromptPrepared(
             AnalysisAiAnalysisRequest request,
             String preparedPrompt,
-            AnalysisContext context
-    ) {
-    }
-
-    default void onAiCompleted(
-            AnalysisAiAnalysisRequest request,
-            AnalysisAiAnalysisResponse response,
-            AnalysisContext context
-    ) {
-    }
-
-    default void onAiFailed(
-            AnalysisAiAnalysisRequest request,
-            RuntimeException exception,
             AnalysisContext context
     ) {
     }

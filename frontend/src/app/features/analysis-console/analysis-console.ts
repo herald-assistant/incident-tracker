@@ -31,7 +31,6 @@ import {
   normalizeAnalysisJob,
   parseImportedAnalysis
 } from '../../core/utils/analysis-import-export.utils';
-import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisOverviewCardComponent } from '../../components/analysis-overview-card/analysis-overview-card';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
@@ -43,7 +42,6 @@ const POLL_INTERVAL_MS = 1500;
     ReactiveFormsModule,
     RouterLink,
     RouterLinkActive,
-    AnalysisFinalResultComponent,
     AnalysisOverviewCardComponent,
     AnalysisStepsPanelComponent
   ],

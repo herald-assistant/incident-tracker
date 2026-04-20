@@ -2,9 +2,6 @@ package pl.mkn.incidenttracker.analysis.job;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
-import pl.mkn.incidenttracker.analysis.AnalysisMode;
-import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
-import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryFlowEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
@@ -64,12 +61,11 @@ class AnalysisJobServiceTest {
         assertEquals("dev/atlas", completed.gitLabBranch());
         assertEquals(2, completed.evidenceSections().size());
         assertEquals(
-                "Synthetic AI prompt for mode=CONSERVATIVE, correlationId=timeout-123, environment=dev3, gitLabBranch=dev/atlas",
-                completed.steps().get(5).preparedPrompt()
+                "Synthetic AI prompt for correlationId=timeout-123, environment=dev3, gitLabBranch=dev/atlas",
+                completed.preparedPrompt()
         );
         assertNotNull(completed.result());
-        assertEquals("DOWNSTREAM_TIMEOUT", completed.result().variants().conservative().detectedProblem());
-        assertEquals(AnalysisMode.CONSERVATIVE.name(), completed.steps().get(5).variantMode());
+        assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
         assertEquals("COMPLETED", completed.steps().get(5).status());
     }
 
@@ -105,7 +101,7 @@ class AnalysisJobServiceTest {
         assertEquals("AI gateway timeout", finished.errorMessage());
         assertEquals(
                 "Prepared prompt for external fallback correlationId=timeout-123",
-                finished.steps().get(5).preparedPrompt()
+                finished.preparedPrompt()
         );
         assertNull(finished.result());
         assertEquals("FAILED", finished.steps().get(5).status());
@@ -118,19 +114,17 @@ class AnalysisJobServiceTest {
                                 new ElasticLogEvidenceProvider(new TestElasticLogPort()),
                                 new DeploymentContextEvidenceProvider(deploymentContextResolver),
                                 new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
-                        new GitLabDeterministicEvidenceProvider(
-                                mock(GitLabRepositoryPort.class),
-                                gitLabProperties,
-                                mock(GitLabSourceResolveService.class),
-                                deploymentContextResolver
+                                new GitLabDeterministicEvidenceProvider(
+                                        mock(GitLabRepositoryPort.class),
+                                        gitLabProperties,
+                                        mock(GitLabSourceResolveService.class),
+                                        deploymentContextResolver
+                                ),
+                                disabledOperationalContextEvidenceProvider()
                         ),
-                        disabledOperationalContextEvidenceProvider(),
-                        disabledExploratoryFlowEvidenceProvider()
+                        analysisAiProvider,
+                        gitLabProperties
                 ),
-                analysisAiProvider,
-                gitLabProperties,
-                disabledExploratoryProperties()
-        ),
                 taskExecutor
         );
     }
@@ -150,16 +144,6 @@ class AnalysisJobServiceTest {
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );
-    }
-
-    private static ExploratoryFlowEvidenceProvider disabledExploratoryFlowEvidenceProvider() {
-        return new ExploratoryFlowEvidenceProvider(mock(GitLabRepositoryPort.class), gitLabProperties(), disabledExploratoryProperties());
-    }
-
-    private static ExploratoryAnalysisProperties disabledExploratoryProperties() {
-        var properties = new ExploratoryAnalysisProperties();
-        properties.setEnabled(false);
-        return properties;
     }
 
     private static final class CapturingTaskExecutor implements TaskExecutor {

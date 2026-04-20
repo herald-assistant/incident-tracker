@@ -108,9 +108,10 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(headers[2]?.querySelector('.analysis-stepper__icon--done')).not.toBeNull();
   });
 
-  it('should expose the prepared prompt for the conservative AI step', async () => {
+  it('should expose the prepared AI prompt in a copyable textarea for the operational context step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
-    fixture.componentRef.setInput('steps', [buildConservativeAiStep()]);
+    fixture.componentRef.setInput('steps', [buildOperationalContextStep()]);
+    fixture.componentRef.setInput('preparedPrompt', buildAiPrompt());
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -121,8 +122,10 @@ describe('AnalysisStepsPanelComponent', () => {
       '.prepared-prompt__textarea'
     ) as HTMLTextAreaElement | null;
 
-    expect(compiled.textContent).toContain('Prompt wariantu conservative');
-    expect(compiled.textContent).toContain('To jest dokładny input, który zasila wariant conservative.');
+    expect(compiled.textContent).toContain('Prompt po dopasowaniu kontekstu operacyjnego');
+    expect(compiled.textContent).toContain(
+      'To jest finalny prompt złożony z evidence i lokalnego kontekstu operacyjnego jeszcze przed wywołaniem AI.'
+    );
     expect(promptTextarea).not.toBeNull();
     expect(promptTextarea?.value).toContain('correlationId: timeout-123');
     expect(promptTextarea?.value).toContain('Provider: dynatrace, category: runtime-signals');
@@ -131,6 +134,7 @@ describe('AnalysisStepsPanelComponent', () => {
   it('should keep the prepared prompt visible on the failed AI step when no result is available', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildFailedAiStep()]);
+    fixture.componentRef.setInput('preparedPrompt', buildAiPrompt());
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -141,8 +145,8 @@ describe('AnalysisStepsPanelComponent', () => {
       '.prepared-prompt__textarea'
     ) as HTMLTextAreaElement | null;
 
-    expect(compiled.textContent).toContain('Prompt wariantu exploratory');
-    expect(compiled.textContent).toContain('To jest dokładny input dla wariantu exploratory.');
+    expect(compiled.textContent).toContain('Prompt przygotowany do wysłania do Copilota');
+    expect(compiled.textContent).toContain('Gdy sesja Copilota nie zadziała');
     expect(promptTextarea?.value).toContain('gitLabBranch: release/2026.04');
   });
 });
@@ -363,43 +367,38 @@ function buildCompletedSteps(): AnalysisJobStepResponse[] {
       completedAt: '2026-04-14T12:00:11Z'
     },
     {
-      code: 'AI_ANALYSIS_CONSERVATIVE',
-      label: 'Budowanie analizy conservative AI',
+      code: 'AI_ANALYSIS',
+      label: 'Budowanie końcowej analizy AI',
       status: 'COMPLETED',
       message: 'Analiza zakończona.',
       itemCount: 0,
       startedAt: '2026-04-14T12:00:12Z',
-      completedAt: '2026-04-14T12:00:18Z',
-      variantMode: 'CONSERVATIVE'
+      completedAt: '2026-04-14T12:00:18Z'
     }
   ];
 }
 
-function buildConservativeAiStep(): AnalysisJobStepResponse {
+function buildOperationalContextStep(): AnalysisJobStepResponse {
   return {
-    code: 'AI_ANALYSIS_CONSERVATIVE',
-    label: 'Budowanie analizy conservative AI',
+    code: 'OPERATIONAL_CONTEXT',
+    label: 'Dopasowanie kontekstu operacyjnego',
     status: 'COMPLETED',
-    message: 'Analiza zakończona.',
+    message: 'Krok zakończony bez nowych danych.',
     itemCount: 0,
     startedAt: '2026-04-14T12:00:10Z',
-    completedAt: '2026-04-14T12:00:12Z',
-    variantMode: 'CONSERVATIVE',
-    preparedPrompt: buildAiPrompt()
+    completedAt: '2026-04-14T12:00:12Z'
   };
 }
 
 function buildFailedAiStep(): AnalysisJobStepResponse {
   return {
-    code: 'AI_ANALYSIS_EXPLORATORY',
-    label: 'Budowanie analizy exploratory AI',
+    code: 'AI_ANALYSIS',
+    label: 'Budowanie końcowej analizy AI',
     status: 'FAILED',
     message: 'AI gateway timeout',
     itemCount: 0,
     startedAt: '2026-04-14T12:00:12Z',
-    completedAt: '2026-04-14T12:00:18Z',
-    variantMode: 'EXPLORATORY',
-    preparedPrompt: buildAiPrompt()
+    completedAt: '2026-04-14T12:00:18Z'
   };
 }
 

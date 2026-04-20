@@ -8,7 +8,6 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
-import pl.mkn.incidenttracker.analysis.AnalysisMode;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
@@ -40,7 +39,7 @@ public class CopilotSdkPreparationService {
 
         if (properties.getGithubToken() != null && !properties.getGithubToken().isBlank()) {
             clientOptions
-                    .setGitHubToken(properties.getGithubToken())
+                    .setGithubToken(properties.getGithubToken())
                     .setUseLoggedInUser(false);
         }
 
@@ -75,22 +74,6 @@ public class CopilotSdkPreparationService {
     }
 
     private String buildPrompt(AnalysisAiAnalysisRequest request, List<ToolDefinition> tools) {
-        var analysisModeInstructions = request.mode() == AnalysisMode.EXPLORATORY
-                ? """
-                Analysis mode: EXPLORATORY.
-                You may formulate a best-supported hypothesis that goes beyond directly observed facts,
-                but only when the evidence contains explicit exploratory-flow reconstruction, repository hints,
-                configuration hints, or operational-context support.
-                Keep facts and hypotheses clearly separated inside the text fields.
-                If you infer a likely call path, say that it is a hypothesis and explain what supports it.
-                Use problemNature=HYPOTHESIS unless the evidence directly confirms the diagnosed failure domain.
-                """
-                : """
-                Analysis mode: CONSERVATIVE.
-                Stay narrowly grounded in directly observed evidence and keep hypotheses minimal.
-                Use problemNature=CONFIRMED unless you must explicitly communicate a limited working hypothesis.
-                """;
-
         return """
                 You are helping with an enterprise software incident analysis.
                 Your answer will be read by an analyst, tester, or junior/mid developer who may need to triage the incident,
@@ -101,9 +84,9 @@ public class CopilotSdkPreparationService {
                 environment: %s
                 gitLabBranch: %s
                 gitLabGroup: %s
-                mode: %s
 
                 Analyze only the evidence below.
+                Do not assume facts that are not supported by the evidence.
                 Follow any loaded skills that are relevant for incident analysis and tool usage.
                 When using GitLab tools, keep the provided gitLabGroup and gitLabBranch unchanged.
                 Treat Dynatrace evidence as initial runtime context only. No Dynatrace tools are available during the session.
@@ -114,7 +97,6 @@ public class CopilotSdkPreparationService {
                 The real cause may still be in an external integration, downstream service, platform configuration, database state, messaging layer,
                 infrastructure, or an area owned by another team that is not directly visible here.
                 If the likely problem is outside our codebase or outside the telemetry currently available, say that explicitly.
-                %s
                 Separate clearly:
                 - what is directly confirmed by the evidence,
                 - what is the best-supported hypothesis,
@@ -139,8 +121,6 @@ public class CopilotSdkPreparationService {
                 summary: <a short markdown block in Polish: one concise opening sentence and then 2-4 markdown bullet lines covering strongest evidence, likely failure domain, and visibility limits>
                 recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
                 rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, and what still requires confirmation or external access>
-                problemNature: <CONFIRMED or HYPOTHESIS>
-                confidence: <HIGH or MEDIUM or LOW>
 
                 Available tools:
                 %s
@@ -152,8 +132,6 @@ public class CopilotSdkPreparationService {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
-                request.mode(),
-                analysisModeInstructions.strip(),
                 formatAvailableTools(tools),
                 formatEvidenceSections(request.evidenceSections())
         );

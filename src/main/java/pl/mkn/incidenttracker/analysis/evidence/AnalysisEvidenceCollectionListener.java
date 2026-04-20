@@ -17,11 +17,4 @@ public interface AnalysisEvidenceCollectionListener {
     ) {
     }
 
-    default void onProviderFailed(
-            AnalysisEvidenceProvider provider,
-            RuntimeException exception,
-            AnalysisContext context
-    ) {
-    }
-
 }
