@@ -45,7 +45,7 @@ Obecny kierunek jest taki:
 To oznacza, ze nie wracamy juz do centralnego rule engine jako glownego flow,
 chyba ze kiedys potrzebny bedzie fallback albo guardrails.
 
-## 4. Evidence providers sa sekwencyjne i pracuja na wspolnym context
+## 4. Evidence pipeline jest deterministyczny i pracuje na wspolnym context
 
 `AnalysisEvidenceProvider` nie dostaje juz tylko `correlationId`.
 Provider dostaje `AnalysisContext`, czyli:
@@ -58,6 +58,13 @@ Powod:
 - GitLab potrzebuje wskazowek z logs i trace,
 - przyszle providery tez moga zalezec od wczesniejszego evidence,
 - unikamy centralnego, rosnacego mappera "od wszystkiego".
+
+Aktualny model wykonania:
+
+- Elasticsearch i deployment context pozostaja krokami sekwencyjnymi,
+- Dynatrace i GitLab deterministic sa uruchamiane rownolegle po deployment
+  context, bo czytaja ten sam snapshot danych wejsciowych,
+- operational context nadal startuje dopiero po dolaczeniu obu wynikow.
 
 Dodatkowo kazdy provider deklaruje teraz jawnie:
 

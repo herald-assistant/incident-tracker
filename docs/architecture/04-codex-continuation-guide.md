@@ -149,6 +149,10 @@ Kazdy provider deklaruje tez:
 
 Jesli dokladasz nowy krok, aktualizuj te metadata razem z implementacja.
 
+Aktualnie collector wykonuje Elasticsearch i deployment context sekwencyjnie,
+a potem fan-outuje Dynatrace i GitLab deterministic rownolegle na tym samym
+snapshotcie `AnalysisContext`, zanim przejdzie do operational context.
+
 ## Najbardziej naturalne kolejne kierunki
 
 ### 1. Prezentacja evidence Dynatrace w UI

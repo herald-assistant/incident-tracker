@@ -123,7 +123,10 @@ Collector:
 
 1. tworzy `AnalysisContext`,
 2. uruchamia wszystkich `AnalysisEvidenceProvider` po kolei,
-3. po kazdym providerze wzbogaca context o kolejna sekcje evidence.
+3. po deployment context uruchamia rownolegle Dynatrace i GitLab deterministic
+   na tym samym snapshotcie contextu,
+4. dolacza ich wyniki w stalej kolejnosci pipeline,
+5. po kazdym zakonczonym kroku wzbogaca context o kolejna sekcje evidence.
 
 Aktualni providerzy:
 
@@ -168,6 +171,13 @@ GitLab deterministic provider:
   podgrupach,
 - szuka odniesien do kodu po pelnej sciezce, stacktrace albo nazwie klasy,
 - pobiera dopasowane pliki lub chunki z GitLaba przez REST.
+
+Dynatrace i GitLab deterministic:
+
+- startuja po deployment context z tego samego snapshotu logs + deployment,
+- wykonuja sie rownolegle, bo nie zaleza od siebie nawzajem,
+- sa nadal raportowane i dolaczane do `AnalysisContext` w deterministycznej
+  kolejnosci: najpierw Dynatrace, potem GitLab.
 
 Operational context provider:
 

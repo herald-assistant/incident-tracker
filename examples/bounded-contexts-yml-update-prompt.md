@@ -1,4 +1,3 @@
-```text
 Update only `bounded-contexts.yml` and return the full ready-to-save YAML document only.
 
 You are building the semantic boundary map for this repository. Read all attached sources and produce the final content of `src/main/resources/operational-context/bounded-contexts.yml`.
@@ -186,4 +185,3 @@ Reason:
 If the attached evidence is too weak to create a confident bounded-context entry, keep that area out of `boundedContexts` and add a precise item to `openQuestions`.
 
 Return the full updated YAML only.
-```

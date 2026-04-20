@@ -75,7 +75,8 @@ Na dzisiaj projekt ma:
 - `pl.mkn.incidenttracker.analysis.job`
   Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
 - `pl.mkn.incidenttracker.analysis.evidence`
-  Sekwencyjne zbieranie evidence przez providery i jawny opis krokow pipeline.
+  Deterministyczne zbieranie evidence przez providery i jawny opis krokow
+  pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
 - `pl.mkn.incidenttracker.analysis.ai`
@@ -123,6 +124,9 @@ Na dzisiaj projekt ma:
 - GitLab w runtime dziala przez rzeczywisty adapter REST.
 - Deployment context jest osobnym krokiem evidence i jest reuse'owany przez
   Dynatrace, GitLab deterministic provider i warstwe orchestration.
+- Dynatrace i GitLab deterministic startuja po deployment context z tego samego
+  snapshotu `AnalysisContext`, ale ich wyniki sa nadal dolaczane do evidence w
+  stalej kolejnosci pipeline.
 - GitLab deterministic provider i GitLab MCP tools sa wydzielone do osobnych
   pakietow, ale reuse'uja ten sam adapter GitLaba.
 - Operational context jest osobnym enrichment stepem nad juz zebranym evidence.

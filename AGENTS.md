@@ -29,7 +29,9 @@ Przed wieksza zmiana zacznij od:
   Elasticsearch.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji, nie z evidence.
 - Glowny flow jest `AI-first`, nie `rule-based`.
-- Evidence providers pracuja sekwencyjnie na `AnalysisContext`.
+- Evidence pipeline pozostaje deterministyczny na `AnalysisContext`, ale po
+  kroku deployment context Dynatrace i GitLab deterministic moga byc pobierane
+  rownolegle z tego samego snapshotu contextu.
 - GitLab ma dwa rozne capability:
   - deterministic resolution deployment context i code references jako evidence
     provider,
@@ -45,7 +47,8 @@ Przed wieksza zmiana zacznij od:
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
   Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
-  Sekwencyjne zbieranie evidence, `AnalysisContext` i jawny collector krokow.
+  Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
+  krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
   Konkretne kroki pipeline evidence oparte o adaptery i wczesniej zebrany
   `AnalysisContext`.

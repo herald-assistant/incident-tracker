@@ -21,6 +21,7 @@ import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.task.TaskExecutor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,7 +44,8 @@ class AnalysisServiceTest {
                                     mock(GitLabSourceResolveService.class),
                                     deploymentContextResolver
                             ),
-                            disabledOperationalContextEvidenceProvider()
+                            disabledOperationalContextEvidenceProvider(),
+                            directTaskExecutor()
                     ),
                     new TestAnalysisAiProvider(),
                     gitLabProperties
@@ -167,6 +169,10 @@ class AnalysisServiceTest {
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );
+    }
+
+    private static TaskExecutor directTaskExecutor() {
+        return Runnable::run;
     }
 
 }

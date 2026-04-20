@@ -172,7 +172,8 @@ class AnalysisJobServiceTest {
                                         mock(GitLabSourceResolveService.class),
                                         deploymentContextResolver
                                 ),
-                                disabledOperationalContextEvidenceProvider()
+                                disabledOperationalContextEvidenceProvider(),
+                                directTaskExecutor()
                         ),
                         analysisAiProvider,
                         gitLabProperties
@@ -196,6 +197,10 @@ class AnalysisJobServiceTest {
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );
+    }
+
+    private static TaskExecutor directTaskExecutor() {
+        return Runnable::run;
     }
 
     private static final class CapturingTaskExecutor implements TaskExecutor {

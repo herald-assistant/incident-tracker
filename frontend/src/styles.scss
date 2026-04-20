@@ -745,6 +745,7 @@ app-root {
 }
 
 .analysis-stepper {
+  --analysis-stepper-columns: 6;
   --analysis-stepper-selected-border: rgba(12, 102, 228, 0.52);
   --analysis-stepper-selected-ring: rgba(12, 102, 228, 0.12);
   --mat-stepper-container-color: transparent;
@@ -767,10 +768,11 @@ app-root {
 }
 
 .analysis-stepper .mat-horizontal-stepper-header-container {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(var(--analysis-stepper-columns), minmax(0, 1fr));
   gap: 10px;
   padding: 0;
+  align-items: stretch;
 }
 
 .analysis-stepper .mat-stepper-horizontal-line {
@@ -778,9 +780,10 @@ app-root {
 }
 
 .analysis-stepper .mat-step-header {
-  flex: 1 1 220px;
+  width: 100%;
   min-width: 0;
-  min-height: 64px;
+  min-height: 100px;
+  margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -1872,6 +1875,10 @@ body.is-column-resizing {
 }
 
 @media (max-width: 1100px) {
+  .analysis-stepper {
+    --analysis-stepper-columns: 3;
+  }
+
   .panel-card--evidence {
     height: auto;
     min-height: 520px;
@@ -1936,10 +1943,6 @@ body.is-column-resizing {
 
   .section-note {
     text-align: left;
-  }
-
-  .analysis-stepper .mat-step-header {
-    flex-basis: 100%;
   }
 
   .repo-code-panel .mat-expansion-panel-header {

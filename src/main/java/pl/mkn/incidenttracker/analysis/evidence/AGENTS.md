@@ -2,8 +2,8 @@
 
 ## Zakres
 
-Ten katalog odpowiada za sekwencyjny pipeline zbierania evidence i kontrakt
-krokow analizy.
+Ten katalog odpowiada za deterministyczny pipeline zbierania evidence i
+kontrakt krokow analizy.
 
 Obejmuje:
 
@@ -22,10 +22,13 @@ Nie obejmuje:
 
 ## Zasady modyfikacji
 
-- Collector jest source of truth dla kolejnosci providerow. Nie wracaj do
-  ukrytej kolejnosci opartej o `@Order` albo niejawne listy beanow.
+- Collector jest source of truth dla kolejnosci providerow i ewentualnych
+  rownoleglych grup krokow. Nie wracaj do ukrytej kolejnosci opartej o
+  `@Order` albo niejawne listy beanow.
 - Lifecycle krokow evidence jest centralny: collector odpowiada za wywolywanie
   listenera przed i po kazdym providerze.
+- Jesli kroki sa uruchamiane rownolegle, collector nadal ma publikowac ich
+  lifecycle i wynik w deterministycznej kolejnosci, zgodnej z pipeline.
 - Kazdy provider powinien byc samodzielna jednostka jednego kroku pipeline i
   zwracac jedno `AnalysisEvidenceSection`.
 - Kazdy provider musi miec jawne `stepCode`, `stepLabel`, `stepPhase`,

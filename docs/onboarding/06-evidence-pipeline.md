@@ -3,23 +3,23 @@
 ## Cel
 
 Zrozumiec najwazniejszy backendowy mechanizm projektu: sekwencyjne zbieranie
-evidence na wspolnym `AnalysisContext`.
+evidence na wspolnym `AnalysisContext`, z jednym kontrolowanym rownoleglym
+fan-outem po deployment context.
 
 ## Po tym kroku rozumiesz
 
 - jak dziala `AnalysisContext`,
-- dlaczego collector jest jawny i sekwencyjny,
+- dlaczego collector jest jawny i deterministyczny,
 - po co provider deklaruje `phase`, `consumedEvidence` i `producedEvidence`,
 - jak downstream czyta wczesniej zebrane dane.
 
 ## Glowny model
 
-Collector uruchamia providerow po kolei:
+Collector uruchamia providerow w jawnie opisanym pipeline:
 
 1. Elasticsearch,
 2. deployment context,
-3. Dynatrace,
-4. GitLab deterministic,
+3. rownolegle: Dynatrace + GitLab deterministic,
 5. operational context.
 
 Kazdy provider:
@@ -27,6 +27,13 @@ Kazdy provider:
 - czyta `AnalysisContext`,
 - moze korzystac z evidence z poprzednich krokow,
 - zwraca jedno `AnalysisEvidenceSection`.
+
+Wazny detal:
+
+- Dynatrace i GitLab deterministic dostaja ten sam snapshot contextu po
+  deployment context,
+- collector nadal scala ich wyniki w stalej kolejnosci, wiec downstream nie
+  musi zgadywac, czy pipeline zachowal sie inaczej miedzy uruchomieniami.
 
 ## Typowane czytanie evidence
 
