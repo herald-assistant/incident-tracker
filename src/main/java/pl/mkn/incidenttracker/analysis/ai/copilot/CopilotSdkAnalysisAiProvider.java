@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
@@ -40,6 +41,31 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
         var analysisStart = System.nanoTime();
         var preparedRequest = preparationService.prepare(request);
         var assistantContent = executionGateway.execute(preparedRequest);
+        var response = mapAssistantContent(
+                request.correlationId(),
+                assistantContent,
+                preparedRequest.prompt()
+        );
+
+        log.info(
+                "Copilot analysis completed correlationId={} durationMs={} detectedProblem={} structuredResponse={}",
+                request.correlationId(),
+                (System.nanoTime() - analysisStart) / 1_000_000,
+                response.detectedProblem(),
+                !"AI_UNSTRUCTURED_RESPONSE".equals(response.detectedProblem())
+        );
+
+        return response;
+    }
+
+    @Override
+    public AnalysisAiAnalysisResponse analyze(
+            AnalysisAiAnalysisRequest request,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
+    ) {
+        var analysisStart = System.nanoTime();
+        var preparedRequest = preparationService.prepare(request);
+        var assistantContent = executionGateway.execute(preparedRequest, toolEvidenceListener);
         var response = mapAssistantContent(
                 request.correlationId(),
                 assistantContent,

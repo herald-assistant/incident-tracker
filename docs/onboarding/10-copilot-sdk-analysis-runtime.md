@@ -33,6 +33,9 @@ Buduje:
 ### Execution
 
 Uruchamia klienta, tworzy sesje, wysyla prompt i zbiera odpowiedz modelu.
+W job flow execution rejestruje tez sesyjny listener, ktory przechwytuje
+wyniki `gitlab_read_repository_file*` i publikuje je jako `toolEvidenceSections`
+do pollowanego snapshotu analizy.
 
 ## Najwazniejsze klasy
 
@@ -52,6 +55,9 @@ do katalogu runtime dla sesji Copilota.
 - prompt niesie dane konkretnego incydentu,
 - skill niesie stale zasady pracy,
 - AI dostaje generyczne evidence, nie klasy adapter-specific,
+- AI-guided GitLab reads moga byc przechwytywane jako diagnostyczne
+  `toolEvidenceSections` dla UI, ale nie staja sie elementem glownego pipeline
+  `AnalysisEvidenceCollector`,
 - parsing odpowiedzi modelu musi byc odporny na drobne roznice formatowania.
 
 ## Checkpoint

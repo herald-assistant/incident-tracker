@@ -6,6 +6,13 @@ public interface AnalysisAiProvider {
         return null;
     }
 
+    default AnalysisAiAnalysisResponse analyze(
+            AnalysisAiAnalysisRequest request,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
+    ) {
+        return analyze(request);
+    }
+
     AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request);
 
 }

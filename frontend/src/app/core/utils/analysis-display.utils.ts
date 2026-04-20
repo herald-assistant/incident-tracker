@@ -28,6 +28,7 @@ const SECTION_TITLES: Record<string, string> = {
   'dynatrace|traces': 'Dynatrace · Trace',
   'dynatrace|runtime-signals': 'Dynatrace · Sygnały runtime',
   'gitlab|resolved-code': 'GitLab · Kod źródłowy',
+  'gitlab|tool-fetched-code': 'GitLab · Pliki pobrane przez AI',
   'operational-context|matched-context': 'Kontekst operacyjny · Dopasowania'
 };
 

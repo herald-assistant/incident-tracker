@@ -18,6 +18,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparat
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.nio.file.Files;
@@ -40,7 +41,8 @@ class CopilotSdkPreparationServiceTest {
                             .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort()))
                             .build()
             ),
-            objectMapper
+            objectMapper,
+            new CopilotToolEvidenceCaptureRegistry(objectMapper)
     );
 
     @Test

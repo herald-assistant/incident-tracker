@@ -317,6 +317,7 @@ const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
 export class AnalysisStepsPanelComponent {
   readonly steps = input<AnalysisJobStepResponse[]>([]);
   readonly evidenceSections = input<AnalysisEvidenceSection[]>([]);
+  readonly toolEvidenceSections = input<AnalysisEvidenceSection[]>([]);
   readonly preparedPrompt = input<string>('');
   readonly result = input<AnalysisResultResponse | null>(null);
 
@@ -328,7 +329,9 @@ export class AnalysisStepsPanelComponent {
 
   protected readonly preparedSteps = computed<StepView[]>(() =>
     this.steps().map((step, index) => {
-      const detailSections = prepareEvidenceSections(resolveStepSections(step, this.evidenceSections()));
+      const detailSections = prepareEvidenceSections(
+        resolveStepSections(step, this.evidenceSections(), this.toolEvidenceSections())
+      );
       const showResultPreview = step.code === 'AI_ANALYSIS' && this.result() !== null;
       const stepPreparedPrompt = resolvePreparedPrompt(
         step.code,
@@ -470,8 +473,13 @@ export class AnalysisStepsPanelComponent {
 
 function resolveStepSections(
   step: AnalysisJobStepResponse,
-  sections: AnalysisEvidenceSection[]
+  sections: AnalysisEvidenceSection[],
+  toolEvidenceSections: AnalysisEvidenceSection[]
 ): AnalysisEvidenceSection[] {
+  if (step.code === 'AI_ANALYSIS') {
+    return toolEvidenceSections;
+  }
+
   const links = resolveProducedEvidenceLinks(step);
   if (links.length === 0) {
     return [];
@@ -577,7 +585,7 @@ function resolvePreparedPrompt(
 
 function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean {
   const normalizedStepCode = String(stepCode || '').toUpperCase();
-  return normalizedStepCode === 'OPERATIONAL_CONTEXT' || normalizedStepCode === 'AI_ANALYSIS';
+  return normalizedStepCode === 'OPERATIONAL_CONTEXT';
 }
 
 function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
@@ -670,7 +678,10 @@ function isElasticsearchLogSection(section: AnalysisEvidenceSection): boolean {
 }
 
 function isGitLabCodeSection(section: AnalysisEvidenceSection): boolean {
-  return section.provider === 'gitlab' && section.category === 'resolved-code';
+  return (
+    section.provider === 'gitlab' &&
+    (section.category === 'resolved-code' || section.category === 'tool-fetched-code')
+  );
 }
 
 function isDynatraceRuntimeSection(section: AnalysisEvidenceSection): boolean {

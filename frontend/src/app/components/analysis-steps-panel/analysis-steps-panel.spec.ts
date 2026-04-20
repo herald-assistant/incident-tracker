@@ -131,7 +131,26 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea?.value).toContain('Provider: dynatrace, category: runtime-signals');
   });
 
-  it('should keep the prepared prompt visible on the failed AI step when no result is available', async () => {
+  it('should hide the prepared prompt on the final AI step and keep the result preview visible', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('preparedPrompt', buildAiPrompt());
+    fixture.componentRef.setInput('result', buildAnalysisResult());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const promptTextarea = compiled.querySelector('.prepared-prompt__textarea');
+
+    expect(compiled.textContent).toContain('Najbardziej prawdopodobny problem');
+    expect(compiled.textContent).toContain('Gateway timeout on backend');
+    expect(compiled.textContent).not.toContain('Prompt przygotowany do wysłania do Copilota');
+    expect(promptTextarea).toBeNull();
+  });
+
+  it('should hide the prepared prompt on a failed AI step when no result is available', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildFailedAiStep()]);
     fixture.componentRef.setInput('preparedPrompt', buildAiPrompt());
@@ -141,13 +160,28 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const promptTextarea = compiled.querySelector(
-      '.prepared-prompt__textarea'
-    ) as HTMLTextAreaElement | null;
+    const promptTextarea = compiled.querySelector('.prepared-prompt__textarea');
 
-    expect(compiled.textContent).toContain('Prompt przygotowany do wysłania do Copilota');
-    expect(compiled.textContent).toContain('Gdy sesja Copilota nie zadziała');
-    expect(promptTextarea?.value).toContain('gitLabBranch: release/2026.04');
+    expect(compiled.textContent).toContain('Krok zakończył się błędem, więc nie udało się zebrać szczegółów.');
+    expect(compiled.textContent).not.toContain('Prompt przygotowany do wysłania do Copilota');
+    expect(promptTextarea).toBeNull();
+  });
+
+  it('should render GitLab files fetched by AI tools on the final analysis step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('toolEvidenceSections', [buildAiToolGitLabSection()]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('GitLab · Pliki pobrane przez AI');
+    expect(compiled.textContent).toContain('CatalogGatewayClient');
+    expect(compiled.textContent).toContain('edge-client-service');
+    expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
   });
 });
 
@@ -390,6 +424,18 @@ function buildOperationalContextStep(): AnalysisJobStepResponse {
   };
 }
 
+function buildCompletedAiStep(): AnalysisJobStepResponse {
+  return {
+    code: 'AI_ANALYSIS',
+    label: 'Budowanie końcowej analizy AI',
+    status: 'COMPLETED',
+    message: 'Analiza zakończona.',
+    itemCount: 0,
+    startedAt: '2026-04-14T12:00:12Z',
+    completedAt: '2026-04-14T12:00:18Z'
+  };
+}
+
 function buildFailedAiStep(): AnalysisJobStepResponse {
   return {
     code: 'AI_ANALYSIS',
@@ -412,4 +458,52 @@ gitLabGroup: platform/backend
 
 Provider: dynatrace, category: runtime-signals
 - Dynatrace problem P-230415 Gateway timeout | signalCategories=database-connectivity, availability`;
+}
+
+function buildAiToolGitLabSection(): AnalysisEvidenceSection {
+  return {
+    provider: 'gitlab',
+    category: 'tool-fetched-code',
+    items: [
+      {
+        title: 'edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java',
+        attributes: [
+          { name: 'group', value: 'sample/runtime' },
+          { name: 'projectName', value: 'edge-client-service' },
+          { name: 'branch', value: 'release/2026.04' },
+          {
+            name: 'filePath',
+            value: 'src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java'
+          },
+          { name: 'referenceType', value: 'AI_TOOL_FILE_CHUNK' },
+          { name: 'toolName', value: 'gitlab_read_repository_file_chunk' },
+          { name: 'requestedStartLine', value: '5' },
+          { name: 'requestedEndLine', value: '12' },
+          { name: 'returnedStartLine', value: '5' },
+          { name: 'returnedEndLine', value: '12' },
+          { name: 'totalLines', value: '14' },
+          {
+            name: 'content',
+            value:
+              'public class CatalogGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}'
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function buildAnalysisResult() {
+  return {
+    status: 'COMPLETED',
+    correlationId: 'timeout-123',
+    environment: 'zt002',
+    gitLabBranch: 'release/2026.04',
+    summary: 'Backend zwraca timeout przy obsłudze żądania kredytowego.',
+    detectedProblem: 'Gateway timeout on backend',
+    recommendedAction: 'Sprawdź połączenia backendu z bazą danych.',
+    rationale: 'Wzrost czasu odpowiedzi koreluje z błędami połączenia do bazy.',
+    affectedFunction: 'CustomerController',
+    prompt: buildAiPrompt()
+  };
 }

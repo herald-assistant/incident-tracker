@@ -62,6 +62,7 @@ class AnalysisJobControllerTest {
                                 )
                         ),
                         List.of(),
+                        List.of(),
                         null,
                         null
                 ));
@@ -99,6 +100,7 @@ class AnalysisJobControllerTest {
                         Instant.parse("2026-04-12T18:00:00Z"),
                         Instant.parse("2026-04-12T18:01:00Z"),
                         Instant.parse("2026-04-12T18:01:00Z"),
+                        List.of(),
                         List.of(),
                         List.of(),
                         "Prompt body for timeout-123",

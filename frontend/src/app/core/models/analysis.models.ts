@@ -88,6 +88,7 @@ export interface AnalysisJobResponse {
   completedAt: string;
   steps: AnalysisJobStepResponse[];
   evidenceSections: AnalysisEvidenceSection[];
+  toolEvidenceSections: AnalysisEvidenceSection[];
   preparedPrompt: string;
   result: AnalysisResultResponse | null;
 }

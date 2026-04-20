@@ -23,6 +23,7 @@ public class CopilotSdkToolBridge {
 
     private final List<ToolCallbackProvider> toolCallbackProviders;
     private final ObjectMapper objectMapper;
+    private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
 
     public List<ToolDefinition> buildToolDefinitions() {
         return toolCallbacksByName().values().stream()
@@ -68,6 +69,11 @@ public class CopilotSdkToolBridge {
             );
 
             var rawResult = callback.call(argumentsJson);
+            toolEvidenceCaptureRegistry.captureToolResult(
+                    invocation.getSessionId(),
+                    invocation.getToolName(),
+                    rawResult
+            );
             var parsedResult = parseToolResult(rawResult);
 
             log.info(

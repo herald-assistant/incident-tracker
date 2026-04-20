@@ -46,7 +46,10 @@ public class AnalysisOrchestrator {
         var preparedPrompt = analysisAiProvider.preparePrompt(aiRequest);
         listener.onAiPromptPrepared(aiRequest, preparedPrompt, context);
 
-        var aiResponse = analysisAiProvider.analyze(aiRequest);
+        var aiResponse = analysisAiProvider.analyze(
+                aiRequest,
+                listener::onAiToolEvidenceUpdated
+        );
         var result = new AnalysisResultResponse(
                 "COMPLETED",
                 correlationId,

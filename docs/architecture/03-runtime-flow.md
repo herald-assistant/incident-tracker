@@ -82,6 +82,8 @@ Snapshot joba zwraca:
 - status calej analizy,
 - aktualny krok i historie krokow,
 - zebrane `evidenceSections`,
+- `toolEvidenceSections`, czyli pliki GitLaba dociagniete przez AI tools juz w
+  trakcie kroku `AI_ANALYSIS`,
 - metadata kroku: `phase`, `consumesEvidence`, `producesEvidence`,
 - `preparedPrompt`, czyli finalny prompt zlozony po evidence collection i przed
   wywolaniem Copilota,
@@ -243,6 +245,10 @@ Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
 
 To jest AI-guided repository exploration.
 Dynatrace nie ma tu osobnych tooli.
+
+W job flow odpowiedzi `gitlab_read_repository_file*` sa dodatkowo mapowane do
+`toolEvidenceSections`, zeby frontend mogl pokazac na zywo, jakie pliki i
+fragmenty kodu AI dociagnelo juz podczas sesji.
 
 Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.gitlab` i
 korzystaja z portow z `analysis.adapter.gitlab`.

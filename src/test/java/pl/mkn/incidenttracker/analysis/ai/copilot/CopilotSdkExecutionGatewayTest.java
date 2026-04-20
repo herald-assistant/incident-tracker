@@ -14,6 +14,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionG
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotAttachmentArtifactBundle;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,7 +41,10 @@ class CopilotSdkExecutionGatewayTest {
     @Test
     void shouldUseDefaultSendAndWaitTimeoutFromProperties() {
         var properties = new CopilotSdkProperties();
-        var gateway = new CopilotSdkExecutionGateway(properties);
+        var gateway = new CopilotSdkExecutionGateway(
+                properties,
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
         var preparedRequest = new CopilotSdkPreparedRequest(
                 "corr-123",
                 new CopilotClientOptions(),
@@ -74,7 +78,10 @@ class CopilotSdkExecutionGatewayTest {
     void shouldUseConfiguredSendAndWaitTimeout() {
         var properties = new CopilotSdkProperties();
         properties.setSendAndWaitTimeout(Duration.ofSeconds(90));
-        var gateway = new CopilotSdkExecutionGateway(properties);
+        var gateway = new CopilotSdkExecutionGateway(
+                properties,
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
         var preparedRequest = new CopilotSdkPreparedRequest(
                 "corr-456",
                 new CopilotClientOptions(),
@@ -107,7 +114,10 @@ class CopilotSdkExecutionGatewayTest {
     @Test
     void shouldCleanupAttachmentArtifactsAfterExecution() throws Exception {
         var properties = new CopilotSdkProperties();
-        var gateway = new CopilotSdkExecutionGateway(properties);
+        var gateway = new CopilotSdkExecutionGateway(
+                properties,
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
         var artifactDirectory = Files.createDirectory(tempDirectory.resolve("attachments"));
         Files.writeString(artifactDirectory.resolve("00-incident-manifest.json"), "{}");
 

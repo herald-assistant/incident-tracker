@@ -97,6 +97,9 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobResponse {
     evidenceSections: Array.isArray(jobObject['evidenceSections'])
       ? jobObject['evidenceSections'].map(normalizeEvidenceSection)
       : [],
+    toolEvidenceSections: Array.isArray(jobObject['toolEvidenceSections'])
+      ? jobObject['toolEvidenceSections'].map(normalizeEvidenceSection)
+      : [],
     preparedPrompt: normalizeString(jobObject['preparedPrompt']),
     result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
   };

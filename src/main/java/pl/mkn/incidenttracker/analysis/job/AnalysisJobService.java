@@ -108,6 +108,11 @@ public class AnalysisJobService {
         ) {
             job.markAiPromptPrepared(preparedPrompt);
         }
+
+        @Override
+        public void onAiToolEvidenceUpdated(pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection section) {
+            job.markAiToolEvidenceUpdated(section);
+        }
     }
 
 }

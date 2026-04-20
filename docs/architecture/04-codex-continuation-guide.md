@@ -124,6 +124,8 @@ Produkcjny build zapisuje `index.html`, `js`, `css` i assets do
 `src/main/resources/static`, skad frontend jest serwowany przez Spring Boot.
 Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
+Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba dociagniete
+przez AI tools podczas kroku `AI_ANALYSIS`.
 
 ### Elastic helper flow
 

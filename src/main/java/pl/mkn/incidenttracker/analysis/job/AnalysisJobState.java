@@ -30,6 +30,7 @@ final class AnalysisJobState {
     private final Instant createdAt;
     private final List<StepState> steps;
     private final List<AnalysisEvidenceSection> evidenceSections;
+    private final List<AnalysisEvidenceSection> toolEvidenceSections;
 
     private AnalysisJobStatus status;
     private String currentStepCode;
@@ -51,6 +52,7 @@ final class AnalysisJobState {
         this.status = AnalysisJobStatus.QUEUED;
         this.steps = new ArrayList<>();
         this.evidenceSections = new ArrayList<>();
+        this.toolEvidenceSections = new ArrayList<>();
 
         for (var descriptor : providerDescriptors) {
             steps.add(new StepState(descriptor));
@@ -95,6 +97,15 @@ final class AnalysisJobState {
 
     synchronized void markAiPromptPrepared(String preparedPrompt) {
         this.preparedPrompt = StringUtils.hasText(preparedPrompt) ? preparedPrompt : null;
+        touch();
+    }
+
+    synchronized void markAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
+        if (section == null || !section.hasItems()) {
+            return;
+        }
+
+        upsertSection(toolEvidenceSections, section);
         touch();
     }
 
@@ -164,9 +175,22 @@ final class AnalysisJobState {
                 completedAt,
                 steps.stream().map(StepState::snapshot).toList(),
                 List.copyOf(evidenceSections),
+                List.copyOf(toolEvidenceSections),
                 preparedPrompt,
                 result
         );
+    }
+
+    private void upsertSection(List<AnalysisEvidenceSection> sections, AnalysisEvidenceSection candidate) {
+        for (int index = 0; index < sections.size(); index++) {
+            var current = sections.get(index);
+            if (current.provider().equals(candidate.provider()) && current.category().equals(candidate.category())) {
+                sections.set(index, candidate);
+                return;
+            }
+        }
+
+        sections.add(candidate);
     }
 
     private void updateRuntimeFacts() {

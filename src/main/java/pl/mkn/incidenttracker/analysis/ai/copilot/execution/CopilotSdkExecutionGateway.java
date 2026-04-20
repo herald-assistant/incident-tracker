@@ -4,8 +4,10 @@ import com.github.copilot.sdk.CopilotClient;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -19,8 +21,16 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSessio
 public class CopilotSdkExecutionGateway {
 
     private final CopilotSdkProperties properties;
+    private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
 
     public String execute(CopilotSdkPreparedRequest preparedRequest) {
+        return execute(preparedRequest, AnalysisAiToolEvidenceListener.NO_OP);
+    }
+
+    public String execute(
+            CopilotSdkPreparedRequest preparedRequest,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
+    ) {
         var overallStart = System.nanoTime();
         var correlationId = preparedRequest.correlationId();
 
@@ -40,25 +50,34 @@ public class CopilotSdkExecutionGateway {
                         logDuration("create-session", correlationId, nanosToMillis(createSessionStart));
                         var sessionSummary = newSessionLogSummary(correlationId);
 
+                        toolEvidenceCaptureRegistry.registerSession(
+                                session.getSessionId(),
+                                toolEvidenceListener
+                        );
+
                         session.on(event -> logSessionEvent(event, session, sessionSummary));
 
-                        var sendAndWaitStart = System.nanoTime();
-                        var timeoutMs = sendAndWaitTimeoutMs();
-                        log.info(
-                                "Copilot sendAndWait configuration correlationId={} timeoutMs={}",
-                                correlationId,
-                                timeoutMs
-                        );
-                        var response = session.sendAndWait(preparedRequest.messageOptions(), timeoutMs).join();
+                        try {
+                            var sendAndWaitStart = System.nanoTime();
+                            var timeoutMs = sendAndWaitTimeoutMs();
+                            log.info(
+                                    "Copilot sendAndWait configuration correlationId={} timeoutMs={}",
+                                    correlationId,
+                                    timeoutMs
+                            );
+                            var response = session.sendAndWait(preparedRequest.messageOptions(), timeoutMs).join();
 
-                        logDuration("send-and-wait", correlationId, nanosToMillis(sendAndWaitStart));
-                        var content = response.getData() != null ? response.getData().content() : null;
-                        if (content == null || content.isBlank()) {
-                            throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
+                            logDuration("send-and-wait", correlationId, nanosToMillis(sendAndWaitStart));
+                            var content = response.getData() != null ? response.getData().content() : null;
+                            if (content == null || content.isBlank()) {
+                                throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
+                            }
+
+                            logSessionSummary(session.getSessionId(), sessionSummary, nanosToMillis(overallStart));
+                            return content;
+                        } finally {
+                            toolEvidenceCaptureRegistry.unregisterSession(session.getSessionId());
                         }
-
-                        logSessionSummary(session.getSessionId(), sessionSummary, nanosToMillis(overallStart));
-                        return content;
                     }
                 } finally {
                     logClientState("before-stop", client.getState(), correlationId);

@@ -30,4 +30,7 @@ public interface AnalysisExecutionListener {
     ) {
     }
 
+    default void onAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
+    }
+
 }

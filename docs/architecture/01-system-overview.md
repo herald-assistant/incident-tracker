@@ -23,6 +23,8 @@ Na dzisiaj projekt ma:
   zapisu zakonczonej analizy jako JSON,
 - w ekranie `GET /` widok promptu przygotowanego dla AI, mozliwy do skopiowania
   nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
+- w ekranie `GET /` ostatni krok AI pokazuje tez pliki GitLaba dociagniete przez
+  tools w trakcie sesji Copilota i odswieza je wraz z pollingiem joba,
 - ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
   GitLaba,
 - glowne API `POST /analysis`,
