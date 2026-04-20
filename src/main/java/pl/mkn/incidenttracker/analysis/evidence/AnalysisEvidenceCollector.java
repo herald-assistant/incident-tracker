@@ -1,5 +1,7 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 @Service
+@Slf4j
 public class AnalysisEvidenceCollector {
 
     private final ElasticLogEvidenceProvider elasticLogEvidenceProvider;
@@ -76,16 +79,8 @@ public class AnalysisEvidenceCollector {
             AnalysisEvidenceCollectionListener listener
     ) {
         var sharedContext = context;
-        var dynatraceFuture = submitProvider(dynatraceEvidenceProvider, sharedContext);
         var gitLabFuture = submitProvider(gitLabDeterministicEvidenceProvider, sharedContext);
-
-        var updatedContext = runSubmittedProvider(
-                dynatraceEvidenceProvider,
-                sharedContext,
-                context,
-                dynatraceFuture,
-                listener
-        );
+        var updatedContext = runProvider(dynatraceEvidenceProvider, sharedContext, listener);
         return runSubmittedProvider(
                 gitLabDeterministicEvidenceProvider,
                 sharedContext,
@@ -99,7 +94,16 @@ public class AnalysisEvidenceCollector {
             AnalysisEvidenceProvider provider,
             AnalysisContext context
     ) {
-        return CompletableFuture.supplyAsync(() -> provider.collect(context), parallelEvidenceTaskExecutor);
+        try {
+            return CompletableFuture.supplyAsync(() -> provider.collect(context), parallelEvidenceTaskExecutor);
+        } catch (TaskRejectedException exception) {
+            log.warn(
+                    "Parallel evidence executor saturated, falling back to inline execution for step={} correlationId={}",
+                    provider.stepCode(),
+                    context.correlationId()
+            );
+            return CompletableFuture.completedFuture(provider.collect(context));
+        }
     }
 
     private AnalysisContext runSubmittedProvider(

@@ -27,6 +27,7 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.Oper
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.Map;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -161,6 +163,57 @@ class AnalysisEvidenceCollectorTest {
     }
 
     @Test
+    void shouldFallbackToInlineCollectionWhenParallelExecutorRejectsTask() {
+        var gitLabProperties = gitLabProperties();
+        gitLabProperties.setBaseUrl("https://gitlab.example.test");
+
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        doReturn(List.of(new GitLabRepositoryProjectCandidate(
+                gitLabProperties.getGroup(),
+                "backend",
+                "container-name",
+                120
+        ))).when(gitLabRepositoryPort).searchProjects(any(), any());
+        doReturn(new GitLabRepositoryFileContent(
+                gitLabProperties.getGroup(),
+                "backend",
+                "release-candidate",
+                "src/main/java/com/example/synthetic/response/TimeoutHandler.java",
+                "class TimeoutHandler {}",
+                false
+        )).when(gitLabRepositoryPort).readFile(any(), any(), any(), any(), anyInt());
+
+        var gitLabSourceResolveService = mock(GitLabSourceResolveService.class);
+        doReturn(new GitLabSourceResolveSession()).when(gitLabSourceResolveService).openSession();
+        doReturn(new GitLabSourceResolveMatch(
+                "src/main/java/com/example/synthetic/response/TimeoutHandler.java",
+                130,
+                List.of("src/main/java/com/example/synthetic/response/TimeoutHandler.java")
+        )).when(gitLabSourceResolveService).resolveMatch(any(), any());
+
+        var collector = new AnalysisEvidenceCollector(
+                new ElasticLogEvidenceProvider(new ProductionLikeElasticLogPort()),
+                new DeploymentContextEvidenceProvider(deploymentContextResolver),
+                new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+                new GitLabDeterministicEvidenceProvider(
+                        gitLabRepositoryPort,
+                        gitLabProperties,
+                        gitLabSourceResolveService,
+                        deploymentContextResolver
+                ),
+                disabledOperationalContextEvidenceProvider(),
+                rejectingTaskExecutor()
+        );
+
+        var context = collector.collect("timeout-123", AnalysisEvidenceCollectionListener.NO_OP);
+
+        assertEquals(
+                List.of("elasticsearch", "deployment-context", "dynatrace", "gitlab"),
+                context.evidenceSections().stream().map(section -> section.provider()).toList()
+        );
+    }
+
+    @Test
     void shouldExposeProviderDescriptorsInExplicitPipelineOrder() {
         var descriptors = analysisEvidenceCollector.providerDescriptors();
 
@@ -201,6 +254,12 @@ class AnalysisEvidenceCollectorTest {
         executor.setQueueCapacity(0);
         executor.initialize();
         return executor;
+    }
+
+    private static TaskExecutor rejectingTaskExecutor() {
+        return task -> {
+            throw new TaskRejectedException("Synthetic task rejection for collector fallback test.");
+        };
     }
 
     private static Map<String, String> attributesByName(AnalysisEvidenceItem item) {
