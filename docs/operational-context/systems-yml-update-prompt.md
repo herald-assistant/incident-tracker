@@ -22,6 +22,10 @@ Keep a short map of systems:
 - Do not model every interface here; only keep the signals needed for incident routing.
 - Preserve the top-level wrapper: `schemaVersion`, `systems`, `openQuestions`.
 - If ownership or topology is unclear, add an `openQuestions` entry.
+- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpoints: ["/api/resource/{id}/details"]`.
+- For endpoint paths or any values with URL path-template placeholders (`{id}`, `{customerId}`, etc.), prefer YAML block sequences (`- item`) over flow sequences, or double-quote every value in the flow sequence.
+- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
+- When in doubt, quote the value. Unquoted `{` in a flow sequence breaks YAML parsing.
 
 ## Example
 

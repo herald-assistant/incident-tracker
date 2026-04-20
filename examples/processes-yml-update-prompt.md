@@ -57,6 +57,26 @@ How to derive processes:
 4. Use `handoff-rules.md` to align practical routing hints.
 5. Merge duplicate observations into one stable business process entry.
 
+YAML syntax safety rules:
+- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
+- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpointPrefixes: ["/api/resource/{id}/details"]` - never `endpointPrefixes: [/api/resource/{id}/details]`.
+- For lists of endpoint paths, hosts, or any values that may contain URL path-template placeholders like `{id}`, `{customerId}`, etc., prefer YAML block sequences over flow sequences:
+
+```yaml
+# correct - block sequence, no quoting needed
+endpoints:
+  - /api/resource/{id}/details
+  - /api/resource/{id}/summary
+
+# correct - flow sequence with quotes
+endpointPrefixes: ["/api/resource/{id}/details"]
+
+# WRONG - unquoted curly braces in flow sequence break YAML parsing
+endpointPrefixes: [/api/resource/{id}/details]
+```
+
+- When in doubt, quote the value. Plain unquoted strings in flow sequences are fragile.
+
 Hard rules:
 - Reuse ids from attached files exactly as they appear. Do not rename team, system, repository, context, or integration ids.
 - Do not invent process boundaries.

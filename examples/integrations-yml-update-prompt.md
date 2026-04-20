@@ -39,6 +39,26 @@ How to derive integrations:
 4. Use `handoff-rules.md` to align handoff targets and required evidence.
 5. If the same contract appears in logs and in GitLab-resolved code, merge it into one integration entry.
 
+YAML syntax safety rules:
+- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
+- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpoints: ["/api/resource/{id}/details"]` - never `endpoints: [/api/resource/{id}/details]`.
+- For lists of endpoint paths, hosts, or any values that may contain URL path-template placeholders like `{id}`, `{customerId}`, etc., prefer YAML block sequences over flow sequences:
+
+```yaml
+# correct - block sequence, no quoting needed
+endpoints:
+  - /api/resource/{id}/details
+  - /api/resource/{id}/summary
+
+# correct - flow sequence with quotes
+endpoints: ["/api/resource/{id}/details"]
+
+# WRONG - unquoted curly braces in flow sequence break YAML parsing
+endpoints: [/api/resource/{id}/details]
+```
+
+- When in doubt, quote the value. Plain unquoted strings in flow sequences are fragile.
+
 Hard rules:
 - Reuse ids from attached files exactly as they appear. Do not rename team, system, process, context, or repository ids.
 - Prefer `from` and `to` to reference stable system ids from `systems.yml` when those systems are modeled there.

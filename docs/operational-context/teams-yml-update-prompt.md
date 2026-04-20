@@ -24,6 +24,10 @@ Keep a short operational map of teams:
 - If a fact is unclear, keep the current value and add an `openQuestions` entry.
 - Preserve the top-level wrapper: `schemaVersion`, `teams`, `openQuestions`.
 - Keep list values short and operational.
+- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpoints: ["/api/resource/{id}/details"]`.
+- For endpoint paths or any values with URL path-template placeholders (`{id}`, `{customerId}`, etc.), prefer YAML block sequences (`- item`) over flow sequences, or double-quote every value in the flow sequence.
+- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
+- When in doubt, quote the value. Unquoted `{` in a flow sequence breaks YAML parsing.
 
 ## Example
 

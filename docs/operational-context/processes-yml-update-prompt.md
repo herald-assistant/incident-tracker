@@ -23,6 +23,10 @@ Keep a short map of business processes:
 - Do not invent process boundaries.
 - Preserve the top-level wrapper: `schemaVersion`, `processes`, `openQuestions`.
 - If information is uncertain, add it to `openQuestions`.
+- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpointPrefixes: ["/api/resource/{id}/details"]`.
+- For endpoint paths or any values with URL path-template placeholders (`{id}`, `{customerId}`, etc.), prefer YAML block sequences (`- item`) over flow sequences, or double-quote every value in the flow sequence.
+- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
+- When in doubt, quote the value. Unquoted `{` in a flow sequence breaks YAML parsing.
 
 ## Example
 
