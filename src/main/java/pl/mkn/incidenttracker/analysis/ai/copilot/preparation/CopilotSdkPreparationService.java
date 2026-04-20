@@ -15,7 +15,6 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
@@ -27,7 +26,6 @@ public class CopilotSdkPreparationService {
     private final CopilotSdkProperties properties;
     private final CopilotSdkToolBridge toolBridge;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
-    private final ExploratoryAnalysisProperties exploratoryProperties;
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
         var tools = toolBridge.buildToolDefinitions();
@@ -80,49 +78,18 @@ public class CopilotSdkPreparationService {
         var analysisModeInstructions = request.mode() == AnalysisMode.EXPLORATORY
                 ? """
                 Analysis mode: EXPLORATORY.
-                This step extends the already prepared conservative analysis. Treat that conservative result as the baseline,
-                then go one step further: if direct flow evidence is missing, you may reconstruct a likely cross-component flow
-                from logs, operational context, repository structure, configuration, and focused tool exploration.
+                You may formulate a best-supported hypothesis that goes beyond directly observed facts,
+                but only when the evidence contains explicit exploratory-flow reconstruction, repository hints,
+                configuration hints, or operational-context support.
                 Keep facts and hypotheses clearly separated inside the text fields.
                 If you infer a likely call path, say that it is a hypothesis and explain what supports it.
-                Build a simple, readable flow diagram that shows components in likely order and clearly marks the error source.
-                Use valid JSON in the diagram field, without markdown code fences.
-                If a timestamp or duration is not visible in logs, leave it empty instead of inventing it.
                 Use problemNature=HYPOTHESIS unless the evidence directly confirms the diagnosed failure domain.
-                Stay within these exploratory policy limits:
-                - at most %d component candidates
-                - at most %d repositories
-                - at most %d search terms per component
-                - at most %d file candidates per repository
-                - at most %d config reads per repository
-                - at most %d code chunk reads per repository
-                - final diagram up to %d nodes and %d edges
-                - mark a path element as hypothesis only when support score is at least %d
-                When exploring repositories, prioritize `@RestController`, `@RequestMapping`, `@FeignClient`, `RestClient`,
-                `WebClient`, messaging listeners or producers, and `application*.yml` or `application*.properties`.
                 """
-                        .formatted(
-                                exploratoryProperties.getMaxComponentCandidates(),
-                                exploratoryProperties.getMaxRepositories(),
-                                exploratoryProperties.getMaxSearchTermsPerComponent(),
-                                exploratoryProperties.getMaxFileCandidatesPerRepository(),
-                                exploratoryProperties.getMaxConfigReadsPerRepository(),
-                                exploratoryProperties.getMaxCodeChunkReadsPerRepository(),
-                                exploratoryProperties.getMaxFlowNodes(),
-                                exploratoryProperties.getMaxFlowEdges(),
-                                exploratoryProperties.getMinHypothesisSupportScore()
-                        )
                 : """
                 Analysis mode: CONSERVATIVE.
                 Stay narrowly grounded in directly observed evidence and keep hypotheses minimal.
                 Use problemNature=CONFIRMED unless you must explicitly communicate a limited working hypothesis.
                 """;
-        var priorResultBlock = request.mode() == AnalysisMode.EXPLORATORY
-                ? formatPriorResult(request)
-                : "";
-        var outputContract = request.mode() == AnalysisMode.EXPLORATORY
-                ? exploratoryOutputContract()
-                : conservativeOutputContract();
 
         return """
                 You are helping with an enterprise software incident analysis.
@@ -148,7 +115,6 @@ public class CopilotSdkPreparationService {
                 infrastructure, or an area owned by another team that is not directly visible here.
                 If the likely problem is outside our codebase or outside the telemetry currently available, say that explicitly.
                 %s
-                %s
                 Separate clearly:
                 - what is directly confirmed by the evidence,
                 - what is the best-supported hypothesis,
@@ -169,7 +135,12 @@ public class CopilotSdkPreparationService {
                 You may use a short "---" separator sparingly if it materially improves readability, but do not over-format the answer.
 
                 Return exactly these lines:
-                %s
+                detectedProblem: <one precise short technical label scoped as narrowly as the evidence allows; plain text, no bullet list>
+                summary: <a short markdown block in Polish: one concise opening sentence and then 2-4 markdown bullet lines covering strongest evidence, likely failure domain, and visibility limits>
+                recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
+                rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, and what still requires confirmation or external access>
+                problemNature: <CONFIRMED or HYPOTHESIS>
+                confidence: <HIGH or MEDIUM or LOW>
 
                 Available tools:
                 %s
@@ -183,62 +154,9 @@ public class CopilotSdkPreparationService {
                 renderGitLabGroup(request.gitLabGroup()),
                 request.mode(),
                 analysisModeInstructions.strip(),
-                priorResultBlock,
-                outputContract,
                 formatAvailableTools(tools),
                 formatEvidenceSections(request.evidenceSections())
         );
-    }
-
-    private String conservativeOutputContract() {
-        return """
-                detectedProblem: <one precise short technical label scoped as narrowly as the evidence allows; plain text, no bullet list>
-                summary: <a short markdown block in Polish: one concise opening sentence and then 2-4 markdown bullet lines covering strongest evidence, likely failure domain, and visibility limits>
-                recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
-                rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, and what still requires confirmation or external access>
-                problemNature: <CONFIRMED or HYPOTHESIS>
-                confidence: <HIGH or MEDIUM or LOW>
-                """;
-    }
-
-    private String exploratoryOutputContract() {
-        return """
-                detectedProblem: <one precise short technical label scoped as narrowly as the evidence allows; plain text, no bullet list>
-                summary: <a short markdown block in Polish: one concise opening sentence and then 2-4 markdown bullet lines covering strongest evidence, likely failure domain, conservative baseline, and visibility limits>
-                recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
-                rationale: <3-6 concise markdown bullet lines in Polish separating facts, bold hypotheses, and visibility gaps>
-                problemNature: <CONFIRMED or HYPOTHESIS>
-                confidence: <HIGH or MEDIUM or LOW>
-                diagram: <valid JSON object without markdown code fences using exactly this shape: {"nodes":[{"id":"component-a","kind":"COMPONENT","title":"Component A","componentName":"Component A","factStatus":"FACT","firstSeenAt":"2026-04-20T10:15:30Z","metadata":[{"name":"class","value":"OrderController"}],"errorSource":false}],"edges":[{"id":"component-a->component-b","fromNodeId":"component-a","toNodeId":"component-b","sequence":1,"interactionType":"HTTP","factStatus":"HYPOTHESIS","startedAt":"2026-04-20T10:15:31Z","durationMs":120,"supportSummary":"Hipoteza oparta o logi i konfiguracje"}]}>
-                """;
-    }
-
-    private String formatPriorResult(AnalysisAiAnalysisRequest request) {
-        if (request.priorResult() == null) {
-            return "Conservative baseline: not available.";
-        }
-
-        var priorResult = request.priorResult();
-        return """
-                Conservative baseline to extend:
-                - detectedProblem: %s
-                - problemNature: %s
-                - confidence: %s
-                - summary: %s
-                - recommendedAction: %s
-                - rationale: %s
-                """.formatted(
-                renderOptional(priorResult.detectedProblem()),
-                renderOptional(priorResult.problemNature() != null ? priorResult.problemNature().name() : null),
-                renderOptional(priorResult.confidence() != null ? priorResult.confidence().name() : null),
-                renderOptional(priorResult.summary()),
-                renderOptional(priorResult.recommendedAction()),
-                renderOptional(priorResult.rationale())
-        );
-    }
-
-    private String renderOptional(String value) {
-        return value != null && !value.isBlank() ? value : "<not-available>";
     }
 
     private String formatAvailableTools(Iterable<ToolDefinition> tools) {

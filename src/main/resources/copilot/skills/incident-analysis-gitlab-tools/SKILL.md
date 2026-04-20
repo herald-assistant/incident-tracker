@@ -9,7 +9,7 @@ Use this skill when analyzing an incident from structured evidence such as:
 
 - logs from Elasticsearch
 - runtime signals from Dynatrace
-- GitLab resolved code references or repository exploration hints
+- deterministic GitLab resolved code references
 
 ## Goal
 
@@ -39,8 +39,6 @@ Return exactly these fields when asked for a diagnosis:
 - `rationale`
 
 Do not invent extra top-level fields unless the caller explicitly asks for them.
-If the caller explicitly asks for an exploratory incident flow, the caller may
-also require a `diagram` field with JSON only.
 
 ## How To Write The Result
 
@@ -96,22 +94,6 @@ also require a `diagram` field with JSON only.
 3. If the logs look incomplete or too truncated, use the Elastic tool first to fetch more precise log entries for the same `correlationId`.
 4. If the evidence is already strong, answer without fetching more data.
 5. If code context is still needed, use GitLab tools to confirm or disprove the hypothesis.
-
-## Exploratory extension mode
-
-When the caller says this is an exploratory step that extends a conservative
-baseline:
-
-1. Treat the conservative result as the starting point, not as ground truth.
-2. Use tools more boldly, but still economically, to test whether a broader
-   cross-component flow is plausible.
-3. Build a simple and readable flow only when it helps explain what likely
-   happened.
-4. Mark every uncertain node or edge as `HYPOTHESIS`.
-5. Mark the component that emitted the visible exception or error log as the
-   error source when the evidence supports it.
-6. If the caller requires a diagram field, return valid JSON only and do not
-   wrap it in markdown fences.
 
 ## Elastic tool strategy
 
@@ -175,7 +157,6 @@ Stop fetching more repository context when one of these is true:
 - the likely cause is supported by multiple signals
 - the code fragment clearly confirms the suspected root cause
 - further reads would be speculative or repetitive
-- you already have enough support to explain a simple flow diagram
 
 ## Efficiency rules
 

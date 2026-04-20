@@ -219,6 +219,7 @@ const STEP_EVIDENCE_LINKS: Record<string, readonly StepEvidenceLink[]> = {
   DEPLOYMENT_CONTEXT: [{ provider: 'deployment-context', category: 'resolved-deployment' }],
   DYNATRACE_TRACES: [{ provider: 'dynatrace', category: 'traces' }],
   DYNATRACE_RUNTIME_SIGNALS: [{ provider: 'dynatrace', category: 'runtime-signals' }],
+  EXPLORATORY_FLOW_RECONSTRUCTION: [{ provider: 'exploratory-flow', category: 'reconstructed-flow' }],
   GITLAB_RESOLVED_CODE: [{ provider: 'gitlab', category: 'resolved-code' }],
   OPERATIONAL_CONTEXT: [{ provider: 'operational-context', category: 'matched-context' }]
 };
@@ -557,6 +558,10 @@ function inferStepEvidenceLinks(stepCode: string | null | undefined): StepEviden
 
   if (normalizedStepCode.includes('GITLAB')) {
     return [{ provider: 'gitlab', category: 'resolved-code' }];
+  }
+
+  if (normalizedStepCode.includes('EXPLORATORY')) {
+    return [{ provider: 'exploratory-flow', category: 'reconstructed-flow' }];
   }
 
   if (normalizedStepCode.includes('OPERATIONAL')) {

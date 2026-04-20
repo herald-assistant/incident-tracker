@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
 import pl.mkn.incidenttracker.analysis.AnalysisMode;
 import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
+import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryFlowEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
@@ -110,47 +111,6 @@ class AnalysisJobServiceTest {
         assertEquals("FAILED", finished.steps().get(5).status());
     }
 
-    @Test
-    void shouldExposeExploratoryAiAsAdditionalStepAfterConservative() {
-        var exploratoryTaskExecutor = new CapturingTaskExecutor();
-        var service = new AnalysisJobService(
-                new AnalysisOrchestrator(
-                        new AnalysisEvidenceCollector(
-                                new ElasticLogEvidenceProvider(new TestElasticLogPort()),
-                                new DeploymentContextEvidenceProvider(deploymentContextResolver),
-                                new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
-                                new GitLabDeterministicEvidenceProvider(
-                                        mock(GitLabRepositoryPort.class),
-                                        gitLabProperties,
-                                        mock(GitLabSourceResolveService.class),
-                                        deploymentContextResolver
-                                ),
-                                disabledOperationalContextEvidenceProvider()
-                        ),
-                        new TestAnalysisAiProvider(),
-                        gitLabProperties,
-                        enabledExploratoryProperties()
-                ),
-                exploratoryTaskExecutor
-        );
-
-        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
-
-        assertEquals(7, started.steps().size());
-        assertEquals("AI_ANALYSIS_CONSERVATIVE", started.steps().get(5).code());
-        assertEquals("AI_ANALYSIS_EXPLORATORY", started.steps().get(6).code());
-        assertEquals(AnalysisMode.EXPLORATORY.name(), started.steps().get(6).variantMode());
-
-        exploratoryTaskExecutor.runNext();
-
-        var completed = service.getAnalysis(started.analysisId());
-
-        assertEquals("COMPLETED", completed.status());
-        assertEquals("COMPLETED", completed.steps().get(6).status());
-        assertEquals(AnalysisMode.EXPLORATORY.name(), completed.steps().get(6).variantMode());
-        assertNotNull(completed.result().variants().exploratory().diagram());
-    }
-
     private AnalysisJobService analysisJobService(AnalysisAiProvider analysisAiProvider, TaskExecutor taskExecutor) {
         return new AnalysisJobService(
                 new AnalysisOrchestrator(
@@ -158,18 +118,19 @@ class AnalysisJobServiceTest {
                                 new ElasticLogEvidenceProvider(new TestElasticLogPort()),
                                 new DeploymentContextEvidenceProvider(deploymentContextResolver),
                                 new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
-                                new GitLabDeterministicEvidenceProvider(
-                                        mock(GitLabRepositoryPort.class),
-                                        gitLabProperties,
-                                        mock(GitLabSourceResolveService.class),
-                                        deploymentContextResolver
-                                ),
-                                disabledOperationalContextEvidenceProvider()
+                        new GitLabDeterministicEvidenceProvider(
+                                mock(GitLabRepositoryPort.class),
+                                gitLabProperties,
+                                mock(GitLabSourceResolveService.class),
+                                deploymentContextResolver
                         ),
-                        analysisAiProvider,
-                        gitLabProperties,
-                        disabledExploratoryProperties()
+                        disabledOperationalContextEvidenceProvider(),
+                        disabledExploratoryFlowEvidenceProvider()
                 ),
+                analysisAiProvider,
+                gitLabProperties,
+                disabledExploratoryProperties()
+        ),
                 taskExecutor
         );
     }
@@ -191,15 +152,13 @@ class AnalysisJobServiceTest {
         );
     }
 
+    private static ExploratoryFlowEvidenceProvider disabledExploratoryFlowEvidenceProvider() {
+        return new ExploratoryFlowEvidenceProvider(mock(GitLabRepositoryPort.class), gitLabProperties(), disabledExploratoryProperties());
+    }
+
     private static ExploratoryAnalysisProperties disabledExploratoryProperties() {
         var properties = new ExploratoryAnalysisProperties();
         properties.setEnabled(false);
-        return properties;
-    }
-
-    private static ExploratoryAnalysisProperties enabledExploratoryProperties() {
-        var properties = new ExploratoryAnalysisProperties();
-        properties.setEnabled(true);
         return properties;
     }
 

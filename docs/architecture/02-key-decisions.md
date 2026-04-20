@@ -45,28 +45,6 @@ Obecny kierunek jest taki:
 To oznacza, ze nie wracamy juz do centralnego rule engine jako glownego flow,
 chyba ze kiedys potrzebny bedzie fallback albo guardrails.
 
-## 3a. Exploratory jest drugim krokiem AI, a nie deterministic flow builderem
-
-Wariant `Exploratory` nie jest osobnym providerem evidence, ktory backendowo
-sklada graf przeplywu.
-
-Obecny model jest taki:
-
-- wspolne evidence zbieramy raz,
-- `Conservative` jest pierwszym krokiem AI,
-- `Exploratory` jest opcjonalnym drugim krokiem AI,
-- exploratory dostaje to samo bazowe evidence oraz conservative baseline,
-- diagram flow pochodzi z odpowiedzi AI i jest renderowany przez frontend.
-
-Powod:
-
-- przy obecnych danych nie da sie wiarygodnie zbudowac flow deterministycznie
-  dla wiekszosci incydentow,
-- exploratory ma byc rozszerzeniem conservative, a nie osobnym pipeline
-  heurystyk backendowych,
-- AI moze ostroznie hipotezowac przebieg miedzy komponentami, jesli jawnie
-  oznaczy `FACT` vs `HYPOTHESIS`.
-
 ## 4. Evidence providers sa sekwencyjne i pracuja na wspolnym context
 
 `AnalysisEvidenceProvider` nie dostaje juz tylko `correlationId`.

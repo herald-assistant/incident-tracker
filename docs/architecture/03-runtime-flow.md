@@ -69,8 +69,7 @@ Background task uruchamia:
 1. wspolny `AnalysisOrchestrator`,
 2. sekwencyjne zbieranie evidence przez `AnalysisEvidenceCollector`,
 3. aktualizacje joba po kazdym kroku pipeline,
-4. krok AI `Conservative` po zebraniu danych,
-5. opcjonalny krok AI `Exploratory` po conservative,
+4. krok AI po zebraniu danych,
 5. status terminalny `COMPLETED`, `FAILED` albo `NOT_FOUND`.
 
 ### Krok 3: polling statusu
@@ -84,11 +83,10 @@ Snapshot joba zwraca:
 - aktualny krok i historie krokow,
 - zebrane `evidenceSections`,
 - metadata kroku: `phase`, `consumesEvidence`, `producesEvidence`,
-- `preparedPrompt` per krok AI, czyli finalny prompt zlozony po evidence
-  collection i przed wywolaniem Copilota,
+- `preparedPrompt`, czyli finalny prompt zlozony po evidence collection i przed
+  wywolaniem Copilota,
 - rozwiazane `environment` i `gitLabBranch`,
-- finalny `AnalysisResultResponse` z wariantami `conservative` i
-  `exploratory`,
+- finalny `AnalysisResultResponse`,
 - kod i komunikat bledu, jesli analiza nie powiodla sie.
 
 ## Flow `POST /analysis`
@@ -193,7 +191,6 @@ Po zebraniu evidence `AnalysisOrchestrator` buduje
 - `gitLabBranch`
 - `gitLabGroup`
 - `evidenceSections`
-- opcjonalnie conservative baseline dla kroku exploratory
 
 ### Krok 4: provider AI
 
@@ -258,16 +255,9 @@ Provider Copilota mapuje tekst odpowiedzi modelu na:
 - `summary`
 - `recommendedAction`
 - `rationale`
-- opcjonalnie `diagram` dla wariantu exploratory
 
 Potem `AnalysisOrchestrator` buduje `AnalysisResultResponse`, ktory zwraca tez
-rozwiazane `environment` i `gitLabBranch` oraz dwa warianty wyniku:
-
-- `conservative`
-- `exploratory`
-
-`Exploratory` jest opcjonalnym drugim krokiem AI. Nie ma juz osobnego
-deterministic kroku `EXPLORATORY_FLOW_RECONSTRUCTION`.
+rozwiazane `environment` i `gitLabBranch`.
 
 ## Flow `POST /api/elasticsearch/logs/search`
 

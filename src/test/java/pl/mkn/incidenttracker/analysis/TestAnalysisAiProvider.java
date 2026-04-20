@@ -5,7 +5,6 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 
-import java.util.List;
 import java.util.Locale;
 
 public final class TestAnalysisAiProvider implements AnalysisAiProvider {
@@ -17,17 +16,16 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
 
     @Override
     public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-        if (request.mode() == AnalysisMode.EXPLORATORY) {
+        if (request.mode() == AnalysisMode.EXPLORATORY && hasExploratoryEvidence(request)) {
             return new AnalysisAiAnalysisResponse(
                     "test-ai-provider",
-                    "Exploratory rozszerza conservative o hipoteze, ze blad rozwinął się na dalszym odcinku flow między komponentami.",
-                    "EXPANDED_FLOW_HYPOTHESIS",
-                    "- Zweryfikuj komponent oznaczony jako miejsce bledu oraz kolejny krok w przeplywie.\n- Potwierdz hipotezy repozytoryjne wobec klas i konfiguracji integracyjnej.",
-                    "- Fakty pochodza z logow i bazowego evidence.\n- Hipotezy pochodza z rozszerzonej interpretacji flow i wskazowek repozytoryjnych.",
+                    "Eksploracyjna rekonstrukcja sugeruje, ze problem najpewniej rozwinal sie dalej poza komponentem z logiem bledu.",
+                    "RECONSTRUCTED_FLOW_HYPOTHESIS",
+                    "- Zweryfikuj klasy i endpointy wskazane przez exploratory flow.\n- Potwierdz hipotezy wobec brakujacych komponentow lub integracji.",
+                    "- Fakty pochodza z logow i deterministycznego GitLaba.\n- Hipotezy pochodza z deep search repo i rekonstrukcji flow.",
                     AnalysisProblemNature.HYPOTHESIS,
                     AnalysisConfidence.MEDIUM,
-                    syntheticPrompt(request),
-                    exploratoryDiagram()
+                    syntheticPrompt(request)
             );
         }
 
@@ -86,44 +84,11 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
                 .anyMatch(item -> isErrorLogMessage(item, "deadlock") || hasAttributeValue(item, "databaseLockDetected", "true"));
     }
 
-    private AnalysisFlowDiagram exploratoryDiagram() {
-        return new AnalysisFlowDiagram(
-                List.of(
-                        new AnalysisFlowDiagramNode(
-                                "backend",
-                                "COMPONENT",
-                                "backend",
-                                "backend",
-                                "FACT",
-                                "2026-04-11T20:57:33.285Z",
-                                List.of(new AnalysisFlowDiagramMetadata("class", "CustomerController")),
-                                true
-                        ),
-                        new AnalysisFlowDiagramNode(
-                                "catalog-service",
-                                "COMPONENT",
-                                "catalog-service",
-                                "catalog-service",
-                                "HYPOTHESIS",
-                                "",
-                                List.of(new AnalysisFlowDiagramMetadata("endpoint", "/inventory")),
-                                false
-                        )
-                ),
-                List.of(
-                        new AnalysisFlowDiagramEdge(
-                                "backend->catalog-service",
-                                "backend",
-                                "catalog-service",
-                                1,
-                                "HTTP",
-                                "HYPOTHESIS",
-                                "",
-                                null,
-                                "Hipoteza rozszerzajaca conservative na podstawie timeoutu i wskazowek repo."
-                        )
-                )
-        );
+    private boolean hasExploratoryEvidence(AnalysisAiAnalysisRequest request) {
+        return request.evidenceSections().stream()
+                .anyMatch(section -> "exploratory-flow".equals(section.provider())
+                        && "reconstructed-flow".equals(section.category())
+                        && section.hasItems());
     }
 
     private boolean isErrorLogMessage(AnalysisEvidenceItem item, String phrase) {

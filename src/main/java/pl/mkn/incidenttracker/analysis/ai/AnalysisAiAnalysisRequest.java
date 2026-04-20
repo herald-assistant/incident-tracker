@@ -10,18 +10,6 @@ public record AnalysisAiAnalysisRequest(
         String gitLabBranch,
         String gitLabGroup,
         AnalysisMode mode,
-        List<AnalysisEvidenceSection> evidenceSections,
-        AnalysisAiPriorResult priorResult
+        List<AnalysisEvidenceSection> evidenceSections
 ) {
-
-    public AnalysisAiAnalysisRequest(
-            String correlationId,
-            String environment,
-            String gitLabBranch,
-            String gitLabGroup,
-            AnalysisMode mode,
-            List<AnalysisEvidenceSection> evidenceSections
-    ) {
-        this(correlationId, environment, gitLabBranch, gitLabGroup, mode, evidenceSections, null);
-    }
 }

@@ -15,8 +15,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPrepared
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -107,7 +105,6 @@ class CopilotSdkAnalysisAiProviderTest {
         assertEquals(AnalysisProblemNature.CONFIRMED, response.problemNature());
         assertEquals(AnalysisConfidence.HIGH, response.confidence());
         assertEquals("Prepared prompt for timeout-123", response.prompt());
-        assertNull(response.diagram());
 
         verify(preparationService).prepare(request);
         verify(executionGateway).execute(same(preparedRequest));
@@ -253,82 +250,6 @@ class CopilotSdkAnalysisAiProviderTest {
         );
         assertEquals(AnalysisProblemNature.CONFIRMED, response.problemNature());
         assertEquals(AnalysisConfidence.HIGH, response.confidence());
-    }
-
-    @Test
-    void shouldParseExploratoryDiagramFromStructuredResponse() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
-        var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = new CopilotSdkAnalysisAiProvider(preparationService, executionGateway);
-
-        var request = new AnalysisAiAnalysisRequest(
-                "corr-flow-123",
-                "dev2",
-                "release/2026.04",
-                "sample/runtime",
-                AnalysisMode.EXPLORATORY,
-                List.of()
-        );
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
-
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
-        when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-flow-123");
-        when(executionGateway.execute(preparedRequest)).thenReturn("""
-                detectedProblem: FLOW_TIMEOUT_HYPOTHESIS
-                summary: Exploratory wskazuje prawdopodobny timeout na dalszym odcinku flow.
-                recommendedAction: - Zweryfikuj wywolanie do `catalog-service`.
-                rationale: - Fakt: blad pojawil sie w `backend`.
-                - Hipoteza: `catalog-service` byl kolejnym komponentem.
-                problemNature: HYPOTHESIS
-                confidence: MEDIUM
-                diagram:
-                {
-                  "nodes": [
-                    {
-                      "id": "backend",
-                      "kind": "COMPONENT",
-                      "title": "backend",
-                      "componentName": "backend",
-                      "factStatus": "FACT",
-                      "firstSeenAt": "2026-04-20T10:15:30Z",
-                      "metadata": [{"name": "class", "value": "CustomerController"}],
-                      "errorSource": true
-                    },
-                    {
-                      "id": "catalog-service",
-                      "kind": "COMPONENT",
-                      "title": "catalog-service",
-                      "componentName": "catalog-service",
-                      "factStatus": "HYPOTHESIS",
-                      "firstSeenAt": "",
-                      "metadata": [{"name": "endpoint", "value": "/inventory"}],
-                      "errorSource": false
-                    }
-                  ],
-                  "edges": [
-                    {
-                      "id": "backend->catalog-service",
-                      "fromNodeId": "backend",
-                      "toNodeId": "catalog-service",
-                      "sequence": 1,
-                      "interactionType": "HTTP",
-                      "factStatus": "HYPOTHESIS",
-                      "startedAt": "",
-                      "durationMs": null,
-                      "supportSummary": "Hipoteza wynikajaca z logow i repo."
-                    }
-                  ]
-                }
-                """.trim());
-
-        var response = provider.analyze(request);
-
-        assertNotNull(response.diagram());
-        assertEquals(2, response.diagram().nodes().size());
-        assertEquals(1, response.diagram().edges().size());
-        assertEquals("backend", response.diagram().nodes().get(0).id());
-        assertEquals(true, response.diagram().nodes().get(0).errorSource());
-        assertEquals("backend->catalog-service", response.diagram().edges().get(0).id());
     }
 
 }

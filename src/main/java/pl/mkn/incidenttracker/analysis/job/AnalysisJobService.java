@@ -34,7 +34,10 @@ public class AnalysisJobService {
                 analysisId,
                 request.correlationId(),
                 analysisOrchestrator.providerDescriptors(),
+                analysisOrchestrator.exploratoryEnabled(),
                 analysisOrchestrator.exploratoryEnabled()
+                        ? analysisOrchestrator.exploratoryProviderDescriptor()
+                        : null
         );
 
         jobs.put(analysisId, job);

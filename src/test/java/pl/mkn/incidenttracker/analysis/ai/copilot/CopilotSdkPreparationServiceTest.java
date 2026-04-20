@@ -17,7 +17,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparat
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.evidence.provider.exploratory.ExploratoryAnalysisProperties;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.nio.file.Path;
@@ -55,8 +54,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 properties,
                 toolBridge,
-                new CopilotSkillRuntimeLoader(properties),
-                exploratoryProperties()
+                new CopilotSkillRuntimeLoader(properties)
         );
         var request = new AnalysisAiAnalysisRequest(
                 "timeout-123",
@@ -160,8 +158,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 properties,
                 toolBridge,
-                new CopilotSkillRuntimeLoader(properties),
-                exploratoryProperties()
+                new CopilotSkillRuntimeLoader(properties)
         );
         var request = new AnalysisAiAnalysisRequest(
                 "corr-123",
@@ -187,8 +184,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 properties,
                 toolBridge,
-                new CopilotSkillRuntimeLoader(properties),
-                exploratoryProperties()
+                new CopilotSkillRuntimeLoader(properties)
         );
         var request = new AnalysisAiAnalysisRequest(
                 "corr-123",
@@ -220,8 +216,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 properties,
                 toolBridge,
-                new CopilotSkillRuntimeLoader(properties),
-                exploratoryProperties()
+                new CopilotSkillRuntimeLoader(properties)
         );
         var request = new AnalysisAiAnalysisRequest(
                 "corr-123",
@@ -247,8 +242,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 properties,
                 toolBridge,
-                new CopilotSkillRuntimeLoader(properties),
-                exploratoryProperties()
+                new CopilotSkillRuntimeLoader(properties)
         );
         var request = new AnalysisAiAnalysisRequest(
                 "corr-123",
@@ -266,54 +260,6 @@ class CopilotSdkPreparationServiceTest {
                 .join();
 
         assertEquals(PermissionRequestResultKind.DENIED_BY_RULES.toString(), decision.getKind());
-    }
-
-    @Test
-    void shouldPrepareExploratoryPromptWithConservativeBaselineAndDiagramContract() {
-        var properties = new CopilotSdkProperties();
-        properties.setWorkingDirectory("C:\\Users\\mknie\\IdeaProjects\\incidenttracker");
-        properties.setSkillRuntimeDirectory(tempDirectory.toString());
-        var exploratoryProperties = exploratoryProperties();
-        exploratoryProperties.setMaxRepositories(3);
-        exploratoryProperties.setMaxFlowNodes(8);
-        exploratoryProperties.setMaxFlowEdges(10);
-
-        var service = new CopilotSdkPreparationService(
-                properties,
-                toolBridge,
-                new CopilotSkillRuntimeLoader(properties),
-                exploratoryProperties
-        );
-        var request = new AnalysisAiAnalysisRequest(
-                "timeout-123",
-                "dev3",
-                "release/2026.04",
-                "sample/runtime",
-                AnalysisMode.EXPLORATORY,
-                List.of(),
-                new pl.mkn.incidenttracker.analysis.ai.AnalysisAiPriorResult(
-                        "DOWNSTREAM_TIMEOUT",
-                        "Conservative widzi timeout w downstream.",
-                        "- Sprawdz timeouty.",
-                        "- Fakty sa mocne, ale bez pelnego flow.",
-                        pl.mkn.incidenttracker.analysis.AnalysisProblemNature.CONFIRMED,
-                        pl.mkn.incidenttracker.analysis.AnalysisConfidence.HIGH
-                )
-        );
-
-        var prepared = service.prepare(request);
-
-        assertTrue(prepared.messageOptions().getPrompt().contains("This step extends the already prepared conservative analysis."));
-        assertTrue(prepared.messageOptions().getPrompt().contains("Conservative baseline to extend:"));
-        assertTrue(prepared.messageOptions().getPrompt().contains("detectedProblem: DOWNSTREAM_TIMEOUT"));
-        assertTrue(prepared.messageOptions().getPrompt().contains("- at most 3 repositories"));
-        assertTrue(prepared.messageOptions().getPrompt().contains("- final diagram up to 8 nodes and 10 edges"));
-        assertTrue(prepared.messageOptions().getPrompt().contains("diagram: <valid JSON object without markdown code fences"));
-        assertTrue(prepared.messageOptions().getPrompt().contains("mode: EXPLORATORY"));
-    }
-
-    private ExploratoryAnalysisProperties exploratoryProperties() {
-        return new ExploratoryAnalysisProperties();
     }
 
 }
