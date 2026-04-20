@@ -111,6 +111,7 @@ class AnalysisJobControllerTest {
                                 "DOWNSTREAM_TIMEOUT",
                                 "Inspect recent HTTP client timeout changes first.",
                                 "Timeout signals align across logs and runtime evidence.",
+                                "To jest funkcja odpowiedzialna za pobranie danych katalogowych potrzebnych do dalszego flow.",
                                 "Prompt body for timeout-123"
                         )
                 ));
@@ -122,6 +123,7 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.preparedPrompt").value("Prompt body for timeout-123"))
                 .andExpect(jsonPath("$.result.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
                 .andExpect(jsonPath("$.result.rationale").value("Timeout signals align across logs and runtime evidence."))
+                .andExpect(jsonPath("$.result.affectedFunction").value("To jest funkcja odpowiedzialna za pobranie danych katalogowych potrzebnych do dalszego flow."))
                 .andExpect(jsonPath("$.result.prompt").value("Prompt body for timeout-123"));
 
         verify(analysisJobService).getAnalysis("job-123");

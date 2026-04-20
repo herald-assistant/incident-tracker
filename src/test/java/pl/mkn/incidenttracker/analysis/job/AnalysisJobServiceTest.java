@@ -66,6 +66,10 @@ class AnalysisJobServiceTest {
         );
         assertNotNull(completed.result());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
+        assertEquals(
+                "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
+                completed.result().affectedFunction()
+        );
         assertEquals("COMPLETED", completed.steps().get(5).status());
     }
 

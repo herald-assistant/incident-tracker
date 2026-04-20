@@ -74,6 +74,10 @@ class AnalysisServiceTest {
                 response.rationale()
         );
         assertEquals(
+                "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
+                response.affectedFunction()
+        );
+        assertEquals(
                 "Synthetic AI prompt for correlationId=timeout-123, environment=dev3, gitLabBranch=dev/atlas",
                 response.prompt()
         );
@@ -103,6 +107,10 @@ class AnalysisServiceTest {
                 response.rationale()
         );
         assertEquals(
+                "The affected function is the order persistence write path that coordinates domain validation and database update steps before the flow can complete.",
+                response.affectedFunction()
+        );
+        assertEquals(
                 "Synthetic AI prompt for correlationId=db-lock-123, environment=dev1, gitLabBranch=dev/zephyr",
                 response.prompt()
         );
@@ -128,6 +136,7 @@ class AnalysisServiceTest {
                 "The test AI provider could not find a strong pattern in the available evidence.",
                 response.rationale()
         );
+        assertEquals("", response.affectedFunction());
         assertEquals(
                 "Synthetic AI prompt for correlationId=corr-123, environment=dev2, gitLabBranch=dev/quartz",
                 response.prompt()

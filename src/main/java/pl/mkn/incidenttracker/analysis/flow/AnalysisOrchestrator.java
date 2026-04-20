@@ -56,6 +56,7 @@ public class AnalysisOrchestrator {
                 aiResponse.detectedProblem(),
                 aiResponse.recommendedAction(),
                 aiResponse.rationale(),
+                aiResponse.affectedFunction(),
                 aiResponse.prompt()
         );
 

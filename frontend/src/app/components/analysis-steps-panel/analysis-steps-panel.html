@@ -100,6 +100,16 @@
                   ></app-markdown-content>
                 </div>
 
+                @if (hasMeaningfulValue(analysisResult.affectedFunction)) {
+                  <div class="analysis-highlight">
+                    <p class="result-card-label">Dotknięta funkcja systemu</p>
+                    <app-markdown-content
+                      [content]="analysisResult.affectedFunction"
+                      [compact]="true"
+                    ></app-markdown-content>
+                  </div>
+                }
+
                 @if (hasMeaningfulValue(analysisResult.rationale)) {
                   <div class="analysis-highlight">
                     <p class="result-card-label">Dlaczego ta diagnoza pasuje</p>

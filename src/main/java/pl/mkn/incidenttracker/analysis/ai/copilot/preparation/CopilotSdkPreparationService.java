@@ -78,6 +78,7 @@ public class CopilotSdkPreparationService {
                 You are helping with an enterprise software incident analysis.
                 Your answer will be read by an analyst, tester, or junior/mid developer who may need to triage the incident,
                 continue local diagnosis, or hand the case over to another Tribe, admins, integration owners, or DB specialists.
+                The reader may be new to the affected area and may not know the broader functional flow behind the failing capability.
                 Write a result that is precise, grounded, operationally useful, and safe for handoff.
 
                 correlationId: %s
@@ -93,6 +94,9 @@ public class CopilotSdkPreparationService {
                 If gitLabBranch is not resolved from logs, do not invent one.
                 Infer project names and file paths only from evidence and repository exploration.
                 If the evidence already contains a concrete exception stacktrace and matching GitLab code around the failing line, answer directly instead of calling more tools.
+                When GitLab exploration is needed, do not stop at the single failing line if understanding the surrounding functional or technical flow would materially improve the diagnosis, handoff, or next step.
+                If one focused code read is not enough for a newcomer to understand the incident, expand the exploration to the surrounding method, class, service flow, and a few directly collaborating files or integration points.
+                Prefer to explain where in the broader request or business flow the failure happens, what leads into that point, what happens immediately after it, and which downstream systems or components are involved.
                 The available evidence comes only from our system: Elasticsearch logs, Dynatrace runtime signals, and GitLab code context.
                 The real cause may still be in an external integration, downstream service, platform configuration, database state, messaging layer,
                 infrastructure, or an area owned by another team that is not directly visible here.
@@ -101,6 +105,7 @@ public class CopilotSdkPreparationService {
                 - what is directly confirmed by the evidence,
                 - what is the best-supported hypothesis,
                 - what remains unverified or outside current visibility,
+                - what the broader functional context is for someone new to this area,
                 - what the fastest next verification or escalation step should be.
                 Do not overclaim root cause in systems that are not directly visible in the evidence.
                 Avoid generic advice like "check logs" or "investigate further" unless you say exactly what should be verified and why.
@@ -109,18 +114,19 @@ public class CopilotSdkPreparationService {
                 Return the analysis in Polish.
                 Keep the field names exactly as shown below, but write every field value in concise, professional Polish.
                 Preserve technical identifiers such as class names, method names, exception types, branch names and file paths in their original form.
-                Use valid Markdown in summary, recommendedAction, and rationale.
+                Use valid Markdown in summary, affectedFunction, recommendedAction, and rationale.
                 Use real markdown bullets on separate lines instead of pseudo-separators.
                 Never use pipe separators like "|" to join multiple points in one line.
-                Put every recommendation or rationale point on its own line starting with "- ".
+                Put every affectedFunction, recommendation, or rationale point on its own line starting with "- " when listing multiple points.
                 Use **bold** for the most important facts and `code spans` for technical identifiers such as classes, methods, exceptions, endpoints, IDs, CIF values, branch names, projects, metrics, queues, or DB objects.
                 You may use a short "---" separator sparingly if it materially improves readability, but do not over-format the answer.
 
                 Return exactly these lines:
                 detectedProblem: <one precise short technical label scoped as narrowly as the evidence allows; plain text, no bullet list>
-                summary: <a short markdown block in Polish: one concise opening sentence and then 2-4 markdown bullet lines covering strongest evidence, likely failure domain, and visibility limits>
+                summary: <a short markdown block in Polish: one concise opening sentence and then 2-5 markdown bullet lines covering strongest evidence, where in the broader functional flow the failure happens, likely failure domain, and visibility limits>
                 recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
-                rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, and what still requires confirmation or external access>
+                rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, what the surrounding flow in our system appears to be, and what still requires confirmation or external access>
+                affectedFunction: <a short markdown block in Polish based on the broader GitLab exploration: one concise opening sentence and then 2-5 markdown bullet lines describing the affected system function, its role in the broader flow, key upstream/downstream collaborators, and where the incident interrupts that flow>
 
                 Available tools:
                 %s

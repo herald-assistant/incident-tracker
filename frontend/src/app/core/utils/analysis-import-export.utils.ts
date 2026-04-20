@@ -10,7 +10,7 @@ import {
 import { isTerminalStatus } from './analysis-display.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
-export const EXPORT_VERSION = 1;
+export const EXPORT_VERSION = 2;
 
 export function buildExportEnvelope(
   job: AnalysisJobResponse,
@@ -168,6 +168,7 @@ function normalizeResult(result: unknown): AnalysisResultResponse {
     detectedProblem: normalizeString(resultObject?.['detectedProblem']),
     recommendedAction: normalizeString(resultObject?.['recommendedAction']),
     rationale: normalizeString(resultObject?.['rationale']),
+    affectedFunction: normalizeString(resultObject?.['affectedFunction']),
     prompt: normalizeString(resultObject?.['prompt'])
   };
 }

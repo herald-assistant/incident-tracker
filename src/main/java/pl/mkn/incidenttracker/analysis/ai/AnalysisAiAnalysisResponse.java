@@ -6,6 +6,7 @@ public record AnalysisAiAnalysisResponse(
         String detectedProblem,
         String recommendedAction,
         String rationale,
+        String affectedFunction,
         String prompt
 ) {
 }

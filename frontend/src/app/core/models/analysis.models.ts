@@ -35,6 +35,7 @@ export interface AnalysisResultResponse {
   detectedProblem: string;
   recommendedAction: string;
   rationale: string;
+  affectedFunction: string;
   prompt: string;
 }
 

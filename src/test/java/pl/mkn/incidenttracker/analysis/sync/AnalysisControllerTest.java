@@ -40,6 +40,7 @@ class AnalysisControllerTest {
                         "DOWNSTREAM_TIMEOUT",
                         "Check downstream latency, timeout configuration, and retry policy.",
                         "Timeout evidence is consistent across logs and runtime signals.",
+                        "Dotknięta funkcja to pobranie danych downstream potrzebnych do złożenia odpowiedzi biznesowej.",
                         "Prompt body for timeout-123"
                 ));
 
@@ -59,6 +60,7 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
                 .andExpect(jsonPath("$.recommendedAction").value("Check downstream latency, timeout configuration, and retry policy."))
                 .andExpect(jsonPath("$.rationale").value("Timeout evidence is consistent across logs and runtime signals."))
+                .andExpect(jsonPath("$.affectedFunction").value("Dotknięta funkcja to pobranie danych downstream potrzebnych do złożenia odpowiedzi biznesowej."))
                 .andExpect(jsonPath("$.prompt").value("Prompt body for timeout-123"));
 
         verify(analysisService).analyze(new AnalysisRequest("timeout-123"));
@@ -111,6 +113,7 @@ class AnalysisControllerTest {
                         "DOWNSTREAM_TIMEOUT",
                         "Check downstream latency, timeout configuration, and retry policy.",
                         "Timeout evidence is consistent across logs and runtime signals.",
+                        "Dotknięta funkcja to pobranie danych downstream potrzebnych do złożenia odpowiedzi biznesowej.",
                         "Prompt body for timeout-123"
                 ));
 

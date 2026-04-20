@@ -37,8 +37,8 @@ Nie obejmuje:
 - Permission handling musi byc jawnie ustawione. Nie zostawiaj domyslnego,
   nieczytelnego zachowania SDK.
 - Parsing odpowiedzi modelu ma pozostac odporny na formatowanie, ale kontrakt
-  pol `detectedProblem`, `summary`, `recommendedAction`, `rationale` powinien
-  pozostac stabilny dla flow i UI.
+  pol `detectedProblem`, `summary`, `recommendedAction`, `rationale`,
+  `affectedFunction` powinien pozostac stabilny dla flow i UI.
 - Jesli kiedys dojda kolejne providery AI, trzymaj ich szczegoly lokalnie i nie
   rozlewaj zaleznosci SDK poza ten katalog.
 
