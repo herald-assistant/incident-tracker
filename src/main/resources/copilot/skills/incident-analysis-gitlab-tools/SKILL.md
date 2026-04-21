@@ -1,243 +1,200 @@
 ---
 name: incident-analysis-gitlab-tools
-description: Guide for incident analysis that starts from logs and Dynatrace runtime signals, then uses GitLab tools efficiently to confirm the likely code-level cause of an error.
+description: Use GitLab tools efficiently to understand the failing code path, repository predicates, integrations, and surrounding functional flow.
 ---
 
-# Incident Analysis With GitLab And Elastic Tools
+# Incident Analysis With GitLab Tools
 
-Use this skill when analyzing an incident from structured evidence such as:
+Use this skill when logs, stack traces, deterministic GitLab evidence, or runtime signals suggest that code context is needed to understand:
 
-- logs from Elasticsearch
-- runtime signals from Dynatrace
-- deterministic GitLab resolved code references
+- the failing method,
+- the repository predicate,
+- the entity or DTO mapping,
+- the integration path,
+- the validation path,
+- the async/event flow,
+- or the affected function for handoff.
 
-## Goal
+## Fixed repository context
 
-Produce a diagnosis that is grounded in evidence and, when needed, refine it by
-reading enough code from GitLab to understand not only the likely failure point,
-but also the surrounding functional flow that gives the incident meaning.
+Treat `gitLabGroup` and `gitLabBranch` from the manifest/prompt as fixed.
 
-The result should be useful for a technical operator, tester, analyst, or
-junior or mid-level developer who may need to react, verify, or hand the case over to
-another team.
-Prefer a diagnosis that helps someone do the next right thing over a diagnosis
-that only sounds plausible.
-Assume the reader may be a new analyst who does not yet understand the affected
-capability, its collaborators, or the overall request path.
+Do not switch group or branch.
+Do not invent project names.
+Infer project names and file paths only from evidence and repository exploration.
 
-Treat the provided `gitLabGroup` and `gitLabBranch` as fixed repository context
-for the current analysis. Infer project names and file paths, but do not
-silently switch to a different group or branch unless the caller explicitly
-changes them.
-Treat the provided `environment` as deployment context only. It is useful for
-the diagnosis and user-facing summary, but it is not a GitLab coordinate.
+## When not to use GitLab tools
 
-## Required output shape
+Do not call GitLab tools when:
 
-Return exactly these fields when asked for a diagnosis:
+- attached deterministic code evidence already contains the relevant stack frame, surrounding method, direct collaborator and enough flow context for a newcomer;
+- the logs, runtime signals and attached code evidence already explain both:
+    - the likely issue,
+    - and the affected function / broader flow;
+- the incident is clearly outside repository visibility;
+- another tool type is more direct for the current hypothesis, for example DB tools for a concrete data check.
 
-- `detectedProblem`
-- `summary`
-- `recommendedAction`
-- `rationale`
-- `affectedFunction`
-- `affectedProcess`
-- `affectedBoundedContext`
-- `affectedTeam`
+If the likely technical error is clear but `affectedFunction` would remain shallow, use GitLab tools to read enough surrounding code to explain the flow and handoff.
 
-Do not invent extra top-level fields unless the caller explicitly asks for them.
+## Exploration goal
 
-## How To Write The Result
+The goal is not to map the whole repository.
 
-- `detectedProblem`
-  Make it specific and technical, not generic. Scope it as narrowly as the
-  evidence allows.
-- `summary`
-  Explain what likely happened in our system, which signals support it most, and
-  whether the likely failure domain seems to be inside our system or outside it.
-  If visibility is incomplete, say that plainly.
-  Prefer one short opening sentence and then a few markdown bullets with the
-  strongest signals, where in the broader functional or technical flow the
-  failure occurs, likely failure domain, and visibility limits.
-- `recommendedAction`
-  Prefer a short prioritized markdown list. Each point should say who should act
-  next and what should be verified or changed.
-  If escalation or handoff is likely needed, name the likely owner such as our
-  team, another Tribe, admins, integration owners, or DBA.
-  If `operational-context` evidence names a team or handoff rule, keep the
-  handoff aligned with that evidence instead of inventing a new owner.
-- `rationale`
-  Use short markdown bullets. Separate confirmed signals from hypotheses and
-  from visibility limits.
-  Never join multiple points with pipe separators such as `|`.
-  Use real markdown bullets on separate lines.
-  Use `**bold**` for the most decision-relevant facts and `` `code spans` `` for
-  technical identifiers such as classes, methods, exceptions, CIF values,
-  branches, metrics, queues, or DB objects.
-  A short `---` separator is allowed only when it materially improves
-  readability.
-- `affectedFunction`
-  Explain the business or technical capability affected by the incident based on
-  the broader GitLab exploration.
-  Prefer one short opening sentence and then a few markdown bullets describing:
-  where this function sits in the wider flow, what enters it, what it calls or
-  coordinates, and where the incident interrupts that flow.
-  Write this for a new analyst who may not know the area yet.
-- `affectedProcess`
-  Return a short Polish plain-text label for the most likely affected process.
-  Prefer a process matched in `operational-context` evidence. If the process is
-  not grounded, write `nieustalone`.
-- `affectedBoundedContext`
-  Return a short Polish plain-text label for the most likely affected bounded
-  context. Prefer a bounded context matched in `operational-context` evidence.
-  If the context is not grounded, write `nieustalone`.
-- `affectedTeam`
-  Return a short Polish plain-text label for the team that should currently own
-  the incident or receive the handoff.
-  Prefer a team matched in `operational-context` evidence or implied by a
-  matched handoff rule. If the owner is not grounded, write `nieustalone`.
+The goal is to understand the smallest useful cross-file and, when relevant, cross-repository flow that explains:
 
-## Enterprise Grounding Rules
+- where the incident starts,
+- which component receives or creates the failing operation,
+- where the failing method sits,
+- what data or request enters that method,
+- which repository, mapper, validator, integration client, listener, scheduler or outbox handler participates,
+- where the incident interrupts the function,
+- what a beginner or mid-level analyst should verify next,
+- which team or owner may need to receive the handoff when evidence supports it.
 
-- Treat Elasticsearch, Dynatrace, and GitLab as evidence from our system only.
-- The incident may still be caused by an external integration, infrastructure,
-  database state, messaging platform, or another team-owned system.
-- If the evidence points outside our system, say so explicitly instead of
-  forcing a code-level root cause in our repository.
-- Do not recommend vague actions. State exactly what should be checked next and
-  why.
-- If direct access is missing, call that out and frame the next step as
-  verification or escalation, not as a proven conclusion.
-- If `operational-context` evidence contains matched processes, bounded
-  contexts, teams, or handoff rules, use that evidence to ground ownership.
-- Do not name a specific process, bounded context, or team unless it is
-  supported by matched operational-context evidence or by very strong
-  corroborating runtime/code evidence.
+## Tool order
 
-## Evidence-first workflow
+1. Prefer attached deterministic GitLab evidence.
+2. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear.
+3. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
+4. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
+5. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
+6. Use `gitlab_read_repository_file` only when:
+    - the file is short,
+    - the chunk is insufficient,
+    - class-level context is necessary,
+    - or the broader flow cannot be understood from chunks/outlines.
 
-1. Start from the attached artifacts only and read the manifest first when one is attached.
-2. Form an initial hypothesis from the attached logs, Dynatrace runtime signals, and already-provided GitLab candidates.
-   Prefer code references resolved directly from stacktraces, class names, or
-   file paths found in logs over generic keyword search.
-   If Dynatrace problem evidence contains curated fields such as
-   `signalCategories` or `correlationHighlights`, treat them as high-value
-   runtime clues for correlation.
-   In particular, explicitly consider signals about database connectivity,
-   availability, messaging and failure increase when they overlap with the
-   incident time window or log symptoms.
-3. If the logs look incomplete or too truncated, use the Elastic tool first to fetch more precise log entries for the same `correlationId`.
-4. If the evidence is already strong and the surrounding flow is already understandable for the reader, answer without fetching more data.
-5. If code context is still needed, use GitLab tools not only to confirm or disprove the hypothesis, but also to understand the surrounding flow of the affected capability.
-6. When the local failing method is only one step in a larger business or technical path, widen the exploration enough to explain the entry point, key collaborators, downstream calls, and where the failure interrupts the flow.
+If a listed tool is not available in the current session, use the available GitLab tools and state limitations only if they affect the diagnosis.
 
-## Elastic tool strategy
+## Search strategy
 
-Use `elastic_search_logs_by_correlation_id` when:
+Use inputs inferred from evidence:
 
-- the evidence contains only a small sample of logs
-- the current logs omit an exception body or long message
-- you need to confirm whether WARN or ERROR entries appeared later in the same incident
+- stacktrace class names,
+- exception names,
+- repository method names,
+- entity names,
+- DTO names,
+- endpoint or operation names,
+- queue/topic/message names,
+- downstream client names,
+- service/container/project hints,
+- business identifiers from logs.
 
-Prefer focused retrieval by the same `correlationId`.
-This tool uses the configured Kibana proxy and does not require extra
-connection parameters.
-Do not switch to a different identifier unless the caller explicitly tells you to.
+Search broadly enough to find the relevant project and direct collaborators, but do not read every candidate.
 
-## GitLab tool strategy
+Prefer ranked candidates and role hints over blind full-file reads.
 
-### 1. Narrow the search space first
+## Chunk-first reading strategy
 
-Prefer `gitlab_search_repository_candidates` when you still need to identify the
-most relevant files.
+Start from the most grounded location:
 
-Use inputs inferred from the evidence:
+- stacktrace file and line,
+- class name from logs,
+- method name from exception,
+- repository method name,
+- endpoint/controller/service name,
+- deterministic candidate from attached evidence.
 
-- `projectNames`
-- `operationNames`
-- `keywords`
+Read outward in this order:
 
-Do not search blindly if the evidence already contains a concrete project and
-file path.
+1. failing method or stack frame area,
+2. containing class/service method,
+3. direct collaborator:
+    - repository,
+    - mapper,
+    - validator,
+    - facade,
+    - gateway,
+    - downstream client,
+    - scheduler,
+    - listener,
+    - outbox/event handler,
+4. one or two direct upstream/downstream steps if they materially improve the explanation for a beginner analyst,
+5. related repository/component only when the current evidence indicates a cross-component flow or handoff.
 
-### 2. Prefer small reads over full files
+## What to extract from code
 
-Prefer `gitlab_read_repository_file_chunk` before `gitlab_read_repository_file`.
+When reading code, extract only what helps the diagnosis and final UX:
 
-Use chunk reads when:
+- method name and responsibility,
+- entry point or trigger,
+- repository predicate,
+- entity/table/field names,
+- ID or business key used,
+- tenant/context/status filters,
+- soft-delete or validity filters,
+- integration endpoint/client,
+- async message/event type,
+- error handling path,
+- direct collaborators,
+- ownership hints if grounded.
 
-- a stack frame or method name points to a local area of code
-- only one method or code block is needed
-- you are confirming a narrow hypothesis
+## Repository predicate analysis
 
-Use full file reads only when:
+When the incident involves "not found", empty result, entity lookup, data filtering, or repository failure, identify:
 
-- the file is short
-- the chunk result is insufficient
-- understanding class-level context is necessary
+- direct key predicate,
+- business key predicate,
+- tenant/context predicate,
+- status/state predicate,
+- soft-delete predicate,
+- validity-date predicate,
+- type/discriminator predicate,
+- joins or relation loading.
 
-### 3. Expand from the failing point to the surrounding flow
+This information should guide DB/data diagnostics.
 
-If the incident appears to involve a broader execution path, read outward from
-the failing point in a controlled way:
+## Broader flow explanation
 
-- first the failing method or stack frame area
-- then the containing class or service method
-- then a few directly collaborating files, such as orchestrators, facades,
-  gateways, validators, mappers, or downstream clients
-- then, if still needed, one more upstream or downstream step that clarifies the
-  functional path for the reader
+If the failing method is only a local step, explain the surrounding flow.
 
-The goal is not to map the entire repository. The goal is to explain the local
-failure inside the smallest broader flow that makes the incident understandable
-to someone new to the area.
+For example:
 
-### 4. Read iteratively
+- controller/request handler -> service -> repository,
+- listener/scheduler -> service -> outbox table -> downstream call,
+- validator -> dictionary/reference lookup -> save,
+- facade -> mapper -> downstream client.
 
-After each tool result:
-
-- update the hypothesis
-- decide whether one more file or chunk is justified by the diagnosis or by the
-  need to explain the broader flow
-- stop once the diagnosis is sufficiently supported
-
-Do not keep reading files without a specific reason.
+Do not describe the whole system.
+Describe the smallest broader flow that helps a new analyst understand the incident.
 
 ## Stop conditions
 
-Stop fetching more repository context when one of these is true:
+Stop reading code when:
 
-- the likely cause is supported by multiple signals
-- the code and surrounding flow are clear enough for a newcomer to understand
-  where the failure happens and what it affects
-- the code fragment clearly confirms the suspected root cause and the nearby
-  functional context is already understandable
-- further reads would be speculative or repetitive
+- the likely failure point is clear,
+- the repository predicate or integration call is understood,
+- the affected function can be explained to a newcomer,
+- the direct upstream/downstream collaborator is clear enough for handoff,
+- further reads would be speculative,
+- or the remaining question requires DB/runtime/downstream visibility rather than more code.
 
-## Efficiency rules
+Do not stop only because the local exception is clear.
+Stop when both the technical failure and the affected flow are clear enough.
 
-- Prefer a few high-value files that explain the flow over many low-value files.
-- Prefer a targeted chunk over a whole file, but allow a somewhat wider read when
-  it materially improves the explanation of the flow.
-- Reuse already collected evidence instead of re-reading the same file.
-- If the evidence remains weak after a few focused reads, say that confidence is limited.
+## Context budget
 
-## Grounding rules
+Tool call count is less important than context quality.
 
-- Do not claim a root cause unless it is supported by the provided evidence or fetched code.
-- Distinguish clearly between confirmed findings and plausible hypotheses.
-- If multiple causes are possible, choose the best-supported one and explain why.
-- If you describe the broader flow, ground that explanation in specific code or
-  evidence rather than generic architectural assumptions.
+It is acceptable to perform broader GitLab exploration when it materially improves `affectedFunction`, handoff, or next action.
 
-## Dependencies
+Prefer:
 
-This skill assumes the following tools may be available:
+- more ranked candidate searches,
+- file outlines,
+- focused chunks,
+- small batches of related chunks,
 
-- `elastic_search_logs_by_correlation_id`
-- `gitlab_search_repository_candidates`
-- `gitlab_read_repository_file`
-- `gitlab_read_repository_file_chunk`
+over:
 
-If a required tool is unavailable, continue with the evidence already provided
-and state the limitation in the rationale.
+- many large full-file reads,
+- repeated reads of the same file,
+- reading unrelated candidates,
+- dumping code into the final answer.
+
+## Grounding
+
+When describing code behavior, mention the supporting class, method, file, or tool result.
+
+If code context remains incomplete, state that limitation instead of guessing.

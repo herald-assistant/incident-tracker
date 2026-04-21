@@ -250,15 +250,19 @@ Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
 #### GitLab
 
 - `gitlab_search_repository_candidates`
+- `gitlab_find_flow_context`
+- `gitlab_read_repository_file_outline`
 - `gitlab_read_repository_file`
 - `gitlab_read_repository_file_chunk`
+- `gitlab_read_repository_file_chunks`
 
 To jest AI-guided repository exploration.
 Dynatrace nie ma tu osobnych tooli.
 
-W job flow odpowiedzi `gitlab_read_repository_file*` sa dodatkowo mapowane do
-`toolEvidenceSections`, zeby frontend mogl pokazac na zywo, jakie pliki i
-fragmenty kodu AI dociagnelo juz podczas sesji.
+W job flow odpowiedzi `gitlab_read_repository_file`,
+`gitlab_read_repository_file_chunk` i `gitlab_read_repository_file_chunks` sa
+dodatkowo mapowane do `toolEvidenceSections`, zeby frontend mogl pokazac na
+zywo, jakie pliki i fragmenty kodu AI dociagnelo juz podczas sesji.
 
 Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.gitlab` i
 korzystaja z portow z `analysis.adapter.gitlab`.

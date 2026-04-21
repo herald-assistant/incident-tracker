@@ -33,7 +33,9 @@ class CopilotSkillRuntimeLoaderTest {
         var skillFile = runtimeRoot.resolve("incident-analysis-gitlab-tools").resolve("SKILL.md");
 
         assertTrue(Files.exists(skillFile));
-        assertTrue(Files.readString(skillFile).contains("# Incident Analysis With GitLab And Elastic Tools"));
+        var skillContent = Files.readString(skillFile);
+        assertTrue(skillContent.contains("name: incident-analysis-gitlab-tools"));
+        assertTrue(skillContent.contains("# Incident Analysis With GitLab Tools"));
     }
 
     @Test

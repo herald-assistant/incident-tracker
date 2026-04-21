@@ -10,7 +10,9 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabFileChunkResult;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabReadRepositoryFileChunkToolResponse;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabReadRepositoryFileChunksToolResponse;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabReadRepositoryFileToolResponse;
 
 import java.util.ArrayList;
@@ -28,6 +30,7 @@ public class CopilotToolEvidenceCaptureRegistry {
     private static final String GITLAB_TOOL_CATEGORY = "tool-fetched-code";
     private static final String TOOL_NAME_FILE = "gitlab_read_repository_file";
     private static final String TOOL_NAME_FILE_CHUNK = "gitlab_read_repository_file_chunk";
+    private static final String TOOL_NAME_FILE_CHUNKS = "gitlab_read_repository_file_chunks";
 
     private final ObjectMapper objectMapper;
     private final Map<String, SessionArtifactAccumulator> sessionAccumulators = new ConcurrentHashMap<>();
@@ -66,6 +69,7 @@ public class CopilotToolEvidenceCaptureRegistry {
         var updatedSection = switch (toolName) {
             case TOOL_NAME_FILE -> captureGitLabFile(rawResult, accumulator);
             case TOOL_NAME_FILE_CHUNK -> captureGitLabFileChunk(rawResult, accumulator);
+            case TOOL_NAME_FILE_CHUNKS -> captureGitLabFileChunks(rawResult, accumulator);
             default -> null;
         };
 
@@ -121,26 +125,21 @@ public class CopilotToolEvidenceCaptureRegistry {
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileChunkToolResponse.class);
-            var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, "group", response.group());
-            addAttribute(attributes, "projectName", response.projectName());
-            addAttribute(attributes, "branch", response.branch());
-            addAttribute(attributes, "filePath", response.filePath());
-            addAttribute(attributes, "referenceType", "AI_TOOL_FILE_CHUNK");
-            addAttribute(attributes, "toolName", TOOL_NAME_FILE_CHUNK);
-            addAttribute(attributes, "requestedStartLine", String.valueOf(response.requestedStartLine()));
-            addAttribute(attributes, "requestedEndLine", String.valueOf(response.requestedEndLine()));
-            addAttribute(attributes, "returnedStartLine", String.valueOf(response.returnedStartLine()));
-            addAttribute(attributes, "returnedEndLine", String.valueOf(response.returnedEndLine()));
-            addAttribute(attributes, "totalLines", String.valueOf(response.totalLines()));
-            addAttribute(attributes, "content", response.content());
-            addAttribute(attributes, "contentTruncated", String.valueOf(response.truncated()));
-
             return accumulator.upsertGitLabItem(
                     gitLabFileKey(response.group(), response.projectName(), response.branch(), response.filePath()),
-                    new AnalysisEvidenceItem(
-                            gitLabItemTitle(response.projectName(), response.filePath()),
-                            List.copyOf(attributes)
+                    buildGitLabChunkItem(
+                            response.group(),
+                            response.projectName(),
+                            response.branch(),
+                            response.filePath(),
+                            TOOL_NAME_FILE_CHUNK,
+                            response.requestedStartLine(),
+                            response.requestedEndLine(),
+                            response.returnedStartLine(),
+                            response.returnedEndLine(),
+                            response.totalLines(),
+                            response.content(),
+                            response.truncated()
                     )
             );
         } catch (JsonProcessingException exception) {
@@ -149,10 +148,92 @@ public class CopilotToolEvidenceCaptureRegistry {
         }
     }
 
+    private AnalysisEvidenceSection captureGitLabFileChunks(
+            String rawResult,
+            SessionArtifactAccumulator accumulator
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileChunksToolResponse.class);
+            AnalysisEvidenceSection updatedSection = null;
+
+            for (var chunk : safeList(response.chunks())) {
+                if (chunk == null) {
+                    continue;
+                }
+
+                updatedSection = accumulator.upsertGitLabItem(
+                        gitLabFileKey(chunk.group(), chunk.projectName(), chunk.branch(), chunk.filePath()),
+                        buildGitLabChunkItem(chunk, TOOL_NAME_FILE_CHUNKS)
+                );
+            }
+
+            return updatedSection;
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab tool chunks result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
+    private AnalysisEvidenceItem buildGitLabChunkItem(GitLabFileChunkResult chunk, String toolName) {
+        return buildGitLabChunkItem(
+                chunk.group(),
+                chunk.projectName(),
+                chunk.branch(),
+                chunk.filePath(),
+                toolName,
+                chunk.requestedStartLine(),
+                chunk.requestedEndLine(),
+                chunk.returnedStartLine(),
+                chunk.returnedEndLine(),
+                chunk.totalLines(),
+                chunk.content(),
+                chunk.truncated()
+        );
+    }
+
+    private AnalysisEvidenceItem buildGitLabChunkItem(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            String toolName,
+            int requestedStartLine,
+            int requestedEndLine,
+            int returnedStartLine,
+            int returnedEndLine,
+            int totalLines,
+            String content,
+            boolean truncated
+    ) {
+        var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+        addAttribute(attributes, "group", group);
+        addAttribute(attributes, "projectName", projectName);
+        addAttribute(attributes, "branch", branch);
+        addAttribute(attributes, "filePath", filePath);
+        addAttribute(attributes, "referenceType", "AI_TOOL_FILE_CHUNK");
+        addAttribute(attributes, "toolName", toolName);
+        addAttribute(attributes, "requestedStartLine", String.valueOf(requestedStartLine));
+        addAttribute(attributes, "requestedEndLine", String.valueOf(requestedEndLine));
+        addAttribute(attributes, "returnedStartLine", String.valueOf(returnedStartLine));
+        addAttribute(attributes, "returnedEndLine", String.valueOf(returnedEndLine));
+        addAttribute(attributes, "totalLines", String.valueOf(totalLines));
+        addAttribute(attributes, "content", content);
+        addAttribute(attributes, "contentTruncated", String.valueOf(truncated));
+
+        return new AnalysisEvidenceItem(
+                gitLabItemTitle(projectName, filePath),
+                List.copyOf(attributes)
+        );
+    }
+
     private void addAttribute(List<AnalysisEvidenceAttribute> attributes, String name, String value) {
         if (StringUtils.hasText(value)) {
             attributes.add(new AnalysisEvidenceAttribute(name, value));
         }
+    }
+
+    private <T> List<T> safeList(List<T> values) {
+        return values != null ? values : List.of();
     }
 
     private String gitLabFileKey(String group, String projectName, String branch, String filePath) {

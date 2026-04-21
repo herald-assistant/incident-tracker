@@ -8,12 +8,12 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import org.springframework.stereotype.Service;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +28,7 @@ public class CopilotSdkPreparationService {
         var tools = toolBridge.buildToolDefinitions();
         var artifactDescriptors = attachmentArtifactService.describe(request);
         var skillDirectories = skillRuntimeLoader.resolveSkillDirectories();
+
         var clientOptions = new CopilotClientOptions()
                 .setUseLoggedInUser(true)
                 .setCwd(properties.getWorkingDirectory());
@@ -94,70 +95,52 @@ public class CopilotSdkPreparationService {
     ) {
         return """
                 You are helping with an enterprise software incident analysis.
-                Your answer will be read by an analyst, tester, or junior/mid developer who may need to triage the incident,
-                continue local diagnosis, or hand the case over to another Tribe, admins, integration owners, or DB specialists.
-                The reader may be new to the affected area and may not know the broader functional flow behind the failing capability.
-                Write a result that is precise, grounded, operationally useful, and safe for handoff.
 
-                correlationId: %s
-                environment: %s
-                gitLabBranch: %s
-                gitLabGroup: %s
+                The result will be read by an operator, tester, analyst, or junior/mid developer.
+                The reader may not know the affected system area.
+                Your job is to explain not only the likely error, but also the affected function,
+                where the incident interrupts the broader flow, what is confirmed, what remains
+                uncertain, and what should be done next.
 
-                Analyze the attached artifacts as the primary source of truth.
-                Read `00-incident-manifest.json` first and use it as the attachment index.
-                Do not assume facts that are not supported by the attached artifacts or tool results.
-                Follow any loaded skills that are relevant for incident analysis and tool usage.
-                When using GitLab tools, keep the provided gitLabGroup and gitLabBranch unchanged.
-                Treat Dynatrace evidence as initial runtime context only. No Dynatrace tools are available during the session.
-                If gitLabBranch is not resolved from logs, do not invent one.
-                Infer project names and file paths only from evidence and repository exploration.
-                If the attached artifacts already contain a concrete exception stacktrace and matching GitLab code around the failing line, answer directly instead of calling more tools.
-                When GitLab exploration is needed, do not stop at the single failing line if understanding the surrounding functional or technical flow would materially improve the diagnosis, handoff, or next step.
-                If one focused code read is not enough for a newcomer to understand the incident, expand the exploration to the surrounding method, class, service flow, and a few directly collaborating files or integration points.
-                Prefer to explain where in the broader request or business flow the failure happens, what leads into that point, what happens immediately after it, and which downstream systems or components are involved.
-                The available evidence comes only from our system: Elasticsearch logs, Dynatrace runtime signals, and GitLab code context.
-                The real cause may still be in an external integration, downstream service, platform configuration, database state, messaging layer,
-                infrastructure, or an area owned by another team that is not directly visible here.
-                If the likely problem is outside our codebase or outside the telemetry currently available, say that explicitly.
-                If `operational-context` evidence contains matched processes, bounded contexts, teams, or handoff rules, use them to ground ownership and handoff decisions.
-                Do not name a specific process, bounded context, or team unless it is supported by matched operational-context evidence or by very strong corroborating runtime/code evidence.
-                If ownership is still ambiguous, write `nieustalone` for the affected process, bounded context, or team instead of guessing.
-                If you recommend a handoff, keep it aligned with the grounded `affectedTeam` value and explain briefly which operational-context evidence supports that owner.
-                Separate clearly:
-                - what is directly confirmed by the evidence,
-                - what is the best-supported hypothesis,
-                - what remains unverified or outside current visibility,
-                - what the broader functional context is for someone new to this area,
-                - what the fastest next verification or escalation step should be.
-                Do not overclaim root cause in systems that are not directly visible in the evidence.
-                Avoid generic advice like "check logs" or "investigate further" unless you say exactly what should be verified and why.
-                Prefer concrete next steps that help a mid-level technical user act effectively.
-                If another team, admins, integration owners, or DB specialists are likely needed, say so directly and explain what should be handed off.
+                Session context:
+                - correlationId: %s
+                - environment: %s
+                - gitLabBranch: %s
+                - gitLabGroup: %s
+
+                Hard rules:
+                - Analyze the attached artifacts as the primary source of truth.
+                - Read `00-incident-manifest.json` first and use it as the attachment index.
+                - Treat environment, gitLabBranch and gitLabGroup as fixed session context.
+                - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
+                - Do not assume facts unsupported by attached artifacts or tool results.
+                - Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality.
+                - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
+                - If attached artifacts already contain enough evidence and the affected flow is understandable, answer directly.
+                - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
+                - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
+
                 Return the analysis in Polish.
-                Keep the field names exactly as shown below, but write every field value in concise, professional Polish.
-                Preserve technical identifiers such as class names, method names, exception types, branch names and file paths in their original form.
-                Use valid Markdown in summary, affectedFunction, recommendedAction, and rationale.
-                Use real markdown bullets on separate lines instead of pseudo-separators.
-                Never use pipe separators like "|" to join multiple points in one line.
-                Put every affectedFunction, recommendation, or rationale point on its own line starting with "- " when listing multiple points.
-                Use **bold** for the most important facts and `code spans` for technical identifiers such as classes, methods, exceptions, endpoints, IDs, CIF values, branch names, projects, metrics, queues, or DB objects.
-                You may use a short "---" separator sparingly if it materially improves readability, but do not over-format the answer.
+                Keep field names exactly as shown below.
+                Use concise professional Markdown in field values.
+                Use `code spans` for technical identifiers such as classes, methods, exceptions, IDs, branches, files, queues, endpoints, or DB objects.
+                Use real markdown bullets on separate lines when listing multiple points.
+                Never join multiple points with pipe separators like "|".
 
                 Return exactly these lines:
-                detectedProblem: <one precise short technical label scoped as narrowly as the evidence allows; plain text, no bullet list>
-                summary: <a short markdown block in Polish: one concise opening sentence and then 2-5 markdown bullet lines covering strongest evidence, where in the broader functional flow the failure happens, likely failure domain, and visibility limits>
-                recommendedAction: <2-4 concise markdown bullet lines in Polish, ordered by priority, each saying who should act next and what should be verified or changed>
-                rationale: <3-6 concise markdown bullet lines in Polish covering confirmed evidence, why this diagnosis fits best, what the surrounding flow in our system appears to be, and what still requires confirmation or external access>
-                affectedFunction: <a short markdown block in Polish based on the broader GitLab exploration: one concise opening sentence and then 2-5 markdown bullet lines describing the affected system function, its role in the broader flow, key upstream/downstream collaborators, and where the incident interrupts that flow>
-                affectedProcess: <short Polish plain-text label for the most likely affected process, grounded in operational-context evidence when available; write `nieustalone` if the process is not grounded>
-                affectedBoundedContext: <short Polish plain-text label for the most likely affected bounded context, grounded in operational-context evidence when available; write `nieustalone` if the context is not grounded>
-                affectedTeam: <short Polish plain-text label for the team that should currently own or receive the handoff, grounded in operational-context evidence when available; write `nieustalone` if the owner is not grounded>
+                detectedProblem: <one precise short technical label scoped as narrowly as evidence allows; plain text>
+                summary: <short markdown block: one opening sentence + 2-5 bullets covering strongest evidence, where the failure happens, likely failure domain, and visibility limits>
+                recommendedAction: <2-4 prioritized markdown bullets saying who should act next and what should be verified or changed>
+                rationale: <3-7 markdown bullets separating confirmed evidence, best-supported hypothesis, surrounding flow, and visibility limits>
+                affectedFunction: <short markdown block: one opening sentence + 2-5 bullets explaining the affected function, its role in the broader flow, key collaborators, and where the incident interrupts it>
+                affectedProcess: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>
+                affectedBoundedContext: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>
+                affectedTeam: <short Polish plain-text label for the team that should own or receive the handoff, grounded in operational-context evidence when available; write `nieustalone` if not grounded>
 
                 Attached artifacts:
                 %s
 
-                Available tools:
+                Available capability groups:
                 %s
                 """.formatted(
                 request.correlationId(),
@@ -165,29 +148,42 @@ public class CopilotSdkPreparationService {
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
                 formatAttachedArtifacts(artifactDescriptors),
-                formatAvailableTools(tools)
+                formatAvailableToolGroups(tools)
         );
     }
 
-    private String formatAvailableTools(Iterable<ToolDefinition> tools) {
-        var rendered = new StringBuilder();
+    private String formatAvailableToolGroups(Iterable<ToolDefinition> tools) {
+        boolean elastic = false;
+        boolean gitlab = false;
+        boolean database = false;
 
         for (var tool : tools) {
-            if (rendered.length() > 0) {
-                rendered.append(System.lineSeparator());
+            var name = tool.name();
+
+            if (name.startsWith("elastic_")) {
+                elastic = true;
+            } else if (name.startsWith("gitlab_")) {
+                gitlab = true;
+            } else if (name.startsWith("db_")) {
+                database = true;
             }
-
-            rendered.append("- ")
-                    .append(tool.name())
-                    .append(": ")
-                    .append(tool.description());
         }
 
-        if (rendered.length() == 0) {
-            return "- none";
+        var rendered = new StringBuilder();
+
+        if (elastic) {
+            rendered.append("- Elasticsearch logs: fetch additional logs for the current incident correlationId.\n");
         }
 
-        return rendered.toString();
+        if (gitlab) {
+            rendered.append("- GitLab code: search broadly across relevant repositories and read focused chunks/files to explain the failing code path, repository predicates, integrations and affected functional flow.\n");
+        }
+
+        if (database) {
+            rendered.append("- Database diagnostics: verify data-dependent hypotheses by inspecting DB scope, finding/describing tables, counting rows, checking predicates, references, process states and minimal samples.\n");
+        }
+
+        return rendered.length() > 0 ? rendered.toString().trim() : "- none";
     }
 
     private String renderGitLabGroup(String gitLabGroup) {
@@ -220,6 +216,10 @@ public class CopilotSdkPreparationService {
             if (artifact.itemCount() != null) {
                 rendered.append(" (items: ").append(artifact.itemCount()).append(")");
             }
+        }
+
+        if (rendered.length() == 0) {
+            return "- none";
         }
 
         return rendered.toString();

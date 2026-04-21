@@ -26,6 +26,9 @@ class GitLabMcpToolsContextTest {
         assertTrue(toolNames.contains("gitlab_search_repository_candidates"));
         assertTrue(toolNames.contains("gitlab_read_repository_file"));
         assertTrue(toolNames.contains("gitlab_read_repository_file_chunk"));
+        assertTrue(toolNames.contains("gitlab_find_flow_context"));
+        assertTrue(toolNames.contains("gitlab_read_repository_file_outline"));
+        assertTrue(toolNames.contains("gitlab_read_repository_file_chunks"));
     }
 
 }

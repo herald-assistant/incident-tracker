@@ -20,6 +20,15 @@ sa potem reuse'owane przez Copilot SDK.
 4. Bridge mapuje je na `ToolDefinition` Copilota.
 5. Sesja Copilota moze je wywolac jako narzedzia runtime.
 
+Aktualny zestaw GitLab MCP obejmuje:
+
+- broad search kandydatow repozytoriow i plikow,
+- wysokopoziomowe `find_flow_context`,
+- outline pliku przed pelnym readem,
+- focused single chunk read,
+- male batch'e powiazanych chunkow,
+- pelny read pliku, gdy jest krotki albo potrzebny w calosci.
+
 ## Najwazniejsze klasy
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/elasticsearch/ElasticMcpTools.java`
@@ -33,6 +42,9 @@ sa potem reuse'owane przez Copilot SDK.
 - tool nie powinien miec logiki calej analizy,
 - tool deleguje do adaptera albo use case'u,
 - warstwa MCP jest o ekspozycji capability, nie o integracji REST,
+- lekkie heurystyki prezentacyjne dla Copilota, np. `inferredRole` albo
+  `recommendedReadStrategy`, moga zyc w warstwie MCP, o ile nie staja sie
+  centralnym rule engine,
 - ten sam tool moze byc widoczny w kontekscie Spring AI i w sesji Copilota.
 
 ## Sprawdz lokalnie

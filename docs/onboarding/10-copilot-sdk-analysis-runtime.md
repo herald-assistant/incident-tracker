@@ -34,8 +34,9 @@ Buduje:
 
 Uruchamia klienta, tworzy sesje, wysyla prompt i zbiera odpowiedz modelu.
 W job flow execution rejestruje tez sesyjny listener, ktory przechwytuje
-wyniki `gitlab_read_repository_file*` i publikuje je jako `toolEvidenceSections`
-do pollowanego snapshotu analizy.
+wyniki `gitlab_read_repository_file`, `gitlab_read_repository_file_chunk`
+i `gitlab_read_repository_file_chunks` i publikuje je jako
+`toolEvidenceSections` do pollowanego snapshotu analizy.
 
 ## Najwazniejsze klasy
 
