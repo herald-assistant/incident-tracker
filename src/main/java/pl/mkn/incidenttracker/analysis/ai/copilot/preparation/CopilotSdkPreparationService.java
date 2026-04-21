@@ -11,8 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -25,7 +27,8 @@ public class CopilotSdkPreparationService {
     private final CopilotAttachmentArtifactService attachmentArtifactService;
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
-        var tools = toolBridge.buildToolDefinitions();
+        var toolSessionContext = buildToolSessionContext(request);
+        var tools = toolBridge.buildToolDefinitions(toolSessionContext);
         var artifactDescriptors = attachmentArtifactService.describe(request);
         var skillDirectories = skillRuntimeLoader.resolveSkillDirectories();
 
@@ -44,6 +47,7 @@ public class CopilotSdkPreparationService {
         }
 
         var sessionConfig = new SessionConfig()
+                .setSessionId(toolSessionContext.copilotSessionId())
                 .setClientName(properties.getClientName())
                 .setWorkingDirectory(properties.getWorkingDirectory())
                 .setStreaming(false)
@@ -83,9 +87,23 @@ public class CopilotSdkPreparationService {
     }
 
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
-        var tools = toolBridge.buildToolDefinitions();
+        var tools = toolBridge.buildToolDefinitions(buildToolSessionContext(request));
         var artifactDescriptors = attachmentArtifactService.describe(request);
         return buildPrompt(request, tools, artifactDescriptors);
+    }
+
+    private CopilotToolSessionContext buildToolSessionContext(AnalysisAiAnalysisRequest request) {
+        var analysisRunId = UUID.randomUUID().toString();
+        var copilotSessionId = "analysis-" + analysisRunId;
+
+        return new CopilotToolSessionContext(
+                analysisRunId,
+                copilotSessionId,
+                request.correlationId(),
+                request.environment(),
+                request.gitLabBranch(),
+                request.gitLabGroup()
+        );
     }
 
     private String buildPrompt(

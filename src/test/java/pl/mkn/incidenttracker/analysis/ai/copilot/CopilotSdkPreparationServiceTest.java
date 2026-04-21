@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.Attachment;
+import com.github.copilot.sdk.json.ToolDefinition;
 import com.github.copilot.sdk.json.PermissionHandler;
 import com.github.copilot.sdk.json.PermissionRequest;
 import com.github.copilot.sdk.json.PermissionRequestResultKind;
@@ -18,16 +19,24 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparat
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CopilotSdkPreparationServiceTest {
 
@@ -67,6 +76,8 @@ class CopilotSdkPreparationServiceTest {
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.sessionConfig().getWorkingDirectory());
             assertEquals("gpt-5.4", prepared.sessionConfig().getModel());
             assertEquals("medium", prepared.sessionConfig().getReasoningEffort());
+            assertNotNull(prepared.sessionConfig().getSessionId());
+            assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
             assertFalse(prepared.sessionConfig().isStreaming());
             assertEquals(6, prepared.sessionConfig().getTools().size());
             assertEquals(1, prepared.sessionConfig().getSkillDirectories().size());
@@ -129,6 +140,44 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(logsContent.contains("\"provider\""));
             assertTrue(logsContent.contains("\"elasticsearch\""));
             assertTrue(logsContent.contains("\"Read timed out while calling catalog-service\""));
+        }
+    }
+
+    @Test
+    void shouldBuildSessionBoundToolContextForBridgeAndSessionConfig() {
+        var properties = baseProperties();
+        properties.setSkillResourceRoots(List.of("copilot/skills"));
+        var request = sampleRequest();
+        var bridge = mock(CopilotSdkToolBridge.class);
+        var expectedTools = List.of(ToolDefinition.createSkipPermission(
+                "gitlab_read_repository_file",
+                "Read repository file",
+                Map.of("type", "object", "properties", Map.of()),
+                invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
+        ));
+        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
+
+        var service = new CopilotSdkPreparationService(
+                properties,
+                bridge,
+                new CopilotSkillRuntimeLoader(properties),
+                new CopilotAttachmentArtifactService(properties, objectMapper)
+        );
+
+        try (var prepared = service.prepare(request)) {
+            verify(bridge).buildToolDefinitions(org.mockito.ArgumentMatchers.argThat(context ->
+                    "timeout-123".equals(context.correlationId())
+                            && "dev3".equals(context.environment())
+                            && "release/2026.04".equals(context.gitLabBranch())
+                            && "sample/runtime".equals(context.gitLabGroup())
+                            && context.analysisRunId() != null
+                            && !context.analysisRunId().isBlank()
+                            && context.copilotSessionId() != null
+                            && context.copilotSessionId().startsWith("analysis-")
+            ));
+            assertEquals(expectedTools, prepared.sessionConfig().getTools());
+            assertNotNull(prepared.sessionConfig().getSessionId());
+            assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
         }
     }
 

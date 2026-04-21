@@ -6,14 +6,17 @@ import com.github.copilot.sdk.json.ToolDefinition;
 import com.github.copilot.sdk.json.ToolInvocation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Component
@@ -26,9 +29,21 @@ public class CopilotSdkToolBridge {
     private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
 
     public List<ToolDefinition> buildToolDefinitions() {
+        var analysisRunId = UUID.randomUUID().toString();
+        return buildToolDefinitions(new CopilotToolSessionContext(
+                analysisRunId,
+                "analysis-" + analysisRunId,
+                null,
+                null,
+                null,
+                null
+        ));
+    }
+
+    public List<ToolDefinition> buildToolDefinitions(CopilotToolSessionContext sessionContext) {
         return toolCallbacksByName().values().stream()
                 .sorted(Comparator.comparing(callback -> callback.getToolDefinition().name()))
-                .map(this::toCopilotToolDefinition)
+                .map(callback -> toCopilotToolDefinition(callback, sessionContext))
                 .toList();
     }
 
@@ -44,31 +59,38 @@ public class CopilotSdkToolBridge {
         return callbacksByName;
     }
 
-    private ToolDefinition toCopilotToolDefinition(ToolCallback callback) {
+    private ToolDefinition toCopilotToolDefinition(ToolCallback callback, CopilotToolSessionContext sessionContext) {
         var springToolDefinition = callback.getToolDefinition();
 
         return ToolDefinition.createSkipPermission(
                 springToolDefinition.name(),
                 springToolDefinition.description(),
                 parseInputSchema(springToolDefinition.inputSchema()),
-                invocation -> invokeSpringToolCallback(callback, invocation)
+                invocation -> invokeSpringToolCallback(callback, invocation, sessionContext)
         );
     }
 
-    private CompletableFuture<Object> invokeSpringToolCallback(ToolCallback callback, ToolInvocation invocation) {
+    private CompletableFuture<Object> invokeSpringToolCallback(
+            ToolCallback callback,
+            ToolInvocation invocation,
+            CopilotToolSessionContext sessionContext
+    ) {
         try {
+            validateSessionId(sessionContext, invocation);
             var argumentsJson = objectMapper.writeValueAsString(
                     invocation.getArguments() != null ? invocation.getArguments() : Map.of()
             );
+            var toolContext = buildToolContext(sessionContext, invocation);
             log.info(
-                    "Copilot tool invocation request sessionId={} toolCallId={} toolName={} arguments={}",
+                    "Copilot tool invocation request expectedSessionId={} actualSessionId={} toolCallId={} toolName={} arguments={}",
+                    sessionContext.copilotSessionId(),
                     invocation.getSessionId(),
                     invocation.getToolCallId(),
                     invocation.getToolName(),
                     abbreviate(argumentsJson, 500)
             );
 
-            var rawResult = callback.call(argumentsJson);
+            var rawResult = callback.call(argumentsJson, toolContext);
             toolEvidenceCaptureRegistry.captureToolResult(
                     invocation.getSessionId(),
                     invocation.getToolName(),
@@ -97,6 +119,52 @@ public class CopilotSdkToolBridge {
                     exception
             );
             return CompletableFuture.failedFuture(exception);
+        }
+    }
+
+    private void validateSessionId(CopilotToolSessionContext sessionContext, ToolInvocation invocation) {
+        if (sessionContext == null
+                || !StringUtils.hasText(sessionContext.copilotSessionId())
+                || !StringUtils.hasText(invocation.getSessionId())) {
+            return;
+        }
+
+        if (!sessionContext.copilotSessionId().equals(invocation.getSessionId())) {
+            throw new IllegalStateException(
+                    "Copilot tool invocation sessionId mismatch. expected=%s actual=%s tool=%s"
+                            .formatted(
+                                    sessionContext.copilotSessionId(),
+                                    invocation.getSessionId(),
+                                    invocation.getToolName()
+                            )
+            );
+        }
+    }
+
+    private ToolContext buildToolContext(CopilotToolSessionContext sessionContext, ToolInvocation invocation) {
+        var context = new LinkedHashMap<String, Object>();
+
+        if (sessionContext != null) {
+            putIfNotBlank(context, CopilotToolContextKeys.ANALYSIS_RUN_ID, sessionContext.analysisRunId());
+            putIfNotBlank(context, CopilotToolContextKeys.COPILOT_SESSION_ID, sessionContext.copilotSessionId());
+            putIfNotBlank(context, CopilotToolContextKeys.CORRELATION_ID, sessionContext.correlationId());
+            putIfNotBlank(context, CopilotToolContextKeys.ENVIRONMENT, sessionContext.environment());
+            putIfNotBlank(context, CopilotToolContextKeys.GITLAB_BRANCH, sessionContext.gitLabBranch());
+            putIfNotBlank(context, CopilotToolContextKeys.GITLAB_GROUP, sessionContext.gitLabGroup());
+        }
+
+        if (invocation != null) {
+            putIfNotBlank(context, CopilotToolContextKeys.ACTUAL_COPILOT_SESSION_ID, invocation.getSessionId());
+            putIfNotBlank(context, CopilotToolContextKeys.TOOL_CALL_ID, invocation.getToolCallId());
+            putIfNotBlank(context, CopilotToolContextKeys.TOOL_NAME, invocation.getToolName());
+        }
+
+        return new ToolContext(context);
+    }
+
+    private void putIfNotBlank(Map<String, Object> context, String key, String value) {
+        if (StringUtils.hasText(value)) {
+            context.put(key, value);
         }
     }
 

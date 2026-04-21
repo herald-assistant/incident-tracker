@@ -1,17 +1,21 @@
 package pl.mkn.incidenttracker.analysis.mcp.gitlab;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolContextKeys;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -25,31 +29,29 @@ class GitLabMcpToolsTest {
     private final GitLabMcpTools gitLabMcpTools = new GitLabMcpTools(new TestGitLabRepositoryPort());
 
     @Test
-    void shouldDelegateSearchRepositoryCandidatesWithCompatibleQueryShape() {
+    void shouldDelegateSearchRepositoryCandidatesUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(new GitLabRepositoryFileCandidate(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 "Matched timeout-related service and log keywords.",
                 95
         )));
 
         var response = tools.searchRepositoryCandidates(
-                "timeout-123",
-                "sample/runtime",
-                "release/2026.04",
                 List.of("billing-service", "catalog-service"),
                 List.of("GET /inventory"),
-                List.of("timeout", "inventory")
+                List.of("timeout", "inventory"),
+                gitLabToolContext()
         );
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
-                "timeout-123".equals(query.correlationId())
-                        && "sample/runtime".equals(query.group())
-                        && "release/2026.04".equals(query.branch())
+                "corr-123".equals(query.correlationId())
+                        && "platform/backend".equals(query.group())
+                        && "feature/INC-123".equals(query.branch())
                         && List.of("billing-service", "catalog-service").equals(query.projectNames())
                         && List.of("GET /inventory").equals(query.operationNames())
                         && List.of("timeout", "inventory").equals(query.keywords())
@@ -59,14 +61,27 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldDefaultNullListsToEmptyListsInSearchRepositoryCandidates() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
+
+        tools.searchRepositoryCandidates(null, null, null, gitLabToolContext());
+
+        verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
+                query.projectNames().isEmpty()
+                        && query.operationNames().isEmpty()
+                        && query.keywords().isEmpty()
+        ));
+    }
+
+    @Test
     void shouldSearchRepositoryCandidatesThroughToolUsingComponentHintForNestedProject() {
         var response = gitLabMcpTools.searchRepositoryCandidates(
-                "agreement-123",
-                "TENANT-ALPHA",
-                "release-candidate",
                 List.of("document-workflow"),
                 List.of(),
-                List.of("document")
+                List.of("document"),
+                gitLabToolContext("TENANT-ALPHA", "release-candidate", "agreement-123")
         );
 
         assertEquals(1, response.candidates().size());
@@ -76,42 +91,41 @@ class GitLabMcpToolsTest {
     }
 
     @Test
-    void shouldDelegateReadRepositoryFileWithExistingContract() {
+    void shouldDelegateReadRepositoryFileUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 120
         )).thenReturn(new GitLabRepositoryFileContent(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 "class CatalogGatewayClient {}",
                 false
         ));
 
         var response = tools.readRepositoryFile(
-                "sample/runtime",
                 "edge-client-service",
-                "release/2026.04",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
-                120
+                120,
+                gitLabToolContext()
         );
 
         verify(gitLabRepositoryPort).readFile(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 120
         );
-        assertEquals("sample/runtime", response.group());
+        assertEquals("platform/backend", response.group());
         assertEquals("edge-client-service", response.projectName());
-        assertEquals("release/2026.04", response.branch());
+        assertEquals("feature/INC-123", response.branch());
         assertEquals("src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java", response.filePath());
         assertEquals("class CatalogGatewayClient {}", response.content());
         assertFalse(response.truncated());
@@ -120,33 +134,34 @@ class GitLabMcpToolsTest {
     @Test
     void shouldUseDefaultCharacterLimitWhenNotProvided() {
         var response = gitLabMcpTools.readRepositoryFile(
-                "sample/runtime",
                 "ledger-write-service",
-                "release/2026.04",
                 "src/main/java/com/example/synthetic/ledger/LedgerTransactionService.java",
-                null
+                null,
+                gitLabToolContext("sample/runtime", "release/2026.04", "corr-123")
         );
 
         assertFalse(response.truncated());
         assertTrue(response.content().contains("LedgerTransactionService"));
+        assertEquals("sample/runtime", response.group());
+        assertEquals("release/2026.04", response.branch());
     }
 
     @Test
-    void shouldDelegateReadRepositoryFileChunkWithExistingContract() {
+    void shouldDelegateReadRepositoryFileChunkUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 5,
                 12,
                 4_000
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 5,
                 12,
@@ -158,19 +173,18 @@ class GitLabMcpToolsTest {
         ));
 
         var response = tools.readRepositoryFileChunk(
-                "sample/runtime",
                 "edge-client-service",
-                "release/2026.04",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 5,
                 12,
-                4_000
+                4_000,
+                gitLabToolContext()
         );
 
         verify(gitLabRepositoryPort).readFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "edge-client-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 5,
                 12,
@@ -190,15 +204,15 @@ class GitLabMcpToolsTest {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 30_000
         )).thenReturn(new GitLabRepositoryFileContent(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 """
                         package pl.mkn.billing;
@@ -221,17 +235,16 @@ class GitLabMcpToolsTest {
         ));
 
         var response = tools.readRepositoryFileOutline(
-                "sample/runtime",
                 "billing-service",
-                "release/2026.04",
                 "src/main/java/pl/mkn/billing/BillingService.java",
-                null
+                null,
+                gitLabToolContext()
         );
 
         verify(gitLabRepositoryPort).readFile(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 30_000
         );
@@ -261,17 +274,17 @@ class GitLabMcpToolsTest {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 10,
                 20,
                 10
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 10,
                 20,
@@ -282,17 +295,17 @@ class GitLabMcpToolsTest {
                 false
         ));
         when(gitLabRepositoryPort.readFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/OrderRepository.java",
                 30,
                 40,
                 5
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/OrderRepository.java",
                 30,
                 40,
@@ -304,8 +317,6 @@ class GitLabMcpToolsTest {
         ));
 
         var response = tools.readRepositoryFileChunks(
-                "sample/runtime",
-                "release/2026.04",
                 List.of(
                         new GitLabFileChunkRequest("billing-service", "src/main/java/pl/mkn/billing/BillingService.java", 10, 20, 10),
                         new GitLabFileChunkRequest("billing-service", "src/main/java/pl/mkn/billing/OrderRepository.java", 30, 40, 10),
@@ -317,22 +328,23 @@ class GitLabMcpToolsTest {
                         new GitLabFileChunkRequest("billing-service", "src/main/java/pl/mkn/billing/OrderJob.java", 1, 5, 100),
                         new GitLabFileChunkRequest("billing-service", "src/main/java/pl/mkn/billing/Extra.java", 1, 5, 100)
                 ),
-                15
+                15,
+                gitLabToolContext()
         );
 
         verify(gitLabRepositoryPort).readFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 10,
                 20,
                 10
         );
         verify(gitLabRepositoryPort).readFileChunk(
-                "sample/runtime",
+                "platform/backend",
                 "billing-service",
-                "release/2026.04",
+                "feature/INC-123",
                 "src/main/java/pl/mkn/billing/OrderRepository.java",
                 30,
                 40,
@@ -341,6 +353,8 @@ class GitLabMcpToolsTest {
         verifyNoMoreInteractions(gitLabRepositoryPort);
 
         assertEquals(2, response.chunks().size());
+        assertEquals("platform/backend", response.group());
+        assertEquals("feature/INC-123", response.branch());
         assertTrue(response.chunkCountTruncated());
         assertTrue(response.totalCharacterLimitReached());
         assertEquals("service-or-orchestrator", response.chunks().get(0).inferredRole());
@@ -348,54 +362,54 @@ class GitLabMcpToolsTest {
     }
 
     @Test
-    void shouldFindFlowContextGroupedByRoleAndUseSeedKeywords() {
+    void shouldFindFlowContextGroupedByRoleAndUseSeedKeywordsFromSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(
                 new GitLabRepositoryFileCandidate(
-                        "sample/runtime",
+                        "platform/backend",
                         "orders-api",
-                        "release/2026.04",
+                        "feature/INC-123",
                         "src/main/java/pl/mkn/orders/OrderController.java",
                         "Controller handling submitOrder endpoint.",
                         100
                 ),
                 new GitLabRepositoryFileCandidate(
-                        "sample/runtime",
+                        "platform/backend",
                         "orders-core",
-                        "release/2026.04",
+                        "feature/INC-123",
                         "src/main/java/pl/mkn/orders/OrderService.java",
                         "Service orchestrates submitOrder flow.",
                         95
                 ),
                 new GitLabRepositoryFileCandidate(
-                        "sample/runtime",
+                        "platform/backend",
                         "orders-core",
-                        "release/2026.04",
+                        "feature/INC-123",
                         "src/main/java/pl/mkn/orders/OrderRepository.java",
                         "Repository predicate used in submitOrder.",
                         92
                 ),
                 new GitLabRepositoryFileCandidate(
-                        "sample/runtime",
+                        "platform/backend",
                         "orders-core",
-                        "release/2026.04",
+                        "feature/INC-123",
                         "src/main/java/pl/mkn/orders/LegacyOrderRepository.java",
                         "Fallback repository path.",
                         80
                 ),
                 new GitLabRepositoryFileCandidate(
-                        "sample/runtime",
+                        "platform/backend",
                         "orders-core",
-                        "release/2026.04",
+                        "feature/INC-123",
                         "src/main/java/pl/mkn/orders/OrderMapper.java",
                         "Mapper between API and domain model.",
                         75
                 ),
                 new GitLabRepositoryFileCandidate(
-                        "sample/runtime",
+                        "platform/backend",
                         "orders-client",
-                        "release/2026.04",
+                        "feature/INC-123",
                         "src/main/java/pl/mkn/orders/PaymentClient.java",
                         "HTTP client calling payment system.",
                         70
@@ -403,22 +417,20 @@ class GitLabMcpToolsTest {
         ));
 
         var response = tools.findFlowContext(
-                "corr-123",
-                "sample/runtime",
-                "release/2026.04",
                 List.of("orders-api", "orders-core"),
                 "pl.mkn.orders.OrderController",
                 "submitOrder",
                 "src/main/java/pl/mkn/orders/OrderController.java",
                 List.of("timeout", "repository"),
                 List.of("POST /orders"),
-                1
+                1,
+                gitLabToolContext()
         );
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 "corr-123".equals(query.correlationId())
-                        && "sample/runtime".equals(query.group())
-                        && "release/2026.04".equals(query.branch())
+                        && "platform/backend".equals(query.group())
+                        && "feature/INC-123".equals(query.branch())
                         && List.of("orders-api", "orders-core").equals(query.projectNames())
                         && List.of("POST /orders").equals(query.operationNames())
                         && List.of(
@@ -479,5 +491,64 @@ class GitLabMcpToolsTest {
         assertEquals(1, tools.rolePriority("entrypoint"));
         assertEquals(List.of("@Configuration", "@Bean"), outline.annotations());
         assertEquals(List.of("Scheduler billingJobScheduler()"), outline.methodSignatures());
+    }
+
+    @Test
+    void shouldThrowReadableErrorWhenGitLabGroupIsMissing() {
+        var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
+                CopilotToolContextKeys.GITLAB_GROUP
+        )));
+
+        assertEquals(
+                "Missing gitLabGroup in Copilot tool context; GitLab tools require session-bound group.",
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void shouldThrowReadableErrorWhenGitLabBranchIsMissing() {
+        var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
+                CopilotToolContextKeys.GITLAB_BRANCH
+        )));
+
+        assertEquals(
+                "Missing gitLabBranch in Copilot tool context; GitLab tools require resolved session branch.",
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void shouldThrowReadableErrorWhenCorrelationIdIsMissing() {
+        var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
+                CopilotToolContextKeys.CORRELATION_ID
+        )));
+
+        assertEquals(
+                "Missing correlationId in Copilot tool context; GitLab tools require session-bound correlationId.",
+                exception.getMessage()
+        );
+    }
+
+    private ToolContext gitLabToolContext() {
+        return gitLabToolContext("platform/backend", "feature/INC-123", "corr-123");
+    }
+
+    private ToolContext gitLabToolContext(String group, String branch, String correlationId) {
+        var context = new LinkedHashMap<String, Object>();
+        context.put(CopilotToolContextKeys.CORRELATION_ID, correlationId);
+        context.put(CopilotToolContextKeys.GITLAB_GROUP, group);
+        context.put(CopilotToolContextKeys.GITLAB_BRANCH, branch);
+        context.put(CopilotToolContextKeys.ENVIRONMENT, "zt01");
+        context.put(CopilotToolContextKeys.ANALYSIS_RUN_ID, "run-1");
+        context.put(CopilotToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
+        context.put(CopilotToolContextKeys.TOOL_CALL_ID, "tool-call-1");
+        context.put(CopilotToolContextKeys.TOOL_NAME, "gitlab_test_tool");
+        return new ToolContext(context);
+    }
+
+    private ToolContext toolContextWithout(String keyToRemove) {
+        var context = new LinkedHashMap<>(gitLabToolContext().getContext());
+        context.remove(keyToRemove);
+        return new ToolContext(context);
     }
 }
