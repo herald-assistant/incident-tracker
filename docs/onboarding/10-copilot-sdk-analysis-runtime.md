@@ -56,9 +56,14 @@ do katalogu runtime dla sesji Copilota.
 - prompt niesie dane konkretnego incydentu,
 - skill niesie stale zasady pracy,
 - AI dostaje generyczne evidence, nie klasy adapter-specific,
+- hidden `ToolContext` niesie session-bound dane runtime, np. `correlationId`,
+  `environment`, `gitLabGroup`, `gitLabBranch`, `analysisRunId`,
+  `copilotSessionId` i metadata tool calla,
 - AI-guided GitLab reads moga byc przechwytywane jako diagnostyczne
   `toolEvidenceSections` dla UI, ale nie staja sie elementem glownego pipeline
   `AnalysisEvidenceCollector`,
+- DB tools sa wlaczane warunkowo po `analysis.database.enabled=true` i nie
+  wymagaja globalnego `spring.datasource`,
 - parsing odpowiedzi modelu musi byc odporny na drobne roznice formatowania.
 
 ## Checkpoint

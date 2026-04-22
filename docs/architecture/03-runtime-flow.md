@@ -234,7 +234,7 @@ Warstwa execution:
 - odbiera odpowiedz modelu,
 - loguje lifecycle klienta i eventy sesji.
 
-### Krok 7: opcjonalne uzycie GitLab tools przez AI
+### Krok 7: opcjonalne uzycie GitLab i Database tools przez AI
 
 W trakcie sesji model moze skorzystac z tooli adapterow:
 
@@ -266,6 +266,38 @@ zywo, jakie pliki i fragmenty kodu AI dociagnelo juz podczas sesji.
 
 Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.gitlab` i
 korzystaja z portow z `analysis.adapter.gitlab`.
+
+#### Database
+
+- `db_get_scope`
+- `db_find_tables`
+- `db_find_columns`
+- `db_describe_table`
+- `db_exists_by_key`
+- `db_count_rows`
+- `db_group_count`
+- `db_sample_rows`
+- `db_check_orphans`
+- `db_find_relationships`
+- `db_join_count`
+- `db_join_sample`
+- `db_compare_table_to_expected_mapping`
+- `db_execute_readonly_sql`
+
+To jest AI-guided, session-bound data diagnostics.
+
+Najwazniejsze reguly runtime:
+
+- `environment` pochodzi z hidden `ToolContext`, nie z parametrow modelu,
+- discovery jest application-scoped:
+  `application/deployment/container/project name -> configured Oracle owner/schema`,
+- discovery tools nie przyjmuja `schemaPattern`,
+- exact data tools pracuja dopiero na dokladnym `schema.table`,
+- raw SQL pozostaje opcjonalny i domyslnie wylaczony,
+- typed DB tools sa preferowane nad `db_execute_readonly_sql`.
+
+Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.database` i
+korzystaja z serwisow i klientow z `analysis.adapter.database`.
 
 ### Krok 8: mapowanie odpowiedzi AI
 
@@ -478,6 +510,20 @@ To daje odpowiedzi na trzy rozne pytania:
 - `analysis.gitlab.group`
 - `analysis.gitlab.token`
 - `analysis.gitlab.ignore-ssl-errors`
+
+### Database
+
+- `analysis.database.enabled`
+- `analysis.database.max-rows`
+- `analysis.database.max-columns`
+- `analysis.database.max-tables-per-search`
+- `analysis.database.max-columns-per-search`
+- `analysis.database.max-result-characters`
+- `analysis.database.query-timeout`
+- `analysis.database.connection-timeout`
+- `analysis.database.raw-sql-enabled`
+- `analysis.database.allow-all-schemas`
+- `analysis.database.environments.<environment>.*`
 
 ### Elasticsearch
 
