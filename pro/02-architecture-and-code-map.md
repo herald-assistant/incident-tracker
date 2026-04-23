@@ -7,7 +7,7 @@ Najkrotszy opis architektury:
 1. UI lub klient API wysyla `correlationId`,
 2. orchestrator zbiera evidence sekwencyjnie,
 3. orchestrator buduje request do AI,
-4. Copilot SDK wykonuje sesje z promptem, skillami, attachmentami i tools,
+4. Copilot SDK wykonuje sesje z promptem, skills, attachmentami i tools,
 5. wynik wraca jako `AnalysisResultResponse`,
 6. job flow projektuje stan do UI.
 
@@ -71,6 +71,8 @@ Konkretne kroki pipeline:
 4. `gitlabdeterministic`
 5. `operationalcontext`
 
+DB capability nie jest tu providerem.
+
 ### `analysis.adapter`
 
 Integracje z systemami zewnetrznymi i helper endpointy.
@@ -80,6 +82,7 @@ Podkatalogi:
 - `elasticsearch`
 - `dynatrace`
 - `gitlab`
+- `database`
 
 ### `analysis.mcp`
 
@@ -89,6 +92,7 @@ Podkatalogi:
 
 - `elasticsearch`
 - `gitlab`
+- `database`
 
 ### `analysis.ai`
 
@@ -111,7 +115,10 @@ Jesli GPT Pro ma analizowac architekture, najlepiej zaczac od tych plikow:
 5. `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/preparation/CopilotSdkPreparationService.java`
 6. `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/execution/CopilotSdkExecutionGateway.java`
 7. `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/tools/CopilotSdkToolBridge.java`
-8. `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobService.java`
+8. `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpTools.java`
+9. `src/main/java/pl/mkn/incidenttracker/analysis/mcp/database/DatabaseMcpTools.java`
+10. `src/main/java/pl/mkn/incidenttracker/analysis/adapter/database/DatabaseToolService.java`
+11. `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobService.java`
 
 ## Evidence pipeline
 
@@ -229,32 +236,42 @@ To jest wazny kompromis:
 
 ### Co nalezy do adaptera
 
-- REST
-- properties
-- port
-- DTO integracyjne
-- helper endpointy
+- REST albo JDBC / routing polaczen,
+- properties,
+- port,
+- DTO integracyjne,
+- helper endpointy tam, gdzie capability jest pomocniczo testowalna,
+- dla DB:
+  - routing po environment,
+  - application-to-schema resolution,
+  - metadata client,
+  - read-only query client,
+  - SQL guard,
+  - masking i limiting wynikow.
 
 ### Co nalezy do evidence provider
 
-- heurystyki incidentowe
-- logs -> deployment
-- logs -> repo hints
+- heurystyki incidentowe,
+- logs -> deployment,
+- logs -> repo hints,
 - runtime -> evidence section
 
 ### Co nalezy do MCP tool
 
-- mala ekspozycja jednego capability
-- delegacja do adaptera lub use case'u
+- mala ekspozycja jednego capability,
+- delegacja do adaptera albo use case'u,
+- session-bound hidden context przez `ToolContext`,
+- lekkie heurystyki prezentacyjne dla modelu, jesli nie zamieniaja sie w
+  centralny rule engine.
 
 ### Co nalezy do AI layer
 
-- prompt
-- skill loading
-- tool bridge
-- attachment artifacts
-- execution session
-- parsing odpowiedzi modelu
+- prompt,
+- skill loading,
+- tool bridge,
+- attachment artifacts,
+- execution session,
+- parsing odpowiedzi modelu.
 
 ## Frontend i artefakt deployowalny
 
@@ -275,16 +292,22 @@ To oznacza:
 - `src/main/resources/copilot/skills`
 - `src/main/resources/operational-context`
 
-Pierwszy sluzy runtime Copilotowi.
-Drugi sluzy optional enrichmentowi operacyjnemu.
+W runtime dzisiaj najwazniejsze skille to:
+
+- `incident-analysis-core`
+- `incident-analysis-gitlab-tools`
+- `incident-data-diagnostics`
 
 ## Najwazniejsze testy do szybkiego zrozumienia systemu
 
 - `AnalysisEvidenceCollectorTest`
 - `GitLabDeterministicEvidenceProviderTest`
 - `CopilotSdkPreparationServiceTest`
-- `CopilotSdkAnalysisAiProviderTest`
 - `CopilotSdkToolBridgeTest`
+- `CopilotSdkDatabaseToolBridgeTest`
+- `GitLabMcpToolsTest`
+- `DatabaseMcpToolsTest`
+- `DatabaseToolServiceTest`
 - `AnalysisJobServiceTest`
 
 ## Co jest szczegolnie wazne przy refaktorach
@@ -292,5 +315,7 @@ Drugi sluzy optional enrichmentowi operacyjnemu.
 - nie duplikowac orchestracji miedzy sync i job,
 - nie przenosic heurystyk incidentowych do adapterow,
 - nie przenosic klas adapterow do warstwy AI,
-- nie mieszac skilli z kodem Java,
-- nie rozbijac na boki odpowiedzialnosci collectora evidence.
+- nie mieszac skills z kodem Java,
+- nie rozbijac na boki odpowiedzialnosci collectora evidence,
+- nie robic z DB capability kolejnego evidence providera bez swiadomej decyzji
+  architektonicznej.

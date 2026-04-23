@@ -30,7 +30,8 @@ Obecny model:
 
 - `group` z `application.properties`,
 - `branch` i `environment` z osobnego kroku deployment context,
-- AI interpretuje tylko `project` i `filePath`.
+- AI interpretuje tylko `project`, `filePath` i - jesli DB capability jest
+  wlaczona - exact `schema.table` zwrocone przez tools.
 
 ## 3. Analiza jest AI-first
 
@@ -112,8 +113,11 @@ To nie jest evidence provider.
 To jest zestaw narzedzi, z ktorych AI moze korzystac podczas sesji:
 
 - search repository candidates,
+- find flow context,
+- read repository file outline,
 - read repository file,
-- read repository file chunk.
+- read repository file chunk,
+- read repository file chunks.
 
 Powod rozdzielenia:
 
@@ -134,7 +138,7 @@ W kodzie rozdzielamy to tez pakietowo:
 - `analysis.mcp.gitlab`
   AI-guided tools.
 
-## 13. Read modele evidence sa typowane
+## 7. Read modele evidence sa typowane
 
 `AnalysisContext` nadal przechowuje generyczne sekcje evidence, ale czytanie
 sekcji odbywa sie przez typowane widoki, np. dla:
@@ -149,7 +153,7 @@ Powod:
 - latwiej utrzymac ewolucje kontraktu evidence,
 - zaleznosci miedzy providerami sa czytelniejsze.
 
-## 14. Flow synchroniczny i jobowy reuse'uja te sama orchestration warstwe
+## 8. Flow synchroniczny i jobowy reuse'uja te sama orchestration warstwe
 
 `AnalysisService` i `AnalysisJobService` nie skladaja juz analizy osobno.
 Oba reuse'uja wspolny `AnalysisOrchestrator`, ktory odpowiada za:
@@ -167,7 +171,35 @@ Powod:
 - jeden runtime flow do utrzymania,
 - mniejsze ryzyko, ze sync i async analiza beda zachowywac sie inaczej.
 
-## 7. Skill Copilota jest zasobem runtime aplikacji
+## 9. GitLab tools sa session-bound przez hidden `ToolContext`
+
+Model nie podaje juz `group`, `branch` ani `correlationId` do GitLab MCP tools.
+
+Powod:
+
+- zmniejszenie swobody modelu tam, gdzie kontekst jest juz znany,
+- mniejsze ryzyko odczytow z niewlasciwej galezi albo scope,
+- lepszy audit trail po `sessionId`, `analysisRunId` i `toolCallId`.
+
+## 10. Database diagnostics sa osobna, opcjonalna capability AI-guided
+
+Database tools:
+
+- nie sa evidence providerem,
+- sa wlaczane warunkowo po `analysis.database.enabled=true`,
+- biora `environment` z hidden `ToolContext`,
+- rozwiazuja scope danych przez
+  `application/deployment/container/project name -> configured schema`,
+- pracuja na readonly, typed tools i exact `schema.table`.
+
+Powod:
+
+- model powinien myslec w kategoriach aplikacji z evidence, a nie Oracle
+  ownera,
+- DB capability ma pomagac potwierdzic lub obalic hipotezy danych, a nie stac
+  sie osobnym pipeline ingestion.
+
+## 11. Skill Copilota jest zasobem runtime aplikacji
 
 Skill nie jest trzymany w `.github`, tylko w `src/main/resources`.
 
@@ -180,7 +212,7 @@ Powod:
 Runtime loader wypakowuje skill do katalogu filesystemowego, bo sesja Copilota
 potrzebuje realnej sciezki do katalogu ze skillami.
 
-## 8. Token GitLaba pochodzi z konfiguracji aplikacji
+## 12. Token GitLaba pochodzi z konfiguracji aplikacji
 
 Na obecnym etapie token nie jest brany z requestu.
 
@@ -193,7 +225,7 @@ Powod:
 Jesli kiedys pojawi sie potrzeba per-request auth, to powinno to byc swiadome
 rozszerzenie, a nie przypadkowy mix modeli autoryzacji.
 
-## 9. Ignorowanie SSL jest lokalne dla konkretnej integracji
+## 13. Ignorowanie SSL jest lokalne dla konkretnej integracji
 
 Opcje ignorowania SSL istnieja lokalnie tylko tam, gdzie sa naprawde potrzebne,
 np. dla GitLaba albo Elasticsearch/Kibana proxy.
@@ -212,7 +244,7 @@ Aktualny stan:
 - nie ma per-request ani per-property przelacznika `analysis.elasticsearch.mode`
   ani `analysis.elasticsearch.ignore-ssl-errors`.
 
-## 10. Osobny GitLab source resolver jest pomocniczym capability
+## 14. Osobny GitLab source resolver jest pomocniczym capability
 
 Endpointy `/api/gitlab/source/resolve` i `/api/gitlab/source/resolve/preview` sa celowym, prostym use
 case'em pomocniczym.
@@ -226,7 +258,7 @@ Powod:
 - sa reuse'owane przez deterministic provider do rozwiazywania symboli, ale nie
   musza byc twardo wpiete jako osobny krok orchestration flow.
 
-## 11. Cache drzewa GitLaba jest ograniczony do jednego requestu
+## 15. Cache drzewa GitLaba jest ograniczony do jednego requestu
 
 `GitLabSourceResolveService` moze cache'owac wynik `repository/tree`, ale tylko
 w granicach jednego requestu HTTP.
@@ -240,7 +272,7 @@ Powod:
 - nie chcemy jeszcze wprowadzac globalnego cache z polityka wygasania i
   synchronizacja.
 
-## 12. Operacyjny frontend jest aplikacja Angular w tym samym repo
+## 16. Operacyjny frontend jest aplikacja Angular w tym samym repo
 
 Ekran `GET /` nie jest juz utrzymywany jako reczne `html + js + scss + css`.
 Zrodlowy frontend zyje w `frontend/`, a produkcyjny build zapisuje bundle do

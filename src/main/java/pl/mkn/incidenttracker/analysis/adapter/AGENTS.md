@@ -14,7 +14,10 @@ Obejmuje:
   query model, properties i adapter REST do runtime signals,
 - `gitlab/`
   properties, porty, adapter REST, repository search, source resolve i helper
-  endpointy GitLaba.
+  endpointy GitLaba,
+- `database/`
+  properties, routing polaczen, metadata Oracle, readonly query execution,
+  SQL guard, masking i limiting wynikow DB capability.
 
 Nie obejmuje:
 
@@ -40,6 +43,10 @@ Nie obejmuje:
 - Dla GitLaba trzymaj `group` w konfiguracji aplikacji. Nie dedukuj go z
   evidence ani z requestu glownego flow `/analysis`.
 - Dla source resolve cache drzewa repozytorium moze byc tylko request-scoped.
+- Dla Database capability nie wprowadzaj globalnego `spring.datasource`.
+  Routing DataSource ma pozostac lokalny i per environment.
+- Dla Database capability nie zgaduj schematow domenowo w kodzie.
+  Application-to-schema mapping ma pochodzic z konfiguracji.
 
 ## Testy
 

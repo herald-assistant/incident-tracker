@@ -12,11 +12,12 @@ Jesli sesja ma byc krotka, daj GPT Pro:
 1. `pro/README.md`
 2. `pro/01-system-and-product-context.md`
 3. `pro/02-architecture-and-code-map.md`
-4. `pro/04-copilot-sdk-current-state.md`
-5. `pro/05-copilot-sdk-optimization-playbook.md`
+4. `pro/03-runtime-contracts-and-configuration.md`
+5. `pro/04-copilot-sdk-current-state.md`
 
 Jesli sesja ma dotyczyc roadmapy, dorzuc jeszcze:
 
+- `pro/05-copilot-sdk-optimization-playbook.md`
 - `pro/06-functional-and-technical-optimization-backlog.md`
 - `pro/07-open-questions-and-decision-register.md`
 
@@ -31,7 +32,9 @@ Traktuj ponizsze decyzje jako twarde, dopoki nie uzasadnisz swiadomie zmiany:
 - gitLabBranch i environment sa wyprowadzane z evidence
 - glowny flow jest AI-first
 - evidence providers sa sekwencyjne na AnalysisContext
-- GitLab deterministic evidence i GitLab tools to osobne capability
+- GitLab deterministic evidence, GitLab tools i DB tools to osobne capability
+- GitLab i DB tools sa session-bound przez hidden ToolContext
+- DB discovery jest application-scoped przez applicationNamePattern, nie schemaPattern
 - skill Copilota jest runtime resource aplikacji
 - nie mieszaj klas adapter-specific do kontraktu AI
 - nie proponuj globalnego trust-all SSL
@@ -75,6 +78,8 @@ W kazdym punkcie wskaz:
 - po co zmiana
 - jakich klas lub modulow dotknie
 - jak zmierzyc efekt
+
+Uwzglednij, ze session-bound GitLab i DB tools sa juz wdrozone.
 ```
 
 ### 3. Product and operator workflow session
@@ -89,6 +94,7 @@ Skup sie na:
 - prezentacji evidence
 - historii analiz
 - roli operational context
+- widocznosci GitLab i DB tool traces
 
 Daj wynik jako backlog z priorytetami P1/P2/P3 oraz uzasadnieniem biznesowym.
 ```
@@ -104,7 +110,7 @@ Skup sie na:
 - failure handling
 - persystencji jobow
 - telemetry i observability
-- ryzykach integracyjnych Elasticsearch / Dynatrace / GitLab / Copilot
+- ryzykach integracyjnych Elasticsearch / Dynatrace / GitLab / Oracle DB / Copilot
 
 Daj wynik jako:
 - top risks
@@ -118,7 +124,7 @@ Prompt:
 
 ```text
 Na podstawie plikow /pro przygotuj 3 alternatywne decyzje architektoniczne dla tematu:
-[tu wstaw temat, np. "session-bound GitLab tools" albo "JSON response contract dla Copilota"].
+[tu wstaw temat, np. "exploration budget dla GitLab i DB tools" albo "JSON response contract dla Copilota"].
 
 Dla kazdej opcji daj:
 - context
@@ -127,6 +133,22 @@ Dla kazdej opcji daj:
 - tradeoffs
 - impact on current classes/modules
 - recommendation
+```
+
+### 6. Data diagnostics governance session
+
+Prompt:
+
+```text
+Na podstawie plikow /pro przygotuj decyzje architektoniczna dla rolloutu DB capability.
+Skup sie na:
+- analysis.database.enabled
+- application-scoped discovery
+- query budgets
+- raw SQL governance
+- audit i UI projection wynikow DB tools
+
+Daj wynik jako ADR z recommended rollout stages.
 ```
 
 ## Jakich wynikow oczekiwac od GPT Pro
@@ -168,7 +190,7 @@ Przy powazniejszych tematach pros o stale sekcje:
 
 - zmian lamacych invarianty requestu `/analysis`
 - mieszania adapterow z AI layer
-- przenoszenia heurystyk incidentowych do MCP tools
+- przenoszenia heurystyk incidentowych do MCP tools albo adapterow
 - refaktorow bez wskazania konkretnych punktow w kodzie
 
 ## Najlepszy sposob zamykania sesji

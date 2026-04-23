@@ -10,7 +10,8 @@ Docelowy flow jest nastepujacy:
 1. uzytkownik wysyla zadanie analizy,
 2. aplikacja zbiera evidence z systemow zewnetrznych,
 3. AI interpretuje evidence,
-4. AI moze dociagac dodatkowy kod z GitLaba przez tools,
+4. AI moze dociagac dodatkowy kod z GitLaba i opcjonalnie zweryfikowac
+   hipotezy danych przez Database tools,
 5. aplikacja zwraca diagnoze i rekomendowany kolejny krok lub kierunek poprawki.
 
 ## Aktualny stan
@@ -31,7 +32,7 @@ Na dzisiaj projekt ma:
 - job-based API dla UI: `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
 - AI-first flow oparty o `AnalysisEvidenceProvider` i `AnalysisAiProvider`,
 - przygotowany bridge pomiedzy Spring tools a GitHub Copilot Java SDK,
-- MCP tools dla GitLaba i Elastica,
+- MCP tools dla Elastica, GitLaba i warunkowo dla Database,
 - pierwszy realny adapter REST do Elasticsearch/Kibana proxy,
 - pierwszy realny adapter REST do Dynatrace Managed,
 - pierwszy realny adapter REST do GitLaba,
@@ -94,6 +95,11 @@ Na dzisiaj projekt ma:
   Elasticsearch/Kibana.
 - `pl.mkn.incidenttracker.analysis.mcp.elasticsearch`
   MCP tools Elastica.
+- `pl.mkn.incidenttracker.analysis.adapter.database`
+  Routing polaczen, metadata Oracle, readonly query execution i SQL guard DB
+  capability.
+- `pl.mkn.incidenttracker.analysis.mcp.database`
+  Session-bound MCP tools diagnostyki danych.
 - `pl.mkn.incidenttracker.analysis.adapter.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).
@@ -129,6 +135,8 @@ Na dzisiaj projekt ma:
   stalej kolejnosci pipeline.
 - GitLab deterministic provider i GitLab MCP tools sa wydzielone do osobnych
   pakietow, ale reuse'uja ten sam adapter GitLaba.
+- Database diagnostics sa osobna, opcjonalna capability AI-guided i nie sa
+  evidence providerem.
 - Operational context jest osobnym enrichment stepem nad juz zebranym evidence.
 - Flow synchroniczny i jobowy reuse'uja ta sama orchestration warstwe
   `AnalysisOrchestrator`.
@@ -158,6 +166,7 @@ flowchart LR
     N --> O["Copilot SDK"]
     O --> P["Elastic tools (optional during session)"]
     O --> R["GitLab tools (optional during session)"]
+    O --> Q["Database tools (optional during session)"]
     N --> S["AnalysisResultResponse"]
     B --> T["GET /analysis/jobs/{analysisId}"]
     T --> D

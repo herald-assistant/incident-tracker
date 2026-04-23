@@ -2,7 +2,8 @@
 
 ## Decyzje juz podjete
 
-Te rzeczy traktuj jako ustalone, dopoki nie ma swiadomej zmiany architektonicznej:
+Te rzeczy traktuj jako ustalone, dopoki nie ma swiadomej zmiany
+architektonicznej:
 
 1. `correlationId` jest jedynym biznesowym polem requestu glownego flow.
 2. `gitLabGroup` pochodzi z konfiguracji aplikacji.
@@ -10,10 +11,16 @@ Te rzeczy traktuj jako ustalone, dopoki nie ma swiadomej zmiany architektoniczne
 4. Glowny flow jest `AI-first`.
 5. Evidence providers sa sekwencyjne i pracuja na wspolnym `AnalysisContext`.
 6. Skill Copilota jest runtime resource aplikacji.
-7. GitLab deterministic evidence i GitLab MCP tools sa osobnymi capability.
-8. Dynatrace nie jest dzisiaj tool-em runtime.
-9. Ignorowanie SSL jest lokalne per integracja.
-10. Job state jest obecnie w pamieci procesu.
+7. GitLab deterministic evidence, GitLab MCP tools i Database MCP tools sa
+   osobnymi capability.
+8. GitLab tools sa session-bound i nie przyjmuja model-facing `group`,
+   `branch` ani `correlationId`.
+9. Database tools sa session-bound i nie przyjmuja model-facing `environment`.
+10. DB discovery jest application-scoped przez `applicationNamePattern`, nie
+    schema-pattern scoped.
+11. Dynatrace nie jest dzisiaj tool-em runtime.
+12. Ignorowanie SSL jest lokalne per integracja.
+13. Job state jest obecnie w pamieci procesu.
 
 ## Otwarte pytania strategiczne
 
@@ -33,9 +40,14 @@ Bez tego trudno uczciwie optymalizowac Copilota.
 Obecny prompt jest ustawiony pod operatora / testera / mid-level developera.
 To jest dobra decyzja, ale warto ja potwierdzic jako produktowy target.
 
-### 3. Czy GitLab tools maja pozostac ogolne, czy maja byc session-bound?
+### 3. Czy DB tool results maja trafic do UI jako osobny strumien?
 
-To jedno z kluczowych pytan dla optymalizacji Copilot SDK.
+Dzisiaj:
+
+- GitLab read tools sa mapowane do `toolEvidenceSections`,
+- DB tools sa logowane, ale nie projektowane jako osobne sekcje evidence.
+
+To wymaga swiadomej decyzji o UX, governance i poziomie szczegolow.
 
 ### 4. Czy chcemy jeden etap AI, czy dwa?
 
@@ -44,7 +56,7 @@ Opcje:
 - jeden etap:
   prosciej, taniej implementacyjnie
 - dwa etapy:
-  lepsza kontrola repo exploration i wyniku
+  lepsza kontrola eksploracji i wyniku
 
 ### 5. Czy Dynatrace powinien dostac w przyszlosci tools?
 
@@ -56,7 +68,7 @@ Przeciw:
 
 - wiekszy koszt,
 - wieksza zlozonosc sesji,
-- ryzyko przesuniecia uwagi z logs i repo.
+- ryzyko przesuniecia uwagi z logs, repo i danych.
 
 ### 6. Czy operational context ma byc rolloutowany szerzej?
 
@@ -79,6 +91,11 @@ To mocno zmienia model systemu:
 Aktualny stan jest wygodny developersko, ale moze byc zbyt liberalny dla
 bardziej restrykcyjnego srodowiska.
 
+### 9. Czy raw SQL ma byc kiedykolwiek wlaczany produkcyjnie?
+
+Capability istnieje jako last resort, ale domyslnie jest wylaczona.
+To wymaga osobnej decyzji governance, audytu i bezpieczenstwa.
+
 ## Otwarte pytania techniczne
 
 ### 1. Jak duze sa realne artifacts attachments?
@@ -98,7 +115,7 @@ Do pomiaru:
 - logs + deployment + Dynatrace
 - logs + deployment + GitLab deterministic
 
-### 3. Ile realnie kosztuje repo exploration?
+### 3. Ile realnie kosztuje repo exploration i DB diagnostics?
 
 Do zmierzenia:
 
@@ -106,7 +123,10 @@ Do zmierzenia:
 - liczba `readFile`,
 - liczba `readFileChunk`,
 - wielkosc plikow,
-- czas odpowiedzi GitLaba.
+- liczba DB queries per tool,
+- liczba zwroconych rows / chars,
+- czas odpowiedzi GitLaba,
+- czas odpowiedzi DB capability.
 
 ### 4. Czy parser tekstowy jest jeszcze wystarczajacy?
 
@@ -121,13 +141,22 @@ Dzisiaj to dobry guardrail dla handoffu i zrozumialosci.
 Warto jednak swiadomie potwierdzic, czy fallback z powodu braku tego pola jest
 pozadany.
 
+### 6. Czy DB capability powinna miec osobny budget i audit policy?
+
+Pytania praktyczne:
+
+- osobny limit query count?
+- osobny limit rows / chars?
+- osobny warning dla `db_execute_readonly_sql`?
+
 ## Rekomendowane metryki do wprowadzenia
 
 ### Metryki trafnosci
 
 - manualny score diagnozy,
 - manualny score `affectedFunction`,
-- manualny score `recommendedAction`
+- manualny score `recommendedAction`,
+- manualny score "kod vs dane".
 
 ### Metryki runtime
 
@@ -143,6 +172,9 @@ pozadany.
 - read file count,
 - read chunk count,
 - total chars returned by GitLab,
+- total DB queries,
+- total rows returned by DB,
+- total chars returned by DB,
 - total chars returned by Elastic tool
 
 ### Metryki struktury odpowiedzi

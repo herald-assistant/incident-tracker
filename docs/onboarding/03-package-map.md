@@ -41,10 +41,13 @@ Konkretne kroki pipeline:
 ### `analysis/adapter`
 
 Integracje zewnetrzne i helper endpointy testowe.
+Sa tu dzisiaj adaptery Elasticsearch, Dynatrace, GitLaba i Database
+capability.
 
 ### `analysis/mcp`
 
 Warstwa tools wystawianych przez Spring AI.
+Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
 
 ### `analysis/ai`
 

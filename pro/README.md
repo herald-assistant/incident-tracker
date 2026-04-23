@@ -12,7 +12,7 @@ Ma sluzyc do:
 - planowania optymalizacji funkcjonalnych i technicznych,
 - szczegolnie: optymalizacji wykorzystania GitHub Copilot Java SDK.
 
-Stan opisany w tym katalogu odpowiada repo na dzien `2026-04-20`.
+Stan opisany w tym katalogu odpowiada repo na dzien `2026-04-22`.
 
 ## Source of truth
 
@@ -26,8 +26,9 @@ Ten pakiet zostal zlozony na podstawie:
 - `docs/onboarding/*`
 - kluczowych klas z `src/main/java/pl/mkn/incidenttracker/analysis/*`
 - `src/main/resources/application.properties`
+- `src/main/resources/copilot/skills/incident-analysis-core/SKILL.md`
 - `src/main/resources/copilot/skills/incident-analysis-gitlab-tools/SKILL.md`
-- `frontend/package.json`
+- `src/main/resources/copilot/skills/incident-data-diagnostics/SKILL.md`
 - wybranych testow w `src/test/java/pl/mkn/incidenttracker/analysis/*`
 
 ## Jak czytac
@@ -50,9 +51,10 @@ Najlepsza kolejnosc:
 - `gitLabGroup` pochodzi z konfiguracji aplikacji.
 - Glowny flow jest `AI-first`, nie `rule-based`.
 - Evidence providers sa sekwencyjne i pracuja na wspolnym `AnalysisContext`.
-- GitLab ma dwa osobne tryby pracy:
-  - deterministic evidence provider,
-  - AI-guided tools.
+- GitLab deterministic evidence, GitLab MCP tools i Database MCP tools sa
+  osobnymi capability.
+- GitLab i Database tools sa session-bound przez hidden `ToolContext`, a nie
+  przez model-facing `group`, `branch`, `environment` albo `correlationId`.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
 - Nie wolno mieszac klas adapter-specific bezposrednio do kontraktu AI.
 - Nie wolno robic globalnego "trust all SSL" dla calej aplikacji.
@@ -60,14 +62,17 @@ Najlepsza kolejnosc:
 ## Co jest tutaj najwazniejsze dla GPT Pro
 
 Jesli celem sesji jest optymalizacja Copilot SDK, GPT Pro powinien rozumiec
-jednoczesnie trzy rzeczy:
+jednoczesnie cztery rzeczy:
 
 1. obecny runtime flow od `correlationId` do wyniku,
-2. aktualny model prompt + attachments + tools + skill,
-3. miejsca, gdzie projekt ma dzisiaj ukryte koszty, ryzyka i ograniczenia.
+2. aktualny model prompt + attachments + tools + skills,
+3. granice miedzy deterministic evidence, AI-guided GitLab exploration i
+   AI-guided DB diagnostics,
+4. miejsca, gdzie projekt ma dzisiaj ukryte koszty, ryzyka i ograniczenia.
 
 Dlatego najwazniejsze pliki tego katalogu to:
 
+- `03-runtime-contracts-and-configuration.md`
 - `04-copilot-sdk-current-state.md`
 - `05-copilot-sdk-optimization-playbook.md`
 - `07-open-questions-and-decision-register.md`
@@ -79,7 +84,9 @@ Aktualizuj `/pro` po kazdej wiekszej zmianie w jednym z tych obszarow:
 - glowny runtime flow,
 - shape evidence i pipeline providerow,
 - kontrakt AI request/response,
+- session-bound `ToolContext` i bridge Copilot SDK,
 - skill, tools albo bridge Copilot SDK,
 - konfiguracja `analysis.ai.copilot.*`,
+- konfiguracja `analysis.database.*`,
 - frontend operatorski i job API,
 - decyzje o tym, co jest deterministic evidence, a co AI-guided exploration.

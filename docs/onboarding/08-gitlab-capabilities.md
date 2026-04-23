@@ -45,10 +45,14 @@ Pakiet: `analysis.mcp.gitlab`
 Odpowiada za:
 
 - wyszukiwanie kandydatow repozytoriow,
+- znajdowanie szerszego flow context,
+- czytanie outline pliku,
 - czytanie pliku,
-- czytanie chunku pliku.
+- czytanie chunku pliku,
+- czytanie malych batchy chunkow.
 
-Tool ma byc maly i reuse'owac adapter.
+Tool ma byc maly, reuse'owac adapter i brac `group`, `branch` oraz
+`correlationId` z hidden `ToolContext`, a nie od modelu.
 
 ## Dwie stale decyzje
 

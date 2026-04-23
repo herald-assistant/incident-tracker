@@ -9,7 +9,9 @@ Obejmuje:
 - `elasticsearch/`
   tools do dodatkowego dogrywania logow po `correlationId`,
 - `gitlab/`
-  tools do wyszukiwania repozytoriow i czytania plikow,
+  session-bound tools do wyszukiwania repozytoriow i czytania kodu,
+- `database/`
+  warunkowo wlaczane, session-bound tools do readonly diagnostyki danych,
 - przyszle wysokopoziomowe tools analityczne, jesli beda potrzebne.
 
 Nie obejmuje:
@@ -24,6 +26,9 @@ Nie obejmuje:
   orchestratora. Nie sklejaj calego flow bezposrednio w metodzie `@Tool`.
 - Kontrakty tooli maja pozostac jawne i male: tylko dane potrzebne do
   wykonania jednego konkretnego kroku eksploracji.
+- Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
+  `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden
+  `ToolContext`, a nie przez model-facing parametry.
 - Nie przenos tu heurystyk incidentowych typu logs -> deployment albo
   logs -> project hints. To nalezy do evidence pipeline.
 - Nie odpalaj bezposrednio `RestClient` z warstwy MCP. Reuse'uj adaptery albo

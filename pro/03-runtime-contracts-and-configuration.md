@@ -23,6 +23,9 @@ Response domainowy to `AnalysisResultResponse` z polami:
 - `recommendedAction`
 - `rationale`
 - `affectedFunction`
+- `affectedProcess`
+- `affectedBoundedContext`
+- `affectedTeam`
 - `prompt`
 
 ### `POST /analysis/jobs`
@@ -50,6 +53,7 @@ Najwazniejsze pola dla UI i diagnostyki:
 - `errorMessage`
 - `steps`
 - `evidenceSections`
+- `toolEvidenceSections`
 - `preparedPrompt`
 - `result`
 
@@ -120,27 +124,66 @@ To jest jedyna rzecz, jaka przechodzi z orchestratora do AI providera.
 - `recommendedAction`
 - `rationale`
 - `affectedFunction`
+- `affectedProcess`
+- `affectedBoundedContext`
+- `affectedTeam`
 - `prompt`
 
 ## Kontrakt finalnego wyniku Copilota
 
-Prompt i skill wymuszaja dokladnie te pola:
+Prompt i skills wymuszaja dzisiaj te pola:
 
 - `detectedProblem`
 - `summary`
 - `recommendedAction`
 - `rationale`
 - `affectedFunction`
+- `affectedProcess`
+- `affectedBoundedContext`
+- `affectedTeam`
 
-Jesli parser nie znajdzie `detectedProblem`, `summary`, `recommendedAction` lub
-`affectedFunction`, provider wraca fallback:
+Parser wymaga twardo:
+
+- `detectedProblem`
+- `summary`
+- `recommendedAction`
+- `affectedFunction`
+
+Jesli parser nie znajdzie jednego z tych czterech pol, provider wraca fallback:
 
 - `detectedProblem = AI_UNSTRUCTURED_RESPONSE`
 - `summary = raw assistant content`
 - `recommendedAction = Review the raw Copilot response and improve response formatting in the prompt.`
 - `affectedFunction = ""`
+- `affectedProcess = ""`
+- `affectedBoundedContext = ""`
+- `affectedTeam = ""`
 
-`rationale` jest opcjonalne i ma default, jesli go brakuje.
+`rationale` ma default, jesli go brakuje.
+
+## Hidden session context dla tooli
+
+Session-bound dane runtime nie sa model-facing parametrami.
+Bridge Copilota przekazuje je do Spring tools przez hidden `ToolContext`.
+
+Najwazniejsze klucze to:
+
+- `analysisRunId`
+- `copilotSessionId`
+- `actualCopilotSessionId`
+- `toolCallId`
+- `toolName`
+- `correlationId`
+- `environment`
+- `gitLabBranch`
+- `gitLabGroup`
+
+W praktyce oznacza to:
+
+- GitLab tools nie przyjmuja juz `group`, `branch` ani `correlationId`,
+- Database tools nie przyjmuja `environment`,
+- model operuje tylko na parametrach eksploracji, a nie na ukrytym runtime
+  scope.
 
 ## Tools dostepne dla Copilota
 
@@ -155,16 +198,47 @@ Wejscie:
 ### GitLab
 
 - `gitlab_search_repository_candidates`
+- `gitlab_find_flow_context`
+- `gitlab_read_repository_file_outline`
 - `gitlab_read_repository_file`
 - `gitlab_read_repository_file_chunk`
+- `gitlab_read_repository_file_chunks`
 
-Wazne:
+Najwazniejsze reguly:
 
-- tools przyjmuja jawnie `group` i `branch`,
-- ale prompt i skill mowia modelowi, zeby traktowal group i branch z requestu
-  jako fixed context.
+- tools sa session-bound i biora `group`, `branch` i `correlationId` z hidden
+  `ToolContext`,
+- model podaje tylko parametry eksploracji, np. `projectName`, `filePath`,
+  `keywords`, `seedClass`, `chunks`,
+- `gitlab_read_repository_file`, `gitlab_read_repository_file_chunk` i
+  `gitlab_read_repository_file_chunks` sa przechwytywane do
+  `toolEvidenceSections` w job flow.
 
-To jest dzisiaj istotne miejsce do przemyslenia i potencjalnej optymalizacji.
+### Database
+
+- `db_get_scope`
+- `db_find_tables`
+- `db_find_columns`
+- `db_describe_table`
+- `db_exists_by_key`
+- `db_count_rows`
+- `db_group_count`
+- `db_sample_rows`
+- `db_check_orphans`
+- `db_find_relationships`
+- `db_join_count`
+- `db_join_sample`
+- `db_compare_table_to_expected_mapping`
+- `db_execute_readonly_sql`
+
+Najwazniejsze reguly:
+
+- capability jest opcjonalna i domyslnie wylaczona,
+- `environment` i `correlationId` pochodza z hidden `ToolContext`,
+- discovery jest application-scoped przez `applicationNamePattern`, a nie przez
+  `schemaPattern`,
+- exact data tools pracuja dopiero na dokladnym `schema.table`,
+- raw SQL jest last resort i domyslnie pozostaje wylaczony.
 
 ## Properties runtime
 
@@ -209,6 +283,52 @@ Domyslne z kodu:
 
 - `searchResultsPerTerm = 20`
 - `maxCandidateCount = 10`
+
+### Database
+
+`analysis.database.*`
+
+- `enabled`
+- `max-rows`
+- `max-columns`
+- `max-tables-per-search`
+- `max-columns-per-search`
+- `max-tables-to-describe`
+- `max-result-characters`
+- `query-timeout`
+- `connection-timeout`
+- `raw-sql-enabled`
+- `allow-all-schemas`
+- `environments.<environment>.jdbc-url`
+- `environments.<environment>.username`
+- `environments.<environment>.password`
+- `environments.<environment>.database-alias`
+- `environments.<environment>.description`
+- `environments.<environment>.allowed-schemas`
+- `environments.<environment>.applications.<application>.schema`
+- `environments.<environment>.applications.<application>.*patterns`
+- `environments.<environment>.applications.<application>.related-schemas`
+
+Domyslne z kodu:
+
+- `enabled = false`
+- `maxRows = 50`
+- `maxColumns = 40`
+- `maxTablesPerSearch = 30`
+- `maxColumnsPerSearch = 50`
+- `maxTablesToDescribe = 5`
+- `maxResultCharacters = 64000`
+- `queryTimeout = 5s`
+- `connectionTimeout = 5s`
+- `rawSqlEnabled = false`
+- `allowAllSchemas = false`
+
+Wazny detal implementacyjny:
+
+- capability nie wymaga globalnego `spring.datasource`,
+- DataSource'y sa tworzone recznie per environment przez
+  `DatabaseConnectionRouter`,
+- aplikacja wyklucza globalne `DataSourceAutoConfiguration`.
 
 ### Elasticsearch
 
@@ -280,11 +400,13 @@ Domyslnie:
 
 ## Runtime resources
 
-### Skill Copilota
+### Runtime skills Copilota
 
 Classpath source:
 
+- `src/main/resources/copilot/skills/incident-analysis-core/SKILL.md`
 - `src/main/resources/copilot/skills/incident-analysis-gitlab-tools/SKILL.md`
+- `src/main/resources/copilot/skills/incident-data-diagnostics/SKILL.md`
 
 Runtime extraction:
 
@@ -300,6 +422,17 @@ Kazda analiza generuje tymczasowo:
 
 - `00-incident-manifest.json`
 - po jednym pliku `.json` na sekcje evidence
+
+Manifest zawiera:
+
+- `correlationId`
+- `environment`
+- `gitLabBranch`
+- `gitLabGroup`
+- `generatedAt`
+- `readFirst`
+- `artifactPolicy`
+- liste artefaktow
 
 ### Operational context
 
@@ -318,9 +451,12 @@ Podstawowe komendy:
 
 ## Wazne runtime fakty
 
+- `SessionConfig` dostaje jawny `sessionId` generowany po stronie backendu,
 - job state jest w pamieci procesu,
 - frontend polluje co `1500 ms`,
 - prepared prompt jest zachowywany takze przy bledzie AI,
 - `AnalysisContext.withSection(...)` ignoruje puste sekcje,
 - orchestrator rzuca `AnalysisDataNotFoundException`, jesli po collectorze nadal
-  nie ma zadnego evidence.
+  nie ma zadnego evidence,
+- Database tool results nie sa dzisiaj mapowane do `toolEvidenceSections`;
+  ten mechanizm jest utrzymywany tylko dla wybranych GitLab read tools.

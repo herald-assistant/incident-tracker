@@ -11,6 +11,17 @@ Skala priorytetu:
 - `P2` sredni impact albo wazny fundament
 - `P3` dalszy horyzont
 
+## Co jest juz zrobione i nie wraca jako backlog bazowy
+
+Te tematy sa juz w kodzie i nie powinny wracac jako "pierwszy krok":
+
+- session-bound GitLab tools,
+- session-bound Database tools,
+- application-scoped DB discovery,
+- jawny backendowy `sessionId`,
+- hidden `ToolContext` z audit metadata,
+- podzial skilli na core, GitLab i data diagnostics.
+
 ## Funkcjonalne
 
 ### P1. Lepszy wynik koncowy dla operatora
@@ -32,16 +43,18 @@ Dotkniete miejsca:
 - provider AI
 - frontend components wyniku
 
-### P1. Czytelniejsza prezentacja evidence w UI
+### P1. Czytelniejsza prezentacja evidence i tool traces w UI
 
 Cel:
 
-- operator ma szybciej rozumiec, co AI zobaczylo.
+- operator ma szybciej rozumiec, co AI zobaczylo i co dociagnelo w trakcie
+  sesji.
 
 Kierunki:
 
 - osobna sekcja Dynatrace signals,
 - lepszy viewer GitLab code evidence,
+- decyzja, czy pokazywac DB findings jako osobny stream diagnostyczny,
 - agregacja deployment facts,
 - szybkie highlighty najwazniejszych sygnalow.
 
@@ -49,6 +62,7 @@ Dotkniete miejsca:
 
 - frontend
 - `AnalysisJobResponse`
+- `toolEvidenceSections`
 
 ### P2. Historia i porownywanie analiz
 
@@ -83,7 +97,7 @@ Cel:
 Przyklady:
 
 - brakujacy downstream logs,
-- brak dostepu do DB,
+- brak dostepu do DB capability,
 - brak potwierdzenia stanu asynchronicznego procesu.
 
 ## Techniczne
@@ -99,7 +113,8 @@ Kierunki:
 - structured session metrics,
 - tool budget,
 - attachment size metrics,
-- per-analysis cost profile.
+- per-analysis cost profile,
+- osobne metryki dla GitLab i DB tools.
 
 ### P1. Twardszy kontrakt odpowiedzi AI
 
@@ -113,17 +128,18 @@ Kierunki:
 - stricter validation,
 - fallback response builder.
 
-### P1. Zmniejszenie swobody GitLab tools
+### P1. Audit i governance dla session-bound tools
 
 Cel:
 
-- mniej losowej eksploracji repo.
+- lepsza kontrola uzycia GitLab i DB capability.
 
 Kierunki:
 
-- session-bound group/branch,
-- tighter DTOs,
-- mozliwy osobny "read deterministic candidate" tool.
+- limity tool calls,
+- limity chars / rows / queries,
+- czytelniejszy audit trail,
+- decyzja, czy i kiedy wolno wlaczyc raw SQL.
 
 ### P1. Lepsza wydajnosc GitLab reads
 
@@ -177,7 +193,7 @@ Kierunki:
 - lepsze stacktrace filtering,
 - dokladniejsze dobieranie caller/callee context.
 
-### P2. Wersjonowanie promptu, skilla i artifacts
+### P2. Wersjonowanie promptu, skilli i artifacts
 
 Cel:
 
@@ -209,7 +225,7 @@ Cel:
 
 - pewnosc, ze sync/job/evidence/AI glue dziala razem.
 
-### P1. Testy kontraktu prompt + skill + parser
+### P1. Testy kontraktu prompt + skills + parser
 
 Cel:
 
@@ -219,9 +235,9 @@ Cel:
 
 Cel:
 
-- porownywanie trafnosci po zmianach promptu, skillu i heurystyk.
+- porownywanie trafnosci po zmianach promptu, skills i heurystyk.
 
-### P2. Testy wydajnosciowe sesji AI i GitLab exploration
+### P2. Testy wydajnosciowe sesji AI, GitLab exploration i DB diagnostics
 
 Cel:
 
@@ -229,11 +245,11 @@ Cel:
 
 ## Sugerowana kolejnosc backlogu
 
-1. telemetry Copilota
+1. telemetry Copilota i tooli
 2. twardszy response contract
-3. session-bound GitLab tools
+3. budget i governance dla tooli
 4. lepszy deterministic context
-5. UI dla evidence i wyniku
+5. UI dla evidence, tool traces i wyniku
 6. persystencja jobow
 7. operational context rollout
 8. multi-stage AI
