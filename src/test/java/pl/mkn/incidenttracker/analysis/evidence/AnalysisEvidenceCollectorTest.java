@@ -70,7 +70,7 @@ class AnalysisEvidenceCollectorTest {
         var context = analysisEvidenceCollector.collect("timeout-123", AnalysisEvidenceCollectionListener.NO_OP);
         var evidenceSections = context.evidenceSections();
 
-        assertEquals(2, evidenceSections.size());
+        assertEquals(3, evidenceSections.size());
         assertEquals("timeout-123", context.correlationId());
 
         var elasticSection = evidenceSections.get(0);
@@ -90,6 +90,12 @@ class AnalysisEvidenceCollectorTest {
         assertEquals("dev3", deploymentAttributes.get("environment"));
         assertEquals("dev/atlas", deploymentAttributes.get("branch"));
         assertEquals("backend", deploymentAttributes.get("projectNameHint"));
+
+        var dynatraceSection = evidenceSections.get(2);
+        assertEquals("dynatrace", dynatraceSection.provider());
+        assertEquals("runtime-signals", dynatraceSection.category());
+        assertEquals("Dynatrace collection status", dynatraceSection.items().get(0).title());
+        assertEquals("SKIPPED", attributesByName(dynatraceSection.items().get(0)).get("collectionStatus"));
     }
 
     @Test

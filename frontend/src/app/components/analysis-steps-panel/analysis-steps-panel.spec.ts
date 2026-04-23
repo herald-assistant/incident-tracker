@@ -51,6 +51,27 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).toContain('CustomerController');
   });
 
+  it('should explain when Dynatrace visibility is unavailable instead of implying healthy runtime', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildDynatraceStep()]);
+    fixture.componentRef.setInput('evidenceSections', [buildUnavailableDynatraceSection()]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Status pobrania z Dynatrace: UNAVAILABLE.');
+    expect(compiled.textContent).toContain('Dynatrace API request failed with HTTP 502');
+    expect(compiled.textContent).toContain(
+      'Missing Dynatrace metrics, problems, or component signals must be treated as lack of data'
+    );
+    expect(compiled.textContent).not.toContain(
+      'W oknie incydentu Dynatrace nie zgłosił osobnego problemu.'
+    );
+  });
+
   it('should keep the done icon on a viewed completed step and show a loader on the running step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', buildProgressSteps());
@@ -421,6 +442,29 @@ function buildOperationalContextStep(): AnalysisJobStepResponse {
     itemCount: 0,
     startedAt: '2026-04-14T12:00:10Z',
     completedAt: '2026-04-14T12:00:12Z'
+  };
+}
+
+function buildUnavailableDynatraceSection(): AnalysisEvidenceSection {
+  return {
+    provider: 'dynatrace',
+    category: 'runtime-signals',
+    items: [
+      {
+        title: 'Dynatrace collection status',
+        attributes: [
+          { name: 'dynatraceItemType', value: 'collection-status' },
+          { name: 'collectionStatus', value: 'UNAVAILABLE' },
+          { name: 'collectionReason', value: 'Dynatrace API request failed with HTTP 502' },
+          {
+            name: 'interpretation',
+            value:
+              'Dynatrace visibility is unavailable for this incident. Missing Dynatrace metrics, problems, or component signals must be treated as lack of data, not as healthy runtime.'
+          },
+          { name: 'correlationStatus', value: 'UNKNOWN' }
+        ]
+      }
+    ]
   };
 }
 

@@ -95,7 +95,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Attached artifacts:"));
             assertTrue(prompt.contains("00-incident-manifest.json"));
             assertTrue(prompt.contains("01-elasticsearch-logs.json"));
-            assertTrue(prompt.contains("02-dynatrace-runtime-signals.json"));
+            assertTrue(prompt.contains("02-dynatrace-runtime-signals.md"));
             assertTrue(prompt.contains("03-gitlab-code-changes.json"));
             assertTrue(prompt.contains("Available capability groups:"));
             assertTrue(prompt.contains("GitLab code: search broadly across relevant repositories and read focused chunks/files to explain the failing code path, repository predicates, integrations and affected functional flow."));
@@ -133,6 +133,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"readFirst\""));
             assertTrue(manifestContent.contains("\"00-incident-manifest.json\""));
             assertTrue(manifestContent.contains("\"01-elasticsearch-logs.json\""));
+            assertTrue(manifestContent.contains("\"02-dynatrace-runtime-signals.md\""));
 
             var logsAttachment = (Attachment) prepared.messageOptions().getAttachments().get(1);
             assertEquals("01-elasticsearch-logs.json", logsAttachment.displayName());
@@ -140,6 +141,15 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(logsContent.contains("\"provider\""));
             assertTrue(logsContent.contains("\"elasticsearch\""));
             assertTrue(logsContent.contains("\"Read timed out while calling catalog-service\""));
+
+            var dynatraceAttachment = (Attachment) prepared.messageOptions().getAttachments().get(2);
+            assertEquals("02-dynatrace-runtime-signals.md", dynatraceAttachment.displayName());
+            var dynatraceContent = Files.readString(Path.of(dynatraceAttachment.path()));
+            assertTrue(dynatraceContent.contains("Dynatrace runtime signals"));
+            assertTrue(dynatraceContent.contains("- collection status: COLLECTED"));
+            assertTrue(dynatraceContent.contains("component `case-evaluation-service`: MATCHED, SIGNALS_PRESENT."));
+            assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
+            assertFalse(dynatraceContent.contains("\"metricLabel\""));
         }
     }
 
@@ -304,14 +314,45 @@ class CopilotSdkPreparationServiceTest {
                 ), new AnalysisEvidenceSection(
                         "dynatrace",
                         "runtime-signals",
-                        List.of(new AnalysisEvidenceItem(
-                                "Dynatrace metric service.response.time.p95 for case-evaluation-service",
+                        List.of(
+                                new AnalysisEvidenceItem(
+                                        "Dynatrace collection status",
+                                        List.of(
+                                                new AnalysisEvidenceAttribute("dynatraceItemType", "collection-status"),
+                                                new AnalysisEvidenceAttribute("collectionStatus", "COLLECTED"),
+                                                new AnalysisEvidenceAttribute("collectionReason", "Dynatrace query completed successfully."),
+                                                new AnalysisEvidenceAttribute("correlationStatus", "MATCHED")
+                                        )
+                                ),
+                                new AnalysisEvidenceItem(
+                                        "Dynatrace correlated component case-evaluation-service",
+                                        List.of(
+                                                new AnalysisEvidenceAttribute("dynatraceItemType", "component-status"),
+                                                new AnalysisEvidenceAttribute("componentName", "case-evaluation-service"),
+                                                new AnalysisEvidenceAttribute("correlationStatus", "MATCHED"),
+                                                new AnalysisEvidenceAttribute("componentSignalStatus", "SIGNALS_PRESENT"),
+                                                new AnalysisEvidenceAttribute("problemDisplayId", "P-26042756"),
+                                                new AnalysisEvidenceAttribute("problemTitle", "Gateway timeout on backend"),
+                                                new AnalysisEvidenceAttribute("signalCategories", "latency, failure-rate"),
+                                                new AnalysisEvidenceAttribute(
+                                                        "correlationHighlights",
+                                                        "HTTP 5xx increase || response time degradation"
+                                                ),
+                                                new AnalysisEvidenceAttribute(
+                                                        "summary",
+                                                        "error rate increased, response time changed 85 -> 1840 ms"
+                                                )
+                                        )
+                                ),
+                                new AnalysisEvidenceItem(
+                                        "Dynatrace metric service.response.time.p95 for case-evaluation-service",
                                 List.of(
                                         new AnalysisEvidenceAttribute("metricLabel", "service.response.time.p95"),
                                         new AnalysisEvidenceAttribute("maxValue", "8.67"),
                                         new AnalysisEvidenceAttribute("unit", "ms")
                                 )
-                        ))
+                                )
+                        )
                 ), new AnalysisEvidenceSection(
                         "gitlab",
                         "code-changes",

@@ -159,7 +159,13 @@ Dynatrace provider:
   incydentu,
 - szuka najlepiej dopasowanych encji `SERVICE` w Dynatrace,
 - pobiera problemy i metryki service-level dla najlepszego dopasowania,
-- zwraca skondensowane `runtime-signals` jako evidence do promptu AI,
+- publikuje strukturalne `runtime-signals` do evidence i UI,
+- w tej sekcji jawnie rozroznia status pobrania
+  (`COLLECTED`, `UNAVAILABLE`, `DISABLED`, `SKIPPED`),
+- dla dopasowanych komponentow rozroznia brak sygnalow problemowych od braku
+  widocznosci,
+- do attachmentu Copilota renderuje skrocony markdownowy summary komponentow,
+  zamiast surowego JSON sekcji Dynatrace,
 - nie wystawia osobnych tooli Dynatrace dla Copilota.
 
 GitLab deterministic provider:

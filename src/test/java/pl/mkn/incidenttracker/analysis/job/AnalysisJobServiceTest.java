@@ -67,7 +67,7 @@ class AnalysisJobServiceTest {
         assertEquals("COMPLETED", completed.status());
         assertEquals("dev3", completed.environment());
         assertEquals("dev/atlas", completed.gitLabBranch());
-        assertEquals(2, completed.evidenceSections().size());
+        assertEquals(3, completed.evidenceSections().size());
         assertEquals(0, completed.toolEvidenceSections().size());
         assertEquals(
                 "Synthetic AI prompt for correlationId=timeout-123, environment=dev3, gitLabBranch=dev/atlas",

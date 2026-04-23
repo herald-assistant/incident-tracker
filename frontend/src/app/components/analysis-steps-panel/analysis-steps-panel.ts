@@ -133,8 +133,16 @@ interface DynatraceMetricAggregateView {
   exampleOperations: string[];
 }
 
+interface DynatraceCollectionStatusView {
+  collectionStatus: string;
+  reason: string;
+  interpretation: string;
+  correlationStatus: string;
+}
+
 interface DynatraceRuntimeSectionView {
   takeaways: string[];
+  collectionStatus: DynatraceCollectionStatusView | null;
   serviceGroups: DynatraceServiceGroupView[];
   metricAggregates: DynatraceMetricAggregateView[];
   serviceMatches: DynatraceServiceMatchView[];
@@ -692,6 +700,7 @@ function prepareDynatraceRuntimeSection(section: AnalysisEvidenceSection): {
   runtime: DynatraceRuntimeSectionView;
   uncategorizedItems: StepEvidenceItemView[];
 } {
+  let collectionStatus: DynatraceCollectionStatusView | null = null;
   const serviceMatches: DynatraceServiceMatchView[] = [];
   const problems: DynatraceProblemView[] = [];
   const metrics: DynatraceMetricView[] = [];
@@ -699,6 +708,12 @@ function prepareDynatraceRuntimeSection(section: AnalysisEvidenceSection): {
 
   for (const [itemIndex, item] of (section.items || []).entries()) {
     const attributesByName = mapAttributesByName(item.attributes || []);
+
+    if (looksLikeDynatraceCollectionStatus(attributesByName)) {
+      collectionStatus = prepareDynatraceCollectionStatus(attributesByName);
+      uncategorizedItems.push(prepareDefaultEvidenceItem(section, item, itemIndex));
+      continue;
+    }
 
     if (looksLikeDynatraceServiceMatch(attributesByName)) {
       serviceMatches.push(prepareDynatraceServiceMatch(section, item, itemIndex, attributesByName));
@@ -723,7 +738,8 @@ function prepareDynatraceRuntimeSection(section: AnalysisEvidenceSection): {
 
   return {
     runtime: {
-      takeaways: buildDynatraceTakeaways(serviceGroups, problems, metricAggregates),
+      takeaways: buildDynatraceTakeaways(collectionStatus, serviceGroups, problems, metricAggregates),
+      collectionStatus,
       serviceGroups,
       metricAggregates,
       serviceMatches,
@@ -732,6 +748,12 @@ function prepareDynatraceRuntimeSection(section: AnalysisEvidenceSection): {
     },
     uncategorizedItems
   };
+}
+
+function looksLikeDynatraceCollectionStatus(
+  attributesByName: ReadonlyMap<string, string>
+): boolean {
+  return attributesByName.has('collectionStatus');
 }
 
 function looksLikeDynatraceServiceMatch(attributesByName: ReadonlyMap<string, string>): boolean {
@@ -917,6 +939,17 @@ function prepareDynatraceMetric(
     maxValue: formatMetricStat(attributesByName, 'maxValue'),
     averageValue: formatMetricStat(attributesByName, 'averageValue'),
     lastValue: formatMetricStat(attributesByName, 'lastValue')
+  };
+}
+
+function prepareDynatraceCollectionStatus(
+  attributesByName: ReadonlyMap<string, string>
+): DynatraceCollectionStatusView {
+  return {
+    collectionStatus: attributeValue(attributesByName, 'collectionStatus'),
+    reason: nonEmptyValue(attributesByName.get('collectionReason')) || '',
+    interpretation: nonEmptyValue(attributesByName.get('interpretation')) || '',
+    correlationStatus: nonEmptyValue(attributesByName.get('correlationStatus')) || ''
   };
 }
 
@@ -1584,11 +1617,31 @@ function formatIncidentWindows(windows: string[]): string {
 }
 
 function buildDynatraceTakeaways(
+  collectionStatus: DynatraceCollectionStatusView | null,
   serviceGroups: DynatraceServiceGroupView[],
   problems: DynatraceProblemView[],
   metricAggregates: DynatraceMetricAggregateView[]
 ): string[] {
   const takeaways: string[] = [];
+
+  if (collectionStatus && collectionStatus.collectionStatus !== 'COLLECTED') {
+    takeaways.push(`Status pobrania z Dynatrace: ${collectionStatus.collectionStatus}.`);
+    if (collectionStatus.reason) {
+      takeaways.push(collectionStatus.reason);
+    }
+    if (collectionStatus.interpretation) {
+      takeaways.push(collectionStatus.interpretation);
+    }
+    return takeaways;
+  }
+
+  if (collectionStatus?.correlationStatus === 'NO_MATCH') {
+    takeaways.push('Dynatrace odpowiedział poprawnie, ale nie dopasował komponentu do tego incydentu.');
+    if (collectionStatus.interpretation) {
+      takeaways.push(collectionStatus.interpretation);
+    }
+    return takeaways;
+  }
 
   if (serviceGroups.length > 0) {
     takeaways.push(serviceGroups[0].summary);

@@ -58,6 +58,15 @@ Do not invent or silently change:
 
 If a value is not grounded in evidence, write that it is not established.
 
+## Dynatrace runtime signal semantics
+
+When the `dynatrace/runtime-signals` attachment contains structured status lines, interpret them literally.
+
+- If `collection status: COLLECTED` and a component is marked as `MATCHED, NO_RELEVANT_SIGNALS`, treat it as explicit absence of Dynatrace-confirmed problems or abnormal metrics for that component in the incident window.
+- If `collection status: UNAVAILABLE`, `DISABLED`, or `SKIPPED`, treat missing Dynatrace metrics, problems, or component signals as lack of visibility, not as evidence of healthy runtime.
+- If `collection status: COLLECTED` but `correlation status: NO_MATCH`, treat Dynatrace as inconclusive for this incident. Do not claim that runtime was healthy only because Dynatrace did not correlate a component.
+- Prefer the component-level Dynatrace summary lines over raw technical detail when explaining the final diagnosis. Use raw problem or metric detail only when it materially strengthens the evidence.
+
 ## Diagnosis quality standard
 
 Always separate:

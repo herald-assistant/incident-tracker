@@ -8,6 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,10 +19,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class CopilotAttachmentArtifactService {
+
+    private static final Pattern HTTP_STATUS_CODE_PATTERN = Pattern.compile("\\bHTTP\\s+(\\d{3})\\b");
 
     private final CopilotSdkProperties properties;
     private final ObjectMapper objectMapper;
@@ -76,7 +80,7 @@ public class CopilotAttachmentArtifactService {
                 var section = request.evidenceSections().get(index);
                 var descriptor = descriptors.get(index + 1);
                 var artifactPath = stagingDirectory.resolve(descriptor.displayName());
-                writeJsonArtifact(artifactPath, buildEvidenceSectionPayload(section));
+                writeSectionArtifact(artifactPath, section);
                 attachments.add(new Attachment(
                         "file",
                         artifactPath.toAbsolutePath().toString(),
@@ -101,6 +105,15 @@ public class CopilotAttachmentArtifactService {
 
     private void writeJsonArtifact(Path artifactPath, Object payload) throws IOException {
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(artifactPath.toFile(), payload);
+    }
+
+    private void writeSectionArtifact(Path artifactPath, AnalysisEvidenceSection section) throws IOException {
+        if (isDynatraceRuntimeSection(section)) {
+            Files.writeString(artifactPath, buildDynatraceRuntimeMarkdown(section));
+            return;
+        }
+
+        writeJsonArtifact(artifactPath, buildEvidenceSectionPayload(section));
     }
 
     private Map<String, Object> buildManifestPayload(
@@ -165,11 +178,137 @@ public class CopilotAttachmentArtifactService {
     }
 
     private String buildSectionFileName(int index, AnalysisEvidenceSection section) {
-        return "%02d-%s-%s.json".formatted(
+        return "%02d-%s-%s.%s".formatted(
                 index,
                 sanitize(normalizeDescriptorValue(section.provider())),
-                sanitize(normalizeDescriptorValue(section.category()))
+                sanitize(normalizeDescriptorValue(section.category())),
+                isDynatraceRuntimeSection(section) ? "md" : "json"
         );
+    }
+
+    private boolean isDynatraceRuntimeSection(AnalysisEvidenceSection section) {
+        return DynatraceRuntimeEvidenceView.matches(section);
+    }
+
+    private String buildDynatraceRuntimeMarkdown(AnalysisEvidenceSection section) {
+        var runtimeView = DynatraceRuntimeEvidenceView.from(section);
+        var lines = new ArrayList<String>();
+        lines.add("Dynatrace runtime signals");
+        lines.add("");
+
+        if (runtimeView.collectionStatus() != null) {
+            var collectionStatus = runtimeView.collectionStatus();
+            lines.add("- collection status: " + collectionStatus.status().name());
+
+            if (hasText(collectionStatus.reason())
+                    && collectionStatus.status() != DynatraceRuntimeEvidenceView.CollectionStatus.COLLECTED) {
+                lines.add("- reason: " + emphasizeHttpStatus(collectionStatus.reason()));
+            }
+
+            if (collectionStatus.correlationStatus() == DynatraceRuntimeEvidenceView.CorrelationStatus.NO_MATCH) {
+                lines.add("- correlation status: " + collectionStatus.correlationStatus().name());
+            }
+
+            if (hasText(collectionStatus.interpretation())
+                    && collectionStatus.status() != DynatraceRuntimeEvidenceView.CollectionStatus.COLLECTED) {
+                lines.add("- interpretation: " + collectionStatus.interpretation());
+            } else if (hasText(collectionStatus.interpretation())
+                    && runtimeView.componentStatuses().isEmpty()
+                    && collectionStatus.correlationStatus() == DynatraceRuntimeEvidenceView.CorrelationStatus.NO_MATCH) {
+                lines.add("- interpretation: " + collectionStatus.interpretation());
+            }
+        }
+
+        for (var componentStatus : runtimeView.componentStatuses()) {
+            lines.add(renderDynatraceComponentStatusLine(componentStatus));
+        }
+
+        if (!runtimeView.hasStructuredStatusSummary()) {
+            lines.add("- collection status: UNKNOWN");
+            lines.add("- interpretation: Dynatrace runtime signals were attached without a structured status summary.");
+        }
+
+        return String.join(System.lineSeparator(), lines) + System.lineSeparator();
+    }
+
+    private String renderDynatraceComponentStatusLine(
+            DynatraceRuntimeEvidenceView.ComponentStatusItem componentStatus
+    ) {
+        var componentName = normalizeDescriptorValue(componentStatus.componentName());
+        var correlationStatus = componentStatus.correlationStatus().name();
+        var signalStatus = componentStatus.signalStatus().name();
+        var rendered = new StringBuilder()
+                .append("- component `")
+                .append(escapeInlineCode(componentName))
+                .append("`: ")
+                .append(correlationStatus)
+                .append(", ")
+                .append(signalStatus)
+                .append('.');
+
+        if (componentStatus.signalStatus() == DynatraceRuntimeEvidenceView.ComponentSignalStatus.NO_RELEVANT_SIGNALS) {
+            if (hasText(componentStatus.interpretation())) {
+                rendered.append(' ').append(componentStatus.interpretation());
+            }
+            return rendered.toString();
+        }
+
+        var problemDisplayId = componentStatus.problemDisplayId();
+        var problemTitle = componentStatus.problemTitle();
+        if (hasText(problemDisplayId) || hasText(problemTitle)) {
+            rendered.append(" Problem ");
+            if (hasText(problemDisplayId)) {
+                rendered.append('`').append(escapeInlineCode(problemDisplayId)).append('`');
+            }
+            if (hasText(problemTitle)) {
+                if (hasText(problemDisplayId)) {
+                    rendered.append(' ');
+                }
+                rendered.append('`').append(escapeInlineCode(problemTitle)).append('`');
+            }
+            rendered.append('.');
+        }
+
+        var categories = formatMarkdownValueList(componentStatus.signalCategories());
+        if (hasText(categories)) {
+            rendered.append(" Categories: ").append(categories).append('.');
+        }
+
+        var highlights = formatMarkdownValueList(componentStatus.correlationHighlights());
+        if (hasText(highlights)) {
+            rendered.append(" Highlights: ").append(highlights).append('.');
+        }
+
+        if (hasText(componentStatus.summary())) {
+            rendered.append(" Summary: ").append(componentStatus.summary()).append('.');
+        }
+
+        return rendered.toString();
+    }
+
+    private String formatMarkdownValueList(List<String> values) {
+        if (values.isEmpty()) {
+            return null;
+        }
+
+        return values.stream()
+                .map(this::escapeInlineCode)
+                .map("`%s`"::formatted)
+                .reduce((left, right) -> left + ", " + right)
+                .orElse(null);
+    }
+
+    private String emphasizeHttpStatus(String value) {
+        var matcher = HTTP_STATUS_CODE_PATTERN.matcher(value);
+        if (!matcher.find()) {
+            return value;
+        }
+
+        return matcher.replaceFirst("HTTP `$1`");
+    }
+
+    private String escapeInlineCode(String value) {
+        return value.replace('`', '\'');
     }
 
     private String sanitize(String value) {
@@ -185,6 +324,10 @@ public class CopilotAttachmentArtifactService {
 
     private String blankToNull(String value) {
         return value != null && !value.isBlank() ? value : null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     public record AttachmentArtifactDescriptor(
