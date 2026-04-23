@@ -8,8 +8,9 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
-public record DynatraceRuntimeEvidenceView(
+public record DynatraceRuntimeEvidenceReadableView(
         CollectionStatusItem collectionStatus,
         List<ComponentStatusItem> componentStatuses
 ) {
@@ -32,24 +33,25 @@ public record DynatraceRuntimeEvidenceView(
     static final String ATTRIBUTE_SIGNAL_CATEGORIES = "signalCategories";
     static final String ATTRIBUTE_CORRELATION_HIGHLIGHTS = "correlationHighlights";
     static final String ATTRIBUTE_SUMMARY = "summary";
+    private static final Pattern HTTP_STATUS_CODE_PATTERN = Pattern.compile("\\bHTTP\\s+(\\d{3})\\b");
 
-    public DynatraceRuntimeEvidenceView {
+    public DynatraceRuntimeEvidenceReadableView {
         componentStatuses = componentStatuses != null ? List.copyOf(componentStatuses) : List.of();
     }
 
-    public static DynatraceRuntimeEvidenceView from(AnalysisContext context) {
+    public static DynatraceRuntimeEvidenceReadableView from(AnalysisContext context) {
         return from(context.evidenceSections());
     }
 
-    public static DynatraceRuntimeEvidenceView from(List<AnalysisEvidenceSection> evidenceSections) {
+    public static DynatraceRuntimeEvidenceReadableView from(List<AnalysisEvidenceSection> evidenceSections) {
         return evidenceSections.stream()
-                .filter(DynatraceRuntimeEvidenceView::matches)
+                .filter(DynatraceRuntimeEvidenceReadableView::matches)
                 .findFirst()
-                .map(DynatraceRuntimeEvidenceView::from)
-                .orElseGet(DynatraceRuntimeEvidenceView::empty);
+                .map(DynatraceRuntimeEvidenceReadableView::from)
+                .orElseGet(DynatraceRuntimeEvidenceReadableView::empty);
     }
 
-    public static DynatraceRuntimeEvidenceView from(AnalysisEvidenceSection section) {
+    public static DynatraceRuntimeEvidenceReadableView from(AnalysisEvidenceSection section) {
         if (!matches(section)) {
             return empty();
         }
@@ -86,11 +88,11 @@ public record DynatraceRuntimeEvidenceView(
             }
         }
 
-        return new DynatraceRuntimeEvidenceView(collectionStatus, componentStatuses);
+        return new DynatraceRuntimeEvidenceReadableView(collectionStatus, componentStatuses);
     }
 
-    public static DynatraceRuntimeEvidenceView empty() {
-        return new DynatraceRuntimeEvidenceView(null, List.of());
+    public static DynatraceRuntimeEvidenceReadableView empty() {
+        return new DynatraceRuntimeEvidenceReadableView(null, List.of());
     }
 
     public static boolean matches(AnalysisEvidenceSection section) {
@@ -100,6 +102,45 @@ public record DynatraceRuntimeEvidenceView(
 
     public boolean hasStructuredStatusSummary() {
         return collectionStatus != null || !componentStatuses.isEmpty();
+    }
+
+    public String toMarkdown() {
+        var lines = new ArrayList<String>();
+        lines.add("Dynatrace runtime signals");
+        lines.add("");
+
+        if (collectionStatus != null) {
+            lines.add("- collection status: " + collectionStatus.status().name());
+
+            if (hasText(collectionStatus.reason())
+                    && collectionStatus.status() != CollectionStatus.COLLECTED) {
+                lines.add("- reason: " + emphasizeHttpStatus(collectionStatus.reason()));
+            }
+
+            if (collectionStatus.correlationStatus() == CorrelationStatus.NO_MATCH) {
+                lines.add("- correlation status: " + collectionStatus.correlationStatus().name());
+            }
+
+            if (hasText(collectionStatus.interpretation())
+                    && collectionStatus.status() != CollectionStatus.COLLECTED) {
+                lines.add("- interpretation: " + collectionStatus.interpretation());
+            } else if (hasText(collectionStatus.interpretation())
+                    && componentStatuses.isEmpty()
+                    && collectionStatus.correlationStatus() == CorrelationStatus.NO_MATCH) {
+                lines.add("- interpretation: " + collectionStatus.interpretation());
+            }
+        }
+
+        for (var componentStatus : componentStatuses) {
+            lines.add(renderComponentStatusLine(componentStatus));
+        }
+
+        if (!hasStructuredStatusSummary()) {
+            lines.add("- collection status: UNKNOWN");
+            lines.add("- interpretation: Dynatrace runtime signals were attached without a structured status summary.");
+        }
+
+        return String.join(System.lineSeparator(), lines) + System.lineSeparator();
     }
 
     private static List<String> splitValues(String rawValue) {
@@ -116,6 +157,92 @@ public record DynatraceRuntimeEvidenceView(
         }
 
         return List.copyOf(values);
+    }
+
+    private String renderComponentStatusLine(ComponentStatusItem componentStatus) {
+        var componentName = normalizeReadableValue(componentStatus.componentName());
+        var correlationStatus = componentStatus.correlationStatus().name();
+        var signalStatus = componentStatus.signalStatus().name();
+        var rendered = new StringBuilder()
+                .append("- component `")
+                .append(escapeInlineCode(componentName))
+                .append("`: ")
+                .append(correlationStatus)
+                .append(", ")
+                .append(signalStatus)
+                .append('.');
+
+        if (componentStatus.signalStatus() == ComponentSignalStatus.NO_RELEVANT_SIGNALS) {
+            if (hasText(componentStatus.interpretation())) {
+                rendered.append(' ').append(componentStatus.interpretation());
+            }
+            return rendered.toString();
+        }
+
+        var problemDisplayId = componentStatus.problemDisplayId();
+        var problemTitle = componentStatus.problemTitle();
+        if (hasText(problemDisplayId) || hasText(problemTitle)) {
+            rendered.append(" Problem ");
+            if (hasText(problemDisplayId)) {
+                rendered.append('`').append(escapeInlineCode(problemDisplayId)).append('`');
+            }
+            if (hasText(problemTitle)) {
+                if (hasText(problemDisplayId)) {
+                    rendered.append(' ');
+                }
+                rendered.append('`').append(escapeInlineCode(problemTitle)).append('`');
+            }
+            rendered.append('.');
+        }
+
+        var categories = formatMarkdownValueList(componentStatus.signalCategories());
+        if (hasText(categories)) {
+            rendered.append(" Categories: ").append(categories).append('.');
+        }
+
+        var highlights = formatMarkdownValueList(componentStatus.correlationHighlights());
+        if (hasText(highlights)) {
+            rendered.append(" Highlights: ").append(highlights).append('.');
+        }
+
+        if (hasText(componentStatus.summary())) {
+            rendered.append(" Summary: ").append(componentStatus.summary()).append('.');
+        }
+
+        return rendered.toString();
+    }
+
+    private String formatMarkdownValueList(List<String> values) {
+        if (values.isEmpty()) {
+            return null;
+        }
+
+        return values.stream()
+                .map(this::escapeInlineCode)
+                .map("`%s`"::formatted)
+                .reduce((left, right) -> left + ", " + right)
+                .orElse(null);
+    }
+
+    private String emphasizeHttpStatus(String value) {
+        var matcher = HTTP_STATUS_CODE_PATTERN.matcher(value);
+        if (!matcher.find()) {
+            return value;
+        }
+
+        return matcher.replaceFirst("HTTP `$1`");
+    }
+
+    private String escapeInlineCode(String value) {
+        return value.replace('`', '\'');
+    }
+
+    private String normalizeReadableValue(String value) {
+        return hasText(value) ? value : "unknown";
+    }
+
+    private boolean hasText(String value) {
+        return StringUtils.hasText(value);
     }
 
     public record CollectionStatusItem(

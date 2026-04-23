@@ -82,10 +82,10 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             return statusOnlySection(
                     buildCollectionStatusItem(
                             null,
-                            DynatraceRuntimeEvidenceView.CollectionStatus.DISABLED,
+                            DynatraceRuntimeEvidenceReadableView.CollectionStatus.DISABLED,
                             "Dynatrace runtime collection is disabled or not configured.",
                             disabledInterpretation(),
-                            DynatraceRuntimeEvidenceView.CorrelationStatus.UNKNOWN,
+                            DynatraceRuntimeEvidenceReadableView.CorrelationStatus.UNKNOWN,
                             0,
                             0,
                             0
@@ -101,10 +101,10 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             return statusOnlySection(
                     buildCollectionStatusItem(
                             null,
-                            DynatraceRuntimeEvidenceView.CollectionStatus.SKIPPED,
+                            DynatraceRuntimeEvidenceReadableView.CollectionStatus.SKIPPED,
                             "Dynatrace enrichment is skipped for dev environment.",
                             skippedInterpretation(),
-                            DynatraceRuntimeEvidenceView.CorrelationStatus.UNKNOWN,
+                            DynatraceRuntimeEvidenceReadableView.CorrelationStatus.UNKNOWN,
                             0,
                             0,
                             0
@@ -117,10 +117,10 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             return statusOnlySection(
                     buildCollectionStatusItem(
                             null,
-                            DynatraceRuntimeEvidenceView.CollectionStatus.SKIPPED,
+                            DynatraceRuntimeEvidenceReadableView.CollectionStatus.SKIPPED,
                             "Dynatrace lookup signals could not be derived from evidence.",
                             skippedInterpretation(),
-                            DynatraceRuntimeEvidenceView.CorrelationStatus.UNKNOWN,
+                            DynatraceRuntimeEvidenceReadableView.CorrelationStatus.UNKNOWN,
                             0,
                             0,
                             0
@@ -140,10 +140,10 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             return statusOnlySection(
                     buildCollectionStatusItem(
                             query,
-                            DynatraceRuntimeEvidenceView.CollectionStatus.UNAVAILABLE,
+                            DynatraceRuntimeEvidenceReadableView.CollectionStatus.UNAVAILABLE,
                             humanizedFailureReason(exception),
                             unavailableInterpretation(),
-                            DynatraceRuntimeEvidenceView.CorrelationStatus.UNKNOWN,
+                            DynatraceRuntimeEvidenceReadableView.CorrelationStatus.UNKNOWN,
                             0,
                             0,
                             0
@@ -154,7 +154,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
     @Override
     public AnalysisEvidenceReference producedEvidence() {
-        return DynatraceRuntimeEvidenceView.EVIDENCE_REFERENCE;
+        return DynatraceRuntimeEvidenceReadableView.EVIDENCE_REFERENCE;
     }
 
     @Override
@@ -233,13 +233,13 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
                 .count();
         var healthyComponentCount = componentSummaries.size() - problematicComponentCount;
         var correlationStatus = componentSummaries.isEmpty()
-                ? DynatraceRuntimeEvidenceView.CorrelationStatus.NO_MATCH
-                : DynatraceRuntimeEvidenceView.CorrelationStatus.MATCHED;
+                ? DynatraceRuntimeEvidenceReadableView.CorrelationStatus.NO_MATCH
+                : DynatraceRuntimeEvidenceReadableView.CorrelationStatus.MATCHED;
 
         var items = new ArrayList<AnalysisEvidenceItem>();
         items.add(buildCollectionStatusItem(
                 query,
-                DynatraceRuntimeEvidenceView.CollectionStatus.COLLECTED,
+                DynatraceRuntimeEvidenceReadableView.CollectionStatus.COLLECTED,
                 "Dynatrace query completed successfully.",
                 collectedInterpretation(correlationStatus),
                 correlationStatus,
@@ -268,7 +268,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
         for (var match : matches) {
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, DynatraceRuntimeEvidenceView.ITEM_TYPE_ATTRIBUTE, ITEM_TYPE_SERVICE_MATCH);
+            addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_ATTRIBUTE, ITEM_TYPE_SERVICE_MATCH);
             addAttribute(attributes, "componentName", componentNamesByEntityId.get(match.entityId()));
             addAttribute(attributes, "entityId", match.entityId());
             addAttribute(attributes, "displayName", match.displayName());
@@ -297,7 +297,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
         for (var problem : problems) {
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, DynatraceRuntimeEvidenceView.ITEM_TYPE_ATTRIBUTE, ITEM_TYPE_PROBLEM);
+            addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_ATTRIBUTE, ITEM_TYPE_PROBLEM);
             addAttribute(attributes, "componentName", componentNameForProblem(problem, componentSummaries));
             addAttribute(attributes, "problemId", problem.problemId());
             addAttribute(attributes, "displayId", problem.displayId());
@@ -335,7 +335,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
         for (var metric : metrics) {
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, DynatraceRuntimeEvidenceView.ITEM_TYPE_ATTRIBUTE, ITEM_TYPE_METRIC);
+            addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_ATTRIBUTE, ITEM_TYPE_METRIC);
             addAttribute(attributes, "componentName", componentNamesByEntityId.get(metric.entityId()));
             addAttribute(attributes, "entityId", metric.entityId());
             addAttribute(attributes, "entityDisplayName", metric.entityDisplayName());
@@ -367,18 +367,18 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(
                     attributes,
-                    DynatraceRuntimeEvidenceView.ITEM_TYPE_ATTRIBUTE,
-                    DynatraceRuntimeEvidenceView.ITEM_TYPE_COMPONENT_STATUS
+                    DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_ATTRIBUTE,
+                    DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_COMPONENT_STATUS
             );
-            addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_COMPONENT_NAME, summary.componentName());
+            addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_COMPONENT_NAME, summary.componentName());
             addAttribute(
                     attributes,
-                    DynatraceRuntimeEvidenceView.ATTRIBUTE_CORRELATION_STATUS,
-                    DynatraceRuntimeEvidenceView.CorrelationStatus.MATCHED.name()
+                    DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_CORRELATION_STATUS,
+                    DynatraceRuntimeEvidenceReadableView.CorrelationStatus.MATCHED.name()
             );
             addAttribute(
                     attributes,
-                    DynatraceRuntimeEvidenceView.ATTRIBUTE_COMPONENT_SIGNAL_STATUS,
+                    DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_COMPONENT_SIGNAL_STATUS,
                     summary.componentSignalStatus()
             );
             addAttribute(attributes, "entityIds", joined(summary.entityIds()));
@@ -386,26 +386,26 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             addAttribute(attributes, "matchedServiceNames", joined(summary.serviceNames()));
             addAttribute(attributes, "problemCount", String.valueOf(summary.problems().size()));
             addAttribute(attributes, "abnormalMetricCount", String.valueOf(summary.abnormalMetrics().size()));
-            addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_SIGNAL_CATEGORIES, joined(summary.signalCategories()));
+            addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_SIGNAL_CATEGORIES, joined(summary.signalCategories()));
             addAttribute(
                     attributes,
-                    DynatraceRuntimeEvidenceView.ATTRIBUTE_CORRELATION_HIGHLIGHTS,
+                    DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_CORRELATION_HIGHLIGHTS,
                     joinWithDelimiter(summary.correlationHighlights())
             );
-            addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_SUMMARY, summary.summary());
+            addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_SUMMARY, summary.summary());
 
             if (!summary.hasSignals()) {
                 addAttribute(
                         attributes,
-                        DynatraceRuntimeEvidenceView.ATTRIBUTE_INTERPRETATION,
+                        DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_INTERPRETATION,
                         "Dynatrace returned data for this component and found no problems or abnormal metrics in the incident window."
                 );
             }
 
             var primaryProblem = primaryProblem(summary.problems());
             if (primaryProblem != null) {
-                addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_PROBLEM_DISPLAY_ID, primaryProblem.displayId());
-                addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_PROBLEM_TITLE, primaryProblem.title());
+                addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_PROBLEM_DISPLAY_ID, primaryProblem.displayId());
+                addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_PROBLEM_TITLE, primaryProblem.title());
             }
 
             items.add(new AnalysisEvidenceItem(
@@ -419,10 +419,10 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
     private AnalysisEvidenceItem buildCollectionStatusItem(
             DynatraceIncidentQuery query,
-            DynatraceRuntimeEvidenceView.CollectionStatus collectionStatus,
+            DynatraceRuntimeEvidenceReadableView.CollectionStatus collectionStatus,
             String reason,
             String interpretation,
-            DynatraceRuntimeEvidenceView.CorrelationStatus correlationStatus,
+            DynatraceRuntimeEvidenceReadableView.CorrelationStatus correlationStatus,
             int matchedComponentCount,
             int problematicComponentCount,
             int healthyComponentCount
@@ -430,13 +430,13 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
         addAttribute(
                 attributes,
-                DynatraceRuntimeEvidenceView.ITEM_TYPE_ATTRIBUTE,
-                DynatraceRuntimeEvidenceView.ITEM_TYPE_COLLECTION_STATUS
+                DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_ATTRIBUTE,
+                DynatraceRuntimeEvidenceReadableView.ITEM_TYPE_COLLECTION_STATUS
         );
-        addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_COLLECTION_STATUS, collectionStatus.name());
-        addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_COLLECTION_REASON, reason);
-        addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_INTERPRETATION, interpretation);
-        addAttribute(attributes, DynatraceRuntimeEvidenceView.ATTRIBUTE_CORRELATION_STATUS, correlationStatus.name());
+        addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_COLLECTION_STATUS, collectionStatus.name());
+        addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_COLLECTION_REASON, reason);
+        addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_INTERPRETATION, interpretation);
+        addAttribute(attributes, DynatraceRuntimeEvidenceReadableView.ATTRIBUTE_CORRELATION_STATUS, correlationStatus.name());
 
         if (query != null) {
             addAttribute(attributes, "incidentStart", renderInstant(query.incidentStart()));
@@ -738,8 +738,8 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
         return shortLabel(rawMessage);
     }
 
-    private String collectedInterpretation(DynatraceRuntimeEvidenceView.CorrelationStatus correlationStatus) {
-        if (DynatraceRuntimeEvidenceView.CorrelationStatus.NO_MATCH.equals(correlationStatus)) {
+    private String collectedInterpretation(DynatraceRuntimeEvidenceReadableView.CorrelationStatus correlationStatus) {
+        if (DynatraceRuntimeEvidenceReadableView.CorrelationStatus.NO_MATCH.equals(correlationStatus)) {
             return "Dynatrace query completed successfully but no correlated component was matched in the incident window. Missing Dynatrace problems or metrics must be treated as inconclusive, not as healthy runtime.";
         }
 
@@ -998,8 +998,8 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
         String componentSignalStatus() {
             return hasSignals()
-                    ? DynatraceRuntimeEvidenceView.ComponentSignalStatus.SIGNALS_PRESENT.name()
-                    : DynatraceRuntimeEvidenceView.ComponentSignalStatus.NO_RELEVANT_SIGNALS.name();
+                    ? DynatraceRuntimeEvidenceReadableView.ComponentSignalStatus.SIGNALS_PRESENT.name()
+                    : DynatraceRuntimeEvidenceReadableView.ComponentSignalStatus.NO_RELEVANT_SIGNALS.name();
         }
 
         List<String> entityIds() {
