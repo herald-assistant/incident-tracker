@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public record GitLabResolvedCodeEvidenceReadableView(
+public record GitLabResolvedCodeEvidenceView(
         List<ResolvedCodeItem> items
 ) {
 
@@ -35,23 +35,23 @@ public record GitLabResolvedCodeEvidenceReadableView(
     static final String ATTRIBUTE_CONTENT = "content";
     static final String ATTRIBUTE_CONTENT_TRUNCATED = "contentTruncated";
 
-    public GitLabResolvedCodeEvidenceReadableView {
+    public GitLabResolvedCodeEvidenceView {
         items = items != null ? List.copyOf(items) : List.of();
     }
 
-    public static GitLabResolvedCodeEvidenceReadableView from(AnalysisContext context) {
+    public static GitLabResolvedCodeEvidenceView from(AnalysisContext context) {
         return from(context.evidenceSections());
     }
 
-    public static GitLabResolvedCodeEvidenceReadableView from(List<AnalysisEvidenceSection> evidenceSections) {
+    public static GitLabResolvedCodeEvidenceView from(List<AnalysisEvidenceSection> evidenceSections) {
         return evidenceSections.stream()
-                .filter(GitLabResolvedCodeEvidenceReadableView::matches)
+                .filter(GitLabResolvedCodeEvidenceView::matches)
                 .findFirst()
-                .map(GitLabResolvedCodeEvidenceReadableView::from)
-                .orElseGet(GitLabResolvedCodeEvidenceReadableView::empty);
+                .map(GitLabResolvedCodeEvidenceView::from)
+                .orElseGet(GitLabResolvedCodeEvidenceView::empty);
     }
 
-    public static GitLabResolvedCodeEvidenceReadableView from(AnalysisEvidenceSection section) {
+    public static GitLabResolvedCodeEvidenceView from(AnalysisEvidenceSection section) {
         if (!matches(section)) {
             return empty();
         }
@@ -81,11 +81,11 @@ public record GitLabResolvedCodeEvidenceReadableView(
             ));
         }
 
-        return new GitLabResolvedCodeEvidenceReadableView(items);
+        return new GitLabResolvedCodeEvidenceView(items);
     }
 
-    public static GitLabResolvedCodeEvidenceReadableView empty() {
-        return new GitLabResolvedCodeEvidenceReadableView(List.of());
+    public static GitLabResolvedCodeEvidenceView empty() {
+        return new GitLabResolvedCodeEvidenceView(List.of());
     }
 
     public static boolean matches(AnalysisEvidenceSection section) {

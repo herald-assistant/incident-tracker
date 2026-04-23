@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public record DynatraceRuntimeEvidenceReadableView(
+public record DynatraceRuntimeEvidenceView(
         CollectionStatusItem collectionStatus,
         List<ComponentStatusItem> componentStatuses
 ) {
@@ -35,23 +35,23 @@ public record DynatraceRuntimeEvidenceReadableView(
     static final String ATTRIBUTE_SUMMARY = "summary";
     private static final Pattern HTTP_STATUS_CODE_PATTERN = Pattern.compile("\\bHTTP\\s+(\\d{3})\\b");
 
-    public DynatraceRuntimeEvidenceReadableView {
+    public DynatraceRuntimeEvidenceView {
         componentStatuses = componentStatuses != null ? List.copyOf(componentStatuses) : List.of();
     }
 
-    public static DynatraceRuntimeEvidenceReadableView from(AnalysisContext context) {
+    public static DynatraceRuntimeEvidenceView from(AnalysisContext context) {
         return from(context.evidenceSections());
     }
 
-    public static DynatraceRuntimeEvidenceReadableView from(List<AnalysisEvidenceSection> evidenceSections) {
+    public static DynatraceRuntimeEvidenceView from(List<AnalysisEvidenceSection> evidenceSections) {
         return evidenceSections.stream()
-                .filter(DynatraceRuntimeEvidenceReadableView::matches)
+                .filter(DynatraceRuntimeEvidenceView::matches)
                 .findFirst()
-                .map(DynatraceRuntimeEvidenceReadableView::from)
-                .orElseGet(DynatraceRuntimeEvidenceReadableView::empty);
+                .map(DynatraceRuntimeEvidenceView::from)
+                .orElseGet(DynatraceRuntimeEvidenceView::empty);
     }
 
-    public static DynatraceRuntimeEvidenceReadableView from(AnalysisEvidenceSection section) {
+    public static DynatraceRuntimeEvidenceView from(AnalysisEvidenceSection section) {
         if (!matches(section)) {
             return empty();
         }
@@ -88,11 +88,11 @@ public record DynatraceRuntimeEvidenceReadableView(
             }
         }
 
-        return new DynatraceRuntimeEvidenceReadableView(collectionStatus, componentStatuses);
+        return new DynatraceRuntimeEvidenceView(collectionStatus, componentStatuses);
     }
 
-    public static DynatraceRuntimeEvidenceReadableView empty() {
-        return new DynatraceRuntimeEvidenceReadableView(null, List.of());
+    public static DynatraceRuntimeEvidenceView empty() {
+        return new DynatraceRuntimeEvidenceView(null, List.of());
     }
 
     public static boolean matches(AnalysisEvidenceSection section) {

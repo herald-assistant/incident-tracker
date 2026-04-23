@@ -103,14 +103,14 @@ class GitLabDeterministicEvidenceProviderTest {
                 attribute.name().equals("content") && attribute.value().contains("ActiveCaseRecordDomainRepository")
         ));
 
-        var readableView = GitLabResolvedCodeEvidenceReadableView.from(section);
-        assertEquals(1, readableView.items().size());
-        assertEquals("backend", readableView.items().get(0).projectName());
+        var resolvedCodeView = GitLabResolvedCodeEvidenceView.from(section);
+        assertEquals(1, resolvedCodeView.items().size());
+        assertEquals("backend", resolvedCodeView.items().get(0).projectName());
         assertEquals(
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
-                readableView.items().get(0).filePath()
+                resolvedCodeView.items().get(0).filePath()
         );
-        var markdown = readableView.toMarkdown();
+        var markdown = resolvedCodeView.toMarkdown();
         assertTrue(markdown.contains("GitLab resolved code references"));
         assertTrue(markdown.contains("- repository: `backend`"));
         assertTrue(markdown.contains("- returned lines: `54-94` of `140`"));

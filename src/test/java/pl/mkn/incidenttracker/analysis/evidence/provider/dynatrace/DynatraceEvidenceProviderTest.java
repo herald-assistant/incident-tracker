@@ -161,13 +161,13 @@ class DynatraceEvidenceProviderTest {
         assertEquals("COLLECTED", attributeValue(collectionItem, "collectionStatus"));
         assertEquals("MATCHED", attributeValue(collectionItem, "correlationStatus"));
 
-        var runtimeView = DynatraceRuntimeEvidenceReadableView.from(section);
-        assertEquals(DynatraceRuntimeEvidenceReadableView.CollectionStatus.COLLECTED, runtimeView.collectionStatus().status());
-        assertEquals(DynatraceRuntimeEvidenceReadableView.CorrelationStatus.MATCHED, runtimeView.collectionStatus().correlationStatus());
+        var runtimeView = DynatraceRuntimeEvidenceView.from(section);
+        assertEquals(DynatraceRuntimeEvidenceView.CollectionStatus.COLLECTED, runtimeView.collectionStatus().status());
+        assertEquals(DynatraceRuntimeEvidenceView.CorrelationStatus.MATCHED, runtimeView.collectionStatus().correlationStatus());
         assertEquals(1, runtimeView.componentStatuses().size());
         assertEquals("svc", runtimeView.componentStatuses().get(0).componentName());
         assertEquals(
-                DynatraceRuntimeEvidenceReadableView.ComponentSignalStatus.SIGNALS_PRESENT,
+                DynatraceRuntimeEvidenceView.ComponentSignalStatus.SIGNALS_PRESENT,
                 runtimeView.componentStatuses().get(0).signalStatus()
         );
         assertEquals("P-123", runtimeView.componentStatuses().get(0).problemDisplayId());
@@ -236,8 +236,8 @@ class DynatraceEvidenceProviderTest {
         );
         assertTrue(attributeValue(section.items().get(0), "interpretation").contains("lack of data"));
 
-        var runtimeView = DynatraceRuntimeEvidenceReadableView.from(section);
-        assertEquals(DynatraceRuntimeEvidenceReadableView.CollectionStatus.UNAVAILABLE, runtimeView.collectionStatus().status());
+        var runtimeView = DynatraceRuntimeEvidenceView.from(section);
+        assertEquals(DynatraceRuntimeEvidenceView.CollectionStatus.UNAVAILABLE, runtimeView.collectionStatus().status());
         assertEquals(
                 "Dynatrace API request failed with HTTP 502",
                 runtimeView.collectionStatus().reason()

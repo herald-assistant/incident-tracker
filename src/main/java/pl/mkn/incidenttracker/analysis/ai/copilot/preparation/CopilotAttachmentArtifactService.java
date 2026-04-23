@@ -8,9 +8,9 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceReadableView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceReadableView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -188,8 +188,8 @@ public class CopilotAttachmentArtifactService {
 
     private boolean isReadableMarkdownSection(AnalysisEvidenceSection section) {
         return ElasticLogEvidenceView.matches(section)
-                || DynatraceRuntimeEvidenceReadableView.matches(section)
-                || GitLabResolvedCodeEvidenceReadableView.matches(section);
+                || DynatraceRuntimeEvidenceView.matches(section)
+                || GitLabResolvedCodeEvidenceView.matches(section);
     }
 
     private String buildReadableMarkdown(AnalysisEvidenceSection section) {
@@ -197,12 +197,12 @@ public class CopilotAttachmentArtifactService {
             return ElasticLogEvidenceView.from(section).toMarkdown();
         }
 
-        if (DynatraceRuntimeEvidenceReadableView.matches(section)) {
-            return DynatraceRuntimeEvidenceReadableView.from(section).toMarkdown();
+        if (DynatraceRuntimeEvidenceView.matches(section)) {
+            return DynatraceRuntimeEvidenceView.from(section).toMarkdown();
         }
 
-        if (GitLabResolvedCodeEvidenceReadableView.matches(section)) {
-            return GitLabResolvedCodeEvidenceReadableView.from(section).toMarkdown();
+        if (GitLabResolvedCodeEvidenceView.matches(section)) {
+            return GitLabResolvedCodeEvidenceView.from(section).toMarkdown();
         }
 
         return null;
