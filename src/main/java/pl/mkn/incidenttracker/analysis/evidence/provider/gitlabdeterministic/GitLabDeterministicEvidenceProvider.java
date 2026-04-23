@@ -87,7 +87,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
 
     @Override
     public AnalysisEvidenceReference producedEvidence() {
-        return new AnalysisEvidenceReference("gitlab", "resolved-code");
+        return GitLabResolvedCodeEvidenceReadableView.EVIDENCE_REFERENCE;
     }
 
     @Override
@@ -279,8 +279,12 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     ) {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
         addBaseCodeAttributes(attributes, deployment, projectName, reference, filePath, match);
-        addAttribute(attributes, "content", fileContent.content());
-        addAttribute(attributes, "contentTruncated", String.valueOf(fileContent.truncated()));
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_CONTENT, fileContent.content());
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_CONTENT_TRUNCATED,
+                String.valueOf(fileContent.truncated())
+        );
 
         return new ResolvedEvidence(
                 evidenceKey(projectName, deployment.branch(), filePath),
@@ -299,13 +303,37 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     ) {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
         addBaseCodeAttributes(attributes, deployment, projectName, reference, filePath, match);
-        addAttribute(attributes, "requestedStartLine", String.valueOf(chunk.requestedStartLine()));
-        addAttribute(attributes, "requestedEndLine", String.valueOf(chunk.requestedEndLine()));
-        addAttribute(attributes, "returnedStartLine", String.valueOf(chunk.returnedStartLine()));
-        addAttribute(attributes, "returnedEndLine", String.valueOf(chunk.returnedEndLine()));
-        addAttribute(attributes, "totalLines", String.valueOf(chunk.totalLines()));
-        addAttribute(attributes, "content", chunk.content());
-        addAttribute(attributes, "contentTruncated", String.valueOf(chunk.truncated()));
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_REQUESTED_START_LINE,
+                String.valueOf(chunk.requestedStartLine())
+        );
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_REQUESTED_END_LINE,
+                String.valueOf(chunk.requestedEndLine())
+        );
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_RETURNED_START_LINE,
+                String.valueOf(chunk.returnedStartLine())
+        );
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_RETURNED_END_LINE,
+                String.valueOf(chunk.returnedEndLine())
+        );
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_TOTAL_LINES,
+                String.valueOf(chunk.totalLines())
+        );
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_CONTENT, chunk.content());
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_CONTENT_TRUNCATED,
+                String.valueOf(chunk.truncated())
+        );
 
         var lineSuffix = reference.lineNumber() != null ? " around line " + reference.lineNumber() : "";
         return new ResolvedEvidence(
@@ -323,20 +351,32 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
             String filePath,
             GitLabSourceResolveMatch match
     ) {
-        addAttribute(attributes, "environment", deployment.environment());
-        addAttribute(attributes, "branch", deployment.branch());
-        addAttribute(attributes, "group", gitLabProperties.getGroup());
-        addAttribute(attributes, "projectName", projectName);
-        addAttribute(attributes, "filePath", filePath);
-        addAttribute(attributes, "referenceType", reference.kind().name());
-        addAttribute(attributes, "symbol", reference.symbol());
-        addAttribute(attributes, "rawReference", reference.rawValue());
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_ENVIRONMENT, deployment.environment());
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_BRANCH, deployment.branch());
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_GROUP, gitLabProperties.getGroup());
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_PROJECT_NAME, projectName);
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_FILE_PATH, filePath);
+        addAttribute(
+                attributes,
+                GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_REFERENCE_TYPE,
+                reference.kind().name()
+        );
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_SYMBOL, reference.symbol());
+        addAttribute(attributes, GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_RAW_REFERENCE, reference.rawValue());
 
         if (reference.lineNumber() != null) {
-            addAttribute(attributes, "lineNumber", String.valueOf(reference.lineNumber()));
+            addAttribute(
+                    attributes,
+                    GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_LINE_NUMBER,
+                    String.valueOf(reference.lineNumber())
+            );
         }
         if (match != null && match.score() != null) {
-            addAttribute(attributes, "resolveScore", String.valueOf(match.score()));
+            addAttribute(
+                    attributes,
+                    GitLabResolvedCodeEvidenceReadableView.ATTRIBUTE_RESOLVE_SCORE,
+                    String.valueOf(match.score())
+            );
         }
     }
 

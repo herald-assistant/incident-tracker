@@ -96,7 +96,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("00-incident-manifest.json"));
             assertTrue(prompt.contains("01-elasticsearch-logs.json"));
             assertTrue(prompt.contains("02-dynatrace-runtime-signals.md"));
-            assertTrue(prompt.contains("03-gitlab-code-changes.json"));
+            assertTrue(prompt.contains("03-gitlab-resolved-code.md"));
             assertTrue(prompt.contains("Available capability groups:"));
             assertTrue(prompt.contains("GitLab code: search broadly across relevant repositories and read focused chunks/files to explain the failing code path, repository predicates, integrations and affected functional flow."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
@@ -150,6 +150,15 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(dynatraceContent.contains("component `case-evaluation-service`: MATCHED, SIGNALS_PRESENT."));
             assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertFalse(dynatraceContent.contains("\"metricLabel\""));
+
+            var gitLabAttachment = (Attachment) prepared.messageOptions().getAttachments().get(3);
+            assertEquals("03-gitlab-resolved-code.md", gitLabAttachment.displayName());
+            var gitLabContent = Files.readString(Path.of(gitLabAttachment.path()));
+            assertTrue(gitLabContent.contains("GitLab resolved code references"));
+            assertTrue(gitLabContent.contains("- repository: `edge-client-service`"));
+            assertTrue(gitLabContent.contains("- returned lines: `5-12` of `14`"));
+            assertTrue(gitLabContent.contains("```java"));
+            assertFalse(gitLabContent.contains("\"content\""));
         }
     }
 
@@ -355,13 +364,35 @@ class CopilotSdkPreparationServiceTest {
                         )
                 ), new AnalysisEvidenceSection(
                         "gitlab",
-                        "code-changes",
+                        "resolved-code",
                         List.of(new AnalysisEvidenceItem(
-                                "edge-client-service change hint",
+                                "edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java around line 8",
                                 List.of(
+                                        new AnalysisEvidenceAttribute("environment", "dev3"),
+                                        new AnalysisEvidenceAttribute("branch", "release/2026.04"),
+                                        new AnalysisEvidenceAttribute("group", "sample/runtime"),
                                         new AnalysisEvidenceAttribute("projectName", "edge-client-service"),
                                         new AnalysisEvidenceAttribute("filePath", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"),
-                                        new AnalysisEvidenceAttribute("summary", "HTTP client timeout defaults were changed.")
+                                        new AnalysisEvidenceAttribute("referenceType", "STACKTRACE_SYMBOL"),
+                                        new AnalysisEvidenceAttribute("symbol", "com.example.synthetic.edge.CatalogGatewayClient"),
+                                        new AnalysisEvidenceAttribute("lineNumber", "8"),
+                                        new AnalysisEvidenceAttribute("resolveScore", "95"),
+                                        new AnalysisEvidenceAttribute("requestedStartLine", "5"),
+                                        new AnalysisEvidenceAttribute("requestedEndLine", "12"),
+                                        new AnalysisEvidenceAttribute("returnedStartLine", "5"),
+                                        new AnalysisEvidenceAttribute("returnedEndLine", "12"),
+                                        new AnalysisEvidenceAttribute("totalLines", "14"),
+                                        new AnalysisEvidenceAttribute(
+                                                "content",
+                                                """
+                                                        public class CatalogGatewayClient {
+                                                            CatalogResponse fetchCatalog(String sku) {
+                                                                return webClient.get();
+                                                            }
+                                                        }
+                                                        """
+                                        ),
+                                        new AnalysisEvidenceAttribute("contentTruncated", "false")
                                 )
                         ))
                 ))

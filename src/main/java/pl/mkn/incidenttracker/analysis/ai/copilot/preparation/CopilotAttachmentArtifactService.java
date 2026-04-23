@@ -9,6 +9,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceReadableView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceReadableView;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -105,8 +106,9 @@ public class CopilotAttachmentArtifactService {
     }
 
     private void writeSectionArtifact(Path artifactPath, AnalysisEvidenceSection section) throws IOException {
-        if (isDynatraceRuntimeSection(section)) {
-            Files.writeString(artifactPath, DynatraceRuntimeEvidenceReadableView.from(section).toMarkdown());
+        var readableMarkdown = buildReadableMarkdown(section);
+        if (readableMarkdown != null) {
+            Files.writeString(artifactPath, readableMarkdown);
             return;
         }
 
@@ -179,12 +181,25 @@ public class CopilotAttachmentArtifactService {
                 index,
                 sanitize(normalizeDescriptorValue(section.provider())),
                 sanitize(normalizeDescriptorValue(section.category())),
-                isDynatraceRuntimeSection(section) ? "md" : "json"
+                isReadableMarkdownSection(section) ? "md" : "json"
         );
     }
 
-    private boolean isDynatraceRuntimeSection(AnalysisEvidenceSection section) {
-        return DynatraceRuntimeEvidenceReadableView.matches(section);
+    private boolean isReadableMarkdownSection(AnalysisEvidenceSection section) {
+        return DynatraceRuntimeEvidenceReadableView.matches(section)
+                || GitLabResolvedCodeEvidenceReadableView.matches(section);
+    }
+
+    private String buildReadableMarkdown(AnalysisEvidenceSection section) {
+        if (DynatraceRuntimeEvidenceReadableView.matches(section)) {
+            return DynatraceRuntimeEvidenceReadableView.from(section).toMarkdown();
+        }
+
+        if (GitLabResolvedCodeEvidenceReadableView.matches(section)) {
+            return GitLabResolvedCodeEvidenceReadableView.from(section).toMarkdown();
+        }
+
+        return null;
     }
 
     private String sanitize(String value) {

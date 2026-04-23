@@ -176,7 +176,10 @@ GitLab deterministic provider:
   rozwiazac rzeczywisty projekt GitLaba w skonfigurowanej grupie i jej
   podgrupach,
 - szuka odniesien do kodu po pelnej sciezce, stacktrace albo nazwie klasy,
-- pobiera dopasowane pliki lub chunki z GitLaba przez REST.
+- pobiera dopasowane pliki lub chunki z GitLaba przez REST,
+- publikuje strukturalne `resolved-code` do evidence i UI,
+- do attachmentu Copilota moze renderowac czytelny markdown z metadanymi pliku
+  i blokiem kodu zamiast surowego JSON sekcji GitLaba.
 
 Dynatrace i GitLab deterministic:
 
