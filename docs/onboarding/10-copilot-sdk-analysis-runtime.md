@@ -56,9 +56,10 @@ do katalogu runtime dla sesji Copilota.
 - prompt niesie dane konkretnego incydentu,
 - skill niesie stale zasady pracy,
 - AI dostaje generyczne evidence, nie klasy adapter-specific,
-- attachmenty deterministic providerow, np. Dynatrace `runtime-signals` i
-  GitLab `resolved-code`, moga byc renderowane jako czytelny markdown dla
-  Copilota, podczas gdy API i UI nadal dostaja strukturalne evidence JSON,
+- attachmenty providerow, np. Elasticsearch `logs`, Dynatrace
+  `runtime-signals` i GitLab `resolved-code`, moga byc renderowane jako
+  czytelny markdown dla Copilota, podczas gdy API i UI nadal dostaja
+  strukturalne evidence JSON,
 - hidden `ToolContext` niesie session-bound dane runtime, np. `correlationId`,
   `environment`, `gitLabGroup`, `gitLabBranch`, `analysisRunId`,
   `copilotSessionId` i metadata tool calla,

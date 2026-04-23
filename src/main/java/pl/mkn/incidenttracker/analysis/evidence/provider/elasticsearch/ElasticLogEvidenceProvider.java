@@ -65,24 +65,24 @@ public class ElasticLogEvidenceProvider implements AnalysisEvidenceProvider {
     private List<AnalysisEvidenceAttribute> buildAttributes(ElasticLogEntry entry) {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
 
-        addAttribute(attributes, "timestamp", entry.timestamp());
-        addAttribute(attributes, "level", entry.level());
-        addAttribute(attributes, "serviceName", entry.serviceName());
-        addAttribute(attributes, "className", entry.className());
-        addAttribute(attributes, "message", entry.message());
-        addAttribute(attributes, "exception", entry.exception());
-        addAttribute(attributes, "thread", entry.thread());
-        addAttribute(attributes, "spanId", entry.spanId());
-        addAttribute(attributes, "namespace", entry.namespace());
-        addAttribute(attributes, "podName", entry.podName());
-        addAttribute(attributes, "containerName", entry.containerName());
-        addAttribute(attributes, "containerImage", entry.containerImage());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_TIMESTAMP, entry.timestamp());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_LEVEL, entry.level());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_SERVICE_NAME, entry.serviceName());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_CLASS_NAME, entry.className());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_MESSAGE, entry.message());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_EXCEPTION, entry.exception());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_THREAD, entry.thread());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_SPAN_ID, entry.spanId());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_NAMESPACE, entry.namespace());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_POD_NAME, entry.podName());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_CONTAINER_NAME, entry.containerName());
+        addAttribute(attributes, ElasticLogEvidenceView.ATTRIBUTE_CONTAINER_IMAGE, entry.containerImage());
 
         if (entry.messageTruncated()) {
-            attributes.add(new AnalysisEvidenceAttribute("messageTruncated", "true"));
+            attributes.add(new AnalysisEvidenceAttribute(ElasticLogEvidenceView.ATTRIBUTE_MESSAGE_TRUNCATED, "true"));
         }
         if (entry.exceptionTruncated()) {
-            attributes.add(new AnalysisEvidenceAttribute("exceptionTruncated", "true"));
+            attributes.add(new AnalysisEvidenceAttribute(ElasticLogEvidenceView.ATTRIBUTE_EXCEPTION_TRUNCATED, "true"));
         }
 
         return List.copyOf(attributes);

@@ -9,6 +9,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceReadableView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceReadableView;
 
 import java.io.IOException;
@@ -186,11 +187,16 @@ public class CopilotAttachmentArtifactService {
     }
 
     private boolean isReadableMarkdownSection(AnalysisEvidenceSection section) {
-        return DynatraceRuntimeEvidenceReadableView.matches(section)
+        return ElasticLogEvidenceView.matches(section)
+                || DynatraceRuntimeEvidenceReadableView.matches(section)
                 || GitLabResolvedCodeEvidenceReadableView.matches(section);
     }
 
     private String buildReadableMarkdown(AnalysisEvidenceSection section) {
+        if (ElasticLogEvidenceView.matches(section)) {
+            return ElasticLogEvidenceView.from(section).toMarkdown();
+        }
+
         if (DynatraceRuntimeEvidenceReadableView.matches(section)) {
             return DynatraceRuntimeEvidenceReadableView.from(section).toMarkdown();
         }

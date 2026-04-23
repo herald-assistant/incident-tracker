@@ -145,6 +145,14 @@ Kazdy krok deklaruje tez:
 To jest wykorzystywane przez job progress i frontend do pokazania realnych
 powiazan miedzy providerami.
 
+Elasticsearch provider:
+
+- zbiera logi po `correlationId`,
+- publikuje strukturalne `logs` do evidence i UI,
+- do attachmentu Copilota moze renderowac czytelny markdown z metadanymi wpisu,
+  trescia `message` i ewentualnym `exception`, zamiast surowego JSON sekcji
+  logow.
+
 Deployment context provider:
 
 - korzysta z logow zebranych z Elastica,

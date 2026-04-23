@@ -94,7 +94,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Read `00-incident-manifest.json` first"));
             assertTrue(prompt.contains("Attached artifacts:"));
             assertTrue(prompt.contains("00-incident-manifest.json"));
-            assertTrue(prompt.contains("01-elasticsearch-logs.json"));
+            assertTrue(prompt.contains("01-elasticsearch-logs.md"));
             assertTrue(prompt.contains("02-dynatrace-runtime-signals.md"));
             assertTrue(prompt.contains("03-gitlab-resolved-code.md"));
             assertTrue(prompt.contains("Available capability groups:"));
@@ -132,15 +132,17 @@ class CopilotSdkPreparationServiceTest {
             var manifestContent = Files.readString(Path.of(manifestAttachment.path()));
             assertTrue(manifestContent.contains("\"readFirst\""));
             assertTrue(manifestContent.contains("\"00-incident-manifest.json\""));
-            assertTrue(manifestContent.contains("\"01-elasticsearch-logs.json\""));
+            assertTrue(manifestContent.contains("\"01-elasticsearch-logs.md\""));
             assertTrue(manifestContent.contains("\"02-dynatrace-runtime-signals.md\""));
 
             var logsAttachment = (Attachment) prepared.messageOptions().getAttachments().get(1);
-            assertEquals("01-elasticsearch-logs.json", logsAttachment.displayName());
+            assertEquals("01-elasticsearch-logs.md", logsAttachment.displayName());
             var logsContent = Files.readString(Path.of(logsAttachment.path()));
-            assertTrue(logsContent.contains("\"provider\""));
-            assertTrue(logsContent.contains("\"elasticsearch\""));
-            assertTrue(logsContent.contains("\"Read timed out while calling catalog-service\""));
+            assertTrue(logsContent.contains("Elasticsearch log evidence"));
+            assertTrue(logsContent.contains("Log entry `1` `ERROR` `billing-service`"));
+            assertTrue(logsContent.contains("- message:"));
+            assertTrue(logsContent.contains("Read timed out while calling catalog-service"));
+            assertFalse(logsContent.contains("\"provider\""));
 
             var dynatraceAttachment = (Attachment) prepared.messageOptions().getAttachments().get(2);
             assertEquals("02-dynatrace-runtime-signals.md", dynatraceAttachment.displayName());
@@ -315,8 +317,10 @@ class CopilotSdkPreparationServiceTest {
                         List.of(new AnalysisEvidenceItem(
                                 "billing-service log entry",
                                 List.of(
+                                        new AnalysisEvidenceAttribute("timestamp", "2026-04-11T20:57:33.285Z"),
                                         new AnalysisEvidenceAttribute("level", "ERROR"),
                                         new AnalysisEvidenceAttribute("serviceName", "billing-service"),
+                                        new AnalysisEvidenceAttribute("className", "com.example.synthetic.BillingService"),
                                         new AnalysisEvidenceAttribute("message", "Read timed out while calling catalog-service")
                                 )
                         ))
