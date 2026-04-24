@@ -2,15 +2,17 @@
 
 ## Cel
 
-Zrozumiec, jak projekt integruje sie z Elasticsearch, Dynatrace, GitLabem i
-Database capability bez rozlewania szczegolow REST albo JDBC po calej
-aplikacji.
+Zrozumiec, jak projekt integruje sie z Elasticsearch, Dynatrace, GitLabem,
+Database capability oraz curated operational context bez rozlewania szczegolow
+REST, JDBC albo query/filter API po calej aplikacji.
 
 ## Po tym kroku rozumiesz
 
 - po co sa porty i adaptery w tym repo,
 - gdzie leza helper endpointy testowe,
-- jakie zachowania konfiguracyjne sa lokalne dla konkretnej integracji.
+- jakie zachowania konfiguracyjne sa lokalne dla konkretnej integracji,
+- dlaczego operational context catalog ma osobny adapter zamiast ladowania go
+  bezposrednio w providerze evidence.
 
 ## Elasticsearch
 

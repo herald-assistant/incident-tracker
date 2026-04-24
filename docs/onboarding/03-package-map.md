@@ -40,9 +40,10 @@ Konkretne kroki pipeline:
 
 ### `analysis/adapter`
 
-Integracje zewnetrzne i helper endpointy testowe.
-Sa tu dzisiaj adaptery Elasticsearch, Dynatrace, GitLaba i Database
-capability.
+Integracje zewnetrzne, reuse'owalne capability adapters i helper endpointy
+testowe.
+Sa tu dzisiaj adaptery Elasticsearch, Dynatrace, GitLaba, Database capability
+i operational context.
 
 ### `analysis/mcp`
 

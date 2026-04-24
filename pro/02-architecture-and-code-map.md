@@ -75,7 +75,8 @@ DB capability nie jest tu providerem.
 
 ### `analysis.adapter`
 
-Integracje z systemami zewnetrznymi i helper endpointy.
+Integracje z systemami zewnetrznymi, reuse'owalne capability adapters i helper
+endpointy.
 
 Podkatalogi:
 
@@ -83,6 +84,7 @@ Podkatalogi:
 - `dynatrace`
 - `gitlab`
 - `database`
+- `operationalcontext`
 
 ### `analysis.mcp`
 
@@ -217,6 +219,8 @@ Publikuje:
 
 To enrichment oparty o curated resource pack.
 Jest domyslnie wylaczony.
+Bazowy katalog jest ladowany przez osobny adapter query-based, a nie
+bezposrednio przez sam provider.
 
 ## Typowane czytanie evidence
 

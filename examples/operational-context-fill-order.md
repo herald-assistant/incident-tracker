@@ -286,7 +286,7 @@ Utrzymac krotki opis calego katalogu i roli poszczegolnych plikow.
 **Czego unikac**
 
 - dlugiej dokumentacji procesowej
-- opisow, ktore rozjechaly sie z kodem i loaderem
+- opisow, ktore rozjechaly sie z kodem i adapterem
 
 **Done when**
 

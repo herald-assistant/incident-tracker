@@ -84,6 +84,9 @@ Na dzisiaj projekt ma:
   Generyczny kontrakt AI i model evidence przekazywany do AI.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
+- `pl.mkn.incidenttracker.analysis.adapter.operationalcontext`
+  Query-based adapter curated operational context catalog i filtrowania go do
+  reuse'u przez evidence i kolejne capability.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.preparation`
   Budowanie konfiguracji, promptu, skilli i requestu do Copilot SDK.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
@@ -138,6 +141,8 @@ Na dzisiaj projekt ma:
 - Database diagnostics sa osobna, opcjonalna capability AI-guided i nie sa
   evidence providerem.
 - Operational context jest osobnym enrichment stepem nad juz zebranym evidence.
+- Bazowy curated operational context jest ladowany przez osobny adapter, a nie
+  bezposrednio przez sam provider enrichmentu.
 - Flow synchroniczny i jobowy reuse'uja ta sama orchestration warstwe
   `AnalysisOrchestrator`.
 - Runtime AI providerem jest GitHub Copilot SDK.

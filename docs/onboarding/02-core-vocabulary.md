@@ -25,7 +25,8 @@ Jeden krok pipeline, ktory czyta `AnalysisContext` i publikuje jedno
 
 ### Adapter
 
-Warstwa integracyjna do Elasticsearch, Dynatrace albo GitLaba. Ma porty,
+Warstwa capability blisko integracji albo zrodla danych, np. Elasticsearch,
+Dynatrace, GitLab, Database albo curated operational context. Ma porty,
 modele, properties i ewentualnie helper endpointy do recznego testowania.
 
 ### Tool

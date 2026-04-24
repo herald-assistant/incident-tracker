@@ -2,8 +2,9 @@
 
 ## Zakres
 
-Ten katalog odpowiada za integracje z systemami zewnetrznymi i pomocnicze
-endpointy testowe tych integracji.
+Ten katalog odpowiada za integracje z systemami zewnetrznymi, reuse'owalne
+capability adapters oraz pomocnicze endpointy testowe tam, gdzie rzeczywiscie
+maja sens.
 
 Obejmuje:
 
@@ -18,6 +19,9 @@ Obejmuje:
 - `database/`
   properties, routing polaczen, metadata Oracle, readonly query execution,
   SQL guard, masking i limiting wynikow DB capability.
+- `operationalcontext/`
+  query-based adapter curated operational context catalog, ladowanie zasobow
+  i generyczne filtrowanie katalogu do reuse'u poza jednym providerem evidence.
 
 Nie obejmuje:
 
@@ -38,6 +42,8 @@ Nie obejmuje:
   logiki.
 - Nie przenos do adapterow heurystyk incidentowych typu logs -> deployment,
   logs -> repo albo evidence -> prompt. To nalezy do `evidence` albo `flow`.
+- Dla `operationalcontext/` trzymaj tutaj capability katalogu i query/filter
+  API, ale incident-specific matching pozostaw po stronie providera evidence.
 - Kontrakty portow maja pozostac generyczne i reuse'owalne z evidence, MCP i
   helper endpointow.
 - Dla GitLaba trzymaj `group` w konfiguracji aplikacji. Nie dedukuj go z
