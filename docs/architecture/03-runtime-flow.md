@@ -200,13 +200,18 @@ Operational context provider:
 
 - czyta juz zebrane evidence, glownie logs, deployment, Dynatrace i GitLaba,
 - buduje z nich sygnaly incydentu,
-- dopasowuje katalog operacyjny: systemy, integracje, procesy, repozytoria,
+- pobiera bazowy katalog operacyjny przez adapter `analysis.adapter.operationalcontext`,
+- dopasowuje do incydentu katalog operacyjny: systemy, integracje, procesy, repozytoria,
   bounded contexts, zespoly, glossary i handoff rules,
-- publikuje osobna sekcje `operational-context/matched-context`.
+- publikuje osobna sekcje `operational-context/matched-context`,
+- utrzymuje provider-owned typed `OperationalContextEvidenceView`, zeby downstreamy
+  nie parsowaly tej sekcji po stringowych kluczach rozsianych po kodzie.
 
 Implementacyjnie:
 
 - generyczny adapter i source resolver sa w `analysis.adapter.gitlab`,
+- katalog operational context i jego query-based adapter sa w
+  `analysis.adapter.operationalcontext`,
 - deployment fact derivation jest w `analysis.evidence.provider.deployment`,
 - deterministic provider jest w `analysis.evidence.provider.gitlabdeterministic`.
 

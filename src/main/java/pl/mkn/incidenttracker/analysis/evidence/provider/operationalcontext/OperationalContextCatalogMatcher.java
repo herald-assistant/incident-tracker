@@ -3,8 +3,10 @@ package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -12,10 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.mapList;
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.mapList;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.textList;
 import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.anyOverlap;
 import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsAnyId;
 import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsId;

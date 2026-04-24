@@ -48,6 +48,11 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.adapter.elasticsearch`
 - `analysis.mcp.elasticsearch`
 
+### Za operational context odpowiadaja glownie
+
+- `analysis.adapter.operationalcontext`
+- `analysis.evidence.provider.operationalcontext`
+
 ## Jak rozwijac projekt bez psucia kierunku
 
 ### Gdy dodajesz nowe zrodlo evidence
@@ -152,6 +157,9 @@ Jesli dokladasz nowy krok, aktualizuj te metadata razem z implementacja.
 Aktualnie collector wykonuje Elasticsearch i deployment context sekwencyjnie,
 a potem fan-outuje Dynatrace i GitLab deterministic rownolegle na tym samym
 snapshotcie `AnalysisContext`, zanim przejdzie do operational context.
+Sam provider operational context nie laduje juz katalogu bezposrednio z
+resources, tylko korzysta z query-based adaptera i wystawia typed
+`OperationalContextEvidenceView` dla downstreamow.
 
 ## Najbardziej naturalne kolejne kierunki
 

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
+package pl.mkn.incidenttracker.analysis.adapter.operationalcontext;
 
 import java.util.List;
 import java.util.Map;

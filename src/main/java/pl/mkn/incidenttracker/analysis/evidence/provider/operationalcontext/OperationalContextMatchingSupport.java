@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.textList;
 
 final class OperationalContextMatchingSupport {
 
@@ -56,7 +56,7 @@ final class OperationalContextMatchingSupport {
 
     static boolean containsId(Map<String, Object> entry, String path, String id) {
         return textList(entry, path).stream()
-                .map(OperationalContextMaps::normalize)
+                .map(value -> normalize(value))
                 .anyMatch(normalize(id)::equals);
     }
 
@@ -64,7 +64,7 @@ final class OperationalContextMatchingSupport {
         return matches.stream()
                 .map(match -> text(match.entry(), "id"))
                 .filter(StringUtils::hasText)
-                .map(OperationalContextMaps::normalize)
+                .map(value -> normalize(value))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
@@ -74,7 +74,7 @@ final class OperationalContextMatchingSupport {
         }
 
         return leftValues.stream()
-                .map(OperationalContextMaps::normalize)
+                .map(value -> normalize(value))
                 .anyMatch(rightValues::contains);
     }
 

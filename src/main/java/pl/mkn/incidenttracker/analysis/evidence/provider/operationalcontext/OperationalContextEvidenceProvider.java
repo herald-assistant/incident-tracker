@@ -3,13 +3,18 @@ package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextPort;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextQuery;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
 
 import java.util.List;
 
@@ -19,7 +24,7 @@ import java.util.List;
 public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvider {
 
     private final OperationalContextProperties properties;
-    private final OperationalContextCatalogLoader catalogLoader;
+    private final OperationalContextPort operationalContextPort;
     private final OperationalContextCatalogMatcher catalogMatcher;
     private final OperationalContextEvidenceMapper evidenceMapper;
 
@@ -30,11 +35,7 @@ public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvi
         }
 
         try {
-            var catalog = catalogLoader.loadCatalog().orElse(null);
-            if (catalog == null) {
-                return evidenceMapper.emptySection();
-            }
-
+            var catalog = operationalContextPort.loadContext(OperationalContextQuery.all());
             var signals = OperationalContextIncidentSignals.from(context);
             if (signals.isEmpty()) {
                 return evidenceMapper.emptySection();
@@ -55,7 +56,7 @@ public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvi
 
     @Override
     public AnalysisEvidenceReference producedEvidence() {
-        return new AnalysisEvidenceReference("operational-context", "matched-context");
+        return OperationalContextEvidenceView.EVIDENCE_REFERENCE;
     }
 
     @Override
@@ -63,8 +64,8 @@ public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvi
         return List.of(
                 ElasticLogEvidenceView.EVIDENCE_REFERENCE,
                 DeploymentContextEvidenceView.EVIDENCE_REFERENCE,
-                new AnalysisEvidenceReference("dynatrace", "runtime-signals"),
-                new AnalysisEvidenceReference("gitlab", "resolved-code")
+                DynatraceRuntimeEvidenceView.EVIDENCE_REFERENCE,
+                GitLabResolvedCodeEvidenceView.EVIDENCE_REFERENCE
         );
     }
 

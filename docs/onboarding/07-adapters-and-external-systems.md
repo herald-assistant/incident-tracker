@@ -64,9 +64,24 @@ Czytaj:
 - `analysis.adapter.database.DatabaseSqlGuard`
 - `analysis.adapter.database.DatabaseToolService`
 
+## Operational Context
+
+Nie jest zrodlem incidentowych heurystyk.
+To reuse'owalny adapter katalogu operacyjnego, ktory laduje zasoby z
+`src/main/resources/operational-context` i potrafi zwracac je po dowolnych
+filtrach query-based.
+
+Czytaj:
+
+- `analysis.adapter.operationalcontext.OperationalContextPort`
+- `analysis.adapter.operationalcontext.OperationalContextAdapter`
+- `analysis.adapter.operationalcontext.OperationalContextQuery`
+
 ## Wazne zasady
 
 - adapter nie powinien znac promptu ani logiki incidentowej,
+- jesli capability ma ogolne query/filter API, trzymaj je po stronie adaptera,
+  a heurystyki konkretnego use case'u dopiero po stronie providera evidence albo toola,
 - nietypowe HTTP, np. ignorowanie SSL, jest lokalne dla konkretnej integracji,
 - nietypowe JDBC, routing po environment, allowlisty schematow i SQL guard
   musza pozostac lokalne dla Database capability,

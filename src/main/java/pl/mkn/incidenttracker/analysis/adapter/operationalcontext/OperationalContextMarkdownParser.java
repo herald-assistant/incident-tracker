@@ -1,8 +1,8 @@
-package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
+package pl.mkn.incidenttracker.analysis.adapter.operationalcontext;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -70,6 +70,8 @@ final class OperationalContextMarkdownParser {
             if (trimmedLine.startsWith("## Open Questions")) {
                 if (currentId != null) {
                     entries.add(parseEntry(currentId, currentLines));
+                    currentId = null;
+                    currentLines = new ArrayList<>();
                 }
                 break;
             }

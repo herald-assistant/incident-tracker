@@ -39,6 +39,8 @@ Wazny detal:
 
 `AnalysisContext` przechowuje generyczne sekcje, ale providery i flow czytaja je
 przez typed views albo helpery blisko capability, np. dla logow i deploymentu.
+To samo dotyczy operational context: provider publikuje generyczne evidence,
+ale downstream ma czytac je przez `OperationalContextEvidenceView`.
 
 To jest kompromis:
 
@@ -59,6 +61,7 @@ To jest kompromis:
 - `provider/dynatrace/DynatraceEvidenceProvider.java`
 - `provider/gitlabdeterministic/GitLabDeterministicEvidenceProvider.java`
 - `provider/operationalcontext/OperationalContextEvidenceProvider.java`
+- `provider/operationalcontext/OperationalContextEvidenceView.java`
 
 ## Checkpoint
 

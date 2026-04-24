@@ -7,7 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
-import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.normalize;
 
 record OperationalContextIncidentSignals(
         String corpus,

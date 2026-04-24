@@ -7,6 +7,8 @@ import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
@@ -20,11 +22,9 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentCo
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabDeterministicEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogLoader;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogMatcher;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
@@ -196,7 +196,7 @@ class AnalysisJobServiceTest {
         properties.setEnabled(false);
         return new OperationalContextEvidenceProvider(
                 properties,
-                new OperationalContextCatalogLoader(properties),
+                new OperationalContextAdapter(properties),
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );

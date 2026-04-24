@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
+package pl.mkn.incidenttracker.analysis.adapter.operationalcontext;
 
 import org.springframework.util.StringUtils;
 
@@ -8,16 +8,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-final class OperationalContextMaps {
+public final class OperationalContextMaps {
 
     private OperationalContextMaps() {
     }
 
-    static String text(Map<String, Object> source, String path) {
+    public static String text(Map<String, Object> source, String path) {
         return text(value(source, path));
     }
 
-    static String text(Object value) {
+    public static String text(Object value) {
         if (value == null) {
             return null;
         }
@@ -26,11 +26,11 @@ final class OperationalContextMaps {
         return StringUtils.hasText(rendered) ? rendered : null;
     }
 
-    static List<String> textList(Map<String, Object> source, String path) {
+    public static List<String> textList(Map<String, Object> source, String path) {
         return textList(value(source, path));
     }
 
-    static List<String> textList(Object value) {
+    public static List<String> textList(Object value) {
         if (value == null) {
             return List.of();
         }
@@ -50,11 +50,11 @@ final class OperationalContextMaps {
         return singleValue != null ? List.of(singleValue) : List.of();
     }
 
-    static List<Map<String, Object>> mapList(Map<String, Object> source, String path) {
+    public static List<Map<String, Object>> mapList(Map<String, Object> source, String path) {
         return mapList(value(source, path));
     }
 
-    static List<Map<String, Object>> mapList(Object value) {
+    public static List<Map<String, Object>> mapList(Object value) {
         if (value == null) {
             return List.of();
         }
@@ -76,7 +76,7 @@ final class OperationalContextMaps {
         return List.of();
     }
 
-    static String normalize(String value) {
+    public static String normalize(String value) {
         if (!StringUtils.hasText(value)) {
             return "";
         }
