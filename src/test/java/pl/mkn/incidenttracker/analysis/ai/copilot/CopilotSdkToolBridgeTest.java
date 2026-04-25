@@ -45,9 +45,10 @@ class CopilotSdkToolBridgeTest {
 
         var tools = bridge.buildToolDefinitions();
 
-        assertEquals(6, tools.size());
+        assertEquals(7, tools.size());
         assertEquals(
                 Set.of(
+                        "gitlab_find_class_references",
                         "gitlab_find_flow_context",
                         "gitlab_search_repository_candidates",
                         "gitlab_read_repository_file",
@@ -150,6 +151,11 @@ class CopilotSdkToolBridgeTest {
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunks"),
                 Set.of("chunks", "maxTotalCharacters"),
+                Set.of("group", "branch", "correlationId", "toolContext")
+        );
+        assertSchemaProperties(
+                toolsByName.get("gitlab_find_class_references"),
+                Set.of("projectNames", "className", "relatedHints", "operationNames", "maxFilesPerRole"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(

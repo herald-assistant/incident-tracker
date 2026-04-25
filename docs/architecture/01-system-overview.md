@@ -138,6 +138,9 @@ Na dzisiaj projekt ma:
   stalej kolejnosci pipeline.
 - GitLab deterministic provider i GitLab MCP tools sa wydzielone do osobnych
   pakietow, ale reuse'uja ten sam adapter GitLaba.
+- GitLab MCP tools potrafia nie tylko szukac kandydatow repo i flow contextu,
+  ale tez znajdowac referencje/importy dla ugruntowanej klasy, zeby lepiej
+  naprowadzac DB diagnostics.
 - Database diagnostics sa osobna, opcjonalna capability AI-guided i nie sa
   evidence providerem.
 - Operational context jest osobnym enrichment stepem nad juz zebranym evidence.

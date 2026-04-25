@@ -54,11 +54,12 @@ The goal is to understand the smallest useful cross-file and, when relevant, cro
 ## Tool order
 
 1. Prefer attached deterministic GitLab evidence.
-2. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear.
-3. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
-4. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
-5. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
-6. Use `gitlab_read_repository_file` only when:
+2. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
+3. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
+4. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear.
+5. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
+6. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
+7. Use `gitlab_read_repository_file` only when:
     - the file is short,
     - the chunk is insufficient,
     - class-level context is necessary,
@@ -84,6 +85,36 @@ Use inputs inferred from evidence:
 Search broadly enough to find the relevant project and direct collaborators, but do not read every candidate.
 
 Prefer ranked candidates and role hints over blind full-file reads.
+
+## Exception -> entity/repository -> DB targeting
+
+When the incident suggests a JPA, repository or data issue, do not jump straight into broad DB discovery.
+
+Instead:
+
+1. Ground the class from logs, stacktrace or deterministic evidence:
+   - entity,
+   - repository,
+   - DTO,
+   - mapper,
+   - validator,
+   - service.
+2. If the project is unclear, use `gitlab_search_repository_candidates`.
+3. If the class is grounded, use `gitlab_find_class_references` with:
+   - the fully qualified class name when known,
+   - the simple class name,
+   - hints such as `@Entity`, `@Table`, `@Query`, `JpaRepository`, `JoinColumn`, `mappedBy`, repository method names, business keys or exception names.
+4. Read the entity/repository files with outline or focused chunks.
+5. Only then drive DB tools with the code-derived table, column and relation hints.
+
+Use this sequence especially for:
+
+- `EntityNotFoundException`,
+- `JpaObjectRetrievalFailureException`,
+- repository empty-result behavior,
+- missing dictionary/reference data,
+- orphan relation symptoms,
+- unexpected join/filter behavior.
 
 ## Chunk-first reading strategy
 
@@ -120,13 +151,17 @@ When reading code, extract only what helps the diagnosis and final UX:
 - method name and responsibility,
 - entry point or trigger,
 - repository predicate,
+- derived Spring Data query intent from method names such as `findBy...AndStatus...`,
+- explicit `@Query` predicates when present,
 - entity/table/field names,
+- JPA annotations such as `@Entity`, `@Table`, `@Column`, `@JoinColumn`, `@JoinTable`, `mappedBy`, `@Embeddable`, `@ElementCollection`,
 - ID or business key used,
 - tenant/context/status filters,
 - soft-delete or validity filters,
 - integration endpoint/client,
 - async message/event type,
 - error handling path,
+- classes importing the grounded entity/repository and what role they play,
 - direct collaborators,
 - ownership hints if grounded.
 
@@ -136,12 +171,14 @@ When the incident involves "not found", empty result, entity lookup, data filter
 
 - direct key predicate,
 - business key predicate,
+- query-derivation parts from repository method names,
 - tenant/context predicate,
 - status/state predicate,
 - soft-delete predicate,
 - validity-date predicate,
 - type/discriminator predicate,
-- joins or relation loading.
+- joins or relation loading,
+- the entity and relation annotations that suggest which tables and links DB tools should verify.
 
 This information should guide DB/data diagnostics.
 

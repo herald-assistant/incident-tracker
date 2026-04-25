@@ -140,6 +140,8 @@ public class CopilotSdkPreparationService {
                 - GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding artifact data is missing.
                 - If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly.
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
+                - If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
+                - If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab search for that class and its imports/references before broad DB discovery when that can narrow the affected flow or target tables.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
 
                 Return the analysis in Polish.
@@ -186,11 +188,11 @@ public class CopilotSdkPreparationService {
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: search broadly across relevant repositories and read focused chunks/files to explain the failing code path, repository predicates, integrations and affected functional flow.\n");
+            rendered.append("- GitLab code: search broadly across relevant repositories, inspect class references/imports, and read focused chunks/files to explain the failing code path, repository predicates, JPA/table hints, integrations and affected functional flow.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {
-            rendered.append("- Database diagnostics: verify data-dependent hypotheses by inspecting DB scope, finding/describing tables, counting rows, checking predicates, references, process states and minimal samples.\n");
+            rendered.append("- Database diagnostics: verify data-dependent hypotheses by inspecting DB scope, finding/describing tables, and using code-derived entity/repository/table hints before exact counts, predicate checks, reference checks, process states or minimal samples.\n");
         }
 
         return rendered.length() > 0

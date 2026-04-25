@@ -255,6 +255,9 @@ Na tym etapie:
   backend,
 - nie wystawiamy GitLab ani Elasticsearch tools, jesli odpowiadajace im dane sa
   juz dolaczone do sesji jako artefakty,
+- prompt i skille moga dodatkowo wymuszac sekwencje
+  `exception/class -> GitLab code hints -> DB diagnostics`, zeby model nie
+  zgadywal tabel i relacji bez oparcia w kodzie,
 - skladamy prompt z danymi incydentu i evidence,
 - ustawiamy strategie permission handling.
 
@@ -286,6 +289,7 @@ evidence `elasticsearch/logs`.
 #### GitLab
 
 - `gitlab_search_repository_candidates`
+- `gitlab_find_class_references`
 - `gitlab_find_flow_context`
 - `gitlab_read_repository_file_outline`
 - `gitlab_read_repository_file`
@@ -294,6 +298,9 @@ evidence `elasticsearch/logs`.
 
 To jest AI-guided repository exploration.
 Dynatrace nie ma tu osobnych tooli.
+Przy symptomach JPA/repository model moze uzyc `gitlab_find_class_references`,
+zeby z pelnej nazwy klasy albo importu dojsc do encji, repozytorium,
+predykatow i relacji przed odpaleniem DB diagnostics.
 Te tools nie sa jednak wystawiane do sesji, jesli artefakty juz zawieraja
 deterministic evidence `gitlab/resolved-code`.
 
@@ -329,6 +336,8 @@ Najwazniejsze reguly runtime:
 - `environment` pochodzi z hidden `ToolContext`, nie z parametrow modelu,
 - discovery jest application-scoped:
   `application/deployment/container/project name -> configured Oracle owner/schema`,
+- preferowany flow dla problemow JPA/data to:
+  `GitLab evidence/tools -> entity/repository/table hints -> DB discovery -> exact data checks`,
 - discovery tools nie przyjmuja `schemaPattern`,
 - exact data tools pracuja dopiero na dokladnym `schema.table`,
 - raw SQL pozostaje opcjonalny i domyslnie wylaczony,

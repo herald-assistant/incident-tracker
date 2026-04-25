@@ -80,6 +80,9 @@ do katalogu runtime dla sesji Copilota.
 - AI-guided GitLab reads moga byc przechwytywane jako diagnostyczne
   `toolEvidenceSections` dla UI, ale nie staja sie elementem glownego pipeline
   `AnalysisEvidenceCollector`,
+- skill i prompt moga kierowac model, aby przy symptomach JPA/repository
+  najpierw wyprowadzil z GitLaba encje, predykat repozytorium, tabele i relacje
+  jako hinty do DB tools,
 - DB tools sa wlaczane warunkowo po `analysis.database.enabled=true` i nie
   wymagaja globalnego `spring.datasource`,
 - parsing odpowiedzi modelu musi byc odporny na drobne roznice formatowania.

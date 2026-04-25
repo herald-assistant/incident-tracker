@@ -436,6 +436,7 @@ class GitLabMcpToolsTest {
                         && List.of(
                         "pl.mkn.orders.OrderController",
                         "OrderController",
+                        "import pl.mkn.orders.OrderController;",
                         "submitOrder",
                         "timeout",
                         "repository"
@@ -460,6 +461,78 @@ class GitLabMcpToolsTest {
                 .size());
         assertEquals(
                 "orders-api:src/main/java/pl/mkn/orders/OrderController.java (entrypoint, outline-then-focused-chunk)",
+                response.recommendedNextReads().get(0)
+        );
+    }
+
+    @Test
+    void shouldFindClassReferencesUsingImportAndSimpleNameKeywords() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(
+                new GitLabRepositoryFileCandidate(
+                        "platform/backend",
+                        "orders-core",
+                        "feature/INC-123",
+                        "src/main/java/pl/mkn/orders/domain/OrderEntity.java",
+                        "Matched exact import for OrderEntity and @Entity hint.",
+                        100
+                ),
+                new GitLabRepositoryFileCandidate(
+                        "platform/backend",
+                        "orders-core",
+                        "feature/INC-123",
+                        "src/main/java/pl/mkn/orders/repository/OrderRepository.java",
+                        "Repository using OrderEntity in JpaRepository declaration.",
+                        95
+                ),
+                new GitLabRepositoryFileCandidate(
+                        "platform/backend",
+                        "orders-core",
+                        "feature/INC-123",
+                        "src/main/java/pl/mkn/orders/service/OrderQueryService.java",
+                        "Service imports OrderEntity and loads aggregate state.",
+                        90
+                )
+        ));
+
+        var response = tools.findClassReferences(
+                List.of("orders-core"),
+                "pl.mkn.orders.domain.OrderEntity",
+                List.of("@Entity", "@Table", "mappedBy", "OrderRepository"),
+                List.of("GET /orders/{id}"),
+                2,
+                gitLabToolContext()
+        );
+
+        verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
+                "corr-123".equals(query.correlationId())
+                        && "platform/backend".equals(query.group())
+                        && "feature/INC-123".equals(query.branch())
+                        && List.of("orders-core").equals(query.projectNames())
+                        && List.of("GET /orders/{id}").equals(query.operationNames())
+                        && List.of(
+                        "pl.mkn.orders.domain.OrderEntity",
+                        "OrderEntity",
+                        "import pl.mkn.orders.domain.OrderEntity;",
+                        "@Entity",
+                        "@Table",
+                        "mappedBy",
+                        "OrderRepository"
+                ).equals(query.keywords())
+        ));
+
+        assertEquals("pl.mkn.orders.domain.OrderEntity", response.searchedClass());
+        assertEquals(
+                List.of(
+                        "service-or-orchestrator",
+                        "repository",
+                        "entity"
+                ),
+                response.groups().stream().map(GitLabFlowContextGroup::role).toList()
+        );
+        assertEquals(
+                "orders-core:src/main/java/pl/mkn/orders/domain/OrderEntity.java (entity, outline-or-focused-chunk)",
                 response.recommendedNextReads().get(0)
         );
     }

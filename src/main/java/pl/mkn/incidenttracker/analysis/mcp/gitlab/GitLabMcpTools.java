@@ -453,6 +453,88 @@ public class GitLabMcpTools {
     }
 
     @Tool(
+            name = "gitlab_find_class_references",
+            description = """
+                    Finds files in the current fixed session group and branch that declare, import or directly use a grounded class.
+                    Use this when an exception, stacktrace or deterministic code evidence points to an entity, repository, DTO,
+                    mapper, validator or client class and you need surrounding code to infer repository predicates, JPA/table hints,
+                    direct relations or the broader flow before DB diagnostics.
+                    """
+    )
+    public GitLabFindClassReferencesToolResponse findClassReferences(
+            @ToolParam(required = false, description = "Candidate GitLab project paths inside the fixed session group.")
+            List<String> projectNames,
+            @ToolParam(description = "Grounded fully qualified or simple class name, for example pl.mkn.orders.domain.OrderEntity.")
+            String className,
+            @ToolParam(required = false, description = "Optional relation or mapping hints such as @Entity, @Table, repository method, JoinColumn, mappedBy, business key or exception name.")
+            List<String> relatedHints,
+            @ToolParam(required = false, description = "Operation names inferred from logs/traces.")
+            List<String> operationNames,
+            @ToolParam(required = false, description = "Maximum files per inferred role. Defaults to 5.")
+            Integer maxFilesPerRole,
+            ToolContext toolContext
+    ) {
+        var scope = GitLabToolScope.from(toolContext);
+        var safeProjectNames = defaultList(projectNames);
+        var safeOperationNames = defaultList(operationNames);
+        var searchKeywords = deduplicate(joinLists(
+                seedClassReferenceKeywords(className),
+                defaultList(relatedHints)
+        ));
+        var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
+
+        log.info(
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "gitlab_find_class_references",
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                className,
+                abbreviateList(safeProjectNames),
+                abbreviateList(safeOperationNames),
+                abbreviateList(searchKeywords),
+                effectiveMaxFilesPerRole
+        );
+
+        var candidates = gitLabRepositoryPort.searchCandidateFiles(new GitLabRepositorySearchQuery(
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                safeProjectNames,
+                safeOperationNames,
+                searchKeywords
+        ));
+        var flowCandidates = toFlowContextCandidates(candidates);
+        var groups = groupFlowCandidates(flowCandidates, effectiveMaxFilesPerRole);
+        var recommendedNextReads = recommendedNextReads(flowCandidates);
+
+        log.info(
+                "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
+                "gitlab_find_class_references",
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                flowCandidates.size(),
+                groups.size(),
+                recommendedNextReads.size()
+        );
+
+        return new GitLabFindClassReferencesToolResponse(
+                scope.group(),
+                scope.branch(),
+                className,
+                searchKeywords,
+                groups,
+                recommendedNextReads
+        );
+    }
+
+    @Tool(
             name = "gitlab_find_flow_context",
             description = """
                     Finds a small set of directly related files in the current fixed session group and branch that explain the functional
@@ -482,11 +564,12 @@ public class GitLabMcpTools {
         var scope = GitLabToolScope.from(toolContext);
         var safeProjectNames = defaultList(projectNames);
         var safeOperationNames = defaultList(operationNames);
-        var searchKeywords = deduplicate(seedKeywords(
-                seedClass,
-                simpleName(seedClass),
+        var searchKeywords = deduplicate(joinLists(
+                seedClassReferenceKeywords(seedClass),
+                seedKeywords(
                 seedMethod,
                 fileNameWithoutExtension(seedFilePath)
+                )
         ));
         searchKeywords = deduplicate(joinLists(searchKeywords, defaultList(keywords)));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
@@ -515,57 +598,9 @@ public class GitLabMcpTools {
                 safeOperationNames,
                 searchKeywords
         ));
-
-        var flowCandidates = defaultList(candidates).stream()
-                .map(candidate -> {
-                    var inferredRole = inferRole(candidate.filePath(), candidate.matchReason());
-                    var recommendedReadStrategy = recommendReadStrategy(candidate.filePath(), inferredRole);
-                    return new GitLabFlowContextCandidate(
-                            candidate.group(),
-                            candidate.projectName(),
-                            candidate.branch(),
-                            candidate.filePath(),
-                            candidate.matchReason(),
-                            candidate.matchScore(),
-                            inferredRole,
-                            recommendedReadStrategy,
-                            abbreviate(candidate.matchReason(), PREVIEW_MAX_CHARACTERS)
-                    );
-                })
-                .toList();
-
-        var groupedCandidates = new LinkedHashMap<String, List<GitLabFlowContextCandidate>>();
-        for (var candidate : flowCandidates) {
-            groupedCandidates.computeIfAbsent(candidate.inferredRole(), ignored -> new ArrayList<>())
-                    .add(candidate);
-        }
-
-        var groups = groupedCandidates.entrySet().stream()
-                .map(entry -> new GitLabFlowContextGroup(
-                        entry.getKey(),
-                        entry.getValue().stream()
-                                .sorted(Comparator.comparingInt(GitLabFlowContextCandidate::matchScore).reversed()
-                                        .thenComparing(GitLabFlowContextCandidate::projectName)
-                                        .thenComparing(GitLabFlowContextCandidate::filePath))
-                                .limit(effectiveMaxFilesPerRole)
-                                .toList()
-                ))
-                .sorted(Comparator.comparingInt((GitLabFlowContextGroup candidate) -> rolePriority(candidate.role()))
-                        .thenComparing(GitLabFlowContextGroup::role))
-                .toList();
-
-        var recommendedNextReads = flowCandidates.stream()
-                .sorted(Comparator.comparingInt(GitLabFlowContextCandidate::matchScore).reversed()
-                        .thenComparing(GitLabFlowContextCandidate::projectName)
-                        .thenComparing(GitLabFlowContextCandidate::filePath))
-                .limit(MAX_RECOMMENDED_NEXT_READS)
-                .map(candidate -> "%s:%s (%s, %s)".formatted(
-                        candidate.projectName(),
-                        candidate.filePath(),
-                        candidate.inferredRole(),
-                        candidate.recommendedReadStrategy()
-                ))
-                .toList();
+        var flowCandidates = toFlowContextCandidates(candidates);
+        var groups = groupFlowCandidates(flowCandidates, effectiveMaxFilesPerRole);
+        var recommendedNextReads = recommendedNextReads(flowCandidates);
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
@@ -585,6 +620,66 @@ public class GitLabMcpTools {
                 groups,
                 recommendedNextReads
         );
+    }
+
+    List<GitLabFlowContextCandidate> toFlowContextCandidates(List<pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandidate> candidates) {
+        return defaultList(candidates).stream()
+                .map(candidate -> {
+                    var inferredRole = inferRole(candidate.filePath(), candidate.matchReason());
+                    var recommendedReadStrategy = recommendReadStrategy(candidate.filePath(), inferredRole);
+                    return new GitLabFlowContextCandidate(
+                            candidate.group(),
+                            candidate.projectName(),
+                            candidate.branch(),
+                            candidate.filePath(),
+                            candidate.matchReason(),
+                            candidate.matchScore(),
+                            inferredRole,
+                            recommendedReadStrategy,
+                            abbreviate(candidate.matchReason(), PREVIEW_MAX_CHARACTERS)
+                    );
+                })
+                .toList();
+    }
+
+    List<GitLabFlowContextGroup> groupFlowCandidates(
+            List<GitLabFlowContextCandidate> flowCandidates,
+            int maxFilesPerRole
+    ) {
+        var groupedCandidates = new LinkedHashMap<String, List<GitLabFlowContextCandidate>>();
+        for (var candidate : defaultList(flowCandidates)) {
+            groupedCandidates.computeIfAbsent(candidate.inferredRole(), ignored -> new ArrayList<>())
+                    .add(candidate);
+        }
+
+        return groupedCandidates.entrySet().stream()
+                .map(entry -> new GitLabFlowContextGroup(
+                        entry.getKey(),
+                        entry.getValue().stream()
+                                .sorted(Comparator.comparingInt(GitLabFlowContextCandidate::matchScore).reversed()
+                                        .thenComparing(GitLabFlowContextCandidate::projectName)
+                                        .thenComparing(GitLabFlowContextCandidate::filePath))
+                                .limit(maxFilesPerRole)
+                                .toList()
+                ))
+                .sorted(Comparator.comparingInt((GitLabFlowContextGroup candidate) -> rolePriority(candidate.role()))
+                        .thenComparing(GitLabFlowContextGroup::role))
+                .toList();
+    }
+
+    List<String> recommendedNextReads(List<GitLabFlowContextCandidate> flowCandidates) {
+        return defaultList(flowCandidates).stream()
+                .sorted(Comparator.comparingInt(GitLabFlowContextCandidate::matchScore).reversed()
+                        .thenComparing(GitLabFlowContextCandidate::projectName)
+                        .thenComparing(GitLabFlowContextCandidate::filePath))
+                .limit(MAX_RECOMMENDED_NEXT_READS)
+                .map(candidate -> "%s:%s (%s, %s)".formatted(
+                        candidate.projectName(),
+                        candidate.filePath(),
+                        candidate.inferredRole(),
+                        candidate.recommendedReadStrategy()
+                ))
+                .toList();
     }
 
     String inferRole(String filePath, String contentOrReason) {
@@ -719,6 +814,24 @@ public class GitLabMcpTools {
         }
 
         return List.copyOf(deduplicated);
+    }
+
+    List<String> seedClassReferenceKeywords(String className) {
+        if (!StringUtils.hasText(className)) {
+            return List.of();
+        }
+
+        var normalizedClassName = className.trim();
+        var searchKeywords = new ArrayList<String>();
+        searchKeywords.add(normalizedClassName);
+
+        var simpleName = simpleName(normalizedClassName);
+        if (StringUtils.hasText(simpleName) && !normalizedClassName.equals(simpleName)) {
+            searchKeywords.add(simpleName);
+            searchKeywords.add("import " + normalizedClassName + ";");
+        }
+
+        return deduplicate(searchKeywords);
     }
 
     private <T> List<T> defaultList(List<T> values) {

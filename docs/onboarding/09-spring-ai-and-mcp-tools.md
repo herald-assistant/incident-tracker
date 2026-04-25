@@ -23,6 +23,7 @@ sa potem reuse'owane przez Copilot SDK.
 Aktualny zestaw GitLab MCP obejmuje:
 
 - broad search kandydatow repozytoriow i plikow,
+- wyszukiwanie referencji/importow dla ugruntowanej klasy,
 - wysokopoziomowe `find_flow_context`,
 - outline pliku przed pelnym readem,
 - focused single chunk read,
@@ -57,7 +58,8 @@ Aktualny zestaw Database MCP obejmuje:
 - warstwa MCP jest o ekspozycji capability, nie o integracji REST,
 - lekkie heurystyki prezentacyjne dla Copilota, np. `inferredRole` albo
   `recommendedReadStrategy`, moga zyc w warstwie MCP, o ile nie staja sie
-  centralnym rule engine,
+  centralnym rule engine; to samo dotyczy lekkiego seedowania wyszukiwania
+  klasy przez FQCN, simple name i exact `import ...;`,
 - session-bound context, np. `environment`, `correlationId`, `gitLabGroup` albo
   `gitLabBranch`, powinien trafic do toola przez `ToolContext`, a nie przez
   model-facing parametry,

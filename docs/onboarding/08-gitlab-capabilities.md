@@ -45,6 +45,7 @@ Pakiet: `analysis.mcp.gitlab`
 Odpowiada za:
 
 - wyszukiwanie kandydatow repozytoriow,
+- znajdowanie referencji i importow dla ugruntowanej klasy,
 - znajdowanie szerszego flow context,
 - czytanie outline pliku,
 - czytanie pliku,
@@ -70,3 +71,4 @@ Tool ma byc maly, reuse'owac adapter i brac `group`, `branch` oraz
 - Gdzie dodasz nowa heurystyke mapowania `container -> project`?
 - Gdzie dodasz nowy endpoint do testowania source resolve?
 - Gdzie dodasz nowy tool czytajacy tylko metadata pliku?
+- Gdzie dodasz nowy tool znajdujacy importy lub uzycia klasy w repozytorium?

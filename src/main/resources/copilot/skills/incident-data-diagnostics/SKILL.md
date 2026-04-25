@@ -81,6 +81,35 @@ The model should normally think in terms of application/deployment names, not Or
 
 ---
 
+## Code-first targeting before DB discovery
+
+When the symptom points to JPA, repository lookup, missing entity, relation traversal or data filtering, first derive table and relation hints from code before broad DB discovery.
+
+Prefer this sequence:
+
+1. Use deterministic GitLab evidence when it already contains the grounded entity/repository class.
+2. If GitLab tools are available and a class name is grounded, use:
+   - `gitlab_find_class_references` to find declaring/importing/using files,
+   - `gitlab_read_repository_file_outline`,
+   - `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks`.
+3. Extract from code:
+   - `@Entity`, `@Table`, `@Column`,
+   - `@JoinColumn`, `@JoinTable`, `mappedBy`,
+   - `@Embeddable`, `@ElementCollection`,
+   - repository method names and derived `findBy...` predicates,
+   - explicit `@Query`,
+   - business keys, tenant/status/deleted/validity filters.
+4. Use those code-derived hints to narrow:
+   - `applicationNamePattern`,
+   - `tableNamePattern`,
+   - `entityOrKeywordHint`,
+   - expected columns,
+   - expected relationships.
+
+Do not guess the table only from the exception label if code can ground it first.
+
+---
+
 ## Data-first priority
 
 Prefer checking these causes first:
@@ -300,6 +329,7 @@ Procedure:
 2. If table is unclear:
 
    - use GitLab evidence or GitLab tools to map entity/repository,
+   - use entity annotations, relation annotations and repository method names as hints for the likely table and links,
    - use `db_find_tables` with `applicationNamePattern`,
    - use `entityOrKeywordHint` with entity, repository, key, or domain terms,
    - then use `db_describe_table` for the best candidate.
@@ -359,7 +389,8 @@ Procedure:
    - soft delete,
    - validity dates,
    - active flag,
-   - ownership/context.
+   - ownership/context,
+   - joins and relation paths implied by entity annotations or repository method structure.
 
 3. Locate the relevant table using `db_find_tables` with `applicationNamePattern` if needed.
 4. Use `db_count_rows` by key only.

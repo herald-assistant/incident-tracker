@@ -124,6 +124,8 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding artifact data is missing."));
             assertTrue(prompt.contains("If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly."));
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
+            assertTrue(prompt.contains("If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
+            assertTrue(prompt.contains("If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab search for that class and its imports/references before broad DB discovery"));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));
             assertTrue(prompt.contains("Keep field names exactly as shown below."));
@@ -304,6 +306,7 @@ class CopilotSdkPreparationServiceTest {
             assertEquals(List.of(dbTool), prepared.sessionConfig().getTools());
             assertEquals(List.of("db_get_scope"), prepared.sessionConfig().getAvailableTools());
             assertTrue(prepared.prompt().contains("Database diagnostics: verify data-dependent hypotheses"));
+            assertTrue(prepared.prompt().contains("code-derived entity/repository/table hints"));
             assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
             assertFalse(prepared.prompt().contains("GitLab code: search broadly across relevant repositories"));
             var deniedElasticDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
