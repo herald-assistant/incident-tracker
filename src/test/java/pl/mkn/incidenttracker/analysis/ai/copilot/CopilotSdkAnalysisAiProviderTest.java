@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
@@ -8,6 +9,9 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 
 import java.util.List;
 
@@ -19,11 +23,13 @@ import static org.mockito.Mockito.when;
 
 class CopilotSdkAnalysisAiProviderTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Test
     void shouldMapCopilotSdkOutputToDomainResponse() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = new CopilotSdkAnalysisAiProvider(preparationService, executionGateway);
+        var provider = provider(preparationService, executionGateway);
 
         var request = new AnalysisAiAnalysisRequest(
                 "timeout-123",
@@ -117,7 +123,7 @@ class CopilotSdkAnalysisAiProviderTest {
     void shouldFallbackWhenCopilotResponseIsNotStructured() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = new CopilotSdkAnalysisAiProvider(preparationService, executionGateway);
+        var provider = provider(preparationService, executionGateway);
 
         var request = new AnalysisAiAnalysisRequest("corr-123", "dev1", "main", "sample/runtime", List.of());
         var preparedRequest = mock(CopilotSdkPreparedRequest.class);
@@ -150,7 +156,7 @@ class CopilotSdkAnalysisAiProviderTest {
     void shouldParseMarkdownFormattedStructuredResponse() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = new CopilotSdkAnalysisAiProvider(preparationService, executionGateway);
+        var provider = provider(preparationService, executionGateway);
 
         var request = new AnalysisAiAnalysisRequest("corr-456", "dev1", "dev/zephyr", "TENANT-ALPHA", List.of());
         var preparedRequest = mock(CopilotSdkPreparedRequest.class);
@@ -231,7 +237,7 @@ class CopilotSdkAnalysisAiProviderTest {
     void shouldNormalizeLegacyPipeSeparatedStructuredResponse() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = new CopilotSdkAnalysisAiProvider(preparationService, executionGateway);
+        var provider = provider(preparationService, executionGateway);
 
         var request = new AnalysisAiAnalysisRequest("corr-789", "uat2", "release-candidate", "TENANT-ALPHA", List.of());
         var preparedRequest = mock(CopilotSdkPreparedRequest.class);
@@ -288,7 +294,7 @@ class CopilotSdkAnalysisAiProviderTest {
     void shouldFallbackWhenStructuredResponseMissesAffectedFunction() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = new CopilotSdkAnalysisAiProvider(preparationService, executionGateway);
+        var provider = provider(preparationService, executionGateway);
 
         var request = new AnalysisAiAnalysisRequest("corr-999", "dev1", "main", "sample/runtime", List.of());
         var preparedRequest = mock(CopilotSdkPreparedRequest.class);
@@ -309,6 +315,16 @@ class CopilotSdkAnalysisAiProviderTest {
         assertEquals("", response.affectedProcess());
         assertEquals("", response.affectedBoundedContext());
         assertEquals("", response.affectedTeam());
+    }
+
+    private CopilotSdkAnalysisAiProvider provider(
+            CopilotSdkPreparationService preparationService,
+            CopilotSdkExecutionGateway executionGateway
+    ) {
+        var properties = new CopilotMetricsProperties();
+        var registry = new CopilotSessionMetricsRegistry(properties);
+        var logger = new CopilotMetricsLogger(properties, objectMapper);
+        return new CopilotSdkAnalysisAiProvider(preparationService, executionGateway, registry, logger);
     }
 
 }

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 
 import java.util.concurrent.CompletionException;
@@ -22,6 +23,7 @@ public class CopilotSdkExecutionGateway {
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
+    private final CopilotSessionMetricsRegistry metricsRegistry;
 
     public String execute(CopilotSdkPreparedRequest preparedRequest) {
         return execute(preparedRequest, AnalysisAiToolEvidenceListener.NO_OP);
@@ -33,6 +35,10 @@ public class CopilotSdkExecutionGateway {
     ) {
         var overallStart = System.nanoTime();
         var correlationId = preparedRequest.correlationId();
+        var copilotSessionId = preparedRequest.sessionConfig().getSessionId();
+        long clientStartDurationMs = 0L;
+        long createSessionDurationMs = 0L;
+        long sendAndWaitDurationMs = 0L;
 
         try {
             try (var client = new CopilotClient(preparedRequest.clientOptions())) {
@@ -41,13 +47,15 @@ public class CopilotSdkExecutionGateway {
                 var clientStart = System.nanoTime();
                 client.start().join();
                 logClientState("after-start", client.getState(), correlationId);
-                logDuration("client-start", correlationId, nanosToMillis(clientStart));
+                clientStartDurationMs = nanosToMillis(clientStart);
+                logDuration("client-start", correlationId, clientStartDurationMs);
 
                 try {
                     var createSessionStart = System.nanoTime();
 
                     try (var session = client.createSession(preparedRequest.sessionConfig()).join()) {
-                        logDuration("create-session", correlationId, nanosToMillis(createSessionStart));
+                        createSessionDurationMs = nanosToMillis(createSessionStart);
+                        logDuration("create-session", correlationId, createSessionDurationMs);
                         var sessionSummary = newSessionLogSummary(correlationId);
 
                         toolEvidenceCaptureRegistry.registerSession(
@@ -67,7 +75,8 @@ public class CopilotSdkExecutionGateway {
                             );
                             var response = session.sendAndWait(preparedRequest.messageOptions(), timeoutMs).join();
 
-                            logDuration("send-and-wait", correlationId, nanosToMillis(sendAndWaitStart));
+                            sendAndWaitDurationMs = nanosToMillis(sendAndWaitStart);
+                            logDuration("send-and-wait", correlationId, sendAndWaitDurationMs);
                             var content = response.getData() != null ? response.getData().content() : null;
                             if (content == null || content.isBlank()) {
                                 throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
@@ -103,6 +112,13 @@ public class CopilotSdkExecutionGateway {
             );
             throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception);
         } finally {
+            metricsRegistry.recordExecutionDurations(
+                    copilotSessionId,
+                    clientStartDurationMs,
+                    createSessionDurationMs,
+                    sendAndWaitDurationMs,
+                    nanosToMillis(overallStart)
+            );
             preparedRequest.close();
         }
     }

@@ -40,6 +40,29 @@ Przed wieksza zmiana zacznij od:
   - AI-guided fetching przez tools.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
 
+## Niezmienniki Copilot SDK i optymalizacji
+
+- Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko
+  `AnalysisAiAnalysisRequest` oraz `AnalysisEvidenceSection`; nie wciskaj klas
+  adapter-specific do prompt buildera ani kontraktu AI.
+- Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
+  incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie,
+  a `MessageOptions` dostaje tylko `setPrompt(prompt)`.
+- Nie zakladaj lokalnych sciezek plikowych dla artefaktow Copilota. Jesli
+  zmieniasz delivery mode na SDK attachments, traktuj to jako jawna zmiane
+  runtime z testami, dokumentacja i planem rollbacku.
+- Sesja Copilota ma jawna allowliste tools przez `SessionConfig.availableTools`
+  i `SessionHooks.onPreToolUse`; lokalny workspace, filesystem, shell i terminal
+  pozostaja zablokowane w glownym flow analizy.
+- GitLab, Elasticsearch i Database tools pozostaja session-bound przez hidden
+  `ToolContext`. Model nie powinien podawac `gitLabGroup`, `gitLabBranch`,
+  `environment` ani `correlationId` dla tych ukrytych scope'ow.
+- GitLab i Elasticsearch tools sa fallback-only, gdy odpowiadajace evidence nie
+  jest juz osadzone w artefaktach. Database tools sa opcjonalna capability
+  AI-guided, nie providerem evidence.
+- Optymalizacje Copilota prowadz inkrementalnie: najpierw pomiar i kontrakt
+  wyniku, potem budzety eksploracji, dopiero pozniej wieksze zmiany flow.
+
 ## Gdzie czego szukac
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow`

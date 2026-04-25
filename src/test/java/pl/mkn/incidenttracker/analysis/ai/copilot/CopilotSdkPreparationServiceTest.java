@@ -19,6 +19,9 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactSer
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
@@ -52,7 +55,9 @@ class CopilotSdkPreparationServiceTest {
                             .build()
             ),
             objectMapper,
-            new CopilotToolEvidenceCaptureRegistry(objectMapper)
+            new CopilotToolEvidenceCaptureRegistry(objectMapper),
+            metricsRegistry(),
+            metricsLogger()
     );
 
     @Test
@@ -203,7 +208,8 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper)
+                new CopilotArtifactService(objectMapper),
+                metricsRegistry()
         );
 
         try (var prepared = service.prepare(request)) {
@@ -257,7 +263,8 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper)
+                new CopilotArtifactService(objectMapper),
+                metricsRegistry()
         );
 
         try (var prepared = service.prepare(request)) {
@@ -299,7 +306,8 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper)
+                new CopilotArtifactService(objectMapper),
+                metricsRegistry()
         );
 
         try (var prepared = service.prepare(request)) {
@@ -407,8 +415,17 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 toolBridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper)
+                new CopilotArtifactService(objectMapper),
+                metricsRegistry()
         );
+    }
+
+    private CopilotSessionMetricsRegistry metricsRegistry() {
+        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
+    }
+
+    private CopilotMetricsLogger metricsLogger() {
+        return new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper);
     }
 
     private CopilotSdkProperties baseProperties() {

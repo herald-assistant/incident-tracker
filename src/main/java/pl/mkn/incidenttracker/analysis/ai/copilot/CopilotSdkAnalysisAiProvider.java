@@ -8,12 +8,16 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 
 @Service
 @Slf4j
@@ -33,6 +37,8 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
 
     private final CopilotSdkPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
+    private final CopilotSessionMetricsRegistry metricsRegistry;
+    private final CopilotMetricsLogger metricsLogger;
 
     @Override
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
@@ -41,24 +47,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
 
     @Override
     public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-        var analysisStart = System.nanoTime();
-        var preparedRequest = preparationService.prepare(request);
-        var assistantContent = executionGateway.execute(preparedRequest);
-        var response = mapAssistantContent(
-                request.correlationId(),
-                assistantContent,
-                preparedRequest.prompt()
-        );
-
-        log.info(
-                "Copilot analysis completed correlationId={} durationMs={} detectedProblem={} structuredResponse={}",
-                request.correlationId(),
-                (System.nanoTime() - analysisStart) / 1_000_000,
-                response.detectedProblem(),
-                !"AI_UNSTRUCTURED_RESPONSE".equals(response.detectedProblem())
-        );
-
-        return response;
+        return analyzeWithExecution(request, executionGateway::execute);
     }
 
     @Override
@@ -66,27 +55,62 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             AnalysisAiAnalysisRequest request,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
-        var analysisStart = System.nanoTime();
-        var preparedRequest = preparationService.prepare(request);
-        var assistantContent = executionGateway.execute(preparedRequest, toolEvidenceListener);
-        var response = mapAssistantContent(
-                request.correlationId(),
-                assistantContent,
-                preparedRequest.prompt()
+        return analyzeWithExecution(
+                request,
+                preparedRequest -> executionGateway.execute(preparedRequest, toolEvidenceListener)
         );
-
-        log.info(
-                "Copilot analysis completed correlationId={} durationMs={} detectedProblem={} structuredResponse={}",
-                request.correlationId(),
-                (System.nanoTime() - analysisStart) / 1_000_000,
-                response.detectedProblem(),
-                !"AI_UNSTRUCTURED_RESPONSE".equals(response.detectedProblem())
-        );
-
-        return response;
     }
 
-    private AnalysisAiAnalysisResponse mapAssistantContent(
+    private AnalysisAiAnalysisResponse analyzeWithExecution(
+            AnalysisAiAnalysisRequest request,
+            Function<CopilotSdkPreparedRequest, String> execution
+    ) {
+        var analysisStart = System.nanoTime();
+        var preparedRequest = preparationService.prepare(request);
+        var copilotSessionId = copilotSessionId(preparedRequest);
+        try {
+            var assistantContent = execution.apply(preparedRequest);
+            var mappedContent = mapAssistantContent(
+                    request.correlationId(),
+                    assistantContent,
+                    preparedRequest.prompt()
+            );
+            var response = mappedContent.response();
+            metricsRegistry.recordResponse(
+                    copilotSessionId,
+                    mappedContent.structuredResponse(),
+                    mappedContent.legacyParserUsed(),
+                    mappedContent.fallbackResponseUsed(),
+                    response.detectedProblem(),
+                    null
+            );
+            metricsRegistry.remove(copilotSessionId).ifPresent(metricsLogger::logSummary);
+
+            log.info(
+                    "Copilot analysis completed correlationId={} durationMs={} detectedProblem={} structuredResponse={}",
+                    request.correlationId(),
+                    (System.nanoTime() - analysisStart) / 1_000_000,
+                    response.detectedProblem(),
+                    mappedContent.structuredResponse()
+            );
+
+            return response;
+        }
+        catch (RuntimeException exception) {
+            metricsRegistry.remove(copilotSessionId).ifPresent(metricsLogger::logSummary);
+            throw exception;
+        }
+    }
+
+    private String copilotSessionId(CopilotSdkPreparedRequest preparedRequest) {
+        if (preparedRequest == null || preparedRequest.sessionConfig() == null) {
+            return null;
+        }
+
+        return preparedRequest.sessionConfig().getSessionId();
+    }
+
+    private MappedAssistantContent mapAssistantContent(
             String correlationId,
             String assistantContent,
             String prompt
@@ -112,8 +136,13 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
                 affectedTeam != null
         );
 
-        if (detectedProblem == null || summary == null || recommendedAction == null || affectedFunction == null) {
-            return new AnalysisAiAnalysisResponse(
+        var structuredResponse = detectedProblem != null
+                && summary != null
+                && recommendedAction != null
+                && affectedFunction != null;
+
+        if (!structuredResponse) {
+            return new MappedAssistantContent(new AnalysisAiAnalysisResponse(
                     "copilot-sdk",
                     assistantContent,
                     "AI_UNSTRUCTURED_RESPONSE",
@@ -124,10 +153,10 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
                     "",
                     "",
                     prompt
-            );
+            ), false, true, true);
         }
 
-        return new AnalysisAiAnalysisResponse(
+        return new MappedAssistantContent(new AnalysisAiAnalysisResponse(
                 "copilot-sdk",
                 summary,
                 detectedProblem,
@@ -140,7 +169,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
                 affectedBoundedContext != null ? affectedBoundedContext : "",
                 affectedTeam != null ? affectedTeam : "",
                 prompt
-        );
+        ), true, true, false);
     }
 
     private Map<String, String> parseLabeledFields(String assistantContent) {
@@ -278,6 +307,14 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     }
 
     private record FieldDeclaration(String key, String initialValue) {
+    }
+
+    private record MappedAssistantContent(
+            AnalysisAiAnalysisResponse response,
+            boolean structuredResponse,
+            boolean legacyParserUsed,
+            boolean fallbackResponseUsed
+    ) {
     }
 
 }

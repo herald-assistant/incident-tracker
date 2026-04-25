@@ -12,6 +12,8 @@ import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 
 import java.time.Duration;
@@ -35,7 +37,8 @@ class CopilotSdkExecutionGatewayTest {
         var properties = new CopilotSdkProperties();
         var gateway = new CopilotSdkExecutionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                metricsRegistry()
         );
         var preparedRequest = new CopilotSdkPreparedRequest(
                 "corr-123",
@@ -72,7 +75,8 @@ class CopilotSdkExecutionGatewayTest {
         properties.setSendAndWaitTimeout(Duration.ofSeconds(90));
         var gateway = new CopilotSdkExecutionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                metricsRegistry()
         );
         var preparedRequest = new CopilotSdkPreparedRequest(
                 "corr-456",
@@ -108,7 +112,8 @@ class CopilotSdkExecutionGatewayTest {
         var properties = new CopilotSdkProperties();
         var gateway = new CopilotSdkExecutionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                metricsRegistry()
         );
 
         var preparedRequest = new CopilotSdkPreparedRequest(
@@ -148,5 +153,9 @@ class CopilotSdkExecutionGatewayTest {
                 null
         ));
         return event;
+    }
+
+    private CopilotSessionMetricsRegistry metricsRegistry() {
+        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
     }
 }

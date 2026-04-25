@@ -16,6 +16,9 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolContextKeys;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.util.List;
@@ -37,11 +40,7 @@ class CopilotSdkToolBridgeTest {
 
     @Test
     void shouldExposeSpringToolsAsCopilotToolDefinitions() {
-        var bridge = new CopilotSdkToolBridge(
-                List.of(gitLabToolProvider()),
-                objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper)
-        );
+        var bridge = bridge(List.of(gitLabToolProvider()));
 
         var tools = bridge.buildToolDefinitions();
 
@@ -62,11 +61,7 @@ class CopilotSdkToolBridgeTest {
 
     @Test
     void shouldPassSessionBoundContextToSpringToolsThroughBridge() {
-        var bridge = new CopilotSdkToolBridge(
-                List.of(contextEchoToolProvider()),
-                objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper)
-        );
+        var bridge = bridge(List.of(contextEchoToolProvider()));
         var sessionContext = gitLabSessionContext();
         var tool = bridge.buildToolDefinitions(sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("context_echo"))
@@ -98,11 +93,7 @@ class CopilotSdkToolBridgeTest {
 
     @Test
     void shouldRejectInvocationWhenSessionIdDoesNotMatchContext() {
-        var bridge = new CopilotSdkToolBridge(
-                List.of(contextEchoToolProvider()),
-                objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper)
-        );
+        var bridge = bridge(List.of(contextEchoToolProvider()));
         var tool = bridge.buildToolDefinitions(gitLabSessionContext()).stream()
                 .filter(candidate -> candidate.name().equals("context_echo"))
                 .findFirst()
@@ -120,11 +111,7 @@ class CopilotSdkToolBridgeTest {
 
     @Test
     void shouldHideSessionBoundFieldsFromGitLabToolSchemas() {
-        var bridge = new CopilotSdkToolBridge(
-                List.of(gitLabToolProvider()),
-                objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper)
-        );
+        var bridge = bridge(List.of(gitLabToolProvider()));
         var toolsByName = bridge.buildToolDefinitions(gitLabSessionContext()).stream()
                 .collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
 
@@ -168,7 +155,7 @@ class CopilotSdkToolBridgeTest {
     @Test
     void shouldInvokeSpringGitLabChunkToolThroughCopilotToolDefinition() {
         var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
-        var bridge = new CopilotSdkToolBridge(List.of(gitLabToolProvider()), objectMapper, registry);
+        var bridge = bridge(List.of(gitLabToolProvider()), registry);
         var sessionContext = gitLabSessionContext();
         var tool = bridge.buildToolDefinitions(sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("gitlab_read_repository_file_chunk"))
@@ -220,7 +207,7 @@ class CopilotSdkToolBridgeTest {
     @Test
     void shouldInvokeSpringGitLabChunksToolThroughCopilotToolDefinition() {
         var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
-        var bridge = new CopilotSdkToolBridge(List.of(gitLabToolProvider()), objectMapper, registry);
+        var bridge = bridge(List.of(gitLabToolProvider()), registry);
         var sessionContext = gitLabSessionContext();
         var tool = bridge.buildToolDefinitions(sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("gitlab_read_repository_file_chunks"))
@@ -315,6 +302,23 @@ class CopilotSdkToolBridgeTest {
         return MethodToolCallbackProvider.builder()
                 .toolObjects(new ContextEchoTools())
                 .build();
+    }
+
+    private CopilotSdkToolBridge bridge(List<ToolCallbackProvider> providers) {
+        return bridge(providers, new CopilotToolEvidenceCaptureRegistry(objectMapper));
+    }
+
+    private CopilotSdkToolBridge bridge(
+            List<ToolCallbackProvider> providers,
+            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry
+    ) {
+        return new CopilotSdkToolBridge(
+                providers,
+                objectMapper,
+                toolEvidenceCaptureRegistry,
+                new CopilotSessionMetricsRegistry(new CopilotMetricsProperties()),
+                new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper)
+        );
     }
 
     static class ContextEchoTools {

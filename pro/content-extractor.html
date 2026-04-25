@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>Łączenie plików tekstowych z katalogu</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 16px;
+      background: #f5f5f7;
+      color: #111827;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    input[type="file"] {
+      max-width: 320px;
+    }
+
+    button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #9ca3af;
+      background: #e5e7eb;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #d1d5db;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    #status {
+      font-size: 13px;
+      color: #4b5563;
+      margin-bottom: 8px;
+      min-height: 18px;
+    }
+
+    #output {
+      width: 100%;
+      height: 70vh;
+      box-sizing: border-box;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+<h1>Połącz pliki tekstowe z katalogu w jeden tekst</h1>
+
+<div class="controls">
+  <label>
+    <strong>Wybierz katalog:</strong>
+    <input id="dirInput" type="file" webkitdirectory multiple>
+  </label>
+  <button id="btnProcess">Połącz pliki</button>
+  <button id="btnDownload" disabled>Pobierz jako .txt</button>
+</div>
+
+<div id="status"></div>
+
+<textarea id="output" placeholder="Tutaj pojawi się połączona treść plików..." spellcheck="false"></textarea>
+
+<script>
+  // Rozszerzenia, które traktujemy jako "tekstowe"
+  const allowedExtensions = [
+    // '.ts', '.tsx', '.js', '.jsx',
+    // '.html', '.htm',
+    // '.css', '.scss', '.sass', '.less',
+    '.json',
+    '.md',
+    // '.txt', '.properties', '.java'
+  ];
+
+  const dirInput = document.getElementById('dirInput');
+  const btnProcess = document.getElementById('btnProcess');
+  const btnDownload = document.getElementById('btnDownload');
+  const output = document.getElementById('output');
+  const statusEl = document.getElementById('status');
+
+  let combinedText = '';
+
+  function isTextFile(file) {
+    const name = file.name.toLowerCase();
+    return allowedExtensions.some(ext => name.endsWith(ext));
+  }
+
+  function setStatus(message) {
+    statusEl.textContent = message || '';
+  }
+
+  btnProcess.addEventListener('click', async () => {
+    const files = Array.from(dirInput.files || []);
+
+    if (!files.length) {
+      alert('Najpierw wybierz katalog (przycisk "Wybierz katalog").');
+      return;
+    }
+
+    const textFiles = files.filter(isTextFile);
+
+    if (!textFiles.length) {
+      alert('W wybranym katalogu nie znaleziono plików o obsługiwanych rozszerzeniach.');
+      return;
+    }
+
+    // Sortujemy po ścieżce względnej, żeby wynik był przewidywalny
+    textFiles.sort((a, b) => {
+      const pa = a.webkitRelativePath || a.name;
+      const pb = b.webkitRelativePath || b.name;
+      return pa.localeCompare(pb);
+    });
+
+    setStatus(`Przetwarzanie ${textFiles.length} plików...`);
+    btnProcess.disabled = true;
+    btnDownload.disabled = true;
+    output.value = '';
+    combinedText = '';
+
+    try {
+      const parts = [];
+
+      for (const file of textFiles) {
+        const path = file.webkitRelativePath || file.name;
+        const content = await file.text();
+
+        parts.push(`=== ${path} ===\n${content}\n\n`);
+      }
+
+      combinedText = parts.join('');
+      output.value = combinedText;
+      setStatus(`Gotowe. Połączono ${textFiles.length} plików.`);
+
+      btnDownload.disabled = false;
+
+    } catch (err) {
+      console.error(err);
+      alert('Wystąpił błąd podczas czytania plików. Szczegóły w konsoli.');
+      setStatus('Błąd podczas przetwarzania plików.');
+    } finally {
+      btnProcess.disabled = false;
+    }
+  });
+
+  btnDownload.addEventListener('click', () => {
+    if (!combinedText) return;
+
+    const blob = new Blob([combinedText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'combined-files.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>

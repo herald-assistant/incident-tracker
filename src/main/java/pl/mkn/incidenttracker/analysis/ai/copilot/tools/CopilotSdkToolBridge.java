@@ -11,6 +11,9 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -27,6 +30,8 @@ public class CopilotSdkToolBridge {
     private final List<ToolCallbackProvider> toolCallbackProviders;
     private final ObjectMapper objectMapper;
     private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
+    private final CopilotSessionMetricsRegistry metricsRegistry;
+    private final CopilotMetricsLogger metricsLogger;
 
     public List<ToolDefinition> buildToolDefinitions() {
         var analysisRunId = UUID.randomUUID().toString();
@@ -75,6 +80,8 @@ public class CopilotSdkToolBridge {
             ToolInvocation invocation,
             CopilotToolSessionContext sessionContext
     ) {
+        var toolStart = System.nanoTime();
+        var metricsRecorded = false;
         try {
             validateSessionId(sessionContext, invocation);
             var argumentsJson = objectMapper.writeValueAsString(
@@ -91,6 +98,8 @@ public class CopilotSdkToolBridge {
             );
 
             var rawResult = callback.call(argumentsJson, toolContext);
+            recordToolMetrics(sessionContext, invocation, rawResult, toolStart);
+            metricsRecorded = true;
             toolEvidenceCaptureRegistry.captureToolResult(
                     invocation.getSessionId(),
                     invocation.getToolCallId(),
@@ -112,6 +121,9 @@ public class CopilotSdkToolBridge {
             return CompletableFuture.completedFuture(parsedResult);
         }
         catch (Exception exception) {
+            if (!metricsRecorded) {
+                recordToolMetrics(sessionContext, invocation, null, toolStart);
+            }
             log.error(
                     "Copilot tool invocation failed sessionId={} toolCallId={} toolName={} error={}",
                     invocation.getSessionId(),
@@ -122,6 +134,28 @@ public class CopilotSdkToolBridge {
             );
             return CompletableFuture.failedFuture(exception);
         }
+    }
+
+    private void recordToolMetrics(
+            CopilotToolSessionContext sessionContext,
+            ToolInvocation invocation,
+            String rawResult,
+            long toolStart
+    ) {
+        if (sessionContext == null || invocation == null) {
+            return;
+        }
+
+        var toolMetrics = CopilotToolMetrics.from(
+                sessionContext.analysisRunId(),
+                sessionContext.copilotSessionId(),
+                invocation.getToolCallId(),
+                invocation.getToolName(),
+                (System.nanoTime() - toolStart) / 1_000_000,
+                rawResult
+        );
+        metricsRegistry.recordToolCall(toolMetrics);
+        metricsLogger.logToolEvent(toolMetrics);
     }
 
     private void validateSessionId(CopilotToolSessionContext sessionContext, ToolInvocation invocation) {

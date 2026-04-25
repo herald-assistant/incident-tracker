@@ -11,6 +11,7 @@ import com.github.copilot.sdk.json.SessionHooks;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
@@ -26,8 +27,10 @@ public class CopilotSdkPreparationService {
     private final CopilotSdkToolBridge toolBridge;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
     private final CopilotArtifactService artifactService;
+    private final CopilotSessionMetricsRegistry metricsRegistry;
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
+        var preparationStart = System.nanoTime();
         var toolSessionContext = buildToolSessionContext(request);
         var registeredTools = toolBridge.buildToolDefinitions(toolSessionContext);
         var toolAccessPolicy = CopilotToolAccessPolicy.from(request, registeredTools);
@@ -72,6 +75,13 @@ public class CopilotSdkPreparationService {
         String prompt = buildPrompt(request, toolAccessPolicy, renderedArtifacts);
         var artifactContents = artifactService.toArtifactContentMap(renderedArtifacts);
         var messageOptions = new MessageOptions().setPrompt(prompt);
+        metricsRegistry.recordPreparation(
+                toolSessionContext,
+                request,
+                renderedArtifacts,
+                prompt,
+                (System.nanoTime() - preparationStart) / 1_000_000
+        );
 
         return new CopilotSdkPreparedRequest(
                 request.correlationId(),
