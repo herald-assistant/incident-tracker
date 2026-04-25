@@ -26,12 +26,14 @@ A good answer should help the reader:
 
 1. Read `00-incident-manifest.json` first when available or when its content is embedded in the prompt.
 2. Use the manifest as the artifact index and session context.
-3. Treat incident artifacts, or their embedded prompt copies, as the primary source of truth.
-4. Form the initial hypothesis from logs, runtime signals, deterministic code evidence and operational context.
-5. Use tools only when they can materially confirm, reject or refine a concrete hypothesis.
-6. If existing artifacts are already sufficient and the affected flow is understandable, answer without extra tool calls.
-7. If the likely technical error is clear but the broader flow is not understandable for a beginner analyst, prefer focused GitLab reads over a shallow final answer.
-8. If visibility is incomplete, explain the limitation and provide the next verification step.
+3. Check manifest `toolPolicy.enabledCapabilityGroups` and `toolPolicy.disabledCapabilityGroups` before assuming that GitLab, Elasticsearch or DB tools are available.
+4. Treat incident artifacts, or their embedded prompt copies, as the primary source of truth.
+5. Form the initial hypothesis from logs, runtime signals, deterministic code evidence and operational context.
+6. Use tools only when they can materially confirm, reject or refine a concrete hypothesis.
+7. If existing artifacts are already sufficient and the affected flow is understandable, answer without extra tool calls.
+8. If the likely technical error is clear but the broader flow is not understandable for a beginner analyst, prefer focused GitLab reads over a shallow final answer.
+9. If a capability group is disabled because equivalent artifacts are already attached, use those artifacts directly instead of complaining about missing tool access.
+10. If visibility is incomplete, explain the limitation and provide the next verification step.
 
 ## Session invariants
 

@@ -54,6 +54,28 @@ Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
 
 Generyczny kontrakt AI i implementacja oparta o Copilot SDK.
 
+### `api`
+
+Wspolny kontrakt bledow HTTP i walidacji dla endpointow backendu.
+
+### `ui`
+
+Cienki routing Spring MVC dla frontendowych route'ow Angulara.
+
+### `frontend/`
+
+Zrodlowa aplikacja Angular operatora: widok analizy, widok `/evidence`,
+komponenty, modele i testy UI.
+
+### `src/main/resources/copilot/skills`
+
+Runtime skille ladowane do sesji Copilota.
+
+### `src/main/resources/operational-context`
+
+Katalog systemow, procesow, repozytoriow i regul routingu uzywany przez
+operational context enrichment.
+
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow`
@@ -63,9 +85,15 @@ Generyczny kontrakt AI i implementacja oparta o Copilot SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
+- `src/main/java/pl/mkn/incidenttracker/api`
+- `src/main/java/pl/mkn/incidenttracker/ui`
+- `frontend/src/app`
+- `src/main/resources/copilot/skills`
+- `src/main/resources/operational-context`
 
 ## Checkpoint
 
 - Gdzie powinien trafic nowy krok evidence?
 - Gdzie powinien trafic nowy helper endpoint do recznego testowania integracji?
 - Gdzie powinien trafic nowy tool dla modelu?
+- Gdzie zmienisz stale zasady pracy modelu i gdzie runtime katalog routingu?

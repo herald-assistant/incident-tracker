@@ -9,7 +9,8 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 - role `AnalysisOrchestrator`,
 - jak sync i job reuse'uja ten sam flow,
 - gdzie wpiete sa listenery progresu,
-- gdzie budowany jest request do AI.
+- gdzie budowany jest request do AI,
+- co trafia do `AnalysisExecution`.
 
 ## Glowna sekwencja
 
@@ -19,6 +20,14 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 4. po zebraniu danych buduje `AnalysisAiAnalysisRequest`,
 5. provider AI przygotowuje prompt i wykonuje analize,
 6. orchestrator mapuje wynik na `AnalysisResultResponse`.
+
+`AnalysisExecution` trzyma potem razem:
+
+- finalny `AnalysisContext`,
+- request do AI,
+- `preparedPrompt`,
+- odpowiedz AI,
+- wynik API.
 
 ## Najwazniejsze klasy
 
@@ -33,15 +42,21 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 - `AnalysisRequest` przyjmuje tylko `correlationId`,
 - `gitLabGroup` pochodzi z konfiguracji, nie z requestu,
 - `environment` i `gitLabBranch` sa rozwiazywane z evidence,
-- job flow nie ma osobnego orchestratora, tylko projekcje postepu.
+- job flow nie ma osobnego orchestratora, tylko projekcje postepu,
+- `AnalysisExecutionListener` obsluguje nie tylko kroki evidence, ale tez
+  `onAiStarted`, `onAiPromptPrepared` i `onAiToolEvidenceUpdated`,
+- job snapshot jest projekcja in-memory, a nie trwala historia analiz.
 
 ## Sprawdz lokalnie
 
 - przejdz przez `AnalysisOrchestrator.analyze(...)`,
 - porownaj, jak `sync` i `job` wchodza do tego samego flow,
-- zobacz, gdzie job zapisuje `preparedPrompt`.
+- zobacz, gdzie job zapisuje `preparedPrompt`,
+- zobacz, gdzie do joba trafia `toolEvidenceSections`.
 
 ## Checkpoint
 
 - Dlaczego `AnalysisJobService` nie powinien miec osobnej logiki analizy?
 - W ktorym miejscu najlepiej dodać nowy listener progresu?
+- Dlaczego `preparedPrompt` i `toolEvidenceSections` sa elementem execution/job
+  projection, a nie glownego evidence pipeline?

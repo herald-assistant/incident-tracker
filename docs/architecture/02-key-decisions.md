@@ -113,6 +113,7 @@ To nie jest evidence provider.
 To jest zestaw narzedzi, z ktorych AI moze korzystac podczas sesji:
 
 - search repository candidates,
+- find class references and imports,
 - find flow context,
 - read repository file outline,
 - read repository file,
@@ -190,6 +191,9 @@ Database tools:
 - biora `environment` z hidden `ToolContext`,
 - rozwiazuja scope danych przez
   `application/deployment/container/project name -> configured schema`,
+- przy symptomach JPA/data maja byc poprzedzone przez code-first targeting:
+  entity, repository predicate, tabela i relacje powinny byc najpierw
+  ugruntowane z deterministic GitLab evidence albo session GitLab tools,
 - pracuja na readonly, typed tools i exact `schema.table`.
 
 Powod:
@@ -314,5 +318,8 @@ Aktualny model:
 - Elasticsearch i GitLab capability sa artifact-gated:
   jesli odpowiadajace im dane sa juz dolaczone do sesji jako artefakty,
   backend nie wystawia tych tool groups do modelu,
+- jesli GitLab tools sa w ten sposob odfiltrowane, model ma wyciagac hinty
+  code-to-DB z dolaczonego `gitlab/resolved-code`, a nie oczekiwac dodatkowej
+  eksploracji repo przez tools,
 - tools pozostaja fallbackiem tylko dla brakujacej widocznosci, a nie pierwszym
   krokiem eksploracji.

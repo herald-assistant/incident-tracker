@@ -31,6 +31,22 @@ architektonicznych.
 - `src/test/java/pl/mkn/incidenttracker/analysis/mcp`
 - `src/test/java/pl/mkn/incidenttracker/analysis/ai/copilot`
 
+### UI i frontend
+
+- `src/test/java/pl/mkn/incidenttracker/ui`
+- `frontend/src/app/**/*.spec.ts`
+
+## Komendy, ktore warto znac
+
+- `mvn -q clean test`
+  backendowe testy jednostkowe i integracyjne Spring Boot.
+- `cd frontend && npm test`
+  testy Angulara. Nie sa uruchamiane przez `mvn test`.
+- `cd frontend && npm run build`
+  produkcyjny build UI do weryfikacji zmian frontendowych.
+- `mvn -q -DskipTests package`
+  pelne pakowanie backendu razem z buildem Angulara w fazie `prepare-package`.
+
 ## Playbook 1: nowy adapter
 
 1. dodaj port i modele do `analysis.adapter.<system>`,
@@ -51,14 +67,23 @@ architektonicznych.
 1. dodaj go do `analysis.mcp.<capability>`,
 2. deleguj do adaptera albo use case'u,
 3. dopisz rejestracje przez `ToolCallbackProvider`,
-4. sprawdz bridge Copilota i testy MCP context.
+4. sprawdz bridge Copilota, policyke dostepu do tooli i testy MCP context.
 
 ## Playbook 4: zmiana AI
 
 1. prompt i request-specific zasady zmieniaj w preparation,
 2. stale zasady zmieniaj w skillu,
 3. nie przeciekaj modelami adapterow do providera AI,
-4. sprawdz parsowanie odpowiedzi i prepared prompt.
+4. sprawdz parsowanie odpowiedzi, prepared prompt i artifact/tool policy.
+
+## Playbook 5: zmiana job payloadu albo frontendu
+
+1. zaktualizuj kontrakt backendowy i projekcje `AnalysisJobResponse`,
+2. zaktualizuj modele TS w `frontend/src/app/core/models`,
+3. sprawdz komponenty widoku analizy i `/evidence`,
+4. odpal `src/test/java/pl/mkn/incidenttracker/ui`,
+5. odpal `cd frontend && npm test`,
+6. potwierdz `cd frontend && npm run build` albo `mvn -q -DskipTests package`.
 
 ## Checkpoint
 
@@ -66,3 +91,4 @@ architektonicznych.
   evidence, czy bezposrednio do providera AI?
 - Jak rozpoznasz, ze logika incidentowa trafila przypadkiem do adaptera?
 - Jakie testy odpalic po zmianie w `analysis.mcp`?
+- Jakie testy odpalic po zmianie job snapshotu albo komponentu Angular?

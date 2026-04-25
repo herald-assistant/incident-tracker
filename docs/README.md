@@ -9,6 +9,13 @@ Ten katalog ma trzy glowne obszary:
 3. `operational-context/`
    materialy pomocnicze do utrzymania katalogu operacyjnego.
 
+Dookola tej dokumentacji sa jeszcze dwa istotne runtime obszary:
+
+- `../src/main/resources/copilot/skills`
+  skille Copilota pakowane do runtime aplikacji,
+- `../src/main/resources/operational-context`
+  realny katalog operacyjny czytany przez enrichment provider.
+
 ## Od czego zaczac
 
 Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
@@ -28,6 +35,9 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
   source of truth dla architektury i zasad dalszego rozwoju.
 - `operational-context/`
   prompty i instrukcje utrzymania katalogu operacyjnego.
+- `../examples`
+  bardziej rozbudowane przyklady promptow i preferowanej kolejnosci
+  uzupelniania operational context.
 - `../frontend`
   zrodlowy workspace Angular dla ekranu operacyjnego.
 - `../src/main/resources/static`
@@ -37,6 +47,8 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 
 - `cd ../frontend && npm start`
   Angular dev server z proxy na lokalny backend Spring Boot.
+- `cd ../frontend && npm test`
+  Testy UI Angulara. Nie sa uruchamiane przez `mvn test`.
 - `cd ../frontend && npm run build`
   Produkcyjny build Angulara zapisujacy `index.html`, `js`, `css` i assets do
   `../src/main/resources/static`.

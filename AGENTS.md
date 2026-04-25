@@ -10,7 +10,8 @@ Glowne zalozenie:
 1. aplikacja zbiera evidence z systemow zewnetrznych,
 2. AI interpretuje evidence,
 3. AI moze dociagac dodatkowy kod z GitLaba przez tools,
-4. aplikacja zwraca diagnoze i rekomendowany kolejny krok.
+4. AI moze opcjonalnie zweryfikowac hipotezy danych przez DB tools,
+5. aplikacja zwraca diagnoze i rekomendowany kolejny krok.
 
 ## Najpierw przeczytaj
 
@@ -32,7 +33,8 @@ Przed wieksza zmiana zacznij od:
 - Evidence pipeline pozostaje deterministyczny na `AnalysisContext`, ale po
   kroku deployment context Dynatrace i GitLab deterministic moga byc pobierane
   rownolegle z tego samego snapshotu contextu.
-- GitLab ma dwa rozne capability:
+- GitLab ma trzy rozne capability:
+  - generyczny adapter i source resolve,
   - deterministic resolution deployment context i code references jako evidence
     provider,
   - AI-guided fetching przez tools.
@@ -60,11 +62,14 @@ Przed wieksza zmiana zacznij od:
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
   MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
   case'ow.
+- `frontend`
+  Zrodlowy workspace Angular dla operatora i helper widoku `/evidence`.
 - `src/main/resources/static`
-  Starter frontend serwowany bezposrednio przez Spring Boot jako `html + js +
-  scss + css`.
+  Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 - `src/main/resources/copilot/skills`
   Skille Copilota pakowane do runtime.
+- `src/main/resources/operational-context`
+  Runtime catalog systemow, procesow, repozytoriow i regul handoffu.
 
 ## Zasady rozwoju
 
@@ -112,6 +117,7 @@ Przed wieksza zmiana zacznij od:
 Podstawowe komendy:
 
 - `mvn -q clean test`
+- `cd frontend && npm test`
 - `mvn -q -DskipTests package`
 
 ## Lokalne AGENTS

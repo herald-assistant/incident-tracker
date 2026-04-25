@@ -37,6 +37,11 @@ Te dokumenty sa nadal source of truth dla architektury:
 3. `../architecture/03-runtime-flow.md`
 4. `../architecture/04-codex-continuation-guide.md`
 
+Przy pracy runtime warto miec obok jeszcze:
+
+- `../../src/main/resources/copilot/skills`
+- `../../src/main/resources/operational-context`
+
 ## Minimalny tryb startowy
 
 Jesli masz tylko 60-90 minut, przeczytaj najpierw:
@@ -50,9 +55,16 @@ Jesli masz tylko 60-90 minut, przeczytaj najpierw:
 ## Komendy startowe
 
 - `mvn -q clean test`
+- `cd frontend && npm test`
 - `mvn -q -DskipTests package`
 - `cd frontend && npm start`
 - `cd frontend && npm run build`
+
+Wazne:
+
+- `mvn test` nie uruchamia testow Angulara,
+- `mvn -q -DskipTests package` buduje tez frontend i kopiuje go do
+  `src/main/resources/static`.
 
 ## Co ma byc efektem
 

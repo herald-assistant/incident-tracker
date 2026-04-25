@@ -16,7 +16,7 @@ glowne, a ktore tylko pomocnicze.
 ### `GET /`
 
 Frontend operatorski, ktory uruchamia job-based flow i pokazuje postep,
-evidence, prompt i wynik.
+evidence, prompt, wynik oraz import/eksport zakonczonej analizy.
 
 ### `POST /analysis`
 
@@ -28,13 +28,14 @@ Start asynchronicznej analizy dla UI.
 
 ### `GET /analysis/jobs/{analysisId}`
 
-Polling statusu, krokow i wyniku.
+Polling statusu, krokow, prepared promptu, evidence i wyniku.
 
 ## Wejscia pomocnicze
 
 ### `GET /evidence`
 
 Widok diagnostyczny do recznego testowania helper endpointow adapterow.
+To route Angulara forwardowana przez Spring Boot do `index.html`.
 
 ### Helper endpointy adapterow
 
@@ -44,6 +45,7 @@ Widok diagnostyczny do recznego testowania helper endpointow adapterow.
 - `POST /api/gitlab/source/resolve/preview`
 
 To nie jest glowny flow analizy. To narzedzia dla developera i operatora.
+Nie ma osobnego helper endpointu Database capability.
 
 ## Przeczytaj w kodzie
 
@@ -57,10 +59,12 @@ To nie jest glowny flow analizy. To narzedzia dla developera i operatora.
 
 - otworz `GET /`,
 - otworz `GET /evidence`,
-- porownaj, jakie dane zwraca `POST /analysis` i `GET /analysis/jobs/{analysisId}`.
+- porownaj, jakie dane zwraca `POST /analysis` i `GET /analysis/jobs/{analysisId}`,
+- zobacz, ze job snapshot zwraca tez `preparedPrompt` i `toolEvidenceSections`.
 
 ## Checkpoint
 
 - Dlaczego UI korzysta glownie z job flow zamiast z `POST /analysis`?
 - Ktore endpointy mozna zmieniac tylko wtedy, gdy zmienia sie realna potrzeba
   operatorska?
+- Ktore dane sa tylko projekcja UI joba, a nie osobnym modelem domenowym?

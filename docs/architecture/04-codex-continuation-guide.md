@@ -24,10 +24,15 @@ Przy nowej sesji najlepiej zaczac od:
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
 - `AnalysisAiProvider`
+- `analysis.adapter.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
 - `analysis.evidence.provider.operationalcontext`
+- `analysis.mcp.database`
 - `frontend/`
+- `frontend/src/app`
+- `src/main/resources/copilot/skills`
+- `src/main/resources/operational-context`
 - `src/main/resources/static`
 
 ### Za GitHub Copilot SDK odpowiadaja glownie
@@ -35,6 +40,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.copilot.preparation`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
+- `CopilotArtifactService`
 
 ### Za GitLaba odpowiadaja glownie
 
@@ -131,6 +137,9 @@ Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba dociagniete
 przez AI tools podczas kroku `AI_ANALYSIS`.
+Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
+a route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
+GitLaba.
 
 ### Elastic helper flow
 
@@ -163,27 +172,29 @@ resources, tylko korzysta z query-based adaptera i wystawia typed
 
 ## Najbardziej naturalne kolejne kierunki
 
-### 1. Prezentacja evidence Dynatrace w UI
+### 1. Selektywne odblokowanie GitLab tools przy deterministic code evidence
 
-Dynatrace jest juz realny po stronie backendu.
-Naturalnym kolejnym krokiem jest czytelne pokazanie service matches, problems i
-metryk na froncie obok logow z Elastica.
+Obecnie przygotowanie sesji wycina cala grupe GitLab tools, jesli artefakty juz
+zawieraja `gitlab/resolved-code`.
+Naturalnym kolejnym krokiem jest bardziej precyzyjna polityka, np. zostawienie
+`gitlab_find_class_references` albo `gitlab_find_flow_context` dla scenariuszy
+code-to-DB, gdy deterministic evidence jest pomocne, ale niewystarczajace.
 
-### 2. Lepsza praca Copilota z repo
+### 2. Bogatsza prezentacja wynikow DB diagnostics i AI tool evidence
 
 Mozliwe kierunki:
 
-- statyczna mapa `kubernetes.container.name -> project candidates`,
-- bardziej precyzyjny ranking kandydatow,
-- dodatkowe narzedzia GitLaba,
-- twardsze limity eksploracji repo,
-- lepszy skill operacyjny.
+- lepsze streszczenia wynikow DB tools w UI,
+- pinowanie najwazniejszych wynikow AI tool calls,
+- czytelniejsze laczenie promptu, evidence i kodu dociagnietego przez AI,
+- lepsze porownanie "deterministic evidence" kontra "AI-guided reads".
 
-### 3. Wynik analizy bogatszy o uzasadnienie
+### 3. Trwalsza historia analiz
 
-Obecnie `rationale` jest parsowane po stronie AI, ale nie wraca do glownej
-odpowiedzi API.
-To moze byc sensowne pole diagnostyczne lub debug mode.
+Aktualny job flow trzyma stan w pamieci procesu i dobrze sluzy operatorowi
+pracujacemu "tu i teraz".
+Naturalnym kolejnym krokiem moze byc trwalsza historia analiz, katalog
+eksportow albo retention wynikow do review po czasie.
 
 ### 4. End-to-end i operational hardening
 
@@ -197,7 +208,8 @@ W dalszej kolejnosci:
 
 ### 5. Rozwoj frontendu operacyjnego
 
-Obecny ekran jest starterem.
+Obecny ekran jest juz sensownym narzedziem operatorskim, ale nadal jest miejsce
+na dalszy rozwoj.
 Naturalne kolejne kroki to:
 
 - historia analiz,
@@ -208,6 +220,7 @@ Naturalne kolejne kroki to:
 ## Szybkie komendy robocze
 
 - `cd frontend && npm start`
+- `cd frontend && npm test`
 - `cd frontend && npm run build`
 - `mvn -q clean test`
 - `mvn -q -DskipTests package`
