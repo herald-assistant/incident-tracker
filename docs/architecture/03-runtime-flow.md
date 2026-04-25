@@ -243,6 +243,10 @@ Na tym etapie:
 
 - ladujemy skill,
 - ladujemy tool definitions,
+- przycinamy tool definitions do allowlisty sesji i blokujemy lokalne
+  workspace/filesystem/shell tools,
+- nie wystawiamy GitLab ani Elasticsearch tools, jesli odpowiadajace im dane sa
+  juz dolaczone do sesji jako attachmenty,
 - skladamy prompt z danymi incydentu i evidence,
 - ustawiamy strategie permission handling.
 
@@ -268,6 +272,8 @@ To jest AI-guided dogranie dodatkowych logow po tym samym `correlationId`,
 gdy evidence z glownego flow jest zbyt skrotowe.
 Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
 `analysis.elasticsearch.*`.
+Ten tool nie jest jednak wystawiany do sesji, jesli attachmenty juz zawieraja
+evidence `elasticsearch/logs`.
 
 #### GitLab
 
@@ -280,6 +286,8 @@ Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
 
 To jest AI-guided repository exploration.
 Dynatrace nie ma tu osobnych tooli.
+Te tools nie sa jednak wystawiane do sesji, jesli attachmenty juz zawieraja
+deterministic evidence `gitlab/resolved-code`.
 
 W job flow odpowiedzi `gitlab_read_repository_file`,
 `gitlab_read_repository_file_chunk` i `gitlab_read_repository_file_chunks` sa

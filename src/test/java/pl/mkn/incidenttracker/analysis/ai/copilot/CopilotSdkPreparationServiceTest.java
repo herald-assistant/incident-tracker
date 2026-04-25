@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -79,7 +80,8 @@ class CopilotSdkPreparationServiceTest {
             assertNotNull(prepared.sessionConfig().getSessionId());
             assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
             assertFalse(prepared.sessionConfig().isStreaming());
-            assertEquals(6, prepared.sessionConfig().getTools().size());
+            assertEquals(List.of(), prepared.sessionConfig().getTools());
+            assertEquals(List.of(), prepared.sessionConfig().getAvailableTools());
             assertEquals(1, prepared.sessionConfig().getSkillDirectories().size());
             assertTrue(prepared.sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.sessionConfig().getOnPermissionRequest());
@@ -98,14 +100,17 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("02-dynatrace-runtime-signals.md"));
             assertTrue(prompt.contains("03-gitlab-resolved-code.md"));
             assertTrue(prompt.contains("Available capability groups:"));
-            assertTrue(prompt.contains("GitLab code: search broadly across relevant repositories and read focused chunks/files to explain the failing code path, repository predicates, integrations and affected functional flow."));
+            assertTrue(prompt.contains("- none; rely on the attached artifacts for this session."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
             assertTrue(prompt.contains("operator, tester, analyst, or junior/mid developer"));
             assertTrue(prompt.contains("may not know the affected system area"));
             assertTrue(prompt.contains("Hard rules:"));
             assertTrue(prompt.contains("Treat environment, gitLabBranch and gitLabGroup as fixed session context."));
+            assertTrue(prompt.contains("Only the explicitly listed capability groups are enabled for this session."));
+            assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
             assertTrue(prompt.contains("Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality."));
+            assertTrue(prompt.contains("GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding attachment data is missing."));
             assertTrue(prompt.contains("If attached artifacts already contain enough evidence and the affected flow is understandable, answer directly."));
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
@@ -134,6 +139,10 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"00-incident-manifest.json\""));
             assertTrue(manifestContent.contains("\"01-elasticsearch-logs.md\""));
             assertTrue(manifestContent.contains("\"02-dynatrace-runtime-signals.md\""));
+            assertTrue(manifestContent.contains("\"toolPolicy\""));
+            assertTrue(manifestContent.contains("\"localWorkspaceAccessBlocked\" : true"));
+            assertTrue(manifestContent.contains("\"enabledToolNames\" : [ ]"));
+            assertTrue(manifestContent.contains("\"name\" : \"gitlab\""));
 
             var logsAttachment = (Attachment) prepared.messageOptions().getAttachments().get(1);
             assertEquals("01-elasticsearch-logs.md", logsAttachment.displayName());
@@ -168,7 +177,7 @@ class CopilotSdkPreparationServiceTest {
     void shouldBuildSessionBoundToolContextForBridgeAndSessionConfig() {
         var properties = baseProperties();
         properties.setSkillResourceRoots(List.of("copilot/skills"));
-        var request = sampleRequest();
+        var request = requestWithoutToolCoveredEvidence();
         var bridge = mock(CopilotSdkToolBridge.class);
         var expectedTools = List.of(ToolDefinition.createSkipPermission(
                 "gitlab_read_repository_file",
@@ -197,8 +206,88 @@ class CopilotSdkPreparationServiceTest {
                             && context.copilotSessionId().startsWith("analysis-")
             ));
             assertEquals(expectedTools, prepared.sessionConfig().getTools());
+            assertEquals(List.of("gitlab_read_repository_file"), prepared.sessionConfig().getAvailableTools());
             assertNotNull(prepared.sessionConfig().getSessionId());
             assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
+        }
+    }
+
+    @Test
+    void shouldAllowOnlyExplicitSpringToolsWhenAttachmentsDoNotAlreadyCoverThem() {
+        var properties = baseProperties();
+        var request = requestWithoutToolCoveredEvidence();
+        var bridge = mock(CopilotSdkToolBridge.class);
+        var expectedTools = List.of(
+                ToolDefinition.createSkipPermission(
+                        "gitlab_read_repository_file",
+                        "Read repository file",
+                        Map.of("type", "object", "properties", Map.of()),
+                        invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
+                ),
+                ToolDefinition.createSkipPermission(
+                        "db_get_scope",
+                        "Get DB scope",
+                        Map.of("type", "object", "properties", Map.of()),
+                        invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
+                )
+        );
+        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
+
+        var service = new CopilotSdkPreparationService(
+                properties,
+                bridge,
+                new CopilotSkillRuntimeLoader(properties),
+                new CopilotAttachmentArtifactService(properties, objectMapper)
+        );
+
+        try (var prepared = service.prepare(request)) {
+            assertEquals(expectedTools, prepared.sessionConfig().getTools());
+            assertEquals(
+                    Set.of("gitlab_read_repository_file", "db_get_scope"),
+                    Set.copyOf(prepared.sessionConfig().getAvailableTools())
+            );
+        }
+    }
+
+    @Test
+    void shouldFilterElasticAndGitLabToolsWhenEquivalentAttachmentDataAlreadyExists() {
+        var properties = baseProperties();
+        var request = sampleRequest();
+        var bridge = mock(CopilotSdkToolBridge.class);
+        var elasticTool = ToolDefinition.createSkipPermission(
+                "elastic_search_logs_by_correlation_id",
+                "Search logs",
+                Map.of("type", "object", "properties", Map.of()),
+                invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
+        );
+        var gitLabTool = ToolDefinition.createSkipPermission(
+                "gitlab_read_repository_file",
+                "Read repository file",
+                Map.of("type", "object", "properties", Map.of()),
+                invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
+        );
+        var dbTool = ToolDefinition.createSkipPermission(
+                "db_get_scope",
+                "Get DB scope",
+                Map.of("type", "object", "properties", Map.of()),
+                invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
+        );
+        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class)))
+                .thenReturn(List.of(elasticTool, gitLabTool, dbTool));
+
+        var service = new CopilotSdkPreparationService(
+                properties,
+                bridge,
+                new CopilotSkillRuntimeLoader(properties),
+                new CopilotAttachmentArtifactService(properties, objectMapper)
+        );
+
+        try (var prepared = service.prepare(request)) {
+            assertEquals(List.of(dbTool), prepared.sessionConfig().getTools());
+            assertEquals(List.of("db_get_scope"), prepared.sessionConfig().getAvailableTools());
+            assertTrue(prepared.prompt().contains("Database diagnostics: verify data-dependent hypotheses"));
+            assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
+            assertFalse(prepared.prompt().contains("GitLab code: search broadly across relevant repositories"));
         }
     }
 
@@ -397,6 +486,26 @@ class CopilotSdkPreparationServiceTest {
                                                         """
                                         ),
                                         new AnalysisEvidenceAttribute("contentTruncated", "false")
+                                )
+                        ))
+                ))
+        );
+    }
+
+    private AnalysisAiAnalysisRequest requestWithoutToolCoveredEvidence() {
+        return new AnalysisAiAnalysisRequest(
+                "timeout-123",
+                "dev3",
+                "release/2026.04",
+                "sample/runtime",
+                List.of(new AnalysisEvidenceSection(
+                        "operational-context",
+                        "matched-context",
+                        List.of(new AnalysisEvidenceItem(
+                                "Operational context summary",
+                                List.of(
+                                        new AnalysisEvidenceAttribute("team", "Billing Team"),
+                                        new AnalysisEvidenceAttribute("process", "Rozliczenie katalogu")
                                 )
                         ))
                 ))

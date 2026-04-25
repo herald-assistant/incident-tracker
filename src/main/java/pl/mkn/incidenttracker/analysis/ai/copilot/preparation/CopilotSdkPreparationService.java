@@ -28,7 +28,9 @@ public class CopilotSdkPreparationService {
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
         var toolSessionContext = buildToolSessionContext(request);
-        var tools = toolBridge.buildToolDefinitions(toolSessionContext);
+        var registeredTools = toolBridge.buildToolDefinitions(toolSessionContext);
+        var toolAccessPolicy = CopilotToolAccessPolicy.from(request, registeredTools);
+        var tools = toolAccessPolicy.enabledTools();
         var artifactDescriptors = attachmentArtifactService.describe(request);
         var skillDirectories = skillRuntimeLoader.resolveSkillDirectories();
 
@@ -52,6 +54,7 @@ public class CopilotSdkPreparationService {
                 .setWorkingDirectory(properties.getWorkingDirectory())
                 .setStreaming(false)
                 .setTools(tools)
+                .setAvailableTools(toolAccessPolicy.availableToolNames())
                 .setSkillDirectories(skillDirectories)
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
@@ -64,8 +67,8 @@ public class CopilotSdkPreparationService {
             sessionConfig.setReasoningEffort(properties.getReasoningEffort());
         }
 
-        String prompt = buildPrompt(request, tools, artifactDescriptors);
-        var attachmentArtifacts = attachmentArtifactService.create(request);
+        String prompt = buildPrompt(request, toolAccessPolicy, artifactDescriptors);
+        var attachmentArtifacts = attachmentArtifactService.create(request, toolAccessPolicy);
 
         try {
             var messageOptions = new MessageOptions()
@@ -88,8 +91,9 @@ public class CopilotSdkPreparationService {
 
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
         var tools = toolBridge.buildToolDefinitions(buildToolSessionContext(request));
+        var toolAccessPolicy = CopilotToolAccessPolicy.from(request, tools);
         var artifactDescriptors = attachmentArtifactService.describe(request);
-        return buildPrompt(request, tools, artifactDescriptors);
+        return buildPrompt(request, toolAccessPolicy, artifactDescriptors);
     }
 
     private CopilotToolSessionContext buildToolSessionContext(AnalysisAiAnalysisRequest request) {
@@ -108,7 +112,7 @@ public class CopilotSdkPreparationService {
 
     private String buildPrompt(
             AnalysisAiAnalysisRequest request,
-            List<ToolDefinition> tools,
+            CopilotToolAccessPolicy toolAccessPolicy,
             List<CopilotAttachmentArtifactService.AttachmentArtifactDescriptor> artifactDescriptors
     ) {
         return """
@@ -130,10 +134,13 @@ public class CopilotSdkPreparationService {
                 - Analyze the attached artifacts as the primary source of truth.
                 - Read `00-incident-manifest.json` first and use it as the attachment index.
                 - Treat environment, gitLabBranch and gitLabGroup as fixed session context.
+                - Only the explicitly listed capability groups are enabled for this session.
+                - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
                 - Do not assume facts unsupported by attached artifacts or tool results.
                 - Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality.
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
+                - GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding attachment data is missing.
                 - If attached artifacts already contain enough evidence and the affected flow is understandable, answer directly.
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
@@ -166,42 +173,28 @@ public class CopilotSdkPreparationService {
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
                 formatAttachedArtifacts(artifactDescriptors),
-                formatAvailableToolGroups(tools)
+                formatAvailableToolGroups(toolAccessPolicy)
         );
     }
 
-    private String formatAvailableToolGroups(Iterable<ToolDefinition> tools) {
-        boolean elastic = false;
-        boolean gitlab = false;
-        boolean database = false;
-
-        for (var tool : tools) {
-            var name = tool.name();
-
-            if (name.startsWith("elastic_")) {
-                elastic = true;
-            } else if (name.startsWith("gitlab_")) {
-                gitlab = true;
-            } else if (name.startsWith("db_")) {
-                database = true;
-            }
-        }
-
+    private String formatAvailableToolGroups(CopilotToolAccessPolicy toolAccessPolicy) {
         var rendered = new StringBuilder();
 
-        if (elastic) {
+        if (toolAccessPolicy.elasticToolsEnabled()) {
             rendered.append("- Elasticsearch logs: fetch additional logs for the current incident correlationId.\n");
         }
 
-        if (gitlab) {
+        if (toolAccessPolicy.gitLabToolsEnabled()) {
             rendered.append("- GitLab code: search broadly across relevant repositories and read focused chunks/files to explain the failing code path, repository predicates, integrations and affected functional flow.\n");
         }
 
-        if (database) {
+        if (toolAccessPolicy.databaseToolsEnabled()) {
             rendered.append("- Database diagnostics: verify data-dependent hypotheses by inspecting DB scope, finding/describing tables, counting rows, checking predicates, references, process states and minimal samples.\n");
         }
 
-        return rendered.length() > 0 ? rendered.toString().trim() : "- none";
+        return rendered.length() > 0
+                ? rendered.toString().trim()
+                : "- none; rely on the attached artifacts for this session.";
     }
 
     private String renderGitLabGroup(String gitLabGroup) {

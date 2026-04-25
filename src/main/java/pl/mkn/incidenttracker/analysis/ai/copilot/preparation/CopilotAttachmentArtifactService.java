@@ -57,7 +57,10 @@ public class CopilotAttachmentArtifactService {
         return List.copyOf(descriptors);
     }
 
-    public CopilotAttachmentArtifactBundle create(AnalysisAiAnalysisRequest request) {
+    public CopilotAttachmentArtifactBundle create(
+            AnalysisAiAnalysisRequest request,
+            CopilotToolAccessPolicy toolAccessPolicy
+    ) {
         var descriptors = describe(request);
         Path stagingDirectory = null;
 
@@ -67,7 +70,7 @@ public class CopilotAttachmentArtifactService {
 
             writeJsonArtifact(
                     stagingDirectory.resolve("00-incident-manifest.json"),
-                    buildManifestPayload(request, descriptors)
+                    buildManifestPayload(request, descriptors, toolAccessPolicy)
             );
             attachments.add(new Attachment(
                     "file",
@@ -118,7 +121,8 @@ public class CopilotAttachmentArtifactService {
 
     private Map<String, Object> buildManifestPayload(
             AnalysisAiAnalysisRequest request,
-            List<AttachmentArtifactDescriptor> descriptors
+            List<AttachmentArtifactDescriptor> descriptors,
+            CopilotToolAccessPolicy toolAccessPolicy
     ) {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("correlationId", request.correlationId());
@@ -131,7 +135,20 @@ public class CopilotAttachmentArtifactService {
                 "attachmentsArePrimarySourceOfTruth", true,
                 "useToolsOnlyForGapFilling", true
         ));
+        payload.put("toolPolicy", buildToolPolicyPayload(toolAccessPolicy));
         payload.put("artifacts", descriptors.stream().map(this::toManifestEntry).toList());
+        return payload;
+    }
+
+    private Map<String, Object> buildToolPolicyPayload(CopilotToolAccessPolicy toolAccessPolicy) {
+        var policy = toolAccessPolicy != null
+                ? toolAccessPolicy
+                : new CopilotToolAccessPolicy(List.of(), List.of(), true, false, false, false, false, false);
+        var payload = new LinkedHashMap<String, Object>();
+        payload.put("localWorkspaceAccessBlocked", policy.localWorkspaceAccessBlocked());
+        payload.put("enabledToolNames", policy.availableToolNames());
+        payload.put("enabledCapabilityGroups", policy.enabledCapabilityGroups());
+        payload.put("disabledCapabilityGroups", policy.disabledCapabilityGroups());
         return payload;
     }
 

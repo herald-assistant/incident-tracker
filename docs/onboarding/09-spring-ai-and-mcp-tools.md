@@ -61,7 +61,14 @@ Aktualny zestaw Database MCP obejmuje:
 - session-bound context, np. `environment`, `correlationId`, `gitLabGroup` albo
   `gitLabBranch`, powinien trafic do toola przez `ToolContext`, a nie przez
   model-facing parametry,
-- ten sam tool moze byc widoczny w kontekscie Spring AI i w sesji Copilota.
+- ten sam tool moze byc widoczny w kontekscie Spring AI i w sesji Copilota,
+- sama rejestracja Spring toola nie oznacza jeszcze, ze trafi on do konkretnej
+  sesji Copilota:
+  `CopilotSdkPreparationService` moze go odfiltrowac, jesli attachmenty juz
+  dostarczyly odpowiadajace mu dane,
+- sesja Copilota dostaje tez allowliste `availableTools`, zeby zablokowac
+  lokalne workspace/filesystem/shell tools i zostawic tylko jawnie dopuszczone
+  MCP capability.
 
 ## Sprawdz lokalnie
 

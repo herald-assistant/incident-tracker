@@ -285,3 +285,27 @@ Powod:
 - nadal zachowujemy jeden artefakt deployowalny po stronie Spring Boot,
 - lokalny dev moze dzialac przez `npm start` z proxy na backend, bez
   osobnego deployu frontendu.
+
+## 17. Sesja Copilota ma allowliste tooli i blokade lokalnego workspace
+
+Sesja Copilota nie powinna miec dostepu do lokalnego dysku, terminala ani
+domyslnych workspace tools podczas glownego flow `/analysis`.
+
+Powod:
+
+- analiza ma opierac sie najpierw na attachmentach wygenerowanych z evidence,
+- dostep do lokalnego repo lub PowerShella wprowadza niepotrzebna sciezke
+  eksploracji poza zakresem incydentu,
+- chcemy miec jawna, backendowa kontrole nad tym, jakie capability sa dostepne
+  modelowi w danej sesji.
+
+Aktualny model:
+
+- `SessionConfig.availableTools` ogranicza sesje do jawnie zarejestrowanych
+  Spring tools,
+- lokalne filesystem/shell tools nie sa wystawiane do sesji,
+- Elasticsearch i GitLab capability sa attachment-gated:
+  jesli odpowiadajace im dane sa juz dolaczone do sesji jako attachmenty,
+  backend nie wystawia tych tool groups do modelu,
+- tools pozostaja fallbackiem tylko dla brakujacej widocznosci, a nie pierwszym
+  krokiem eksploracji.
