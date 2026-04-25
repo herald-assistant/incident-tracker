@@ -266,6 +266,11 @@ const GITLAB_ATTRIBUTE_ORDER: Record<string, number> = {
   content: 999
 };
 
+const TOOL_EVIDENCE_SECTION_ORDER: Record<string, number> = {
+  'gitlab|tool-fetched-code': 10,
+  'database|tool-results': 20
+};
+
 const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
   {
     id: 'containerName',
@@ -485,7 +490,7 @@ function resolveStepSections(
   toolEvidenceSections: AnalysisEvidenceSection[]
 ): AnalysisEvidenceSection[] {
   if (step.code === 'AI_ANALYSIS') {
-    return toolEvidenceSections;
+    return [...toolEvidenceSections].sort(compareToolEvidenceSections);
   }
 
   const links = resolveProducedEvidenceLinks(step);
@@ -498,6 +503,22 @@ function resolveStepSections(
       (link) => section.provider === link.provider && section.category === link.category
     )
   );
+}
+
+function compareToolEvidenceSections(
+  left: AnalysisEvidenceSection,
+  right: AnalysisEvidenceSection
+): number {
+  const leftKey = `${String(left.provider || '')}|${String(left.category || '')}`;
+  const rightKey = `${String(right.provider || '')}|${String(right.category || '')}`;
+  const leftOrder = TOOL_EVIDENCE_SECTION_ORDER[leftKey] ?? 500;
+  const rightOrder = TOOL_EVIDENCE_SECTION_ORDER[rightKey] ?? 500;
+
+  if (leftOrder !== rightOrder) {
+    return leftOrder - rightOrder;
+  }
+
+  return leftKey.localeCompare(rightKey);
 }
 
 function buildEvidenceFlowMeta(step: AnalysisJobStepResponse): string[] {
@@ -802,6 +823,29 @@ function normalizeDefaultEvidenceAttribute(
       ...attribute,
       name: 'projectNameHint'
     };
+  }
+
+  if (section.provider === 'database' && section.category === 'tool-results') {
+    if (attribute.name === 'databaseAlias') {
+      return {
+        ...attribute,
+        name: 'baza'
+      };
+    }
+
+    if (attribute.name === 'parameters') {
+      return {
+        ...attribute,
+        name: 'parametry'
+      };
+    }
+
+    if (attribute.name === 'result') {
+      return {
+        ...attribute,
+        name: 'rezultat'
+      };
+    }
   }
 
   return attribute;

@@ -29,6 +29,7 @@ const SECTION_TITLES: Record<string, string> = {
   'dynatrace|runtime-signals': 'Dynatrace · Sygnały runtime',
   'gitlab|resolved-code': 'GitLab · Kod źródłowy',
   'gitlab|tool-fetched-code': 'GitLab · Pliki pobrane przez AI',
+  'database|tool-results': 'Baza danych · Dane pobrane przez AI',
   'operational-context|matched-context': 'Kontekst operacyjny · Dopasowania'
 };
 
@@ -36,6 +37,10 @@ const LARGE_TEXT_ATTRIBUTES = new Set([
   'message',
   'exception',
   'content',
+  'parameters',
+  'parametry',
+  'result',
+  'rezultat',
   'rationale',
   'evidenceSummary'
 ]);

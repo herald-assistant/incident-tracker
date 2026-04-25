@@ -204,6 +204,31 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).toContain('edge-client-service');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
   });
+
+  it('should render database tool results below GitLab tool evidence on the final analysis step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('toolEvidenceSections', [
+      buildAiToolDatabaseSection(),
+      buildAiToolGitLabSection()
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const content = compiled.textContent || '';
+
+    expect(content).toContain('GitLab · Pliki pobrane przez AI');
+    expect(content).toContain('Baza danych · Dane pobrane przez AI');
+    expect(content).toContain('db_count_rows');
+    expect(content).toContain('"tableName": "ORDER_EVENT"');
+    expect(content).toContain('"count": 3');
+    expect(content.indexOf('GitLab · Pliki pobrane przez AI')).toBeLessThan(
+      content.indexOf('Baza danych · Dane pobrane przez AI')
+    );
+  });
 });
 
 function buildDynatraceStep(): AnalysisJobStepResponse {
@@ -530,6 +555,52 @@ function buildAiToolGitLabSection(): AnalysisEvidenceSection {
             name: 'content',
             value:
               'public class CatalogGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}'
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function buildAiToolDatabaseSection(): AnalysisEvidenceSection {
+  return {
+    provider: 'database',
+    category: 'tool-results',
+    items: [
+      {
+        title: 'db_count_rows',
+        attributes: [
+          { name: 'environment', value: 'zt002' },
+          { name: 'databaseAlias', value: 'oracle' },
+          {
+            name: 'parameters',
+            value: `{
+  "table": {
+    "schema": "CLP",
+    "tableName": "ORDER_EVENT"
+  },
+  "filters": [
+    {
+      "column": "correlation_id",
+      "operator": "EQ",
+      "values": ["corr-123"]
+    }
+  ]
+}`
+          },
+          {
+            name: 'result',
+            value: `{
+  "environment": "zt002",
+  "databaseAlias": "oracle",
+  "table": {
+    "schema": "CLP",
+    "tableName": "ORDER_EVENT"
+  },
+  "count": 3,
+  "appliedFilters": ["CORRELATION_ID = corr-123"],
+  "warnings": []
+}`
           }
         ]
       }

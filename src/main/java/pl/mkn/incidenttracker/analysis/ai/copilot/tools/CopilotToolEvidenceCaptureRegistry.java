@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class CopilotToolEvidenceCaptureRegistry {
 
+    private static final String DATABASE_PROVIDER = "database";
+    private static final String DATABASE_TOOL_CATEGORY = "tool-results";
     private static final String GITLAB_PROVIDER = "gitlab";
     private static final String GITLAB_TOOL_CATEGORY = "tool-fetched-code";
     private static final String TOOL_NAME_FILE = "gitlab_read_repository_file";
@@ -56,7 +59,13 @@ public class CopilotToolEvidenceCaptureRegistry {
         sessionAccumulators.remove(sessionId);
     }
 
-    public void captureToolResult(String sessionId, String toolName, String rawResult) {
+    public void captureToolResult(
+            String sessionId,
+            String toolCallId,
+            String toolName,
+            String rawArguments,
+            String rawResult
+    ) {
         if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(toolName) || !StringUtils.hasText(rawResult)) {
             return;
         }
@@ -70,7 +79,9 @@ public class CopilotToolEvidenceCaptureRegistry {
             case TOOL_NAME_FILE -> captureGitLabFile(rawResult, accumulator);
             case TOOL_NAME_FILE_CHUNK -> captureGitLabFileChunk(rawResult, accumulator);
             case TOOL_NAME_FILE_CHUNKS -> captureGitLabFileChunks(rawResult, accumulator);
-            default -> null;
+            default -> isDatabaseTool(toolName)
+                    ? captureDatabaseToolResult(toolCallId, toolName, rawArguments, rawResult, accumulator)
+                    : null;
         };
 
         if (updatedSection == null || !updatedSection.hasItems()) {
@@ -88,6 +99,30 @@ public class CopilotToolEvidenceCaptureRegistry {
                     exception
             );
         }
+    }
+
+    private AnalysisEvidenceSection captureDatabaseToolResult(
+            String toolCallId,
+            String toolName,
+            String rawArguments,
+            String rawResult,
+            SessionArtifactAccumulator accumulator
+    ) {
+        var resultNode = readJsonNode(rawResult);
+        var argumentsNode = readJsonNode(rawArguments);
+        var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+        addAttribute(attributes, "environment", readTopLevelText(resultNode, "environment"));
+        addAttribute(attributes, "databaseAlias", readTopLevelText(resultNode, "databaseAlias"));
+        addAttribute(attributes, "parameters", prettyPayload(argumentsNode, rawArguments, "{}"));
+        addAttribute(attributes, "result", prettyPayload(resultNode, rawResult, ""));
+
+        return accumulator.appendDatabaseItem(
+                databaseToolKey(toolCallId, toolName),
+                new AnalysisEvidenceItem(
+                        databaseToolTitle(toolName),
+                        List.copyOf(attributes)
+                )
+        );
     }
 
     private AnalysisEvidenceSection captureGitLabFile(
@@ -232,6 +267,51 @@ public class CopilotToolEvidenceCaptureRegistry {
         }
     }
 
+    private JsonNode readJsonNode(String rawPayload) {
+        if (!StringUtils.hasText(rawPayload)) {
+            return null;
+        }
+
+        try {
+            return objectMapper.readTree(rawPayload);
+        }
+        catch (JsonProcessingException exception) {
+            log.warn("Failed to parse tool payload as JSON. reason={}", exception.getMessage());
+            return null;
+        }
+    }
+
+    private String prettyPayload(JsonNode payload, String rawPayload, String fallback) {
+        if (payload == null || payload.isNull()) {
+            return StringUtils.hasText(rawPayload) ? rawPayload.trim() : fallback;
+        }
+
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
+        }
+        catch (JsonProcessingException exception) {
+            log.warn("Failed to pretty print tool payload. reason={}", exception.getMessage());
+            return StringUtils.hasText(rawPayload) ? rawPayload.trim() : fallback;
+        }
+    }
+
+    private String readTopLevelText(JsonNode payload, String fieldName) {
+        if (payload == null || !payload.isObject()) {
+            return null;
+        }
+
+        var field = payload.get(fieldName);
+        if (field == null || field.isNull()) {
+            return null;
+        }
+
+        if (field.isValueNode()) {
+            return field.asText();
+        }
+
+        return prettyPayload(field, field.toString(), null);
+    }
+
     private <T> List<T> safeList(List<T> values) {
         return values != null ? values : List.of();
     }
@@ -258,6 +338,21 @@ public class CopilotToolEvidenceCaptureRegistry {
         return "GitLab tool fetched file";
     }
 
+    private boolean isDatabaseTool(String toolName) {
+        return StringUtils.hasText(toolName) && toolName.trim().startsWith("db_");
+    }
+
+    private String databaseToolKey(String toolCallId, String toolName) {
+        if (StringUtils.hasText(toolCallId)) {
+            return toolCallId.trim();
+        }
+        return "db-tool::" + safeKeyPart(toolName);
+    }
+
+    private String databaseToolTitle(String toolName) {
+        return StringUtils.hasText(toolName) ? toolName.trim() : "database-tool";
+    }
+
     private String safeKeyPart(String value) {
         return StringUtils.hasText(value) ? value.trim() : "-";
     }
@@ -269,10 +364,11 @@ public class CopilotToolEvidenceCaptureRegistry {
 
     private record SessionArtifactAccumulator(
             AnalysisAiToolEvidenceListener listener,
-            LinkedHashMap<String, AnalysisEvidenceItem> gitLabItems
+            LinkedHashMap<String, AnalysisEvidenceItem> gitLabItems,
+            LinkedHashMap<String, AnalysisEvidenceItem> databaseItems
     ) {
         private SessionArtifactAccumulator(AnalysisAiToolEvidenceListener listener) {
-            this(listener, new LinkedHashMap<>());
+            this(listener, new LinkedHashMap<>(), new LinkedHashMap<>());
         }
 
         private synchronized AnalysisEvidenceSection upsertGitLabItem(String key, AnalysisEvidenceItem candidate) {
@@ -290,6 +386,25 @@ public class CopilotToolEvidenceCaptureRegistry {
                     GITLAB_PROVIDER,
                     GITLAB_TOOL_CATEGORY,
                     List.copyOf(gitLabItems.values())
+            );
+        }
+
+        private synchronized AnalysisEvidenceSection appendDatabaseItem(
+                String key,
+                AnalysisEvidenceItem candidate
+        ) {
+            var effectiveKey = key;
+            if (!StringUtils.hasText(effectiveKey) || databaseItems.containsKey(effectiveKey)) {
+                effectiveKey = (StringUtils.hasText(key) ? key : "db-tool")
+                        + "::"
+                        + (databaseItems.size() + 1);
+            }
+
+            databaseItems.put(effectiveKey, candidate);
+            return new AnalysisEvidenceSection(
+                    DATABASE_PROVIDER,
+                    DATABASE_TOOL_CATEGORY,
+                    List.copyOf(databaseItems.values())
             );
         }
     }

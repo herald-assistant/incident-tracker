@@ -93,7 +93,9 @@ public class CopilotSdkToolBridge {
             var rawResult = callback.call(argumentsJson, toolContext);
             toolEvidenceCaptureRegistry.captureToolResult(
                     invocation.getSessionId(),
+                    invocation.getToolCallId(),
                     invocation.getToolName(),
+                    argumentsJson,
                     rawResult
             );
             var parsedResult = parseToolResult(rawResult);
