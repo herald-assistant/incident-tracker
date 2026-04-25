@@ -735,6 +735,177 @@
                               </section>
                             }
                           </div>
+                        } @else if (section.variant === 'database-tool-panels') {
+                          @if (section.databaseTools.length === 0) {
+                            <div class="empty-state">
+                              AI nie pobrało dodatkowych danych z bazy danych w tym kroku.
+                            </div>
+                          } @else {
+                            <div class="database-tool-results">
+                              <div class="database-tool-results__intro">
+                                <div>
+                                  <p class="result-card-label">Co AI sprawdziło w bazie danych</p>
+                                  <p class="database-tool-results__description">
+                                    Każda karta pokazuje jedno wywołanie narzędzia DB: jaki był zakres
+                                    sprawdzenia, co zostało zwrócone i jaki z tego płynie wniosek.
+                                  </p>
+                                </div>
+
+                                <div class="database-tool-results__summary">
+                                  <span class="database-tool-results__badge">
+                                    Wywołania {{ section.databaseTools.length }}
+                                  </span>
+                                  <span class="database-tool-results__badge">
+                                    Typy narzędzi {{ section.databaseToolTypeCount }}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div class="database-tool-card-list">
+                                @for (tool of section.databaseTools; track tool.key) {
+                                  <article class="database-tool-card">
+                                    <div class="database-tool-card__header">
+                                      <div class="database-tool-card__header-copy">
+                                        <p class="database-tool-card__eyebrow">Sprawdzenie w bazie</p>
+                                        <h5 class="database-tool-card__title">{{ tool.title }}</h5>
+                                        <p class="database-tool-card__subtitle">{{ tool.scopeLabel }}</p>
+                                      </div>
+
+                                      <div class="database-tool-card__badges">
+                                        <span class="database-tool-card__badge database-tool-card__badge--tool">
+                                          {{ tool.toolName }}
+                                        </span>
+                                        <span class="database-tool-card__badge">{{ tool.environment }}</span>
+                                        <span class="database-tool-card__badge">{{ tool.databaseAlias }}</span>
+                                      </div>
+                                    </div>
+
+                                    <p class="database-tool-card__summary">{{ tool.summary }}</p>
+
+                                    @if (tool.metric; as metric) {
+                                      <div
+                                        class="database-tool-card__metric"
+                                        [class.database-tool-card__metric--success]="metric.tone === 'success'"
+                                        [class.database-tool-card__metric--warning]="metric.tone === 'warning'"
+                                      >
+                                        <span class="database-tool-card__metric-label">{{ metric.label }}</span>
+                                        <strong class="database-tool-card__metric-value">
+                                          {{ metric.value }}
+                                        </strong>
+                                      </div>
+                                    }
+
+                                    @if (tool.parameterFields.length > 0) {
+                                      <section class="database-tool-card__section">
+                                        <h6 class="database-tool-card__section-title">Zakres sprawdzenia</h6>
+                                        <div class="attribute-grid">
+                                          @for (field of tool.parameterFields; track field.label) {
+                                            <span class="attribute-name">{{ field.label }}</span>
+                                            <span class="attribute-value">{{ field.value }}</span>
+                                          }
+                                        </div>
+                                      </section>
+                                    }
+
+                                    @if (tool.resultFields.length > 0) {
+                                      <section class="database-tool-card__section">
+                                        <h6 class="database-tool-card__section-title">Najważniejszy wynik</h6>
+                                        <div class="attribute-grid">
+                                          @for (field of tool.resultFields; track field.label) {
+                                            <span class="attribute-name">{{ field.label }}</span>
+                                            <span class="attribute-value">{{ field.value }}</span>
+                                          }
+                                        </div>
+                                      </section>
+                                    }
+
+                                    @if (tool.listBlocks.length > 0) {
+                                      <div class="database-tool-card__lists">
+                                        @for (block of tool.listBlocks; track block.title) {
+                                          <section
+                                            class="database-tool-card__section database-tool-card__section--list"
+                                            [class.database-tool-card__section--warning]="block.tone === 'warning'"
+                                          >
+                                            <h6 class="database-tool-card__section-title">{{ block.title }}</h6>
+                                            <ul class="database-tool-card__list">
+                                              @for (entry of block.items; track entry) {
+                                                <li>{{ entry }}</li>
+                                              }
+                                            </ul>
+                                          </section>
+                                        }
+                                      </div>
+                                    }
+
+                                    @if (tool.tableViews.length > 0) {
+                                      <div class="database-tool-card__tables">
+                                        @for (table of tool.tableViews; track table.title) {
+                                          <section class="database-tool-card__section">
+                                            <div class="database-tool-card__table-header">
+                                              <h6 class="database-tool-card__section-title">{{ table.title }}</h6>
+                                              @if (table.truncated) {
+                                                <span class="database-tool-card__table-note">
+                                                  Pokazano pierwsze {{ table.rows.length }} wierszy
+                                                </span>
+                                              }
+                                            </div>
+
+                                            <div
+                                              class="database-tool-table"
+                                              [style.--database-tool-columns]="table.columns.length"
+                                            >
+                                              <div class="database-tool-table__header">
+                                                @for (column of table.columns; track column) {
+                                                  <span class="database-tool-table__cell database-tool-table__cell--header">
+                                                    {{ column }}
+                                                  </span>
+                                                }
+                                              </div>
+
+                                              @for (row of table.rows; track $index) {
+                                                <div class="database-tool-table__row">
+                                                  @for (cell of row; track $index) {
+                                                    <span class="database-tool-table__cell">{{ cell }}</span>
+                                                  }
+                                                </div>
+                                              }
+                                            </div>
+                                          </section>
+                                        }
+                                      </div>
+                                    }
+
+                                    @if (tool.warnings.length > 0) {
+                                      <section class="database-tool-card__section database-tool-card__section--warning">
+                                        <h6 class="database-tool-card__section-title">Warningi</h6>
+                                        <ul class="database-tool-card__list">
+                                          @for (warning of tool.warnings; track warning) {
+                                            <li>{{ warning }}</li>
+                                          }
+                                        </ul>
+                                      </section>
+                                    }
+
+                                    <details class="database-tool-card__technical">
+                                      <summary>Szczegóły techniczne</summary>
+
+                                      <div class="attribute-list">
+                                        <div class="attribute-row attribute-row--block">
+                                          <span class="attribute-name">parametry</span>
+                                          <pre class="attribute-block">{{ tool.rawParameters }}</pre>
+                                        </div>
+
+                                        <div class="attribute-row attribute-row--block">
+                                          <span class="attribute-name">rezultat</span>
+                                          <pre class="attribute-block">{{ tool.rawResult }}</pre>
+                                        </div>
+                                      </div>
+                                    </details>
+                                  </article>
+                                }
+                              </div>
+                            </div>
+                          }
                         } @else if (section.variant === 'gitlab-code-panels') {
                           @if (section.codePanels.length === 0) {
                             <div class="empty-state">

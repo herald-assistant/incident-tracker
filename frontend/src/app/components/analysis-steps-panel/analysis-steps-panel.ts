@@ -181,6 +181,48 @@ interface RepoCodePanelView {
   blockAttributes: AnalysisEvidenceAttribute[];
 }
 
+interface DatabaseToolFieldView {
+  label: string;
+  value: string;
+}
+
+interface DatabaseToolListBlockView {
+  title: string;
+  items: string[];
+  tone: 'default' | 'warning';
+}
+
+interface DatabaseToolTableView {
+  title: string;
+  columns: string[];
+  rows: string[][];
+  truncated: boolean;
+}
+
+interface DatabaseToolMetricView {
+  label: string;
+  value: string;
+  tone: 'default' | 'success' | 'warning';
+}
+
+interface DatabaseToolCardView {
+  key: string;
+  toolName: string;
+  title: string;
+  scopeLabel: string;
+  summary: string;
+  environment: string;
+  databaseAlias: string;
+  metric: DatabaseToolMetricView | null;
+  parameterFields: DatabaseToolFieldView[];
+  resultFields: DatabaseToolFieldView[];
+  listBlocks: DatabaseToolListBlockView[];
+  tableViews: DatabaseToolTableView[];
+  warnings: string[];
+  rawParameters: string;
+  rawResult: string;
+}
+
 interface StepEvidenceSectionView {
   key: string;
   title: string;
@@ -189,11 +231,14 @@ interface StepEvidenceSectionView {
     | 'default'
     | 'elasticsearch-log-table'
     | 'gitlab-code-panels'
-    | 'dynatrace-runtime-panels';
+    | 'dynatrace-runtime-panels'
+    | 'database-tool-panels';
   items: StepEvidenceItemView[];
   logRows: ElasticsearchLogRowView[];
   codePanels: RepoCodePanelView[];
   dynatraceRuntime: DynatraceRuntimeSectionView | null;
+  databaseTools: DatabaseToolCardView[];
+  databaseToolTypeCount: number;
 }
 
 interface StepView {
@@ -270,6 +315,26 @@ const TOOL_EVIDENCE_SECTION_ORDER: Record<string, number> = {
   'gitlab|tool-fetched-code': 10,
   'database|tool-results': 20
 };
+
+const DATABASE_TOOL_LABELS: Record<string, string> = {
+  db_get_scope: 'Sprawdzenie zakresu dostępu',
+  db_find_tables: 'Wyszukiwanie tabel',
+  db_find_columns: 'Wyszukiwanie kolumn',
+  db_describe_table: 'Opis tabeli',
+  db_exists_by_key: 'Sprawdzenie istnienia rekordu',
+  db_count_rows: 'Policzenie rekordów',
+  db_group_count: 'Grupowanie wyników',
+  db_sample_rows: 'Pobranie próbki rekordów',
+  db_check_orphans: 'Weryfikacja osieroconych rekordów',
+  db_find_relationships: 'Wyszukiwanie relacji',
+  db_join_count: 'Policzenie wyniku joina',
+  db_join_sample: 'Próbka wyniku joina',
+  db_compare_table_to_expected_mapping: 'Porównanie z oczekiwanym mapowaniem',
+  db_execute_readonly_sql: 'Eksperckie zapytanie read-only'
+};
+
+const DATABASE_TABLE_MAX_ROWS = 8;
+const DATABASE_TABLE_MAX_COLUMNS = 8;
 
 const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
   {
@@ -650,7 +715,9 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         items: [],
         logRows,
         codePanels: [],
-        dynatraceRuntime: null
+        dynatraceRuntime: null,
+        databaseTools: [],
+        databaseToolTypeCount: 0
       };
     }
 
@@ -667,7 +734,28 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         items: [],
         logRows: [],
         codePanels,
-        dynatraceRuntime: null
+        dynatraceRuntime: null,
+        databaseTools: [],
+        databaseToolTypeCount: 0
+      };
+    }
+
+    if (isDatabaseToolSection(section)) {
+      const databaseTools = (section.items || []).map((item, itemIndex) =>
+        prepareDatabaseToolCard(section, item, itemIndex)
+      );
+
+      return {
+        key: sectionKey,
+        title: formatEvidenceSectionTitle(section),
+        itemCount: databaseTools.length,
+        variant: 'database-tool-panels',
+        items: [],
+        logRows: [],
+        codePanels: [],
+        dynatraceRuntime: null,
+        databaseTools,
+        databaseToolTypeCount: new Set(databaseTools.map((tool) => tool.toolName)).size
       };
     }
 
@@ -681,7 +769,9 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         items: runtimeSection.uncategorizedItems,
         logRows: [],
         codePanels: [],
-        dynatraceRuntime: runtimeSection.runtime
+        dynatraceRuntime: runtimeSection.runtime,
+        databaseTools: [],
+        databaseToolTypeCount: 0
       };
     }
 
@@ -697,7 +787,9 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
       items,
       logRows: [],
       codePanels: [],
-      dynatraceRuntime: null
+      dynatraceRuntime: null,
+      databaseTools: [],
+      databaseToolTypeCount: 0
     };
   });
 }
@@ -711,6 +803,10 @@ function isGitLabCodeSection(section: AnalysisEvidenceSection): boolean {
     section.provider === 'gitlab' &&
     (section.category === 'resolved-code' || section.category === 'tool-fetched-code')
   );
+}
+
+function isDatabaseToolSection(section: AnalysisEvidenceSection): boolean {
+  return section.provider === 'database' && section.category === 'tool-results';
 }
 
 function isDynatraceRuntimeSection(section: AnalysisEvidenceSection): boolean {
@@ -1034,6 +1130,527 @@ function prepareRepoCodePanel(
   };
 }
 
+function prepareDatabaseToolCard(
+  section: AnalysisEvidenceSection,
+  item: { title: string; attributes: AnalysisEvidenceAttribute[] },
+  itemIndex: number
+): DatabaseToolCardView {
+  const itemKey = buildEvidenceItemKey(section, item, itemIndex);
+  const attributesByName = mapAttributesByName(item.attributes || []);
+  const toolName = nonEmptyValue(item.title) || 'db_tool';
+  const rawParameters = nonEmptyValue(attributesByName.get('parameters')) || '{}';
+  const rawResult = nonEmptyValue(attributesByName.get('result')) || '{}';
+  const parameters = parseJsonPayload(rawParameters);
+  const result = parseJsonPayload(rawResult);
+  const resultRecord = asRecord(result);
+
+  return {
+    key: itemKey,
+    toolName,
+    title: DATABASE_TOOL_LABELS[toolName] || toolName,
+    scopeLabel: buildDatabaseScopeLabel(toolName, parameters, resultRecord),
+    summary: buildDatabaseToolSummary(toolName, parameters, resultRecord),
+    environment: attributeValue(attributesByName, 'environment'),
+    databaseAlias: attributeValue(attributesByName, 'databaseAlias'),
+    metric: buildDatabaseMetric(toolName, resultRecord),
+    parameterFields: buildDatabaseParameterFields(toolName, parameters),
+    resultFields: buildDatabaseResultFields(toolName, resultRecord),
+    listBlocks: buildDatabaseListBlocks(toolName, resultRecord),
+    tableViews: buildDatabaseTableViews(toolName, resultRecord),
+    warnings: stringArray(resultRecord?.['warnings']),
+    rawParameters,
+    rawResult
+  };
+}
+
+function buildDatabaseScopeLabel(
+  toolName: string,
+  parameters: unknown,
+  result: Record<string, unknown> | null
+): string {
+  const parameterRecord = asRecord(parameters);
+  const exactTable =
+    firstDefinedText(
+      formatDbTableRef(parameterRecord?.['table']),
+      formatDbTableRef(parameterRecord?.['actualTable']),
+      formatDbTableRef(result?.['table']),
+      formatDbTableRef(result?.['actualTable'])
+    ) || '';
+
+  if (exactTable) {
+    return exactTable;
+  }
+
+  if (toolName === 'db_check_orphans') {
+    const child = formatDbTableRef(result?.['childTable']) || formatDbTableRef(parameterRecord?.['childTable']);
+    const parent =
+      formatDbTableRef(result?.['parentTable']) || formatDbTableRef(parameterRecord?.['parentTable']);
+    if (child && parent) {
+      return `${child} -> ${parent}`;
+    }
+  }
+
+  if (toolName === 'db_find_relationships' || toolName === 'db_join_count' || toolName === 'db_join_sample') {
+    const tables = tableRefsSummary(parameterRecord?.['tables']);
+    if (tables) {
+      return tables;
+    }
+  }
+
+  return (
+    firstDefinedText(
+      stringValue(parameterRecord?.['applicationNamePattern']),
+      stringValue(result?.['resolvedApplication']),
+      stringValue(parameterRecord?.['reason'])
+    ) || 'Zakres z bieżącej sesji'
+  );
+}
+
+function buildDatabaseToolSummary(
+  toolName: string,
+  parameters: unknown,
+  result: Record<string, unknown> | null
+): string {
+  const parameterRecord = asRecord(parameters);
+  const resolvedApplication =
+    firstDefinedText(
+      stringValue(result?.['resolvedApplication']),
+      stringValue(parameterRecord?.['applicationNamePattern'])
+    ) || 'bieżącego kontekstu';
+
+  switch (toolName) {
+    case 'db_get_scope':
+      return `Pokazano zakres dostępu dla bieżącego środowiska: ${arrayLength(result?.['applications'])} mapowań aplikacji i ${stringArray(result?.['allowedSchemas']).length} dozwolonych schematów.`;
+    case 'db_find_tables':
+      return `Znaleziono ${arrayLength(result?.['candidates'])} kandydatów tabel lub widoków dla ${resolvedApplication}.`;
+    case 'db_find_columns':
+      return `Znaleziono ${arrayLength(result?.['candidates'])} kandydatów kolumn dla ${resolvedApplication}.`;
+    case 'db_describe_table': {
+      const describedTable =
+        firstDefinedText(
+          formatDbTableRef(result?.['table']),
+          combineQualifiedName(stringValue(result?.['schema']), stringValue(result?.['tableName']))
+        ) || 'wskazaną tabelę';
+      return `Opisano ${describedTable}: ${arrayLength(result?.['columns'])} kolumn, ${stringArray(result?.['primaryKeyColumns']).length} kolumn PK i ${arrayLength(result?.['importedForeignKeys']) + arrayLength(result?.['exportedForeignKeys'])} relacji FK.`;
+    }
+    case 'db_exists_by_key':
+      return boolValue(result?.['exists'])
+        ? `Rekord istnieje w ${formatDbTableRef(result?.['table']) || 'wskazanej tabeli'} i spełnia podane warunki klucza.`
+        : `Nie znaleziono rekordu w ${formatDbTableRef(result?.['table']) || 'wskazanej tabeli'} dla podanego klucza.`;
+    case 'db_count_rows':
+      return `Policzono ${numberLabel(result?.['count'], 'rekord', 'rekordy', 'rekordów')} w ${formatDbTableRef(result?.['table']) || 'wskazanej tabeli'}.`;
+    case 'db_group_count':
+      return `Pogrupowano wynik dla ${formatDbTableRef(result?.['table']) || 'wskazanej tabeli'} i zwrócono ${numberLabel(arrayLength(result?.['groups']), 'grupę', 'grupy', 'grup')}.`;
+    case 'db_sample_rows':
+      return `Pobrano próbkę ${numberLabel(arrayLength(result?.['rows']), 'rekordu', 'rekordy', 'rekordów')} z ${formatDbTableRef(result?.['table']) || 'wskazanej tabeli'}.`;
+    case 'db_check_orphans':
+      return `Sprawdzono osierocone rekordy między ${formatDbTableRef(result?.['childTable']) || 'tabelą dziecka'} i ${formatDbTableRef(result?.['parentTable']) || 'tabelą rodzica'}: znaleziono ${numberLabel(result?.['orphanCount'], 'sierotę', 'sieroty', 'sierot')}.`;
+    case 'db_find_relationships':
+      return `Zebrano ${numberLabel(arrayLength(result?.['relationships']), 'relację', 'relacje', 'relacji')} między wskazanymi tabelami.`;
+    case 'db_join_count':
+      return `Join zwrócił ${numberLabel(result?.['count'], 'rekord', 'rekordy', 'rekordów')} po zastosowaniu warunków łączenia.`;
+    case 'db_join_sample':
+      return `Pobrano próbkę ${numberLabel(arrayLength(result?.['rows']), 'wiersza', 'wiersze', 'wierszy')} z planu joina.`;
+    case 'db_compare_table_to_expected_mapping':
+      return `Porównano tabelę ${formatDbTableRef(result?.['actualTable']) || 'docelową'} z oczekiwanym mapowaniem: ${numberLabel(arrayLength(result?.['confirmedMatches']), 'zgodność', 'zgodności', 'zgodności')} i ${numberLabel(arrayLength(result?.['mismatches']), 'rozbieżność', 'rozbieżności', 'rozbieżności')}.`;
+    case 'db_execute_readonly_sql':
+      return `Wykonano eksperckie zapytanie read-only i zwrócono ${numberLabel(arrayLength(result?.['rows']), 'wiersz', 'wiersze', 'wierszy')}.`;
+    default:
+      return 'To wywołanie pokazało szczegóły z bazy danych dla hipotezy weryfikowanej przez AI.';
+  }
+}
+
+function buildDatabaseMetric(
+  toolName: string,
+  result: Record<string, unknown> | null
+): DatabaseToolMetricView | null {
+  switch (toolName) {
+    case 'db_exists_by_key': {
+      const exists = boolValue(result?.['exists']);
+      if (exists === null) {
+        return null;
+      }
+      return {
+        label: 'Wynik',
+        value: exists ? 'Istnieje' : 'Brak rekordu',
+        tone: exists ? 'success' : 'warning'
+      };
+    }
+    case 'db_count_rows':
+    case 'db_join_count':
+      return {
+        label: 'Rekordy',
+        value: integerString(result?.['count']),
+        tone: 'default'
+      };
+    case 'db_group_count':
+      return {
+        label: 'Grupy',
+        value: String(arrayLength(result?.['groups'])),
+        tone: 'default'
+      };
+    case 'db_sample_rows':
+    case 'db_join_sample':
+    case 'db_execute_readonly_sql':
+      return {
+        label: 'Wiersze',
+        value: String(arrayLength(result?.['rows'])),
+        tone: 'default'
+      };
+    case 'db_find_tables':
+    case 'db_find_columns':
+      return {
+        label: 'Dopasowania',
+        value: String(arrayLength(result?.['candidates'])),
+        tone: 'default'
+      };
+    case 'db_find_relationships':
+      return {
+        label: 'Relacje',
+        value: String(arrayLength(result?.['relationships'])),
+        tone: 'default'
+      };
+    case 'db_describe_table':
+      return {
+        label: 'Kolumny',
+        value: String(arrayLength(result?.['columns'])),
+        tone: 'default'
+      };
+    case 'db_get_scope':
+      return {
+        label: 'Schematy',
+        value: String(stringArray(result?.['allowedSchemas']).length),
+        tone: 'default'
+      };
+    case 'db_check_orphans': {
+      const orphanCount = numberValue(result?.['orphanCount']);
+      return {
+        label: 'Sieroty',
+        value: orphanCount !== null ? String(orphanCount) : '0',
+        tone: orphanCount && orphanCount > 0 ? 'warning' : 'success'
+      };
+    }
+    case 'db_compare_table_to_expected_mapping': {
+      const mismatchCount = arrayLength(result?.['mismatches']);
+      return {
+        label: 'Rozbieżności',
+        value: String(mismatchCount),
+        tone: mismatchCount > 0 ? 'warning' : 'success'
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function buildDatabaseParameterFields(
+  toolName: string,
+  parameters: unknown
+): DatabaseToolFieldView[] {
+  const fields: DatabaseToolFieldView[] = [];
+  const parameterRecord = asRecord(parameters);
+
+  switch (toolName) {
+    case 'db_find_tables':
+      pushDatabaseField(fields, 'Aplikacja', stringValue(parameterRecord?.['applicationNamePattern']));
+      pushDatabaseField(fields, 'Tabela / wzorzec', stringValue(parameterRecord?.['tableNamePattern']));
+      pushDatabaseField(fields, 'Hint encji', stringValue(parameterRecord?.['entityOrKeywordHint']));
+      pushDatabaseField(fields, 'Limit', integerString(parameterRecord?.['limit']));
+      break;
+    case 'db_find_columns':
+      pushDatabaseField(fields, 'Aplikacja', stringValue(parameterRecord?.['applicationNamePattern']));
+      pushDatabaseField(fields, 'Tabela / wzorzec', stringValue(parameterRecord?.['tableNamePattern']));
+      pushDatabaseField(fields, 'Kolumna / wzorzec', stringValue(parameterRecord?.['columnNamePattern']));
+      pushDatabaseField(fields, 'Pole Java', stringValue(parameterRecord?.['javaFieldNameHint']));
+      pushDatabaseField(fields, 'Limit', integerString(parameterRecord?.['limit']));
+      break;
+    case 'db_describe_table':
+      pushDatabaseField(fields, 'Tabela', formatDbTableRef(parameterRecord?.['table']));
+      break;
+    case 'db_exists_by_key':
+      pushDatabaseField(fields, 'Tabela', formatDbTableRef(parameterRecord?.['table']));
+      pushDatabaseField(fields, 'Klucz', keyValuesSummary(parameterRecord?.['keyValues']));
+      pushDatabaseField(fields, 'Projekcja', commaSeparated(parameterRecord?.['projectionColumns']));
+      break;
+    case 'db_count_rows':
+      pushDatabaseField(fields, 'Tabela', formatDbTableRef(parameterRecord?.['table']));
+      pushDatabaseField(fields, 'Filtry', filtersSummary(parameterRecord?.['filters']));
+      break;
+    case 'db_group_count':
+      pushDatabaseField(fields, 'Tabela', formatDbTableRef(parameterRecord?.['table']));
+      pushDatabaseField(fields, 'Grupowanie', commaSeparated(parameterRecord?.['groupByColumns']));
+      pushDatabaseField(fields, 'Filtry', filtersSummary(parameterRecord?.['filters']));
+      pushDatabaseField(fields, 'Limit', integerString(parameterRecord?.['limit']));
+      break;
+    case 'db_sample_rows':
+      pushDatabaseField(fields, 'Tabela', formatDbTableRef(parameterRecord?.['table']));
+      pushDatabaseField(fields, 'Kolumny', commaSeparated(parameterRecord?.['columns']));
+      pushDatabaseField(fields, 'Filtry', filtersSummary(parameterRecord?.['filters']));
+      pushDatabaseField(fields, 'Sortowanie', orderBySummary(parameterRecord?.['orderBy']));
+      pushDatabaseField(fields, 'Limit', integerString(parameterRecord?.['limit']));
+      break;
+    case 'db_check_orphans':
+      pushDatabaseField(fields, 'Tabela dziecka', formatDbTableRef(parameterRecord?.['childTable']));
+      pushDatabaseField(fields, 'Kolumna dziecka', stringValue(parameterRecord?.['childColumn']));
+      pushDatabaseField(fields, 'Tabela rodzica', formatDbTableRef(parameterRecord?.['parentTable']));
+      pushDatabaseField(fields, 'Kolumna rodzica', stringValue(parameterRecord?.['parentColumn']));
+      pushDatabaseField(fields, 'Filtry dziecka', filtersSummary(parameterRecord?.['childFilters']));
+      pushDatabaseField(fields, 'Limit próbki', integerString(parameterRecord?.['sampleLimit']));
+      break;
+    case 'db_find_relationships':
+      pushDatabaseField(fields, 'Tabele', tableRefsSummary(parameterRecord?.['tables']));
+      pushDatabaseField(fields, 'Głębokość', integerString(parameterRecord?.['depth']));
+      pushDatabaseField(fields, 'Uwzględnij inferred', booleanLabel(parameterRecord?.['includeInferred']));
+      break;
+    case 'db_join_count':
+      pushDatabaseField(fields, 'Tabele', tableRefsSummary(parameterRecord?.['tables']));
+      pushDatabaseField(fields, 'Joiny', joinsSummary(parameterRecord?.['joins']));
+      pushDatabaseField(fields, 'Filtry', qualifiedFiltersSummary(parameterRecord?.['filters']));
+      break;
+    case 'db_join_sample':
+      pushDatabaseField(fields, 'Tabele', tableRefsSummary(parameterRecord?.['tables']));
+      pushDatabaseField(fields, 'Joiny', joinsSummary(parameterRecord?.['joins']));
+      pushDatabaseField(fields, 'Kolumny', projectedColumnsSummary(parameterRecord?.['columns']));
+      pushDatabaseField(fields, 'Filtry', qualifiedFiltersSummary(parameterRecord?.['filters']));
+      pushDatabaseField(fields, 'Limit', integerString(parameterRecord?.['limit']));
+      break;
+    case 'db_compare_table_to_expected_mapping':
+      pushDatabaseField(fields, 'Tabela', formatDbTableRef(parameterRecord?.['actualTable']));
+      pushDatabaseField(fields, 'Oczekiwane kolumny', String(arrayLength(parameterRecord?.['expectedColumns'])));
+      pushDatabaseField(
+        fields,
+        'Oczekiwane relacje',
+        String(arrayLength(parameterRecord?.['expectedRelationships']))
+      );
+      break;
+    case 'db_execute_readonly_sql':
+      pushDatabaseField(fields, 'Powód', stringValue(parameterRecord?.['reason']));
+      pushDatabaseField(fields, 'Limit', integerString(parameterRecord?.['maxRows']));
+      pushDatabaseField(fields, 'SQL', sqlPreview(parameterRecord?.['sql']));
+      break;
+    default:
+      break;
+  }
+
+  return fields;
+}
+
+function buildDatabaseResultFields(
+  toolName: string,
+  result: Record<string, unknown> | null
+): DatabaseToolFieldView[] {
+  const fields: DatabaseToolFieldView[] = [];
+
+  switch (toolName) {
+    case 'db_get_scope':
+      pushDatabaseField(fields, 'Mapowania aplikacji', String(arrayLength(result?.['applications'])));
+      pushDatabaseField(fields, 'Dozwolone schematy', String(stringArray(result?.['allowedSchemas']).length));
+      pushDatabaseField(fields, 'Reguły bezpieczeństwa', String(stringArray(result?.['safetyRules']).length));
+      break;
+    case 'db_find_tables':
+    case 'db_find_columns':
+      pushDatabaseField(fields, 'Rozwiązana aplikacja', stringValue(result?.['resolvedApplication']));
+      pushDatabaseField(fields, 'Schematy', stringArray(result?.['resolvedSchemas']).join(', '));
+      pushDatabaseField(fields, 'Ucięte', booleanLabel(result?.['truncated']));
+      break;
+    case 'db_describe_table':
+      pushDatabaseField(fields, 'Typ obiektu', stringValue(result?.['tableType']));
+      pushDatabaseField(fields, 'PK', String(stringArray(result?.['primaryKeyColumns']).length));
+      pushDatabaseField(fields, 'FK przychodzące', String(arrayLength(result?.['exportedForeignKeys'])));
+      pushDatabaseField(fields, 'FK wychodzące', String(arrayLength(result?.['importedForeignKeys'])));
+      pushDatabaseField(fields, 'Indeksy', String(arrayLength(result?.['indexes'])));
+      break;
+    case 'db_exists_by_key':
+      pushDatabaseField(fields, 'Dopasowane rekordy', integerString(result?.['count']));
+      pushDatabaseField(fields, 'Projekcja', String(arrayLength(result?.['projection'])));
+      break;
+    case 'db_count_rows':
+      pushDatabaseField(fields, 'Zastosowane filtry', String(stringArray(result?.['appliedFilters']).length));
+      break;
+    case 'db_group_count':
+      pushDatabaseField(fields, 'Zwrócone grupy', String(arrayLength(result?.['groups'])));
+      pushDatabaseField(fields, 'Ucięte', booleanLabel(result?.['truncated']));
+      break;
+    case 'db_sample_rows':
+      pushDatabaseField(fields, 'Zwrócone wiersze', String(arrayLength(result?.['rows'])));
+      pushDatabaseField(fields, 'Kolumny', commaSeparated(result?.['columns']));
+      pushDatabaseField(fields, 'Ucięte', booleanLabel(result?.['truncated']));
+      break;
+    case 'db_check_orphans':
+      pushDatabaseField(fields, 'Kolumna dziecka', stringValue(result?.['childColumn']));
+      pushDatabaseField(fields, 'Kolumna rodzica', stringValue(result?.['parentColumn']));
+      pushDatabaseField(fields, 'Próbka sierot', String(arrayLength(result?.['sampleRows'])));
+      break;
+    case 'db_find_relationships': {
+      const relationships = objectArray(result?.['relationships']);
+      const declaredCount = relationships.filter((relationship) => boolValue(relationship['declared'])).length;
+      pushDatabaseField(fields, 'Relacje declared', String(declaredCount));
+      pushDatabaseField(fields, 'Relacje inferred', String(relationships.length - declaredCount));
+      break;
+    }
+    case 'db_join_sample':
+    case 'db_execute_readonly_sql':
+      pushDatabaseField(fields, 'Zwrócone wiersze', String(arrayLength(result?.['rows'])));
+      pushDatabaseField(fields, 'Ucięte', booleanLabel(result?.['truncated']));
+      break;
+    case 'db_compare_table_to_expected_mapping':
+      pushDatabaseField(fields, 'Zgodności', String(arrayLength(result?.['confirmedMatches'])));
+      pushDatabaseField(fields, 'Rozbieżności', String(arrayLength(result?.['mismatches'])));
+      break;
+    default:
+      break;
+  }
+
+  return fields;
+}
+
+function buildDatabaseListBlocks(
+  toolName: string,
+  result: Record<string, unknown> | null
+): DatabaseToolListBlockView[] {
+  const blocks: DatabaseToolListBlockView[] = [];
+
+  switch (toolName) {
+    case 'db_get_scope':
+      pushDatabaseListBlock(
+        blocks,
+        'Mapowania aplikacji',
+        objectArray(result?.['applications']).map(formatDatabaseApplicationScope)
+      );
+      pushDatabaseListBlock(blocks, 'Dozwolone schematy', stringArray(result?.['allowedSchemas']));
+      pushDatabaseListBlock(blocks, 'Reguły bezpieczeństwa', stringArray(result?.['safetyRules']));
+      break;
+    case 'db_find_tables':
+      pushDatabaseListBlock(
+        blocks,
+        'Najlepsze dopasowania',
+        objectArray(result?.['candidates']).map(formatDatabaseTableCandidate)
+      );
+      break;
+    case 'db_find_columns':
+      pushDatabaseListBlock(
+        blocks,
+        'Najlepsze dopasowania',
+        objectArray(result?.['candidates']).map(formatDatabaseColumnCandidate)
+      );
+      break;
+    case 'db_describe_table':
+      pushDatabaseListBlock(blocks, 'Kolumny klucza głównego', stringArray(result?.['primaryKeyColumns']));
+      pushDatabaseListBlock(
+        blocks,
+        'Relacje sugerowane',
+        objectArray(result?.['inferredRelationships']).map(formatDatabaseRelationship)
+      );
+      pushDatabaseListBlock(
+        blocks,
+        'Klucze obce wychodzące',
+        objectArray(result?.['importedForeignKeys']).map(formatDatabaseForeignKey)
+      );
+      pushDatabaseListBlock(
+        blocks,
+        'Klucze obce przychodzące',
+        objectArray(result?.['exportedForeignKeys']).map(formatDatabaseForeignKey)
+      );
+      break;
+    case 'db_find_relationships':
+      pushDatabaseListBlock(
+        blocks,
+        'Relacje',
+        objectArray(result?.['relationships']).map(formatDatabaseRelationship)
+      );
+      break;
+    case 'db_compare_table_to_expected_mapping':
+      pushDatabaseListBlock(blocks, 'Potwierdzone zgodności', stringArray(result?.['confirmedMatches']));
+      pushDatabaseListBlock(
+        blocks,
+        'Rozbieżności do sprawdzenia',
+        stringArray(result?.['mismatches']),
+        'warning'
+      );
+      break;
+    default:
+      break;
+  }
+
+  return blocks;
+}
+
+function buildDatabaseTableViews(
+  toolName: string,
+  result: Record<string, unknown> | null
+): DatabaseToolTableView[] {
+  switch (toolName) {
+    case 'db_describe_table':
+      return createTableViews('Kolumny', result?.['columns'], ['name', 'dataType', 'nullable', 'comment']);
+    case 'db_exists_by_key':
+      return createTableViews('Projekcja rekordu', result?.['projection']);
+    case 'db_group_count':
+      return createTableViews('Wynik grupowania', result?.['groups']);
+    case 'db_sample_rows':
+      return createTableViews('Próbka rekordów', result?.['rows']);
+    case 'db_check_orphans':
+      return createTableViews('Przykładowe sieroty', result?.['sampleRows']);
+    case 'db_join_sample':
+      return createTableViews('Próbka z joina', result?.['rows']);
+    case 'db_execute_readonly_sql':
+      return createTableViews('Wiersze z zapytania', result?.['rows']);
+    default:
+      return [];
+  }
+}
+
+function createTableViews(
+  title: string,
+  source: unknown,
+  preferredColumns: string[] = []
+): DatabaseToolTableView[] {
+  const rows = objectArray(source);
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const preferred = preferredColumns.filter((column) => rows.some((row) => column in row));
+  const discovered = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const columns = [...preferred, ...discovered.filter((column) => !preferred.includes(column))].slice(
+    0,
+    DATABASE_TABLE_MAX_COLUMNS
+  );
+  const visibleRows = rows.slice(0, DATABASE_TABLE_MAX_ROWS).map((row) =>
+    columns.map((column) => formatTableCellValue(row[column]))
+  );
+
+  return [
+    {
+      title,
+      columns,
+      rows: visibleRows,
+      truncated: rows.length > DATABASE_TABLE_MAX_ROWS
+    }
+  ];
+}
+
+function pushDatabaseField(
+  fields: DatabaseToolFieldView[],
+  label: string,
+  value: string
+): void {
+  if (value && value.trim() && value !== 'n/a') {
+    fields.push({ label, value });
+  }
+}
+
+function pushDatabaseListBlock(
+  blocks: DatabaseToolListBlockView[],
+  title: string,
+  items: string[],
+  tone: 'default' | 'warning' = 'default'
+): void {
+  const normalizedItems = items.map((item) => item.trim()).filter(Boolean);
+  if (normalizedItems.length > 0) {
+    blocks.push({ title, items: normalizedItems, tone });
+  }
+}
+
 function buildStepKey(step: AnalysisJobStepResponse, index: number): string {
   return step.code || `${step.label || 'step'}-${index}`;
 }
@@ -1197,6 +1814,358 @@ function mapAttributesByName(
   }
 
   return attributesByName;
+}
+
+function parseJsonPayload(rawPayload: string): unknown {
+  try {
+    return JSON.parse(rawPayload);
+  } catch {
+    return rawPayload;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function objectArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value
+        .map((item) => asRecord(item))
+        .filter((item): item is Record<string, unknown> => item !== null)
+    : [];
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value
+        .map((item) => stringValue(item))
+        .filter((item): item is string => Boolean(item))
+    : [];
+}
+
+function arrayLength(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+function stringValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return '';
+}
+
+function boolValue(value: unknown): boolean | null {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  return null;
+}
+
+function numberValue(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function integerString(value: unknown): string {
+  const parsed = numberValue(value);
+  return parsed !== null ? String(parsed) : '';
+}
+
+function booleanLabel(value: unknown): string {
+  const parsed = boolValue(value);
+  if (parsed === null) {
+    return '';
+  }
+
+  return parsed ? 'Tak' : 'Nie';
+}
+
+function commaSeparated(value: unknown): string {
+  return stringArray(value).join(', ');
+}
+
+function formatDbTableRef(value: unknown): string {
+  const record = asRecord(value);
+  if (!record) {
+    return stringValue(value);
+  }
+
+  const schema = stringValue(record['schema']);
+  const tableName = stringValue(record['tableName']);
+
+  return combineQualifiedName(schema, tableName) || tableName || schema;
+}
+
+function combineQualifiedName(left: string, right: string): string {
+  if (left && right) {
+    return `${left}.${right}`;
+  }
+
+  return '';
+}
+
+function formatDbColumnRef(value: unknown): string {
+  const record = asRecord(value);
+  if (!record) {
+    return stringValue(value);
+  }
+
+  const table = formatDbTableRef(record['table']);
+  const column = stringValue(record['column']);
+
+  if (table && column) {
+    return `${table}.${column}`;
+  }
+
+  return column || table;
+}
+
+function formatDbValues(values: unknown): string {
+  const normalizedValues = stringArray(values);
+  return normalizedValues.length > 0 ? normalizedValues.join(', ') : '∅';
+}
+
+function filtersSummary(value: unknown): string {
+  return objectArray(value)
+    .map((filter) => {
+      const column = stringValue(filter['column']);
+      const operator = stringValue(filter['operator']);
+      const values = formatDbValues(filter['values']);
+      return [column, operator, values].filter(Boolean).join(' ');
+    })
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function qualifiedFiltersSummary(value: unknown): string {
+  return objectArray(value)
+    .map((filter) => {
+      const column = formatDbColumnRef(filter['column']);
+      const operator = stringValue(filter['operator']);
+      const values = formatDbValues(filter['values']);
+      return [column, operator, values].filter(Boolean).join(' ');
+    })
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function keyValuesSummary(value: unknown): string {
+  return objectArray(value)
+    .map((entry) => {
+      const column = stringValue(entry['column']);
+      const entryValue = stringValue(entry['value']);
+      return column && entryValue ? `${column}=${entryValue}` : column || entryValue;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function orderBySummary(value: unknown): string {
+  return objectArray(value)
+    .map((entry) => {
+      const column = stringValue(entry['column']);
+      const direction = stringValue(entry['direction']);
+      return [column, direction].filter(Boolean).join(' ');
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function joinsSummary(value: unknown): string {
+  return objectArray(value)
+    .map((entry) => {
+      const left = formatDbColumnRef(entry['left']);
+      const right = formatDbColumnRef(entry['right']);
+      const type = stringValue(entry['type']);
+      return [left, type ? `[${type}]` : '', right].filter(Boolean).join(' -> ');
+    })
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function tableRefsSummary(value: unknown): string {
+  return objectArray(value)
+    .map((table) => formatDbTableRef(table))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function projectedColumnsSummary(value: unknown): string {
+  return objectArray(value)
+    .map((entry) => {
+      const column = formatDbColumnRef(entry['column']);
+      const alias = stringValue(entry['alias']);
+      return alias ? `${column} as ${alias}` : column;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function sqlPreview(value: unknown): string {
+  const sql = stringValue(value);
+  if (!sql) {
+    return '';
+  }
+
+  const normalized = sql.replace(/\s+/g, ' ').trim();
+  return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
+}
+
+function formatDatabaseApplicationScope(application: Record<string, unknown>): string {
+  const alias = stringValue(application['applicationAlias']);
+  const schema = stringValue(application['schema']);
+  const relatedSchemas = stringArray(application['relatedSchemas']);
+  const description = stringValue(application['description']);
+  const parts = [`${alias} -> ${schema}`];
+
+  if (relatedSchemas.length > 0) {
+    parts.push(`related: ${relatedSchemas.join(', ')}`);
+  }
+
+  if (description) {
+    parts.push(description);
+  }
+
+  return parts.filter(Boolean).join(' · ');
+}
+
+function formatDatabaseTableCandidate(candidate: Record<string, unknown>): string {
+  const table = formatDbTableRef(candidate);
+  const tableType = stringValue(candidate['tableType']);
+  const columnCount = integerString(candidate['columnCount']);
+  const primaryKeys = stringArray(candidate['primaryKeyColumns']);
+  const matchedBecause = stringArray(candidate['matchedBecause']);
+  const parts = [table];
+
+  if (tableType) {
+    parts.push(tableType);
+  }
+
+  if (columnCount) {
+    parts.push(`${columnCount} kolumn`);
+  }
+
+  if (primaryKeys.length > 0) {
+    parts.push(`PK: ${primaryKeys.join(', ')}`);
+  }
+
+  if (matchedBecause.length > 0) {
+    parts.push(matchedBecause.slice(0, 2).join(' | '));
+  }
+
+  return parts.join(' · ');
+}
+
+function formatDatabaseColumnCandidate(candidate: Record<string, unknown>): string {
+  const table = formatDbTableRef(candidate);
+  const columnName = stringValue(candidate['columnName']);
+  const dataType = stringValue(candidate['dataType']);
+  const comment = stringValue(candidate['comment']);
+  const matchedBecause = stringArray(candidate['matchedBecause']);
+  const parts = [`${table}.${columnName}`];
+
+  if (dataType) {
+    parts.push(dataType);
+  }
+
+  if (comment) {
+    parts.push(comment);
+  }
+
+  if (matchedBecause.length > 0) {
+    parts.push(matchedBecause.slice(0, 2).join(' | '));
+  }
+
+  return parts.join(' · ');
+}
+
+function formatDatabaseRelationship(relationship: Record<string, unknown>): string {
+  const source = formatDbTableRef(relationship['sourceTable']);
+  const sourceColumn = stringValue(relationship['sourceColumn']);
+  const target = formatDbTableRef(relationship['targetTable']);
+  const targetColumn = stringValue(relationship['targetColumn']);
+  const evidence = stringValue(relationship['evidence']);
+  const declared = boolValue(relationship['declared']);
+  const title = `${source}.${sourceColumn} -> ${target}.${targetColumn}`;
+
+  if (declared === null && !evidence) {
+    return title;
+  }
+
+  return [title, declared ? 'declared' : 'inferred', evidence].filter(Boolean).join(' · ');
+}
+
+function formatDatabaseForeignKey(foreignKey: Record<string, unknown>): string {
+  const source = formatDbTableRef(foreignKey['sourceTable']);
+  const target = formatDbTableRef(foreignKey['targetTable']);
+  const sourceColumns = stringArray(foreignKey['sourceColumns']);
+  const targetColumns = stringArray(foreignKey['targetColumns']);
+
+  return [
+    `${source} (${sourceColumns.join(', ')}) -> ${target} (${targetColumns.join(', ')})`,
+    stringValue(foreignKey['constraintName'])
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function formatTableCellValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function numberLabel(
+  value: unknown,
+  singular: string,
+  pluralFew: string,
+  pluralMany: string
+): string {
+  const count = numberValue(value) ?? 0;
+
+  if (count === 1) {
+    return `1 ${singular}`;
+  }
+
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} ${pluralFew}`;
+  }
+
+  return `${count} ${pluralMany}`;
 }
 
 function formatTimestamp(value: string | undefined): string {
