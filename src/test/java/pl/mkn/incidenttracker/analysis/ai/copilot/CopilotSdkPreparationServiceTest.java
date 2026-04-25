@@ -1,7 +1,9 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.Attachment;
+import com.github.copilot.sdk.json.BlobAttachment;
+import com.github.copilot.sdk.json.PreToolUseHookInput;
+import com.github.copilot.sdk.json.PreToolUseHookOutput;
 import com.github.copilot.sdk.json.ToolDefinition;
 import com.github.copilot.sdk.json.PermissionHandler;
 import com.github.copilot.sdk.json.PermissionRequest;
@@ -25,6 +27,8 @@ import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,6 +90,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prepared.sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.sessionConfig().getOnPermissionRequest());
             assertEquals(List.of(), prepared.sessionConfig().getDisabledSkills());
+            assertNotNull(prepared.sessionConfig().getHooks());
 
             var prompt = prepared.messageOptions().getPrompt();
             assertTrue(prompt.contains("correlationId: timeout-123"));
@@ -94,6 +99,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("gitLabGroup: sample/runtime"));
             assertTrue(prompt.contains("Analyze the attached artifacts as the primary source of truth."));
             assertTrue(prompt.contains("Read `00-incident-manifest.json` first"));
+            assertTrue(prompt.contains("Attached artifacts are delivered inline to this session. Do not try to open them from the local filesystem."));
             assertTrue(prompt.contains("Attached artifacts:"));
             assertTrue(prompt.contains("00-incident-manifest.json"));
             assertTrue(prompt.contains("01-elasticsearch-logs.md"));
@@ -132,9 +138,9 @@ class CopilotSdkPreparationServiceTest {
             assertEquals(prompt, prepared.prompt());
 
             assertEquals(4, prepared.messageOptions().getAttachments().size());
-            var manifestAttachment = (Attachment) prepared.messageOptions().getAttachments().get(0);
-            assertEquals("00-incident-manifest.json", manifestAttachment.displayName());
-            var manifestContent = Files.readString(Path.of(manifestAttachment.path()));
+            var manifestAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(0);
+            assertEquals("00-incident-manifest.json", manifestAttachment.getDisplayName());
+            var manifestContent = decodeBlob(manifestAttachment);
             assertTrue(manifestContent.contains("\"readFirst\""));
             assertTrue(manifestContent.contains("\"00-incident-manifest.json\""));
             assertTrue(manifestContent.contains("\"01-elasticsearch-logs.md\""));
@@ -142,34 +148,40 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"toolPolicy\""));
             assertTrue(manifestContent.contains("\"localWorkspaceAccessBlocked\" : true"));
             assertTrue(manifestContent.contains("\"enabledToolNames\" : [ ]"));
+            assertTrue(manifestContent.contains("\"deliveryMode\" : \"inline-blob\""));
             assertTrue(manifestContent.contains("\"name\" : \"gitlab\""));
 
-            var logsAttachment = (Attachment) prepared.messageOptions().getAttachments().get(1);
-            assertEquals("01-elasticsearch-logs.md", logsAttachment.displayName());
-            var logsContent = Files.readString(Path.of(logsAttachment.path()));
+            var logsAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(1);
+            assertEquals("01-elasticsearch-logs.md", logsAttachment.getDisplayName());
+            var logsContent = decodeBlob(logsAttachment);
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
             assertTrue(logsContent.contains("Log entry `1` `ERROR` `billing-service`"));
             assertTrue(logsContent.contains("- message:"));
             assertTrue(logsContent.contains("Read timed out while calling catalog-service"));
             assertFalse(logsContent.contains("\"provider\""));
 
-            var dynatraceAttachment = (Attachment) prepared.messageOptions().getAttachments().get(2);
-            assertEquals("02-dynatrace-runtime-signals.md", dynatraceAttachment.displayName());
-            var dynatraceContent = Files.readString(Path.of(dynatraceAttachment.path()));
+            var dynatraceAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(2);
+            assertEquals("02-dynatrace-runtime-signals.md", dynatraceAttachment.getDisplayName());
+            var dynatraceContent = decodeBlob(dynatraceAttachment);
             assertTrue(dynatraceContent.contains("Dynatrace runtime signals"));
             assertTrue(dynatraceContent.contains("- collection status: COLLECTED"));
             assertTrue(dynatraceContent.contains("component `case-evaluation-service`: MATCHED, SIGNALS_PRESENT."));
             assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertFalse(dynatraceContent.contains("\"metricLabel\""));
 
-            var gitLabAttachment = (Attachment) prepared.messageOptions().getAttachments().get(3);
-            assertEquals("03-gitlab-resolved-code.md", gitLabAttachment.displayName());
-            var gitLabContent = Files.readString(Path.of(gitLabAttachment.path()));
+            var gitLabAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(3);
+            assertEquals("03-gitlab-resolved-code.md", gitLabAttachment.getDisplayName());
+            var gitLabContent = decodeBlob(gitLabAttachment);
             assertTrue(gitLabContent.contains("GitLab resolved code references"));
             assertTrue(gitLabContent.contains("- repository: `edge-client-service`"));
             assertTrue(gitLabContent.contains("- returned lines: `5-12` of `14`"));
             assertTrue(gitLabContent.contains("```java"));
             assertFalse(gitLabContent.contains("\"content\""));
+
+            var deniedToolDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+                    .handle(new PreToolUseHookInput().setToolName("read_file"), null)
+                    .join();
+            assertEquals("deny", deniedToolDecision.permissionDecision());
         }
     }
 
@@ -207,6 +219,14 @@ class CopilotSdkPreparationServiceTest {
             ));
             assertEquals(expectedTools, prepared.sessionConfig().getTools());
             assertEquals(List.of("gitlab_read_repository_file"), prepared.sessionConfig().getAvailableTools());
+            var allowedToolDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+                    .handle(new PreToolUseHookInput().setToolName("gitlab_read_repository_file"), null)
+                    .join();
+            assertEquals("allow", allowedToolDecision.permissionDecision());
+            var deniedToolDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+                    .handle(new PreToolUseHookInput().setToolName("read_file"), null)
+                    .join();
+            assertEquals("deny", deniedToolDecision.permissionDecision());
             assertNotNull(prepared.sessionConfig().getSessionId());
             assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
         }
@@ -288,6 +308,10 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prepared.prompt().contains("Database diagnostics: verify data-dependent hypotheses"));
             assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
             assertFalse(prepared.prompt().contains("GitLab code: search broadly across relevant repositories"));
+            var deniedElasticDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+                    .handle(new PreToolUseHookInput().setToolName("elastic_search_logs_by_correlation_id"), null)
+                    .join();
+            assertEquals("deny", deniedElasticDecision.permissionDecision());
         }
     }
 
@@ -510,5 +534,9 @@ class CopilotSdkPreparationServiceTest {
                         ))
                 ))
         );
+    }
+
+    private String decodeBlob(BlobAttachment attachment) {
+        return new String(Base64.getDecoder().decode(attachment.getData()), StandardCharsets.UTF_8);
     }
 }

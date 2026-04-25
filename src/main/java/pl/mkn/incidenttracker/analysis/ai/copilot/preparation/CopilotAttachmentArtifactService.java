@@ -1,7 +1,8 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.Attachment;
+import com.github.copilot.sdk.json.BlobAttachment;
+import com.github.copilot.sdk.json.MessageAttachment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
@@ -13,10 +14,10 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLo
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -62,61 +63,58 @@ public class CopilotAttachmentArtifactService {
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         var descriptors = describe(request);
-        Path stagingDirectory = null;
-
         try {
-            stagingDirectory = createStagingDirectory(request.correlationId());
-            var attachments = new ArrayList<Attachment>();
-
-            writeJsonArtifact(
-                    stagingDirectory.resolve("00-incident-manifest.json"),
-                    buildManifestPayload(request, descriptors, toolAccessPolicy)
-            );
-            attachments.add(new Attachment(
-                    "file",
-                    stagingDirectory.resolve("00-incident-manifest.json").toAbsolutePath().toString(),
-                    "00-incident-manifest.json"
+            var attachments = new ArrayList<MessageAttachment>();
+            attachments.add(createBlobAttachment(
+                    "00-incident-manifest.json",
+                    "application/json",
+                    renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy))
             ));
 
             for (int index = 0; index < request.evidenceSections().size(); index++) {
                 var section = request.evidenceSections().get(index);
                 var descriptor = descriptors.get(index + 1);
-                var artifactPath = stagingDirectory.resolve(descriptor.displayName());
-                writeSectionArtifact(artifactPath, section);
-                attachments.add(new Attachment(
-                        "file",
-                        artifactPath.toAbsolutePath().toString(),
-                        descriptor.displayName()
+                attachments.add(createBlobAttachment(
+                        descriptor.displayName(),
+                        mimeTypeFor(descriptor.displayName()),
+                        renderSectionArtifact(section)
                 ));
             }
 
-            return new CopilotAttachmentArtifactBundle(List.copyOf(attachments), stagingDirectory);
+            return new CopilotAttachmentArtifactBundle(List.copyOf(attachments));
         } catch (IOException exception) {
-            if (stagingDirectory != null) {
-                new CopilotAttachmentArtifactBundle(List.of(), stagingDirectory).close();
-            }
             throw new IllegalStateException("Failed to prepare Copilot attachment artifacts.", exception);
         }
     }
 
-    private Path createStagingDirectory(String correlationId) throws IOException {
-        var root = Path.of(properties.getAttachmentArtifactDirectory());
-        Files.createDirectories(root);
-        return Files.createTempDirectory(root, sanitize(correlationId) + "-");
-    }
-
-    private void writeJsonArtifact(Path artifactPath, Object payload) throws IOException {
-        objectMapper.writerWithDefaultPrettyPrinter().writeValue(artifactPath.toFile(), payload);
-    }
-
-    private void writeSectionArtifact(Path artifactPath, AnalysisEvidenceSection section) throws IOException {
+    private String renderSectionArtifact(AnalysisEvidenceSection section) throws IOException {
         var readableMarkdown = buildReadableMarkdown(section);
         if (readableMarkdown != null) {
-            Files.writeString(artifactPath, readableMarkdown);
-            return;
+            return readableMarkdown;
         }
 
-        writeJsonArtifact(artifactPath, buildEvidenceSectionPayload(section));
+        return renderJson(buildEvidenceSectionPayload(section));
+    }
+
+    private String renderJson(Object payload) throws IOException {
+        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
+    }
+
+    private BlobAttachment createBlobAttachment(String displayName, String mimeType, String content) {
+        return new BlobAttachment()
+                .setDisplayName(displayName)
+                .setMimeType(mimeType)
+                .setData(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private String mimeTypeFor(String displayName) {
+        if (displayName != null && displayName.toLowerCase(Locale.ROOT).endsWith(".json")) {
+            return "application/json";
+        }
+        if (displayName != null && displayName.toLowerCase(Locale.ROOT).endsWith(".md")) {
+            return "text/markdown";
+        }
+        return "text/plain";
     }
 
     private Map<String, Object> buildManifestPayload(
@@ -133,7 +131,8 @@ public class CopilotAttachmentArtifactService {
         payload.put("readFirst", "00-incident-manifest.json");
         payload.put("artifactPolicy", Map.of(
                 "attachmentsArePrimarySourceOfTruth", true,
-                "useToolsOnlyForGapFilling", true
+                "useToolsOnlyForGapFilling", true,
+                "deliveryMode", "inline-blob"
         ));
         payload.put("toolPolicy", buildToolPolicyPayload(toolAccessPolicy));
         payload.put("artifacts", descriptors.stream().map(this::toManifestEntry).toList());

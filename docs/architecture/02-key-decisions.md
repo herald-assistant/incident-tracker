@@ -303,6 +303,10 @@ Aktualny model:
 
 - `SessionConfig.availableTools` ogranicza sesje do jawnie zarejestrowanych
   Spring tools,
+- attachmenty incydentu sa przekazywane do sesji jako inline `blob`, a nie
+  jako lokalne sciezki plikowe,
+- `SessionHooks.onPreToolUse` dodatkowo blokuje kazdy tool, ktory nie jest
+  jawnie dopuszczony przez backend dla danej sesji,
 - lokalne filesystem/shell tools nie sa wystawiane do sesji,
 - Elasticsearch i GitLab capability sa attachment-gated:
   jesli odpowiadajace im dane sa juz dolaczone do sesji jako attachmenty,

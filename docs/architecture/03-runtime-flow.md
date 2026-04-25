@@ -245,6 +245,10 @@ Na tym etapie:
 - ladujemy tool definitions,
 - przycinamy tool definitions do allowlisty sesji i blokujemy lokalne
   workspace/filesystem/shell tools,
+- przekazujemy attachmenty jako inline blob payload zamiast lokalnych sciezek
+  plikowych, zeby model nie musial czytac ich z dysku,
+- ustawiamy pre-tool hook, ktory deny'uje kazdy tool niewystawiony jawnie przez
+  backend,
 - nie wystawiamy GitLab ani Elasticsearch tools, jesli odpowiadajace im dane sa
   juz dolaczone do sesji jako attachmenty,
 - skladamy prompt z danymi incydentu i evidence,

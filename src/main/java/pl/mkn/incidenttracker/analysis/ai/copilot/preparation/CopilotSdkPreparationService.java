@@ -5,7 +5,9 @@ import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.PermissionHandler;
 import com.github.copilot.sdk.json.PermissionRequestResult;
 import com.github.copilot.sdk.json.PermissionRequestResultKind;
+import com.github.copilot.sdk.json.PreToolUseHookOutput;
 import com.github.copilot.sdk.json.SessionConfig;
+import com.github.copilot.sdk.json.SessionHooks;
 import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -56,6 +58,7 @@ public class CopilotSdkPreparationService {
                 .setTools(tools)
                 .setAvailableTools(toolAccessPolicy.availableToolNames())
                 .setSkillDirectories(skillDirectories)
+                .setHooks(toolAccessHooks(toolAccessPolicy))
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
 
@@ -133,6 +136,7 @@ public class CopilotSdkPreparationService {
                 Hard rules:
                 - Analyze the attached artifacts as the primary source of truth.
                 - Read `00-incident-manifest.json` first and use it as the attachment index.
+                - Attached artifacts are delivered inline to this session. Do not try to open them from the local filesystem.
                 - Treat environment, gitLabBranch and gitLabGroup as fixed session context.
                 - Only the explicitly listed capability groups are enabled for this session.
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
@@ -243,6 +247,19 @@ public class CopilotSdkPreparationService {
             );
             case APPROVE_ALL -> PermissionHandler.APPROVE_ALL;
         };
+    }
+
+    private SessionHooks toolAccessHooks(CopilotToolAccessPolicy toolAccessPolicy) {
+        return new SessionHooks().setOnPreToolUse((input, invocation) -> {
+            var toolName = input != null ? input.getToolName() : null;
+            if (toolName != null && toolAccessPolicy.availableToolNames().contains(toolName)) {
+                return CompletableFuture.completedFuture(PreToolUseHookOutput.allow());
+            }
+
+            return CompletableFuture.completedFuture(PreToolUseHookOutput.deny(
+                    "Use only the inline attached artifacts and the explicitly enabled incident-analysis tools for this session."
+            ));
+        });
     }
 
     private List<String> safeList(List<String> values) {

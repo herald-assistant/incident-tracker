@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -112,7 +112,7 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
-    void shouldCleanupAttachmentArtifactsAfterExecution() throws Exception {
+    void shouldKeepLegacyStagingDirectoryUntouchedWhenBundleUsesInlineAttachments() throws Exception {
         var properties = new CopilotSdkProperties();
         var gateway = new CopilotSdkExecutionGateway(
                 properties,
@@ -144,7 +144,7 @@ class CopilotSdkExecutionGatewayTest {
             assertEquals("Structured answer", gateway.execute(preparedRequest));
         }
 
-        assertFalse(Files.exists(artifactDirectory));
+        assertTrue(Files.exists(artifactDirectory));
     }
 
     private AssistantMessageEvent assistantMessage(String content) {

@@ -60,6 +60,8 @@ do katalogu runtime dla sesji Copilota.
   `runtime-signals` i GitLab `resolved-code`, moga byc renderowane jako
   czytelny markdown dla Copilota, podczas gdy API i UI nadal dostaja
   strukturalne evidence JSON,
+- do sesji Copilota attachmenty sa przekazywane jako inline blob payload, a nie
+  jako sciezki do plikow na lokalnym dysku,
 - attachmenty sa nie tylko promptowym zaleceniem, ale tez wejciem do polityki
   sesji:
   jesli attachmenty juz niosa dane Elastica albo deterministic GitLab code
@@ -67,6 +69,8 @@ do katalogu runtime dla sesji Copilota.
 - `SessionConfig.availableTools` jest ustawiane jawnie, zeby odciac lokalny
   disk/workspace i shell tools; sesja widzi tylko jawnie dopuszczone Spring
   tools,
+- `SessionHooks.onPreToolUse` jest dodatkowym guardrailem runtime i deny'uje
+  kazdy tool spoza tej allowlisty, np. built-in `read_file`,
 - hidden `ToolContext` niesie session-bound dane runtime, np. `correlationId`,
   `environment`, `gitLabGroup`, `gitLabBranch`, `analysisRunId`,
   `copilotSessionId` i metadata tool calla,

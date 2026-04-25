@@ -1,31 +1,24 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
-import com.github.copilot.sdk.json.Attachment;
-import org.springframework.util.FileSystemUtils;
+import com.github.copilot.sdk.json.MessageAttachment;
 
 import java.nio.file.Path;
 import java.util.List;
 
 public record CopilotAttachmentArtifactBundle(
-        List<Attachment> attachments,
-        Path stagingDirectory
+        List<MessageAttachment> attachments
 ) implements AutoCloseable {
 
     public static CopilotAttachmentArtifactBundle empty() {
-        return new CopilotAttachmentArtifactBundle(List.of(), null);
+        return new CopilotAttachmentArtifactBundle(List.of());
+    }
+
+    public CopilotAttachmentArtifactBundle(List<MessageAttachment> attachments, Path ignoredStagingDirectory) {
+        this(attachments);
     }
 
     @Override
     public void close() {
-        if (stagingDirectory == null) {
-            return;
-        }
-
-        try {
-            FileSystemUtils.deleteRecursively(stagingDirectory);
-        } catch (Exception ignored) {
-            // Cleanup is best-effort. The analysis result should not fail because temp files
-            // could not be removed after the SDK call completed.
-        }
+        // Inline blob attachments do not require filesystem cleanup.
     }
 }
