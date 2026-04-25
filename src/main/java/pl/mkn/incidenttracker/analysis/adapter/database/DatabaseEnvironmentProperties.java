@@ -13,6 +13,7 @@ import java.util.Map;
 public class DatabaseEnvironmentProperties {
 
     private String jdbcUrl;
+    private String driverClassName;
     private String username;
     private String password;
     private String databaseAlias = "oracle";

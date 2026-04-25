@@ -1,7 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.BlobAttachment;
 import com.github.copilot.sdk.json.PreToolUseHookInput;
 import com.github.copilot.sdk.json.PreToolUseHookOutput;
 import com.github.copilot.sdk.json.ToolDefinition;
@@ -16,7 +15,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotAttachmentArtifactService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
@@ -25,10 +24,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContex
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -97,12 +93,12 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("environment: dev3"));
             assertTrue(prompt.contains("gitLabBranch: release/2026.04"));
             assertTrue(prompt.contains("gitLabGroup: sample/runtime"));
-            assertTrue(prompt.contains("Analyze the attached artifacts as the primary source of truth."));
+            assertTrue(prompt.contains("Analyze the incident artifacts as the primary source of truth."));
             assertTrue(prompt.contains("Read `00-incident-manifest.json` first"));
-            assertTrue(prompt.contains("Attached artifacts are delivered inline to this session. Do not try to open them from the local filesystem."));
+            assertTrue(prompt.contains("Incident artifacts are embedded directly in this prompt. Do not try to open them from the local filesystem."));
             assertTrue(prompt.contains("The authoritative artifact contents are embedded below in this prompt."));
             assertTrue(prompt.contains("Do not claim that you only see the artifact list when the artifact contents are embedded below."));
-            assertTrue(prompt.contains("Attached artifacts:"));
+            assertTrue(prompt.contains("Artifacts:"));
             assertTrue(prompt.contains("Embedded artifact contents:"));
             assertTrue(prompt.contains("00-incident-manifest.json"));
             assertTrue(prompt.contains("01-elasticsearch-logs.md"));
@@ -110,12 +106,12 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("03-gitlab-resolved-code.md"));
             assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 00-incident-manifest.json | mimeType=application/json>>>"));
             assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-elasticsearch-logs.md | mimeType=text/markdown>>>"));
-            assertTrue(prompt.contains("\"deliveryMode\" : \"inline-blob\""));
+            assertTrue(prompt.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(prompt.contains("Read timed out while calling catalog-service"));
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
-            assertTrue(prompt.contains("- none; rely on the attached artifacts for this session."));
+            assertTrue(prompt.contains("- none; rely on the incident artifacts for this session."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
             assertTrue(prompt.contains("operator, tester, analyst, or junior/mid developer"));
             assertTrue(prompt.contains("may not know the affected system area"));
@@ -125,8 +121,8 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
             assertTrue(prompt.contains("Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality."));
-            assertTrue(prompt.contains("GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding attachment data is missing."));
-            assertTrue(prompt.contains("If attached artifacts already contain enough evidence and the affected flow is understandable, answer directly."));
+            assertTrue(prompt.contains("GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding artifact data is missing."));
+            assertTrue(prompt.contains("If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly."));
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));
@@ -145,10 +141,9 @@ class CopilotSdkPreparationServiceTest {
             assertFalse(prompt.contains("metricLabel=service.response.time.p95"));
             assertEquals(prompt, prepared.prompt());
 
-            assertEquals(4, prepared.messageOptions().getAttachments().size());
-            var manifestAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(0);
-            assertEquals("00-incident-manifest.json", manifestAttachment.getDisplayName());
-            var manifestContent = decodeBlob(manifestAttachment);
+            assertTrue(prepared.messageOptions().getAttachments() == null || prepared.messageOptions().getAttachments().isEmpty());
+            assertEquals(4, prepared.artifactContents().size());
+            var manifestContent = prepared.artifactContents().get("00-incident-manifest.json");
             assertTrue(manifestContent.contains("\"readFirst\""));
             assertTrue(manifestContent.contains("\"00-incident-manifest.json\""));
             assertTrue(manifestContent.contains("\"01-elasticsearch-logs.md\""));
@@ -156,30 +151,25 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"toolPolicy\""));
             assertTrue(manifestContent.contains("\"localWorkspaceAccessBlocked\" : true"));
             assertTrue(manifestContent.contains("\"enabledToolNames\" : [ ]"));
-            assertTrue(manifestContent.contains("\"deliveryMode\" : \"inline-blob\""));
+            assertTrue(manifestContent.contains("\"deliveryMode\" : \"embedded-prompt\""));
+            assertTrue(manifestContent.contains("\"artifactsArePrimarySourceOfTruth\" : true"));
             assertTrue(manifestContent.contains("\"name\" : \"gitlab\""));
 
-            var logsAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(1);
-            assertEquals("01-elasticsearch-logs.md", logsAttachment.getDisplayName());
-            var logsContent = decodeBlob(logsAttachment);
+            var logsContent = prepared.artifactContents().get("01-elasticsearch-logs.md");
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
             assertTrue(logsContent.contains("Log entry `1` `ERROR` `billing-service`"));
             assertTrue(logsContent.contains("- message:"));
             assertTrue(logsContent.contains("Read timed out while calling catalog-service"));
             assertFalse(logsContent.contains("\"provider\""));
 
-            var dynatraceAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(2);
-            assertEquals("02-dynatrace-runtime-signals.md", dynatraceAttachment.getDisplayName());
-            var dynatraceContent = decodeBlob(dynatraceAttachment);
+            var dynatraceContent = prepared.artifactContents().get("02-dynatrace-runtime-signals.md");
             assertTrue(dynatraceContent.contains("Dynatrace runtime signals"));
             assertTrue(dynatraceContent.contains("- collection status: COLLECTED"));
             assertTrue(dynatraceContent.contains("component `case-evaluation-service`: MATCHED, SIGNALS_PRESENT."));
             assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertFalse(dynatraceContent.contains("\"metricLabel\""));
 
-            var gitLabAttachment = (BlobAttachment) prepared.messageOptions().getAttachments().get(3);
-            assertEquals("03-gitlab-resolved-code.md", gitLabAttachment.getDisplayName());
-            var gitLabContent = decodeBlob(gitLabAttachment);
+            var gitLabContent = prepared.artifactContents().get("03-gitlab-resolved-code.md");
             assertTrue(gitLabContent.contains("GitLab resolved code references"));
             assertTrue(gitLabContent.contains("- repository: `edge-client-service`"));
             assertTrue(gitLabContent.contains("- returned lines: `5-12` of `14`"));
@@ -211,7 +201,7 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotAttachmentArtifactService(properties, objectMapper)
+                new CopilotArtifactService(objectMapper)
         );
 
         try (var prepared = service.prepare(request)) {
@@ -241,7 +231,7 @@ class CopilotSdkPreparationServiceTest {
     }
 
     @Test
-    void shouldAllowOnlyExplicitSpringToolsWhenAttachmentsDoNotAlreadyCoverThem() {
+    void shouldAllowOnlyExplicitSpringToolsWhenArtifactsDoNotAlreadyCoverThem() {
         var properties = baseProperties();
         var request = requestWithoutToolCoveredEvidence();
         var bridge = mock(CopilotSdkToolBridge.class);
@@ -265,7 +255,7 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotAttachmentArtifactService(properties, objectMapper)
+                new CopilotArtifactService(objectMapper)
         );
 
         try (var prepared = service.prepare(request)) {
@@ -278,7 +268,7 @@ class CopilotSdkPreparationServiceTest {
     }
 
     @Test
-    void shouldFilterElasticAndGitLabToolsWhenEquivalentAttachmentDataAlreadyExists() {
+    void shouldFilterElasticAndGitLabToolsWhenEquivalentArtifactDataAlreadyExists() {
         var properties = baseProperties();
         var request = sampleRequest();
         var bridge = mock(CopilotSdkToolBridge.class);
@@ -307,7 +297,7 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotAttachmentArtifactService(properties, objectMapper)
+                new CopilotArtifactService(objectMapper)
         );
 
         try (var prepared = service.prepare(request)) {
@@ -414,7 +404,7 @@ class CopilotSdkPreparationServiceTest {
                 properties,
                 toolBridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotAttachmentArtifactService(properties, objectMapper)
+                new CopilotArtifactService(objectMapper)
         );
     }
 
@@ -422,7 +412,6 @@ class CopilotSdkPreparationServiceTest {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\Users\\mknie\\IdeaProjects\\incidenttracker");
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
-        properties.setAttachmentArtifactDirectory(tempDirectory.resolve("attachments").toString());
         return properties;
     }
 
@@ -544,7 +533,4 @@ class CopilotSdkPreparationServiceTest {
         );
     }
 
-    private String decodeBlob(BlobAttachment attachment) {
-        return new String(Base64.getDecoder().decode(attachment.getData()), StandardCharsets.UTF_8);
-    }
 }

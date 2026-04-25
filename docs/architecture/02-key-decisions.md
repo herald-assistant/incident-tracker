@@ -293,7 +293,7 @@ domyslnych workspace tools podczas glownego flow `/analysis`.
 
 Powod:
 
-- analiza ma opierac sie najpierw na attachmentach wygenerowanych z evidence,
+- analiza ma opierac sie najpierw na artefaktach wygenerowanych z evidence,
 - dostep do lokalnego repo lub PowerShella wprowadza niepotrzebna sciezke
   eksploracji poza zakresem incydentu,
 - chcemy miec jawna, backendowa kontrole nad tym, jakie capability sa dostepne
@@ -303,16 +303,16 @@ Aktualny model:
 
 - `SessionConfig.availableTools` ogranicza sesje do jawnie zarejestrowanych
   Spring tools,
-- attachmenty incydentu sa przekazywane do sesji jako inline `blob`, a nie
-  jako lokalne sciezki plikowe,
+- artefakty incydentu sa osadzane bezposrednio w promptcie, a nie
+  przekazywane jako lokalne sciezki plikowe,
 - ta sama tresc manifestu i evidence jest dodatkowo osadzana w samym promptcie,
   zeby model mial gwarantowany dostep do danych nawet wtedy, gdy runtime
-  Copilota nie eksponuje blob attachmentow jako "otwieralnych" plikow,
+  Copilota nie eksponuje osobnych artefaktow jako "otwieralnych" plikow,
 - `SessionHooks.onPreToolUse` dodatkowo blokuje kazdy tool, ktory nie jest
   jawnie dopuszczony przez backend dla danej sesji,
 - lokalne filesystem/shell tools nie sa wystawiane do sesji,
-- Elasticsearch i GitLab capability sa attachment-gated:
-  jesli odpowiadajace im dane sa juz dolaczone do sesji jako attachmenty,
+- Elasticsearch i GitLab capability sa artifact-gated:
+  jesli odpowiadajace im dane sa juz dolaczone do sesji jako artefakty,
   backend nie wystawia tych tool groups do modelu,
 - tools pozostaja fallbackiem tylko dla brakujacej widocznosci, a nie pierwszym
   krokiem eksploracji.

@@ -64,7 +64,7 @@ Aktualny zestaw Database MCP obejmuje:
 - ten sam tool moze byc widoczny w kontekscie Spring AI i w sesji Copilota,
 - sama rejestracja Spring toola nie oznacza jeszcze, ze trafi on do konkretnej
   sesji Copilota:
-  `CopilotSdkPreparationService` moze go odfiltrowac, jesli attachmenty juz
+  `CopilotSdkPreparationService` moze go odfiltrowac, jesli artefakty juz
   dostarczyly odpowiadajace mu dane,
 - sesja Copilota dostaje tez allowliste `availableTools`, zeby zablokowac
   lokalne workspace/filesystem/shell tools i zostawic tylko jawnie dopuszczone

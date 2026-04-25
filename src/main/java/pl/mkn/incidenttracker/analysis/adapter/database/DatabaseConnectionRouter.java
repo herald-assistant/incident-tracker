@@ -81,22 +81,78 @@ public class DatabaseConnectionRouter implements AutoCloseable {
             );
         }
 
+        var jdbcUrl = environmentProperties.getJdbcUrl().strip();
+        var username = environmentProperties.getUsername().strip();
+        var driverClassName = resolveDriverClassName(environmentProperties, jdbcUrl);
+
         log.info(
-                "Initializing read-only database pool environment={} databaseAlias={}",
+                "Initializing read-only database pool environment={} databaseAlias={} driverClassName={}",
                 environment,
-                environmentProperties.getDatabaseAlias()
+                environmentProperties.getDatabaseAlias(),
+                StringUtils.hasText(driverClassName) ? driverClassName : "<auto>"
         );
 
-        var configuration = new HikariConfig();
-        configuration.setJdbcUrl(environmentProperties.getJdbcUrl());
-        configuration.setUsername(environmentProperties.getUsername());
-        configuration.setPassword(environmentProperties.getPassword());
-        configuration.setPoolName("incident-db-" + environment);
-        configuration.setMaximumPoolSize(3);
-        configuration.setReadOnly(true);
-        configuration.setConnectionTimeout(properties.getConnectionTimeout().toMillis());
+        try {
+            var configuration = new HikariConfig();
+            configuration.setJdbcUrl(jdbcUrl);
+            configuration.setUsername(username);
+            configuration.setPassword(environmentProperties.getPassword());
+            if (StringUtils.hasText(driverClassName)) {
+                configuration.setDriverClassName(driverClassName);
+            }
+            configuration.setPoolName("incident-db-" + environment);
+            configuration.setMaximumPoolSize(3);
+            configuration.setReadOnly(true);
+            configuration.setConnectionTimeout(properties.getConnectionTimeout().toMillis());
+            return new HikariDataSource(configuration);
+        }
+        catch (RuntimeException exception) {
+            throw new IllegalStateException(
+                    buildDataSourceInitializationMessage(environment, jdbcUrl, driverClassName),
+                    exception
+            );
+        }
+    }
 
-        return new HikariDataSource(configuration);
+    String resolveDriverClassName(DatabaseEnvironmentProperties environmentProperties) {
+        return resolveDriverClassName(environmentProperties, environmentProperties.getJdbcUrl());
+    }
+
+    String resolveDriverClassName(
+            DatabaseEnvironmentProperties environmentProperties,
+            String jdbcUrl
+    ) {
+        if (StringUtils.hasText(environmentProperties.getDriverClassName())) {
+            return environmentProperties.getDriverClassName().strip();
+        }
+        if (StringUtils.hasText(jdbcUrl) && jdbcUrl.strip().startsWith("jdbc:oracle:")) {
+            return "oracle.jdbc.OracleDriver";
+        }
+        if ("oracle".equalsIgnoreCase(environmentProperties.getDatabaseAlias())) {
+            return "oracle.jdbc.OracleDriver";
+        }
+        return null;
+    }
+
+    private String buildDataSourceInitializationMessage(
+            String environment,
+            String jdbcUrl,
+            String driverClassName
+    ) {
+        var driverDetail = StringUtils.hasText(driverClassName)
+                ? " with driverClassName '%s'".formatted(driverClassName)
+                : "";
+        var oracleHint = jdbcUrl.startsWith("jdbc:oracle:")
+                ? " For Oracle on Java 17 prefer runtime dependency 'com.oracle.database.jdbc:ojdbc17'."
+                : "";
+        return """
+                Failed to initialize database pool for environment '%s' using jdbcUrl '%s'%s.
+                Ensure the JDBC driver is present on the runtime classpath and the JDBC URL is valid.%s
+                You can also configure analysis.database.environments.%s.driver-class-name explicitly.
+                """
+                .formatted(environment, jdbcUrl, driverDetail, oracleHint, environment)
+                .replace('\n', ' ')
+                .trim();
     }
 
     private String requireEnvironment(String environment) {

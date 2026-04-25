@@ -56,18 +56,18 @@ do katalogu runtime dla sesji Copilota.
 - prompt niesie dane konkretnego incydentu,
 - skill niesie stale zasady pracy,
 - AI dostaje generyczne evidence, nie klasy adapter-specific,
-- attachmenty providerow, np. Elasticsearch `logs`, Dynatrace
+- artefakty providerow, np. Elasticsearch `logs`, Dynatrace
   `runtime-signals` i GitLab `resolved-code`, moga byc renderowane jako
   czytelny markdown dla Copilota, podczas gdy API i UI nadal dostaja
   strukturalne evidence JSON,
-- do sesji Copilota attachmenty sa przekazywane jako inline blob payload, a nie
-  jako sciezki do plikow na lokalnym dysku,
+- do sesji Copilota artefakty sa osadzane bezposrednio w promptcie, a nie jako
+  sciezki do plikow na lokalnym dysku,
 - preparation osadza te same artifacty rowniez bezposrednio w promptcie, zeby
   model mial pewny dostep do tresci nawet wtedy, gdy runtime nie pozwala ich
   "otwierac" jak osobnych plikow,
-- attachmenty sa nie tylko promptowym zaleceniem, ale tez wejciem do polityki
+- artefakty sa nie tylko promptowym zaleceniem, ale tez wejciem do polityki
   sesji:
-  jesli attachmenty juz niosa dane Elastica albo deterministic GitLab code
+  jesli artefakty juz niosa dane Elastica albo deterministic GitLab code
   evidence, preparation nie wystawia odpowiadajacych im tool groups,
 - `SessionConfig.availableTools` jest ustawiane jawnie, zeby odciac lokalny
   disk/workspace i shell tools; sesja widzi tylko jawnie dopuszczone Spring

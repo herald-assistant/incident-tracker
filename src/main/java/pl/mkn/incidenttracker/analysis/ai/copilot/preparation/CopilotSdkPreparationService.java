@@ -8,7 +8,6 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.PreToolUseHookOutput;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.SessionHooks;
-import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
@@ -26,14 +25,14 @@ public class CopilotSdkPreparationService {
     private final CopilotSdkProperties properties;
     private final CopilotSdkToolBridge toolBridge;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
-    private final CopilotAttachmentArtifactService attachmentArtifactService;
+    private final CopilotArtifactService artifactService;
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
         var toolSessionContext = buildToolSessionContext(request);
         var registeredTools = toolBridge.buildToolDefinitions(toolSessionContext);
         var toolAccessPolicy = CopilotToolAccessPolicy.from(request, registeredTools);
         var tools = toolAccessPolicy.enabledTools();
-        var renderedArtifacts = attachmentArtifactService.renderArtifacts(request, toolAccessPolicy);
+        var renderedArtifacts = artifactService.renderArtifacts(request, toolAccessPolicy);
         var skillDirectories = skillRuntimeLoader.resolveSkillDirectories();
 
         var clientOptions = new CopilotClientOptions()
@@ -71,31 +70,23 @@ public class CopilotSdkPreparationService {
         }
 
         String prompt = buildPrompt(request, toolAccessPolicy, renderedArtifacts);
-        var attachmentArtifacts = attachmentArtifactService.create(renderedArtifacts);
+        var artifactContents = artifactService.toArtifactContentMap(renderedArtifacts);
+        var messageOptions = new MessageOptions().setPrompt(prompt);
 
-        try {
-            var messageOptions = new MessageOptions()
-                    .setPrompt(prompt)
-                    .setAttachments(attachmentArtifacts.attachments());
-
-            return new CopilotSdkPreparedRequest(
-                    request.correlationId(),
-                    clientOptions,
-                    sessionConfig,
-                    messageOptions,
-                    prompt,
-                    attachmentArtifacts
-            );
-        } catch (RuntimeException exception) {
-            attachmentArtifacts.close();
-            throw exception;
-        }
+        return new CopilotSdkPreparedRequest(
+                request.correlationId(),
+                clientOptions,
+                sessionConfig,
+                messageOptions,
+                prompt,
+                artifactContents
+        );
     }
 
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
         var tools = toolBridge.buildToolDefinitions(buildToolSessionContext(request));
         var toolAccessPolicy = CopilotToolAccessPolicy.from(request, tools);
-        var renderedArtifacts = attachmentArtifactService.renderArtifacts(request, toolAccessPolicy);
+        var renderedArtifacts = artifactService.renderArtifacts(request, toolAccessPolicy);
         return buildPrompt(request, toolAccessPolicy, renderedArtifacts);
     }
 
@@ -116,7 +107,7 @@ public class CopilotSdkPreparationService {
     private String buildPrompt(
             AnalysisAiAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy,
-            List<CopilotAttachmentArtifactService.AttachmentArtifact> renderedArtifacts
+            List<CopilotArtifactService.Artifact> renderedArtifacts
     ) {
         return """
                 You are helping with an enterprise software incident analysis.
@@ -134,20 +125,20 @@ public class CopilotSdkPreparationService {
                 - gitLabGroup: %s
 
                 Hard rules:
-                - Analyze the attached artifacts as the primary source of truth.
-                - Read `00-incident-manifest.json` first and use it as the attachment index.
-                - Attached artifacts are delivered inline to this session. Do not try to open them from the local filesystem.
+                - Analyze the incident artifacts as the primary source of truth.
+                - Read `00-incident-manifest.json` first and use it as the artifact index.
+                - Incident artifacts are embedded directly in this prompt. Do not try to open them from the local filesystem.
                 - The authoritative artifact contents are embedded below in this prompt. Treat that embedded content as the full text of the session artifacts.
                 - Do not claim that you only see the artifact list when the artifact contents are embedded below.
                 - Treat environment, gitLabBranch and gitLabGroup as fixed session context.
                 - Only the explicitly listed capability groups are enabled for this session.
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
-                - Do not assume facts unsupported by attached artifacts or tool results.
+                - Do not assume facts unsupported by the incident artifacts or tool results.
                 - Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality.
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
-                - GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding attachment data is missing.
-                - If attached artifacts already contain enough evidence and the affected flow is understandable, answer directly.
+                - GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding artifact data is missing.
+                - If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly.
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
 
@@ -168,7 +159,7 @@ public class CopilotSdkPreparationService {
                 affectedBoundedContext: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>
                 affectedTeam: <short Polish plain-text label for the team that should own or receive the handoff, grounded in operational-context evidence when available; write `nieustalone` if not grounded>
 
-                Attached artifacts:
+                Artifacts:
                 %s
 
                 Embedded artifact contents:
@@ -181,7 +172,7 @@ public class CopilotSdkPreparationService {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
-                formatAttachedArtifacts(renderedArtifacts),
+                formatArtifacts(renderedArtifacts),
                 formatEmbeddedArtifacts(renderedArtifacts),
                 formatAvailableToolGroups(toolAccessPolicy)
         );
@@ -204,7 +195,7 @@ public class CopilotSdkPreparationService {
 
         return rendered.length() > 0
                 ? rendered.toString().trim()
-                : "- none; rely on the attached artifacts for this session.";
+                : "- none; rely on the incident artifacts for this session.";
     }
 
     private String renderGitLabGroup(String gitLabGroup) {
@@ -219,8 +210,8 @@ public class CopilotSdkPreparationService {
         return gitLabBranch != null && !gitLabBranch.isBlank() ? gitLabBranch : "<not-resolved-from-logs>";
     }
 
-    private String formatAttachedArtifacts(
-            List<CopilotAttachmentArtifactService.AttachmentArtifact> renderedArtifacts
+    private String formatArtifacts(
+            List<CopilotArtifactService.Artifact> renderedArtifacts
     ) {
         var rendered = new StringBuilder();
 
@@ -247,7 +238,7 @@ public class CopilotSdkPreparationService {
     }
 
     private String formatEmbeddedArtifacts(
-            List<CopilotAttachmentArtifactService.AttachmentArtifact> renderedArtifacts
+            List<CopilotArtifactService.Artifact> renderedArtifacts
     ) {
         if (renderedArtifacts.isEmpty()) {
             return "<none>";
@@ -292,7 +283,7 @@ public class CopilotSdkPreparationService {
             }
 
             return CompletableFuture.completedFuture(PreToolUseHookOutput.deny(
-                    "Use only the inline attached artifacts and the explicitly enabled incident-analysis tools for this session."
+                    "Use only the inline incident artifacts and the explicitly enabled incident-analysis tools for this session."
             ));
         });
     }

@@ -29,7 +29,6 @@ public class CopilotSdkProperties {
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
     private List<String> skillResourceRoots = List.of("copilot/skills");
     private String skillRuntimeDirectory = defaultSkillRuntimeDirectory();
-    private String attachmentArtifactDirectory = defaultAttachmentArtifactDirectory();
     private List<String> skillDirectories = List.of();
     private List<String> disabledSkills = List.of();
 
@@ -38,11 +37,4 @@ public class CopilotSdkProperties {
                 + "incidenttracker" + java.io.File.separator
                 + "copilot-skills";
     }
-
-    private static String defaultAttachmentArtifactDirectory() {
-        return System.getProperty("java.io.tmpdir") + java.io.File.separator
-                + "incidenttracker" + java.io.File.separator
-                + "copilot-attachments";
-    }
-
 }

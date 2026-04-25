@@ -21,6 +21,7 @@
         <java.version>17</java.version>
         <spring-ai.version>1.1.2</spring-ai.version>
         <copilot-sdk-java.version>0.2.1-java.0</copilot-sdk-java.version>
+        <oracle.jdbc.version>23.6.0.24.10</oracle.jdbc.version>
         <frontend-maven-plugin.version>1.15.4</frontend-maven-plugin.version>
         <frontend.node.version>v22.14.0</frontend.node.version>
     </properties>
@@ -49,6 +50,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc17</artifactId>
+            <version>${oracle.jdbc.version}</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.ai</groupId>

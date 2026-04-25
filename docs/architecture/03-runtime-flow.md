@@ -149,7 +149,7 @@ Elasticsearch provider:
 
 - zbiera logi po `correlationId`,
 - publikuje strukturalne `logs` do evidence i UI,
-- do attachmentu Copilota moze renderowac czytelny markdown z metadanymi wpisu,
+- do artefaktu Copilota moze renderowac czytelny markdown z metadanymi wpisu,
   trescia `message` i ewentualnym `exception`, zamiast surowego JSON sekcji
   logow.
 
@@ -172,7 +172,7 @@ Dynatrace provider:
   (`COLLECTED`, `UNAVAILABLE`, `DISABLED`, `SKIPPED`),
 - dla dopasowanych komponentow rozroznia brak sygnalow problemowych od braku
   widocznosci,
-- do attachmentu Copilota renderuje skrocony markdownowy summary komponentow,
+- do artefaktu Copilota renderuje skrocony markdownowy summary komponentow,
   zamiast surowego JSON sekcji Dynatrace,
 - nie wystawia osobnych tooli Dynatrace dla Copilota.
 
@@ -186,7 +186,7 @@ GitLab deterministic provider:
 - szuka odniesien do kodu po pelnej sciezce, stacktrace albo nazwie klasy,
 - pobiera dopasowane pliki lub chunki z GitLaba przez REST,
 - publikuje strukturalne `resolved-code` do evidence i UI,
-- do attachmentu Copilota moze renderowac czytelny markdown z metadanymi pliku
+- do artefaktu Copilota moze renderowac czytelny markdown z metadanymi pliku
   i blokiem kodu zamiast surowego JSON sekcji GitLaba.
 
 Dynatrace i GitLab deterministic:
@@ -245,15 +245,16 @@ Na tym etapie:
 - ladujemy tool definitions,
 - przycinamy tool definitions do allowlisty sesji i blokujemy lokalne
   workspace/filesystem/shell tools,
-- przekazujemy attachmenty jako inline blob payload zamiast lokalnych sciezek
-  plikowych, zeby model nie musial czytac ich z dysku,
+- osadzamy artefakty bezposrednio w promptcie zamiast przekazywac je jako
+  osobne pliki lub lokalne sciezki, zeby model nie musial niczego czytac z
+  dysku,
 - osadzamy tresc manifestu i wszystkich artifactow bezposrednio w promptcie,
   zeby model widzial realne evidence nawet wtedy, gdy runtime Copilota nie
-  udostepnia blob attachmentow jako otwieralnych plikow,
+  udostepnia osobnych artefaktow jako otwieralnych plikow,
 - ustawiamy pre-tool hook, ktory deny'uje kazdy tool niewystawiony jawnie przez
   backend,
 - nie wystawiamy GitLab ani Elasticsearch tools, jesli odpowiadajace im dane sa
-  juz dolaczone do sesji jako attachmenty,
+  juz dolaczone do sesji jako artefakty,
 - skladamy prompt z danymi incydentu i evidence,
 - ustawiamy strategie permission handling.
 
@@ -279,7 +280,7 @@ To jest AI-guided dogranie dodatkowych logow po tym samym `correlationId`,
 gdy evidence z glownego flow jest zbyt skrotowe.
 Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
 `analysis.elasticsearch.*`.
-Ten tool nie jest jednak wystawiany do sesji, jesli attachmenty juz zawieraja
+Ten tool nie jest jednak wystawiany do sesji, jesli artefakty juz zawieraja
 evidence `elasticsearch/logs`.
 
 #### GitLab
@@ -293,7 +294,7 @@ evidence `elasticsearch/logs`.
 
 To jest AI-guided repository exploration.
 Dynatrace nie ma tu osobnych tooli.
-Te tools nie sa jednak wystawiane do sesji, jesli attachmenty juz zawieraja
+Te tools nie sa jednak wystawiane do sesji, jesli artefakty juz zawieraja
 deterministic evidence `gitlab/resolved-code`.
 
 W job flow odpowiedzi `gitlab_read_repository_file`,

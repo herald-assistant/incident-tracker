@@ -8,23 +8,18 @@ import com.github.copilot.sdk.json.CopilotClientOptions;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotAttachmentArtifactBundle;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -34,9 +29,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CopilotSdkExecutionGatewayTest {
-
-    @TempDir
-    Path tempDirectory;
 
     @Test
     void shouldUseDefaultSendAndWaitTimeoutFromProperties() {
@@ -51,7 +43,7 @@ class CopilotSdkExecutionGatewayTest {
                 new SessionConfig(),
                 new MessageOptions().setPrompt("Diagnose incident"),
                 "Diagnose incident",
-                CopilotAttachmentArtifactBundle.empty()
+                Map.of()
         );
         var sessionRef = new AtomicReference<CopilotSession>();
 
@@ -88,7 +80,7 @@ class CopilotSdkExecutionGatewayTest {
                 new SessionConfig(),
                 new MessageOptions().setPrompt("Diagnose incident"),
                 "Diagnose incident",
-                CopilotAttachmentArtifactBundle.empty()
+                Map.of()
         );
         var sessionRef = new AtomicReference<CopilotSession>();
 
@@ -112,14 +104,12 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
-    void shouldKeepLegacyStagingDirectoryUntouchedWhenBundleUsesInlineAttachments() throws Exception {
+    void shouldExecuteWithArtifactOnlyPreparedRequest() {
         var properties = new CopilotSdkProperties();
         var gateway = new CopilotSdkExecutionGateway(
                 properties,
                 new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper())
         );
-        var artifactDirectory = Files.createDirectory(tempDirectory.resolve("attachments"));
-        Files.writeString(artifactDirectory.resolve("00-incident-manifest.json"), "{}");
 
         var preparedRequest = new CopilotSdkPreparedRequest(
                 "corr-cleanup",
@@ -127,7 +117,7 @@ class CopilotSdkExecutionGatewayTest {
                 new SessionConfig(),
                 new MessageOptions().setPrompt("Diagnose incident"),
                 "Diagnose incident",
-                new CopilotAttachmentArtifactBundle(List.of(), artifactDirectory)
+                Map.of("00-incident-manifest.json", "{}")
         );
 
         try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
@@ -143,8 +133,6 @@ class CopilotSdkExecutionGatewayTest {
         })) {
             assertEquals("Structured answer", gateway.execute(preparedRequest));
         }
-
-        assertTrue(Files.exists(artifactDirectory));
     }
 
     private AssistantMessageEvent assistantMessage(String content) {

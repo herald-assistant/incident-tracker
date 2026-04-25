@@ -1,8 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.BlobAttachment;
-import com.github.copilot.sdk.json.MessageAttachment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
@@ -14,10 +12,9 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLo
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -25,17 +22,16 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class CopilotAttachmentArtifactService {
+public class CopilotArtifactService {
 
-    private final CopilotSdkProperties properties;
     private final ObjectMapper objectMapper;
 
-    public List<AttachmentArtifact> renderArtifacts(
+    public List<Artifact> renderArtifacts(
             AnalysisAiAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
-        var artifacts = new ArrayList<AttachmentArtifact>();
-        artifacts.add(new AttachmentArtifact(
+        var artifacts = new ArrayList<Artifact>();
+        artifacts.add(new Artifact(
                 "00-incident-manifest.json",
                 "Artifact index and analysis context",
                 null,
@@ -49,7 +45,7 @@ public class CopilotAttachmentArtifactService {
         for (int index = 0; index < sections.size(); index++) {
             var section = sections.get(index);
             var displayName = buildSectionFileName(index + 1, section);
-            artifacts.add(new AttachmentArtifact(
+            artifacts.add(new Artifact(
                     displayName,
                     "Evidence section from provider `%s` in category `%s`".formatted(
                             normalizeDescriptorValue(section.provider()),
@@ -66,24 +62,20 @@ public class CopilotAttachmentArtifactService {
         return List.copyOf(artifacts);
     }
 
-    public CopilotAttachmentArtifactBundle create(
+    public Map<String, String> toArtifactContentMap(
             AnalysisAiAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
-        return create(renderArtifacts(request, toolAccessPolicy));
+        return toArtifactContentMap(renderArtifacts(request, toolAccessPolicy));
     }
 
-    public CopilotAttachmentArtifactBundle create(List<AttachmentArtifact> artifacts) {
-        var attachments = new ArrayList<MessageAttachment>();
+    public Map<String, String> toArtifactContentMap(List<Artifact> artifacts) {
+        var artifactContents = new LinkedHashMap<String, String>();
         for (var artifact : artifacts) {
-            attachments.add(createBlobAttachment(
-                    artifact.displayName(),
-                    artifact.mimeType(),
-                    artifact.content()
-            ));
+            artifactContents.put(artifact.displayName(), artifact.content());
         }
 
-        return new CopilotAttachmentArtifactBundle(List.copyOf(attachments));
+        return Collections.unmodifiableMap(artifactContents);
     }
 
     private String renderManifestArtifact(
@@ -91,7 +83,7 @@ public class CopilotAttachmentArtifactService {
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         try {
-            var descriptors = buildArtifactDescriptors(request);
+            var descriptors = buildArtifactIndex(request);
             return renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy));
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to render Copilot incident manifest.", exception);
@@ -115,9 +107,9 @@ public class CopilotAttachmentArtifactService {
         return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
     }
 
-    private List<AttachmentArtifactDescriptor> buildArtifactDescriptors(AnalysisAiAnalysisRequest request) {
-        var descriptors = new ArrayList<AttachmentArtifactDescriptor>();
-        descriptors.add(new AttachmentArtifactDescriptor(
+    private List<ArtifactDescriptor> buildArtifactIndex(AnalysisAiAnalysisRequest request) {
+        var descriptors = new ArrayList<ArtifactDescriptor>();
+        descriptors.add(new ArtifactDescriptor(
                 "00-incident-manifest.json",
                 "Artifact index and analysis context",
                 null,
@@ -128,7 +120,7 @@ public class CopilotAttachmentArtifactService {
         var sections = request.evidenceSections();
         for (int index = 0; index < sections.size(); index++) {
             var section = sections.get(index);
-            descriptors.add(new AttachmentArtifactDescriptor(
+            descriptors.add(new ArtifactDescriptor(
                     buildSectionFileName(index + 1, section),
                     "Evidence section from provider `%s` in category `%s`".formatted(
                             normalizeDescriptorValue(section.provider()),
@@ -143,13 +135,6 @@ public class CopilotAttachmentArtifactService {
         return List.copyOf(descriptors);
     }
 
-    private BlobAttachment createBlobAttachment(String displayName, String mimeType, String content) {
-        return new BlobAttachment()
-                .setDisplayName(displayName)
-                .setMimeType(mimeType)
-                .setData(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)));
-    }
-
     private String mimeTypeFor(String displayName) {
         if (displayName != null && displayName.toLowerCase(Locale.ROOT).endsWith(".json")) {
             return "application/json";
@@ -162,7 +147,7 @@ public class CopilotAttachmentArtifactService {
 
     private Map<String, Object> buildManifestPayload(
             AnalysisAiAnalysisRequest request,
-            List<AttachmentArtifactDescriptor> descriptors,
+            List<ArtifactDescriptor> descriptors,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         var payload = new LinkedHashMap<String, Object>();
@@ -173,9 +158,9 @@ public class CopilotAttachmentArtifactService {
         payload.put("generatedAt", Instant.now().toString());
         payload.put("readFirst", "00-incident-manifest.json");
         payload.put("artifactPolicy", Map.of(
-                "attachmentsArePrimarySourceOfTruth", true,
+                "artifactsArePrimarySourceOfTruth", true,
                 "useToolsOnlyForGapFilling", true,
-                "deliveryMode", "inline-blob"
+                "deliveryMode", "embedded-prompt"
         ));
         payload.put("toolPolicy", buildToolPolicyPayload(toolAccessPolicy));
         payload.put("artifacts", descriptors.stream().map(this::toManifestEntry).toList());
@@ -194,7 +179,7 @@ public class CopilotAttachmentArtifactService {
         return payload;
     }
 
-    private Map<String, Object> toManifestEntry(AttachmentArtifactDescriptor descriptor) {
+    private Map<String, Object> toManifestEntry(ArtifactDescriptor descriptor) {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("displayName", descriptor.displayName());
         payload.put("role", descriptor.role());
@@ -282,7 +267,7 @@ public class CopilotAttachmentArtifactService {
         return value != null && !value.isBlank() ? value : null;
     }
 
-    public record AttachmentArtifactDescriptor(
+    public record ArtifactDescriptor(
             String displayName,
             String role,
             String provider,
@@ -291,7 +276,7 @@ public class CopilotAttachmentArtifactService {
     ) {
     }
 
-    public record AttachmentArtifact(
+    public record Artifact(
             String displayName,
             String role,
             String provider,
@@ -300,8 +285,8 @@ public class CopilotAttachmentArtifactService {
             String mimeType,
             String content
     ) {
-        public AttachmentArtifactDescriptor descriptor() {
-            return new AttachmentArtifactDescriptor(displayName, role, provider, category, itemCount);
+        public ArtifactDescriptor descriptor() {
+            return new ArtifactDescriptor(displayName, role, provider, category, itemCount);
         }
     }
 }
