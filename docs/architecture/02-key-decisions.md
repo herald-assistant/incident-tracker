@@ -305,6 +305,9 @@ Aktualny model:
   Spring tools,
 - attachmenty incydentu sa przekazywane do sesji jako inline `blob`, a nie
   jako lokalne sciezki plikowe,
+- ta sama tresc manifestu i evidence jest dodatkowo osadzana w samym promptcie,
+  zeby model mial gwarantowany dostep do danych nawet wtedy, gdy runtime
+  Copilota nie eksponuje blob attachmentow jako "otwieralnych" plikow,
 - `SessionHooks.onPreToolUse` dodatkowo blokuje kazdy tool, ktory nie jest
   jawnie dopuszczony przez backend dla danej sesji,
 - lokalne filesystem/shell tools nie sa wystawiane do sesji,

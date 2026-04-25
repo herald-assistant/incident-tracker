@@ -100,11 +100,20 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Analyze the attached artifacts as the primary source of truth."));
             assertTrue(prompt.contains("Read `00-incident-manifest.json` first"));
             assertTrue(prompt.contains("Attached artifacts are delivered inline to this session. Do not try to open them from the local filesystem."));
+            assertTrue(prompt.contains("The authoritative artifact contents are embedded below in this prompt."));
+            assertTrue(prompt.contains("Do not claim that you only see the artifact list when the artifact contents are embedded below."));
             assertTrue(prompt.contains("Attached artifacts:"));
+            assertTrue(prompt.contains("Embedded artifact contents:"));
             assertTrue(prompt.contains("00-incident-manifest.json"));
             assertTrue(prompt.contains("01-elasticsearch-logs.md"));
             assertTrue(prompt.contains("02-dynatrace-runtime-signals.md"));
             assertTrue(prompt.contains("03-gitlab-resolved-code.md"));
+            assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 00-incident-manifest.json | mimeType=application/json>>>"));
+            assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-elasticsearch-logs.md | mimeType=text/markdown>>>"));
+            assertTrue(prompt.contains("\"deliveryMode\" : \"inline-blob\""));
+            assertTrue(prompt.contains("Read timed out while calling catalog-service"));
+            assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
+            assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
             assertTrue(prompt.contains("- none; rely on the attached artifacts for this session."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
@@ -133,7 +142,6 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("affectedProcess: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>"));
             assertTrue(prompt.contains("affectedBoundedContext: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>"));
             assertTrue(prompt.contains("affectedTeam: <short Polish plain-text label for the team that should own or receive the handoff, grounded in operational-context evidence when available; write `nieustalone` if not grounded>"));
-            assertFalse(prompt.contains("Read timed out while calling catalog-service"));
             assertFalse(prompt.contains("metricLabel=service.response.time.p95"));
             assertEquals(prompt, prepared.prompt());
 

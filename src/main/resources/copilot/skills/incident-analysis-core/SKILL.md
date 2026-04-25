@@ -24,9 +24,9 @@ A good answer should help the reader:
 
 ## Evidence-first workflow
 
-1. Read `00-incident-manifest.json` first when attached.
+1. Read `00-incident-manifest.json` first when attached or when its content is embedded in the prompt.
 2. Use the manifest as the attachment index and session context.
-3. Treat attached artifacts as the primary source of truth.
+3. Treat attached artifacts, or their embedded prompt copies, as the primary source of truth.
 4. Form the initial hypothesis from logs, runtime signals, deterministic code evidence and operational context.
 5. Use tools only when they can materially confirm, reject or refine a concrete hypothesis.
 6. If existing artifacts are already sufficient and the affected flow is understandable, answer without extra tool calls.

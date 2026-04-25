@@ -62,6 +62,9 @@ do katalogu runtime dla sesji Copilota.
   strukturalne evidence JSON,
 - do sesji Copilota attachmenty sa przekazywane jako inline blob payload, a nie
   jako sciezki do plikow na lokalnym dysku,
+- preparation osadza te same artifacty rowniez bezposrednio w promptcie, zeby
+  model mial pewny dostep do tresci nawet wtedy, gdy runtime nie pozwala ich
+  "otwierac" jak osobnych plikow,
 - attachmenty sa nie tylko promptowym zaleceniem, ale tez wejciem do polityki
   sesji:
   jesli attachmenty juz niosa dane Elastica albo deterministic GitLab code

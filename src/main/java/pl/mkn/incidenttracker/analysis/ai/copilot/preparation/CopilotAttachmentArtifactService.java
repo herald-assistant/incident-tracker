@@ -30,7 +30,92 @@ public class CopilotAttachmentArtifactService {
     private final CopilotSdkProperties properties;
     private final ObjectMapper objectMapper;
 
-    public List<AttachmentArtifactDescriptor> describe(AnalysisAiAnalysisRequest request) {
+    public List<AttachmentArtifact> renderArtifacts(
+            AnalysisAiAnalysisRequest request,
+            CopilotToolAccessPolicy toolAccessPolicy
+    ) {
+        var artifacts = new ArrayList<AttachmentArtifact>();
+        artifacts.add(new AttachmentArtifact(
+                "00-incident-manifest.json",
+                "Artifact index and analysis context",
+                null,
+                null,
+                null,
+                "application/json",
+                renderManifestArtifact(request, toolAccessPolicy)
+        ));
+
+        var sections = request.evidenceSections();
+        for (int index = 0; index < sections.size(); index++) {
+            var section = sections.get(index);
+            var displayName = buildSectionFileName(index + 1, section);
+            artifacts.add(new AttachmentArtifact(
+                    displayName,
+                    "Evidence section from provider `%s` in category `%s`".formatted(
+                            normalizeDescriptorValue(section.provider()),
+                            normalizeDescriptorValue(section.category())
+                    ),
+                    section.provider(),
+                    section.category(),
+                    section.items().size(),
+                    mimeTypeFor(displayName),
+                    renderSectionArtifact(section)
+            ));
+        }
+
+        return List.copyOf(artifacts);
+    }
+
+    public CopilotAttachmentArtifactBundle create(
+            AnalysisAiAnalysisRequest request,
+            CopilotToolAccessPolicy toolAccessPolicy
+    ) {
+        return create(renderArtifacts(request, toolAccessPolicy));
+    }
+
+    public CopilotAttachmentArtifactBundle create(List<AttachmentArtifact> artifacts) {
+        var attachments = new ArrayList<MessageAttachment>();
+        for (var artifact : artifacts) {
+            attachments.add(createBlobAttachment(
+                    artifact.displayName(),
+                    artifact.mimeType(),
+                    artifact.content()
+            ));
+        }
+
+        return new CopilotAttachmentArtifactBundle(List.copyOf(attachments));
+    }
+
+    private String renderManifestArtifact(
+            AnalysisAiAnalysisRequest request,
+            CopilotToolAccessPolicy toolAccessPolicy
+    ) {
+        try {
+            var descriptors = buildArtifactDescriptors(request);
+            return renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to render Copilot incident manifest.", exception);
+        }
+    }
+
+    private String renderSectionArtifact(AnalysisEvidenceSection section) {
+        try {
+            var readableMarkdown = buildReadableMarkdown(section);
+            if (readableMarkdown != null) {
+                return readableMarkdown;
+            }
+
+            return renderJson(buildEvidenceSectionPayload(section));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to render Copilot evidence artifact.", exception);
+        }
+    }
+
+    private String renderJson(Object payload) throws IOException {
+        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
+    }
+
+    private List<AttachmentArtifactDescriptor> buildArtifactDescriptors(AnalysisAiAnalysisRequest request) {
         var descriptors = new ArrayList<AttachmentArtifactDescriptor>();
         descriptors.add(new AttachmentArtifactDescriptor(
                 "00-incident-manifest.json",
@@ -56,48 +141,6 @@ public class CopilotAttachmentArtifactService {
         }
 
         return List.copyOf(descriptors);
-    }
-
-    public CopilotAttachmentArtifactBundle create(
-            AnalysisAiAnalysisRequest request,
-            CopilotToolAccessPolicy toolAccessPolicy
-    ) {
-        var descriptors = describe(request);
-        try {
-            var attachments = new ArrayList<MessageAttachment>();
-            attachments.add(createBlobAttachment(
-                    "00-incident-manifest.json",
-                    "application/json",
-                    renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy))
-            ));
-
-            for (int index = 0; index < request.evidenceSections().size(); index++) {
-                var section = request.evidenceSections().get(index);
-                var descriptor = descriptors.get(index + 1);
-                attachments.add(createBlobAttachment(
-                        descriptor.displayName(),
-                        mimeTypeFor(descriptor.displayName()),
-                        renderSectionArtifact(section)
-                ));
-            }
-
-            return new CopilotAttachmentArtifactBundle(List.copyOf(attachments));
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to prepare Copilot attachment artifacts.", exception);
-        }
-    }
-
-    private String renderSectionArtifact(AnalysisEvidenceSection section) throws IOException {
-        var readableMarkdown = buildReadableMarkdown(section);
-        if (readableMarkdown != null) {
-            return readableMarkdown;
-        }
-
-        return renderJson(buildEvidenceSectionPayload(section));
-    }
-
-    private String renderJson(Object payload) throws IOException {
-        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
     }
 
     private BlobAttachment createBlobAttachment(String displayName, String mimeType, String content) {
@@ -246,5 +289,19 @@ public class CopilotAttachmentArtifactService {
             String category,
             Integer itemCount
     ) {
+    }
+
+    public record AttachmentArtifact(
+            String displayName,
+            String role,
+            String provider,
+            String category,
+            Integer itemCount,
+            String mimeType,
+            String content
+    ) {
+        public AttachmentArtifactDescriptor descriptor() {
+            return new AttachmentArtifactDescriptor(displayName, role, provider, category, itemCount);
+        }
     }
 }

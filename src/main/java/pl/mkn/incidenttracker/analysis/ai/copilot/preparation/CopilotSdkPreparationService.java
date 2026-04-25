@@ -33,7 +33,7 @@ public class CopilotSdkPreparationService {
         var registeredTools = toolBridge.buildToolDefinitions(toolSessionContext);
         var toolAccessPolicy = CopilotToolAccessPolicy.from(request, registeredTools);
         var tools = toolAccessPolicy.enabledTools();
-        var artifactDescriptors = attachmentArtifactService.describe(request);
+        var renderedArtifacts = attachmentArtifactService.renderArtifacts(request, toolAccessPolicy);
         var skillDirectories = skillRuntimeLoader.resolveSkillDirectories();
 
         var clientOptions = new CopilotClientOptions()
@@ -70,8 +70,8 @@ public class CopilotSdkPreparationService {
             sessionConfig.setReasoningEffort(properties.getReasoningEffort());
         }
 
-        String prompt = buildPrompt(request, toolAccessPolicy, artifactDescriptors);
-        var attachmentArtifacts = attachmentArtifactService.create(request, toolAccessPolicy);
+        String prompt = buildPrompt(request, toolAccessPolicy, renderedArtifacts);
+        var attachmentArtifacts = attachmentArtifactService.create(renderedArtifacts);
 
         try {
             var messageOptions = new MessageOptions()
@@ -95,8 +95,8 @@ public class CopilotSdkPreparationService {
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
         var tools = toolBridge.buildToolDefinitions(buildToolSessionContext(request));
         var toolAccessPolicy = CopilotToolAccessPolicy.from(request, tools);
-        var artifactDescriptors = attachmentArtifactService.describe(request);
-        return buildPrompt(request, toolAccessPolicy, artifactDescriptors);
+        var renderedArtifacts = attachmentArtifactService.renderArtifacts(request, toolAccessPolicy);
+        return buildPrompt(request, toolAccessPolicy, renderedArtifacts);
     }
 
     private CopilotToolSessionContext buildToolSessionContext(AnalysisAiAnalysisRequest request) {
@@ -116,7 +116,7 @@ public class CopilotSdkPreparationService {
     private String buildPrompt(
             AnalysisAiAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy,
-            List<CopilotAttachmentArtifactService.AttachmentArtifactDescriptor> artifactDescriptors
+            List<CopilotAttachmentArtifactService.AttachmentArtifact> renderedArtifacts
     ) {
         return """
                 You are helping with an enterprise software incident analysis.
@@ -137,6 +137,8 @@ public class CopilotSdkPreparationService {
                 - Analyze the attached artifacts as the primary source of truth.
                 - Read `00-incident-manifest.json` first and use it as the attachment index.
                 - Attached artifacts are delivered inline to this session. Do not try to open them from the local filesystem.
+                - The authoritative artifact contents are embedded below in this prompt. Treat that embedded content as the full text of the session artifacts.
+                - Do not claim that you only see the artifact list when the artifact contents are embedded below.
                 - Treat environment, gitLabBranch and gitLabGroup as fixed session context.
                 - Only the explicitly listed capability groups are enabled for this session.
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
@@ -169,6 +171,9 @@ public class CopilotSdkPreparationService {
                 Attached artifacts:
                 %s
 
+                Embedded artifact contents:
+                %s
+
                 Available capability groups:
                 %s
                 """.formatted(
@@ -176,7 +181,8 @@ public class CopilotSdkPreparationService {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
-                formatAttachedArtifacts(artifactDescriptors),
+                formatAttachedArtifacts(renderedArtifacts),
+                formatEmbeddedArtifacts(renderedArtifacts),
                 formatAvailableToolGroups(toolAccessPolicy)
         );
     }
@@ -214,11 +220,11 @@ public class CopilotSdkPreparationService {
     }
 
     private String formatAttachedArtifacts(
-            List<CopilotAttachmentArtifactService.AttachmentArtifactDescriptor> artifactDescriptors
+            List<CopilotAttachmentArtifactService.AttachmentArtifact> renderedArtifacts
     ) {
         var rendered = new StringBuilder();
 
-        for (var artifact : artifactDescriptors) {
+        for (var artifact : renderedArtifacts) {
             if (rendered.length() > 0) {
                 rendered.append(System.lineSeparator());
             }
@@ -235,6 +241,35 @@ public class CopilotSdkPreparationService {
 
         if (rendered.length() == 0) {
             return "- none";
+        }
+
+        return rendered.toString();
+    }
+
+    private String formatEmbeddedArtifacts(
+            List<CopilotAttachmentArtifactService.AttachmentArtifact> renderedArtifacts
+    ) {
+        if (renderedArtifacts.isEmpty()) {
+            return "<none>";
+        }
+
+        var rendered = new StringBuilder();
+        for (var artifact : renderedArtifacts) {
+            if (rendered.length() > 0) {
+                rendered.append(System.lineSeparator()).append(System.lineSeparator());
+            }
+
+            rendered.append("<<<BEGIN ARTIFACT: ")
+                    .append(artifact.displayName())
+                    .append(" | mimeType=")
+                    .append(artifact.mimeType())
+                    .append(">>>")
+                    .append(System.lineSeparator())
+                    .append(artifact.content())
+                    .append(System.lineSeparator())
+                    .append("<<<END ARTIFACT: ")
+                    .append(artifact.displayName())
+                    .append(">>>");
         }
 
         return rendered.toString();

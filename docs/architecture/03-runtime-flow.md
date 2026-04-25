@@ -247,6 +247,9 @@ Na tym etapie:
   workspace/filesystem/shell tools,
 - przekazujemy attachmenty jako inline blob payload zamiast lokalnych sciezek
   plikowych, zeby model nie musial czytac ich z dysku,
+- osadzamy tresc manifestu i wszystkich artifactow bezposrednio w promptcie,
+  zeby model widzial realne evidence nawet wtedy, gdy runtime Copilota nie
+  udostepnia blob attachmentow jako otwieralnych plikow,
 - ustawiamy pre-tool hook, ktory deny'uje kazdy tool niewystawiony jawnie przez
   backend,
 - nie wystawiamy GitLab ani Elasticsearch tools, jesli odpowiadajace im dane sa
