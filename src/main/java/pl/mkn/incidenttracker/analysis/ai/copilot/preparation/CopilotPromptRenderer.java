@@ -47,7 +47,9 @@ public class CopilotPromptRenderer {
                 - GitLab, Elasticsearch and Database tools are coverage-aware and may be enabled for targeted gap filling even when some related evidence is already attached.
                 - If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly.
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
-                - If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
+                - If `DB_CODE_GROUNDING_NEEDED` is listed, do not start broad DB table/column discovery from guesses.
+                - Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom, you must either cite deterministic GitLab evidence that already identifies the entity/repository mapping, call an enabled GitLab tool to try to find that mapping, or state that GitLab grounding is unavailable and use DB discovery as a fallback.
+                - Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
                 - If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab class-reference or flow tools with grounded class names and focused keywords before broad DB discovery when that can narrow the affected flow or target tables.
                 - Every GitLab tool call must include `reason`: one short Polish sentence that explains the practical purpose of this read/search for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
                 - Every Database tool call must include `reason`: one short Polish sentence that explains why this DB result is useful for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
@@ -124,11 +126,11 @@ public class CopilotPromptRenderer {
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code and flow coverage gaps. Include a short Polish `reason` in every GitLab tool call.\n");
+            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow or DB code-grounding gaps. Include a short Polish `reason` in every GitLab tool call.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {
-            rendered.append("- Database diagnostics: use discovery tools for POSSIBLE data gaps; verify data-dependent hypotheses only when coverage marks dataDiagnosticNeed as LIKELY or REQUIRED and the environment is resolved. Include a short Polish `reason` in every Database tool call.\n");
+            rendered.append("- Database diagnostics: before table/column discovery, ground table and relation hints from deterministic GitLab evidence or enabled GitLab tools when `DB_CODE_GROUNDING_NEEDED` is listed; use DB discovery as fallback if code grounding is unavailable. Include a short Polish `reason` in every Database tool call.\n");
         }
 
         return rendered.length() > 0

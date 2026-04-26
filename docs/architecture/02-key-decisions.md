@@ -184,6 +184,10 @@ Polityka:
 - GitLab tools sa wlaczane przy braku code evidence albo gdy jest tylko
   symbol, stack frame, failing method lub brakuje flow context.
 - Gdy GitLab zna projekt/plik, zostaje ograniczony focused toolset.
+- Przy DB-related symptomach coverage moze dodac luke
+  `DB_CODE_GROUNDING_NEEDED`. Wtedy focused GitLab tools pozostaja dostepne do
+  proby ugruntowania encji, repozytorium, tabel i relacji przed DB discovery,
+  nawet jesli ogolny flow context z GitLaba wyglada na wystarczajacy.
 - DB tools sa wlaczane tylko przy resolved environment i
   `DataDiagnosticNeed=LIKELY/REQUIRED`.
 - Dla `POSSIBLE` dostepne sa tylko discovery tools.
@@ -224,6 +228,10 @@ lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 - GitLab search/flow context powinien uzywac konkretnych, ugruntowanych
   keywordow,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
+- DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow
+  najpierw trzeba sprobowac ugruntowac encje, repozytorium, tabele i relacje z
+  deterministic GitLab evidence albo focused GitLab tools; DB discovery jest
+  fallbackiem, nie zgadywaniem tabel,
 - DB sample rows nie sluzy do przegladania danych biznesowych,
 - raw SQL jest last resort i moze byc zablokowany.
 

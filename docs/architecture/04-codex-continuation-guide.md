@@ -172,13 +172,13 @@ resources, tylko korzysta z query-based adaptera i wystawia typed
 
 ## Najbardziej naturalne kolejne kierunki
 
-### 1. Selektywne odblokowanie GitLab tools przy deterministic code evidence
+### 1. Dalsze dopracowanie code-to-DB grounding
 
-Obecnie przygotowanie sesji wycina cala grupe GitLab tools, jesli artefakty juz
-zawieraja `gitlab/resolved-code`.
-Naturalnym kolejnym krokiem jest bardziej precyzyjna polityka, np. zostawienie
-`gitlab_find_class_references` albo `gitlab_find_flow_context` dla scenariuszy
-code-to-DB, gdy deterministic evidence jest pomocne, ale niewystarczajace.
+Policy zostawia focused GitLab tools przy luce `DB_CODE_GROUNDING_NEEDED`, zeby
+model sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
+discovery.
+Naturalnym kolejnym krokiem jest mierzenie, czy to faktycznie zmniejsza liczbe
+zgadywanych tabel i czy nie zwieksza niepotrzebnie kosztu GitLab calls.
 
 ### 2. Utrzymanie prostego widoku AI tool evidence
 

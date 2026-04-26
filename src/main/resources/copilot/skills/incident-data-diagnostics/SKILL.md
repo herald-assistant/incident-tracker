@@ -97,9 +97,19 @@ The model should normally think in terms of application/deployment names, not Or
 
 ---
 
-## Code-first targeting before DB discovery
+## Mandatory code-first targeting before DB discovery
 
 When the symptom points to JPA, repository lookup, missing entity, relation traversal or data filtering, first derive table and relation hints from code before broad DB discovery.
+
+If `DB_CODE_GROUNDING_NEEDED` appears in `00-incident-manifest.json`, do not start `db_find_tables`, `db_find_columns`, `db_describe_table`, row counts or samples from guessed table/column names.
+
+Before the first DB table/column/schema-table query, do one of these:
+
+1. Use deterministic GitLab evidence that already shows the entity/repository mapping.
+2. If GitLab tools are available, call a focused GitLab tool to try to find the entity/repository/table mapping.
+3. If code grounding is unavailable or no entity/repository can be found with the available tools, state that limitation in the DB `reason` and use DB discovery as a fallback.
+
+The fallback is allowed, but only after the code-grounding attempt or after confirming that no relevant GitLab tool is available.
 
 Prefer this sequence:
 
@@ -123,6 +133,12 @@ Prefer this sequence:
    - expected relationships.
 
 Do not guess the table only from the exception label if code can ground it first.
+
+Good fallback `reason` example:
+
+```text
+Nie udalo sie potwierdzic encji w dostepnym kodzie, wiec szukam tabeli po nazwie aplikacji i slowach z bledu.
+```
 
 ---
 

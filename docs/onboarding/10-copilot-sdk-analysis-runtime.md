@@ -80,6 +80,12 @@ Runtime rejestruje tylko tools dozwolone przez `CopilotToolAccessPolicy`.
 Policy uzywa `CopilotEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
 sekcja evidence istnieje.
 
+Gdy coverage wykryje DB-related symptom bez ugruntowanej encji/repozytorium w
+GitLab evidence, manifest dostaje `DB_CODE_GROUNDING_NEEDED`. Wtedy policy
+zostawia focused GitLab tools, zeby model mogl sprobowac znalezc mapowanie
+entity/table/relations przed DB discovery; jesli to sie nie uda albo GitLab
+tools nie ma w sesji, DB discovery jest jawnym fallbackiem.
+
 Policy powstaje przez `CopilotToolAccessPolicyFactory`, aby ukryta zaleznosc
 od coverage evaluatora nie byla zaszyta w samym recordzie policy.
 

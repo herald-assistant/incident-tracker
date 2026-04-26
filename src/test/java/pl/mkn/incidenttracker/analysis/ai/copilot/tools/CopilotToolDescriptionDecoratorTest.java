@@ -32,6 +32,16 @@ class CopilotToolDescriptionDecoratorTest {
     }
 
     @Test
+    void shouldAppendCodeGroundingGuidanceForDbDiscovery() {
+        var description = decorator.decorate("db_find_tables", "Finds tables.");
+
+        assertTrue(description.contains("ground the entity/repository/table mapping"));
+        assertTrue(description.contains("use DB discovery as fallback"));
+        assertTrue(description.contains("Use code-derived table, column and relation hints"));
+        assertTrue(description.contains("Always provide reason as one short Polish sentence"));
+    }
+
+    @Test
     void shouldLeaveUnknownToolDescriptionUntouched() {
         var description = decorator.decorate("custom_tool", "  Custom description.  ");
 

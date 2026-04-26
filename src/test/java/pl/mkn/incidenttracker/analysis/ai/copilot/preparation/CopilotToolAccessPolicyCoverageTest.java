@@ -92,6 +92,73 @@ class CopilotToolAccessPolicyCoverageTest {
     }
 
     @Test
+    void shouldEnableFocusedGitLabToolsForDatabaseCodeGroundingGapEvenWhenFlowContextIsAttached() {
+        var policy = policy(
+                request("dev3", List.of(
+                        jpaExceptionSection(),
+                        gitLabSection(
+                                "Flow context upstream and downstream for CheckoutService",
+                                """
+                                        class CheckoutService {
+                                            Order submit(CheckoutCommand command) {
+                                                validator.validate(command);
+                                                return downstreamClient.reserve(command.id());
+                                            }
+                                        }
+                                        """
+                        )
+                )),
+                tools(
+                        "gitlab_search_repository_candidates",
+                        "gitlab_read_repository_file",
+                        "gitlab_find_class_references",
+                        "gitlab_find_flow_context",
+                        "gitlab_read_repository_file_chunk",
+                        "gitlab_read_repository_file_chunks",
+                        "gitlab_read_repository_file_outline",
+                        "db_find_tables"
+                )
+        );
+
+        assertTrue(policy.evidenceCoverage().hasGap("DB_CODE_GROUNDING_NEEDED"));
+        assertTrue(policy.availableToolNames().contains("gitlab_find_class_references"));
+        assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunks"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_outline"));
+        assertFalse(policy.availableToolNames().contains("gitlab_search_repository_candidates"));
+        assertFalse(policy.availableToolNames().contains("gitlab_read_repository_file"));
+        assertTrue(policy.availableToolNames().contains("db_find_tables"));
+    }
+
+    @Test
+    void shouldNotAddDatabaseCodeGroundingGapWhenOrmMappingEvidenceIsAttached() {
+        var policy = policy(
+                request("dev3", List.of(
+                        jpaExceptionSection(),
+                        gitLabSection(
+                                "OrderEntity mapping",
+                                """
+                                        @Entity
+                                        @Table(name = "ORDERS")
+                                        class OrderEntity {
+                                            @Column(name = "BUSINESS_KEY")
+                                            private String businessKey;
+
+                                            @JoinColumn(name = "CUSTOMER_ID")
+                                            private CustomerEntity customer;
+                                        }
+                                        """
+                        )
+                )),
+                tools("gitlab_find_class_references", "db_find_tables")
+        );
+
+        assertFalse(policy.evidenceCoverage().hasGap("DB_CODE_GROUNDING_NEEDED"));
+        assertTrue(policy.availableToolNames().contains("db_find_tables"));
+    }
+
+    @Test
     void shouldDisableElasticToolsWhenLogsAreSufficient() {
         var policy = policy(
                 request("dev3", List.of(sufficientElasticSection())),

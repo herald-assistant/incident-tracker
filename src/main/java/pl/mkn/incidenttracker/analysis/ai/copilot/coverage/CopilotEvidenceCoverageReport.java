@@ -65,4 +65,8 @@ public record CopilotEvidenceCoverageReport(
     public boolean databaseDiscoveryOnly() {
         return environmentResolved && dataDiagnosticNeed == DataDiagnosticNeed.POSSIBLE;
     }
+
+    public boolean databaseCodeGroundingNeedsTooling() {
+        return hasGap("DB_CODE_GROUNDING_NEEDED");
+    }
 }

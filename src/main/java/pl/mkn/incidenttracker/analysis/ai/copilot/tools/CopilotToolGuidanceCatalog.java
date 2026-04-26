@@ -11,6 +11,8 @@ import java.util.Map;
 public class CopilotToolGuidanceCatalog {
 
     private static final List<String> DATABASE_REASON_GUIDANCE = List.of(
+            "For JPA, repository or data-access symptoms, first ground the entity/repository/table mapping from deterministic GitLab evidence or an enabled GitLab tool call; use DB discovery as fallback only when code grounding is unavailable.",
+            "Use code-derived table, column and relation hints instead of guessing names from the exception label.",
             "Always provide reason as one short Polish sentence for the operator."
     );
 

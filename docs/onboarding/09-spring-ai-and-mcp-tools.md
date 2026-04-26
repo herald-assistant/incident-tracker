@@ -43,6 +43,9 @@ Reguly:
 - GitLab tools sa aktywne przy brakujacym code/flow context.
 - Gdy GitLab evidence zna projekt/plik, zostaje focused toolset zamiast
   szerokiego browse.
+- Przy `DB_CODE_GROUNDING_NEEDED` focused GitLab tools sa aktywne takze po to,
+  zeby model sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie
+  przed przeszukiwaniem DB metadata.
 - DB tools wymagaja resolved environment i uzasadnionej potrzeby data
   diagnostics.
 - Raw SQL jest domyslnie zablokowany.
@@ -60,6 +63,9 @@ Przyklady guidance:
 - GitLab search/flow context powinien uzywac konkretnych keywordow ze
   stacktrace, exception, klasy, repozytorium albo service name,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
+- DB tools przypominaja, ze DB discovery dla JPA/repository/data-access
+  symptomow jest fallbackiem po deterministic GitLab evidence albo probie
+  focused GitLab tool call,
 - DB sample rows nie sluzy do przegladania danych biznesowych,
 - raw SQL jest last resort i moze byc zablokowany przez policy/budget.
 

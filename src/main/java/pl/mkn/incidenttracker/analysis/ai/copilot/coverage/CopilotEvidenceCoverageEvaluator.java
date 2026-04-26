@@ -33,6 +33,7 @@ public class CopilotEvidenceCoverageEvaluator {
         var runtimeCoverage = runtimeCoverage(sections, elasticCoverage);
         var dataDiagnosticNeed = dataDiagnosticNeed(sections);
         var environmentResolved = request != null && StringUtils.hasText(request.environment());
+        var databaseCodeGrounded = databaseCodeGrounded(sections);
 
         if ((dataDiagnosticNeed == DataDiagnosticNeed.LIKELY || dataDiagnosticNeed == DataDiagnosticNeed.REQUIRED)
                 && !environmentResolved) {
@@ -46,6 +47,13 @@ public class CopilotEvidenceCoverageEvaluator {
             gaps.add(gap(
                     "DB_DIAGNOSTIC_NEEDED",
                     "Evidence suggests a data-dependent symptom that may require read-only DB verification."
+            ));
+        }
+
+        if (dataDiagnosticNeed != DataDiagnosticNeed.NONE && !databaseCodeGrounded) {
+            gaps.add(gap(
+                    "DB_CODE_GROUNDING_NEEDED",
+                    "Before DB table or column discovery, ground the entity/repository/table mapping from deterministic GitLab evidence or enabled GitLab tools when possible."
             ));
         }
 
@@ -265,6 +273,41 @@ public class CopilotEvidenceCoverageEvaluator {
         }
 
         return DataDiagnosticNeed.NONE;
+    }
+
+    private boolean databaseCodeGrounded(List<AnalysisEvidenceSection> sections) {
+        var gitLab = GitLabResolvedCodeEvidenceView.from(sections);
+        if (!gitLab.hasItems()) {
+            return false;
+        }
+
+        for (var item : gitLab.items()) {
+            var text = normalize(
+                    safe(item.title())
+                            + "\n" + safe(item.filePath())
+                            + "\n" + safe(item.symbol())
+                            + "\n" + safe(item.content())
+            );
+            if (containsAny(
+                    text,
+                    "@entity",
+                    "@table",
+                    "@column",
+                    "@joincolumn",
+                    "@jointable",
+                    "mappedby",
+                    "@embeddable",
+                    "@elementcollection",
+                    "@query",
+                    "jparepository",
+                    "crudrepository",
+                    "pagingandsortingrepository"
+            )) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private String allEvidenceText(List<AnalysisEvidenceSection> sections) {

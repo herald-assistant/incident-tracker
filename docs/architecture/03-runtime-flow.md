@@ -145,6 +145,7 @@ Przyklady luk:
 - `MISSING_CODE_CONTEXT`,
 - `MISSING_FLOW_CONTEXT`,
 - `DB_ENVIRONMENT_UNRESOLVED`,
+- `DB_CODE_GROUNDING_NEEDED`,
 - `DB_DIAGNOSTIC_NEEDED`.
 
 Coverage nie diagnozuje root cause. Jego rola to powiedziec, czy AI ma
@@ -165,6 +166,9 @@ Elasticsearch tools:
 GitLab tools:
 
 - wlaczone, gdy brakuje code evidence albo flow context,
+- wlaczone w focused toolset przy luce `DB_CODE_GROUNDING_NEEDED`, zeby model
+  sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
+  discovery,
 - dla znanego projektu/pliku zostaje focused toolset:
   `gitlab_find_class_references`, `gitlab_find_flow_context`,
   `gitlab_read_repository_file_outline`,
@@ -182,7 +186,10 @@ DB tools:
 - `db_execute_readonly_sql` pozostaje domyslnie disabled.
 
 Prompt instruuje model, zeby uzywal tools tylko dla luk z
-`evidenceCoverage.gaps`.
+`evidenceCoverage.gaps`. Dla `DB_CODE_GROUNDING_NEEDED` model ma przed pierwsza
+proba DB table/column/schema-table query uzyc deterministic GitLab evidence albo
+wykonac focused GitLab tool call; gdy to niemozliwe, DB discovery jest jawnym
+fallbackiem z limitation w `reason`.
 
 ## 8. Session config i blokady lokalne
 

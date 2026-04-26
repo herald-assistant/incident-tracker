@@ -54,7 +54,9 @@ public class DatabaseMcpTools {
                     The environment is taken from hidden ToolContext. applicationNamePattern should be an application,
                     deployment, container, service or GitLab project name inferred from incident evidence. The backend
                     resolves it to a configured Oracle owner/schema and searches allowed tables/views. Returns lightweight
-                    candidates only, not full schemas.
+                    candidates only, not full schemas. For JPA/repository symptoms, first try to ground the entity/table
+                    mapping from deterministic GitLab evidence or enabled GitLab tools; use this as fallback when that
+                    mapping is still incomplete.
                     """
     )
     public DbTableSearchResult findTables(
@@ -95,7 +97,8 @@ public class DatabaseMcpTools {
             description = """
                     Finds ranked Oracle column candidates for an application on the current incident environment.
                     Use applicationNamePattern from evidence and optional table/column/Java field hints to locate ID,
-                    business key, tenant, status, state, soft-delete, validity, event or correlation columns.
+                    business key, tenant, status, state, soft-delete, validity, event or correlation columns. Prefer
+                    Java field hints and relation hints from entity/repository code over guessed column names.
                     """
     )
     public DbColumnSearchResult findColumns(

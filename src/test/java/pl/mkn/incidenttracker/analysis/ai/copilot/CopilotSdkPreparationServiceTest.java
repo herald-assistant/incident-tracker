@@ -133,7 +133,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
-            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code and flow coverage gaps."));
+            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow or DB code-grounding gaps."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
             assertTrue(prompt.contains("operator, tester, analyst, or junior/mid developer"));
             assertTrue(prompt.contains("may not know the affected system area"));
@@ -148,7 +148,8 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("GitLab, Elasticsearch and Database tools are coverage-aware"));
             assertTrue(prompt.contains("If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly."));
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
-            assertTrue(prompt.contains("If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
+            assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
+            assertTrue(prompt.contains("Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
             assertTrue(prompt.contains("If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab class-reference or flow tools with grounded class names and focused keywords before broad DB discovery"));
             assertTrue(prompt.contains("Every GitLab tool call must include `reason`: one short Polish sentence"));
             assertTrue(prompt.contains("Every Database tool call must include `reason`: one short Polish sentence"));

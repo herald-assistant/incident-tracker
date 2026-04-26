@@ -121,6 +121,11 @@ Instead:
 4. Read the entity/repository files with outline or focused chunks.
 5. Only then drive DB tools with the code-derived table, column and relation hints.
 
+If `DB_CODE_GROUNDING_NEEDED` is listed in the manifest, treat this as a required attempt before DB table/column discovery whenever GitLab tools are available.
+
+If the attempt does not find an entity or repository, do not keep browsing indefinitely.
+Move to DB discovery as fallback and make the limitation visible in the DB tool `reason`.
+
 Use this sequence especially for:
 
 - `EntityNotFoundException`,

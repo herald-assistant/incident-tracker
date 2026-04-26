@@ -165,6 +165,9 @@ public record CopilotToolAccessPolicy(
     }
 
     private static boolean gitLabToolEnabled(String toolName, CopilotEvidenceCoverageReport evidenceCoverage) {
+        if (evidenceCoverage.databaseCodeGroundingNeedsTooling() && FOCUSED_GITLAB_TOOLS.contains(toolName)) {
+            return true;
+        }
         if (!evidenceCoverage.gitLabNeedsTooling()) {
             return false;
         }
