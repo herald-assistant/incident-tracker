@@ -110,6 +110,25 @@ class CopilotSdkToolBridgeTest {
     }
 
     @Test
+    void shouldReturnFailedFutureWhenSpringToolCallbackFails() {
+        var bridge = bridge(List.of(failingToolProvider()));
+        var sessionContext = gitLabSessionContext();
+        var tool = bridge.buildToolDefinitions(sessionContext).stream()
+                .filter(candidate -> candidate.name().equals("failing_tool"))
+                .findFirst()
+                .orElseThrow();
+        var invocation = new ToolInvocation()
+                .setSessionId(sessionContext.copilotSessionId())
+                .setToolCallId("tool-call-failing-1")
+                .setToolName("failing_tool")
+                .setArguments(objectMapper.valueToTree(Map.of()));
+
+        var exception = assertThrows(CompletionException.class, () -> tool.handler().invoke(invocation).join());
+
+        assertTrue(exception.getCause().getMessage().contains("boom"));
+    }
+
+    @Test
     void shouldHideSessionBoundFieldsFromGitLabToolSchemas() {
         var bridge = bridge(List.of(gitLabToolProvider()));
         var toolsByName = bridge.buildToolDefinitions(gitLabSessionContext()).stream()
@@ -304,6 +323,12 @@ class CopilotSdkToolBridgeTest {
                 .build();
     }
 
+    private ToolCallbackProvider failingToolProvider() {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(new FailingTools())
+                .build();
+    }
+
     private CopilotSdkToolBridge bridge(List<ToolCallbackProvider> providers) {
         return bridge(providers, new CopilotToolEvidenceCaptureRegistry(objectMapper));
     }
@@ -341,6 +366,14 @@ class CopilotSdkToolBridgeTest {
                     "toolCallId", context.get(CopilotToolContextKeys.TOOL_CALL_ID),
                     "toolName", context.get(CopilotToolContextKeys.TOOL_NAME)
             );
+        }
+    }
+
+    static class FailingTools {
+
+        @Tool(name = "failing_tool", description = "Throws for failed future testing.")
+        public Map<String, Object> failingTool() {
+            throw new IllegalStateException("boom");
         }
     }
 }

@@ -20,6 +20,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactSer
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
@@ -246,12 +247,12 @@ class CopilotSdkPreparationServiceTest {
         when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
         var service = new CopilotSdkPreparationService(
-                properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
+                sessionConfigFactory(properties),
                 metricsRegistry()
         );
 
@@ -303,12 +304,12 @@ class CopilotSdkPreparationServiceTest {
         when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
         var service = new CopilotSdkPreparationService(
-                properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
+                sessionConfigFactory(properties),
                 metricsRegistry()
         );
 
@@ -348,12 +349,12 @@ class CopilotSdkPreparationServiceTest {
                 .thenReturn(List.of(elasticTool, gitLabTool, dbTool));
 
         var service = new CopilotSdkPreparationService(
-                properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
+                sessionConfigFactory(properties),
                 metricsRegistry()
         );
 
@@ -458,12 +459,12 @@ class CopilotSdkPreparationServiceTest {
 
     private CopilotSdkPreparationService createService(CopilotSdkProperties properties) {
         return new CopilotSdkPreparationService(
-                properties,
                 toolBridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
+                sessionConfigFactory(properties),
                 metricsRegistry()
         );
     }
@@ -474,6 +475,10 @@ class CopilotSdkPreparationServiceTest {
 
     private CopilotPromptRenderer promptRenderer() {
         return new CopilotPromptRenderer();
+    }
+
+    private CopilotSessionConfigFactory sessionConfigFactory(CopilotSdkProperties properties) {
+        return new CopilotSessionConfigFactory(properties);
     }
 
     private CopilotSessionMetricsRegistry metricsRegistry() {

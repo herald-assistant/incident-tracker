@@ -13,6 +13,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactSer
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
@@ -41,12 +42,12 @@ class CopilotSdkPreparationServiceEvidenceReferencePromptTest {
         var bridge = mock(CopilotSdkToolBridge.class);
         when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.<ToolDefinition>of());
         var service = new CopilotSdkPreparationService(
-                properties,
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(new ObjectMapper()),
                 new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
                 new CopilotPromptRenderer(),
+                new CopilotSessionConfigFactory(properties),
                 new CopilotSessionMetricsRegistry(new CopilotMetricsProperties())
         );
 
