@@ -1,0 +1,78 @@
+package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class CopilotToolEvidenceCaptureRegistryDatabaseSummaryTest {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void shouldPublishNormalizedDatabaseDiagnosticSummary() {
+        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
+        registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
+            @Override
+            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
+                capturedSection.set(section);
+            }
+        });
+
+        registry.captureToolResult(
+                "session-1",
+                "tool-call-db-1",
+                "db_count_rows",
+                """
+                        {
+                          "table": {"schema": "CLP", "tableName": "ORDER_EVENT"},
+                          "filters": [
+                            {"column": "correlation_id", "operator": "EQ", "values": ["corr-123"]}
+                          ]
+                        }
+                        """,
+                """
+                        {
+                          "environment": "zt002",
+                          "databaseAlias": "oracle",
+                          "table": {"schema": "CLP", "tableName": "ORDER_EVENT"},
+                          "count": 3,
+                          "appliedFilters": ["CORRELATION_ID = corr-123"],
+                          "warnings": []
+                        }
+                        """
+        );
+
+        assertNotNull(capturedSection.get());
+        assertEquals("database", capturedSection.get().provider());
+        assertEquals("tool-results", capturedSection.get().category());
+        assertEquals(1, capturedSection.get().items().size());
+
+        var attributes = attributes(capturedSection.get());
+        assertEquals("db_count_rows", attributes.get("toolName"));
+        assertEquals("zt002", attributes.get("environment"));
+        assertEquals("oracle", attributes.get("databaseAlias"));
+        assertTrue(attributes.get("diagnosticQuestion").contains("CLP.ORDER_EVENT"));
+        assertTrue(attributes.get("resultSummary").contains("table=CLP.ORDER_EVENT"));
+        assertTrue(attributes.get("resultSummary").contains("count=3"));
+        assertTrue(attributes.get("parameters").contains("\"correlation_id\""));
+        assertTrue(attributes.get("result").contains("\"count\" : 3"));
+    }
+
+    private Map<String, String> attributes(AnalysisEvidenceSection section) {
+        return section.items().get(0).attributes().stream()
+                .collect(Collectors.toMap(
+                        attribute -> attribute.name(),
+                        attribute -> attribute.value()
+                ));
+    }
+}

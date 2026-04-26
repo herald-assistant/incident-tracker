@@ -36,6 +36,7 @@ public class CopilotSdkToolBridge {
     private final CopilotSessionMetricsRegistry metricsRegistry;
     private final CopilotMetricsLogger metricsLogger;
     private final CopilotToolBudgetGuard budgetGuard;
+    private final CopilotToolDescriptionDecorator descriptionDecorator;
 
     @Autowired
     public CopilotSdkToolBridge(
@@ -44,7 +45,8 @@ public class CopilotSdkToolBridge {
             CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
             CopilotSessionMetricsRegistry metricsRegistry,
             CopilotMetricsLogger metricsLogger,
-            CopilotToolBudgetGuard budgetGuard
+            CopilotToolBudgetGuard budgetGuard,
+            CopilotToolDescriptionDecorator descriptionDecorator
     ) {
         this.toolCallbackProviders = toolCallbackProviders;
         this.objectMapper = objectMapper;
@@ -52,6 +54,26 @@ public class CopilotSdkToolBridge {
         this.metricsRegistry = metricsRegistry;
         this.metricsLogger = metricsLogger;
         this.budgetGuard = budgetGuard;
+        this.descriptionDecorator = descriptionDecorator;
+    }
+
+    public CopilotSdkToolBridge(
+            List<ToolCallbackProvider> toolCallbackProviders,
+            ObjectMapper objectMapper,
+            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotMetricsLogger metricsLogger,
+            CopilotToolBudgetGuard budgetGuard
+    ) {
+        this(
+                toolCallbackProviders,
+                objectMapper,
+                toolEvidenceCaptureRegistry,
+                metricsRegistry,
+                metricsLogger,
+                budgetGuard,
+                new CopilotToolDescriptionDecorator()
+        );
     }
 
     public CopilotSdkToolBridge(
@@ -70,7 +92,8 @@ public class CopilotSdkToolBridge {
                 new CopilotToolBudgetGuard(
                         new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
                         metricsRegistry
-                )
+                ),
+                new CopilotToolDescriptionDecorator()
         );
     }
 
@@ -107,10 +130,14 @@ public class CopilotSdkToolBridge {
 
     private ToolDefinition toCopilotToolDefinition(ToolCallback callback, CopilotToolSessionContext sessionContext) {
         var springToolDefinition = callback.getToolDefinition();
+        var decoratedDescription = descriptionDecorator.decorate(
+                springToolDefinition.name(),
+                springToolDefinition.description()
+        );
 
         return ToolDefinition.createSkipPermission(
                 springToolDefinition.name(),
-                springToolDefinition.description(),
+                decoratedDescription,
                 parseInputSchema(springToolDefinition.inputSchema()),
                 invocation -> invokeSpringToolCallback(callback, invocation, sessionContext)
         );
