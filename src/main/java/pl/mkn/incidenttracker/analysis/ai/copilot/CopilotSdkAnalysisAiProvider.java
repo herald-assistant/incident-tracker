@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
@@ -15,8 +16,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotStructuredAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-
-import java.util.function.Function;
 
 @Service
 @Slf4j
@@ -36,8 +35,15 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     }
 
     @Override
+    public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        return preparationService.prepare(request);
+    }
+
+    @Override
     public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-        return analyzeWithExecution(request, executionGateway::execute);
+        try (var preparedAnalysis = prepare(request)) {
+            return analyzePrepared(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP, false, request);
+        }
     }
 
     @Override
@@ -45,21 +51,42 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             AnalysisAiAnalysisRequest request,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
-        return analyzeWithExecution(
-                request,
-                preparedRequest -> executionGateway.execute(preparedRequest, toolEvidenceListener)
-        );
+        try (var preparedAnalysis = prepare(request)) {
+            return analyzePrepared(preparedAnalysis, toolEvidenceListener, true, request);
+        }
     }
 
-    private AnalysisAiAnalysisResponse analyzeWithExecution(
-            AnalysisAiAnalysisRequest request,
-            Function<CopilotSdkPreparedRequest, String> execution
+    @Override
+    public AnalysisAiAnalysisResponse analyze(
+            AnalysisAiPreparedAnalysis preparedAnalysis,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
+        return analyzePrepared(preparedAnalysis, toolEvidenceListener, true, null);
+    }
+
+    private AnalysisAiAnalysisResponse analyzePrepared(
+            AnalysisAiPreparedAnalysis preparedAnalysis,
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            boolean withToolEvidenceListener,
+            AnalysisAiAnalysisRequest requestOverride
+    ) {
+        if (!(preparedAnalysis instanceof CopilotSdkPreparedRequest preparedRequest)) {
+            throw new IllegalArgumentException(
+                    "Copilot SDK provider requires CopilotSdkPreparedRequest, got %s"
+                            .formatted(preparedAnalysis != null ? preparedAnalysis.getClass().getName() : "null")
+            );
+        }
+
+        var request = requestOverride != null ? requestOverride : request(preparedRequest);
         var analysisStart = System.nanoTime();
-        var preparedRequest = preparationService.prepare(request);
         var copilotSessionId = copilotSessionId(preparedRequest);
         try {
-            var assistantContent = execution.apply(preparedRequest);
+            var assistantContent = withToolEvidenceListener
+                    ? executionGateway.execute(
+                            preparedRequest,
+                            toolEvidenceListener != null ? toolEvidenceListener : AnalysisAiToolEvidenceListener.NO_OP
+                    )
+                    : executionGateway.execute(preparedRequest);
             var parseResult = responseParser.parse(assistantContent);
             var qualityReport = qualityGate.evaluate(request, parseResult.response());
             var response = toAiResponse(parseResult.response(), preparedRequest.prompt());
@@ -98,6 +125,20 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             metricsRegistry.remove(copilotSessionId).ifPresent(metricsLogger::logSummary);
             throw exception;
         }
+    }
+
+    private AnalysisAiAnalysisRequest request(CopilotSdkPreparedRequest preparedRequest) {
+        if (preparedRequest.request() != null) {
+            return preparedRequest.request();
+        }
+
+        return new AnalysisAiAnalysisRequest(
+                preparedRequest.correlationId(),
+                null,
+                null,
+                null,
+                java.util.List.of()
+        );
     }
 
     private String copilotSessionId(CopilotSdkPreparedRequest preparedRequest) {

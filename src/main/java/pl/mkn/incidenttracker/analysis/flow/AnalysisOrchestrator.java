@@ -43,36 +43,38 @@ public class AnalysisOrchestrator {
         );
 
         listener.onAiStarted(aiRequest, context);
-        var preparedPrompt = analysisAiProvider.preparePrompt(aiRequest);
-        listener.onAiPromptPrepared(aiRequest, preparedPrompt, context);
+        try (var preparedAnalysis = analysisAiProvider.prepare(aiRequest)) {
+            var preparedPrompt = preparedAnalysis.prompt();
+            listener.onAiPromptPrepared(aiRequest, preparedPrompt, context);
 
-        var aiResponse = analysisAiProvider.analyze(
-                aiRequest,
-                listener::onAiToolEvidenceUpdated
-        );
-        var result = new AnalysisResultResponse(
-                "COMPLETED",
-                correlationId,
-                aiRequest.environment(),
-                aiRequest.gitLabBranch(),
-                aiResponse.summary(),
-                aiResponse.detectedProblem(),
-                aiResponse.recommendedAction(),
-                aiResponse.rationale(),
-                aiResponse.affectedFunction(),
-                aiResponse.affectedProcess(),
-                aiResponse.affectedBoundedContext(),
-                aiResponse.affectedTeam(),
-                aiResponse.prompt()
-        );
+            var aiResponse = analysisAiProvider.analyze(
+                    preparedAnalysis,
+                    listener::onAiToolEvidenceUpdated
+            );
+            var result = new AnalysisResultResponse(
+                    "COMPLETED",
+                    correlationId,
+                    aiRequest.environment(),
+                    aiRequest.gitLabBranch(),
+                    aiResponse.summary(),
+                    aiResponse.detectedProblem(),
+                    aiResponse.recommendedAction(),
+                    aiResponse.rationale(),
+                    aiResponse.affectedFunction(),
+                    aiResponse.affectedProcess(),
+                    aiResponse.affectedBoundedContext(),
+                    aiResponse.affectedTeam(),
+                    aiResponse.prompt()
+            );
 
-        return new AnalysisExecution(
-                context,
-                aiRequest,
-                StringUtils.hasText(preparedPrompt) ? preparedPrompt : aiResponse.prompt(),
-                aiResponse,
-                result
-        );
+            return new AnalysisExecution(
+                    context,
+                    aiRequest,
+                    StringUtils.hasText(preparedPrompt) ? preparedPrompt : aiResponse.prompt(),
+                    aiResponse,
+                    result
+            );
+        }
     }
 
     public List<AnalysisEvidenceProviderDescriptor> providerDescriptors() {

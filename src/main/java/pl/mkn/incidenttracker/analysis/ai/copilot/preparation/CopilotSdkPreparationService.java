@@ -89,7 +89,8 @@ public class CopilotSdkPreparationService {
                 sessionConfig,
                 messageOptions,
                 prompt,
-                artifactContents
+                artifactContents,
+                request
         );
     }
 
