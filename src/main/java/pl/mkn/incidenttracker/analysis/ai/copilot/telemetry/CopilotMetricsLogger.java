@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 
 @Slf4j
 @Component
@@ -31,7 +31,7 @@ public class CopilotMetricsLogger {
         log.info("Copilot tool metrics event {}", toJson(metrics));
     }
 
-    public void logQualityReport(String correlationId, CopilotResponseQualityReport report) {
+    public void logQualityReport(String correlationId, Report report) {
         if (!properties.isEnabled() || !properties.isLogSummary() || report == null || report.passed()) {
             return;
         }

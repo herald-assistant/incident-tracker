@@ -7,7 +7,9 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotStructuredAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -72,16 +74,16 @@ public class CopilotResponseQualityGate {
 
     private final CopilotResponseQualityProperties properties;
 
-    public CopilotResponseQualityReport evaluate(
+    public Report evaluate(
             AnalysisAiAnalysisRequest request,
-            CopilotStructuredAnalysisResponse response
+            StructuredAnalysisResponse response
     ) {
         if (properties == null || !properties.isEnabled()) {
-            return CopilotResponseQualityReport.disabled(mode());
+            return Report.disabled(mode());
         }
 
         var evidence = EvidenceSummary.from(request);
-        var findings = new ArrayList<CopilotResponseQualityFinding>();
+        var findings = new ArrayList<Finding>();
 
         validateAffectedFunction(response, findings);
         validateRecommendedAction(response, findings);
@@ -91,12 +93,12 @@ public class CopilotResponseQualityGate {
         validateHighConfidence(response, evidence, findings);
         validateRationaleStructure(response, findings);
 
-        return new CopilotResponseQualityReport(true, mode(), findings.isEmpty(), findings);
+        return new Report(true, mode(), findings.isEmpty(), findings);
     }
 
     private void validateAffectedFunction(
-            CopilotStructuredAnalysisResponse response,
-            List<CopilotResponseQualityFinding> findings
+            StructuredAnalysisResponse response,
+            List<Finding> findings
     ) {
         var value = text(response != null ? response.affectedFunction() : null);
         var normalized = normalize(value);
@@ -121,8 +123,8 @@ public class CopilotResponseQualityGate {
     }
 
     private void validateRecommendedAction(
-            CopilotStructuredAnalysisResponse response,
-            List<CopilotResponseQualityFinding> findings
+            StructuredAnalysisResponse response,
+            List<Finding> findings
     ) {
         var action = text(response != null ? response.recommendedAction() : null);
         var normalized = normalize(action);
@@ -137,9 +139,9 @@ public class CopilotResponseQualityGate {
     }
 
     private void validateDataIssueGrounding(
-            CopilotStructuredAnalysisResponse response,
+            StructuredAnalysisResponse response,
             EvidenceSummary evidence,
-            List<CopilotResponseQualityFinding> findings
+            List<Finding> findings
     ) {
         if (!looksLikeDataIssue(response) || evidence.databaseEvidence() || hasDbVisibilityLimit(response)) {
             return;
@@ -153,9 +155,9 @@ public class CopilotResponseQualityGate {
     }
 
     private void validateOwnershipGrounding(
-            CopilotStructuredAnalysisResponse response,
+            StructuredAnalysisResponse response,
             EvidenceSummary evidence,
-            List<CopilotResponseQualityFinding> findings
+            List<Finding> findings
     ) {
         if (!isEstablished(response != null ? response.affectedTeam() : null)) {
             return;
@@ -171,9 +173,9 @@ public class CopilotResponseQualityGate {
     }
 
     private void validateProcessContextGrounding(
-            CopilotStructuredAnalysisResponse response,
+            StructuredAnalysisResponse response,
             EvidenceSummary evidence,
-            List<CopilotResponseQualityFinding> findings
+            List<Finding> findings
     ) {
         if (!isEstablished(response != null ? response.affectedProcess() : null)
                 && !isEstablished(response != null ? response.affectedBoundedContext() : null)) {
@@ -190,9 +192,9 @@ public class CopilotResponseQualityGate {
     }
 
     private void validateHighConfidence(
-            CopilotStructuredAnalysisResponse response,
+            StructuredAnalysisResponse response,
             EvidenceSummary evidence,
-            List<CopilotResponseQualityFinding> findings
+            List<Finding> findings
     ) {
         if (!"high".equalsIgnoreCase(text(response != null ? response.confidence() : null))) {
             return;
@@ -223,8 +225,8 @@ public class CopilotResponseQualityGate {
     }
 
     private void validateRationaleStructure(
-            CopilotStructuredAnalysisResponse response,
-            List<CopilotResponseQualityFinding> findings
+            StructuredAnalysisResponse response,
+            List<Finding> findings
     ) {
         var rationale = normalize(response != null ? response.rationale() : null);
         var hasConfirmed = containsAny(rationale, List.of("potwierdz", "confirmed", "evidence", "dowod", "fakt", "log"));
@@ -240,11 +242,11 @@ public class CopilotResponseQualityGate {
         }
     }
 
-    private boolean looksLikeDataIssue(CopilotStructuredAnalysisResponse response) {
+    private boolean looksLikeDataIssue(StructuredAnalysisResponse response) {
         return response != null && containsAny(normalize(response.detectedProblem()), DATA_ISSUE_TERMS);
     }
 
-    private boolean hasDbVisibilityLimit(CopilotStructuredAnalysisResponse response) {
+    private boolean hasDbVisibilityLimit(StructuredAnalysisResponse response) {
         if (response == null) {
             return false;
         }
@@ -305,8 +307,8 @@ public class CopilotResponseQualityGate {
                 : CopilotResponseQualityProperties.Mode.REPORT_ONLY;
     }
 
-    private CopilotResponseQualityFinding finding(String code, String field, String message) {
-        return new CopilotResponseQualityFinding(
+    private Finding finding(String code, String field, String message) {
+        return new Finding(
                 CopilotResponseQualitySeverity.WARNING,
                 code,
                 field,

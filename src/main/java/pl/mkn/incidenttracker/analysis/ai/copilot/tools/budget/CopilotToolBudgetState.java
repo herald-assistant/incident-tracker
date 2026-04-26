@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget;
 
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetDtos.Decision;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,9 +38,9 @@ public class CopilotToolBudgetState {
         return properties;
     }
 
-    public synchronized CopilotToolBudgetDecision beforeInvocation(String toolName) {
+    public synchronized Decision beforeInvocation(String toolName) {
         if (!properties.active()) {
-            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
+            return Decision.allowed(sessionId, toolName);
         }
 
         if (isRawSqlTool(toolName)) {
@@ -48,23 +49,23 @@ public class CopilotToolBudgetState {
 
         var exceeded = exceededBeforeInvocation(toolName);
         if (exceeded.isEmpty()) {
-            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
+            return Decision.allowed(sessionId, toolName);
         }
 
         if (properties.getMode() == BudgetMode.HARD) {
             deniedToolCalls++;
             warnings.addAll(exceeded);
-            return CopilotToolBudgetDecision.denied(sessionId, toolName, exceeded);
+            return Decision.denied(sessionId, toolName, exceeded);
         }
 
         softLimitExceededCount += exceeded.size();
         warnings.addAll(exceeded);
-        return CopilotToolBudgetDecision.soft(sessionId, toolName, exceeded);
+        return Decision.soft(sessionId, toolName, exceeded);
     }
 
-    public synchronized CopilotToolBudgetDecision afterInvocation(String toolName, String rawResult) {
+    public synchronized Decision afterInvocation(String toolName, String rawResult) {
         if (!properties.active()) {
-            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
+            return Decision.allowed(sessionId, toolName);
         }
 
         var rawResultCharacters = rawResult != null ? rawResult.length() : 0L;
@@ -100,12 +101,12 @@ public class CopilotToolBudgetState {
 
         var exceeded = exceededAfterInvocation(toolName);
         if (exceeded.isEmpty()) {
-            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
+            return Decision.allowed(sessionId, toolName);
         }
 
         softLimitExceededCount += exceeded.size();
         warnings.addAll(exceeded);
-        return CopilotToolBudgetDecision.soft(sessionId, toolName, exceeded);
+        return Decision.soft(sessionId, toolName, exceeded);
     }
 
     public synchronized CopilotToolBudgetSnapshot snapshot() {

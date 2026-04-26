@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +39,7 @@ final class MutableCopilotAnalysisMetrics {
     private boolean qualityGateEnabled;
     private CopilotResponseQualityProperties.Mode qualityGateMode;
     private boolean qualityGatePassed = true;
-    private List<CopilotResponseQualityFinding> qualityFindings = List.of();
+    private List<Finding> qualityFindings = List.of();
     private int budgetSoftLimitExceededCount;
     private int budgetDeniedToolCalls;
     private int budgetRawSqlAttempts;
@@ -118,7 +118,7 @@ final class MutableCopilotAnalysisMetrics {
         this.responseConfidence = responseConfidence;
     }
 
-    synchronized void recordQualityReport(CopilotResponseQualityReport report) {
+    synchronized void recordQualityReport(Report report) {
         qualityGateEnabled = report.enabled();
         qualityGateMode = report.mode();
         qualityGatePassed = report.passed();

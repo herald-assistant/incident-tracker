@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.EvidenceReference;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.ParseResult;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +31,7 @@ public class CopilotResponseParser {
 
     private final ObjectMapper objectMapper;
 
-    public CopilotResponseParseResult parse(String assistantContent) {
+    public ParseResult parse(String assistantContent) {
         var fullJson = parseJsonNode(assistantContent);
         if (fullJson != null) {
             return resultFromResponse(
@@ -53,13 +56,13 @@ public class CopilotResponseParser {
         return fallbackResult(null, assistantContent, List.of());
     }
 
-    private CopilotResponseParseResult resultFromResponse(
-            CopilotStructuredAnalysisResponse parsedResponse,
+    private ParseResult resultFromResponse(
+            StructuredAnalysisResponse parsedResponse,
             String assistantContent,
             List<String> parsedFields
     ) {
         if (hasRequiredFields(parsedResponse)) {
-            return new CopilotResponseParseResult(
+            return new ParseResult(
                     normalizeResponse(parsedResponse),
                     true,
                     false,
@@ -70,12 +73,12 @@ public class CopilotResponseParser {
         return fallbackResult(parsedResponse, assistantContent, parsedFields);
     }
 
-    private CopilotResponseParseResult fallbackResult(
-            CopilotStructuredAnalysisResponse parsedResponse,
+    private ParseResult fallbackResult(
+            StructuredAnalysisResponse parsedResponse,
             String assistantContent,
             List<String> parsedFields
     ) {
-        return new CopilotResponseParseResult(
+        return new ParseResult(
                 fallbackResponse(parsedResponse, assistantContent),
                 false,
                 true,
@@ -83,11 +86,11 @@ public class CopilotResponseParser {
         );
     }
 
-    private CopilotStructuredAnalysisResponse fallbackResponse(
-            CopilotStructuredAnalysisResponse parsedResponse,
+    private StructuredAnalysisResponse fallbackResponse(
+            StructuredAnalysisResponse parsedResponse,
             String assistantContent
     ) {
-        return new CopilotStructuredAnalysisResponse(
+        return new StructuredAnalysisResponse(
                 firstText(parsedResponse != null ? parsedResponse.detectedProblem() : null, "AI_UNSTRUCTURED_RESPONSE"),
                 firstText(
                         parsedResponse != null ? parsedResponse.summary() : null,
@@ -105,8 +108,8 @@ public class CopilotResponseParser {
         );
     }
 
-    private CopilotStructuredAnalysisResponse normalizeResponse(CopilotStructuredAnalysisResponse response) {
-        return new CopilotStructuredAnalysisResponse(
+    private StructuredAnalysisResponse normalizeResponse(StructuredAnalysisResponse response) {
+        return new StructuredAnalysisResponse(
                 response.detectedProblem(),
                 response.summary(),
                 response.recommendedAction(),
@@ -121,7 +124,7 @@ public class CopilotResponseParser {
         );
     }
 
-    private boolean hasRequiredFields(CopilotStructuredAnalysisResponse response) {
+    private boolean hasRequiredFields(StructuredAnalysisResponse response) {
         return response != null
                 && StringUtils.hasText(response.detectedProblem())
                 && StringUtils.hasText(response.summary())
@@ -152,8 +155,8 @@ public class CopilotResponseParser {
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private CopilotStructuredAnalysisResponse responseFromJson(JsonNode node) {
-        return new CopilotStructuredAnalysisResponse(
+    private StructuredAnalysisResponse responseFromJson(JsonNode node) {
+        return new StructuredAnalysisResponse(
                 text(node, "detectedProblem"),
                 text(node, "summary"),
                 text(node, "recommendedAction"),
@@ -182,17 +185,17 @@ public class CopilotResponseParser {
         return field.toString();
     }
 
-    private List<CopilotEvidenceReference> evidenceReferences(JsonNode node) {
+    private List<EvidenceReference> evidenceReferences(JsonNode node) {
         if (node == null || !node.isArray()) {
             return List.of();
         }
 
-        var references = new ArrayList<CopilotEvidenceReference>();
+        var references = new ArrayList<EvidenceReference>();
         for (var item : node) {
             if (!item.isObject()) {
                 continue;
             }
-            references.add(new CopilotEvidenceReference(
+            references.add(new EvidenceReference(
                     text(item, "field"),
                     text(item, "artifactId"),
                     text(item, "itemId"),

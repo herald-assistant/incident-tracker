@@ -11,7 +11,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetExceededResult;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetDtos;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetGuard;
 
 import java.util.Map;
@@ -47,7 +47,7 @@ public class CopilotToolInvocationHandler {
                     argumentsJson
             );
             if (budgetDecision.denied()) {
-                return CompletableFuture.completedFuture(CopilotToolBudgetExceededResult.from(budgetDecision));
+                return CompletableFuture.completedFuture(CopilotToolBudgetDtos.deniedResult(budgetDecision));
             }
 
             var toolContext = toolContextFactory.buildToolContext(sessionContext, invocation);

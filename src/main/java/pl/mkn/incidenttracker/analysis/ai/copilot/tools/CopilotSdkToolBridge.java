@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.ToolDefinition;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
@@ -15,25 +15,13 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 public class CopilotSdkToolBridge {
 
     private final List<ToolCallbackProvider> toolCallbackProviders;
     private final ObjectMapper objectMapper;
     private final CopilotToolDescriptionDecorator descriptionDecorator;
     private final CopilotToolInvocationHandler invocationHandler;
-
-    @Autowired
-    public CopilotSdkToolBridge(
-            List<ToolCallbackProvider> toolCallbackProviders,
-            ObjectMapper objectMapper,
-            CopilotToolDescriptionDecorator descriptionDecorator,
-            CopilotToolInvocationHandler invocationHandler
-    ) {
-        this.toolCallbackProviders = toolCallbackProviders;
-        this.objectMapper = objectMapper;
-        this.descriptionDecorator = descriptionDecorator;
-        this.invocationHandler = invocationHandler;
-    }
 
     public List<ToolDefinition> buildToolDefinitions() {
         var analysisRunId = UUID.randomUUID().toString();

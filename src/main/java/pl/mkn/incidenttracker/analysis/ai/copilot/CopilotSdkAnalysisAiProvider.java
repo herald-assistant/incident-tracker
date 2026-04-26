@@ -13,7 +13,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPrepared
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotStructuredAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 
@@ -132,7 +132,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     }
 
     private AnalysisAiAnalysisResponse toAiResponse(
-            CopilotStructuredAnalysisResponse structuredResponse,
+            StructuredAnalysisResponse structuredResponse,
             String prompt
     ) {
         return new AnalysisAiAnalysisResponse(

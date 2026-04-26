@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
 
 import java.util.List;
 
@@ -37,7 +37,7 @@ public record CopilotAnalysisMetrics(
         CopilotResponseQualityProperties.Mode qualityGateMode,
         boolean qualityGatePassed,
         int qualityFindingCount,
-        List<CopilotResponseQualityFinding> qualityFindings,
+        List<Finding> qualityFindings,
         int budgetSoftLimitExceededCount,
         int budgetDeniedToolCalls,
         int budgetRawSqlAttempts,

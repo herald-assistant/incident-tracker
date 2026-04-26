@@ -6,9 +6,9 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualitySeverity;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
@@ -57,11 +57,11 @@ class CopilotSessionMetricsRegistryTest {
         );
         registry.recordQualityReport(
                 context.copilotSessionId(),
-                new CopilotResponseQualityReport(
+                new Report(
                         true,
                         CopilotResponseQualityProperties.Mode.REPORT_ONLY,
                         false,
-                        List.of(new CopilotResponseQualityFinding(
+                        List.of(new Finding(
                                 CopilotResponseQualitySeverity.WARNING,
                                 "GENERIC_RECOMMENDED_ACTION",
                                 "recommendedAction",

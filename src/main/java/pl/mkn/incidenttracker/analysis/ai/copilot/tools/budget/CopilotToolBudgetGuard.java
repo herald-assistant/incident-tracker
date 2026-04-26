@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetDtos.Decision;
 
 @Slf4j
 @Component
@@ -13,7 +14,7 @@ public class CopilotToolBudgetGuard {
     private final CopilotToolBudgetRegistry budgetRegistry;
     private final CopilotSessionMetricsRegistry metricsRegistry;
 
-    public CopilotToolBudgetDecision beforeInvocation(
+    public Decision beforeInvocation(
             String sessionId,
             String toolName,
             String argumentsJson
@@ -23,7 +24,7 @@ public class CopilotToolBudgetGuard {
         }
         var decision = budgetRegistry.state(sessionId)
                 .map(state -> state.beforeInvocation(toolName))
-                .orElseGet(() -> CopilotToolBudgetDecision.allowed(sessionId, toolName));
+                .orElseGet(() -> Decision.allowed(sessionId, toolName));
         recordDecision(decision);
         if (decision.denied()) {
             log.warn(
@@ -45,14 +46,14 @@ public class CopilotToolBudgetGuard {
         return decision;
     }
 
-    public CopilotToolBudgetDecision afterInvocation(
+    public Decision afterInvocation(
             String sessionId,
             String toolName,
             String rawResult
     ) {
         var decision = budgetRegistry.state(sessionId)
                 .map(state -> state.afterInvocation(toolName, rawResult))
-                .orElseGet(() -> CopilotToolBudgetDecision.allowed(sessionId, toolName));
+                .orElseGet(() -> Decision.allowed(sessionId, toolName));
         recordDecision(decision);
         if (decision.softLimitExceeded()) {
             log.warn(
@@ -66,7 +67,7 @@ public class CopilotToolBudgetGuard {
         return decision;
     }
 
-    private void recordDecision(CopilotToolBudgetDecision decision) {
+    private void recordDecision(Decision decision) {
         if (decision.denied()) {
             metricsRegistry.recordBudgetDenied(decision.sessionId(), decision.toolName(), decision.reason());
         }

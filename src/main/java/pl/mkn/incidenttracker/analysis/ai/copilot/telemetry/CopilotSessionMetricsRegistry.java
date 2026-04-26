@@ -1,10 +1,11 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
 import java.util.List;
@@ -13,14 +14,11 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@RequiredArgsConstructor
 public class CopilotSessionMetricsRegistry {
 
     private final CopilotMetricsProperties properties;
     private final Map<String, MutableCopilotAnalysisMetrics> metricsBySessionId = new ConcurrentHashMap<>();
-
-    public CopilotSessionMetricsRegistry(CopilotMetricsProperties properties) {
-        this.properties = properties;
-    }
 
     public void recordPreparation(
             CopilotToolSessionContext context,
@@ -82,7 +80,7 @@ public class CopilotSessionMetricsRegistry {
         ));
     }
 
-    public void recordQualityReport(String copilotSessionId, CopilotResponseQualityReport report) {
+    public void recordQualityReport(String copilotSessionId, Report report) {
         if (report == null) {
             return;
         }
@@ -115,8 +113,8 @@ public class CopilotSessionMetricsRegistry {
             return Optional.empty();
         }
 
-        var metrics = metricsBySessionId.remove(copilotSessionId);
-        return metrics != null ? Optional.of(metrics.snapshot()) : Optional.empty();
+        return Optional.ofNullable(metricsBySessionId.remove(copilotSessionId))
+                .map(MutableCopilotAnalysisMetrics::snapshot);
     }
 
     public int sessionCount() {

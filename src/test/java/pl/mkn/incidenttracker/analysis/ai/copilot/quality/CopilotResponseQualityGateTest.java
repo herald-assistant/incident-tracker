@@ -5,7 +5,8 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotStructuredAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
 import java.util.List;
 
@@ -145,12 +146,12 @@ class CopilotResponseQualityGateTest {
         assertTrue(report.findings().isEmpty());
     }
 
-    private void assertFinding(CopilotResponseQualityReport report, String code) {
+    private void assertFinding(Report report, String code) {
         assertFalse(report.passed());
         assertTrue(report.findings().stream().anyMatch(finding -> code.equals(finding.code())));
     }
 
-    private CopilotStructuredAnalysisResponse response(
+    private StructuredAnalysisResponse response(
             String detectedProblem,
             String recommendedAction,
             String affectedFunction,
@@ -177,7 +178,7 @@ class CopilotResponseQualityGateTest {
         );
     }
 
-    private CopilotStructuredAnalysisResponse response(
+    private StructuredAnalysisResponse response(
             String detectedProblem,
             String recommendedAction,
             String affectedFunction,
@@ -188,7 +189,7 @@ class CopilotResponseQualityGateTest {
             List<String> visibilityLimits,
             String rationale
     ) {
-        return new CopilotStructuredAnalysisResponse(
+        return new StructuredAnalysisResponse(
                 detectedProblem,
                 "Timeout jest widoczny w logach i dotyczy wywolania downstream.",
                 recommendedAction,

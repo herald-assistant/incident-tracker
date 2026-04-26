@@ -2,9 +2,9 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualitySeverity;
 
 import java.util.List;
@@ -84,11 +84,11 @@ class CopilotMetricsLoggerTest {
 
         assertDoesNotThrow(() -> logger.logQualityReport(
                 "corr-123",
-                new CopilotResponseQualityReport(
+                new Report(
                         true,
                         CopilotResponseQualityProperties.Mode.REPORT_ONLY,
                         false,
-                        List.of(new CopilotResponseQualityFinding(
+                        List.of(new Finding(
                                 CopilotResponseQualitySeverity.WARNING,
                                 "SHALLOW_AFFECTED_FUNCTION",
                                 "affectedFunction",
