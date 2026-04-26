@@ -31,7 +31,9 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
 
     @Override
     public String preparePrompt(AnalysisAiAnalysisRequest request) {
-        return preparationService.preparePrompt(request);
+        try (var prepared = prepare(request)) {
+            return prepared.prompt();
+        }
     }
 
     @Override
@@ -42,7 +44,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     @Override
     public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
         try (var preparedAnalysis = prepare(request)) {
-            return analyzePrepared(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP, false, request);
+            return analyzePrepared(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP, request);
         }
     }
 
@@ -52,7 +54,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
         try (var preparedAnalysis = prepare(request)) {
-            return analyzePrepared(preparedAnalysis, toolEvidenceListener, true, request);
+            return analyzePrepared(preparedAnalysis, toolEvidenceListener, request);
         }
     }
 
@@ -61,13 +63,12 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             AnalysisAiPreparedAnalysis preparedAnalysis,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
-        return analyzePrepared(preparedAnalysis, toolEvidenceListener, true, null);
+        return analyzePrepared(preparedAnalysis, toolEvidenceListener, null);
     }
 
     private AnalysisAiAnalysisResponse analyzePrepared(
             AnalysisAiPreparedAnalysis preparedAnalysis,
             AnalysisAiToolEvidenceListener toolEvidenceListener,
-            boolean withToolEvidenceListener,
             AnalysisAiAnalysisRequest requestOverride
     ) {
         if (!(preparedAnalysis instanceof CopilotSdkPreparedRequest preparedRequest)) {
@@ -81,12 +82,10 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
         var analysisStart = System.nanoTime();
         var copilotSessionId = copilotSessionId(preparedRequest);
         try {
-            var assistantContent = withToolEvidenceListener
-                    ? executionGateway.execute(
-                            preparedRequest,
-                            toolEvidenceListener != null ? toolEvidenceListener : AnalysisAiToolEvidenceListener.NO_OP
-                    )
-                    : executionGateway.execute(preparedRequest);
+            var assistantContent = executionGateway.execute(
+                    preparedRequest,
+                    toolEvidenceListener != null ? toolEvidenceListener : AnalysisAiToolEvidenceListener.NO_OP
+            );
             var parseResult = responseParser.parse(assistantContent);
             var qualityReport = qualityGate.evaluate(request, parseResult.response());
             var response = toAiResponse(parseResult.response(), preparedRequest.prompt());

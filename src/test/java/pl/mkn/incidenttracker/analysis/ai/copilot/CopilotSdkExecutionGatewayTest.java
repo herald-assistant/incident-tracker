@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -138,6 +139,39 @@ class CopilotSdkExecutionGatewayTest {
         })) {
             assertEquals("Structured answer", gateway.execute(preparedRequest));
         }
+    }
+
+    @Test
+    void shouldNotClosePreparedRequestAfterExecution() {
+        var properties = new CopilotSdkProperties();
+        var gateway = new CopilotSdkExecutionGateway(
+                properties,
+                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                metricsRegistry()
+        );
+        var messageOptions = new MessageOptions().setPrompt("Diagnose incident");
+        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+
+        when(preparedRequest.correlationId()).thenReturn("corr-gateway-owned");
+        when(preparedRequest.clientOptions()).thenReturn(new CopilotClientOptions());
+        when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig());
+        when(preparedRequest.messageOptions()).thenReturn(messageOptions);
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(any(SessionConfig.class))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("session-gateway-owned");
+            when(session.sendAndWait(same(messageOptions), eq(300_000L)))
+                    .thenReturn(CompletableFuture.completedFuture(assistantMessage("Structured answer")));
+        })) {
+            assertEquals("Structured answer", gateway.execute(preparedRequest));
+        }
+
+        verify(preparedRequest, never()).close();
     }
 
     private AssistantMessageEvent assistantMessage(String content) {

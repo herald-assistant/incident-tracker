@@ -323,7 +323,7 @@ public class CopilotResponseQualityGate {
     ) {
 
         private static EvidenceSummary from(AnalysisAiAnalysisRequest request) {
-            var sections = request != null && request.evidenceSections() != null
+            var sections = request != null
                     ? request.evidenceSections()
                     : List.<AnalysisEvidenceSection>of();
 
@@ -379,7 +379,7 @@ public class CopilotResponseQualityGate {
         }
 
         private static String normalizeSection(AnalysisEvidenceSection section) {
-            if (section == null || section.items() == null) {
+            if (section == null) {
                 return "";
             }
 
@@ -389,9 +389,6 @@ public class CopilotResponseQualityGate {
                     continue;
                 }
                 text.append(' ').append(item.title());
-                if (item.attributes() == null) {
-                    continue;
-                }
                 for (AnalysisEvidenceAttribute attribute : item.attributes()) {
                     if (attribute != null) {
                         text.append(' ').append(attribute.name()).append(' ').append(attribute.value());

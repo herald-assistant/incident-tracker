@@ -156,7 +156,6 @@ public class CopilotSdkExecutionGateway {
                     sendAndWaitDurationMs,
                     nanosToMillis(overallStart)
             );
-            preparedRequest.close();
         }
     }
 

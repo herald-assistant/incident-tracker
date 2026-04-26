@@ -20,7 +20,7 @@ public class CopilotIncidentDigestService {
             AnalysisAiAnalysisRequest request,
             CopilotEvidenceCoverageReport coverage
     ) {
-        var evidenceSections = request != null && request.evidenceSections() != null
+        var evidenceSections = request != null
                 ? request.evidenceSections()
                 : List.<AnalysisEvidenceSection>of();
         var effectiveCoverage = coverage != null ? coverage : CopilotEvidenceCoverageReport.empty();

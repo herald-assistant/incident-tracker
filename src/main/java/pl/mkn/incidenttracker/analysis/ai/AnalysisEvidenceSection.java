@@ -8,6 +8,10 @@ public record AnalysisEvidenceSection(
         List<AnalysisEvidenceItem> items
 ) {
 
+    public AnalysisEvidenceSection {
+        items = items != null ? List.copyOf(items) : List.of();
+    }
+
     public boolean hasItems() {
         return !items.isEmpty();
     }

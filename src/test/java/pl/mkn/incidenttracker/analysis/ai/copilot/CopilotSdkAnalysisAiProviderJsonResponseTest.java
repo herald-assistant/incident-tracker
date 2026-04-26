@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
@@ -17,6 +18,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,7 +37,7 @@ class CopilotSdkAnalysisAiProviderJsonResponseTest {
         when(preparationService.prepare(request)).thenReturn(preparedRequest);
         when(preparedRequest.prompt()).thenReturn("Prepared JSON prompt");
         when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-json"));
-        when(executionGateway.execute(preparedRequest)).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Timeout w `CatalogClient`.",

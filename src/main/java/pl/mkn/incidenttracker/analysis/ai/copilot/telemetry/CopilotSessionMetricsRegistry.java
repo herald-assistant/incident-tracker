@@ -140,7 +140,7 @@ public class CopilotSessionMetricsRegistry {
             String prompt,
             long preparationDurationMs
     ) {
-        var evidenceSections = request != null && request.evidenceSections() != null
+        var evidenceSections = request != null
                 ? request.evidenceSections()
                 : List.<pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection>of();
         var safeArtifacts = artifacts != null ? artifacts : List.<CopilotArtifactService.Artifact>of();

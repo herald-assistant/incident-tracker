@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 
 import java.util.List;
 import java.util.Map;
@@ -18,9 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotToolAccessPolicyCoverageTest {
 
+    private final CopilotToolAccessPolicyFactory policyFactory =
+            new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+
     @Test
     void shouldEnableGitLabToolsWhenNoDeterministicGitLabEvidenceIsAttached() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of()),
                 tools("gitlab_search_repository_candidates", "gitlab_read_repository_file")
         );
@@ -33,7 +37,7 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldKeepFocusedGitLabToolsForFailingMethodOnlyEvidence() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of(gitLabSection(
                         "CheckoutService.java around failing method",
                         """
@@ -67,7 +71,7 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldDisableGitLabToolsWhenFlowContextIsAttached() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of(gitLabSection(
                         "Flow context upstream and downstream for CheckoutService",
                         """
@@ -89,7 +93,7 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldDisableElasticToolsWhenLogsAreSufficient() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of(sufficientElasticSection())),
                 tools("elastic_search_logs_by_correlation_id")
         );
@@ -99,7 +103,7 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldEnableElasticToolsWhenLogsAreTruncated() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of(new AnalysisEvidenceSection(
                         "elasticsearch",
                         "logs",
@@ -119,7 +123,7 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldEnableDatabaseToolsForRequiredDataDiagnosticWithResolvedEnvironmentExceptRawSql() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of(jpaExceptionSection())),
                 tools("db_get_scope", "db_find_tables", "db_exists_by_key", "db_execute_readonly_sql")
         );
@@ -132,7 +136,7 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldDisableDatabaseToolsWhenDataNeedExistsButEnvironmentIsUnresolved() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request(null, List.of(jpaExceptionSection())),
                 tools("db_get_scope", "db_find_tables")
         );
@@ -143,12 +147,19 @@ class CopilotToolAccessPolicyCoverageTest {
 
     @Test
     void shouldDisableDatabaseToolsWhenThereIsNoDataDiagnosticNeed() {
-        var policy = CopilotToolAccessPolicy.from(
+        var policy = policy(
                 request("dev3", List.of(sufficientElasticSection())),
                 tools("db_get_scope", "db_find_tables")
         );
 
         assertEquals(List.of(), policy.availableToolNames());
+    }
+
+    private CopilotToolAccessPolicy policy(
+            AnalysisAiAnalysisRequest request,
+            List<ToolDefinition> tools
+    ) {
+        return policyFactory.create(request, tools);
     }
 
     private AnalysisAiAnalysisRequest request(String environment, List<AnalysisEvidenceSection> sections) {

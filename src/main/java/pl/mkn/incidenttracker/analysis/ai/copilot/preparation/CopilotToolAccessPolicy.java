@@ -1,10 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.github.copilot.sdk.json.ToolDefinition;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.ElasticEvidenceCoverage;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.GitLabEvidenceCoverage;
 
 import java.util.ArrayList;
@@ -20,8 +17,6 @@ public record CopilotToolAccessPolicy(
         boolean elasticToolsRegistered,
         boolean gitLabToolsRegistered,
         boolean databaseToolsRegistered,
-        boolean elasticDataAttached,
-        boolean gitLabDataAttached,
         CopilotEvidenceCoverageReport evidenceCoverage
 ) {
 
@@ -47,22 +42,24 @@ public record CopilotToolAccessPolicy(
         evidenceCoverage = evidenceCoverage != null ? evidenceCoverage : CopilotEvidenceCoverageReport.empty();
     }
 
-    public static CopilotToolAccessPolicy from(
-            AnalysisAiAnalysisRequest request,
-            List<ToolDefinition> registeredTools
-    ) {
-        return from(request, registeredTools, new CopilotEvidenceCoverageEvaluator().evaluate(request));
+    public static CopilotToolAccessPolicy empty() {
+        return new CopilotToolAccessPolicy(
+                List.of(),
+                List.of(),
+                true,
+                false,
+                false,
+                false,
+                CopilotEvidenceCoverageReport.empty()
+        );
     }
 
-    public static CopilotToolAccessPolicy from(
-            AnalysisAiAnalysisRequest request,
+    public static CopilotToolAccessPolicy fromCoverage(
             List<ToolDefinition> registeredTools,
             CopilotEvidenceCoverageReport evidenceCoverage
     ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
         var coverage = evidenceCoverage != null ? evidenceCoverage : CopilotEvidenceCoverageReport.empty();
-        var elasticDataAttached = coverage.elastic() != ElasticEvidenceCoverage.NONE;
-        var gitLabDataAttached = coverage.gitLab() != GitLabEvidenceCoverage.NONE;
         var elasticToolsRegistered = hasToolPrefix(tools, "elastic_");
         var gitLabToolsRegistered = hasToolPrefix(tools, "gitlab_");
         var databaseToolsRegistered = hasToolPrefix(tools, "db_");
@@ -80,8 +77,6 @@ public record CopilotToolAccessPolicy(
                 elasticToolsRegistered,
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
-                elasticDataAttached,
-                gitLabDataAttached,
                 coverage
         );
     }

@@ -220,17 +220,7 @@ public class CopilotArtifactService {
     private Map<String, Object> buildToolPolicyPayload(CopilotToolAccessPolicy toolAccessPolicy) {
         var policy = toolAccessPolicy != null
                 ? toolAccessPolicy
-                : new CopilotToolAccessPolicy(
-                        List.of(),
-                        List.of(),
-                        true,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        CopilotEvidenceCoverageReport.empty()
-                );
+                : CopilotToolAccessPolicy.empty();
         var payload = new LinkedHashMap<String, Object>();
         payload.put("localWorkspaceAccessBlocked", policy.localWorkspaceAccessBlocked());
         payload.put("enabledToolNames", policy.availableToolNames());

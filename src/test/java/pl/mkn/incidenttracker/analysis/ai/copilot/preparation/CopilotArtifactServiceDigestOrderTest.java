@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 
 import java.util.List;
 
@@ -15,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CopilotArtifactServiceDigestOrderTest {
 
     private final CopilotArtifactService artifactService = new CopilotArtifactService(new ObjectMapper());
+    private final CopilotToolAccessPolicyFactory policyFactory =
+            new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 
     @Test
     void shouldRenderManifestThenDigestThenEvidenceArtifacts() {
@@ -32,7 +35,7 @@ class CopilotArtifactServiceDigestOrderTest {
                 )
         );
 
-        var artifacts = artifactService.renderArtifacts(request, CopilotToolAccessPolicy.from(request, List.of()));
+        var artifacts = artifactService.renderArtifacts(request, policyFactory.create(request, List.of()));
 
         assertEquals("00-incident-manifest.json", artifacts.get(0).displayName());
         assertEquals("01-incident-digest.md", artifacts.get(1).displayName());

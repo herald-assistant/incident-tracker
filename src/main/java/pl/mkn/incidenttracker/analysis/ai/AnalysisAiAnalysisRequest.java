@@ -9,4 +9,8 @@ public record AnalysisAiAnalysisRequest(
         String gitLabGroup,
         List<AnalysisEvidenceSection> evidenceSections
 ) {
+
+    public AnalysisAiAnalysisRequest {
+        evidenceSections = evidenceSections != null ? List.copyOf(evidenceSections) : List.of();
+    }
 }

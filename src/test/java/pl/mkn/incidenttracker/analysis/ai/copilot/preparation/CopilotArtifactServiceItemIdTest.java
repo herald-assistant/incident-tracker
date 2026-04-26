@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 
 import java.util.List;
 
@@ -15,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CopilotArtifactServiceItemIdTest {
 
     private final CopilotArtifactService artifactService = new CopilotArtifactService(new ObjectMapper());
+    private final CopilotToolAccessPolicyFactory policyFactory =
+            new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 
     @Test
     void shouldRenderStableItemIdsInMarkdownArtifacts() {
@@ -57,7 +60,7 @@ class CopilotArtifactServiceItemIdTest {
     }
 
     private CopilotToolAccessPolicy policy(AnalysisAiAnalysisRequest request) {
-        return CopilotToolAccessPolicy.from(request, List.of());
+        return policyFactory.create(request, List.of());
     }
 
     private AnalysisAiAnalysisRequest request(List<AnalysisEvidenceSection> sections) {

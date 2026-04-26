@@ -15,10 +15,13 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
@@ -247,6 +250,8 @@ class CopilotSdkPreparationServiceTest {
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
+                policyFactory(),
+                promptRenderer(),
                 metricsRegistry()
         );
 
@@ -302,6 +307,8 @@ class CopilotSdkPreparationServiceTest {
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
+                policyFactory(),
+                promptRenderer(),
                 metricsRegistry()
         );
 
@@ -345,6 +352,8 @@ class CopilotSdkPreparationServiceTest {
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
+                policyFactory(),
+                promptRenderer(),
                 metricsRegistry()
         );
 
@@ -453,8 +462,18 @@ class CopilotSdkPreparationServiceTest {
                 toolBridge,
                 new CopilotSkillRuntimeLoader(properties),
                 new CopilotArtifactService(objectMapper),
+                policyFactory(),
+                promptRenderer(),
                 metricsRegistry()
         );
+    }
+
+    private CopilotToolAccessPolicyFactory policyFactory() {
+        return new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+    }
+
+    private CopilotPromptRenderer promptRenderer() {
+        return new CopilotPromptRenderer();
     }
 
     private CopilotSessionMetricsRegistry metricsRegistry() {

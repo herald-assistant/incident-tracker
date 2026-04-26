@@ -11,7 +11,7 @@ import java.util.stream.IntStream;
 public class CopilotArtifactItemIdGenerator {
 
     public List<String> itemIds(AnalysisEvidenceSection section) {
-        var itemCount = section != null && section.items() != null ? section.items().size() : 0;
+        var itemCount = section != null ? section.items().size() : 0;
         return IntStream.range(0, itemCount)
                 .mapToObj(index -> itemId(section, index))
                 .toList();

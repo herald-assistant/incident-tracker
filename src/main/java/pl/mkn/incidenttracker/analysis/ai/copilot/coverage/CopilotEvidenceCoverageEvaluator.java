@@ -23,7 +23,7 @@ public class CopilotEvidenceCoverageEvaluator {
     private static final int SHORT_CODE_CONTEXT_CHARACTERS = 300;
 
     public CopilotEvidenceCoverageReport evaluate(AnalysisAiAnalysisRequest request) {
-        var sections = request != null && request.evidenceSections() != null
+        var sections = request != null
                 ? request.evidenceSections()
                 : List.<AnalysisEvidenceSection>of();
         var gaps = new ArrayList<EvidenceGap>();
@@ -208,7 +208,7 @@ public class CopilotEvidenceCoverageEvaluator {
             var provider = normalize(section.provider());
             var category = normalize(section.category());
             if (provider.contains("operational-context") || category.contains("operational-context")) {
-                return section.items() != null && !section.items().isEmpty()
+                return section.hasItems()
                         ? OperationalContextCoverage.MATCHED
                         : OperationalContextCoverage.PARTIAL;
             }
@@ -271,17 +271,11 @@ public class CopilotEvidenceCoverageEvaluator {
         var text = new StringBuilder();
         for (var section : sections) {
             text.append(' ').append(section.provider()).append(' ').append(section.category());
-            if (section.items() == null) {
-                continue;
-            }
             for (AnalysisEvidenceItem item : section.items()) {
                 if (item == null) {
                     continue;
                 }
                 text.append(' ').append(item.title());
-                if (item.attributes() == null) {
-                    continue;
-                }
                 for (AnalysisEvidenceAttribute attribute : item.attributes()) {
                     if (attribute != null) {
                         text.append(' ').append(attribute.name()).append(' ').append(attribute.value());
