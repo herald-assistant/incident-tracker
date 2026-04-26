@@ -138,37 +138,37 @@ class CopilotSdkToolBridgeTest {
 
         assertSchemaProperties(
                 toolsByName.get("gitlab_search_repository_candidates"),
-                Set.of("projectNames", "operationNames", "keywords"),
+                Set.of("projectNames", "operationNames", "keywords", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file"),
-                Set.of("projectName", "filePath", "maxCharacters"),
+                Set.of("projectName", "filePath", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunk"),
-                Set.of("projectName", "filePath", "startLine", "endLine", "maxCharacters"),
+                Set.of("projectName", "filePath", "startLine", "endLine", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_outline"),
-                Set.of("projectName", "filePath", "maxCharacters"),
+                Set.of("projectName", "filePath", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunks"),
-                Set.of("chunks", "maxTotalCharacters"),
+                Set.of("chunks", "maxTotalCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_class_references"),
-                Set.of("projectNames", "className", "relatedHints", "operationNames", "maxFilesPerRole"),
+                Set.of("projectNames", "className", "relatedHints", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_flow_context"),
-                Set.of("projectNames", "seedClass", "seedMethod", "seedFilePath", "keywords", "operationNames", "maxFilesPerRole"),
+                Set.of("projectNames", "seedClass", "seedMethod", "seedFilePath", "keywords", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
     }
@@ -199,7 +199,8 @@ class CopilotSdkToolBridgeTest {
                         "filePath", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                         "startLine", 5,
                         "endLine", 12,
-                        "maxCharacters", 4_000
+                        "maxCharacters", 4_000,
+                        "reason", "Sprawdzam fragment klienta z timeoutem."
                 )));
 
         var result = tool.handler().invoke(invocation).join();
@@ -263,7 +264,8 @@ class CopilotSdkToolBridgeTest {
                                         "maxCharacters", 4_000
                                 )
                         ),
-                        "maxTotalCharacters", 20_000
+                        "maxTotalCharacters", 20_000,
+                        "reason", "Sprawdzam dwa fragmenty powiazane z przeplywem."
                 )));
 
         var result = tool.handler().invoke(invocation).join();

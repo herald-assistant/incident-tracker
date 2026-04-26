@@ -355,6 +355,22 @@
   font-weight: 700;
 }
 
+.repo-code-panel__reason {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(12, 102, 228, 0.14);
+  border-radius: 12px;
+  background: #f7fbff;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.repo-code-panel__reason span {
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
 @media (max-width: 860px) {
   .analysis-stepper-card__hint,
   .stepper-detail__header {

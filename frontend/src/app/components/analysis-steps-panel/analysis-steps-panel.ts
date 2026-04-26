@@ -173,6 +173,7 @@ interface RepoCodePanelView {
   key: string;
   headerTitle: string;
   componentName: string;
+  reason: string;
   detailsTooltip: string;
   hasContent: boolean;
   highlightedLineNumber: number | null;
@@ -289,6 +290,7 @@ const LOG_TABLE_ATTRIBUTE_ORDER: Record<string, number> = {
 };
 
 const GITLAB_ATTRIBUTE_ORDER: Record<string, number> = {
+  reason: 5,
   projectName: 10,
   containerName: 20,
   environment: 30,
@@ -304,6 +306,7 @@ const GITLAB_ATTRIBUTE_ORDER: Record<string, number> = {
   requestedEndLine: 130,
   returnedStartLine: 140,
   returnedEndLine: 150,
+  startLine: 155,
   totalLines: 160,
   commitSha: 170,
   containerImage: 180,
@@ -1109,18 +1112,31 @@ function prepareRepoCodePanel(
   const content = attributesByName.get('content') || '';
   const highlightedLineNumber = integerValue(attributesByName, 'lineNumber');
   const contentStartLine =
+    integerValue(attributesByName, 'startLine') ??
     integerValue(attributesByName, 'returnedStartLine') ??
     integerValue(attributesByName, 'requestedStartLine') ??
     (content ? 1 : null);
 
-  const headerTitle = buildRepoPanelTitle(attributesByName, item.title);
-  const componentName = buildRepoPanelComponentName(attributesByName);
+  const filePath = nonEmptyValue(attributesByName.get('filePath'));
+  const headerTitle =
+    section.category === 'tool-fetched-code' && filePath
+      ? lastPathSegment(filePath)
+      : buildRepoPanelTitle(attributesByName, item.title);
+  const componentName =
+    section.category === 'tool-fetched-code'
+      ? filePath || buildRepoPanelComponentName(attributesByName)
+      : buildRepoPanelComponentName(attributesByName);
+  const reason =
+    section.category === 'tool-fetched-code'
+      ? nonEmptyValue(attributesByName.get('reason')) || 'Model nie podał powodu pobrania tego pliku.'
+      : nonEmptyValue(attributesByName.get('reason'));
   const metaAttributes = attributes.filter((attribute) => attribute.name !== 'content');
 
   return {
     key: itemKey,
     headerTitle,
     componentName,
+    reason,
     detailsTooltip: buildRepoTooltipContent(item.title || headerTitle, attributes),
     hasContent: Boolean(content),
     highlightedLineNumber,

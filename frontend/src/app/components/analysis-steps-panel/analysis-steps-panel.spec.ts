@@ -201,7 +201,8 @@ describe('AnalysisStepsPanelComponent', () => {
 
     expect(compiled.textContent).toContain('GitLab · Pliki pobrane przez AI');
     expect(compiled.textContent).toContain('CatalogGatewayClient');
-    expect(compiled.textContent).toContain('edge-client-service');
+    expect(compiled.textContent).toContain('Powód pobrania');
+    expect(compiled.textContent).toContain('Sprawdzam fragment klienta z timeoutem.');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
   });
 
@@ -537,20 +538,12 @@ function buildAiToolGitLabSection(): AnalysisEvidenceSection {
       {
         title: 'edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java',
         attributes: [
-          { name: 'group', value: 'sample/runtime' },
-          { name: 'projectName', value: 'edge-client-service' },
-          { name: 'branch', value: 'release/2026.04' },
           {
             name: 'filePath',
             value: 'src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java'
           },
-          { name: 'referenceType', value: 'AI_TOOL_FILE_CHUNK' },
-          { name: 'toolName', value: 'gitlab_read_repository_file_chunk' },
-          { name: 'requestedStartLine', value: '5' },
-          { name: 'requestedEndLine', value: '12' },
-          { name: 'returnedStartLine', value: '5' },
-          { name: 'returnedEndLine', value: '12' },
-          { name: 'totalLines', value: '14' },
+          { name: 'reason', value: 'Sprawdzam fragment klienta z timeoutem.' },
+          { name: 'startLine', value: '5' },
           {
             name: 'content',
             value:

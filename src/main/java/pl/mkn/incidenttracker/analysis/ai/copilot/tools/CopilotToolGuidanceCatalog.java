@@ -15,7 +15,8 @@ public class CopilotToolGuidanceCatalog {
                     List.of(
                             "Expensive. Use only when outline/chunk tools are insufficient.",
                             "Prefer gitlab_read_repository_file_chunk or gitlab_read_repository_file_chunks first.",
-                            "Do not use for broad browsing."
+                            "Do not use for broad browsing.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
@@ -23,42 +24,48 @@ public class CopilotToolGuidanceCatalog {
                     List.of(
                             "Use when project or file is unclear.",
                             "Prefer focused terms from stacktrace, exception, class, entity, repository or service names.",
-                            "Do not use repeatedly with broad generic terms."
+                            "Do not use repeatedly with broad generic terms.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     "gitlab_read_repository_file_outline",
                     List.of(
                             "Use before full file reads to understand class role and available method signatures.",
-                            "Follow up with focused chunks when a specific method, repository predicate or client call matters."
+                            "Follow up with focused chunks when a specific method, repository predicate or client call matters.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     "gitlab_read_repository_file_chunk",
                     List.of(
                             "Preferred focused read for a known stack frame, method or predicate.",
-                            "Keep line ranges tight and tied to a concrete evidence gap."
+                            "Keep line ranges tight and tied to a concrete evidence gap.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     "gitlab_read_repository_file_chunks",
                     List.of(
                             "Use for a small set of directly related files needed to explain the flow.",
-                            "Avoid batch browsing unrelated candidates."
+                            "Avoid batch browsing unrelated candidates.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     "gitlab_find_flow_context",
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
-                            "Use recommended next reads rather than launching broad searches."
+                            "Use recommended next reads rather than launching broad searches.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     "gitlab_find_class_references",
                     List.of(
                             "Use when a concrete class from stacktrace or code evidence needs ownership or caller context.",
-                            "Prefer class names and related hints from existing evidence."
+                            "Prefer class names and related hints from existing evidence.",
+                            "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(

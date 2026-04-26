@@ -146,9 +146,9 @@ class AnalysisJobServiceTest {
         assertEquals("tool-fetched-code", inProgress.toolEvidenceSections().get(0).category());
         assertEquals(1, inProgress.toolEvidenceSections().get(0).items().size());
         assertEquals(
-                "edge-client-service",
+                "Sprawdzam fragment klienta z timeoutem.",
                 inProgress.toolEvidenceSections().get(0).items().get(0).attributes().stream()
-                        .filter(attribute -> "projectName".equals(attribute.name()))
+                        .filter(attribute -> "reason".equals(attribute.name()))
                         .findFirst()
                         .orElseThrow()
                         .value()
@@ -288,19 +288,15 @@ class AnalysisJobServiceTest {
                     List.of(new AnalysisEvidenceItem(
                             "edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                             List.of(
-                                    new AnalysisEvidenceAttribute("group", "sample/runtime"),
-                                    new AnalysisEvidenceAttribute("projectName", "edge-client-service"),
-                                    new AnalysisEvidenceAttribute("branch", "dev/atlas"),
                                     new AnalysisEvidenceAttribute(
                                             "filePath",
                                             "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"
                                     ),
-                                    new AnalysisEvidenceAttribute("referenceType", "AI_TOOL_FILE_CHUNK"),
-                                    new AnalysisEvidenceAttribute("requestedStartLine", "5"),
-                                    new AnalysisEvidenceAttribute("requestedEndLine", "12"),
-                                    new AnalysisEvidenceAttribute("returnedStartLine", "5"),
-                                    new AnalysisEvidenceAttribute("returnedEndLine", "12"),
-                                    new AnalysisEvidenceAttribute("totalLines", "14"),
+                                    new AnalysisEvidenceAttribute(
+                                            "reason",
+                                            "Sprawdzam fragment klienta z timeoutem."
+                                    ),
+                                    new AnalysisEvidenceAttribute("startLine", "5"),
                                     new AnalysisEvidenceAttribute(
                                             "content",
                                             "public class CatalogGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}"

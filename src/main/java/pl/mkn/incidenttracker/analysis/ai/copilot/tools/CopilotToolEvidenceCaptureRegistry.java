@@ -21,8 +21,6 @@ public class CopilotToolEvidenceCaptureRegistry {
     private static final String DATABASE_TOOL_CATEGORY = "tool-results";
     private static final String GITLAB_PROVIDER = "gitlab";
     private static final String GITLAB_TOOL_CATEGORY = "tool-fetched-code";
-    private static final String GITLAB_TOOL_SEARCH_CATEGORY = "tool-search-results";
-    private static final String GITLAB_TOOL_FLOW_CATEGORY = "tool-flow-context";
 
     private final GitLabToolEvidenceMapper gitLabMapper;
     private final DatabaseToolEvidenceMapper databaseMapper;
@@ -101,15 +99,11 @@ public class CopilotToolEvidenceCaptureRegistry {
     static record SessionArtifactAccumulator(
             AnalysisAiToolEvidenceListener listener,
             LinkedHashMap<String, AnalysisEvidenceItem> gitLabItems,
-            LinkedHashMap<String, AnalysisEvidenceItem> gitLabSearchItems,
-            LinkedHashMap<String, AnalysisEvidenceItem> gitLabFlowItems,
             LinkedHashMap<String, AnalysisEvidenceItem> databaseItems
     ) {
         SessionArtifactAccumulator(AnalysisAiToolEvidenceListener listener) {
             this(
                     listener,
-                    new LinkedHashMap<>(),
-                    new LinkedHashMap<>(),
                     new LinkedHashMap<>(),
                     new LinkedHashMap<>()
             );
@@ -130,30 +124,6 @@ public class CopilotToolEvidenceCaptureRegistry {
                     GITLAB_PROVIDER,
                     GITLAB_TOOL_CATEGORY,
                     List.copyOf(gitLabItems.values())
-            );
-        }
-
-        synchronized AnalysisEvidenceSection appendGitLabSearchItem(
-                String key,
-                AnalysisEvidenceItem candidate
-        ) {
-            appendItem(gitLabSearchItems, key, "gitlab-search-tool", candidate);
-            return new AnalysisEvidenceSection(
-                    GITLAB_PROVIDER,
-                    GITLAB_TOOL_SEARCH_CATEGORY,
-                    List.copyOf(gitLabSearchItems.values())
-            );
-        }
-
-        synchronized AnalysisEvidenceSection appendGitLabFlowItem(
-                String key,
-                AnalysisEvidenceItem candidate
-        ) {
-            appendItem(gitLabFlowItems, key, "gitlab-flow-tool", candidate);
-            return new AnalysisEvidenceSection(
-                    GITLAB_PROVIDER,
-                    GITLAB_TOOL_FLOW_CATEGORY,
-                    List.copyOf(gitLabFlowItems.values())
             );
         }
 
@@ -187,7 +157,7 @@ public class CopilotToolEvidenceCaptureRegistry {
 
         private static boolean isChunkItem(AnalysisEvidenceItem item) {
             return item.attributes().stream()
-                    .anyMatch(attribute -> "requestedStartLine".equals(attribute.name()));
+                    .anyMatch(attribute -> "startLine".equals(attribute.name()));
         }
     }
 }

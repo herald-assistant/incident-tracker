@@ -48,6 +48,7 @@ class GitLabMcpToolsTest {
                 List.of("billing-service", "catalog-service"),
                 List.of("GET /inventory"),
                 List.of("timeout", "inventory"),
+                "Sprawdzam kandydatow repozytorium dla testu.",
                 gitLabToolContext()
         );
 
@@ -69,7 +70,7 @@ class GitLabMcpToolsTest {
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
 
-        tools.searchRepositoryCandidates(null, null, null, gitLabToolContext());
+        tools.searchRepositoryCandidates(null, null, null, "Sprawdzam puste wejscie.", gitLabToolContext());
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 query.projectNames().isEmpty()
@@ -84,6 +85,7 @@ class GitLabMcpToolsTest {
                 List.of("document-workflow"),
                 List.of(),
                 List.of("document"),
+                "Sprawdzam zagniezdzony projekt.",
                 gitLabToolContext("TENANT-ALPHA", "release-candidate", "agreement-123")
         );
 
@@ -116,6 +118,7 @@ class GitLabMcpToolsTest {
                 "edge-client-service",
                 "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
                 120,
+                "Czytam plik w tescie delegacji.",
                 gitLabToolContext()
         );
 
@@ -140,6 +143,7 @@ class GitLabMcpToolsTest {
                 "ledger-write-service",
                 "src/main/java/com/example/synthetic/ledger/LedgerTransactionService.java",
                 null,
+                "Czytam plik z domyslnym limitem.",
                 gitLabToolContext("sample/runtime", "release/2026.04", "corr-123")
         );
 
@@ -181,6 +185,7 @@ class GitLabMcpToolsTest {
                 5,
                 12,
                 4_000,
+                "Czytam fragment pliku w tescie delegacji.",
                 gitLabToolContext()
         );
 
@@ -241,6 +246,7 @@ class GitLabMcpToolsTest {
                 "billing-service",
                 "src/main/java/pl/mkn/billing/BillingService.java",
                 null,
+                "Sprawdzam zarys pliku w tescie.",
                 gitLabToolContext()
         );
 
@@ -332,6 +338,7 @@ class GitLabMcpToolsTest {
                         new GitLabFileChunkRequest("billing-service", "src/main/java/pl/mkn/billing/Extra.java", 1, 5, 100)
                 ),
                 15,
+                "Czytam kilka fragmentow w tescie limitow.",
                 gitLabToolContext()
         );
 
@@ -427,6 +434,7 @@ class GitLabMcpToolsTest {
                 List.of("timeout", "repository"),
                 List.of("POST /orders"),
                 1,
+                "Szukam kontekstu przeplywu w tescie.",
                 gitLabToolContext()
         );
 
@@ -505,6 +513,7 @@ class GitLabMcpToolsTest {
                 List.of("@Entity", "@Table", "mappedBy", "OrderRepository"),
                 List.of("GET /orders/{id}"),
                 2,
+                "Szukam referencji klasy w tescie.",
                 gitLabToolContext()
         );
 

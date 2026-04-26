@@ -38,26 +38,27 @@ class CopilotToolEvidenceCaptureRegistryGitLabFilePrecedenceTest {
                 "session-1",
                 "tool-call-chunk-1",
                 "gitlab_read_repository_file_chunk",
-                "{}",
+                "{\"reason\":\"Sprawdzam fragment pliku.\"}",
                 chunkResult("focused chunk")
         );
-        assertEquals("gitlab_read_repository_file_chunk", attributes(capturedSection.get()).get("toolName"));
+        assertEquals("Sprawdzam fragment pliku.", attributes(capturedSection.get()).get("reason"));
+        assertEquals("5", attributes(capturedSection.get()).get("startLine"));
 
         registry.captureToolResult(
                 "session-1",
                 "tool-call-full-1",
                 "gitlab_read_repository_file",
-                "{}",
+                "{\"reason\":\"Czytam caly plik.\"}",
                 fullFileResult("full file content")
         );
-        assertEquals("gitlab_read_repository_file", attributes(capturedSection.get()).get("toolName"));
+        assertEquals("Czytam caly plik.", attributes(capturedSection.get()).get("reason"));
         assertEquals("full file content", attributes(capturedSection.get()).get("content"));
 
         registry.captureToolResult(
                 "session-1",
                 "tool-call-chunk-2",
                 "gitlab_read_repository_file_chunk",
-                "{}",
+                "{\"reason\":\"Sprawdzam pozniejszy fragment.\"}",
                 chunkResult("later focused chunk")
         );
 
@@ -65,9 +66,9 @@ class CopilotToolEvidenceCaptureRegistryGitLabFilePrecedenceTest {
         assertEquals(3, updateCount.get());
         assertEquals("gitlab", capturedSection.get().provider());
         assertEquals("tool-fetched-code", capturedSection.get().category());
-        assertEquals("gitlab_read_repository_file", attributes.get("toolName"));
+        assertEquals("Czytam caly plik.", attributes.get("reason"));
         assertEquals("full file content", attributes.get("content"));
-        assertFalse(attributes.containsKey("requestedStartLine"));
+        assertFalse(attributes.containsKey("startLine"));
         assertTrue(attributes.get("filePath").contains("OrderService.java"));
     }
 

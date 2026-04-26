@@ -913,8 +913,12 @@
                             </div>
                           } @else {
                             <mat-accordion class="repo-code-panels">
-                              @for (panel of section.codePanels; track panel.key) {
-                                <mat-expansion-panel class="repo-code-panel" hideToggle>
+                              @for (panel of section.codePanels; track panel.key; let panelIndex = $index) {
+                                <mat-expansion-panel
+                                  class="repo-code-panel"
+                                  hideToggle
+                                  [expanded]="panelIndex === 0"
+                                >
                                   <mat-expansion-panel-header class="repo-code-panel__header">
                                     <div class="repo-code-panel__header-main">
                                       <span class="repo-code-panel__title">{{ panel.headerTitle }}</span>
@@ -928,20 +932,6 @@
                                         </span>
                                       }
 
-                                      <button
-                                        class="details-tooltip__trigger"
-                                        type="button"
-                                        [attr.aria-label]="'Pokaż pełne szczegóły wpisu repozytorium ' + panel.headerTitle"
-                                        [matTooltip]="panel.detailsTooltip"
-                                        matTooltipPosition="above"
-                                        matTooltipClass="analysis-log-tooltip"
-                                        [matTooltipShowDelay]="100"
-                                        (click)="$event.stopPropagation()"
-                                        (keydown)="$event.stopPropagation()"
-                                      >
-                                        <mat-icon fontSet="material-symbols-outlined">info</mat-icon>
-                                      </button>
-
                                       <mat-icon
                                         class="repo-code-panel__expand-icon"
                                         fontSet="material-symbols-outlined"
@@ -950,6 +940,13 @@
                                       </mat-icon>
                                     </div>
                                   </mat-expansion-panel-header>
+
+                                  @if (hasMeaningfulValue(panel.reason)) {
+                                    <p class="repo-code-panel__reason">
+                                      <span>Powód pobrania:</span>
+                                      {{ panel.reason }}
+                                    </p>
+                                  }
 
                                   @if (panel.hasContent) {
                                     <div class="repo-code-viewer">

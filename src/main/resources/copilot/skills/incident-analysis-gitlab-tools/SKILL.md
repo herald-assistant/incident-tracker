@@ -23,6 +23,20 @@ Do not switch group or branch.
 Do not invent project names.
 Infer project names and file paths only from evidence and repository exploration.
 
+## GitLab tool reason
+
+Every GitLab tool call must include the optional `reason` argument.
+
+Write `reason` in Polish as one short, practical sentence for a junior analyst.
+Explain what the tool call is meant to verify or clarify.
+Do not include hidden reasoning, long analysis, or step-by-step deliberation.
+
+Good examples:
+
+- `Sprawdzam fragment metody ze stacktrace, zeby potwierdzic predykat repozytorium.`
+- `Szukam uzyc klasy encji, zeby ustalic gdzie zaczyna sie przeplyw biznesowy.`
+- `Czytam serwis i repozytorium, zeby wyjasnic juniorowi ktory warunek odcina dane.`
+
 ## When not to use GitLab tools
 
 Do not call GitLab tools when:

@@ -79,6 +79,8 @@ public class GitLabMcpTools {
             List<String> operationNames,
             @ToolParam(required = false, description = "Keywords inferred from logs, traces, code identifiers or the current hypothesis.")
             List<String> keywords,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model wywoluje to narzedzie.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
@@ -141,6 +143,8 @@ public class GitLabMcpTools {
             String filePath,
             @ToolParam(required = false, description = "Maximum number of characters to return. Defaults to 4000.")
             Integer maxCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta ten plik.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
@@ -211,6 +215,8 @@ public class GitLabMcpTools {
             int endLine,
             @ToolParam(required = false, description = "Maximum number of characters to return. Defaults to 4000.")
             Integer maxCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta ten fragment pliku.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
@@ -289,6 +295,8 @@ public class GitLabMcpTools {
             String filePath,
             @ToolParam(required = false, description = "Maximum number of characters to read before extracting outline. Defaults to 30000.")
             Integer maxCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model sprawdza zarys tego pliku.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
@@ -365,6 +373,8 @@ public class GitLabMcpTools {
             List<GitLabFileChunkRequest> chunks,
             @ToolParam(required = false, description = "Maximum total characters returned across all chunks. Defaults to 20000.")
             Integer maxTotalCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta te fragmenty plikow.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
@@ -484,6 +494,8 @@ public class GitLabMcpTools {
             List<String> operationNames,
             @ToolParam(required = false, description = "Maximum files per inferred role. Defaults to 5.")
             Integer maxFilesPerRole,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model szuka referencji tej klasy.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
@@ -571,6 +583,8 @@ public class GitLabMcpTools {
             List<String> operationNames,
             @ToolParam(required = false, description = "Maximum files per inferred role. Defaults to 5.")
             Integer maxFilesPerRole,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model szuka kontekstu przeplywu.")
+            String reason,
             ToolContext toolContext
     ) {
         var scope = GitLabToolScope.from(toolContext);
