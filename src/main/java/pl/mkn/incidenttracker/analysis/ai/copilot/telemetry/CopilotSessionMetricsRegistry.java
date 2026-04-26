@@ -92,6 +92,22 @@ public class CopilotSessionMetricsRegistry {
         withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordQualityReport(report));
     }
 
+    public void recordBudgetWarnings(String copilotSessionId, List<String> warnings) {
+        if (warnings == null || warnings.isEmpty()) {
+            return;
+        }
+
+        withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordBudgetWarnings(warnings));
+    }
+
+    public void recordBudgetDenied(String copilotSessionId, String toolName, String reason) {
+        withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordBudgetDenied(toolName, reason));
+    }
+
+    public void recordBudgetRawSqlAttempt(String copilotSessionId) {
+        withMetrics(copilotSessionId).ifPresent(MutableCopilotAnalysisMetrics::recordBudgetRawSqlAttempt);
+    }
+
     public Optional<CopilotAnalysisMetrics> snapshot(String copilotSessionId) {
         return withMetrics(copilotSessionId).map(MutableCopilotAnalysisMetrics::snapshot);
     }
@@ -179,6 +195,10 @@ public class CopilotSessionMetricsRegistry {
         private CopilotResponseQualityProperties.Mode qualityGateMode;
         private boolean qualityGatePassed = true;
         private List<CopilotResponseQualityFinding> qualityFindings = List.of();
+        private int budgetSoftLimitExceededCount;
+        private int budgetDeniedToolCalls;
+        private int budgetRawSqlAttempts;
+        private final java.util.ArrayList<String> budgetWarnings = new java.util.ArrayList<>();
 
         private MutableCopilotAnalysisMetrics(
                 String analysisRunId,
@@ -260,6 +280,20 @@ public class CopilotSessionMetricsRegistry {
             qualityFindings = report.findings();
         }
 
+        private synchronized void recordBudgetWarnings(List<String> warnings) {
+            budgetSoftLimitExceededCount += warnings.size();
+            budgetWarnings.addAll(warnings);
+        }
+
+        private synchronized void recordBudgetDenied(String toolName, String reason) {
+            budgetDeniedToolCalls++;
+            budgetWarnings.add("Denied tool `%s`: %s".formatted(toolName, reason));
+        }
+
+        private synchronized void recordBudgetRawSqlAttempt() {
+            budgetRawSqlAttempts++;
+        }
+
         private synchronized CopilotAnalysisMetrics snapshot() {
             return new CopilotAnalysisMetrics(
                     analysisRunId,
@@ -293,7 +327,11 @@ public class CopilotSessionMetricsRegistry {
                     qualityGateMode,
                     qualityGatePassed,
                     qualityFindings.size(),
-                    qualityFindings
+                    qualityFindings,
+                    budgetSoftLimitExceededCount,
+                    budgetDeniedToolCalls,
+                    budgetRawSqlAttempts,
+                    budgetWarnings
             );
         }
     }

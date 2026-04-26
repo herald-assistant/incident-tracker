@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.ToolDefinition;
 import com.github.copilot.sdk.json.ToolInvocation;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -14,6 +14,10 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetExceededResult;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetGuard;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetRegistry;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -24,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class CopilotSdkToolBridge {
 
     private final List<ToolCallbackProvider> toolCallbackProviders;
@@ -32,6 +35,44 @@ public class CopilotSdkToolBridge {
     private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
     private final CopilotSessionMetricsRegistry metricsRegistry;
     private final CopilotMetricsLogger metricsLogger;
+    private final CopilotToolBudgetGuard budgetGuard;
+
+    @Autowired
+    public CopilotSdkToolBridge(
+            List<ToolCallbackProvider> toolCallbackProviders,
+            ObjectMapper objectMapper,
+            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotMetricsLogger metricsLogger,
+            CopilotToolBudgetGuard budgetGuard
+    ) {
+        this.toolCallbackProviders = toolCallbackProviders;
+        this.objectMapper = objectMapper;
+        this.toolEvidenceCaptureRegistry = toolEvidenceCaptureRegistry;
+        this.metricsRegistry = metricsRegistry;
+        this.metricsLogger = metricsLogger;
+        this.budgetGuard = budgetGuard;
+    }
+
+    public CopilotSdkToolBridge(
+            List<ToolCallbackProvider> toolCallbackProviders,
+            ObjectMapper objectMapper,
+            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotMetricsLogger metricsLogger
+    ) {
+        this(
+                toolCallbackProviders,
+                objectMapper,
+                toolEvidenceCaptureRegistry,
+                metricsRegistry,
+                metricsLogger,
+                new CopilotToolBudgetGuard(
+                        new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
+                        metricsRegistry
+                )
+        );
+    }
 
     public List<ToolDefinition> buildToolDefinitions() {
         var analysisRunId = UUID.randomUUID().toString();
@@ -87,6 +128,15 @@ public class CopilotSdkToolBridge {
             var argumentsJson = objectMapper.writeValueAsString(
                     invocation.getArguments() != null ? invocation.getArguments() : Map.of()
             );
+            var budgetDecision = budgetGuard.beforeInvocation(
+                    invocation.getSessionId(),
+                    invocation.getToolName(),
+                    argumentsJson
+            );
+            if (budgetDecision.denied()) {
+                return CompletableFuture.completedFuture(CopilotToolBudgetExceededResult.from(budgetDecision));
+            }
+
             var toolContext = buildToolContext(sessionContext, invocation);
             log.info(
                     "Copilot tool invocation request expectedSessionId={} actualSessionId={} toolCallId={} toolName={} arguments={}",
@@ -98,6 +148,7 @@ public class CopilotSdkToolBridge {
             );
 
             var rawResult = callback.call(argumentsJson, toolContext);
+            budgetGuard.afterInvocation(invocation.getSessionId(), invocation.getToolName(), rawResult);
             recordToolMetrics(sessionContext, invocation, rawResult, toolStart);
             metricsRecorded = true;
             toolEvidenceCaptureRegistry.captureToolResult(

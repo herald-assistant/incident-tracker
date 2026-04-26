@@ -51,6 +51,10 @@ class CopilotMetricsLoggerTest {
                 null,
                 true,
                 0,
+                List.of(),
+                0,
+                0,
+                0,
                 List.of()
         )));
     }

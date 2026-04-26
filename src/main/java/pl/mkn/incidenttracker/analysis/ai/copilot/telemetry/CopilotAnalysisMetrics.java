@@ -37,10 +37,15 @@ public record CopilotAnalysisMetrics(
         CopilotResponseQualityProperties.Mode qualityGateMode,
         boolean qualityGatePassed,
         int qualityFindingCount,
-        List<CopilotResponseQualityFinding> qualityFindings
+        List<CopilotResponseQualityFinding> qualityFindings,
+        int budgetSoftLimitExceededCount,
+        int budgetDeniedToolCalls,
+        int budgetRawSqlAttempts,
+        List<String> budgetWarnings
 ) {
 
     public CopilotAnalysisMetrics {
         qualityFindings = qualityFindings != null ? List.copyOf(qualityFindings) : List.of();
+        budgetWarnings = budgetWarnings != null ? List.copyOf(budgetWarnings) : List.of();
     }
 }

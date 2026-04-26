@@ -2,13 +2,15 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.execution;
 
 import com.github.copilot.sdk.CopilotClient;
 import lombok.extern.slf4j.Slf4j;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetRegistry;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -18,12 +20,38 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSessio
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class CopilotSdkExecutionGateway {
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry;
     private final CopilotSessionMetricsRegistry metricsRegistry;
+    private final CopilotToolBudgetRegistry toolBudgetRegistry;
+
+    @Autowired
+    public CopilotSdkExecutionGateway(
+            CopilotSdkProperties properties,
+            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotToolBudgetRegistry toolBudgetRegistry
+    ) {
+        this.properties = properties;
+        this.toolEvidenceCaptureRegistry = toolEvidenceCaptureRegistry;
+        this.metricsRegistry = metricsRegistry;
+        this.toolBudgetRegistry = toolBudgetRegistry;
+    }
+
+    public CopilotSdkExecutionGateway(
+            CopilotSdkProperties properties,
+            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotSessionMetricsRegistry metricsRegistry
+    ) {
+        this(
+                properties,
+                toolEvidenceCaptureRegistry,
+                metricsRegistry,
+                new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties())
+        );
+    }
 
     public String execute(CopilotSdkPreparedRequest preparedRequest) {
         return execute(preparedRequest, AnalysisAiToolEvidenceListener.NO_OP);
@@ -62,6 +90,7 @@ public class CopilotSdkExecutionGateway {
                                 session.getSessionId(),
                                 toolEvidenceListener
                         );
+                        toolBudgetRegistry.registerSession(session.getSessionId());
 
                         session.on(event -> logSessionEvent(event, session, sessionSummary));
 
@@ -86,6 +115,14 @@ public class CopilotSdkExecutionGateway {
                             return content;
                         } finally {
                             toolEvidenceCaptureRegistry.unregisterSession(session.getSessionId());
+                            toolBudgetRegistry.unregisterSession(session.getSessionId()).ifPresent(snapshot -> log.info(
+                                    "Copilot tool budget summary sessionId={} totalCalls={} softLimitExceeded={} deniedToolCalls={} rawSqlAttempts={}",
+                                    snapshot.sessionId(),
+                                    snapshot.totalCalls(),
+                                    snapshot.softLimitExceededCount(),
+                                    snapshot.deniedToolCalls(),
+                                    snapshot.rawSqlAttempts()
+                            ));
                         }
                     }
                 } finally {
