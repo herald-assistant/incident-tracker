@@ -7,6 +7,8 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.EvidenceGap;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
@@ -163,6 +165,7 @@ public class CopilotArtifactService {
                 "deliveryMode", "embedded-prompt"
         ));
         payload.put("toolPolicy", buildToolPolicyPayload(toolAccessPolicy));
+        payload.put("evidenceCoverage", buildEvidenceCoveragePayload(toolAccessPolicy));
         payload.put("artifacts", descriptors.stream().map(this::toManifestEntry).toList());
         return payload;
     }
@@ -170,12 +173,44 @@ public class CopilotArtifactService {
     private Map<String, Object> buildToolPolicyPayload(CopilotToolAccessPolicy toolAccessPolicy) {
         var policy = toolAccessPolicy != null
                 ? toolAccessPolicy
-                : new CopilotToolAccessPolicy(List.of(), List.of(), true, false, false, false, false, false);
+                : new CopilotToolAccessPolicy(
+                        List.of(),
+                        List.of(),
+                        true,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        CopilotEvidenceCoverageReport.empty()
+                );
         var payload = new LinkedHashMap<String, Object>();
         payload.put("localWorkspaceAccessBlocked", policy.localWorkspaceAccessBlocked());
         payload.put("enabledToolNames", policy.availableToolNames());
         payload.put("enabledCapabilityGroups", policy.enabledCapabilityGroups());
         payload.put("disabledCapabilityGroups", policy.disabledCapabilityGroups());
+        return payload;
+    }
+
+    private Map<String, Object> buildEvidenceCoveragePayload(CopilotToolAccessPolicy toolAccessPolicy) {
+        var coverage = toolAccessPolicy != null
+                ? toolAccessPolicy.evidenceCoverage()
+                : CopilotEvidenceCoverageReport.empty();
+        var payload = new LinkedHashMap<String, Object>();
+        payload.put("elastic", coverage.elastic().name());
+        payload.put("gitLab", coverage.gitLab().name());
+        payload.put("runtime", coverage.runtime().name());
+        payload.put("dataDiagnosticNeed", coverage.dataDiagnosticNeed().name());
+        payload.put("operationalContext", coverage.operationalContext().name());
+        payload.put("environmentResolved", coverage.environmentResolved());
+        payload.put("gaps", coverage.gaps().stream().map(this::toEvidenceGapPayload).toList());
+        return payload;
+    }
+
+    private Map<String, String> toEvidenceGapPayload(EvidenceGap gap) {
+        var payload = new LinkedHashMap<String, String>();
+        payload.put("code", gap.code());
+        payload.put("description", gap.description());
         return payload;
     }
 

@@ -85,8 +85,17 @@ class CopilotSdkPreparationServiceTest {
             assertNotNull(prepared.sessionConfig().getSessionId());
             assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
             assertFalse(prepared.sessionConfig().isStreaming());
-            assertEquals(List.of(), prepared.sessionConfig().getTools());
-            assertEquals(List.of(), prepared.sessionConfig().getAvailableTools());
+            assertEquals(
+                    Set.of(
+                            "gitlab_find_class_references",
+                            "gitlab_find_flow_context",
+                            "gitlab_read_repository_file_chunk",
+                            "gitlab_read_repository_file_chunks",
+                            "gitlab_read_repository_file_outline"
+                    ),
+                    Set.copyOf(prepared.sessionConfig().getAvailableTools())
+            );
+            assertEquals(5, prepared.sessionConfig().getTools().size());
             assertEquals(1, prepared.sessionConfig().getSkillDirectories().size());
             assertTrue(prepared.sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.sessionConfig().getOnPermissionRequest());
@@ -116,7 +125,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
-            assertTrue(prompt.contains("- none; rely on the incident artifacts for this session."));
+            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code and flow coverage gaps."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
             assertTrue(prompt.contains("operator, tester, analyst, or junior/mid developer"));
             assertTrue(prompt.contains("may not know the affected system area"));
@@ -126,7 +135,9 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
             assertTrue(prompt.contains("Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality."));
-            assertTrue(prompt.contains("GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding artifact data is missing."));
+            assertTrue(prompt.contains("Use tools only for evidence gaps listed in `evidenceCoverage.gaps`"));
+            assertTrue(prompt.contains("Do not use tools just because they are available."));
+            assertTrue(prompt.contains("GitLab, Elasticsearch and Database tools are coverage-aware"));
             assertTrue(prompt.contains("If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly."));
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
             assertTrue(prompt.contains("If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
@@ -160,10 +171,13 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"02-dynatrace-runtime-signals.md\""));
             assertTrue(manifestContent.contains("\"toolPolicy\""));
             assertTrue(manifestContent.contains("\"localWorkspaceAccessBlocked\" : true"));
-            assertTrue(manifestContent.contains("\"enabledToolNames\" : [ ]"));
+            assertTrue(manifestContent.contains("\"enabledToolNames\""));
+            assertTrue(manifestContent.contains("\"gitlab_find_flow_context\""));
+            assertTrue(manifestContent.contains("\"evidenceCoverage\""));
+            assertTrue(manifestContent.contains("\"gitLab\" : \"DIRECT_COLLABORATOR_ATTACHED\""));
+            assertTrue(manifestContent.contains("\"code\" : \"MISSING_FLOW_CONTEXT\""));
             assertTrue(manifestContent.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(manifestContent.contains("\"artifactsArePrimarySourceOfTruth\" : true"));
-            assertTrue(manifestContent.contains("\"name\" : \"gitlab\""));
 
             var logsContent = prepared.artifactContents().get("01-elasticsearch-logs.md");
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
@@ -271,16 +285,16 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(expectedTools, prepared.sessionConfig().getTools());
+            assertEquals(List.of(expectedTools.get(0)), prepared.sessionConfig().getTools());
             assertEquals(
-                    Set.of("gitlab_read_repository_file", "db_get_scope"),
+                    Set.of("gitlab_read_repository_file"),
                     Set.copyOf(prepared.sessionConfig().getAvailableTools())
             );
         }
     }
 
     @Test
-    void shouldFilterElasticAndGitLabToolsWhenEquivalentArtifactDataAlreadyExists() {
+    void shouldFilterRegisteredToolsWhenCoverageDoesNotAllowTheirSpecificUse() {
         var properties = baseProperties();
         var request = sampleRequest();
         var bridge = mock(CopilotSdkToolBridge.class);
@@ -314,12 +328,11 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(List.of(dbTool), prepared.sessionConfig().getTools());
-            assertEquals(List.of("db_get_scope"), prepared.sessionConfig().getAvailableTools());
-            assertTrue(prepared.prompt().contains("Database diagnostics: verify data-dependent hypotheses"));
-            assertTrue(prepared.prompt().contains("code-derived entity/repository/table hints"));
+            assertEquals(List.of(), prepared.sessionConfig().getTools());
+            assertEquals(List.of(), prepared.sessionConfig().getAvailableTools());
+            assertFalse(prepared.prompt().contains("Database diagnostics:"));
             assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
-            assertFalse(prepared.prompt().contains("GitLab code: search broadly across relevant repositories"));
+            assertFalse(prepared.prompt().contains("GitLab code: inspect class references/imports"));
             var deniedElasticDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("elastic_search_logs_by_correlation_id"), null)
                     .join();

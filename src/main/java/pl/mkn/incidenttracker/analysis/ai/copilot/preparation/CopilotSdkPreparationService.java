@@ -147,7 +147,9 @@ public class CopilotSdkPreparationService {
                 - Do not assume facts unsupported by the incident artifacts or tool results.
                 - Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality.
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
-                - GitLab and Elasticsearch tools are fallback-only and are enabled only when the corresponding artifact data is missing.
+                - Use tools only for evidence gaps listed in `evidenceCoverage.gaps` in `00-incident-manifest.json`.
+                - Do not use tools just because they are available.
+                - GitLab, Elasticsearch and Database tools are coverage-aware and may be enabled for targeted gap filling even when some related evidence is already attached.
                 - If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly.
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
                 - If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
@@ -218,15 +220,15 @@ public class CopilotSdkPreparationService {
         var rendered = new StringBuilder();
 
         if (toolAccessPolicy.elasticToolsEnabled()) {
-            rendered.append("- Elasticsearch logs: fetch additional logs for the current incident correlationId.\n");
+            rendered.append("- Elasticsearch logs: fetch additional logs only for listed log coverage gaps for the current incident correlationId.\n");
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: search broadly across relevant repositories, inspect class references/imports, and read focused chunks/files to explain the failing code path, repository predicates, JPA/table hints, integrations and affected functional flow.\n");
+            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code and flow coverage gaps.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {
-            rendered.append("- Database diagnostics: verify data-dependent hypotheses by inspecting DB scope, finding/describing tables, and using code-derived entity/repository/table hints before exact counts, predicate checks, reference checks, process states or minimal samples.\n");
+            rendered.append("- Database diagnostics: use discovery tools for POSSIBLE data gaps; verify data-dependent hypotheses only when coverage marks dataDiagnosticNeed as LIKELY or REQUIRED and the environment is resolved.\n");
         }
 
         return rendered.length() > 0
