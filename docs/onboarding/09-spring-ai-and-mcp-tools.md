@@ -32,6 +32,11 @@ analizy nadal ma tylko `correlationId`.
 zarejestrowane. Najpierw `CopilotEvidenceCoverageEvaluator` ocenia generyczne
 evidence i tworzy `CopilotEvidenceCoverageReport`.
 
+W runtime policy jest tworzona przez `CopilotToolAccessPolicyFactory`.
+Fabryka dostaje `AnalysisAiAnalysisRequest` oraz zarejestrowane
+`ToolDefinition`, uruchamia evaluator coverage i przekazuje gotowy report do
+`CopilotToolAccessPolicy.fromCoverage(...)`.
+
 Reguly:
 
 - Elastic tools sa aktywne przy brakujacych, obcietych albo niepelnych logach.
@@ -72,6 +77,25 @@ Limity obejmuja:
 - returned characters,
 - DB raw SQL calls.
 
+## Bridge i invocation handler
+
+`CopilotSdkToolBridge` jest waska warstwa adaptera Spring tools -> Copilot
+SDK. Zbiera `ToolCallback`, deduplikuje po nazwie, sortuje, dekoruje opis,
+parsuje input schema i tworzy `ToolDefinition`.
+
+Wykonanie toola jest w `CopilotToolInvocationHandler`. Handler:
+
+- sprawdza session id,
+- wywoluje `CopilotToolBudgetGuard` przed i po callbacku,
+- buduje hidden `ToolContext` przez `CopilotToolContextFactory`,
+- wywoluje Spring `ToolCallback`,
+- zapisuje metryki i loguje tool event,
+- publikuje tool evidence,
+- parsuje result do obiektu zwracanego SDK.
+
+Blad callbacka pozostaje failed future dla SDK. Bridge nie ukrywa takiego
+bledu jako pustego wyniku.
+
 ## Capture tool evidence
 
 `CopilotToolEvidenceCaptureRegistry` przeksztalca wybrane wyniki tools w
@@ -87,6 +111,10 @@ Capture obejmuje:
 Dzieki temu audyt sesji pokazuje nie tylko finalna odpowiedz AI, ale tez
 material dociagniety przez tools.
 
+Registry zarzadza lifecycle sesji i routingiem capture. Mapowanie szczegolow
+GitLab i DB jest w oddzielnych mapperach, dzieki czemu registry nie zna
+formatu kazdego toola.
+
 ## Zasady przy dodawaniu tools
 
 - Tool powinien miec waski, typed contract.
@@ -95,8 +123,10 @@ material dociagniety przez tools.
 - Jesli tool jest drogi albo ryzykowny, dodaj guidance w
   `CopilotToolGuidanceCatalog`.
 - Jesli wynik toola jest diagnostycznie wazny, dodaj capture do
-  `CopilotToolEvidenceCaptureRegistry`.
+  odpowiedniego mappera evidence capture.
 - Nie eksportuj DTO adapterow jako publicznego kontraktu AI.
+- Nie zmieniaj publicznego requestu analizy: `/analysis` i `/analysis/jobs`
+  nadal przyjmuja tylko `correlationId`.
 
 ## Najwazniejsze properties
 

@@ -42,6 +42,12 @@ ustalane przez backend:
 Prepared analysis gwarantuje, ze prompt widoczny w UI/debug jest tym samym
 promptem, ktory poszedl do Copilota.
 
+Ownership jest po stronie kodu, ktory wywolal `prepare(request)`.
+`AnalysisOrchestrator` uzywa try-with-resources i zamyka prepared analysis po
+zakonczeniu kroku AI. Provider zamyka tylko prepared analysis utworzone przez
+wlasne `analyze(request)`. `analyze(prepared, listener)` oraz gateway SDK nie
+zamykaja obiektu przekazanego przez caller.
+
 ## 3. Evidence pipeline
 
 Evidence collector pracuje na `AnalysisContext` i zwraca liste
@@ -74,7 +80,18 @@ Preparation obejmuje:
 - wyrenderowanie manifestu, digestu i evidence artifacts,
 - osadzenie artifact contents inline w promptcie,
 - zaladowanie runtime skills,
+- zbudowanie `CopilotClientOptions` i `SessionConfig`,
 - zebranie metryk preparation.
+
+Serwis preparation sklada zaleznosci, ale nie zawiera juz calej logiki
+renderingu i konfiguracji SDK:
+
+- `CopilotToolAccessPolicyFactory` laczy evaluator coverage z registered
+  tools i zwraca coverage-aware policy,
+- `CopilotPromptRenderer` renderuje prompt, JSON-only response contract,
+  available capability groups i embedded artifacts,
+- `CopilotSessionConfigFactory` buduje client options, session config,
+  permission handler, hooks, skill directories i disabled skills.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.
@@ -136,6 +153,9 @@ wystarczajacy material i ktore tools mozna uzasadnic.
 ## 7. Coverage-aware tool policy
 
 `CopilotToolAccessPolicy` filtruje tools na podstawie coverage.
+Produkcyjna sciezka tworzy ja przez `CopilotToolAccessPolicyFactory`, ktora
+uzywa `CopilotEvidenceCoverageEvaluator` i przekazuje do policy gotowy
+`CopilotEvidenceCoverageReport`.
 
 Elasticsearch tools:
 
@@ -164,7 +184,9 @@ Prompt instruuje model, zeby uzywal tools tylko dla luk z
 
 ## 8. Session config i blokady lokalne
 
-`CopilotSdkExecutionGateway` tworzy sesje z allowlista tools z policy.
+`CopilotSdkPreparedRequest` niesie `SessionConfig` utworzony przez
+`CopilotSessionConfigFactory`. Gateway wykonuje przygotowana konfiguracje
+sesji i nie przebudowuje policy ani promptu.
 
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal
 w glownym flow analizy. Integracyjne tools GitLab/Elastic/DB sa wywolywane
@@ -177,13 +199,24 @@ Model nie podaje jawnie scope'ow takich jak `correlationId`, `gitLabGroup`,
 
 `CopilotSdkToolBridge` konwertuje Spring tools na definicje Copilota.
 
-W runtime robi tez:
+Po refaktorze bridge robi tylko rejestracje definicji:
 
 - dekorowanie opisow przez `CopilotToolDescriptionDecorator`,
-- klasyfikacje tools dla telemetryki,
+- parsowanie input schema,
+- utworzenie `ToolDefinition` z handlerem wykonania.
+
+`CopilotToolInvocationHandler` obsluguje runtime invocation:
+
+- walidacje session id,
 - budget guard przed i po callbacku,
 - capture tool evidence,
+- klasyfikacje tools dla telemetryki,
+- logowanie request/result preview,
+- parsowanie wyniku callbacka,
 - normalizacje denied budget result w trybie hard.
+
+`CopilotToolContextFactory` buduje hidden `ToolContext` na podstawie
+`CopilotToolSessionContext` i invocation.
 
 Decorated descriptions sa guidance dla modelu, nie zmieniaja implementacji
 adapterow.
@@ -193,10 +226,10 @@ adapterow.
 Budzet jest session-bound:
 
 1. gateway rejestruje session state,
-2. bridge pyta `CopilotToolBudgetGuard.beforeInvocation(...)`,
+2. invocation handler pyta `CopilotToolBudgetGuard.beforeInvocation(...)`,
 3. callback Spring tool jest wykonany albo zwrocony jest kontrolowany denied
    result,
-4. bridge wywoluje `afterInvocation(...)` z raw result,
+4. invocation handler wywoluje `afterInvocation(...)` z raw result,
 5. gateway usuwa state w `finally`.
 
 Domyslny tryb to `soft`: przekroczenia sa logowane i metrykowane, ale nie
@@ -296,6 +329,10 @@ jest dostepny nawet wtedy, gdy execution failuje.
 
 `toolEvidenceSections` sa osobnym polem job response i moga byc aktualizowane
 podczas sesji AI przez listener. UI nie zalezy od typow Copilot SDK.
+
+Publiczne kontrakty sync/job pozostaja bez zmian: request zawiera tylko
+`correlationId`, `gitLabGroup` pochodzi z konfiguracji, a `environment` i
+`gitLabBranch` sa wyprowadzane z evidence.
 
 ## 16. Najwazniejsze properties
 

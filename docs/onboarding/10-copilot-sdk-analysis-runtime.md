@@ -15,8 +15,17 @@ Flow:
 3. `AnalysisAiProvider.analyze(prepared, listener)` uruchamia sesje SDK,
 4. prepared request jest zamykany po execution.
 
-Nie ma juz podwojnego budowania promptu przez `preparePrompt(...)` i
-`analyze(request)`.
+Ownership prepared requestu:
+
+- kod, ktory wywolal `prepare(request)`, zamyka returned
+  `AnalysisAiPreparedAnalysis`,
+- `analyze(request)` zamyka tylko prepared request utworzony przez siebie,
+- `analyze(prepared, listener)` nie zamyka obiektu przekazanego przez caller,
+- `CopilotSdkExecutionGateway` nie zamyka prepared requestu.
+
+Nie ma juz podwojnego budowania promptu przez produkcyjne
+`preparePrompt(...)` i `analyze(request)`. Preview promptu ma pochodzic z
+realnego `prepare(request).prompt()`.
 
 ## Preparation
 
@@ -28,6 +37,16 @@ Nie ma juz podwojnego budowania promptu przez `preparePrompt(...)` i
 - laduje runtime skills,
 - generuje prompt JSON-only,
 - rejestruje metryki preparation.
+
+Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
+
+- `CopilotToolAccessPolicyFactory` buduje policy z coverage reportu i listy
+  registered tools,
+- `CopilotPromptRenderer` zawiera tekst promptu, JSON response contract,
+  rendering capability groups i embedded artifact contents,
+- `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,
+  `SessionConfig`, permission handler, hooks, safe lists, skill directories i
+  disabled skills.
 
 Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 
@@ -61,11 +80,21 @@ Runtime rejestruje tylko tools dozwolone przez `CopilotToolAccessPolicy`.
 Policy uzywa `CopilotEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
 sekcja evidence istnieje.
 
+Policy powstaje przez `CopilotToolAccessPolicyFactory`, aby ukryta zaleznosc
+od coverage evaluatora nie byla zaszyta w samym recordzie policy.
+
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal.
 GitLab, Elasticsearch i DB tools pracuja przez hidden `ToolContext`.
 
 `CopilotToolDescriptionDecorator` dodaje Copilot-facing guidance do opisow
 drogich albo ryzykownych tools.
+
+`CopilotSdkToolBridge` odpowiada za rejestracje definicji tools: zbiera Spring
+callbacks, sortuje je, dekoruje description, parsuje input schema i tworzy
+`ToolDefinition`. `CopilotToolInvocationHandler` odpowiada za wykonanie:
+waliduje session id, buduje hidden context, pilnuje budgetu before/after,
+wywoluje callback, zapisuje metryki, publikuje evidence capture i parsuje
+result preview.
 
 ## Budget
 
@@ -84,7 +113,7 @@ Soft mode nie blokuje. Hard mode zwraca kontrolowany result
 
 ## Tool evidence
 
-Bridge publikuje tool evidence przez listener:
+Invocation handler publikuje tool evidence przez listener:
 
 - `gitlab/tool-fetched-code`,
 - `gitlab/tool-search-results`,
@@ -93,6 +122,10 @@ Bridge publikuje tool evidence przez listener:
 
 DB summaries zawieraja pytanie diagnostyczne, parametry i summary wyniku, aby
 audyt nie byl tylko raw JSON dump.
+
+Registry capture zarzadza sesjami i routingiem. Mapowanie GitLab/DB wynikow
+jest przeniesione do mapperow, zeby lifecycle sesji nie mieszal sie z
+formatem payloadow poszczegolnych tools.
 
 ## Response parsing
 
@@ -139,6 +172,20 @@ Metryki obejmuja:
 - detected problem/confidence,
 - quality findings,
 - budget warnings/denials.
+
+Mutable stan licznikow jest oddzielony od registry, ale pola
+`CopilotAnalysisMetrics` i JSON summary log pozostaja bez zmian.
+
+## Publiczny kontrakt produktu
+
+Refaktory runtime Copilota nie zmieniaja kontraktow zewnetrznych:
+
+- `POST /analysis` i `POST /analysis/jobs` przyjmuja tylko `correlationId`,
+- `gitLabGroup` pochodzi z konfiguracji,
+- `environment` i `gitLabBranch` sa wyprowadzane z evidence,
+- artefakty Copilota sa embedded inline w promptcie, nie SDK attachments,
+- response aplikacji pozostaje mapowany z JSON-only odpowiedzi AI do
+  dotychczasowych pol.
 
 ## Properties
 

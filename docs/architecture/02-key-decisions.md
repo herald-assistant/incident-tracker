@@ -85,9 +85,22 @@ Aktualny flow:
 4. wykonuje `AnalysisAiProvider.analyze(prepared, listener)`,
 5. zamyka `AnalysisAiPreparedAnalysis` w `finally`/try-with-resources.
 
+Ownership prepared analysis jest jawny:
+
+- wlasciciel obiektu zwroconego z `prepare(request)` zamyka go po uzyciu,
+- `analyze(request)` zamyka prepared analysis, ktore sam przygotowal,
+- `analyze(prepared, listener)` nie zamyka prepared analysis przekazanego
+  przez caller,
+- gateway wykonujacy SDK nie przejmuje ownership i nie zamyka prepared
+  requestu.
+
 `CopilotSdkPreparedRequest` implementuje generyczny
 `AnalysisAiPreparedAnalysis`, ale typ SDK nie wycieka poza pakiet
 `analysis.ai.copilot`.
+
+`AnalysisAiProvider` nie ma produkcyjnych shortcutow dodanych tylko dla
+testow, takich jak oddzielne `preparePrompt(...)` albo domyslne prepared
+adaptery. Testy tworza wlasne prepared fixtures.
 
 ## 8. Artefakty Copilota sa inline w promptcie
 
@@ -159,6 +172,11 @@ Nie uzywamy juz zasady "sekcja GitLab/Elasticsearch istnieje, wiec wylacz
 tools". `CopilotEvidenceCoverageEvaluator` ocenia coverage generycznych
 evidence i tworzy `CopilotEvidenceCoverageReport`.
 
+`CopilotToolAccessPolicyFactory` jest jedynym produkcyjnym miejscem, ktore
+laczy request, evaluator coverage i zarejestrowane tool definitions. Sama
+`CopilotToolAccessPolicy` jest budowana z gotowego coverage reportu i nie
+tworzy recznie nowego evaluatora.
+
 Polityka:
 
 - Elasticsearch tools sa wlaczane przy braku logow, truncation albo braku
@@ -175,8 +193,8 @@ Coverage i luki evidence sa widoczne w manifest/prompt.
 
 ## 13. Tool budget jest egzekwowany w backendzie
 
-Budzet tools jest session-bound i dziala w `CopilotSdkToolBridge` przed i po
-wywolaniu callbacka.
+Budzet tools jest session-bound i dziala w `CopilotToolInvocationHandler`
+przed i po wywolaniu callbacka.
 
 Domyslnie `analysis.ai.copilot.tool-budget.mode=soft`, czyli przekroczenia sa
 logowane i trafiaja do telemetryki, ale tool call nie jest blokowany. Tryb
@@ -194,6 +212,8 @@ Model nie powinien podawac `correlationId`, `gitLabGroup`, `gitLabBranch` ani
 
 SessionConfig ma jawna allowliste tools, a `SessionHooks.onPreToolUse`
 blokuje lokalny workspace/filesystem/shell/terminal w glownym flow analizy.
+Konfiguracje klienta SDK, `SessionConfig`, hooks, permission handler,
+skill directories i disabled skills buduje `CopilotSessionConfigFactory`.
 
 ## 15. Tool descriptions moga byc dekorowane dla Copilota
 
@@ -217,6 +237,15 @@ Capture obejmuje:
 - GitLab outline/flow/class references jako `gitlab/tool-flow-context`,
 - DB tools jako `database/tool-results` z pytaniem diagnostycznym,
   parametrami i summary wyniku.
+
+Registry zarzadza sesja i routingiem capture, a szczegoly mapowania wynikow
+GitLab/DB sa oddzielone od lifecycle sesji.
+
+`CopilotSdkToolBridge` pozostaje warstwa rejestracji tools: zbiera Spring
+`ToolCallback`, sortuje je, dekoruje opisy, parsuje input schema i tworzy
+`ToolDefinition`. Wykonanie callbacka, walidacja session id, budget
+before/after, telemetryka, evidence capture i parsowanie wyniku sa w
+`CopilotToolInvocationHandler`.
 
 ## 17. Telemetry jest pierwsza warstwa optymalizacji
 
@@ -250,6 +279,11 @@ metryki i audyt wyniku.
 Job state moze przechowywac prepared prompt i `toolEvidenceSections`, ale UI
 nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
 analizy aplikacji.
+
+Refaktory w `analysis.ai` i `analysis.ai.copilot` nie zmieniaja publicznego
+kontraktu produktu: `POST /analysis` i `POST /analysis/jobs` nadal przyjmuja
+tylko `correlationId`, response pozostaje mapowany do dotychczasowych pol
+aplikacji, a artefakty Copilota nadal sa embedded inline w promptcie.
 
 ## 20. Optymalizacje Copilota prowadzimy inkrementalnie
 
