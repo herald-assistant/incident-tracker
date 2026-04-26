@@ -43,10 +43,6 @@ public class CopilotArtifactService {
         this.itemIdGenerator = itemIdGenerator;
     }
 
-    public CopilotArtifactService(ObjectMapper objectMapper) {
-        this(objectMapper, new CopilotIncidentDigestService(), new CopilotArtifactItemIdGenerator());
-    }
-
     public List<Artifact> renderArtifacts(
             AnalysisAiAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy

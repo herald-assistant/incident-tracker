@@ -9,7 +9,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPrepared
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetRegistry;
 
 import java.util.concurrent.CompletionException;
@@ -38,19 +37,6 @@ public class CopilotSdkExecutionGateway {
         this.toolEvidenceCaptureRegistry = toolEvidenceCaptureRegistry;
         this.metricsRegistry = metricsRegistry;
         this.toolBudgetRegistry = toolBudgetRegistry;
-    }
-
-    public CopilotSdkExecutionGateway(
-            CopilotSdkProperties properties,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
-            CopilotSessionMetricsRegistry metricsRegistry
-    ) {
-        this(
-                properties,
-                toolEvidenceCaptureRegistry,
-                metricsRegistry,
-                new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties())
-        );
     }
 
     public String execute(CopilotSdkPreparedRequest preparedRequest) {

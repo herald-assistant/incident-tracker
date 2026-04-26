@@ -22,6 +22,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkToolBridgeMetricsTest {
 
@@ -41,10 +43,10 @@ class CopilotSdkToolBridgeMetricsTest {
         var properties = new CopilotMetricsProperties();
         properties.setLogToolEvents(false);
         var metricsRegistry = new CopilotSessionMetricsRegistry(properties);
-        var bridge = new CopilotSdkToolBridge(
+        var bridge = toolBridge(
                 List.of(metricsToolProvider()),
                 objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper),
+                toolEvidenceCaptureRegistry(objectMapper),
                 metricsRegistry,
                 new CopilotMetricsLogger(properties, objectMapper)
         );

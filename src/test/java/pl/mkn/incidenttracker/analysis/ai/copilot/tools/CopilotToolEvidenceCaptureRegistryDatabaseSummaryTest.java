@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotToolEvidenceCaptureRegistryDatabaseSummaryTest {
 
@@ -19,7 +20,7 @@ class CopilotToolEvidenceCaptureRegistryDatabaseSummaryTest {
 
     @Test
     void shouldPublishNormalizedDatabaseDiagnosticSummary() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
         registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
             @Override

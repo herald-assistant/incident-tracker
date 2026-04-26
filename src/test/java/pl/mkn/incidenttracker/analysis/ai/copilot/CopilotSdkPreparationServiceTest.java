@@ -45,6 +45,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkPreparationServiceTest {
 
@@ -52,14 +55,14 @@ class CopilotSdkPreparationServiceTest {
     Path tempDirectory;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final CopilotSdkToolBridge toolBridge = new CopilotSdkToolBridge(
+    private final CopilotSdkToolBridge toolBridge = toolBridge(
             List.of(
                     MethodToolCallbackProvider.builder()
                             .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort()))
                             .build()
             ),
             objectMapper,
-            new CopilotToolEvidenceCaptureRegistry(objectMapper),
+            toolEvidenceCaptureRegistry(objectMapper),
             metricsRegistry(),
             metricsLogger()
     );
@@ -249,7 +252,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper),
+                artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
                 sessionConfigFactory(properties),
@@ -306,7 +309,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper),
+                artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
                 sessionConfigFactory(properties),
@@ -351,7 +354,7 @@ class CopilotSdkPreparationServiceTest {
         var service = new CopilotSdkPreparationService(
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper),
+                artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
                 sessionConfigFactory(properties),
@@ -461,7 +464,7 @@ class CopilotSdkPreparationServiceTest {
         return new CopilotSdkPreparationService(
                 toolBridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(objectMapper),
+                artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
                 sessionConfigFactory(properties),

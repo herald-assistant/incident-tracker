@@ -14,7 +14,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPrepared
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
 
 import java.time.Duration;
 import java.util.Map;
@@ -30,15 +29,17 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.executionGateway;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkExecutionGatewayTest {
 
     @Test
     void shouldUseDefaultSendAndWaitTimeoutFromProperties() {
         var properties = new CopilotSdkProperties();
-        var gateway = new CopilotSdkExecutionGateway(
+        var gateway = executionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                toolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
                 metricsRegistry()
         );
         var preparedRequest = new CopilotSdkPreparedRequest(
@@ -74,9 +75,9 @@ class CopilotSdkExecutionGatewayTest {
     void shouldUseConfiguredSendAndWaitTimeout() {
         var properties = new CopilotSdkProperties();
         properties.setSendAndWaitTimeout(Duration.ofSeconds(90));
-        var gateway = new CopilotSdkExecutionGateway(
+        var gateway = executionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                toolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
                 metricsRegistry()
         );
         var preparedRequest = new CopilotSdkPreparedRequest(
@@ -111,9 +112,9 @@ class CopilotSdkExecutionGatewayTest {
     @Test
     void shouldExecuteWithArtifactOnlyPreparedRequest() {
         var properties = new CopilotSdkProperties();
-        var gateway = new CopilotSdkExecutionGateway(
+        var gateway = executionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                toolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
                 metricsRegistry()
         );
 
@@ -144,9 +145,9 @@ class CopilotSdkExecutionGatewayTest {
     @Test
     void shouldNotClosePreparedRequestAfterExecution() {
         var properties = new CopilotSdkProperties();
-        var gateway = new CopilotSdkExecutionGateway(
+        var gateway = executionGateway(
                 properties,
-                new CopilotToolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
+                toolEvidenceCaptureRegistry(new com.fasterxml.jackson.databind.ObjectMapper()),
                 metricsRegistry()
         );
         var messageOptions = new MessageOptions().setPrompt("Diagnose incident");

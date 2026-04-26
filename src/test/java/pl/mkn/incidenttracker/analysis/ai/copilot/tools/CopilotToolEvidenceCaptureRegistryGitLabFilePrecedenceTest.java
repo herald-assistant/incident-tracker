@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotToolEvidenceCaptureRegistryGitLabFilePrecedenceTest {
 
@@ -22,7 +23,7 @@ class CopilotToolEvidenceCaptureRegistryGitLabFilePrecedenceTest {
 
     @Test
     void shouldKeepFullGitLabFileWhenChunkForSameFileArrivesLater() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
         var updateCount = new AtomicInteger();
         registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {

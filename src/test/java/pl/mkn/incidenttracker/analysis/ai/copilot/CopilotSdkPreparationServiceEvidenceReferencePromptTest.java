@@ -9,7 +9,6 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
@@ -28,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotSdkPreparationServiceEvidenceReferencePromptTest {
 
@@ -44,7 +44,7 @@ class CopilotSdkPreparationServiceEvidenceReferencePromptTest {
         var service = new CopilotSdkPreparationService(
                 bridge,
                 new CopilotSkillRuntimeLoader(properties),
-                new CopilotArtifactService(new ObjectMapper()),
+                artifactService(new ObjectMapper()),
                 new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
                 new CopilotPromptRenderer(),
                 new CopilotSessionConfigFactory(properties),

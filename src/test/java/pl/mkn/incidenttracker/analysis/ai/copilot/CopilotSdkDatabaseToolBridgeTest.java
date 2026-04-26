@@ -32,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkDatabaseToolBridgeTest {
 
@@ -39,10 +41,10 @@ class CopilotSdkDatabaseToolBridgeTest {
 
     @Test
     void shouldHideEnvironmentAndSchemaPatternFromDiscoveryToolSchemas() {
-        var bridge = new CopilotSdkToolBridge(
+        var bridge = toolBridge(
                 java.util.List.of(databaseToolProvider()),
                 objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper),
+                toolEvidenceCaptureRegistry(objectMapper),
                 metricsRegistry(),
                 metricsLogger()
         );
@@ -84,8 +86,8 @@ class CopilotSdkDatabaseToolBridgeTest {
                 List.of()
         ));
 
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
-        var bridge = new CopilotSdkToolBridge(
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
+        var bridge = toolBridge(
                 List.of(databaseToolProvider(databaseToolService)),
                 objectMapper,
                 registry,

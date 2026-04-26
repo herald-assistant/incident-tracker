@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkToolBridgeDescriptionTest {
 
@@ -27,19 +29,19 @@ class CopilotSdkToolBridgeDescriptionTest {
 
     @Test
     void shouldDecorateCopilotFacingToolDescriptions() {
-        var bridge = new CopilotSdkToolBridge(
+        var metricsRegistry = new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
+        var bridge = toolBridge(
                 List.of(gitLabToolProvider()),
                 objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper),
-                new CopilotSessionMetricsRegistry(new CopilotMetricsProperties()),
+                toolEvidenceCaptureRegistry(objectMapper),
+                metricsRegistry,
                 new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper),
                 new pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetGuard(
                         new pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetRegistry(
                                 new pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetProperties()
                         ),
-                        new CopilotSessionMetricsRegistry(new CopilotMetricsProperties())
-                ),
-                new CopilotToolDescriptionDecorator(new CopilotToolGuidanceCatalog())
+                        metricsRegistry
+                )
         );
 
         var descriptionsByName = bridge.buildToolDefinitions(sessionContext()).stream()

@@ -12,10 +12,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotArtifactServiceDigestOrderTest {
 
-    private final CopilotArtifactService artifactService = new CopilotArtifactService(new ObjectMapper());
+    private final CopilotArtifactService artifactService = artifactService(new ObjectMapper());
     private final CopilotToolAccessPolicyFactory policyFactory =
             new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 

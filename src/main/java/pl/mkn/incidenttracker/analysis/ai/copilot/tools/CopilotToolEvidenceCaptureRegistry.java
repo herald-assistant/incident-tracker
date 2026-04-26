@@ -1,6 +1,5 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -36,12 +35,6 @@ public class CopilotToolEvidenceCaptureRegistry {
     ) {
         this.gitLabMapper = gitLabMapper;
         this.databaseMapper = databaseMapper;
-    }
-
-    public CopilotToolEvidenceCaptureRegistry(ObjectMapper objectMapper) {
-        var payloadReader = new ToolJsonPayloadReader(objectMapper);
-        this.gitLabMapper = new GitLabToolEvidenceMapper(objectMapper, payloadReader);
-        this.databaseMapper = new DatabaseToolEvidenceMapper(payloadReader);
     }
 
     public void registerSession(String sessionId, AnalysisAiToolEvidenceListener listener) {

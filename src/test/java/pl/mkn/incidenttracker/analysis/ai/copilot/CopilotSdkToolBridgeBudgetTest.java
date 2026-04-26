@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkToolBridgeBudgetTest {
 
@@ -89,10 +91,10 @@ class CopilotSdkToolBridgeBudgetTest {
     ) {
         var metricsProperties = new CopilotMetricsProperties();
         metricsProperties.setLogToolEvents(false);
-        return new CopilotSdkToolBridge(
+        return toolBridge(
                 List.of(MethodToolCallbackProvider.builder().toolObjects(tools).build()),
                 objectMapper,
-                new CopilotToolEvidenceCaptureRegistry(objectMapper),
+                toolEvidenceCaptureRegistry(objectMapper),
                 metricsRegistry,
                 new CopilotMetricsLogger(metricsProperties, objectMapper),
                 new CopilotToolBudgetGuard(budgetRegistry, metricsRegistry)

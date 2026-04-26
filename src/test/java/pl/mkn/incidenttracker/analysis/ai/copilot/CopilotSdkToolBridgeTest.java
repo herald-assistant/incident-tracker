@@ -33,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotSdkToolBridgeTest {
 
@@ -173,7 +175,7 @@ class CopilotSdkToolBridgeTest {
 
     @Test
     void shouldInvokeSpringGitLabChunkToolThroughCopilotToolDefinition() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var bridge = bridge(List.of(gitLabToolProvider()), registry);
         var sessionContext = gitLabSessionContext();
         var tool = bridge.buildToolDefinitions(sessionContext).stream()
@@ -225,7 +227,7 @@ class CopilotSdkToolBridgeTest {
 
     @Test
     void shouldInvokeSpringGitLabChunksToolThroughCopilotToolDefinition() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var bridge = bridge(List.of(gitLabToolProvider()), registry);
         var sessionContext = gitLabSessionContext();
         var tool = bridge.buildToolDefinitions(sessionContext).stream()
@@ -330,14 +332,14 @@ class CopilotSdkToolBridgeTest {
     }
 
     private CopilotSdkToolBridge bridge(List<ToolCallbackProvider> providers) {
-        return bridge(providers, new CopilotToolEvidenceCaptureRegistry(objectMapper));
+        return bridge(providers, toolEvidenceCaptureRegistry(objectMapper));
     }
 
     private CopilotSdkToolBridge bridge(
             List<ToolCallbackProvider> providers,
             CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry
     ) {
-        return new CopilotSdkToolBridge(
+        return toolBridge(
                 providers,
                 objectMapper,
                 toolEvidenceCaptureRegistry,

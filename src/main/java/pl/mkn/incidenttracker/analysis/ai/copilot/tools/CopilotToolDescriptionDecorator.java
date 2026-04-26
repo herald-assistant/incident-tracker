@@ -12,10 +12,6 @@ public class CopilotToolDescriptionDecorator {
 
     private final CopilotToolGuidanceCatalog guidanceCatalog;
 
-    public CopilotToolDescriptionDecorator() {
-        this(new CopilotToolGuidanceCatalog());
-    }
-
     public String decorate(String toolName, String description) {
         var baseDescription = StringUtils.hasText(description) ? description.trim() : "";
         var guidance = guidanceCatalog.guidanceFor(toolName);

@@ -7,11 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetGuard;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetRegistry;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -38,70 +33,6 @@ public class CopilotSdkToolBridge {
         this.objectMapper = objectMapper;
         this.descriptionDecorator = descriptionDecorator;
         this.invocationHandler = invocationHandler;
-    }
-
-    public CopilotSdkToolBridge(
-            List<ToolCallbackProvider> toolCallbackProviders,
-            ObjectMapper objectMapper,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger,
-            CopilotToolBudgetGuard budgetGuard
-    ) {
-        this(
-                toolCallbackProviders,
-                objectMapper,
-                toolEvidenceCaptureRegistry,
-                metricsRegistry,
-                metricsLogger,
-                budgetGuard,
-                new CopilotToolDescriptionDecorator()
-        );
-    }
-
-    public CopilotSdkToolBridge(
-            List<ToolCallbackProvider> toolCallbackProviders,
-            ObjectMapper objectMapper,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger,
-            CopilotToolBudgetGuard budgetGuard,
-            CopilotToolDescriptionDecorator descriptionDecorator
-    ) {
-        this(
-                toolCallbackProviders,
-                objectMapper,
-                descriptionDecorator,
-                new CopilotToolInvocationHandler(
-                        objectMapper,
-                        new CopilotToolContextFactory(),
-                        toolEvidenceCaptureRegistry,
-                        metricsRegistry,
-                        metricsLogger,
-                        budgetGuard
-                )
-        );
-    }
-
-    public CopilotSdkToolBridge(
-            List<ToolCallbackProvider> toolCallbackProviders,
-            ObjectMapper objectMapper,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger
-    ) {
-        this(
-                toolCallbackProviders,
-                objectMapper,
-                toolEvidenceCaptureRegistry,
-                metricsRegistry,
-                metricsLogger,
-                new CopilotToolBudgetGuard(
-                        new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
-                        metricsRegistry
-                ),
-                new CopilotToolDescriptionDecorator()
-        );
     }
 
     public List<ToolDefinition> buildToolDefinitions() {

@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
 
 class CopilotToolEvidenceCaptureRegistryGitLabSearchTest {
 
@@ -19,7 +20,7 @@ class CopilotToolEvidenceCaptureRegistryGitLabSearchTest {
 
     @Test
     void shouldCaptureGitLabSearchResultsAsAuditEvidence() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
         registry.registerSession("session-1", listener(capturedSection));
 
@@ -64,7 +65,7 @@ class CopilotToolEvidenceCaptureRegistryGitLabSearchTest {
 
     @Test
     void shouldCaptureGitLabFlowContextAsAuditEvidence() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
         registry.registerSession("session-1", listener(capturedSection));
 
@@ -123,7 +124,7 @@ class CopilotToolEvidenceCaptureRegistryGitLabSearchTest {
 
     @Test
     void shouldCaptureGitLabOutlineAsAuditEvidence() {
-        var registry = new CopilotToolEvidenceCaptureRegistry(objectMapper);
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
         registry.registerSession("session-1", listener(capturedSection));
 
