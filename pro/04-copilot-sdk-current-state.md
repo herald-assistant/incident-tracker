@@ -1,361 +1,176 @@
 # Copilot SDK Current State
 
-## Glowny obraz
+Ten dokument opisuje aktualny stan integracji Copilot SDK po serii
+optymalizacji PR-1..PR-8.
 
-Warstwa AI jest dzisiaj zorganizowana poprawnie modulowo i ma wyrazna granice:
+## Status w skrocie
 
-- `AnalysisOrchestrator` zna tylko `AnalysisAiProvider`,
-- implementacja runtime to `CopilotSdkAnalysisAiProvider`,
-- szczegoly SDK sa zamkniete w `analysis.ai.copilot.*`.
+Wdrozone:
 
-To jest mocny punkt obecnej architektury.
+- telemetry per analiza i per tool,
+- JSON-only response contract,
+- report-only response quality gate,
+- evidence coverage evaluator,
+- coverage-aware tool policy,
+- incident digest i stable artifact item IDs,
+- backend tool budget,
+- tool description decorators,
+- rozszerzony capture tool evidence,
+- single prepared analysis flow.
 
-## Aktualny flow Copilot SDK
+Nieaktualne historyczne zalozenia:
 
-### 1. Orchestrator buduje request do AI
+- prompt nie jest juz budowany dwa razy,
+- response nie jest juz parserem legacy labeli,
+- tool policy nie wylacza GitLaba tylko dlatego, ze istnieje jedna sekcja
+  GitLab evidence,
+- runtime nie uzywa SDK attachments dla evidence.
 
-Po evidence collection powstaje `AnalysisAiAnalysisRequest` z:
+## Glowny flow
 
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-- `evidenceSections`
+1. Evidence collector tworzy `AnalysisEvidenceSection`.
+2. Orchestrator buduje `AnalysisAiAnalysisRequest`.
+3. Provider wykonuje `prepare(request)` i zwraca `AnalysisAiPreparedAnalysis`.
+4. Job state zapisuje `prepared.prompt()`.
+5. Provider wykonuje `analyze(prepared, listener)`.
+6. Gateway uruchamia sesje Copilot SDK.
+7. Bridge obsluguje Spring tool callbacks, telemetry, budget i capture.
+8. Parser mapuje JSON response na publiczny `AnalysisAiAnalysisResponse`.
+9. Quality gate loguje findings w trybie report-only.
 
-### 2. `preparePrompt(...)`
+## Preparation
 
-Orchestrator wola osobno:
+`CopilotSdkPreparationService` sklada wszystkie elementy potrzebne do sesji:
 
-- `analysisAiProvider.preparePrompt(aiRequest)`
+- coverage report,
+- tool access policy,
+- decorated tool definitions,
+- artifacts inline,
+- runtime skills,
+- final prompt,
+- preparation metrics.
 
-Ten wynik sluzy glownie do debugowania i job snapshotu.
+`CopilotSdkPreparedRequest` przechowuje prompt, artifacts, tools, context,
+skills i metryki. Jest zamykany po execution.
 
-### 3. `analyze(...)`
+## Artifact model
 
-Potem provider AI robi juz pelne:
+Artifacts sa logicznymi plikami w promptcie:
 
-- preparation
-- execution
-- parsing odpowiedzi
+```text
+00-incident-manifest.json
+01-incident-digest.md
+02-... evidence
+```
 
-## Preparation layer
+Manifest zawiera indeks, tool policy, coverage i delivery mode. Digest jest
+kompresja najwazniejszych faktow dla modelu. Raw evidence nadal jest dostepne
+w kolejnych artifacts.
 
-Klasa glowna:
+Wazne: current code uses embedded prompt artifacts, not SDK attachments.
 
-- `CopilotSdkPreparationService`
+## Response model
 
-Odpowiada za:
+Prompt wymaga JSON only. Parser probuje:
 
-- zbudowanie `CopilotClientOptions`
-- zbudowanie `SessionConfig`
-- zbudowanie `MessageOptions`
-- zbudowanie promptu
-- dolaczenie `ToolDefinition`
-- dolaczenie skill directories
-- dolaczenie attachment artifacts
-- zbudowanie `CopilotToolSessionContext`
-- ustawienie jawnego `SessionConfig.sessionId`
+1. full JSON,
+2. fenced JSON,
+3. structured fallback.
 
-To oznacza, ze backend zna session id zanim wywola runtime Copilota.
+Legacy labeled fallback zostal usuniety.
 
-## Prompt
+Publiczny response nadal uzywa istniejacych pol, ale wewnetrzny JSON zawiera
+tez rationale, process/context/team, confidence, evidence references i
+visibility limits.
 
-Prompt jest request-specific i zawiera:
+## Quality
 
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-- instrukcje, zeby czytac attachments jako primary source of truth,
-- instrukcje, zeby najpierw czytac `00-incident-manifest.json`,
-- instrukcje o tym, kiedy wolno uzyc tools,
-- instrukcje o rozdzieleniu:
-  - confirmed signals,
-  - best-supported hypothesis,
-  - visibility limits,
-  - broader functional context,
-  - next action,
-- wymuszenie odpowiedzi po polsku,
-- wymuszenie dokladnej listy pol wyjsciowych,
-- liste capability groups:
-  - Elasticsearch logs,
-  - GitLab code,
-  - Database diagnostics, jesli capability jest wlaczona.
+`CopilotResponseQualityGate` sprawdza, czy wynik jest uzyteczny i ugruntowany.
+Aktualny tryb to `REPORT_ONLY`.
 
-Wazny detal:
+Findings nie naprawiaja ani nie nadpisuja wyniku. Sa materialem do telemetryki
+i przyszlego soft repair.
 
-prompt nie niesie surowego evidence inline.
-Evidence jest przerzucone do attachment artifacts.
+## Coverage i policy
 
-## Attachment strategy
+Coverage evaluator czyta generyczne evidence i okresla:
 
-Klasa:
+- stan log evidence,
+- stan GitLab/code/flow evidence,
+- runtime coverage,
+- operational context coverage,
+- potrzebe DB diagnostics,
+- evidence gaps.
 
-- `CopilotAttachmentArtifactService`
+Tool policy korzysta z coverage:
 
-Strategia:
+- Elastic only for log gaps,
+- GitLab only for code/flow gaps,
+- DB only for resolved environment plus data diagnostic need,
+- raw SQL disabled by default.
 
-1. z requestu AI budowany jest manifest,
-2. kazda sekcja evidence jest zapisywana do osobnego pliku JSON,
-3. wszystkie pliki sa dolaczane jako attachments do `MessageOptions`.
+## Tools
 
-Powstaja:
+GitLab tools obejmuja search, full file read, chunk/chunks, outline,
+class references i flow context.
 
-- `00-incident-manifest.json`
-- `01-*.json`
-- `02-*.json`
-- ...
+DB tools obejmuja discovery, typed checks, joins, samples, mapping comparison
+i raw SQL, ale raw SQL jest domyslnie blokowany przez policy/budget.
 
-Manifest zawiera:
+Tool descriptions sa dekorowane przez `CopilotToolDescriptionDecorator`.
 
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-- `generatedAt`
-- `readFirst`
-- `artifactPolicy`
-- liste artefaktow
+## Tool budget
 
-To jest bardzo dobra baza do dalszej optymalizacji, bo zmniejsza presje na
-gigantyczny prompt i pozwala lepiej separowac role promptu od danych.
+Budget jest session-bound. Soft mode loguje przekroczenia, hard mode zwraca
+controlled denied result.
 
-## Skill strategy
+Budzet mierzy:
 
-Klasa:
+- total calls,
+- calls per group,
+- GitLab search/read/chunk,
+- DB raw SQL attempts,
+- returned characters.
 
-- `CopilotSkillRuntimeLoader`
+## Tool evidence capture
 
-Aktualny model:
+Captured sections:
 
-- skille zrodlowe leza w `src/main/resources/copilot/skills`,
-- loader wypakowuje classpath resources do runtime directory,
-- runtime directory jest cache'owany po pierwszym resolve,
-- mozna dopiac dodatkowe `skillDirectories` z filesystemu,
-- mozna wylaczyc wybrane skille przez `disabledSkills`.
+- `gitlab/tool-fetched-code`,
+- `gitlab/tool-search-results`,
+- `gitlab/tool-flow-context`,
+- `database/tool-results`.
 
-Aktualny zestaw skilli:
+To daje job API material audytowy poza finalnym tekstem AI.
 
-- `incident-analysis-core`
-- `incident-analysis-gitlab-tools`
-- `incident-data-diagnostics`
+## Telemetry
 
-To jest juz sensowny podzial:
+Session metrics lacza preparation, execution, parser, tools, budget i quality.
+Summary log powinien powstac raz dla analizy, a tool events moga byc logowane
+oddzielnie.
 
-- core diagnozy i styl odpowiedzi,
-- eksploracja GitLaba,
-- diagnostyka danych i DB capability.
+## Properties
 
-## Tool bridge
+Aktywne grupy Copilota:
 
-Klasa:
+```text
+analysis.ai.copilot.*
+analysis.ai.copilot.metrics.*
+analysis.ai.copilot.quality-gate.*
+analysis.ai.copilot.tool-budget.*
+```
 
-- `CopilotSdkToolBridge`
+Nie dokumentowac juz properties dla attachment artifacts ani legacy response
+formatu, jesli nie istnieja w kodzie.
 
-Model:
+## Aktualne ograniczenia
 
-1. Spring `@Tool` sa rejestrowane przez `ToolCallbackProvider`,
-2. bridge zbiera callbacki po nazwie,
-3. mapuje je do Copilot `ToolDefinition`,
-4. przy wywolaniu serializuje args do JSON,
-5. buduje hidden Spring `ToolContext`,
-6. odpala oryginalny Spring callback przez `call(inputJson, toolContext)`,
-7. loguje request i preview resultu,
-8. waliduje `sessionId` miedzy backendowym kontekstem i realna sesja SDK.
-
-W hidden `ToolContext` laduja m.in.:
-
-- `analysisRunId`
-- `copilotSessionId`
-- `actualCopilotSessionId`
-- `toolCallId`
-- `toolName`
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-
-Wazny detal:
-
-bridge nadal uzywa `ToolDefinition.createSkipPermission(...)`.
-
-To oznacza, ze permission handling dla tych tooli jest de facto pomijany na
-poziomie definicji toola, nawet jesli sesja ma ustawiony handler permissions.
-
-## Session-bound tools
-
-Aktualny stan:
-
-- GitLab tools sa juz session-bound,
-- Database tools sa od startu session-bound,
-- model nie podaje `gitLabGroup`, `gitLabBranch`, `correlationId` ani
-  `environment` do tych capability.
-
-To zmniejsza przestrzen bledow i pozwala utrzymac lepszy audit trail po
-`analysisRunId`, `copilotSessionId` i `toolCallId`.
-
-## Execution layer
-
-Klasa:
-
-- `CopilotSdkExecutionGateway`
-
-Aktualne zachowanie:
-
-- tworzy `CopilotClient`,
-- startuje klienta,
-- tworzy sesje,
-- podpina lifecycle logger i session event logger,
-- wysyla `sendAndWait(...)`,
-- czeka do timeoutu z properties,
-- zamyka klienta i temp artifacts.
-
-Parametry runtime:
-
-- streaming jest `false`,
-- timeout domyslnie `5 minut`,
-- auth:
-  - logged-in user, jesli brak PAT,
-  - PAT, jesli `github-token` jest ustawiony.
-
-W job flow execution dodatkowo rejestruje listener do
-`CopilotToolEvidenceCaptureRegistry`, ale tylko dla wybranych GitLab read tools.
-
-## Response parsing
-
-Klasa:
-
-- `CopilotSdkAnalysisAiProvider`
-
-Parser:
-
-- czyta labeled fields linia po linii,
-- toleruje markdown wrappers typu `**summary:**`,
-- normalizuje starszy format z pipe separators,
-- oczekuje pol:
-  - `detectedProblem`
-  - `summary`
-  - `recommendedAction`
-  - `rationale`
-  - `affectedFunction`
-  - `affectedProcess`
-  - `affectedBoundedContext`
-  - `affectedTeam`
-- twardo wymaga:
-  - `detectedProblem`
-  - `summary`
-  - `recommendedAction`
-  - `affectedFunction`
-
-To jest rozsadne, ale nadal oparte o parse tekstu, nie o twardy JSON schema
-response.
-
-## Obserwowalnosc
-
-Aktualnie sa cztery poziomy logowania:
-
-1. lifecycle klienta Copilota,
-2. eventy sesji,
-3. request/result tool invocations w bridge,
-4. request/result samych MCP tools.
-
-Dodatkowo provider AI loguje:
-
-- czy odpowiedz byla structured,
-- jakie pola parser rozpoznal,
-- jaki byl `detectedProblem`,
-- czy `affectedFunction`, `affectedProcess`, `affectedBoundedContext` i
-  `affectedTeam` byly obecne.
-
-## Co jest dzisiaj dobre
-
-- mocny podzial preparation / execution / tools,
-- jawny backendowy `sessionId`,
-- hidden `ToolContext` dla session-bound capability,
-- skille jako runtime resources,
-- attachments zamiast dumpowania calego evidence do promptu,
-- zachowywanie prepared prompt dla UI i debugowania,
-- reuse Spring tools zamiast duplikacji implementacji,
-- sensowne testy pokrywajace prompt, parser, bridge, tool schemas i skill
-  loader.
-
-## Co jest dzisiaj ograniczeniem
-
-### 1. Prompt budowany jest dwa razy
-
-Przed analiza:
-
-- raz przez `preparePrompt(...)`,
-- drugi raz wewnatrz `prepare(...)`.
-
-To nie jest blad funkcjonalny, ale to oznacza:
-
-- powtorna budowe tool list,
-- powtorne opisy attachments,
-- duplikacje pracy preparation layer.
-
-### 2. Parser nadal bazuje na tekstowym formacie
-
-To zwieksza ryzyko `AI_UNSTRUCTURED_RESPONSE`.
-
-### 3. Brakuje session-level telemetry dla kosztu eksploracji
-
-Projekt loguje eventy i tool calls, ale nie buduje jeszcze uporzadkowanego
-zestawu metryk typu:
-
-- ile razy uzyto tooli,
-- ile plikow przeczytano,
-- ile zapytan DB wykonano,
-- jaki byl czas przygotowania,
-- jaki byl czas AI,
-- jaki byl rozmiar attachment artifacts,
-- ile bylo sekcji evidence i itemow.
-
-### 4. Brakuje jawnego exploration budget
-
-Skill instruuje model, zeby byl oszczedny, ale backend nie ma jeszcze twardych
-ograniczen sesji typu:
-
-- max tool calls,
-- max total chars z GitLaba,
-- max query count albo max result size dla DB,
-- max read file calls.
-
-### 5. Permission model jest dzisiaj bardzo liberalny
-
-Domyslnie:
-
-- `permissionMode = APPROVE_ALL`
-- tool definitions skipuja permission requests
-
-To upraszcza runtime, ale moze byc zbyt liberalne w twardszym srodowisku.
-
-### 6. Dynatrace jest tylko attachmentem, nie runtime capability
-
-To jest swiadoma decyzja, ale ogranicza mozliwosc dopytania modelu o dodatkowe
-sygnaly runtime podczas sesji.
-
-### 7. Tool evidence capture jest waskie
-
-W job flow do `toolEvidenceSections` trafiaja tylko wybrane GitLab read tools.
-
-To oznacza, ze:
-
-- GitLab search/outline i DB tools sa logowane,
-- ale nie sa jeszcze projektowane do osobnych sekcji evidence dla UI.
-
-## Najwazniejsze klasy dla optymalizacji Copilota
-
-- `CopilotSdkPreparationService`
-- `CopilotAttachmentArtifactService`
-- `CopilotSkillRuntimeLoader`
-- `CopilotSdkToolBridge`
-- `CopilotSdkExecutionGateway`
-- `CopilotSdkAnalysisAiProvider`
-- `CopilotToolEvidenceCaptureRegistry`
-- `ElasticMcpTools`
-- `GitLabMcpTools`
-- `DatabaseMcpTools`
-- `DatabaseToolService`
-- `GitLabDeterministicEvidenceProvider`
-- `SKILL.md`
+- Quality gate jest report-only; nie ma jeszcze soft repair.
+- Nie ma golden evaluation suite do mierzenia trafnosci wynikow.
+- Tool budget thresholds sa baseline i wymagaja strojenia na realnych
+  analizach.
+- Permission mode property nadal domyslnie ma `approve-all`, przy czym glowny
+  analysis flow blokuje lokalne tools przez session hooks.
+- UI moze dalej rozwinac prezentacje tool traces, budget warnings i quality
+  findings.
+- SDK attachments pozostaja poza runtime.

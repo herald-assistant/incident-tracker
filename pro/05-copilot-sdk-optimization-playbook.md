@@ -1,330 +1,137 @@
 # Copilot SDK Optimization Playbook
 
-## Cel optymalizacji
+Ten playbook opisuje, jak dalej optymalizowac Copilota po wdrozonej bazie
+PR-1..PR-8.
 
-Optymalizacja Copilot SDK w tym projekcie powinna jednoczesnie poprawic:
+## Co jest juz wdrozone
 
-1. trafnosc diagnozy,
-2. stabilnosc shape odpowiedzi,
-3. koszt i czas sesji,
-4. przewidywalnosc pracy z GitLab i DB tools,
-5. debuggability i governance.
+Baseline optymalizacyjny:
 
-## Co juz jest wdrozone
+- telemetry i session metrics,
+- JSON-only response contract,
+- response parser zachowujacy czesciowo sparsowane pola,
+- report-only quality gate,
+- evidence coverage evaluator,
+- coverage-aware tool policy,
+- incident digest,
+- stable artifact `itemId`,
+- evidence references w kontrakcie JSON,
+- backend-enforced tool budget,
+- tool description decorators,
+- extended tool evidence capture,
+- single prepared analysis flow.
 
-To sa rzeczy, ktore jeszcze niedawno byly planem, a dzisiaj sa juz stanem kodu:
+To oznacza, ze kolejne optymalizacje powinny bazowac na metrykach, a nie na
+samym intuicyjnym tuningu promptu.
 
-- session-bound GitLab tools,
-- session-bound Database tools,
-- jawny backendowy `sessionId`,
-- hidden `ToolContext` z `correlationId`, `environment`, `gitLabGroup`,
-  `gitLabBranch`, `analysisRunId`, `copilotSessionId`, `toolCallId`,
-  `toolName`,
-- application-scoped DB discovery przez `applicationNamePattern`,
-- warunkowe wlaczanie DB capability przez `analysis.database.enabled`,
-- trzy runtime skille zamiast jednego duzego pakietu zasad.
+## Najwazniejsze cele produktu
 
-To przesuwa ciezar optymalizacji z "napraw kontrakt tooli" na
-"zmierz, ogranicz i uporzadkuj eksploatacje runtime".
+Wynik Copilota ma:
 
-## Najwazniejsze dzwignie na teraz
+- wskazac problem,
+- oddzielic fakty od hipotez,
+- wyjasnic affected function jako flow, a nie tylko klase lub wyjatek,
+- dac konkretny next step dla operatora/testera/developera,
+- ujawnic visibility limits,
+- odwolywac sie do evidence przez `artifactId` i `itemId`, gdy to mozliwe.
 
-### A. Twardszy response contract
+## Jak czytac metryki
 
-Obecny parser nadal bazuje na tekscie.
+Najpierw patrzec na:
 
-Rekomendacja:
+- `totalExecutionDurationMs`,
+- `sendAndWaitDurationMs`,
+- `totalToolCalls`,
+- `gitLabReadFileCalls`,
+- `gitLabReadChunkCalls`,
+- `gitLabReturnedCharacters`,
+- `databaseQueryCalls`,
+- `databaseRawSqlCalls`,
+- `databaseReturnedCharacters`,
+- `fallbackResponseUsed`,
+- quality findings.
 
-- przejsc na JSON-only response contract albo fenced JSON block,
-- zachowac czytelny fallback, ale zmniejszyc zaleznosc od tekstowego parsera.
+Interpretacja:
 
-Zysk:
+- duzo GitLab calls + plytkie `affectedFunction` oznacza problem coverage albo
+  zle seedowanie tools,
+- brak GitLab calls + plytkie `affectedFunction` oznacza zbyt agresywna policy
+  albo brak gap w coverage,
+- DB calls przy braku data issue oznaczaja zbyt szeroki `DataDiagnosticNeed`,
+- fallback JSON oznacza problem kontraktu promptu albo model response.
 
-- mniej `AI_UNSTRUCTURED_RESPONSE`,
-- mniej parser maintenance,
-- prostszy frontend i downstream debug.
+## Nastepne dzwignie
 
-### B. Telemetry per analysis session
+1. Golden evaluation suite
 
-Zbieraj jawnie:
+   Zbudowac zestaw przykladow z oczekiwanym shape odpowiedzi, expected evidence
+   references i akceptowalnymi next steps. To powinno byc glowne narzedzie
+   oceny zmian promptu/policy.
 
-- liczbe sekcji evidence,
-- liczbe itemow evidence,
-- liczbe attachment files,
-- rozmiar attachment artifacts,
-- liczbe tool calls per type,
-- liczbe GitLab reads per strategy,
-- liczbe DB queries per tool,
-- latency:
-  - evidence collection,
-  - prompt preparation,
-  - Copilot execution,
-  - tools.
+2. Metrics dashboard albo raport offline
 
-Zysk:
+   Logi telemetryczne trzeba agregowac po analysis run i porownywac koszt,
+   latency, fallback rate oraz quality findings.
 
-- da sie porownywac eksperymenty,
-- latwiej wykryc regresje,
-- mozna wreszcie zamknac dyskusje "czy session-bound tools realnie pomagaja".
+3. Budget tuning
 
-### C. Exploration budget
+   Domyslne limity sa konserwatywnym baseline. Po kilku realnych analizach
+   stroic osobno GitLab search, chunk calls, DB calls i returned characters.
 
-Przyklady:
+4. Soft repair
 
-- max `gitlab_read_repository_file` calls na sesje,
-- max laczny rozmiar odczytanego kodu,
-- preferowanie `chunk` nad `file`,
-- max liczba DB queries,
-- max rows / chars zwroconych przez DB per sesja,
-- sygnal ostrzegawczy, gdy agent zaczyna "browse'owac" zamiast diagnozowac.
+   Quality gate moze w kolejnym kroku uruchomic druga, krotka runde modelu:
+   "previous response failed these checks, return corrected JSON only".
+   Nie mieszac tego z parserem ani tool execution.
 
-Mozna to zrobic:
+5. UI dla audytu
 
-- w skillu jako zasada,
-- w backendzie jako twarda kontrola,
-- najlepiej w obu warstwach.
+   Pokazac tool evidence, budget warnings, quality findings i evidence
+   references w job UI w sposob czytelny dla operatora.
 
-### D. Lepszy deterministic context
+6. Permission hardening
 
-Praktyka:
+   Rozwazyc ostrzejszy default permission mode po potwierdzeniu, ze session
+   hooks i allowlista tools pokrywaja wszystkie flow.
 
-- lepszy ranking stacktrace -> file chunk,
-- lepszy ranking `container/service -> project`,
-- dorzucenie kilku bardziej kontekstowych chunkow w deterministic mode,
-- np. nie tylko failing method, ale tez bezposredni caller.
+7. Model/routing experiments
 
-Zysk:
+   Dopiero po metrykach i golden eval porownywac modele, reasoning effort i
+   ewentualne multi-stage flows.
 
-- mniej narzedziowego biegana po repo,
-- mniejsza sesja,
-- lepsza czytelnosc dla operatora.
+## Zasady zmian promptu
 
-### E. Jasny audit trail dla DB capability
-
-Kolejny logiczny krok po session-bound DB tools to:
-
-- policzalne logi query budgetu,
-- lepsze rozroznienie typed tools vs raw SQL,
-- decyzja, czy DB tool results maja trafic do UI jako osobny strumien
-  diagnostyczny.
-
-## Quick wins
-
-### 1. Przestan budowac prompt dwa razy
-
-Obecny stan:
-
-- `preparePrompt(...)`
-- potem `prepare(...)`
-
-Rekomendacja:
-
-- w orchestratorze wywolywac jedna preparation sciezke,
-- zwracac z niej `preparedPrompt` i gotowy artifact summary,
-- reuse'owac wynik przy analizie.
-
-Zysk:
-
-- mniej duplikacji,
-- mniej kosztu preparation,
-- jedno zrodlo prawdy dla promptu.
-
-### 2. Dodaj telemetry do Copilot + tools
-
-Najpierw lightweight:
-
-- structured log event per analysis,
-- liczniki tool calls,
-- liczniki bytes/chars,
-- latency buckets.
-
-### 3. Dodaj budget enforcement
-
-Najpierw soft:
-
-- warnings w logach,
-- threshold alerts.
-
-Potem hard:
-
-- odciecie dalszych expensive tooli po przekroczeniu budzetu.
-
-### 4. Rozszerz evidence capture policy
-
-Rozwaz:
-
-- czy outline z GitLaba ma byc pokazywany w UI,
-- czy DB findings powinny miec osobna projekcje,
-- czy operator ma widziec tylko "fetched code", czy tez "validated data facts".
-
-## Sredni horyzont
-
-### 1. Planner/executor pattern dla repo i DB exploration
-
-Zamiast zostawiac caly tok myslenia modelowi w jednym kroku:
-
-- planner planuje 1-3 ruchy,
-- executor wykonuje,
-- writer sklada wynik.
-
-Nie musi to byc od razu osobny model.
-Mozna zaczac od jawnego wewnetrznego prompt protocol.
-
-### 2. Context compression layer
-
-Dzisiaj attachments sa 1:1 z evidence sections.
-
-Mozliwe ulepszenie:
-
-- osobny "incident digest" artifact,
-- osobny "top candidate code map" artifact,
-- osobny "runtime highlights" artifact,
-- opcjonalnie osobny "data diagnostics summary" artifact, jesli DB tools byly
-  uzyte.
-
-Takie streszczenia moga:
-
-- ograniczyc liczbe otwieranych artifacts,
-- zmniejszyc koszt reasoning,
-- pomoc modelowi szybciej wejsc w hipoteze.
-
-### 3. Capability-aware model routing
-
-Jesli SDK i srodowisko to wspieraja, rozdziel decyzje:
-
-- tanszy / szybszy model do wstepnej klasyfikacji,
-- mocniejszy model do finalnego writeupu,
-- albo ten sam model z rozna `reasoningEffort`.
-
-Obecny kod juz ma properties:
-
-- `analysis.ai.copilot.model`
-- `analysis.ai.copilot.reasoning-effort`
-
-To daje dobra baze do eksperymentow bez duzego refaktoru.
-
-### 4. Lepsza wspolpraca ze skillami
-
-Obecny podzial na trzy skille jest juz lepszy niz dawny model "jeden skill do
-wszystkiego", ale nadal mozna dopracowac:
-
-- zakres core vs gitlab vs data diagnostics,
-- wersjonowanie i rollout zmian,
-- testy kontraktu prompt + skills + parser.
-
-## Dluzszy horyzont
-
-### 1. Confidence scoring
-
-Wynik powinien dostawac jawna ocene typu:
-
-- `high`
-- `medium`
-- `low`
-
-Oparta o:
-
-- jak silne sa logs,
-- czy jest deterministic code match,
-- czy sa spojne runtime signals,
-- czy model musial daleko eksplorowac repo albo DB,
-- czy problem wyglada na wewnetrzny czy zewnetrzny.
-
-### 2. Structured incident memory
-
-Przyszly kierunek:
-
-- zapamietywanie typowych incident patterns,
-- mapowanie recurring symptoms na lepszy prompt context,
-- ale bez powrotu do centralnego rule engine jako glownej diagnozy.
-
-### 3. Runtime governance
-
-W mocniej regulowanym srodowisku:
-
-- mniej liberalny permission mode,
-- audit trail dla tool usage,
-- whitelisting skill directories,
-- ograniczenie exploration budgetu i raw SQL.
-
-## Najlepsza kolejnosc wdrazania
-
-1. telemetry
-2. twardszy response contract
-3. exploration budget
-4. jeden flow preparation zamiast podwojnego budowania promptu
-5. lepszy deterministic code context
-6. audit i UI projection dla DB capability
-7. ewentualnie dwuetapowy AI flow
-
-## Proponowane eksperymenty
-
-### Eksperyment 1
-
-Hipoteza:
-
-- JSON-only response zmniejszy fallbacki parsera.
-
-Metrki:
-
-- odsetek `AI_UNSTRUCTURED_RESPONSE`
-- manualna ocena czytelnosci
-
-### Eksperyment 2
-
-Hipoteza:
-
-- telemetry + budget ogranicza kosztowne sesje bez spadku trafnosci.
-
-Metrki:
-
-- P50/P95 czasu sesji
-- P50/P95 liczby tool calls
-- manualna ocena trafnosci
-
-### Eksperyment 3
-
-Hipoteza:
-
-- lepszy deterministic context zmniejszy potrzebe GitLab exploration.
-
-Metrki:
-
-- procent analiz bez zadnych tool calls,
-- procent analiz tylko z 1-2 chunk reads,
-- ocena trafnosci wyniku
-
-### Eksperyment 4
-
-Hipoteza:
-
-- session-bound DB tools poprawiaja groundedness dla incydentow data-related
-  bez niekontrolowanego browse'owania schematow.
-
-Metrki:
-
-- liczba query per sesja,
-- procent sesji konczacych sie bez raw SQL,
-- manualna ocena "czy wynik odroznia kod od danych".
-
-## Miejsca w kodzie, gdzie najczesciej trzeba bedzie pracowac
-
-- `CopilotSdkPreparationService`
-- `CopilotSdkAnalysisAiProvider`
-- `CopilotSdkToolBridge`
-- `GitLabMcpTools`
-- `DatabaseMcpTools`
-- `DatabaseToolService`
-- `ElasticMcpTools`
-- `GitLabDeterministicEvidenceProvider`
-- `SKILL.md`
-- testy `analysis.ai.copilot.*`
-
-## Czego nie robic przy optymalizacji Copilota
-
-- nie wrzucac modeli adapter-specific do kontraktu AI,
-- nie przenosic polityki eksploracji repo ani DB do adapterow,
-- nie rozszerzac tools o cale `/analysis`,
-- nie rozwiazywac problemow promptu przez wrzucanie coraz dluzszego promptu,
-- nie obchodzic skilli przez przypadkowe hardkodowanie stalych zasad w wielu
-  miejscach naraz.
+- Nie wracac do legacy labeled response.
+- Nie usuwac JSON-only instruction bez testow parsera/provider.
+- Nie dodawac danych incydentu do skill files.
+- Manifest i digest maja byc czytane przed raw evidence.
+- Prompt powinien wymagac evidence references dla kluczowych claimow, ale
+  tolerowac puste references, gdy evidence nie ma itemId.
+
+## Zasady zmian tools
+
+- Tools wlaczac przez coverage gaps, nie przez sam fakt rejestracji.
+- Nie dawac modelowi scope'ow, ktore sa w hidden `ToolContext`.
+- Drogi tool musi miec budget i guidance.
+- Wynik diagnostycznie waznego toola powinien trafiec do
+  `toolEvidenceSections`.
+- Raw SQL wymaga osobnej decyzji, property i audytu.
+
+## Zasady zmian artifactow
+
+- Nie zakladac lokalnych sciezek.
+- Nie przechodzic na SDK attachments bez jawnej decyzji.
+- Zachowac `00-incident-manifest.json` i `01-incident-digest.md` jako pierwsze.
+- Nie zmieniac publicznego `AnalysisEvidenceItem` tylko po to, zeby dodac
+  `itemId`; item IDs sa artifact-only.
+
+## Kolejnosc rekomendowana od teraz
+
+1. Dodac golden tests/eval fixtures dla representative incidents.
+2. Zrobic dashboard/raport z telemetry logs.
+3. Dostosowac budget thresholds na podstawie danych.
+4. Dodac UI projection dla quality/budget/tool traces/evidence refs.
+5. Wprowadzic soft repair jako osobny etap.
+6. Rozwazyc stricter permission mode.
+7. Dopiero potem eksperymentowac z attachments, multi-agent planning albo
+   model routing.

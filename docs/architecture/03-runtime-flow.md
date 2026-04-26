@@ -1,610 +1,331 @@
 # Runtime Flow
 
-## Flow `GET /`
+Ten dokument opisuje aktualny przeplyw analizy incydentu dla sync API,
+job API, evidence pipeline i providera AI opartego o Copilot SDK.
 
-To jest startowy frontend operacyjny serwowany przez Spring Boot.
+## 1. Publiczne wejscia
 
-### Co zwraca
+Sync:
 
-- statyczny `index.html`,
-- hashowane bundle `main-*.js` i `styles-*.css`,
-- assets wygenerowane przez Angular CLI, np. `favicon.ico`.
+```http
+POST /analysis
+```
 
-### Rola tego flow
+Async:
 
-- daje prosty ekran do wpisania `correlationId`,
-- wywoluje `POST /analysis/jobs` i potem polluje `GET /analysis/jobs/{analysisId}`,
-- prezentuje status, environment, branch i diagnoze w czytelnej formie,
-- pozwala zaimportowac albo wyeksportowac zakonczony zapis analizy do pliku JSON,
-- jest zrodlowo utrzymywany jako aplikacja Angular w `frontend/`,
-- produkcyjny build zapisuje wynik do `src/main/resources/static`,
-- lokalny dev UI moze dzialac przez `cd frontend && npm start`, z proxy na
-  backend Spring Boot.
+```http
+POST /analysis/jobs
+GET /analysis/jobs/{analysisId}
+```
 
-## Flow `GET /evidence`
+Request publiczny niesie tylko `correlationId`. Pozostale scope'y sa
+ustalane przez backend:
 
-To jest pomocniczy frontend diagnostyczny serwowany przez ten sam backend
-Spring Boot.
+- `environment` z evidence runtime/deployment,
+- `gitLabBranch` z deployment context,
+- `gitLabGroup` z konfiguracji,
+- DB scope z resolved environment i konfiguracji database tools.
 
-### Rola tego flow
+## 2. Orkiestracja wysokiego poziomu
 
-- daje formularze do recznego odpalania helper endpointow adapterow,
-- pozwala testowac `POST /api/elasticsearch/logs/search`,
-- pozwala testowac `POST /api/gitlab/repository/search`,
-- pozwala testowac `POST /api/gitlab/source/resolve` i wariant `preview`,
-- pokazuje odpowiedzi backendu jako sformatowany JSON w polach tekstowych.
-
-### Uwagi runtime
-
-- route Angulara `/evidence` jest forwardowana po stronie Spring Boot do
-  `index.html`,
-- frontend nie trzyma lokalnej konfiguracji polaczen do Elastica ani GitLaba,
-  tylko wywoluje istniejace helper endpointy backendu,
-- ten widok nie wchodzi do glownego flow `/analysis`; sluzy do manualnych testow
-  adapterow.
-
-## Flow `POST /analysis/jobs`
-
-To jest asynchroniczny flow wykorzystywany przez aktualny frontend `GET /`.
-
-### Wejscie
-
-Request zawiera:
-
-- `correlationId`
-
-### Krok 1: utworzenie joba
-
-`AnalysisJobController` deleguje do `AnalysisJobService`, ktory:
-
-1. generuje `analysisId`,
-2. tworzy `AnalysisJobState` z krokami progressu,
-3. zwraca poczatkowy snapshot joba ze statusem `QUEUED`,
-4. uruchamia w tle watek analizy przez `TaskExecutor`.
-
-### Krok 2: analiza w tle
-
-Background task uruchamia:
-
-1. wspolny `AnalysisOrchestrator`,
-2. sekwencyjne zbieranie evidence przez `AnalysisEvidenceCollector`,
-3. aktualizacje joba po kazdym kroku pipeline,
-4. krok AI po zebraniu danych,
-5. status terminalny `COMPLETED`, `FAILED` albo `NOT_FOUND`.
-
-### Krok 3: polling statusu
-
-Frontend odczytuje `GET /analysis/jobs/{analysisId}` do czasu statusu
-terminalnego.
-
-Snapshot joba zwraca:
-
-- status calej analizy,
-- aktualny krok i historie krokow,
-- zebrane `evidenceSections`,
-- `toolEvidenceSections`, czyli pliki GitLaba dociagniete przez AI tools juz w
-  trakcie kroku `AI_ANALYSIS`,
-- metadata kroku: `phase`, `consumesEvidence`, `producesEvidence`,
-- `preparedPrompt`, czyli finalny prompt zlozony po evidence collection i przed
-  wywolaniem Copilota,
-- rozwiazane `environment` i `gitLabBranch`,
-- finalny `AnalysisResultResponse`,
-- kod i komunikat bledu, jesli analiza nie powiodla sie.
-
-## Flow `POST /analysis`
-
-To pozostaje glowny, synchroniczny kontrakt analizy po stronie API.
-Ekran `GET /` korzysta jednak dzisiaj z wariantu jobowego, bo potrzebuje
-pokazywac postep i dane przyrostowo.
-
-### Wejscie
-
-Request zawiera:
-
-- `correlationId`
-
-`gitLabGroup` pochodzi z konfiguracji.
-`environment` i `gitLabBranch` sa rozwiazywane pozniej z evidence.
-
-### Krok 1: kontroler
-
-`AnalysisController`:
-
-- przyjmuje request,
-- uruchamia walidacje,
-- deleguje do `AnalysisService`.
-
-### Krok 2: zbieranie evidence
-
-`AnalysisService` deleguje do `AnalysisOrchestrator`, a ten wywoluje
-`AnalysisEvidenceCollector`.
-
-Collector:
+`AnalysisOrchestrator` wykonuje flow:
 
 1. tworzy `AnalysisContext`,
-2. uruchamia wszystkich `AnalysisEvidenceProvider` po kolei,
-3. po deployment context uruchamia rownolegle Dynatrace i GitLab deterministic
-   na tym samym snapshotcie contextu,
-4. dolacza ich wyniki w stalej kolejnosci pipeline,
-5. po kazdym zakonczonym kroku wzbogaca context o kolejna sekcje evidence.
-
-Aktualni providerzy:
-
-- Elasticsearch
-- Deployment context
-- Dynatrace runtime signals
-- GitLab deterministic resolution
-- Operational context enrichment
-
-Kazdy krok deklaruje tez:
-
-- `phase`,
-- `consumesEvidence`,
-- `producesEvidence`.
-
-To jest wykorzystywane przez job progress i frontend do pokazania realnych
-powiazan miedzy providerami.
-
-Elasticsearch provider:
-
-- zbiera logi po `correlationId`,
-- publikuje strukturalne `logs` do evidence i UI,
-- do artefaktu Copilota moze renderowac czytelny markdown z metadanymi wpisu,
-  trescia `message` i ewentualnym `exception`, zamiast surowego JSON sekcji
-  logow.
-
-Deployment context provider:
-
-- korzysta z logow zebranych z Elastica,
-- wyprowadza `environment`, `gitLabBranch`, `projectName` i hinty deploymentowe,
-- publikuje osobna sekcje evidence `deployment-context/resolved-deployment`,
-- jest wspolnym zrodlem faktow dla Dynatrace, GitLaba i orchestration flow.
-
-Dynatrace provider:
-
-- korzysta z logow z Elastica i z deployment context,
-- wyprowadza `namespace`, `pod`, `container`, `microservice` i okno czasu
-  incydentu,
-- szuka najlepiej dopasowanych encji `SERVICE` w Dynatrace,
-- pobiera problemy i metryki service-level dla najlepszego dopasowania,
-- publikuje strukturalne `runtime-signals` do evidence i UI,
-- w tej sekcji jawnie rozroznia status pobrania
-  (`COLLECTED`, `UNAVAILABLE`, `DISABLED`, `SKIPPED`),
-- dla dopasowanych komponentow rozroznia brak sygnalow problemowych od braku
-  widocznosci,
-- do artefaktu Copilota renderuje skrocony markdownowy summary komponentow,
-  zamiast surowego JSON sekcji Dynatrace,
-- nie wystawia osobnych tooli Dynatrace dla Copilota.
-
-GitLab deterministic provider:
-
-- korzysta z logow z Elastica i z deployment context,
-- nie rozwiazuje juz sam `environment` ani `branch`,
-- wykorzystuje hinty komponentu, glownie `kubernetes.container.name`, zeby
-  rozwiazac rzeczywisty projekt GitLaba w skonfigurowanej grupie i jej
-  podgrupach,
-- szuka odniesien do kodu po pelnej sciezce, stacktrace albo nazwie klasy,
-- pobiera dopasowane pliki lub chunki z GitLaba przez REST,
-- publikuje strukturalne `resolved-code` do evidence i UI,
-- do artefaktu Copilota moze renderowac czytelny markdown z metadanymi pliku
-  i blokiem kodu zamiast surowego JSON sekcji GitLaba.
-
-Dynatrace i GitLab deterministic:
-
-- startuja po deployment context z tego samego snapshotu logs + deployment,
-- wykonuja sie rownolegle, bo nie zaleza od siebie nawzajem,
-- sa nadal raportowane i dolaczane do `AnalysisContext` w deterministycznej
-  kolejnosci: najpierw Dynatrace, potem GitLab.
-
-Operational context provider:
-
-- czyta juz zebrane evidence, glownie logs, deployment, Dynatrace i GitLaba,
-- buduje z nich sygnaly incydentu,
-- pobiera bazowy katalog operacyjny przez adapter `analysis.adapter.operationalcontext`,
-- dopasowuje do incydentu katalog operacyjny: systemy, integracje, procesy, repozytoria,
-  bounded contexts, zespoly, glossary i handoff rules,
-- publikuje osobna sekcje `operational-context/matched-context`,
-- utrzymuje provider-owned typed `OperationalContextEvidenceView`, zeby downstreamy
-  nie parsowaly tej sekcji po stringowych kluczach rozsianych po kodzie.
-
-Implementacyjnie:
-
-- generyczny adapter i source resolver sa w `analysis.adapter.gitlab`,
-- katalog operational context i jego query-based adapter sa w
-  `analysis.adapter.operationalcontext`,
-- deployment fact derivation jest w `analysis.evidence.provider.deployment`,
-- deterministic provider jest w `analysis.evidence.provider.gitlabdeterministic`.
-
-### Krok 3: budowa requestu do AI
-
-Po zebraniu evidence `AnalysisOrchestrator` buduje
-`AnalysisAiAnalysisRequest`, ktory zawiera:
-
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-- `evidenceSections`
-
-### Krok 4: provider AI
-
-`AnalysisAiProvider` w runtime jest dzisiaj realizowany przez
-`CopilotSdkAnalysisAiProvider`.
-
-### Krok 5: przygotowanie sesji Copilota
-
-`CopilotSdkPreparationService` przygotowuje:
-
-- `CopilotClientOptions`
-- `SessionConfig`
-- `MessageOptions`
-
-Na tym etapie:
-
-- ladujemy skill,
-- ladujemy tool definitions,
-- przycinamy tool definitions do allowlisty sesji i blokujemy lokalne
-  workspace/filesystem/shell tools,
-- osadzamy artefakty bezposrednio w promptcie zamiast przekazywac je jako
-  osobne pliki lub lokalne sciezki, zeby model nie musial niczego czytac z
-  dysku,
-- osadzamy tresc manifestu i wszystkich artifactow bezposrednio w promptcie,
-  zeby model widzial realne evidence nawet wtedy, gdy runtime Copilota nie
-  udostepnia osobnych artefaktow jako otwieralnych plikow,
-- ustawiamy pre-tool hook, ktory deny'uje kazdy tool niewystawiony jawnie przez
-  backend,
-- nie wystawiamy GitLab ani Elasticsearch tools, jesli odpowiadajace im dane sa
-  juz dolaczone do sesji jako artefakty,
-- prompt i skille moga dodatkowo wymuszac sekwencje
-  `exception/class -> GitLab code hints -> DB diagnostics`, zeby model nie
-  zgadywal tabel i relacji bez oparcia w kodzie,
-- skladamy prompt z danymi incydentu i evidence,
-- ustawiamy strategie permission handling.
-
-### Krok 6: wykonanie sesji
-
-Warstwa execution:
-
-- uruchamia klienta,
-- tworzy sesje,
-- wysyla prompt,
-- odbiera odpowiedz modelu,
-- loguje lifecycle klienta i eventy sesji.
-
-### Krok 7: opcjonalne uzycie GitLab i Database tools przez AI
-
-W trakcie sesji model moze skorzystac z tooli adapterow:
-
-#### Elasticsearch
-
-- `elastic_search_logs_by_correlation_id`
-
-To jest AI-guided dogranie dodatkowych logow po tym samym `correlationId`,
-gdy evidence z glownego flow jest zbyt skrotowe.
-Tool przyjmuje tylko `correlationId`, a rozmiar i limity wyniku pochodza z
-`analysis.elasticsearch.*`.
-Ten tool nie jest jednak wystawiany do sesji, jesli artefakty juz zawieraja
-evidence `elasticsearch/logs`.
-
-#### GitLab
-
-- `gitlab_search_repository_candidates`
-- `gitlab_find_class_references`
-- `gitlab_find_flow_context`
-- `gitlab_read_repository_file_outline`
-- `gitlab_read_repository_file`
-- `gitlab_read_repository_file_chunk`
-- `gitlab_read_repository_file_chunks`
-
-To jest AI-guided repository exploration.
-Dynatrace nie ma tu osobnych tooli.
-Przy symptomach JPA/repository model moze uzyc `gitlab_find_class_references`,
-zeby z pelnej nazwy klasy albo importu dojsc do encji, repozytorium,
-predykatow i relacji przed odpaleniem DB diagnostics.
-Te tools nie sa jednak wystawiane do sesji, jesli artefakty juz zawieraja
-deterministic evidence `gitlab/resolved-code`.
-
-W job flow odpowiedzi `gitlab_read_repository_file`,
-`gitlab_read_repository_file_chunk` i `gitlab_read_repository_file_chunks` sa
-dodatkowo mapowane do `toolEvidenceSections`, zeby frontend mogl pokazac na
-zywo, jakie pliki i fragmenty kodu AI dociagnelo juz podczas sesji.
+2. uruchamia deterministic evidence collector,
+3. buduje `AnalysisAiAnalysisRequest`,
+4. wywoluje `AnalysisAiProvider.prepare(request)`,
+5. zapisuje `prepared.prompt()` w stanie joba,
+6. uruchamia `AnalysisAiProvider.analyze(prepared, listener)`,
+7. mapuje odpowiedz AI i tool evidence do response/job state,
+8. zamyka prepared analysis.
 
-Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.gitlab` i
-korzystaja z portow z `analysis.adapter.gitlab`.
-
-#### Database
+Prepared analysis gwarantuje, ze prompt widoczny w UI/debug jest tym samym
+promptem, ktory poszedl do Copilota.
 
-- `db_get_scope`
-- `db_find_tables`
-- `db_find_columns`
-- `db_describe_table`
-- `db_exists_by_key`
-- `db_count_rows`
-- `db_group_count`
-- `db_sample_rows`
-- `db_check_orphans`
-- `db_find_relationships`
-- `db_join_count`
-- `db_join_sample`
-- `db_compare_table_to_expected_mapping`
-- `db_execute_readonly_sql`
+## 3. Evidence pipeline
 
-To jest AI-guided, session-bound data diagnostics.
+Evidence collector pracuje na `AnalysisContext` i zwraca liste
+`AnalysisEvidenceSection`.
 
-Najwazniejsze reguly runtime:
+Typowy przebieg:
 
-- `environment` pochodzi z hidden `ToolContext`, nie z parametrow modelu,
-- discovery jest application-scoped:
-  `application/deployment/container/project name -> configured Oracle owner/schema`,
-- preferowany flow dla problemow JPA/data to:
-  `GitLab evidence/tools -> entity/repository/table hints -> DB discovery -> exact data checks`,
-- discovery tools nie przyjmuja `schemaPattern`,
-- exact data tools pracuja dopiero na dokladnym `schema.table`,
-- raw SQL pozostaje opcjonalny i domyslnie wylaczony,
-- typed DB tools sa preferowane nad `db_execute_readonly_sql`.
+1. Elasticsearch log evidence po `correlationId`,
+2. deployment context resolution,
+3. po deployment context mozliwy rownolegly fan-out:
+   - Dynatrace runtime signals,
+   - GitLab deterministic resolved code evidence,
+4. operational context matching,
+5. opcjonalne sekcje uzupelniajace.
 
-Implementacyjnie te tool-e sa utrzymywane w `analysis.mcp.database` i
-korzystaja z serwisow i klientow z `analysis.adapter.database`.
+Provider evidence powinien izolowac adapter-specific modele. Na granicy AI
+zostaja tylko generyczne `AnalysisEvidenceSection`, `AnalysisEvidenceItem` i
+`AnalysisEvidenceAttribute`.
 
-### Krok 8: mapowanie odpowiedzi AI
+## 4. Przygotowanie Copilota
 
-Provider Copilota mapuje tekst odpowiedzi modelu na:
+`CopilotSdkPreparationService` buduje `CopilotSdkPreparedRequest`.
+Prepared request implementuje `AnalysisAiPreparedAnalysis`.
 
-- `detectedProblem`
-- `summary`
-- `recommendedAction`
-- `rationale`
-- `affectedFunction`
-- `affectedProcess`
-- `affectedBoundedContext`
-- `affectedTeam`
+Preparation obejmuje:
 
-Potem `AnalysisOrchestrator` buduje `AnalysisResultResponse`, ktory zwraca tez
-rozwiazane `environment`, `gitLabBranch` oraz jawne pola wynikowe dla
-processu, bounded contextu i teamu, o ile analiza ma dla nich wystarczajace
-ugruntowanie w `operational-context`.
+- wyliczenie `CopilotEvidenceCoverageReport`,
+- zbudowanie `CopilotToolAccessPolicy`,
+- dekorowanie opisow tools,
+- wyrenderowanie manifestu, digestu i evidence artifacts,
+- osadzenie artifact contents inline w promptcie,
+- zaladowanie runtime skills,
+- zebranie metryk preparation.
 
-## Flow `POST /api/elasticsearch/logs/search`
+Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
+fragmentami promptu.
 
-To jest odseparowany flow diagnostyczno-testowy.
+## 5. Artefakty incydentu
 
-### Wejscie
+Kolejnosc artefaktow:
 
-Request zawiera tylko:
+```text
+00-incident-manifest.json
+01-incident-digest.md
+02-... evidence artifact
+03-... evidence artifact
+```
 
-- `correlationId`
+Manifest zawiera:
 
-Pozostale dane polaczenia i limity odpowiedzi pochodza z konfiguracji
-`analysis.elasticsearch.*`.
+- `correlationId`, `environment`, `gitLabBranch`, `gitLabGroup`,
+- `artifactFormatVersion`,
+- `readFirst=00-incident-manifest.json`,
+- `readNext=01-incident-digest.md`,
+- `artifactPolicy.deliveryMode=embedded-prompt`,
+- enabled/disabled tool groups,
+- `evidenceCoverage`,
+- indeks artefaktow i ich `itemIds`.
 
-### Krok 1: budowa zapytania Kibana proxy
+Digest zawiera skompresowane fakty sesji, coverage, log signals, deployment,
+runtime, code highlights i znane luki evidence.
 
-Serwis buduje wywolanie:
+`itemId` sa stabilne tylko w renderingu Copilota. Nie zmieniaja publicznego
+kontraktu `AnalysisEvidenceItem`.
 
-- `POST /s/{space}/api/console/proxy`
-- query params:
-  `path={configuredIndexPattern}/_search`
-  `method=GET`
-- body z:
-  - `size`
-  - sortowaniem po `@timestamp asc`
-  - filtrem `term fields.correlationId`
+## 6. Coverage evaluator
 
-Adapter REST zawsze ignoruje bledy certyfikatu i hosta, ale tylko lokalnie dla
-integracji Elasticsearch/Kibana.
+`CopilotEvidenceCoverageEvaluator` czyta generyczne evidence przez helpery
+widoku i zwraca:
 
-### Krok 2: mapowanie odpowiedzi
+- `ElasticEvidenceCoverage`,
+- `GitLabEvidenceCoverage`,
+- `RuntimeEvidenceCoverage`,
+- `OperationalContextCoverage`,
+- `DataDiagnosticNeed`,
+- `environmentResolved`,
+- liste `EvidenceGap`.
 
-Adapter mapuje:
+Przyklady luk:
 
-- `_source.fields`
-- `kubernetes`
-- `container`
-- metadata `hits.total`, `timed_out`, `took`
+- `MISSING_LOGS`,
+- `MISSING_STACKTRACE`,
+- `TRUNCATED_LOGS`,
+- `MISSING_CODE_CONTEXT`,
+- `MISSING_FLOW_CONTEXT`,
+- `DB_ENVIRONMENT_UNRESOLVED`,
+- `DB_DIAGNOSTIC_NEEDED`.
 
-na typowany wynik `ElasticLogSearchResult`.
+Coverage nie diagnozuje root cause. Jego rola to powiedziec, czy AI ma
+wystarczajacy material i ktore tools mozna uzasadnic.
 
-### Krok 3: odpowiedz
+## 7. Coverage-aware tool policy
 
-Endpoint zwraca:
+`CopilotToolAccessPolicy` filtruje tools na podstawie coverage.
 
-- metadata wyszukiwania,
-- liste wpisow logow,
-- komunikat `OK` albo czytelny blad.
+Elasticsearch tools:
 
-Nie ma osobnego wariantu `preview` dla Elastica.
+- wlaczone, gdy brakuje logow, stacktrace albo logi sa obciete,
+- wylaczone, gdy log evidence jest wystarczajace.
 
-## Flow `POST /api/gitlab/repository/search`
+GitLab tools:
 
-To jest odseparowany flow diagnostyczno-testowy dla adaptera repozytorium
-GitLaba.
+- wlaczone, gdy brakuje code evidence albo flow context,
+- dla znanego projektu/pliku zostaje focused toolset:
+  `gitlab_find_class_references`, `gitlab_find_flow_context`,
+  `gitlab_read_repository_file_outline`,
+  `gitlab_read_repository_file_chunk`,
+  `gitlab_read_repository_file_chunks`,
+- broad search zostaje dla braku deterministic GitLab evidence.
 
-### Wejscie
+DB tools:
 
-Request zawiera:
+- wlaczone przy resolved environment i `DataDiagnosticNeed=LIKELY/REQUIRED`,
+- discovery-only przy `POSSIBLE`,
+- wylaczone przy braku resolved environment,
+- `db_execute_readonly_sql` pozostaje domyslnie disabled.
 
-- `projectHints`
-- opcjonalnie `correlationId`
-- opcjonalnie `branch`
-- opcjonalnie `operationNames`
-- opcjonalnie `keywords`
+Prompt instruuje model, zeby uzywal tools tylko dla luk z
+`evidenceCoverage.gaps`.
 
-`group` nie przychodzi z requestu.
-Pochodzi z konfiguracji `analysis.gitlab.group`.
+## 8. Session config i blokady lokalne
 
-### Krok 1: rozwiazanie projektow
+`CopilotSdkExecutionGateway` tworzy sesje z allowlista tools z policy.
 
-Serwis wywoluje generyczny port repozytorium, ktory:
+`SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal
+w glownym flow analizy. Integracyjne tools GitLab/Elastic/DB sa wywolywane
+przez Spring tool callbacks i hidden `ToolContext`.
 
-- normalizuje hinty projektow, np. `agreement-process -> agreement_process`,
-- przeszukuje skonfigurowana grupe GitLaba razem z podgrupami,
-- zwraca kandydatow repozytoriow z uzasadnieniem dopasowania.
+Model nie podaje jawnie scope'ow takich jak `correlationId`, `gitLabGroup`,
+`gitLabBranch` czy `environment`.
 
-To pozwala recznie sprawdzic logike typu:
+## 9. Tool bridge
 
-- `agreement-process`
-- `agreement_process`
-- `BANKING/PROCESSES/CREDIT_AGREEMENT_PROCESS`
+`CopilotSdkToolBridge` konwertuje Spring tools na definicje Copilota.
 
-### Krok 2: opcjonalne wyszukiwanie plikow
+W runtime robi tez:
 
-Jesli request zawiera `operationNames` albo `keywords`, serwis:
+- dekorowanie opisow przez `CopilotToolDescriptionDecorator`,
+- klasyfikacje tools dla telemetryki,
+- budget guard przed i po callbacku,
+- capture tool evidence,
+- normalizacje denied budget result w trybie hard.
 
-- reuse'uje te same hinty projektu,
-- odpytuje adapter o kandydatow plikow,
-- zwraca ranking plikow razem z rozwiazanym projektem.
+Decorated descriptions sa guidance dla modelu, nie zmieniaja implementacji
+adapterow.
 
-Jesli nie ma `operationNames` ani `keywords`, endpoint konczy sie na zwroceniu
-samych kandydatow repozytoriow.
+## 10. Tool budget
 
-### Krok 3: odpowiedz
+Budzet jest session-bound:
 
-Odpowiedz zawiera:
+1. gateway rejestruje session state,
+2. bridge pyta `CopilotToolBudgetGuard.beforeInvocation(...)`,
+3. callback Spring tool jest wykonany albo zwrocony jest kontrolowany denied
+   result,
+4. bridge wywoluje `afterInvocation(...)` z raw result,
+5. gateway usuwa state w `finally`.
 
-- `group`
-- `branch`
-- `projectHints`
-- `projectCandidates`
-- `fileCandidates`
-- `message`
+Domyslny tryb to `soft`: przekroczenia sa logowane i metrykowane, ale nie
+blokuja. `hard` zwraca:
 
-## Flow `POST /api/gitlab/source/resolve`
+```json
+{
+  "status": "denied_by_tool_budget",
+  "toolName": "...",
+  "reason": "...",
+  "instruction": "Stop further exploration and return the best grounded analysis with visibility limits."
+}
+```
 
-To jest odseparowany flow diagnostyczno-testowy.
+## 11. Tool evidence capture
 
-### Wejscie
+`CopilotToolEvidenceCaptureRegistry` publikuje dodatkowe sekcje evidence do
+job listenera.
 
-Request zawiera:
+Kategorie:
 
-- `gitlabBaseUrl`
-- `groupPath`
-- `projectPath`
-- `ref`
-- `symbol`
+- `gitlab/tool-fetched-code` dla file/chunk/chunks,
+- `gitlab/tool-search-results` dla search candidates,
+- `gitlab/tool-flow-context` dla outline, flow context i class references,
+- `database/tool-results` dla DB tools.
 
-### Krok 1: rozwiazanie symbolu
+DB capture zapisuje m.in. `toolName`, `diagnosticQuestion`, `environment`,
+`databaseAlias`, `parameters`, `resultSummary` i `result`.
+
+## 12. Response contract
 
-Serwis rozbija symbol na:
-
-- `simpleName`
-- `packagePath`
-
-### Krok 2: pobranie drzewa repozytorium
-
-Serwis wywoluje GitLab REST API:
-
-- `repository/tree`
-- `recursive=true`
-- paginacja przez `X-Next-Page`
-
-Jesli w tym samym requestcie serwis rozwiazuje ten sam `group/project/ref`
-wielokrotnie, wynik drzewa moze zostac reused z cache request-scoped.
-
-### Krok 3: ranking kandydatow
-
-Serwis:
-
-- filtruje `blob`,
-- szuka nazw plikow zgodnych z symbolem,
-- liczy score wedlug ustalonych regul,
-- wybiera najlepszego kandydata.
-
-### Krok 4: pobranie raw content
-
-Serwis pobiera tresc najlepszego pliku przez:
-
-- `repository/files/{filePath}/raw`
-
-### Krok 5: odpowiedz
-
-Odpowiedz zawiera:
-
-- `matchedPath`
-- `score`
-- `candidates`
-- `content`
-- `message`
-
-W wariancie `preview` tresc jest obcinana do 2000 znakow.
-
-## Warstwy obserwowalnosci
-
-Aktualnie mamy trzy poziomy logowania dla Copilota i tooli:
-
-1. logi lifecycle klienta,
-2. logi eventow sesji,
-3. logi bridge i samych tooli.
-
-To daje odpowiedzi na trzy rozne pytania:
-
-- co stalo sie z klientem i sesja,
-- jakie eventy i tool calle wykonal agent,
-- jakie dokladnie dane dostalo i zwrocilo narzedzie.
-
-## Kluczowe properties runtime
-
-### AI
-
-- `analysis.ai.copilot.github-token`
-- `analysis.ai.copilot.permission-mode`
-- `analysis.ai.copilot.send-and-wait-timeout`
-- `analysis.ai.copilot.skill-resource-roots`
-- `analysis.ai.copilot.skill-runtime-directory`
-
-### GitLab
-
-- `analysis.gitlab.base-url`
-- `analysis.gitlab.group`
-- `analysis.gitlab.token`
-- `analysis.gitlab.ignore-ssl-errors`
-
-### Database
-
-- `analysis.database.enabled`
-- `analysis.database.max-rows`
-- `analysis.database.max-columns`
-- `analysis.database.max-tables-per-search`
-- `analysis.database.max-columns-per-search`
-- `analysis.database.max-result-characters`
-- `analysis.database.query-timeout`
-- `analysis.database.connection-timeout`
-- `analysis.database.raw-sql-enabled`
-- `analysis.database.allow-all-schemas`
-- `analysis.database.environments.<environment>.*`
-
-### Elasticsearch
-
-- `analysis.elasticsearch.base-url`
-- `analysis.elasticsearch.kibana-space-id`
-- `analysis.elasticsearch.index-pattern`
-- `analysis.elasticsearch.authorization-header`
-- `analysis.elasticsearch.evidence-size`
-- `analysis.elasticsearch.evidence-max-message-characters`
-- `analysis.elasticsearch.evidence-max-exception-characters`
-- `analysis.elasticsearch.search-size`
-- `analysis.elasticsearch.search-max-message-characters`
-- `analysis.elasticsearch.search-max-exception-characters`
-- `analysis.elasticsearch.tool-size`
-- `analysis.elasticsearch.tool-max-message-characters`
-- `analysis.elasticsearch.tool-max-exception-characters`
-
-### Dynatrace
-
-- `analysis.dynatrace.base-url`
-- `analysis.dynatrace.api-token`
-- `analysis.dynatrace.entity-page-size`
-- `analysis.dynatrace.entity-fetch-max-pages`
-- `analysis.dynatrace.entity-candidate-limit`
-- `analysis.dynatrace.problem-page-size`
-- `analysis.dynatrace.problem-limit`
-- `analysis.dynatrace.problem-evidence-limit`
-- `analysis.dynatrace.metric-entity-limit`
-- `analysis.dynatrace.metric-resolution`
-- `analysis.dynatrace.query-padding-before`
-- `analysis.dynatrace.query-padding-after`
-
-## Co jest jeszcze synthetic
-
-Na teraz Elasticsearch, Dynatrace i GitLab maja rzeczywiste adaptery REST.
-Testy utrzymuja osobne fake adaptery, ale produkcyjny runtime nie ma juz trybu
-`synthetic` dla tych integracji.
+Prompt wymaga JSON-only response. Publiczny response aplikacji nadal mapuje
+do obecnych pol, ale JSON AI zawiera bogatszy kontrakt:
+
+```json
+{
+  "detectedProblem": "string",
+  "summary": "markdown string in Polish",
+  "recommendedAction": "markdown string in Polish",
+  "rationale": "markdown string in Polish",
+  "affectedFunction": "markdown string in Polish",
+  "affectedProcess": "string or nieustalone",
+  "affectedBoundedContext": "string or nieustalone",
+  "affectedTeam": "string or nieustalone",
+  "confidence": "high|medium|low",
+  "evidenceReferences": [
+    {
+      "field": "detectedProblem|summary|recommendedAction|rationale|affectedFunction|affectedProcess|affectedBoundedContext|affectedTeam",
+      "artifactId": "string",
+      "itemId": "string",
+      "claim": "short Polish explanation"
+    }
+  ],
+  "visibilityLimits": ["string"]
+}
+```
+
+Parser probuje caly content jako JSON, potem fenced JSON block. Legacy
+labeled parser nie istnieje. Jesli brakuje wymaganych pol, fallback zachowuje
+czesciowo sparsowane pola i ustawia `AI_UNSTRUCTURED_RESPONSE` tylko wtedy,
+gdy brakuje `detectedProblem`.
+
+## 13. Quality gate
+
+Po parsingu provider uruchamia `CopilotResponseQualityGate`.
+
+W trybie domyslnym `REPORT_ONLY` findings sa logowane i podpinane pod
+telemetryke, ale nie zmieniaja odpowiedzi zwracanej do uzytkownika.
+
+Quality gate ocenia m.in. glebokosc `affectedFunction`, konkretnosc
+`recommendedAction`, ugruntowanie ownership/process/context, spojnosci
+confidence oraz strukture rationale.
+
+## 14. Telemetry
+
+Metryki sesji sa trzymane w `CopilotSessionMetricsRegistry` i logowane przez
+`CopilotMetricsLogger`.
+
+Zbierane sa:
+
+- counts evidence sections/items/artifacts,
+- artifact total characters,
+- prompt characters,
+- preparation/client/create session/sendAndWait/total durations,
+- tool calls total i wedlug grup,
+- drogie GitLab/DB tool counters,
+- returned characters,
+- structured/fallback/parser state,
+- detected problem/confidence,
+- quality findings,
+- budget warnings i denials.
+
+## 15. Job state i UI
+
+Async flow zapisuje prepared prompt przed wykonaniem AI. Dzieki temu prompt
+jest dostepny nawet wtedy, gdy execution failuje.
+
+`toolEvidenceSections` sa osobnym polem job response i moga byc aktualizowane
+podczas sesji AI przez listener. UI nie zalezy od typow Copilot SDK.
+
+## 16. Najwazniejsze properties
+
+```properties
+analysis.ai.copilot.working-directory=${user.dir}
+analysis.ai.copilot.permission-mode=approve-all
+analysis.ai.copilot.send-and-wait-timeout=5m
+analysis.ai.copilot.skill-resource-roots=copilot/skills
+analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
+
+analysis.ai.copilot.metrics.enabled=true
+analysis.ai.copilot.metrics.log-summary=true
+analysis.ai.copilot.metrics.log-tool-events=true
+
+analysis.ai.copilot.quality-gate.enabled=true
+analysis.ai.copilot.quality-gate.mode=report-only
+
+analysis.ai.copilot.tool-budget.enabled=true
+analysis.ai.copilot.tool-budget.mode=soft
+analysis.ai.copilot.tool-budget.max-total-calls=16
+analysis.ai.copilot.tool-budget.max-elastic-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-calls=8
+analysis.ai.copilot.tool-budget.max-gitlab-search-calls=3
+analysis.ai.copilot.tool-budget.max-gitlab-read-file-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-read-chunk-calls=6
+analysis.ai.copilot.tool-budget.max-gitlab-returned-characters=80000
+analysis.ai.copilot.tool-budget.max-db-calls=8
+analysis.ai.copilot.tool-budget.max-db-raw-sql-calls=0
+analysis.ai.copilot.tool-budget.max-db-returned-characters=64000
+```
+
+Nie ma runtime flagi wybierajacej legacy response labels. Aktualny kontrakt
+Copilota jest JSON-only.

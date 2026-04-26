@@ -1,211 +1,187 @@
 # Open Questions And Decision Register
 
-## Decyzje juz podjete
+Ten dokument rozdziela decyzje juz podjete od tematow, ktore nadal wymagaja
+osobnego PR-a albo produktu.
 
-Te rzeczy traktuj jako ustalone, dopoki nie ma swiadomej zmiany
-architektonicznej:
+## Decision Register
 
-1. `correlationId` jest jedynym biznesowym polem requestu glownego flow.
-2. `gitLabGroup` pochodzi z konfiguracji aplikacji.
-3. `gitLabBranch` i `environment` sa rozwiazywane z evidence.
-4. Glowny flow jest `AI-first`.
-5. Evidence providers sa sekwencyjne i pracuja na wspolnym `AnalysisContext`.
-6. Skill Copilota jest runtime resource aplikacji.
-7. GitLab deterministic evidence, GitLab MCP tools i Database MCP tools sa
-   osobnymi capability.
-8. GitLab tools sa session-bound i nie przyjmuja model-facing `group`,
-   `branch` ani `correlationId`.
-9. Database tools sa session-bound i nie przyjmuja model-facing `environment`.
-10. DB discovery jest application-scoped przez `applicationNamePattern`, nie
-    schema-pattern scoped.
-11. Dynatrace nie jest dzisiaj tool-em runtime.
-12. Ignorowanie SSL jest lokalne per integracja.
-13. Job state jest obecnie w pamieci procesu.
+### D1 - Public analysis request remains `correlationId` only
 
-## Otwarte pytania strategiczne
+Status: accepted.
 
-### 1. Jak mierzymy sukces analizy?
+`environment`, `gitLabBranch` and DB scope are derived by backend evidence and
+configuration. `gitLabGroup` comes from application config.
 
-Brakuje jeszcze jawnej odpowiedzi:
+### D2 - AI boundary stays generic
 
-- czy najwazniejsza jest trafnosc?
-- czy szybkosc?
-- czy jakosc handoffu?
-- czy ograniczenie liczby tool calls?
+Status: accepted.
 
-Bez tego trudno uczciwie optymalizowac Copilota.
+AI providers consume `AnalysisAiAnalysisRequest` and `AnalysisEvidenceSection`.
+Adapter DTOs stay behind evidence providers, adapters or view helpers.
 
-### 2. Czy finalny wynik ma byc bardziej ekspercki czy bardziej operatorski?
+### D3 - Copilot artifacts are embedded in prompt
 
-Obecny prompt jest ustawiony pod operatora / testera / mid-level developera.
-To jest dobra decyzja, ale warto ja potwierdzic jako produktowy target.
+Status: accepted.
 
-### 3. Czy DB tool results maja trafic do UI jako osobny strumien?
+Current runtime uses logical artifacts rendered inline in the prompt.
+SDK attachments are not used for evidence delivery.
 
-Dzisiaj:
+Changing this requires explicit runtime change, tests and rollback plan.
 
-- GitLab read tools sa mapowane do `toolEvidenceSections`,
-- DB tools sa logowane, ale nie projektowane jako osobne sekcje evidence.
+### D4 - Prepared analysis flow replaces double prompt preparation
 
-To wymaga swiadomej decyzji o UX, governance i poziomie szczegolow.
+Status: accepted.
 
-### 4. Czy chcemy jeden etap AI, czy dwa?
+`AnalysisAiPreparedAnalysis` is the generic prepared contract. The job prompt
+is `prepared.prompt()` and execution reuses the same prepared request.
 
-Opcje:
+### D5 - Response contract is JSON-only
 
-- jeden etap:
-  prosciej, taniej implementacyjnie
-- dwa etapy:
-  lepsza kontrola eksploracji i wyniku
+Status: accepted.
 
-### 5. Czy Dynatrace powinien dostac w przyszlosci tools?
+Copilot must return valid JSON. Parser supports full JSON and fenced JSON
+tolerance. Legacy labeled parser has been removed.
 
-Za:
+### D6 - Quality gate starts as report-only
 
-- lepsze dogrywanie runtime context.
+Status: accepted.
 
-Przeciw:
+Quality findings are logged and metered. Runtime response is not changed in
+`REPORT_ONLY`.
 
-- wiekszy koszt,
-- wieksza zlozonosc sesji,
-- ryzyko przesuniecia uwagi z logs, repo i danych.
+### D7 - Tool policy is coverage-aware
 
-### 6. Czy operational context ma byc rolloutowany szerzej?
+Status: accepted.
 
-Dzisiaj:
+Tool availability is based on `CopilotEvidenceCoverageReport` and evidence
+gaps, not on simple "evidence section exists" checks.
 
-- capability istnieje,
-- ale jest domyslnie wylaczone.
+### D8 - DB tools require grounded need and resolved environment
 
-### 7. Czy potrzebna jest persystencja jobow?
+Status: accepted.
 
-To mocno zmienia model systemu:
+DB tools are available only when data diagnostics are justified and the
+environment is resolved. Discovery-only mode is allowed for weaker signals.
+Raw SQL stays disabled by default.
 
-- historia,
-- niezaleznosc od restartu,
-- mozliwy backlog operatora,
-- ale tez wieksza zlozonosc.
+### D9 - Tool budget is backend-enforced
 
-### 8. Jak mocno chcemy zamknac permission model Copilota?
+Status: accepted.
 
-Aktualny stan jest wygodny developersko, ale moze byc zbyt liberalny dla
-bardziej restrykcyjnego srodowiska.
+Budget state is per Copilot session. Soft mode logs warnings; hard mode returns
+controlled `denied_by_tool_budget` result.
 
-### 9. Czy raw SQL ma byc kiedykolwiek wlaczany produkcyjnie?
+### D10 - Incident digest and item IDs are artifact-only
 
-Capability istnieje jako last resort, ale domyslnie jest wylaczona.
-To wymaga osobnej decyzji governance, audytu i bezpieczenstwa.
+Status: accepted.
 
-## Otwarte pytania techniczne
+`01-incident-digest.md` is generated after the manifest. Stable `itemId`
+values are added during artifact rendering and do not change the public
+`AnalysisEvidenceItem` contract.
 
-### 1. Jak duze sa realne artifacts attachments?
+### D11 - Tool descriptions can be Copilot-specific
 
-Bez telemetry nie wiemy:
+Status: accepted.
 
-- czy attachment strategy realnie zmniejsza koszt,
-- czy model nie otwiera zbyt wielu artefaktow,
-- czy nie produkujemy zbyt duzo sekcji i itemow.
+`CopilotToolDescriptionDecorator` may append model guidance to Spring tool
+descriptions without changing tool implementation.
 
-### 2. Ktore elementy deterministic evidence daja najwiekszy zysk?
+### D12 - Tool evidence capture is part of audit
 
-Do pomiaru:
+Status: accepted.
 
-- logs only
-- logs + deployment
-- logs + deployment + Dynatrace
-- logs + deployment + GitLab deterministic
+GitLab and DB tool results can be normalized into `toolEvidenceSections` for
+job/UI audit.
 
-### 3. Ile realnie kosztuje repo exploration i DB diagnostics?
+## Open Questions
 
-Do zmierzenia:
+### Q1 - How should telemetry be consumed?
 
-- liczba `searchRepositoryCandidates`,
-- liczba `readFile`,
-- liczba `readFileChunk`,
-- wielkosc plikow,
-- liczba DB queries per tool,
-- liczba zwroconych rows / chars,
-- czas odpowiedzi GitLaba,
-- czas odpowiedzi DB capability.
+Backend logs structured metrics, but the product still needs a dashboard,
+offline report or dev endpoint to compare runs.
 
-### 4. Czy parser tekstowy jest jeszcze wystarczajacy?
+Decision needed:
 
-Pytanie praktyczne:
+- log-only for now,
+- local report script,
+- persisted metrics,
+- UI dashboard.
 
-- czy poprawiac parser,
-- czy przejsc na mocniejszy structured output.
+### Q2 - What is the golden evaluation format?
 
-### 5. Czy `affectedFunction` powinno pozostac polem wymaganym?
+Before model/prompt experiments, define fixtures:
 
-Dzisiaj to dobry guardrail dla handoffu i zrozumialosci.
-Warto jednak swiadomie potwierdzic, czy fallback z powodu braku tego pola jest
-pozadany.
+- input evidence pack,
+- expected JSON shape,
+- expected quality findings,
+- expected evidence references,
+- acceptable tool budget envelope.
 
-### 6. Czy DB capability powinna miec osobny budget i audit policy?
+### Q3 - When to enable `SOFT_REPAIR`?
 
-Pytania praktyczne:
+Quality gate has modes for future behavior, but only report-only should be
+used until tests prove the repair pass improves output without hiding evidence
+limits.
 
-- osobny limit query count?
-- osobny limit rows / chars?
-- osobny warning dla `db_execute_readonly_sql`?
+### Q4 - Should SDK attachments ever replace embedded prompt artifacts?
 
-## Rekomendowane metryki do wprowadzenia
+Current decision is embedded prompt. Attachments may reduce prompt size later,
+but they introduce delivery-mode risk and require dedicated tests.
 
-### Metryki trafnosci
+### Q5 - How strict should Copilot permissions be?
 
-- manualny score diagnozy,
-- manualny score `affectedFunction`,
-- manualny score `recommendedAction`,
-- manualny score "kod vs dane".
+Main analysis flow blocks local workspace tools by session hooks, but
+`permission-mode` default remains operationally important. Decide whether to
+change default after regression tests.
 
-### Metryki runtime
+### Q6 - How should UI present tool evidence and quality findings?
 
-- total analysis latency,
-- evidence latency,
-- AI latency,
-- tool latency,
-- P50 / P95
+Backend exposes `toolEvidenceSections`, quality findings in telemetry and JSON
+visibility limits/evidence references. UI still needs a concise operator view.
 
-### Metryki kosztu eksploracji
+### Q7 - How should DB raw SQL be governed?
 
-- tool calls per session,
-- read file count,
-- read chunk count,
-- total chars returned by GitLab,
-- total DB queries,
-- total rows returned by DB,
-- total chars returned by DB,
-- total chars returned by Elastic tool
+Current policy and budget default disable raw SQL. If enabled later, it needs:
 
-### Metryki struktury odpowiedzi
+- explicit property,
+- approval/audit story,
+- result masking/projection rules,
+- tests for denial and allowed use.
 
-- rate `AI_UNSTRUCTURED_RESPONSE`,
-- rate missing `affectedFunction`,
-- rate fallback prompt review recommendation
+### Q8 - Which budget thresholds are correct?
 
-## Rekomendowany format decyzji z GPT Pro
+Defaults are a starting point:
 
-Dla kazdego wiekszego tematu warto prosic GPT Pro o wynik w jednym z formatow:
+- total calls 16,
+- GitLab calls 8,
+- GitLab search 3,
+- GitLab full file 1,
+- GitLab chunks 6,
+- DB calls 8,
+- raw SQL 0.
 
-### ADR
+Tune using telemetry from real incidents.
 
-- context
-- options
-- decision
-- consequences
+### Q9 - Should quality findings affect public response?
 
-### Experiment memo
+Today no. Future options:
 
-- hypothesis
-- change
-- metrics
-- success threshold
-- rollback condition
+- keep report-only,
+- expose findings in job API,
+- soft repair,
+- strict fallback for severe failures.
 
-### Backlog memo
+Do not silently change user-facing diagnosis without a product decision.
 
-- problem
-- user value
-- technical value
-- scope touched
-- impact / effort
+## Resolved Questions
+
+Telemetry exists and records preparation, execution, tools, parser, quality
+and budget metrics.
+
+Response parsing is JSON-only; legacy labels are no longer supported.
+
+GitLab `gitlab_find_class_references` exists as a real MCP tool.
+
+DB tool results are captured into `database/tool-results` evidence sections.
+
+Prompt is prepared once and reused for execution.

@@ -1,85 +1,116 @@
-# Krok 9: Spring AI, Tools I MCP
+# Spring AI And MCP Tools
 
-## Cel
+Ten onboarding opisuje, jak aplikacja rejestruje tools uzywane przez Copilota
+i jak backend pilnuje scope, budgetu oraz audytu.
 
-Zrozumiec, jak projekt uzywa Spring AI do wystawiania tools i jak te same tools
-sa potem reuse'owane przez Copilot SDK.
+## Warstwy
 
-## Po tym kroku rozumiesz
+Tools sa implementowane w pakiecie `analysis.mcp` i deleguja do adapterow albo
+use case'ow aplikacji. Copilot nie wywoluje adapterow bezposrednio.
 
-- czym jest `@Tool`,
-- po co jest `ToolCallbackProvider`,
-- dlaczego `analysis.mcp` jest osobna warstwa,
-- jak Spring tool trafia do sesji Copilota.
+Najwazniejsze grupy:
 
-## Model w tym projekcie
+- `elastic_*` - dodatkowe log evidence po `correlationId`,
+- `gitlab_*` - search, outline, flow context, class references i focused file
+  reads,
+- `db_*` - read-only database diagnostics w resolved environment.
 
-1. Klasa tools ma metody oznaczone `@Tool`.
-2. Konfiguracja tworzy `ToolCallbackProvider`.
-3. Provider AI zbiera callbacki ze Springa.
-4. Bridge mapuje je na `ToolDefinition` Copilota.
-5. Sesja Copilota moze je wywolac jako narzedzia runtime.
+## Hidden ToolContext
 
-Aktualny zestaw GitLab MCP obejmuje:
+Zakres narzedzi jest session-bound. `ToolContext` niesie ukryte dane:
 
-- broad search kandydatow repozytoriow i plikow,
-- wyszukiwanie referencji/importow dla ugruntowanej klasy,
-- wysokopoziomowe `find_flow_context`,
-- outline pliku przed pelnym readem,
-- focused single chunk read,
-- male batch'e powiazanych chunkow,
-- pelny read pliku, gdy jest krotki albo potrzebny w calosci.
+- `correlationId` dla Elasticsearch,
+- `gitLabGroup` i `gitLabBranch` dla GitLaba,
+- `environment` i database scope dla DB.
 
-Aktualny zestaw Database MCP obejmuje:
+Model nie powinien podawac tych wartosci jako argumentow. Publiczny request
+analizy nadal ma tylko `correlationId`.
 
-- session-bound `db_get_scope`,
-- application-scoped discovery przez `db_find_tables` i `db_find_columns`,
-- exact `schema.table` data checks typu `db_exists_by_key`, `db_count_rows`,
-  `db_group_count`, `db_sample_rows`,
-- relationship diagnostics typu `db_check_orphans`, `db_find_relationships`,
-  `db_join_count`, `db_join_sample`,
-- opcjonalne `db_compare_table_to_expected_mapping`,
-- last-resort `db_execute_readonly_sql`, gdy backend jawnie wlaczy raw SQL.
+## Coverage-aware allowlista
 
-## Najwazniejsze klasy
+`CopilotToolAccessPolicy` nie wlacza tools tylko dlatego, ze sa
+zarejestrowane. Najpierw `CopilotEvidenceCoverageEvaluator` ocenia generyczne
+evidence i tworzy `CopilotEvidenceCoverageReport`.
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/elasticsearch/ElasticMcpTools.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/elasticsearch/ElasticMcpToolConfiguration.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpTools.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab/GitLabMcpToolConfiguration.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/database/DatabaseMcpTools.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/database/DatabaseMcpToolConfiguration.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/tools/CopilotSdkToolBridge.java`
+Reguly:
 
-## Co jest wazne architektonicznie
+- Elastic tools sa aktywne przy brakujacych, obcietych albo niepelnych logach.
+- GitLab tools sa aktywne przy brakujacym code/flow context.
+- Gdy GitLab evidence zna projekt/plik, zostaje focused toolset zamiast
+  szerokiego browse.
+- DB tools wymagaja resolved environment i uzasadnionej potrzeby data
+  diagnostics.
+- Raw SQL jest domyslnie zablokowany.
 
-- tool nie powinien miec logiki calej analizy,
-- tool deleguje do adaptera albo use case'u,
-- warstwa MCP jest o ekspozycji capability, nie o integracji REST,
-- lekkie heurystyki prezentacyjne dla Copilota, np. `inferredRole` albo
-  `recommendedReadStrategy`, moga zyc w warstwie MCP, o ile nie staja sie
-  centralnym rule engine; to samo dotyczy lekkiego seedowania wyszukiwania
-  klasy przez FQCN, simple name i exact `import ...;`,
-- session-bound context, np. `environment`, `correlationId`, `gitLabGroup` albo
-  `gitLabBranch`, powinien trafic do toola przez `ToolContext`, a nie przez
-  model-facing parametry,
-- ten sam tool moze byc widoczny w kontekscie Spring AI i w sesji Copilota,
-- sama rejestracja Spring toola nie oznacza jeszcze, ze trafi on do konkretnej
-  sesji Copilota:
-  `CopilotSdkPreparationService` moze go odfiltrowac, jesli artefakty juz
-  dostarczyly odpowiadajace mu dane,
-- sesja Copilota dostaje tez allowliste `availableTools`, zeby zablokowac
-  lokalne workspace/filesystem/shell tools i zostawic tylko jawnie dopuszczone
-  MCP capability.
+Coverage i evidence gaps sa widoczne w `00-incident-manifest.json`.
 
-## Sprawdz lokalnie
+## Opisy tools dla Copilota
 
-- przeczytaj konfiguracje `MethodToolCallbackProvider`,
-- zobacz, jak `CopilotSdkToolBridge` buduje `ToolDefinition`,
-- uruchom testy z `src/test/java/pl/mkn/incidenttracker/analysis/mcp`.
+`CopilotToolDescriptionDecorator` dokleja do Spring tool descriptions krotkie
+guidance dla modelu. To nie zmienia implementacji tools.
 
-## Checkpoint
+Przyklady guidance:
 
-- Dlaczego `analysis.mcp` nie powinno wykonywac `RestClient` bezposrednio?
-- Po co jest osobna konfiguracja `ToolCallbackProvider`, skoro metody maja
-  juz `@Tool`?
+- full file read jest expensive i powinien byc uzywany dopiero po outline/chunk,
+- GitLab search powinien uzywac seedow ze stacktrace, exception, klasy,
+  repozytorium albo service name,
+- DB sample rows nie sluzy do przegladania danych biznesowych,
+- raw SQL jest last resort i moze byc zablokowany przez policy/budget.
+
+## Budget guard
+
+`CopilotToolBudgetGuard` pilnuje limitow na sesje. Domyslnie dziala w trybie
+`soft`, czyli ostrzega i metrykuje, ale nie blokuje. Tryb `hard` zwraca
+kontrolowany wynik `denied_by_tool_budget`.
+
+Limity obejmuja:
+
+- total tool calls,
+- Elastic/GitLab/DB calls,
+- GitLab search calls,
+- GitLab read file/chunk calls,
+- returned characters,
+- DB raw SQL calls.
+
+## Capture tool evidence
+
+`CopilotToolEvidenceCaptureRegistry` przeksztalca wybrane wyniki tools w
+`AnalysisEvidenceSection`, ktore job flow publikuje jako `toolEvidenceSections`.
+
+Capture obejmuje:
+
+- GitLab fetched code,
+- GitLab search results,
+- GitLab outline/flow/class reference context,
+- DB diagnostic summaries.
+
+Dzieki temu audyt sesji pokazuje nie tylko finalna odpowiedz AI, ale tez
+material dociagniety przez tools.
+
+## Zasady przy dodawaniu tools
+
+- Tool powinien miec waski, typed contract.
+- Scope incydentu ma pochodzic z `ToolContext`, nie od modelu.
+- Dodaj test dla rejestracji i zachowania toola.
+- Jesli tool jest drogi albo ryzykowny, dodaj guidance w
+  `CopilotToolGuidanceCatalog`.
+- Jesli wynik toola jest diagnostycznie wazny, dodaj capture do
+  `CopilotToolEvidenceCaptureRegistry`.
+- Nie eksportuj DTO adapterow jako publicznego kontraktu AI.
+
+## Najwazniejsze properties
+
+```properties
+analysis.ai.copilot.tool-budget.enabled=true
+analysis.ai.copilot.tool-budget.mode=soft
+analysis.ai.copilot.tool-budget.max-total-calls=16
+analysis.ai.copilot.tool-budget.max-elastic-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-calls=8
+analysis.ai.copilot.tool-budget.max-gitlab-search-calls=3
+analysis.ai.copilot.tool-budget.max-gitlab-read-file-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-read-chunk-calls=6
+analysis.ai.copilot.tool-budget.max-gitlab-returned-characters=80000
+analysis.ai.copilot.tool-budget.max-db-calls=8
+analysis.ai.copilot.tool-budget.max-db-raw-sql-calls=0
+analysis.ai.copilot.tool-budget.max-db-returned-characters=64000
+```

@@ -1,94 +1,171 @@
-# Krok 10: Runtime Copilot SDK
+# Copilot SDK Analysis Runtime
 
-## Cel
+Ten onboarding opisuje aktualny runtime providera
+`CopilotSdkAnalysisAiProvider`.
 
-Zrozumiec, jak projekt uzywa GitHub Copilot Java SDK do wykonania finalnej
-analizy.
+## Najwazniejszy kontrakt
 
-## Po tym kroku rozumiesz
+Copilot dostaje przygotowany request przez generyczne
+`AnalysisAiPreparedAnalysis`.
 
-- jak wyglada preparation requestu do Copilota,
-- gdzie budowany jest prompt,
-- jak ladowane sa runtime skills,
-- jak odpowiedz modelu jest mapowana z powrotem na kontrakt aplikacji.
+Flow:
 
-## Trzy czesci runtime
+1. `AnalysisAiProvider.prepare(request)` buduje `CopilotSdkPreparedRequest`,
+2. orchestrator zapisuje `prepared.prompt()`,
+3. `AnalysisAiProvider.analyze(prepared, listener)` uruchamia sesje SDK,
+4. prepared request jest zamykany po execution.
 
-### Provider AI
+Nie ma juz podwojnego budowania promptu przez `preparePrompt(...)` i
+`analyze(request)`.
 
-`CopilotSdkAnalysisAiProvider` jest implementacja `AnalysisAiProvider`.
-To glowna granica pomiedzy flow aplikacji a konkretnym SDK.
+## Preparation
 
-### Preparation
+`CopilotSdkPreparationService`:
 
-Buduje:
+- ocenia evidence coverage,
+- buduje coverage-aware tool policy,
+- renderuje artefakty inline,
+- laduje runtime skills,
+- generuje prompt JSON-only,
+- rejestruje metryki preparation.
 
-- `CopilotClientOptions`,
-- `SessionConfig`,
-- `MessageOptions`,
-- prompt,
-- liste tool definitions,
-- skill directories.
+Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 
-### Execution
+```text
+00-incident-manifest.json
+01-incident-digest.md
+02-... raw evidence
+```
 
-Uruchamia klienta, tworzy sesje, wysyla prompt i zbiera odpowiedz modelu.
-W job flow execution rejestruje tez sesyjny listener, ktory przechwytuje
-wyniki `gitlab_read_repository_file`, `gitlab_read_repository_file_chunk`
-i `gitlab_read_repository_file_chunks` i publikuje je jako
-`toolEvidenceSections` do pollowanego snapshotu analizy.
+Manifest deklaruje `deliveryMode=embedded-prompt` i zawiera evidence coverage,
+tool policy oraz indeks `itemIds`.
 
-## Najwazniejsze klasy
+## Incident digest i itemId
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/CopilotSdkAnalysisAiProvider.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/preparation/CopilotSdkPreparationService.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/execution/CopilotSdkExecutionGateway.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/copilot/tools/CopilotSdkToolBridge.java`
+`01-incident-digest.md` jest skompresowana warstwa kontekstu dla modelu:
 
-## Skill
+- session facts,
+- coverage summary,
+- strongest log signals,
+- deployment facts,
+- runtime highlights,
+- code highlights,
+- known evidence gaps.
 
-Skill jest runtime resource aplikacji.
-Zrodlo prawdy lezy w `src/main/resources/copilot/skills`, a loader wypakowuje go
-do katalogu runtime dla sesji Copilota.
+`itemId` sa generowane tylko w Copilot artifact rendering. Markdown artifacts
+dostaja naglowki `## itemId: ...`, a JSON artifacts pole `itemId`.
 
-## Co warto zapamietac
+## Tools
 
-- prompt niesie dane konkretnego incydentu,
-- skill niesie stale zasady pracy,
-- AI dostaje generyczne evidence, nie klasy adapter-specific,
-- artefakty providerow, np. Elasticsearch `logs`, Dynatrace
-  `runtime-signals` i GitLab `resolved-code`, moga byc renderowane jako
-  czytelny markdown dla Copilota, podczas gdy API i UI nadal dostaja
-  strukturalne evidence JSON,
-- do sesji Copilota artefakty sa osadzane bezposrednio w promptcie, a nie jako
-  sciezki do plikow na lokalnym dysku,
-- preparation osadza te same artifacty rowniez bezposrednio w promptcie, zeby
-  model mial pewny dostep do tresci nawet wtedy, gdy runtime nie pozwala ich
-  "otwierac" jak osobnych plikow,
-- artefakty sa nie tylko promptowym zaleceniem, ale tez wejciem do polityki
-  sesji:
-  jesli artefakty juz niosa dane Elastica albo deterministic GitLab code
-  evidence, preparation nie wystawia odpowiadajacych im tool groups,
-- `SessionConfig.availableTools` jest ustawiane jawnie, zeby odciac lokalny
-  disk/workspace i shell tools; sesja widzi tylko jawnie dopuszczone Spring
-  tools,
-- `SessionHooks.onPreToolUse` jest dodatkowym guardrailem runtime i deny'uje
-  kazdy tool spoza tej allowlisty, np. built-in `read_file`,
-- hidden `ToolContext` niesie session-bound dane runtime, np. `correlationId`,
-  `environment`, `gitLabGroup`, `gitLabBranch`, `analysisRunId`,
-  `copilotSessionId` i metadata tool calla,
-- AI-guided GitLab reads moga byc przechwytywane jako diagnostyczne
-  `toolEvidenceSections` dla UI, ale nie staja sie elementem glownego pipeline
-  `AnalysisEvidenceCollector`,
-- skill i prompt moga kierowac model, aby przy symptomach JPA/repository
-  najpierw wyprowadzil z GitLaba encje, predykat repozytorium, tabele i relacje
-  jako hinty do DB tools,
-- DB tools sa wlaczane warunkowo po `analysis.database.enabled=true` i nie
-  wymagaja globalnego `spring.datasource`,
-- parsing odpowiedzi modelu musi byc odporny na drobne roznice formatowania.
+Runtime rejestruje tylko tools dozwolone przez `CopilotToolAccessPolicy`.
+Policy uzywa `CopilotEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
+sekcja evidence istnieje.
 
-## Checkpoint
+`SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal.
+GitLab, Elasticsearch i DB tools pracuja przez hidden `ToolContext`.
 
-- Gdzie zmieniasz stale zasady pracy modelu?
-- Gdzie zmieniasz sam prompt dla jednego requestu analizy?
-- Dlaczego provider AI nie powinien znac klas adaptera Elasticsearch?
+`CopilotToolDescriptionDecorator` dodaje Copilot-facing guidance do opisow
+drogich albo ryzykownych tools.
+
+## Budget
+
+`CopilotToolBudgetRegistry` tworzy state per `copilotSessionId`.
+`CopilotToolBudgetGuard` jest wywolywany w bridge przed i po tool callbacku.
+
+Domyslnie:
+
+```properties
+analysis.ai.copilot.tool-budget.enabled=true
+analysis.ai.copilot.tool-budget.mode=soft
+```
+
+Soft mode nie blokuje. Hard mode zwraca kontrolowany result
+`denied_by_tool_budget`.
+
+## Tool evidence
+
+Bridge publikuje tool evidence przez listener:
+
+- `gitlab/tool-fetched-code`,
+- `gitlab/tool-search-results`,
+- `gitlab/tool-flow-context`,
+- `database/tool-results`.
+
+DB summaries zawieraja pytanie diagnostyczne, parametry i summary wyniku, aby
+audyt nie byl tylko raw JSON dump.
+
+## Response parsing
+
+Prompt wymaga odpowiedzi JSON-only. Parser akceptuje caly content jako JSON
+albo fenced JSON block. Legacy labeled parser nie istnieje.
+
+Wymagane pola:
+
+- `detectedProblem`
+- `summary`
+- `recommendedAction`
+- `affectedFunction`
+
+Dodatkowe pola:
+
+- `rationale`
+- `affectedProcess`
+- `affectedBoundedContext`
+- `affectedTeam`
+- `confidence`
+- `evidenceReferences`
+- `visibilityLimits`
+
+Fallback zachowuje czesciowo sparsowane pola i ustawia
+`AI_UNSTRUCTURED_RESPONSE` tylko wtedy, gdy brakuje `detectedProblem`.
+
+## Quality gate
+
+`CopilotResponseQualityGate` dziala domyslnie w `REPORT_ONLY`.
+Findings sa widoczne w telemetryce/logach, ale nie zmieniaja runtime result.
+
+## Telemetry
+
+`CopilotSessionMetricsRegistry` agreguje metryki sesji, a
+`CopilotMetricsLogger` emituje structured summary log.
+
+Metryki obejmuja:
+
+- rozmiary promptu i artefaktow,
+- duration preparation/client/create session/sendAndWait/total,
+- tool calls wedlug grup,
+- drogie tool counters i returned characters,
+- parser/fallback state,
+- detected problem/confidence,
+- quality findings,
+- budget warnings/denials.
+
+## Properties
+
+```properties
+analysis.ai.copilot.working-directory=${user.dir}
+analysis.ai.copilot.permission-mode=approve-all
+analysis.ai.copilot.send-and-wait-timeout=5m
+analysis.ai.copilot.skill-resource-roots=copilot/skills
+analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
+
+analysis.ai.copilot.metrics.enabled=true
+analysis.ai.copilot.metrics.log-summary=true
+analysis.ai.copilot.metrics.log-tool-events=true
+
+analysis.ai.copilot.quality-gate.enabled=true
+analysis.ai.copilot.quality-gate.mode=report-only
+
+analysis.ai.copilot.tool-budget.enabled=true
+analysis.ai.copilot.tool-budget.mode=soft
+analysis.ai.copilot.tool-budget.max-total-calls=16
+analysis.ai.copilot.tool-budget.max-elastic-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-calls=8
+analysis.ai.copilot.tool-budget.max-gitlab-search-calls=3
+analysis.ai.copilot.tool-budget.max-gitlab-read-file-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-read-chunk-calls=6
+analysis.ai.copilot.tool-budget.max-gitlab-returned-characters=80000
+analysis.ai.copilot.tool-budget.max-db-calls=8
+analysis.ai.copilot.tool-budget.max-db-raw-sql-calls=0
+analysis.ai.copilot.tool-budget.max-db-returned-characters=64000
+```

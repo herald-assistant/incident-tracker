@@ -1,10 +1,20 @@
 # Runtime Contracts And Configuration
 
-## Glowny kontrakt API
+Ten plik opisuje aktualny kontrakt runtime po optymalizacjach Copilota. Jest
+to context pack dla pracy w `/pro`, wiec celowo skupia sie na granicach,
+konfiguracji i rzeczach, ktorych nie nalezy pomylic z historycznym stanem.
 
-### `POST /analysis`
+## Publiczne API analizy
 
-Request:
+Endpointy:
+
+```http
+POST /analysis
+POST /analysis/jobs
+GET /analysis/jobs/{analysisId}
+```
+
+Request wejscia niesie tylko:
 
 ```json
 {
@@ -12,451 +22,371 @@ Request:
 }
 ```
 
-Response domainowy to `AnalysisResultResponse` z polami:
+Backend wyprowadza pozostale scope'y:
 
-- `status`
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `summary`
-- `detectedProblem`
-- `recommendedAction`
-- `rationale`
-- `affectedFunction`
-- `affectedProcess`
-- `affectedBoundedContext`
-- `affectedTeam`
-- `prompt`
+- `environment` z evidence,
+- `gitLabBranch` z deployment/runtime evidence,
+- `gitLabGroup` z konfiguracji,
+- DB scope z resolved environment i konfiguracji datasource.
 
-### `POST /analysis/jobs`
+Nie przywracac `branch`, `environment` ani `gitLabGroup` do publicznego
+requestu.
 
-Request:
+## Granica AI
 
-```json
-{
-  "correlationId": "..."
+Generyczny kontrakt AI:
+
+```java
+public interface AnalysisAiProvider {
+    default String preparePrompt(AnalysisAiAnalysisRequest request) { ... }
+    default AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) { ... }
+    default AnalysisAiAnalysisResponse analyze(
+            AnalysisAiPreparedAnalysis preparedAnalysis,
+            AnalysisAiToolEvidenceListener listener
+    ) { ... }
+    AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request);
 }
 ```
 
-### `GET /analysis/jobs/{analysisId}`
+`AnalysisAiPreparedAnalysis` jest generyczne i nie ujawnia Copilot SDK:
 
-Zwraca `AnalysisJobResponse`.
-
-Najwazniejsze pola dla UI i diagnostyki:
-
-- `status`
-- `currentStepCode`
-- `currentStepLabel`
-- `environment`
-- `gitLabBranch`
-- `errorCode`
-- `errorMessage`
-- `steps`
-- `evidenceSections`
-- `toolEvidenceSections`
-- `preparedPrompt`
-- `result`
-
-## Statusy joba
-
-Status calego joba:
-
-- `QUEUED`
-- `COLLECTING_EVIDENCE`
-- `ANALYZING`
-- `COMPLETED`
-- `FAILED`
-- `NOT_FOUND`
-
-Status kroku:
-
-- `PENDING`
-- `IN_PROGRESS`
-- `COMPLETED`
-- `FAILED`
-- `SKIPPED`
-
-## Kontrakt evidence
-
-Granica backend -> AI i backend -> UI uzywa:
-
-- `AnalysisEvidenceSection`
-- `AnalysisEvidenceItem`
-- `AnalysisEvidenceAttribute`
-
-Shape sekcji:
-
-```json
-{
-  "provider": "gitlab",
-  "category": "resolved-code",
-  "items": [
-    {
-      "title": "backend file src/main/java/...",
-      "attributes": [
-        { "name": "projectName", "value": "backend" },
-        { "name": "filePath", "value": "src/main/java/..." }
-      ]
-    }
-  ]
+```java
+public interface AnalysisAiPreparedAnalysis extends AutoCloseable {
+    String providerName();
+    String correlationId();
+    String prompt();
 }
 ```
 
-## Kontrakt AI request
+`CopilotSdkPreparedRequest` implementuje ten interfejs wewnatrz
+`analysis.ai.copilot`.
 
-`AnalysisAiAnalysisRequest` zawiera:
+## Prepared analysis flow
 
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-- `evidenceSections`
+Orchestrator:
 
-To jest jedyna rzecz, jaka przechodzi z orchestratora do AI providera.
+1. zbiera deterministic evidence,
+2. buduje `AnalysisAiAnalysisRequest`,
+3. wywoluje `provider.prepare(request)`,
+4. zapisuje `prepared.prompt()` w job state,
+5. wywoluje `provider.analyze(prepared, listener)`,
+6. zamyka prepared request.
 
-## Kontrakt AI response
+Dzieki temu prompt widoczny w job UI jest dokladnie promptem uzytym przez
+Copilota.
 
-`AnalysisAiAnalysisResponse` zawiera:
+## Evidence contract
 
-- `providerName`
-- `summary`
-- `detectedProblem`
-- `recommendedAction`
-- `rationale`
-- `affectedFunction`
-- `affectedProcess`
-- `affectedBoundedContext`
-- `affectedTeam`
-- `prompt`
+AI layer dostaje generyczne:
 
-## Kontrakt finalnego wyniku Copilota
+- `AnalysisAiAnalysisRequest`,
+- `AnalysisEvidenceSection`,
+- `AnalysisEvidenceItem`,
+- `AnalysisEvidenceAttribute`.
 
-Prompt i skills wymuszaja dzisiaj te pola:
+Nie wciskac DTO adapterow do prompt buildera ani publicznych kontraktow AI.
+Jesli potrzebny jest typowany widok, uzyc helperow widoku zbudowanych nad
+generycznymi sekcjami.
 
-- `detectedProblem`
-- `summary`
-- `recommendedAction`
-- `rationale`
-- `affectedFunction`
-- `affectedProcess`
-- `affectedBoundedContext`
-- `affectedTeam`
+## Artifact delivery contract
 
-Parser wymaga twardo:
+Aktualny runtime uzywa embedded prompt artifacts, nie SDK attachments.
 
-- `detectedProblem`
-- `summary`
-- `recommendedAction`
-- `affectedFunction`
+`CopilotArtifactService` renderuje logiczne pliki:
 
-Jesli parser nie znajdzie jednego z tych czterech pol, provider wraca fallback:
+```text
+00-incident-manifest.json
+01-incident-digest.md
+02-... evidence artifact
+```
 
-- `detectedProblem = AI_UNSTRUCTURED_RESPONSE`
-- `summary = raw assistant content`
-- `recommendedAction = Review the raw Copilot response and improve response formatting in the prompt.`
-- `affectedFunction = ""`
-- `affectedProcess = ""`
-- `affectedBoundedContext = ""`
-- `affectedTeam = ""`
+Artifact contents sa osadzane inline w promptcie. `MessageOptions` dostaje
+tylko finalny prompt przez `setPrompt(prompt)`.
 
-`rationale` ma default, jesli go brakuje.
+Nie zakladac lokalnych sciezek plikowych dla artifactow. Zmiana na SDK
+attachments to jawna zmiana runtime.
 
-## Hidden session context dla tooli
-
-Session-bound dane runtime nie sa model-facing parametrami.
-Bridge Copilota przekazuje je do Spring tools przez hidden `ToolContext`.
-
-Najwazniejsze klucze to:
-
-- `analysisRunId`
-- `copilotSessionId`
-- `actualCopilotSessionId`
-- `toolCallId`
-- `toolName`
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-
-W praktyce oznacza to:
-
-- GitLab tools nie przyjmuja juz `group`, `branch` ani `correlationId`,
-- Database tools nie przyjmuja `environment`,
-- model operuje tylko na parametrach eksploracji, a nie na ukrytym runtime
-  scope.
-
-## Tools dostepne dla Copilota
-
-### Elasticsearch
-
-- `elastic_search_logs_by_correlation_id`
-
-Wejscie:
-
-- `correlationId`
-
-### GitLab
-
-- `gitlab_search_repository_candidates`
-- `gitlab_find_flow_context`
-- `gitlab_read_repository_file_outline`
-- `gitlab_read_repository_file`
-- `gitlab_read_repository_file_chunk`
-- `gitlab_read_repository_file_chunks`
-
-Najwazniejsze reguly:
-
-- tools sa session-bound i biora `group`, `branch` i `correlationId` z hidden
-  `ToolContext`,
-- model podaje tylko parametry eksploracji, np. `projectName`, `filePath`,
-  `keywords`, `seedClass`, `chunks`,
-- `gitlab_read_repository_file`, `gitlab_read_repository_file_chunk` i
-  `gitlab_read_repository_file_chunks` sa przechwytywane do
-  `toolEvidenceSections` w job flow.
-
-### Database
-
-- `db_get_scope`
-- `db_find_tables`
-- `db_find_columns`
-- `db_describe_table`
-- `db_exists_by_key`
-- `db_count_rows`
-- `db_group_count`
-- `db_sample_rows`
-- `db_check_orphans`
-- `db_find_relationships`
-- `db_join_count`
-- `db_join_sample`
-- `db_compare_table_to_expected_mapping`
-- `db_execute_readonly_sql`
-
-Najwazniejsze reguly:
-
-- capability jest opcjonalna i domyslnie wylaczona,
-- `environment` i `correlationId` pochodza z hidden `ToolContext`,
-- discovery jest application-scoped przez `applicationNamePattern`, a nie przez
-  `schemaPattern`,
-- exact data tools pracuja dopiero na dokladnym `schema.table`,
-- raw SQL jest last resort i domyslnie pozostaje wylaczony.
-
-## Properties runtime
-
-### AI / Copilot SDK
-
-`analysis.ai.copilot.*`
-
-- `cli-path`
-- `working-directory`
-- `model`
-- `reasoning-effort`
-- `client-name`
-- `send-and-wait-timeout`
-- `github-token`
-- `permission-mode`
-- `skill-resource-roots`
-- `skill-runtime-directory`
-- `attachment-artifact-directory`
-- `skill-directories`
-- `disabled-skills`
-
-Domyslne zachowania z kodu:
-
-- `cliPath = copilot`
-- `clientName = incidenttracker`
-- `permissionMode = APPROVE_ALL`
-- `sendAndWaitTimeout = 5m`
-- `skillResourceRoots = [copilot/skills]`
-
-### GitLab
-
-`analysis.gitlab.*`
-
-- `base-url`
-- `group`
-- `token`
-- `ignore-ssl-errors`
-- `search-results-per-term`
-- `max-candidate-count`
-
-Domyslne z kodu:
-
-- `searchResultsPerTerm = 20`
-- `maxCandidateCount = 10`
-
-### Database
-
-`analysis.database.*`
-
-- `enabled`
-- `max-rows`
-- `max-columns`
-- `max-tables-per-search`
-- `max-columns-per-search`
-- `max-tables-to-describe`
-- `max-result-characters`
-- `query-timeout`
-- `connection-timeout`
-- `raw-sql-enabled`
-- `allow-all-schemas`
-- `environments.<environment>.jdbc-url`
-- `environments.<environment>.username`
-- `environments.<environment>.password`
-- `environments.<environment>.database-alias`
-- `environments.<environment>.description`
-- `environments.<environment>.allowed-schemas`
-- `environments.<environment>.applications.<application>.schema`
-- `environments.<environment>.applications.<application>.*patterns`
-- `environments.<environment>.applications.<application>.related-schemas`
-
-Domyslne z kodu:
-
-- `enabled = false`
-- `maxRows = 50`
-- `maxColumns = 40`
-- `maxTablesPerSearch = 30`
-- `maxColumnsPerSearch = 50`
-- `maxTablesToDescribe = 5`
-- `maxResultCharacters = 64000`
-- `queryTimeout = 5s`
-- `connectionTimeout = 5s`
-- `rawSqlEnabled = false`
-- `allowAllSchemas = false`
-
-Wazny detal implementacyjny:
-
-- capability nie wymaga globalnego `spring.datasource`,
-- DataSource'y sa tworzone recznie per environment przez
-  `DatabaseConnectionRouter`,
-- aplikacja wyklucza globalne `DataSourceAutoConfiguration`.
-
-### Elasticsearch
-
-`analysis.elasticsearch.*`
-
-- `base-url`
-- `kibana-space-id`
-- `index-pattern`
-- `authorization-header`
-- `evidence-size`
-- `evidence-max-message-characters`
-- `evidence-max-exception-characters`
-- `search-size`
-- `search-max-message-characters`
-- `search-max-exception-characters`
-- `tool-size`
-- `tool-max-message-characters`
-- `tool-max-exception-characters`
-
-Domyslne z kodu:
-
-- `kibanaSpaceId = default`
-- `indexPattern = logs-*`
-- `evidenceSize = 20`
-- `searchSize = 200`
-- `toolSize = 200`
-
-### Dynatrace
-
-`analysis.dynatrace.*`
-
-- `base-url`
-- `api-token`
-- `entity-page-size`
-- `entity-fetch-max-pages`
-- `entity-candidate-limit`
-- `problem-page-size`
-- `problem-limit`
-- `problem-evidence-limit`
-- `metric-entity-limit`
-- `metric-resolution`
-- `query-padding-before`
-- `query-padding-after`
-
-Domyslne z kodu:
-
-- `entityPageSize = 200`
-- `entityFetchMaxPages = 5`
-- `entityCandidateLimit = 3`
-- `problemLimit = 3`
-- `problemEvidenceLimit = 3`
-- `metricEntityLimit = 2`
-- `metricResolution = 1m`
-- padding przed i po incydencie: `15m`
-
-### Operational context
-
-`analysis.operational-context.*`
-
-- `enabled`
-- `resource-root`
-- `max-items-per-type`
-- `max-glossary-terms`
-- `max-handoff-rules`
-
-Domyslnie:
-
-- `enabled = false`
-
-## Runtime resources
-
-### Runtime skills Copilota
-
-Classpath source:
-
-- `src/main/resources/copilot/skills/incident-analysis-core/SKILL.md`
-- `src/main/resources/copilot/skills/incident-analysis-gitlab-tools/SKILL.md`
-- `src/main/resources/copilot/skills/incident-data-diagnostics/SKILL.md`
-
-Runtime extraction:
-
-- `${java.io.tmpdir}/incident-tracker/copilot-skills`
-
-### Attachment artifacts
-
-Session staging directory:
-
-- `${java.io.tmpdir}/incident-tracker/copilot-attachments`
-
-Kazda analiza generuje tymczasowo:
-
-- `00-incident-manifest.json`
-- po jednym pliku `.json` na sekcje evidence
+## Artifact manifest
 
 Manifest zawiera:
 
-- `correlationId`
-- `environment`
-- `gitLabBranch`
-- `gitLabGroup`
-- `generatedAt`
-- `readFirst`
-- `artifactPolicy`
-- liste artefaktow
+- `correlationId`,
+- `environment`,
+- `gitLabBranch`,
+- `gitLabGroup`,
+- `artifactFormatVersion`,
+- `readFirst`,
+- `readNext`,
+- `artifactPolicy.deliveryMode=embedded-prompt`,
+- `toolPolicy`,
+- `evidenceCoverage`,
+- indeks artifactow i `itemIds`.
 
-### Operational context
+`AnalysisEvidenceItem` nie ma publicznego `itemId`. Stable IDs sa generowane
+artifact-only podczas renderowania Copilota.
 
-Classpath source:
+## Incident digest
 
-- `src/main/resources/operational-context/*`
+`01-incident-digest.md` jest kontekstowa kompresja przed raw evidence:
 
-## Build i test
+- session facts,
+- evidence coverage,
+- strongest log signals,
+- deployment facts,
+- runtime signals,
+- code evidence highlights,
+- known evidence gaps.
 
-Podstawowe komendy:
+Prompt instruuje model, aby czytal manifest, potem digest, a dopiero pozniej
+raw artifacts.
 
-- `mvn -q clean test`
-- `mvn -q -DskipTests package`
-- `cd frontend && npm start`
-- `cd frontend && npm run build`
+## JSON response contract
 
-## Wazne runtime fakty
+Copilot ma zwracac tylko valid JSON.
 
-- `SessionConfig` dostaje jawny `sessionId` generowany po stronie backendu,
-- job state jest w pamieci procesu,
-- frontend polluje co `1500 ms`,
-- prepared prompt jest zachowywany takze przy bledzie AI,
-- `AnalysisContext.withSection(...)` ignoruje puste sekcje,
-- orchestrator rzuca `AnalysisDataNotFoundException`, jesli po collectorze nadal
-  nie ma zadnego evidence,
-- Database tool results nie sa dzisiaj mapowane do `toolEvidenceSections`;
-  ten mechanizm jest utrzymywany tylko dla wybranych GitLab read tools.
+Minimalny wymagany shape:
+
+```json
+{
+  "detectedProblem": "string",
+  "summary": "markdown string in Polish",
+  "recommendedAction": "markdown string in Polish",
+  "rationale": "markdown string in Polish",
+  "affectedFunction": "markdown string in Polish",
+  "affectedProcess": "string or nieustalone",
+  "affectedBoundedContext": "string or nieustalone",
+  "affectedTeam": "string or nieustalone",
+  "confidence": "high|medium|low",
+  "evidenceReferences": [
+    {
+      "field": "detectedProblem|summary|recommendedAction|rationale|affectedFunction|affectedProcess|affectedBoundedContext|affectedTeam",
+      "artifactId": "string",
+      "itemId": "string",
+      "claim": "short Polish explanation"
+    }
+  ],
+  "visibilityLimits": ["string"]
+}
+```
+
+Parser:
+
+1. probuje caly content jako JSON,
+2. probuje fenced JSON block,
+3. buduje fallback strukturalny.
+
+Legacy labeled parser zostal usuniety. Nie dokumentowac juz
+`detectedProblem: ...` jako wspieranego kontraktu.
+
+Fallback zachowuje pola czesciowo sparsowane z JSON. `AI_UNSTRUCTURED_RESPONSE`
+pojawia sie, gdy nie ma parseable `detectedProblem`.
+
+## Quality gate
+
+`CopilotResponseQualityGate` dziala po parserze. Domyslnie jest
+`REPORT_ONLY`, wiec nie zmienia runtime response.
+
+Quality findings trafiaja do logow i telemetryki.
+
+## Coverage report
+
+`CopilotEvidenceCoverageReport` zawiera:
+
+- `elastic`,
+- `gitLab`,
+- `runtime`,
+- `operationalContext`,
+- `dataDiagnosticNeed`,
+- `environmentResolved`,
+- `gaps`.
+
+Coverage enum values:
+
+```text
+Elastic: NONE, LOGS_PRESENT_NO_EXCEPTION, EXCEPTION_PRESENT,
+STACKTRACE_PRESENT, TRUNCATED, SUFFICIENT
+
+GitLab: NONE, SYMBOL_ONLY, STACK_FRAME_ONLY, FAILING_METHOD_ONLY,
+DIRECT_COLLABORATOR_ATTACHED, FLOW_CONTEXT_ATTACHED, SUFFICIENT
+
+DataDiagnosticNeed: NONE, POSSIBLE, LIKELY, REQUIRED
+
+OperationalContext: NONE, PARTIAL, MATCHED
+```
+
+Coverage report jest w manifest/prompt i steruje allowlista tools.
+
+## Tool policy
+
+`CopilotToolAccessPolicy` filtruje tools wedlug coverage:
+
+- Elastic tools tylko dla brakujacych/niepelnych/obcietych logow.
+- GitLab tools dla brakujacego code/flow context.
+- Przy znanym GitLab evidence wlaczany jest focused GitLab toolset.
+- DB tools tylko przy resolved environment i realnej potrzebie data
+  diagnostics.
+- `db_execute_readonly_sql` jest domyslnie disabled.
+
+## Tool contracts
+
+Elasticsearch:
+
+```text
+elastic_search_logs_by_correlation_id
+```
+
+GitLab:
+
+```text
+gitlab_search_repository_candidates
+gitlab_read_repository_file
+gitlab_read_repository_file_chunk
+gitlab_read_repository_file_outline
+gitlab_read_repository_file_chunks
+gitlab_find_class_references
+gitlab_find_flow_context
+```
+
+Database:
+
+```text
+db_get_scope
+db_find_tables
+db_find_columns
+db_describe_table
+db_exists_by_key
+db_count_rows
+db_group_count
+db_sample_rows
+db_check_orphans
+db_find_relationships
+db_join_count
+db_join_sample
+db_compare_table_to_expected_mapping
+db_execute_readonly_sql
+```
+
+Tools sa session-bound przez hidden `ToolContext`.
+
+## Tool descriptions
+
+`CopilotToolDescriptionDecorator` dokleja guidance do opisow tools. Guidance
+jest Copilot-facing i nie zmienia Spring tool implementation.
+
+Catalog obejmuje m.in.:
+
+- `gitlab_read_repository_file`,
+- `gitlab_search_repository_candidates`,
+- `gitlab_read_repository_file_outline`,
+- `gitlab_read_repository_file_chunk`,
+- `gitlab_read_repository_file_chunks`,
+- `gitlab_find_flow_context`,
+- `gitlab_find_class_references`,
+- `db_sample_rows`,
+- `db_join_sample`,
+- `db_execute_readonly_sql`.
+
+## Tool evidence sections
+
+`CopilotToolEvidenceCaptureRegistry` publikuje:
+
+```text
+gitlab/tool-fetched-code
+gitlab/tool-search-results
+gitlab/tool-flow-context
+database/tool-results
+```
+
+DB tool evidence zawiera:
+
+- `toolName`,
+- `diagnosticQuestion`,
+- `environment`,
+- `databaseAlias`,
+- `parameters`,
+- `resultSummary`,
+- `result`.
+
+## Telemetry contract
+
+`CopilotAnalysisMetrics` agreguje per analiza:
+
+- section/item/artifact counts,
+- artifact/prompt characters,
+- preparation/client/create session/sendAndWait/total durations,
+- total tool calls,
+- Elastic/GitLab/DB calls,
+- GitLab read file/chunk calls,
+- GitLab returned characters,
+- DB query/raw SQL calls,
+- DB returned characters,
+- structured/fallback/parser state,
+- detected problem/confidence,
+- quality findings,
+- budget warnings/denials.
+
+`CopilotMetricsLogger` emituje summary log i opcjonalne tool events.
+
+## Runtime properties
+
+Copilot SDK:
+
+```properties
+analysis.ai.copilot.cli-path=copilot
+analysis.ai.copilot.working-directory=${user.dir}
+analysis.ai.copilot.model=
+analysis.ai.copilot.reasoning-effort=
+analysis.ai.copilot.client-name=incidenttracker
+analysis.ai.copilot.send-and-wait-timeout=5m
+analysis.ai.copilot.github-token=
+analysis.ai.copilot.permission-mode=approve-all
+analysis.ai.copilot.skill-resource-roots=copilot/skills
+analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
+analysis.ai.copilot.skill-directories=
+analysis.ai.copilot.disabled-skills=
+```
+
+Metrics:
+
+```properties
+analysis.ai.copilot.metrics.enabled=true
+analysis.ai.copilot.metrics.log-summary=true
+analysis.ai.copilot.metrics.log-tool-events=true
+```
+
+Quality:
+
+```properties
+analysis.ai.copilot.quality-gate.enabled=true
+analysis.ai.copilot.quality-gate.mode=report-only
+analysis.ai.copilot.quality-gate.min-affected-function-characters=80
+analysis.ai.copilot.quality-gate.high-confidence-visibility-limit-threshold=2
+```
+
+Tool budget:
+
+```properties
+analysis.ai.copilot.tool-budget.enabled=true
+analysis.ai.copilot.tool-budget.mode=soft
+analysis.ai.copilot.tool-budget.max-total-calls=16
+analysis.ai.copilot.tool-budget.max-elastic-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-calls=8
+analysis.ai.copilot.tool-budget.max-gitlab-search-calls=3
+analysis.ai.copilot.tool-budget.max-gitlab-read-file-calls=1
+analysis.ai.copilot.tool-budget.max-gitlab-read-chunk-calls=6
+analysis.ai.copilot.tool-budget.max-gitlab-returned-characters=80000
+analysis.ai.copilot.tool-budget.max-db-calls=8
+analysis.ai.copilot.tool-budget.max-db-raw-sql-calls=0
+analysis.ai.copilot.tool-budget.max-db-returned-characters=64000
+```
+
+Nie ma aktywnej flagi `analysis.ai.copilot.response-format`. Response format
+jest JSON-only w aktualnym runtime.
+
+## Safety defaults
+
+- Local workspace/filesystem/shell/terminal blocked by session hooks.
+- Raw SQL blocked by policy and default budget.
+- Tool budget soft by default.
+- Quality gate report-only by default.
+- Artifacts embedded in prompt, not local attachments.

@@ -1,255 +1,169 @@
 # Functional And Technical Optimization Backlog
 
-## Jak czytac backlog
+Ten backlog pokazuje, co po optymalizacjach Copilota jest juz zrobione, a co
+pozostaje do kolejnych PR-ow.
 
-To nie jest finalny roadmap commit.
-To jest uporzadkowana lista tematow, ktore warto warsztatowo ocenic w GPT Pro.
+## Done
 
-Skala priorytetu:
+Telemetry:
 
-- `P1` wysoki impact / bliski horyzont
-- `P2` sredni impact albo wazny fundament
-- `P3` dalszy horyzont
+- metrics registry per `copilotSessionId`,
+- preparation metrics,
+- execution durations,
+- tool counts by group,
+- returned characters,
+- parser/fallback fields,
+- budget and quality signals.
 
-## Co jest juz zrobione i nie wraca jako backlog bazowy
+Response contract:
 
-Te tematy sa juz w kodzie i nie powinny wracac jako "pierwszy krok":
+- JSON-only prompt contract,
+- DTO/parser pod `analysis.ai.copilot.response`,
+- fenced JSON tolerance,
+- partial fallback preserving parsed fields,
+- legacy labels removed.
 
-- session-bound GitLab tools,
-- session-bound Database tools,
-- application-scoped DB discovery,
-- jawny backendowy `sessionId`,
-- hidden `ToolContext` z audit metadata,
-- podzial skilli na core, GitLab i data diagnostics.
+Quality:
 
-## Funkcjonalne
+- `CopilotResponseQualityGate`,
+- quality findings/severity/report,
+- report-only default,
+- telemetry/log integration.
 
-### P1. Lepszy wynik koncowy dla operatora
+Coverage and policy:
 
-Cel:
+- `CopilotEvidenceCoverageEvaluator`,
+- Elastic/GitLab/runtime/operational/data diagnostic coverage,
+- evidence gaps in manifest,
+- coverage-aware `CopilotToolAccessPolicy`,
+- DB tools gated by environment and data need.
 
-- wynik ma byc bardziej akcyjny i latwiejszy do handoffu.
+Artifacts:
 
-Kierunki:
+- `00-incident-manifest.json`,
+- `01-incident-digest.md`,
+- stable artifact-only item IDs,
+- evidence references in JSON contract,
+- manifest read order.
 
-- confidence level,
-- suggested owner / handoff target,
-- oddzielenie confirmed facts od hypothesis w osobnych sekcjach UI,
-- jawne wskazanie: wewnatrz naszego systemu vs poza nasza widocznoscia.
+Tool governance:
 
-Dotkniete miejsca:
+- backend tool budget,
+- soft/hard modes,
+- raw SQL separate limit,
+- tool description decorators,
+- extended DB/GitLab capture.
 
-- `AnalysisResultResponse`
-- provider AI
-- frontend components wyniku
+Flow:
 
-### P1. Czytelniejsza prezentacja evidence i tool traces w UI
+- `AnalysisAiPreparedAnalysis`,
+- `CopilotSdkPreparedRequest` implements generic prepared contract,
+- orchestrator builds prompt once and reuses prepared request.
 
-Cel:
+Docs:
 
-- operator ma szybciej rozumiec, co AI zobaczylo i co dociagnelo w trakcie
-  sesji.
+- architecture, onboarding and `/pro` context updated for current runtime.
 
-Kierunki:
+## P0 - Evaluation and regressions
 
-- osobna sekcja Dynatrace signals,
-- lepszy viewer GitLab code evidence,
-- decyzja, czy pokazywac DB findings jako osobny stream diagnostyczny,
-- agregacja deployment facts,
-- szybkie highlighty najwazniejszych sygnalow.
+Add golden evaluation fixtures for Copilot output:
 
-Dotkniete miejsca:
+- input evidence pack,
+- expected required JSON fields,
+- expected affected function depth,
+- accepted/rejected recommended actions,
+- expected evidence reference behavior,
+- expected tool budget envelope.
 
-- frontend
-- `AnalysisJobResponse`
-- `toolEvidenceSections`
+This is the biggest missing safety net before more prompt/model changes.
 
-### P2. Historia i porownywanie analiz
+## P1 - Observability productization
 
-Cel:
+Turn telemetry logs into a usable report:
 
-- latwiejszy powrot do poprzednich incidentow i eksportow.
+- aggregate by analysis run,
+- show latency and cost proxies,
+- show fallback/quality/budget rates,
+- compare before/after policy or prompt changes.
 
-Kierunki:
+Can start as offline script or dev endpoint before UI.
 
-- trwala historia jobow,
-- porownanie dwoch analiz,
-- seed dla recurring incidents.
+## P1 - UI audit view
 
-### P2. Rozszerzenie operational context
+Expose in job UI:
 
-Cel:
+- `toolEvidenceSections`,
+- budget warnings/denials,
+- quality findings,
+- evidence references,
+- visibility limits,
+- coverage report.
 
-- lepsze dopasowanie ownership, bounded context i repo mapy.
+The backend already produces most of this material; UX still needs projection.
 
-Kierunki:
+## P1 - Budget tuning
 
-- wlaczenie w wybranych srodowiskach,
-- lepsze curated files,
-- sensowniejsze limity matchowania.
+Tune defaults using real sessions:
 
-### P3. Sugerowanie dalszych pytan diagnostycznych
+- GitLab search limit,
+- GitLab chunk limit,
+- returned character limits,
+- DB discovery vs typed diagnostics,
+- raw SQL policy.
 
-Cel:
+Keep raw SQL default at zero until there is a separate approval story.
 
-- jesli widocznosc jest slaba, system powinien sugerowac, czego jeszcze brakuje.
+## P2 - Soft repair
 
-Przyklady:
+Add optional `SOFT_REPAIR` quality mode:
 
-- brakujacy downstream logs,
-- brak dostepu do DB capability,
-- brak potwierdzenia stanu asynchronicznego procesu.
+- run a short second model pass,
+- include failed quality findings,
+- require corrected JSON only,
+- no additional tools in repair stage unless explicitly designed.
 
-## Techniczne
+Do not mix this with parser fallback.
 
-### P1. Telemetry i budzetowanie pracy Copilota
+## P2 - Permission hardening
 
-Cel:
+Review whether `analysis.ai.copilot.permission-mode=approve-all` should remain
+the app default. Session hooks already block local tools in analysis flow, but
+the property name is still operationally sensitive.
 
-- mierzalnosc i kontrola kosztu.
+## P2 - Deterministic evidence improvements
 
-Kierunki:
+Improve deterministic GitLab and operational context before AI:
 
-- structured session metrics,
-- tool budget,
-- attachment size metrics,
-- per-analysis cost profile,
-- osobne metryki dla GitLab i DB tools.
+- better candidate ranking,
+- richer upstream/downstream hints,
+- faster file outlines,
+- smaller code windows with stable line references.
 
-### P1. Twardszy kontrakt odpowiedzi AI
+This reduces AI tool exploration.
 
-Cel:
+## P2 - Data diagnostics governance
 
-- mniej `AI_UNSTRUCTURED_RESPONSE`.
+Improve DB governance:
 
-Kierunki:
+- more typed checks before samples,
+- stronger masking/projection rules,
+- better DB evidence UI,
+- explicit raw SQL approval if ever enabled.
 
-- JSON response,
-- stricter validation,
-- fallback response builder.
+## P3 - Model routing and multi-stage flows
 
-### P1. Audit i governance dla session-bound tools
+After golden eval and telemetry:
 
-Cel:
+- compare model/reasoning effort,
+- consider planner/diagnoser split,
+- consider no-tools first pass followed by targeted tool pass,
+- consider SDK attachments only with rollback plan.
 
-- lepsza kontrola uzycia GitLab i DB capability.
+## P3 - Pattern memory
 
-Kierunki:
+Longer-term:
 
-- limity tool calls,
-- limity chars / rows / queries,
-- czytelniejszy audit trail,
-- decyzja, czy i kiedy wolno wlaczyc raw SQL.
-
-### P1. Lepsza wydajnosc GitLab reads
-
-Cel:
-
-- mniejszy koszt czytania plikow.
-
-Aktualny problem:
-
-- `readFileChunk(...)` pobiera raw content calego pliku, a potem tnie linie po
-  stronie aplikacji.
-
-Mozliwe kierunki:
-
-- streaming lub range-like strategy,
-- request cache dla raw file content,
-- lepsza granularity chunkow.
-
-### P2. Hardening integracji
-
-Cel:
-
-- lepsza odpornosc runtime.
-
-Kierunki:
-
-- retry policy,
-- timeout policy,
-- fallback strategy,
-- lepsze error classification.
-
-### P2. Persystencja jobow
-
-Cel:
-
-- historia, niezaleznosc od restartu procesu, lepszy operator workflow.
-
-Ryzyko:
-
-- to zmienia architekture i wymaga swiadomej decyzji.
-
-### P2. Lepsze deterministic heurystyki
-
-Cel:
-
-- mniej pracy po stronie modelu.
-
-Kierunki:
-
-- trafniejsze `container/service -> project`,
-- lepsze stacktrace filtering,
-- dokladniejsze dobieranie caller/callee context.
-
-### P2. Wersjonowanie promptu, skilli i artifacts
-
-Cel:
-
-- latwiejsze A/B testy i debugowanie regresji.
-
-Kierunki:
-
-- `promptVersion`
-- `skillVersion`
-- `artifactFormatVersion`
-
-### P3. Multi-stage AI flow
-
-Cel:
-
-- osobno planning, osobno evidence gap filling, osobno final answer.
-
-### P3. Incident pattern memory
-
-Cel:
-
-- szybsze rozpoznawanie powtarzalnych klas incydentow.
-
-## Testing And Quality
-
-### P1. Testy end-to-end dla analizy
-
-Cel:
-
-- pewnosc, ze sync/job/evidence/AI glue dziala razem.
-
-### P1. Testy kontraktu prompt + skills + parser
-
-Cel:
-
-- wykrywanie regresji w shape odpowiedzi i zasadach sesji.
-
-### P2. Golden datasets dla incidentow
-
-Cel:
-
-- porownywanie trafnosci po zmianach promptu, skills i heurystyk.
-
-### P2. Testy wydajnosciowe sesji AI, GitLab exploration i DB diagnostics
-
-Cel:
-
-- zrozumienie P95 i kosztownych outlierow.
-
-## Sugerowana kolejnosc backlogu
-
-1. telemetry Copilota i tooli
-2. twardszy response contract
-3. budget i governance dla tooli
-4. lepszy deterministic context
-5. UI dla evidence, tool traces i wyniku
-6. persystencja jobow
-7. operational context rollout
-8. multi-stage AI
+- store incident patterns,
+- match recurring failures,
+- suggest known next steps,
+- keep model response grounded in current evidence, not just memory.

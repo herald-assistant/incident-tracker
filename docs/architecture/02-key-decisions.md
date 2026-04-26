@@ -1,325 +1,269 @@
 # Key Decisions
 
-## 1. `correlationId` jest jedynym biznesowym polem requestu `/analysis`
+Ten dokument zbiera decyzje architektoniczne, ktore sa wazne przy
+utrzymaniu flow analizy incydentu i integracji AI.
 
-`correlationId` nie jest traktowany jako header tej aplikacji, tylko jako dane
-wejsciowe analizy.
+## 1. Publiczny request analizy pozostaje minimalny
 
-`branch` i `environment` nie sa juz podawane przez klienta.
-Sa wyprowadzane podczas zbierania evidence, glownie z logow Elasticsearch i
-tagu obrazu kontenera.
+`POST /analysis` i `POST /analysis/jobs` przyjmuja tylko `correlationId`.
+Runtime nie przywraca `branch`, `environment`, `gitLabGroup` ani innych pol
+sterujacych do publicznego requestu.
 
-Powod:
+Konsekwencje:
 
-- aplikacja nie uczestniczy w badanym flow mikroserwisowym,
-- uzytkownik recznie uruchamia analize dla konkretnego przypadku,
-- kontekst deploymentu jest najlepiej dostepny w logs analizowanego incydentu,
-- request `/analysis` pozostaje minimalny i prosty dla uzytkownika.
+- `environment` jest wyprowadzany z evidence, przede wszystkim z logow
+  Elasticsearch i deployment context.
+- `gitLabBranch` jest wyprowadzany z evidence deployment/runtime.
+- `gitLabGroup` pochodzi z konfiguracji aplikacji.
+- uzytkownik nie moze recznie przesterowac zakresu GitLaba albo DB przez
+  publiczne API analizy.
 
-## 2. `gitLabGroup` pochodzi z konfiguracji aplikacji, a `gitLabBranch` z deployment evidence
+## 2. Flow pozostaje AI-first
 
-Grupa GitLaba nie jest dedukowana z logs ani trace.
+Evidence pipeline zbiera deterministyczny material, ale diagnoza i
+rekomendacja sa wynikiem providera AI. Nie przenosimy diagnozowania do
+centralnego rule engine.
 
-Powod:
+Heurystyki sa dozwolone tylko jako:
 
-- to stabilniejsza informacja infrastrukturalna niz evidence,
-- ogranicza przestrzen przeszukiwania,
-- upraszcza prompt i korzystanie z tooli.
+- deterministyczne wzbogacanie `AnalysisContext`,
+- ocena coverage i luk evidence,
+- polityka dostepu do tools,
+- walidacja shape/jakosci odpowiedzi AI,
+- telemetryka i audyt.
 
-Obecny model:
+Heurystyki nie powinny zastapic modelu w budowaniu diagnozy biznesowej.
 
-- `group` z `application.properties`,
-- `branch` i `environment` z osobnego kroku deployment context,
-- AI interpretuje tylko `project`, `filePath` i - jesli DB capability jest
-  wlaczona - exact `schema.table` zwrocone przez tools.
+## 3. Evidence pipeline jest deterministyczny na `AnalysisContext`
 
-## 3. Analiza jest AI-first
+Kolejne kroki evidence providerow czytaja i aktualizuja `AnalysisContext`.
+Po resolved deployment context kroki Dynatrace i GitLab deterministic moga
+dzialac rownolegle z tego samego snapshotu contextu.
 
-Wczesniejszy etap rule-based byl krokiem edukacyjnym.
+Provider evidence zwraca `AnalysisEvidenceSection`. AI layer nie powinien
+czytac DTO adapterow bezposrednio.
 
-Obecny kierunek jest taki:
+## 4. GitLab ma trzy osobne capability
 
-- evidence jest zbierane przez providery,
-- AI wykonuje wlasciwa interpretacje,
-- wynik analizy pochodzi z providera AI.
+GitLab w systemie nie jest jedna abstrakcja:
 
-To oznacza, ze nie wracamy juz do centralnego rule engine jako glownego flow,
-chyba ze kiedys potrzebny bedzie fallback albo guardrails.
+- adapter i source resolve do ogolnego dostepu do GitLaba,
+- deterministic evidence provider do deployment context/code references,
+- AI-guided tools do dociagania kodu w sesji Copilota.
 
-## 4. Evidence pipeline jest deterministyczny i pracuje na wspolnym context
+Te role nie powinny byc mieszane. Deterministic evidence ma przygotowac
+najlepszy snapshot przed AI, a tools sa tylko do uzupelniania luk.
 
-`AnalysisEvidenceProvider` nie dostaje juz tylko `correlationId`.
-Provider dostaje `AnalysisContext`, czyli:
+## 5. Skills Copilota sa runtime resource
 
-- `correlationId`,
-- evidence zebrane przez poprzednie providery.
+Skille Copilota sa pakowane z aplikacja z `src/main/resources/copilot/skills`.
+Nie traktujemy ich jako plikow `.github` repozytorium hosta.
 
-Powod:
+Skill przechowuje stale zasady pracy modelu. Dane konkretnego incydentu
+niesie prompt i artefakty przygotowane w runtime.
 
-- GitLab potrzebuje wskazowek z logs i trace,
-- przyszle providery tez moga zalezec od wczesniejszego evidence,
-- unikamy centralnego, rosnacego mappera "od wszystkiego".
+## 6. Granica AI pozostaje generyczna
 
-Aktualny model wykonania:
+Kontrakt wejscia do AI to `AnalysisAiAnalysisRequest` i lista
+`AnalysisEvidenceSection`. Prompt builder i provider AI nie przyjmuja klas
+adapter-specific.
 
-- Elasticsearch i deployment context pozostaja krokami sekwencyjnymi,
-- Dynatrace i GitLab deterministic sa uruchamiane rownolegle po deployment
-  context, bo czytaja ten sam snapshot danych wejsciowych,
-- operational context nadal startuje dopiero po dolaczeniu obu wynikow.
+Jesli AI layer potrzebuje typowego widoku evidence, powinien uzyc helperow
+widoku nad generycznymi `AnalysisEvidenceSection`, np. widokow dla logow,
+runtime signals albo resolved code evidence.
 
-Dodatkowo kazdy provider deklaruje teraz jawnie:
+## 7. Prepared analysis jest budowane raz
 
-- faze kroku,
-- jakie evidence czyta,
-- jakie evidence publikuje.
+Orchestrator nie buduje juz promptu debugowego osobno od requestu
+wykonywanego przez AI.
 
-To pozwala pokazac realne zaleznosci bez zgadywania ich po `@Order` i nazwach
-stringowych.
+Aktualny flow:
 
-## 5. AI dostaje generyczne sekcje evidence
+1. orchestrator buduje `AnalysisAiAnalysisRequest`,
+2. wywoluje `AnalysisAiProvider.prepare(request)`,
+3. zapisuje `prepared.prompt()` w stanie joba,
+4. wykonuje `AnalysisAiProvider.analyze(prepared, listener)`,
+5. zamyka `AnalysisAiPreparedAnalysis` w `finally`/try-with-resources.
 
-Domena i adaptery zachowuja typowane modele.
-Na granicy z AI evidence jest ujednolicone do:
+`CopilotSdkPreparedRequest` implementuje generyczny
+`AnalysisAiPreparedAnalysis`, ale typ SDK nie wycieka poza pakiet
+`analysis.ai.copilot`.
 
-- `AnalysisEvidenceSection`,
-- `AnalysisEvidenceItem`,
-- `AnalysisEvidenceAttribute`.
+## 8. Artefakty Copilota sa inline w promptcie
 
-Powod:
+Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
+incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie.
+`MessageOptions` dostaje finalny prompt przez `setPrompt(prompt)`.
 
-- AI nie powinno znac klas adapterow,
-- latwiej dodawac nowych providerow,
-- prompt builder i provider AI sa bardziej stabilne.
+Nie zakladamy lokalnych sciezek plikowych dla artefaktow. Zmiana delivery
+mode na SDK attachments bylaby jawna zmiana runtime wymagajaca testow,
+dokumentacji i planu rollbacku.
 
-## 6. GitLab ma dwa rozne capability pracy
+## 9. Manifest i digest sa pierwszymi artefaktami
 
-### Tryb A: deterministic resolution code evidence
+Kolejnosc artefaktow Copilota zaczyna sie od:
 
-To jest czesc zbierania evidence.
+1. `00-incident-manifest.json`
+2. `01-incident-digest.md`
+3. artefakty raw evidence
 
-GitLab provider analizuje juz zebrane logs i deployment context, a potem zwraca
-konkretne odniesienia do kodu lub fragmenty plikow.
+Manifest zawiera indeks artefaktow, polityke tools, coverage report i
+deklaruje `deliveryMode=embedded-prompt`. Digest kompresuje najwazniejsze
+fakty sesji, logi, deployment/runtime, code highlights i znane luki evidence.
 
-Sam deployment context nie jest juz odpowiedzialnoscia providera GitLaba.
-To osobny krok evidence, ktory publikuje:
+`AnalysisEvidenceItem` nie dostal publicznego pola `itemId`. Stabilne
+`itemId` sa generowane tylko podczas renderowania artefaktow Copilota i
+pojawiaja sie w manifest, JSON artifacts i markdown artifacts.
 
-- `environment`
-- `gitLabBranch`
-- project hints z deploymentu
+## 10. Kontrakt odpowiedzi AI jest JSON-only
 
-### Tryb B: AI-guided fetching
+Copilot ma zwracac tylko poprawny JSON, bez Markdown fence i bez prozy poza
+JSON. Parser obsluguje:
 
-To nie jest evidence provider.
-To jest zestaw narzedzi, z ktorych AI moze korzystac podczas sesji:
+- caly content jako JSON,
+- fenced JSON block jako tolerancje dla modelu,
+- fallback strukturalny, gdy wymaganych pol nie da sie sparsowac.
 
-- search repository candidates,
-- find class references and imports,
-- find flow context,
-- read repository file outline,
-- read repository file,
-- read repository file chunk,
-- read repository file chunks.
+Legacy labeled response parser zostal usuniety. Brak wymaganych pol powoduje
+fallback z `detectedProblem=AI_UNSTRUCTURED_RESPONSE`, ale pola juz
+sparsowane z JSON sa zachowywane.
 
-Powod rozdzielenia:
+Wymagane pola dla obecnego publicznego response to:
 
-- inna odpowiedzialnosc,
-- inny moment wykonania,
-- inna kontrola kosztu i eksploracji.
+- `detectedProblem`
+- `summary`
+- `recommendedAction`
+- `affectedFunction`
 
-W kodzie rozdzielamy to tez pakietowo:
+JSON niesie tez pola pomocnicze: `rationale`, `affectedProcess`,
+`affectedBoundedContext`, `affectedTeam`, `confidence`,
+`evidenceReferences` i `visibilityLimits`.
 
-- `analysis.adapter.gitlab`
-  generyczny adapter i source resolver,
-- `analysis.evidence.provider.deployment`
-  rozpoznanie deployment context z logs,
-- `analysis.evidence.provider.gitlabdeterministic`
-  mapping evidence -> GitLab code references,
-- `analysis.evidence.provider.operationalcontext`
-  enrichment katalogiem operacyjnym,
-- `analysis.mcp.gitlab`
-  AI-guided tools.
+## 11. Quality gate jest report-only
 
-## 7. Read modele evidence sa typowane
+`CopilotResponseQualityGate` sprawdza uzytecznosc i ugruntowanie wyniku:
 
-`AnalysisContext` nadal przechowuje generyczne sekcje evidence, ale czytanie
-sekcji odbywa sie przez typowane widoki, np. dla:
+- zbyt plytkie `affectedFunction`,
+- generyczne `recommendedAction`,
+- data issue bez DB evidence albo visibility limit,
+- ownership/context bez evidence,
+- `confidence=high` przy slabym evidence,
+- rationale bez rozdzielenia faktow, hipotez i ograniczen.
 
-- logs Elasticsearch,
-- deployment context,
-- kolejnych derived facts.
+Domyslny tryb to `REPORT_ONLY`. Findings ida do logow/telemetryki, ale nie
+zmieniaja runtime result.
 
-Powod:
+## 12. Tool policy jest coverage-aware
 
-- providery i orchestrator nie musza znac nazw atrybutow po stringach,
-- latwiej utrzymac ewolucje kontraktu evidence,
-- zaleznosci miedzy providerami sa czytelniejsze.
+Nie uzywamy juz zasady "sekcja GitLab/Elasticsearch istnieje, wiec wylacz
+tools". `CopilotEvidenceCoverageEvaluator` ocenia coverage generycznych
+evidence i tworzy `CopilotEvidenceCoverageReport`.
 
-## 8. Flow synchroniczny i jobowy reuse'uja te sama orchestration warstwe
+Polityka:
 
-`AnalysisService` i `AnalysisJobService` nie skladaja juz analizy osobno.
-Oba reuse'uja wspolny `AnalysisOrchestrator`, ktory odpowiada za:
+- Elasticsearch tools sa wlaczane przy braku logow, truncation albo braku
+  stacktrace.
+- GitLab tools sa wlaczane przy braku code evidence albo gdy jest tylko
+  symbol, stack frame, failing method lub brakuje flow context.
+- Gdy GitLab zna projekt/plik, zostaje ograniczony focused toolset.
+- DB tools sa wlaczane tylko przy resolved environment i
+  `DataDiagnosticNeed=LIKELY/REQUIRED`.
+- Dla `POSSIBLE` dostepne sa tylko discovery tools.
+- `db_execute_readonly_sql` pozostaje domyslnie zablokowany przez tool policy.
 
-- collect evidence,
-- derive deployment facts,
-- build `AnalysisAiAnalysisRequest`,
-- prepare prompt,
-- execute AI,
-- zmapowac wynik.
+Coverage i luki evidence sa widoczne w manifest/prompt.
 
-Powod:
+## 13. Tool budget jest egzekwowany w backendzie
 
-- mniej duplikacji,
-- jeden runtime flow do utrzymania,
-- mniejsze ryzyko, ze sync i async analiza beda zachowywac sie inaczej.
+Budzet tools jest session-bound i dziala w `CopilotSdkToolBridge` przed i po
+wywolaniu callbacka.
 
-## 9. GitLab tools sa session-bound przez hidden `ToolContext`
+Domyslnie `analysis.ai.copilot.tool-budget.mode=soft`, czyli przekroczenia sa
+logowane i trafiaja do telemetryki, ale tool call nie jest blokowany. Tryb
+`hard` zwraca kontrolowany wynik `denied_by_tool_budget`, zamiast zabijac cala
+sesje wyjatkiem.
 
-Model nie podaje juz `group`, `branch` ani `correlationId` do GitLab MCP tools.
+Budzet rozroznia m.in. total calls, grupy Elastic/GitLab/DB, GitLab search,
+read file/chunk, returned characters oraz raw SQL attempts.
 
-Powod:
+## 14. Tools sa session-bound i ukrywaja scope
 
-- zmniejszenie swobody modelu tam, gdzie kontekst jest juz znany,
-- mniejsze ryzyko odczytow z niewlasciwej galezi albo scope,
-- lepszy audit trail po `sessionId`, `analysisRunId` i `toolCallId`.
+GitLab, Elasticsearch i DB tools dostaja scope przez ukryty `ToolContext`.
+Model nie powinien podawac `correlationId`, `gitLabGroup`, `gitLabBranch` ani
+`environment` jako jawnych argumentow dla tych scope'ow.
 
-## 10. Database diagnostics sa osobna, opcjonalna capability AI-guided
+SessionConfig ma jawna allowliste tools, a `SessionHooks.onPreToolUse`
+blokuje lokalny workspace/filesystem/shell/terminal w glownym flow analizy.
 
-Database tools:
+## 15. Tool descriptions moga byc dekorowane dla Copilota
 
-- nie sa evidence providerem,
-- sa wlaczane warunkowo po `analysis.database.enabled=true`,
-- biora `environment` z hidden `ToolContext`,
-- rozwiazuja scope danych przez
-  `application/deployment/container/project name -> configured schema`,
-- przy symptomach JPA/data maja byc poprzedzone przez code-first targeting:
-  entity, repository predicate, tabela i relacje powinny byc najpierw
-  ugruntowane z deterministic GitLab evidence albo session GitLab tools,
-- pracuja na readonly, typed tools i exact `schema.table`.
+`CopilotToolDescriptionDecorator` dokleja krotkie guidance do opisow drogich
+lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 
-Powod:
+- full file read jest expensive i preferuje chunks/outline,
+- GitLab search powinien uzywac konkretnych seedow,
+- DB sample rows nie sluzy do przegladania danych biznesowych,
+- raw SQL jest last resort i moze byc zablokowany.
 
-- model powinien myslec w kategoriach aplikacji z evidence, a nie Oracle
-  ownera,
-- DB capability ma pomagac potwierdzic lub obalic hipotezy danych, a nie stac
-  sie osobnym pipeline ingestion.
+## 16. Tool evidence jest czescia audytu
 
-## 11. Skill Copilota jest zasobem runtime aplikacji
+`CopilotToolEvidenceCaptureRegistry` publikuje tool evidence przez
+`AnalysisAiToolEvidenceListener`.
 
-Skill nie jest trzymany w `.github`, tylko w `src/main/resources`.
+Capture obejmuje:
 
-Powod:
+- GitLab file/chunk/chunks jako `gitlab/tool-fetched-code`,
+- GitLab search jako `gitlab/tool-search-results`,
+- GitLab outline/flow/class references jako `gitlab/tool-flow-context`,
+- DB tools jako `database/tool-results` z pytaniem diagnostycznym,
+  parametrami i summary wyniku.
 
-- aplikacja ma byc deployowalna jako JAR/kontener,
-- skill ma byc dostepny w runtime,
-- skill zmienia sie razem z capability projektu.
+## 17. Telemetry jest pierwsza warstwa optymalizacji
 
-Runtime loader wypakowuje skill do katalogu filesystemowego, bo sesja Copilota
-potrzebuje realnej sciezki do katalogu ze skillami.
+Copilot zbiera metryki per analiza/sesja:
 
-## 12. Token GitLaba pochodzi z konfiguracji aplikacji
+- liczby sekcji/items/artifacts,
+- rozmiary artifacts i promptu,
+- duration preparation/client/session/sendAndWait/total,
+- liczby tool calls wedlug grup,
+- liczniki drogich tools,
+- returned characters,
+- parser/fallback/structured response,
+- detected problem/confidence,
+- quality findings,
+- budget warnings/denials.
 
-Na obecnym etapie token nie jest brany z requestu.
+Celem jest porownywanie trafnosci, kosztu i latency przed wymuszaniem
+kolejnych ograniczen.
 
-Powod:
+## 18. Raw SQL jest oddzielnym ryzykiem
 
-- to pasuje do obecnej architektury integracyjnej,
-- upraszcza flow `analysis`,
-- ogranicza liczbe wariantow do utrzymania.
+`db_execute_readonly_sql` jest traktowany osobno od typed DB tools.
+Domyslnie tool policy go nie wlacza, a budzet ma osobny limit
+`max-db-raw-sql-calls=0`.
 
-Jesli kiedys pojawi sie potrzeba per-request auth, to powinno to byc swiadome
-rozszerzenie, a nie przypadkowy mix modeli autoryzacji.
+Zmiana tej decyzji musi byc jawna i powinna obejmowac properties, testy,
+metryki i audyt wyniku.
 
-## 13. Ignorowanie SSL jest lokalne dla konkretnej integracji
+## 19. Frontend/job API nie powinny wymagac wiedzy o SDK
 
-Opcje ignorowania SSL istnieja lokalnie tylko tam, gdzie sa naprawde potrzebne,
-np. dla GitLaba albo Elasticsearch/Kibana proxy.
+Job state moze przechowywac prepared prompt i `toolEvidenceSections`, ale UI
+nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
+analizy aplikacji.
 
-Powod:
+## 20. Optymalizacje Copilota prowadzimy inkrementalnie
 
-- projekt dziala w wewnetrznym srodowisku,
-- problemy certyfikatowe moga dotyczyc tylko wybranych integracji,
-- nie chcemy globalnie oslabiac bezpieczenstwa HTTP klienta dla calej aplikacji.
+Kolejnosc prac:
 
-Aktualny stan:
+1. telemetry i baseline,
+2. JSON response contract,
+3. quality gate,
+4. coverage-aware tool policy,
+5. incident digest, item IDs i evidence references,
+6. tool budget,
+7. tool description decorators i audit capture,
+8. single prepared analysis flow,
+9. dokumentacja, pro context i decision records.
 
-- GitLab nadal ma osobna konfiguracje `analysis.gitlab.ignore-ssl-errors`,
-- Elasticsearch ma lokalny klient REST, ktory zawsze ignoruje bledy certyfikatu
-  i hosta tylko dla tej integracji,
-- nie ma per-request ani per-property przelacznika `analysis.elasticsearch.mode`
-  ani `analysis.elasticsearch.ignore-ssl-errors`.
-
-## 14. Osobny GitLab source resolver jest pomocniczym capability
-
-Endpointy `/api/gitlab/source/resolve` i `/api/gitlab/source/resolve/preview` sa celowym, prostym use
-case'em pomocniczym.
-
-Nie sa jeszcze czescia glownego flow `/analysis`.
-
-Powod:
-
-- daja latwy sposob testowania prawdziwego GitLaba,
-- pomagaja sprawdzic ranking plikow i pobieranie tresci,
-- sa reuse'owane przez deterministic provider do rozwiazywania symboli, ale nie
-  musza byc twardo wpiete jako osobny krok orchestration flow.
-
-## 15. Cache drzewa GitLaba jest ograniczony do jednego requestu
-
-`GitLabSourceResolveService` moze cache'owac wynik `repository/tree`, ale tylko
-w granicach jednego requestu HTTP.
-
-Powod:
-
-- deterministic provider i endpoint `resolve` potrafia prosic o to samo drzewo
-  wielokrotnie przy tym samym `group/project/ref`,
-- request-scoped cache ogranicza zbedne wywolania REST bez ryzyka przecieku
-  danych miedzy analizami,
-- nie chcemy jeszcze wprowadzac globalnego cache z polityka wygasania i
-  synchronizacja.
-
-## 16. Operacyjny frontend jest aplikacja Angular w tym samym repo
-
-Ekran `GET /` nie jest juz utrzymywany jako reczne `html + js + scss + css`.
-Zrodlowy frontend zyje w `frontend/`, a produkcyjny build zapisuje bundle do
-`src/main/resources/static`.
-
-Powod:
-
-- poprzednia implementacja przestala byc utrzymywalna i trudna w review,
-- Angular daje czytelniejszy podzial na komponenty, serwisy i modele UI,
-- nadal zachowujemy jeden artefakt deployowalny po stronie Spring Boot,
-- lokalny dev moze dzialac przez `npm start` z proxy na backend, bez
-  osobnego deployu frontendu.
-
-## 17. Sesja Copilota ma allowliste tooli i blokade lokalnego workspace
-
-Sesja Copilota nie powinna miec dostepu do lokalnego dysku, terminala ani
-domyslnych workspace tools podczas glownego flow `/analysis`.
-
-Powod:
-
-- analiza ma opierac sie najpierw na artefaktach wygenerowanych z evidence,
-- dostep do lokalnego repo lub PowerShella wprowadza niepotrzebna sciezke
-  eksploracji poza zakresem incydentu,
-- chcemy miec jawna, backendowa kontrole nad tym, jakie capability sa dostepne
-  modelowi w danej sesji.
-
-Aktualny model:
-
-- `SessionConfig.availableTools` ogranicza sesje do jawnie zarejestrowanych
-  Spring tools,
-- artefakty incydentu sa osadzane bezposrednio w promptcie, a nie
-  przekazywane jako lokalne sciezki plikowe,
-- ta sama tresc manifestu i evidence jest dodatkowo osadzana w samym promptcie,
-  zeby model mial gwarantowany dostep do danych nawet wtedy, gdy runtime
-  Copilota nie eksponuje osobnych artefaktow jako "otwieralnych" plikow,
-- `SessionHooks.onPreToolUse` dodatkowo blokuje kazdy tool, ktory nie jest
-  jawnie dopuszczony przez backend dla danej sesji,
-- lokalne filesystem/shell tools nie sa wystawiane do sesji,
-- Elasticsearch i GitLab capability sa artifact-gated:
-  jesli odpowiadajace im dane sa juz dolaczone do sesji jako artefakty,
-  backend nie wystawia tych tool groups do modelu,
-- jesli GitLab tools sa w ten sposob odfiltrowane, model ma wyciagac hinty
-  code-to-DB z dolaczonego `gitlab/resolved-code`, a nie oczekiwac dodatkowej
-  eksploracji repo przez tools,
-- tools pozostaja fallbackiem tylko dla brakujacej widocznosci, a nie pierwszym
-  krokiem eksploracji.
+Dopiero po tych warstwach warto dodawac wieksze zmiany, np. soft repair,
+multi-stage flow, routing modeli albo alternatywne delivery mode artefaktow.
