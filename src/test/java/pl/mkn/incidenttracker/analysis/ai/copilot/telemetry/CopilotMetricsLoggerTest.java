@@ -2,6 +2,12 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualitySeverity;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
@@ -40,7 +46,12 @@ class CopilotMetricsLoggerTest {
                 false,
                 false,
                 null,
-                null
+                null,
+                false,
+                null,
+                true,
+                0,
+                List.of()
         )));
     }
 
@@ -61,5 +72,25 @@ class CopilotMetricsLoggerTest {
                 false,
                 false
         )));
+    }
+
+    @Test
+    void shouldNotThrowWhenQualityReportContainsFindings() {
+        var logger = new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper);
+
+        assertDoesNotThrow(() -> logger.logQualityReport(
+                "corr-123",
+                new CopilotResponseQualityReport(
+                        true,
+                        CopilotResponseQualityProperties.Mode.REPORT_ONLY,
+                        false,
+                        List.of(new CopilotResponseQualityFinding(
+                                CopilotResponseQualitySeverity.WARNING,
+                                "SHALLOW_AFFECTED_FUNCTION",
+                                "affectedFunction",
+                                "affectedFunction is too shallow."
+                        ))
+                )
+        ));
     }
 }

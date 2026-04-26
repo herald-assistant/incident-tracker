@@ -4,6 +4,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
 import java.util.List;
@@ -79,6 +82,14 @@ public class CopilotSessionMetricsRegistry {
                 detectedProblem,
                 responseConfidence
         ));
+    }
+
+    public void recordQualityReport(String copilotSessionId, CopilotResponseQualityReport report) {
+        if (report == null) {
+            return;
+        }
+
+        withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordQualityReport(report));
     }
 
     public Optional<CopilotAnalysisMetrics> snapshot(String copilotSessionId) {
@@ -164,6 +175,10 @@ public class CopilotSessionMetricsRegistry {
         private boolean fallbackResponseUsed;
         private String detectedProblem;
         private String responseConfidence;
+        private boolean qualityGateEnabled;
+        private CopilotResponseQualityProperties.Mode qualityGateMode;
+        private boolean qualityGatePassed = true;
+        private List<CopilotResponseQualityFinding> qualityFindings = List.of();
 
         private MutableCopilotAnalysisMetrics(
                 String analysisRunId,
@@ -238,6 +253,13 @@ public class CopilotSessionMetricsRegistry {
             this.responseConfidence = responseConfidence;
         }
 
+        private synchronized void recordQualityReport(CopilotResponseQualityReport report) {
+            qualityGateEnabled = report.enabled();
+            qualityGateMode = report.mode();
+            qualityGatePassed = report.passed();
+            qualityFindings = report.findings();
+        }
+
         private synchronized CopilotAnalysisMetrics snapshot() {
             return new CopilotAnalysisMetrics(
                     analysisRunId,
@@ -266,7 +288,12 @@ public class CopilotSessionMetricsRegistry {
                     structuredResponse,
                     fallbackResponseUsed,
                     detectedProblem,
-                    responseConfidence
+                    responseConfidence,
+                    qualityGateEnabled,
+                    qualityGateMode,
+                    qualityGatePassed,
+                    qualityFindings.size(),
+                    qualityFindings
             );
         }
     }

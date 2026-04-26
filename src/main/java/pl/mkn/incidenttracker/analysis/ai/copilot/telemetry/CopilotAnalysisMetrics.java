@@ -1,5 +1,10 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
+
+import java.util.List;
+
 public record CopilotAnalysisMetrics(
         String analysisRunId,
         String copilotSessionId,
@@ -27,6 +32,15 @@ public record CopilotAnalysisMetrics(
         boolean structuredResponse,
         boolean fallbackResponseUsed,
         String detectedProblem,
-        String responseConfidence
+        String responseConfidence,
+        boolean qualityGateEnabled,
+        CopilotResponseQualityProperties.Mode qualityGateMode,
+        boolean qualityGatePassed,
+        int qualityFindingCount,
+        List<CopilotResponseQualityFinding> qualityFindings
 ) {
+
+    public CopilotAnalysisMetrics {
+        qualityFindings = qualityFindings != null ? List.copyOf(qualityFindings) : List.of();
+    }
 }

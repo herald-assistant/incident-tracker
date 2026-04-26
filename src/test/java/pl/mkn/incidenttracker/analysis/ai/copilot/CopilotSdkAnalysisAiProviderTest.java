@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
@@ -276,6 +278,7 @@ class CopilotSdkAnalysisAiProviderTest {
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
+                new CopilotResponseQualityGate(new CopilotResponseQualityProperties()),
                 registry,
                 logger
         );

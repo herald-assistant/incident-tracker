@@ -6,6 +6,10 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityFinding;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualitySeverity;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
 import java.util.List;
@@ -51,6 +55,20 @@ class CopilotSessionMetricsRegistryTest {
                 "DOWNSTREAM_TIMEOUT",
                 null
         );
+        registry.recordQualityReport(
+                context.copilotSessionId(),
+                new CopilotResponseQualityReport(
+                        true,
+                        CopilotResponseQualityProperties.Mode.REPORT_ONLY,
+                        false,
+                        List.of(new CopilotResponseQualityFinding(
+                                CopilotResponseQualitySeverity.WARNING,
+                                "GENERIC_RECOMMENDED_ACTION",
+                                "recommendedAction",
+                                "Action is too generic."
+                        ))
+                )
+        );
 
         var metrics = registry.snapshot(context.copilotSessionId()).orElseThrow();
 
@@ -79,6 +97,10 @@ class CopilotSessionMetricsRegistryTest {
         assertEquals("database-result".length(), metrics.databaseReturnedCharacters());
         assertTrue(metrics.structuredResponse());
         assertEquals("DOWNSTREAM_TIMEOUT", metrics.detectedProblem());
+        assertTrue(metrics.qualityGateEnabled());
+        assertEquals(CopilotResponseQualityProperties.Mode.REPORT_ONLY, metrics.qualityGateMode());
+        assertEquals(1, metrics.qualityFindingCount());
+        assertEquals("GENERIC_RECOMMENDED_ACTION", metrics.qualityFindings().get(0).code());
     }
 
     @Test
