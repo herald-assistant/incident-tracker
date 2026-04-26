@@ -57,8 +57,9 @@ guidance dla modelu. To nie zmienia implementacji tools.
 Przyklady guidance:
 
 - full file read jest expensive i powinien byc uzywany dopiero po outline/chunk,
-- GitLab search powinien uzywac seedow ze stacktrace, exception, klasy,
-  repozytorium albo service name,
+- GitLab search/flow context powinien uzywac konkretnych keywordow ze
+  stacktrace, exception, klasy, repozytorium albo service name,
+- GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB sample rows nie sluzy do przegladania danych biznesowych,
 - raw SQL jest last resort i moze byc zablokowany przez policy/budget.
 
@@ -103,13 +104,13 @@ bledu jako pustego wyniku.
 
 Capture obejmuje:
 
-- GitLab fetched code,
-- GitLab search results,
-- GitLab outline/flow/class reference context,
-- DB diagnostic summaries.
+- GitLab fetched code jako nazwa/sciezka pliku, tresc kodu i `reason`,
+- DB tool results jako prosty wynik i `reason`.
 
 Dzieki temu audyt sesji pokazuje nie tylko finalna odpowiedz AI, ale tez
-material dociagniety przez tools.
+material dociagniety przez tools bez dodatkowego szumu technicznego. GitLab
+search, outline, flow context i class references pomagaja modelowi, ale nie sa
+publikowane jako osobne sekcje user-facing evidence.
 
 Registry zarzadza lifecycle sesji i routingiem capture. Mapowanie szczegolow
 GitLab i DB jest w oddzielnych mapperach, dzieki czemu registry nie zna

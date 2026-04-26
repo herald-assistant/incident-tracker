@@ -57,6 +57,10 @@ Przed wieksza zmiana zacznij od:
 - GitLab, Elasticsearch i Database tools pozostaja session-bound przez hidden
   `ToolContext`. Model nie powinien podawac `gitLabGroup`, `gitLabBranch`,
   `environment` ani `correlationId` dla tych ukrytych scope'ow.
+- GitLab i Database tools moga miec tylko prosty operator-facing `reason` jako
+  powod wywolania. Nie przywracaj dodatkowych model-facing parametrow
+  eksploracyjnych, pytan diagnostycznych ani technicznych pseudo-heurystyk do
+  user-facing evidence.
 - GitLab i Elasticsearch tools sa fallback-only, gdy odpowiadajace evidence nie
   jest juz osadzone w artefaktach. Database tools sa opcjonalna capability
   AI-guided, nie providerem evidence.

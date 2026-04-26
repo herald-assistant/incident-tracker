@@ -218,13 +218,13 @@ Use this order unless evidence clearly justifies a different path:
 For `db_find_tables`, prefer a request shaped conceptually like:
 
 ```text
-db_find_tables(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit)
+db_find_tables(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit, reason)
 ```
 
 For `db_find_columns`, prefer a request shaped conceptually like:
 
 ```text
-db_find_columns(applicationNamePattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit)
+db_find_columns(applicationNamePattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit, reason)
 ```
 
 The backend resolves:

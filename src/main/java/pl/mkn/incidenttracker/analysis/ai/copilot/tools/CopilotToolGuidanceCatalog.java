@@ -61,6 +61,7 @@ public class CopilotToolGuidanceCatalog {
                     "gitlab_find_flow_context",
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
+                            "Use focused keywords grounded in logs, stacktrace, code evidence or current tool results.",
                             "Use recommended next reads rather than launching broad searches.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )

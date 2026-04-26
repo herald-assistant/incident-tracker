@@ -70,7 +70,7 @@ The goal is to understand the smallest useful cross-file and, when relevant, cro
 1. Prefer attached deterministic GitLab evidence.
 2. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
 3. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
-4. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear.
+4. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear; pass focused `keywords` grounded in logs, stacktrace, code evidence or current tool results.
 5. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
 6. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
 7. Use `gitlab_read_repository_file` only when:

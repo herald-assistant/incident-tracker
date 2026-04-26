@@ -502,7 +502,7 @@ public class GitLabMcpTools {
         var safeProjectNames = defaultList(projectNames);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(joinLists(
-                seedClassReferenceKeywords(className),
+                classReferenceKeywords(className),
                 defaultList(relatedHints)
         ));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
@@ -571,13 +571,7 @@ public class GitLabMcpTools {
     public GitLabFindFlowContextToolResponse findFlowContext(
             @ToolParam(required = false, description = "Candidate GitLab project paths inside the fixed session group.")
             List<String> projectNames,
-            @ToolParam(required = false, description = "Seed class from stacktrace, logs or deterministic evidence.")
-            String seedClass,
-            @ToolParam(required = false, description = "Seed method from stacktrace, logs or deterministic evidence.")
-            String seedMethod,
-            @ToolParam(required = false, description = "Seed file path from deterministic evidence.")
-            String seedFilePath,
-            @ToolParam(required = false, description = "Keywords such as entity, repository method, endpoint, queue, event type, exception or downstream client.")
+            @ToolParam(required = false, description = "Focused keywords such as grounded class, method, entity, repository method, endpoint, queue, event type, exception or downstream client.")
             List<String> keywords,
             @ToolParam(required = false, description = "Operation names inferred from logs/traces.")
             List<String> operationNames,
@@ -590,14 +584,7 @@ public class GitLabMcpTools {
         var scope = GitLabToolScope.from(toolContext);
         var safeProjectNames = defaultList(projectNames);
         var safeOperationNames = defaultList(operationNames);
-        var searchKeywords = deduplicate(joinLists(
-                seedClassReferenceKeywords(seedClass),
-                seedKeywords(
-                seedMethod,
-                fileNameWithoutExtension(seedFilePath)
-                )
-        ));
-        searchKeywords = deduplicate(joinLists(searchKeywords, defaultList(keywords)));
+        var searchKeywords = deduplicate(defaultList(keywords));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
 
         log.info(
@@ -842,7 +829,7 @@ public class GitLabMcpTools {
         return List.copyOf(deduplicated);
     }
 
-    List<String> seedClassReferenceKeywords(String className) {
+    List<String> classReferenceKeywords(String className) {
         if (!StringUtils.hasText(className)) {
             return List.of();
         }
@@ -906,16 +893,6 @@ public class GitLabMcpTools {
         joined.addAll(defaultList(left));
         joined.addAll(defaultList(right));
         return joined;
-    }
-
-    private List<String> seedKeywords(String... values) {
-        var seededValues = new ArrayList<String>();
-
-        for (var value : values) {
-            seededValues.add(value);
-        }
-
-        return seededValues;
     }
 
     private int normalizeMaxFilesPerRole(Integer maxFilesPerRole) {

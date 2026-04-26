@@ -55,6 +55,17 @@ Odpowiada za:
 Tool ma byc maly, reuse'owac adapter i brac `group`, `branch` oraz
 `correlationId` z hidden `ToolContext`, a nie od modelu.
 
+Kazdy GitLab MCP tool przyjmuje opcjonalne `reason`: krotki powod po polsku,
+po co model prosi o dany odczyt albo wyszukiwanie. `gitlab_find_flow_context`
+przyjmuje focused `keywords` z evidence/logow, bez osobnych parametrow klasy,
+metody albo pliku.
+
+User-facing capture z GitLaba pozostaje maksymalnie prosty. Do UI trafia tylko
+kod pobrany przez file/chunk/chunks: nazwa/sciezka pliku, tresc kodu,
+opcjonalny start line i `reason`. Search, outline, flow context i class
+references sa pomocnicze dla modelu i nie tworza osobnych sekcji evidence dla
+operatora.
+
 ## Dwie stale decyzje
 
 - `gitLabGroup` pochodzi z konfiguracji aplikacji,

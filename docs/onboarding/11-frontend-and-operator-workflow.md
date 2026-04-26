@@ -37,6 +37,10 @@ Aktualny frontend ma dwa route'y Angulara:
   dane dociagniete przez AI tools juz w trakcie kroku `AI_ANALYSIS`,
 - widok krokow ma specjalne rendery dla logow Elasticsearch, code/tool evidence
   z GitLaba, runtime signals Dynatrace i wynikow DB tools,
+- GitLab tool evidence pokazuje juniorowi tylko nazwe/sciezke pliku, powod
+  pobrania (`reason`) i kod,
+- DB tool evidence pokazuje powod sprawdzenia (`reason`) oraz wynik jako prosta
+  tabela albo JSON bez diagnostycznych pytan, parametrow i technicznych badge'y,
 - route `/evidence` nie zna polaczen do backendow zewnetrznych; odpala tylko
   helper endpointy Spring Boot.
 

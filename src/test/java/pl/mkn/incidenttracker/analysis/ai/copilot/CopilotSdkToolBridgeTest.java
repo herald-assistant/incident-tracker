@@ -168,7 +168,7 @@ class CopilotSdkToolBridgeTest {
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_flow_context"),
-                Set.of("projectNames", "seedClass", "seedMethod", "seedFilePath", "keywords", "operationNames", "maxFilesPerRole", "reason"),
+                Set.of("projectNames", "keywords", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
     }

@@ -116,12 +116,15 @@ Soft mode nie blokuje. Hard mode zwraca kontrolowany result
 Invocation handler publikuje tool evidence przez listener:
 
 - `gitlab/tool-fetched-code`,
-- `gitlab/tool-search-results`,
-- `gitlab/tool-flow-context`,
 - `database/tool-results`.
 
-DB summaries zawieraja pytanie diagnostyczne, parametry i summary wyniku, aby
-audyt nie byl tylko raw JSON dump.
+GitLab user-facing evidence pokazuje tylko plik/chunk, sciezke pliku, tresc
+kodu i `reason` podany przez model. Search, outline, flow context i class
+references pozostaja pomocniczymi toolami dla modelu, bez osobnych sekcji UI.
+
+DB user-facing evidence pokazuje `reason` podany przez model oraz wynik toola
+jako `result`. Nie utrzymujemy juz diagnostycznego pytania, parametrow ani
+dodatkowego streszczenia wyniku w payloadzie dla operatora.
 
 Registry capture zarzadza sesjami i routingiem. Mapowanie GitLab/DB wynikow
 jest przeniesione do mapperow, zeby lifecycle sesji nie mieszal sie z

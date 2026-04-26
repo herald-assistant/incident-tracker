@@ -29,6 +29,9 @@ Nie obejmuje:
 - Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
   `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden
   `ToolContext`, a nie przez model-facing parametry.
+- Dla GitLab i Database tools jedyny operator-facing powod wywolania to
+  opcjonalny `reason`. Nie dodawaj model-facing parametrow eksploracyjnych,
+  pytan diagnostycznych ani innych pol, ktore probuja zastapic prosty powod.
 - Nie przenos tu heurystyk incidentowych typu logs -> deployment albo
   logs -> project hints. To nalezy do evidence pipeline.
 - Nie odpalaj bezposrednio `RestClient` z warstwy MCP. Reuse'uj adaptery albo

@@ -180,11 +180,12 @@ Naturalnym kolejnym krokiem jest bardziej precyzyjna polityka, np. zostawienie
 `gitlab_find_class_references` albo `gitlab_find_flow_context` dla scenariuszy
 code-to-DB, gdy deterministic evidence jest pomocne, ale niewystarczajace.
 
-### 2. Bogatsza prezentacja wynikow DB diagnostics i AI tool evidence
+### 2. Utrzymanie prostego widoku AI tool evidence
 
 Mozliwe kierunki:
 
-- lepsze streszczenia wynikow DB tools w UI,
+- lepsze formatowanie prostych wynikow DB tools bez dodawania diagnostycznych
+  pytan, parametrow ani technicznych badge'y,
 - pinowanie najwazniejszych wynikow AI tool calls,
 - czytelniejsze laczenie promptu, evidence i kodu dociagnietego przez AI,
 - lepsze porownanie "deterministic evidence" kontra "AI-guided reads".

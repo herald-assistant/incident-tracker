@@ -221,7 +221,9 @@ skill directories i disabled skills buduje `CopilotSessionConfigFactory`.
 lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 
 - full file read jest expensive i preferuje chunks/outline,
-- GitLab search powinien uzywac konkretnych seedow,
+- GitLab search/flow context powinien uzywac konkretnych, ugruntowanych
+  keywordow,
+- GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB sample rows nie sluzy do przegladania danych biznesowych,
 - raw SQL jest last resort i moze byc zablokowany.
 
@@ -233,10 +235,16 @@ lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 Capture obejmuje:
 
 - GitLab file/chunk/chunks jako `gitlab/tool-fetched-code`,
-- GitLab search jako `gitlab/tool-search-results`,
-- GitLab outline/flow/class references jako `gitlab/tool-flow-context`,
-- DB tools jako `database/tool-results` z pytaniem diagnostycznym,
-  parametrami i summary wyniku.
+- DB tools jako `database/tool-results`.
+
+GitLab search, outline, flow context i class references sa helperami dla
+modelu, ale nie sa publikowane jako osobne user-facing sekcje evidence.
+Widok uzytkownika dla GitLaba dostaje tylko nazwe/sciezke pliku, tresc kodu i
+`reason` podany przez model.
+
+DB capture publikuje tylko prosty wynik i `reason` podany przez model. Nie
+utrzymujemy juz osobnych pytan diagnostycznych, technicznych parametrow ani
+dodatkowych streszczen wyniku w user-facing evidence.
 
 Registry zarzadza sesja i routingiem capture, a szczegoly mapowania wynikow
 GitLab/DB sa oddzielone od lifecycle sesji.

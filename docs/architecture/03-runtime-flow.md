@@ -170,7 +170,9 @@ GitLab tools:
   `gitlab_read_repository_file_outline`,
   `gitlab_read_repository_file_chunk`,
   `gitlab_read_repository_file_chunks`,
-- broad search zostaje dla braku deterministic GitLab evidence.
+- broad search zostaje dla braku deterministic GitLab evidence,
+- `gitlab_find_flow_context` przyjmuje focused `keywords`, bez osobnych
+  parametrow klasy/metody/pliku.
 
 DB tools:
 
@@ -252,12 +254,17 @@ job listenera.
 Kategorie:
 
 - `gitlab/tool-fetched-code` dla file/chunk/chunks,
-- `gitlab/tool-search-results` dla search candidates,
-- `gitlab/tool-flow-context` dla outline, flow context i class references,
 - `database/tool-results` dla DB tools.
 
-DB capture zapisuje m.in. `toolName`, `diagnosticQuestion`, `environment`,
-`databaseAlias`, `parameters`, `resultSummary` i `result`.
+GitLab capture jest celowo prosty: user-facing evidence zawiera plik/chunk,
+sciezke pliku, tresc kodu, opcjonalny numer linii startowej i `reason` podany
+przez model. Search candidates, outline, flow context i class references nie
+sa osobnymi sekcjami UI.
+
+DB capture jest rowniez celowo prosty: user-facing evidence zawiera `reason`
+podany przez model oraz wynik toola jako `result`. Nie publikujemy juz osobnych
+pytan diagnostycznych, parametrow, srodowiska, aliasu bazy ani streszczen
+wyniku jako pol dla operatora.
 
 ## 12. Response contract
 

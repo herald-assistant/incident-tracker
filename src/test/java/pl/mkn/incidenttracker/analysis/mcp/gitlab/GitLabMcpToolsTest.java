@@ -372,7 +372,7 @@ class GitLabMcpToolsTest {
     }
 
     @Test
-    void shouldFindFlowContextGroupedByRoleAndUseSeedKeywordsFromSessionBoundScope() {
+    void shouldFindFlowContextGroupedByRoleAndUseFocusedKeywordsFromSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(
@@ -428,10 +428,14 @@ class GitLabMcpToolsTest {
 
         var response = tools.findFlowContext(
                 List.of("orders-api", "orders-core"),
-                "pl.mkn.orders.OrderController",
-                "submitOrder",
-                "src/main/java/pl/mkn/orders/OrderController.java",
-                List.of("timeout", "repository"),
+                List.of(
+                        "pl.mkn.orders.OrderController",
+                        "OrderController",
+                        "import pl.mkn.orders.OrderController;",
+                        "submitOrder",
+                        "timeout",
+                        "repository"
+                ),
                 List.of("POST /orders"),
                 1,
                 "Szukam kontekstu przeplywu w tescie.",
@@ -550,7 +554,7 @@ class GitLabMcpToolsTest {
     }
 
     @Test
-    void shouldExposeHelperHeuristicsForOutlineAndRoleClassification() {
+    void shouldExposeHelpersForOutlineAndRoleClassification() {
         var tools = new GitLabMcpTools(mock(GitLabRepositoryPort.class));
 
         var outline = tools.buildOutline("""

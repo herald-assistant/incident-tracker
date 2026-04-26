@@ -34,6 +34,9 @@ Nie obejmuje:
   `src/main/resources/copilot/skills`, a nie plikiem w `.github`.
 - Tool bridge ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
   ich implementacje.
+- User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
+  `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
+  pseudo-heurystyk ani technicznych pol do payloadu dla operatora.
 - Permission handling musi byc jawnie ustawione. Nie zostawiaj domyslnego,
   nieczytelnego zachowania SDK.
 - Parsing odpowiedzi modelu ma pozostac odporny na formatowanie, ale kontrakt
