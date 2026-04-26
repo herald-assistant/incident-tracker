@@ -40,7 +40,6 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         var execution = orchestrator.analyze("timeout-123");
 
         assertEquals(1, provider.prepareCalls);
-        assertEquals(0, provider.preparePromptCalls);
         assertEquals(1, provider.analyzePreparedCalls);
         assertEquals(0, provider.analyzeRequestCalls);
         assertSame(provider.prepared, provider.analyzedPrepared);
@@ -105,7 +104,6 @@ class AnalysisOrchestratorPreparedAiFlowTest {
 
         private final boolean failOnAnalyze;
         private int prepareCalls;
-        private int preparePromptCalls;
         private int analyzePreparedCalls;
         private int analyzeRequestCalls;
         private TrackingPreparedAnalysis prepared;
@@ -113,12 +111,6 @@ class AnalysisOrchestratorPreparedAiFlowTest {
 
         private PreparedFlowProvider(boolean failOnAnalyze) {
             this.failOnAnalyze = failOnAnalyze;
-        }
-
-        @Override
-        public String preparePrompt(AnalysisAiAnalysisRequest request) {
-            preparePromptCalls++;
-            return "Legacy prompt for " + request.correlationId();
         }
 
         @Override

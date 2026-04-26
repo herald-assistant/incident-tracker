@@ -2,7 +2,9 @@ package pl.mkn.incidenttracker.analysis;
 
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 
 import java.util.Locale;
@@ -10,8 +12,13 @@ import java.util.Locale;
 public final class TestAnalysisAiProvider implements AnalysisAiProvider {
 
     @Override
-    public String preparePrompt(AnalysisAiAnalysisRequest request) {
-        return syntheticPrompt(request);
+    public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        return new TestPreparedAnalysis(
+                "test-ai-provider",
+                request.correlationId(),
+                syntheticPrompt(request),
+                request
+        );
     }
 
     @Override
@@ -60,6 +67,18 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
         );
     }
 
+    @Override
+    public AnalysisAiAnalysisResponse analyze(
+            AnalysisAiPreparedAnalysis preparedAnalysis,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
+    ) {
+        if (preparedAnalysis instanceof TestPreparedAnalysis testPreparedAnalysis) {
+            return analyze(testPreparedAnalysis.request());
+        }
+
+        throw new IllegalArgumentException("Unsupported prepared analysis: " + preparedAnalysis);
+    }
+
     private String syntheticPrompt(AnalysisAiAnalysisRequest request) {
         return "Synthetic AI prompt for correlationId=%s, environment=%s, gitLabBranch=%s"
                 .formatted(request.correlationId(), request.environment(), request.gitLabBranch());
@@ -94,5 +113,12 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
                         && attribute.value().toLowerCase(Locale.ROOT).contains(expectedPhrase));
     }
 
-}
+    private record TestPreparedAnalysis(
+            String providerName,
+            String correlationId,
+            String prompt,
+            AnalysisAiAnalysisRequest request
+    ) implements AnalysisAiPreparedAnalysis {
+    }
 
+}

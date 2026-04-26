@@ -33,25 +33,6 @@ class CopilotSdkAnalysisAiProviderPreparedFlowTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void shouldPreparePromptFromPreparedRequestAndCloseIt() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
-        var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = provider(preparationService, executionGateway);
-        var request = new AnalysisAiAnalysisRequest("corr-preview", "zt01", "main", "sample/runtime", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
-
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
-        when(preparedRequest.prompt()).thenReturn("Preview prompt from real prepared request");
-
-        var prompt = provider.preparePrompt(request);
-
-        assertEquals("Preview prompt from real prepared request", prompt);
-        verify(preparationService).prepare(request);
-        verify(preparedRequest).close();
-        verifyNoInteractions(executionGateway);
-    }
-
-    @Test
     void shouldAnalyzeAlreadyPreparedRequestWithoutPreparingAgain() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);

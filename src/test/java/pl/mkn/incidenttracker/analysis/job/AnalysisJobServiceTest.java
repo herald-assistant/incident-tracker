@@ -11,6 +11,7 @@ import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalCon
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
@@ -230,13 +231,25 @@ class AnalysisJobServiceTest {
     private static final class FailingAnalysisAiProvider implements AnalysisAiProvider {
 
         @Override
-        public String preparePrompt(AnalysisAiAnalysisRequest request) {
-            return "Prepared prompt for external fallback correlationId=%s"
-                    .formatted(request.correlationId());
+        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+            return new TestPreparedAnalysis(
+                    "failing-ai-provider",
+                    request.correlationId(),
+                    "Prepared prompt for external fallback correlationId=%s".formatted(request.correlationId()),
+                    request
+            );
         }
 
         @Override
         public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
+            throw new IllegalStateException("AI gateway timeout");
+        }
+
+        @Override
+        public AnalysisAiAnalysisResponse analyze(
+                AnalysisAiPreparedAnalysis preparedAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
             throw new IllegalStateException("AI gateway timeout");
         }
     }
@@ -247,21 +260,28 @@ class AnalysisJobServiceTest {
         private final CountDownLatch finishSignal = new CountDownLatch(1);
 
         @Override
-        public String preparePrompt(AnalysisAiAnalysisRequest request) {
-            return "Prepared prompt with live tool evidence correlationId=%s"
-                    .formatted(request.correlationId());
+        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+            return new TestPreparedAnalysis(
+                    "blocking-tool-ai-provider",
+                    request.correlationId(),
+                    "Prepared prompt with live tool evidence correlationId=%s".formatted(request.correlationId()),
+                    request
+            );
         }
 
         @Override
         public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-            return analyze(request, AnalysisAiToolEvidenceListener.NO_OP);
+            try (var prepared = prepare(request)) {
+                return analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
+            }
         }
 
         @Override
         public AnalysisAiAnalysisResponse analyze(
-                AnalysisAiAnalysisRequest request,
+                AnalysisAiPreparedAnalysis preparedAnalysis,
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
+            var prepared = testPreparedAnalysis(preparedAnalysis);
             toolEvidenceListener.onToolEvidenceUpdated(new AnalysisEvidenceSection(
                     "gitlab",
                     "tool-fetched-code",
@@ -300,7 +320,7 @@ class AnalysisJobServiceTest {
                     "Billing catalog lookup",
                     "Billing Context",
                     "Core Integration Team",
-                    preparePrompt(request)
+                    prepared.prompt()
             );
         }
 
@@ -322,5 +342,20 @@ class AnalysisJobServiceTest {
         }
     }
 
-}
+    private static TestPreparedAnalysis testPreparedAnalysis(AnalysisAiPreparedAnalysis preparedAnalysis) {
+        if (preparedAnalysis instanceof TestPreparedAnalysis testPreparedAnalysis) {
+            return testPreparedAnalysis;
+        }
 
+        throw new IllegalArgumentException("Unsupported prepared analysis: " + preparedAnalysis);
+    }
+
+    private record TestPreparedAnalysis(
+            String providerName,
+            String correlationId,
+            String prompt,
+            AnalysisAiAnalysisRequest request
+    ) implements AnalysisAiPreparedAnalysis {
+    }
+
+}

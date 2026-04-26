@@ -30,13 +30,6 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     private final CopilotMetricsLogger metricsLogger;
 
     @Override
-    public String preparePrompt(AnalysisAiAnalysisRequest request) {
-        try (var prepared = prepare(request)) {
-            return prepared.prompt();
-        }
-    }
-
-    @Override
     public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
         return preparationService.prepare(request);
     }
@@ -45,16 +38,6 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
         try (var preparedAnalysis = prepare(request)) {
             return analyzePrepared(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP, request);
-        }
-    }
-
-    @Override
-    public AnalysisAiAnalysisResponse analyze(
-            AnalysisAiAnalysisRequest request,
-            AnalysisAiToolEvidenceListener toolEvidenceListener
-    ) {
-        try (var preparedAnalysis = prepare(request)) {
-            return analyzePrepared(preparedAnalysis, toolEvidenceListener, request);
         }
     }
 
