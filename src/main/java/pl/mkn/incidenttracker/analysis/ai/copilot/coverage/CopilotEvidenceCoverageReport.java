@@ -56,10 +56,6 @@ public record CopilotEvidenceCoverageReport(
                 || hasGap("MISSING_FLOW_CONTEXT");
     }
 
-    public boolean gitLabHasKnownProjectOrFile() {
-        return gitLab != GitLabEvidenceCoverage.NONE;
-    }
-
     public boolean databaseNeedsTooling() {
         return environmentResolved
                 && (dataDiagnosticNeed == DataDiagnosticNeed.LIKELY

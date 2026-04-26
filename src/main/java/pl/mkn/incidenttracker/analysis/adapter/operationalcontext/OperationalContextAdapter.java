@@ -13,7 +13,6 @@ import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalCon
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.mapList;

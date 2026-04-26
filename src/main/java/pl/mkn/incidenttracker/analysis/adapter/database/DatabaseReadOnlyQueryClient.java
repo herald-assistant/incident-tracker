@@ -6,7 +6,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,15 +32,5 @@ public class DatabaseReadOnlyQueryClient {
                 sqlTemplate,
                 new MapSqlParameterSource(parameters)
         );
-    }
-
-    public QueryCapture query(String sqlTemplate, Map<String, ?> parameters) {
-        return new QueryCapture(sqlTemplate, new LinkedHashMap<>(parameters));
-    }
-
-    public record QueryCapture(
-            String sqlTemplate,
-            Map<String, ?> parameters
-    ) {
     }
 }

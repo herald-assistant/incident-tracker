@@ -6,9 +6,5 @@ public enum AnalysisJobStatus {
     ANALYZING,
     COMPLETED,
     NOT_FOUND,
-    FAILED;
-
-    public boolean isTerminal() {
-        return this == COMPLETED || this == NOT_FOUND || this == FAILED;
-    }
+    FAILED
 }

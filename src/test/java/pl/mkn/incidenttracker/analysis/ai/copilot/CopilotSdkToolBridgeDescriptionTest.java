@@ -9,10 +9,6 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolDescriptionDecorator;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolGuidanceCatalog;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 

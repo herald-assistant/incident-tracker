@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.incidenttracker.analysis.mcp.database.DbOperator;
 import pl.mkn.incidenttracker.analysis.mcp.database.JoinType;
-import pl.mkn.incidenttracker.analysis.mcp.database.SortDirection;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,7 +12,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;

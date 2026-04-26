@@ -109,13 +109,6 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized void markAiSkipped(String message) {
-        step(AI_STEP_CODE).markSkipped(message);
-        currentStepCode = null;
-        currentStepLabel = null;
-        touch();
-    }
-
     synchronized void markCompleted(AnalysisResultResponse result) {
         this.result = result;
         this.environment = result.environment();

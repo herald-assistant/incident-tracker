@@ -19,10 +19,6 @@ public record DynatraceIncidentEvidence(
         return new DynatraceIncidentEvidence(List.of(), List.of(), List.of());
     }
 
-    public boolean hasAnyData() {
-        return !serviceMatches.isEmpty() || !problems.isEmpty() || !metrics.isEmpty();
-    }
-
     public record ServiceMatch(
             String entityId,
             String displayName,

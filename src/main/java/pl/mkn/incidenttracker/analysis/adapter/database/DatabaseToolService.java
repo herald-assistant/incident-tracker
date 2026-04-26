@@ -17,7 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
 

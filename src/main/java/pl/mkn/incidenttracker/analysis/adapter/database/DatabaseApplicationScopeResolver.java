@@ -8,11 +8,9 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbApplicationScopeInfo;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 @Component
 @Slf4j

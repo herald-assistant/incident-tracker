@@ -46,7 +46,4 @@ public final class CopilotResponseDtos {
             String claim
     ) {
     }
-
-    public record VisibilityLimit(String description) {
-    }
 }

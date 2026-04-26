@@ -20,10 +20,6 @@ public record OperationalContextQuery(
         return new OperationalContextQuery(Set.of(), List.of(), true);
     }
 
-    public static OperationalContextQuery forEntryTypes(OperationalContextEntryType... entryTypes) {
-        return new OperationalContextQuery(Set.of(entryTypes), List.of(), true);
-    }
-
     public boolean includes(OperationalContextEntryType entryType) {
         return includedEntryTypes.isEmpty() || includedEntryTypes.contains(entryType);
     }

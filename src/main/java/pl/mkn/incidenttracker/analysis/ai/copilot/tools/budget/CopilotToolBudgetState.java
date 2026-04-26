@@ -34,10 +34,6 @@ public class CopilotToolBudgetState {
         return sessionId;
     }
 
-    public CopilotToolBudgetProperties properties() {
-        return properties;
-    }
-
     public synchronized Decision beforeInvocation(String toolName) {
         if (!properties.active()) {
             return Decision.allowed(sessionId, toolName);

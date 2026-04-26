@@ -101,11 +101,6 @@ public final class DatabaseToolDtos {
     ) {
     }
 
-    public record DbDescribeTablesRequest(
-            List<DbTableRef> tables
-    ) {
-    }
-
     public record DbExistsByKeyRequest(
             DbTableRef table,
             List<DbKeyValue> keyValues,
