@@ -25,7 +25,6 @@ public record CopilotAnalysisMetrics(
         int databaseRawSqlCalls,
         long databaseReturnedCharacters,
         boolean structuredResponse,
-        boolean legacyParserUsed,
         boolean fallbackResponseUsed,
         String detectedProblem,
         String responseConfidence

@@ -69,14 +69,12 @@ public class CopilotSessionMetricsRegistry {
     public void recordResponse(
             String copilotSessionId,
             boolean structuredResponse,
-            boolean legacyParserUsed,
             boolean fallbackResponseUsed,
             String detectedProblem,
             String responseConfidence
     ) {
         withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordResponse(
                 structuredResponse,
-                legacyParserUsed,
                 fallbackResponseUsed,
                 detectedProblem,
                 responseConfidence
@@ -163,7 +161,6 @@ public class CopilotSessionMetricsRegistry {
         private int databaseRawSqlCalls;
         private long databaseReturnedCharacters;
         private boolean structuredResponse;
-        private boolean legacyParserUsed;
         private boolean fallbackResponseUsed;
         private String detectedProblem;
         private String responseConfidence;
@@ -231,13 +228,11 @@ public class CopilotSessionMetricsRegistry {
 
         private synchronized void recordResponse(
                 boolean structuredResponse,
-                boolean legacyParserUsed,
                 boolean fallbackResponseUsed,
                 String detectedProblem,
                 String responseConfidence
         ) {
             this.structuredResponse = structuredResponse;
-            this.legacyParserUsed = legacyParserUsed;
             this.fallbackResponseUsed = fallbackResponseUsed;
             this.detectedProblem = detectedProblem;
             this.responseConfidence = responseConfidence;
@@ -269,7 +264,6 @@ public class CopilotSessionMetricsRegistry {
                     databaseRawSqlCalls,
                     databaseReturnedCharacters,
                     structuredResponse,
-                    legacyParserUsed,
                     fallbackResponseUsed,
                     detectedProblem,
                     responseConfidence

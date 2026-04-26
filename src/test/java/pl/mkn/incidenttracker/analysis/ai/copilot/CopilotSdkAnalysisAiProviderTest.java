@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
@@ -77,14 +78,19 @@ class CopilotSdkAnalysisAiProviderTest {
         when(preparationService.prepare(request)).thenReturn(preparedRequest);
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for timeout-123");
         when(executionGateway.execute(preparedRequest)).thenReturn("""
-                detectedProblem: DOWNSTREAM_TIMEOUT
-                summary: Downstream timeout is likely tied to recent HTTP client timeout changes.
-                recommendedAction: Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.
-                rationale: Timeout signals appeared in both logs and traces and align with the recent GitLab hint.
-                affectedFunction: The affected function is the outbound inventory lookup used by the billing flow before it can finalize the response.
-                affectedProcess: Rozliczenie klienta
-                affectedBoundedContext: Billing Context
-                affectedTeam: Core Integration Team
+                {
+                  "detectedProblem": "DOWNSTREAM_TIMEOUT",
+                  "summary": "Downstream timeout is likely tied to recent HTTP client timeout changes.",
+                  "recommendedAction": "Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.",
+                  "rationale": "Timeout signals appeared in both logs and traces and align with the recent GitLab hint.",
+                  "affectedFunction": "The affected function is the outbound inventory lookup used by the billing flow before it can finalize the response.",
+                  "affectedProcess": "Rozliczenie klienta",
+                  "affectedBoundedContext": "Billing Context",
+                  "affectedTeam": "Core Integration Team",
+                  "confidence": "high",
+                  "evidenceReferences": [],
+                  "visibilityLimits": []
+                }
                 """.trim());
 
         var response = provider.analyze(request);
@@ -164,28 +170,19 @@ class CopilotSdkAnalysisAiProviderTest {
         when(preparationService.prepare(request)).thenReturn(preparedRequest);
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-456");
         when(executionGateway.execute(preparedRequest)).thenReturn("""
-                The evidence is already strong and no more fetches are needed.
-
-                **detectedProblem:** EntityNotFoundException thrown when no ActiveCaseRecord exists for caseId 7001234567 matching the active-status filter
-                **summary:** **Żądanie** dla `CASE_ID=7001234567` dotarło do `ActiveCaseRecordController.getActiveCaseRecordForCaseId`.
-
-                - **Potwierdzone:** wywołanie przeszło przez `ActiveCaseRecordQueryService` i zakończyło się w `ActiveCaseRecordDomainRepository`.
-                - **Granica widoczności:** brak bezpośredniego wglądu w DB i w faktyczną listę `statuses`.
-                **recommendedAction:**
-                - **Zespół backend:** zweryfikuj, czy `ActiveCaseRecord` dla `CASE_ID=7001234567` powinien istnieć w oczekiwanych statusach.
-                - **DBA / integracja:** potwierdź, czy rekord został zapisany przed wywołaniem API.
-                **rationale:**
-                - **Logi:** stacktrace i przepływ kontrolera wskazują ten sam punkt awarii.
-                - **Kod:** `orElseThrow()` w repozytorium wspiera hipotezę o braku danych, a nie o błędzie mapowania.
-                **affectedFunction:**
-                `ActiveCaseRecordController.getActiveCaseRecordForCaseId` obsługuje odczyt aktywnego rekordu sprawy dla klienta API.
-
-                - Wejście przechodzi przez warstwę kontrolera i serwis zapytań.
-                - Krytyczny krok to pobranie rekordu z repozytorium domenowego po `caseId` i statusach aktywnych.
-                - Incydent przerywa flow dokładnie tam, gdzie system oczekuje istniejącego rekordu, ale go nie znajduje.
-                **affectedProcess:** Obsługa aktywnej sprawy
-                **affectedBoundedContext:** Case Management
-                **affectedTeam:** Zespół Case API
+                {
+                  "detectedProblem": "EntityNotFoundException thrown when no ActiveCaseRecord exists for caseId 7001234567 matching the active-status filter",
+                  "summary": "**Żądanie** dla `CASE_ID=7001234567` dotarło do `ActiveCaseRecordController.getActiveCaseRecordForCaseId`.\\n\\n- **Potwierdzone:** wywołanie przeszło przez `ActiveCaseRecordQueryService` i zakończyło się w `ActiveCaseRecordDomainRepository`.\\n- **Granica widoczności:** brak bezpośredniego wglądu w DB i w faktyczną listę `statuses`.",
+                  "recommendedAction": "- **Zespół backend:** zweryfikuj, czy `ActiveCaseRecord` dla `CASE_ID=7001234567` powinien istnieć w oczekiwanych statusach.\\n- **DBA / integracja:** potwierdź, czy rekord został zapisany przed wywołaniem API.",
+                  "rationale": "- **Logi:** stacktrace i przepływ kontrolera wskazują ten sam punkt awarii.\\n- **Kod:** `orElseThrow()` w repozytorium wspiera hipotezę o braku danych, a nie o błędzie mapowania.",
+                  "affectedFunction": "`ActiveCaseRecordController.getActiveCaseRecordForCaseId` obsługuje odczyt aktywnego rekordu sprawy dla klienta API.\\n\\n- Wejście przechodzi przez warstwę kontrolera i serwis zapytań.\\n- Krytyczny krok to pobranie rekordu z repozytorium domenowego po `caseId` i statusach aktywnych.\\n- Incydent przerywa flow dokładnie tam, gdzie system oczekuje istniejącego rekordu, ale go nie znajduje.",
+                  "affectedProcess": "Obsługa aktywnej sprawy",
+                  "affectedBoundedContext": "Case Management",
+                  "affectedTeam": "Zespół Case API",
+                  "confidence": "medium",
+                  "evidenceReferences": [],
+                  "visibilityLimits": []
+                }
                 """.trim());
 
         var response = provider.analyze(request);
@@ -234,63 +231,6 @@ class CopilotSdkAnalysisAiProviderTest {
     }
 
     @Test
-    void shouldNormalizeLegacyPipeSeparatedStructuredResponse() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
-        var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var provider = provider(preparationService, executionGateway);
-
-        var request = new AnalysisAiAnalysisRequest("corr-789", "uat2", "release-candidate", "TENANT-ALPHA", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
-
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
-        when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-789");
-        when(executionGateway.execute(preparedRequest)).thenReturn("""
-                detectedProblem: EntityNotFoundException in getLatestActiveCaseRecordByCaseIdAndStatuses
-                summary: W naszym systemie widać błąd domenowy dla `CASE_ID=7007654321`. | - Najmocniej wspiera to stacktrace do `ActiveCaseRecordDomainRepository.java:74`. | - Brakuje bezpośredniego wglądu w DB i faktyczną listę `statuses`.
-                recommendedAction: (Zespół backend) sprawdź rekord `ActiveCaseRecord` dla `CASE_ID=7007654321`. | - (Integracja / async) potwierdź, czy proces zasilania utworzył rekord przed wywołaniem API.
-                rationale: Potwierdzone w logach: `EntityNotFoundException` i pełny stacktrace. | - Potwierdzone w kodzie: `orElseThrow()` oznacza brak wyników z warstwy danych.
-                affectedFunction: Odczyt aktywnego rekordu sprawy jest częścią flow prezentacji bieżącego statusu case w API. | - Flow zaczyna się od endpointu odczytowego. | - Następnie warstwa zapytań deleguje do repozytorium domenowego. | - Incydent zatrzymuje cały flow na braku rekordu spełniającego filtr aktywnych statusów.
-                """.trim());
-
-        var response = provider.analyze(request);
-
-        assertEquals(
-                """
-                        W naszym systemie widać błąd domenowy dla `CASE_ID=7007654321`.
-                        - Najmocniej wspiera to stacktrace do `ActiveCaseRecordDomainRepository.java:74`.
-                        - Brakuje bezpośredniego wglądu w DB i faktyczną listę `statuses`.
-                        """.trim(),
-                response.summary()
-        );
-        assertEquals(
-                """
-                        - (Zespół backend) sprawdź rekord `ActiveCaseRecord` dla `CASE_ID=7007654321`.
-                        - (Integracja / async) potwierdź, czy proces zasilania utworzył rekord przed wywołaniem API.
-                        """.trim(),
-                response.recommendedAction()
-        );
-        assertEquals(
-                """
-                        - Potwierdzone w logach: `EntityNotFoundException` i pełny stacktrace.
-                        - Potwierdzone w kodzie: `orElseThrow()` oznacza brak wyników z warstwy danych.
-                        """.trim(),
-                response.rationale()
-        );
-        assertEquals(
-                """
-                        Odczyt aktywnego rekordu sprawy jest częścią flow prezentacji bieżącego statusu case w API.
-                        - Flow zaczyna się od endpointu odczytowego.
-                        - Następnie warstwa zapytań deleguje do repozytorium domenowego.
-                        - Incydent zatrzymuje cały flow na braku rekordu spełniającego filtr aktywnych statusów.
-                        """.trim(),
-                response.affectedFunction()
-        );
-        assertEquals("", response.affectedProcess());
-        assertEquals("", response.affectedBoundedContext());
-        assertEquals("", response.affectedTeam());
-    }
-
-    @Test
     void shouldFallbackWhenStructuredResponseMissesAffectedFunction() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
@@ -302,19 +242,27 @@ class CopilotSdkAnalysisAiProviderTest {
         when(preparationService.prepare(request)).thenReturn(preparedRequest);
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-999");
         when(executionGateway.execute(preparedRequest)).thenReturn("""
-                detectedProblem: DOWNSTREAM_TIMEOUT
-                summary: Timeout is visible in the downstream call path.
-                recommendedAction: Verify timeout defaults and downstream latency.
-                rationale: Logs and traces both point to the same timeout symptom.
+                {
+                  "detectedProblem": "DOWNSTREAM_TIMEOUT",
+                  "summary": "Timeout is visible in the downstream call path.",
+                  "recommendedAction": "Verify timeout defaults and downstream latency.",
+                  "rationale": "Logs and traces both point to the same timeout symptom.",
+                  "affectedProcess": "Orders",
+                  "affectedBoundedContext": "Ordering",
+                  "affectedTeam": "Orders Team",
+                  "confidence": "low",
+                  "evidenceReferences": [],
+                  "visibilityLimits": []
+                }
                 """.trim());
 
         var response = provider.analyze(request);
 
-        assertEquals("AI_UNSTRUCTURED_RESPONSE", response.detectedProblem());
+        assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
         assertEquals("", response.affectedFunction());
-        assertEquals("", response.affectedProcess());
-        assertEquals("", response.affectedBoundedContext());
-        assertEquals("", response.affectedTeam());
+        assertEquals("Orders", response.affectedProcess());
+        assertEquals("Ordering", response.affectedBoundedContext());
+        assertEquals("Orders Team", response.affectedTeam());
     }
 
     private CopilotSdkAnalysisAiProvider provider(
@@ -324,7 +272,13 @@ class CopilotSdkAnalysisAiProviderTest {
         var properties = new CopilotMetricsProperties();
         var registry = new CopilotSessionMetricsRegistry(properties);
         var logger = new CopilotMetricsLogger(properties, objectMapper);
-        return new CopilotSdkAnalysisAiProvider(preparationService, executionGateway, registry, logger);
+        return new CopilotSdkAnalysisAiProvider(
+                preparationService,
+                executionGateway,
+                new CopilotResponseParser(objectMapper),
+                registry,
+                logger
+        );
     }
 
 }

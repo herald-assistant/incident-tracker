@@ -47,7 +47,6 @@ class CopilotSessionMetricsRegistryTest {
         registry.recordResponse(
                 context.copilotSessionId(),
                 true,
-                true,
                 false,
                 "DOWNSTREAM_TIMEOUT",
                 null
@@ -79,7 +78,6 @@ class CopilotSessionMetricsRegistryTest {
         assertEquals(1, metrics.databaseRawSqlCalls());
         assertEquals("database-result".length(), metrics.databaseReturnedCharacters());
         assertTrue(metrics.structuredResponse());
-        assertTrue(metrics.legacyParserUsed());
         assertEquals("DOWNSTREAM_TIMEOUT", metrics.detectedProblem());
     }
 

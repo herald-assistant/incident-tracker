@@ -154,22 +154,7 @@ public class CopilotSdkPreparationService {
                 - If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab search for that class and its imports/references before broad DB discovery when that can narrow the affected flow or target tables.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
 
-                Return the analysis in Polish.
-                Keep field names exactly as shown below.
-                Use concise professional Markdown in field values.
-                Use `code spans` for technical identifiers such as classes, methods, exceptions, IDs, branches, files, queues, endpoints, or DB objects.
-                Use real markdown bullets on separate lines when listing multiple points.
-                Never join multiple points with pipe separators like "|".
-
-                Return exactly these lines:
-                detectedProblem: <one precise short technical label scoped as narrowly as evidence allows; plain text>
-                summary: <short markdown block: one opening sentence + 2-5 bullets covering strongest evidence, where the failure happens, likely failure domain, and visibility limits>
-                recommendedAction: <2-4 prioritized markdown bullets saying who should act next and what should be verified or changed>
-                rationale: <3-7 markdown bullets separating confirmed evidence, best-supported hypothesis, surrounding flow, and visibility limits>
-                affectedFunction: <short markdown block: one opening sentence + 2-5 bullets explaining the affected function, its role in the broader flow, key collaborators, and where the incident interrupts it>
-                affectedProcess: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>
-                affectedBoundedContext: <short Polish plain-text label grounded in operational-context evidence when available; write `nieustalone` if not grounded>
-                affectedTeam: <short Polish plain-text label for the team that should own or receive the handoff, grounded in operational-context evidence when available; write `nieustalone` if not grounded>
+                %s
 
                 Artifacts:
                 %s
@@ -184,10 +169,49 @@ public class CopilotSdkPreparationService {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
+                jsonResponseContract(),
                 formatArtifacts(renderedArtifacts),
                 formatEmbeddedArtifacts(renderedArtifacts),
                 formatAvailableToolGroups(toolAccessPolicy)
         );
+    }
+
+    private String jsonResponseContract() {
+        return """
+                Return the analysis in Polish.
+                Return only valid JSON.
+                Do not wrap it in Markdown.
+                Do not add prose before or after JSON.
+                Use concise professional Markdown in string values where the schema says markdown string.
+                Use `code spans` for technical identifiers such as classes, methods, exceptions, IDs, branches, files, queues, endpoints, or DB objects.
+                Use real markdown bullets separated by newline characters inside markdown string values when listing multiple points.
+                Never join multiple points with pipe separators like "|".
+
+                Required schema:
+                {
+                  "detectedProblem": "string",
+                  "summary": "markdown string in Polish",
+                  "recommendedAction": "markdown string in Polish",
+                  "rationale": "markdown string in Polish",
+                  "affectedFunction": "markdown string in Polish",
+                  "affectedProcess": "string or nieustalone",
+                  "affectedBoundedContext": "string or nieustalone",
+                  "affectedTeam": "string or nieustalone",
+                  "confidence": "high|medium|low",
+                  "evidenceReferences": [
+                    {
+                      "field": "detectedProblem|summary|recommendedAction|rationale|affectedFunction|affectedProcess|affectedBoundedContext|affectedTeam",
+                      "artifactId": "string",
+                      "itemId": "string",
+                      "claim": "short Polish explanation"
+                    }
+                  ],
+                  "visibilityLimits": ["string"]
+                }
+
+                `evidenceReferences` may be an empty array when stable item IDs are unavailable.
+                `visibilityLimits` should list the most important unverified assumptions or missing data.
+                """.trim();
     }
 
     private String formatAvailableToolGroups(CopilotToolAccessPolicy toolAccessPolicy) {
