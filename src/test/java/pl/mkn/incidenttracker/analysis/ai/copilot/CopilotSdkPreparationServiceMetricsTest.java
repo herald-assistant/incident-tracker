@@ -54,7 +54,7 @@ class CopilotSdkPreparationServiceMetricsTest {
 
             assertEquals(2, metrics.evidenceSectionCount());
             assertEquals(3, metrics.evidenceItemCount());
-            assertEquals(3, metrics.artifactCount());
+            assertEquals(4, metrics.artifactCount());
             assertEquals(
                     prepared.artifactContents().values().stream().mapToLong(String::length).sum(),
                     metrics.artifactTotalCharacters()

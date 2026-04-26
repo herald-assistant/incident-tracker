@@ -136,7 +136,8 @@ public class CopilotSdkPreparationService {
 
                 Hard rules:
                 - Analyze the incident artifacts as the primary source of truth.
-                - Read `00-incident-manifest.json` first and use it as the artifact index.
+                - Read `00-incident-manifest.json` first and use it as the artifact index, then read `01-incident-digest.md`.
+                - Use raw evidence artifacts to verify the digest before making a claim.
                 - Incident artifacts are embedded directly in this prompt. Do not try to open them from the local filesystem.
                 - The authoritative artifact contents are embedded below in this prompt. Treat that embedded content as the full text of the session artifacts.
                 - Do not claim that you only see the artifact list when the artifact contents are embedded below.
@@ -154,6 +155,7 @@ public class CopilotSdkPreparationService {
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
                 - If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
                 - If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab search for that class and its imports/references before broad DB discovery when that can narrow the affected flow or target tables.
+                - When possible, include evidenceReferences with artifactId and itemId for important claims.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
 
                 %s
@@ -211,7 +213,9 @@ public class CopilotSdkPreparationService {
                   "visibilityLimits": ["string"]
                 }
 
-                `evidenceReferences` may be an empty array when stable item IDs are unavailable.
+                Prefer `evidenceReferences` for important claims and use the artifact display name as `artifactId`.
+                Use stable `itemId` values from the evidence artifacts whenever a claim is grounded in a specific evidence item.
+                `evidenceReferences` may be an empty array only when a claim cannot be tied to a specific artifact item.
                 `visibilityLimits` should list the most important unverified assumptions or missing data.
                 """.trim();
     }

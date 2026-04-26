@@ -109,17 +109,21 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("gitLabGroup: sample/runtime"));
             assertTrue(prompt.contains("Analyze the incident artifacts as the primary source of truth."));
             assertTrue(prompt.contains("Read `00-incident-manifest.json` first"));
+            assertTrue(prompt.contains("then read `01-incident-digest.md`"));
+            assertTrue(prompt.contains("Use raw evidence artifacts to verify the digest before making a claim."));
             assertTrue(prompt.contains("Incident artifacts are embedded directly in this prompt. Do not try to open them from the local filesystem."));
             assertTrue(prompt.contains("The authoritative artifact contents are embedded below in this prompt."));
             assertTrue(prompt.contains("Do not claim that you only see the artifact list when the artifact contents are embedded below."));
             assertTrue(prompt.contains("Artifacts:"));
             assertTrue(prompt.contains("Embedded artifact contents:"));
             assertTrue(prompt.contains("00-incident-manifest.json"));
-            assertTrue(prompt.contains("01-elasticsearch-logs.md"));
-            assertTrue(prompt.contains("02-dynatrace-runtime-signals.md"));
-            assertTrue(prompt.contains("03-gitlab-resolved-code.md"));
+            assertTrue(prompt.contains("01-incident-digest.md"));
+            assertTrue(prompt.contains("02-elasticsearch-logs.md"));
+            assertTrue(prompt.contains("03-dynatrace-runtime-signals.md"));
+            assertTrue(prompt.contains("04-gitlab-resolved-code.md"));
             assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 00-incident-manifest.json | mimeType=application/json>>>"));
-            assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-elasticsearch-logs.md | mimeType=text/markdown>>>"));
+            assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
+            assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 02-elasticsearch-logs.md | mimeType=text/markdown>>>"));
             assertTrue(prompt.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(prompt.contains("Read timed out while calling catalog-service"));
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
@@ -142,6 +146,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
             assertTrue(prompt.contains("If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
             assertTrue(prompt.contains("If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab search for that class and its imports/references before broad DB discovery"));
+            assertTrue(prompt.contains("When possible, include evidenceReferences with artifactId and itemId for important claims."));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));
             assertTrue(prompt.contains("Return only valid JSON."));
@@ -158,17 +163,24 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(prompt.contains("\"confidence\": \"high|medium|low\""));
             assertTrue(prompt.contains("\"evidenceReferences\": ["));
             assertTrue(prompt.contains("\"visibilityLimits\": [\"string\"]"));
-            assertTrue(prompt.contains("`evidenceReferences` may be an empty array"));
+            assertTrue(prompt.contains("Prefer `evidenceReferences` for important claims"));
+            assertTrue(prompt.contains("Use stable `itemId` values from the evidence artifacts"));
             assertFalse(prompt.contains("metricLabel=service.response.time.p95"));
             assertEquals(prompt, prepared.prompt());
 
             assertTrue(prepared.messageOptions().getAttachments() == null || prepared.messageOptions().getAttachments().isEmpty());
-            assertEquals(4, prepared.artifactContents().size());
+            assertEquals(5, prepared.artifactContents().size());
             var manifestContent = prepared.artifactContents().get("00-incident-manifest.json");
             assertTrue(manifestContent.contains("\"readFirst\""));
+            assertTrue(manifestContent.contains("\"readNext\""));
+            assertTrue(manifestContent.contains("\"artifactFormatVersion\" : \"copilot-artifacts-v2\""));
             assertTrue(manifestContent.contains("\"00-incident-manifest.json\""));
-            assertTrue(manifestContent.contains("\"01-elasticsearch-logs.md\""));
-            assertTrue(manifestContent.contains("\"02-dynatrace-runtime-signals.md\""));
+            assertTrue(manifestContent.contains("\"01-incident-digest.md\""));
+            assertTrue(manifestContent.contains("\"02-elasticsearch-logs.md\""));
+            assertTrue(manifestContent.contains("\"03-dynatrace-runtime-signals.md\""));
+            assertTrue(manifestContent.contains("\"04-gitlab-resolved-code.md\""));
+            assertTrue(manifestContent.contains("\"elastic-logs-001\""));
+            assertTrue(manifestContent.contains("\"gitlab-resolved-code-001\""));
             assertTrue(manifestContent.contains("\"toolPolicy\""));
             assertTrue(manifestContent.contains("\"localWorkspaceAccessBlocked\" : true"));
             assertTrue(manifestContent.contains("\"enabledToolNames\""));
@@ -179,22 +191,31 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(manifestContent.contains("\"artifactsArePrimarySourceOfTruth\" : true"));
 
-            var logsContent = prepared.artifactContents().get("01-elasticsearch-logs.md");
+            var digestContent = prepared.artifactContents().get("01-incident-digest.md");
+            assertTrue(digestContent.contains("# Incident digest"));
+            assertTrue(digestContent.contains("- correlationId: `timeout-123`"));
+            assertTrue(digestContent.contains("- GitLab: `DIRECT_COLLABORATOR_ATTACHED`"));
+            assertTrue(digestContent.contains("## Known evidence gaps"));
+
+            var logsContent = prepared.artifactContents().get("02-elasticsearch-logs.md");
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
+            assertTrue(logsContent.contains("## itemId: elastic-logs-001"));
             assertTrue(logsContent.contains("Log entry `1` `ERROR` `billing-service`"));
             assertTrue(logsContent.contains("- message:"));
             assertTrue(logsContent.contains("Read timed out while calling catalog-service"));
             assertFalse(logsContent.contains("\"provider\""));
 
-            var dynatraceContent = prepared.artifactContents().get("02-dynatrace-runtime-signals.md");
+            var dynatraceContent = prepared.artifactContents().get("03-dynatrace-runtime-signals.md");
             assertTrue(dynatraceContent.contains("Dynatrace runtime signals"));
+            assertTrue(dynatraceContent.contains("## itemId: dynatrace-runtime-signals-001"));
             assertTrue(dynatraceContent.contains("- collection status: COLLECTED"));
             assertTrue(dynatraceContent.contains("component `case-evaluation-service`: MATCHED, SIGNALS_PRESENT."));
             assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertFalse(dynatraceContent.contains("\"metricLabel\""));
 
-            var gitLabContent = prepared.artifactContents().get("03-gitlab-resolved-code.md");
+            var gitLabContent = prepared.artifactContents().get("04-gitlab-resolved-code.md");
             assertTrue(gitLabContent.contains("GitLab resolved code references"));
+            assertTrue(gitLabContent.contains("## itemId: gitlab-resolved-code-001"));
             assertTrue(gitLabContent.contains("- repository: `edge-client-service`"));
             assertTrue(gitLabContent.contains("- returned lines: `5-12` of `14`"));
             assertTrue(gitLabContent.contains("```java"));

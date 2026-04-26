@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
@@ -23,30 +23,64 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class CopilotArtifactService {
 
+    private static final String MANIFEST_ARTIFACT_ID = "00-incident-manifest.json";
+    private static final String DIGEST_ARTIFACT_ID = "01-incident-digest.md";
+
     private final ObjectMapper objectMapper;
+    private final CopilotIncidentDigestService incidentDigestService;
+    private final CopilotArtifactItemIdGenerator itemIdGenerator;
+
+    @Autowired
+    public CopilotArtifactService(
+            ObjectMapper objectMapper,
+            CopilotIncidentDigestService incidentDigestService,
+            CopilotArtifactItemIdGenerator itemIdGenerator
+    ) {
+        this.objectMapper = objectMapper;
+        this.incidentDigestService = incidentDigestService;
+        this.itemIdGenerator = itemIdGenerator;
+    }
+
+    public CopilotArtifactService(ObjectMapper objectMapper) {
+        this(objectMapper, new CopilotIncidentDigestService(), new CopilotArtifactItemIdGenerator());
+    }
 
     public List<Artifact> renderArtifacts(
             AnalysisAiAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
+        var descriptors = buildArtifactIndex(request);
         var artifacts = new ArrayList<Artifact>();
         artifacts.add(new Artifact(
-                "00-incident-manifest.json",
+                MANIFEST_ARTIFACT_ID,
                 "Artifact index and analysis context",
                 null,
                 null,
                 null,
                 "application/json",
-                renderManifestArtifact(request, toolAccessPolicy)
+                renderManifestArtifact(request, descriptors, toolAccessPolicy)
+        ));
+        artifacts.add(new Artifact(
+                DIGEST_ARTIFACT_ID,
+                "Compressed incident digest for fast grounding",
+                "copilot",
+                "incident-digest",
+                null,
+                "text/markdown",
+                incidentDigestService.renderDigest(
+                        request,
+                        toolAccessPolicy != null
+                                ? toolAccessPolicy.evidenceCoverage()
+                                : CopilotEvidenceCoverageReport.empty()
+                )
         ));
 
         var sections = request.evidenceSections();
         for (int index = 0; index < sections.size(); index++) {
             var section = sections.get(index);
-            var displayName = buildSectionFileName(index + 1, section);
+            var displayName = buildSectionFileName(index + 2, section);
             artifacts.add(new Artifact(
                     displayName,
                     "Evidence section from provider `%s` in category `%s`".formatted(
@@ -82,10 +116,10 @@ public class CopilotArtifactService {
 
     private String renderManifestArtifact(
             AnalysisAiAnalysisRequest request,
+            List<ArtifactDescriptor> descriptors,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         try {
-            var descriptors = buildArtifactIndex(request);
             return renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy));
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to render Copilot incident manifest.", exception);
@@ -96,7 +130,7 @@ public class CopilotArtifactService {
         try {
             var readableMarkdown = buildReadableMarkdown(section);
             if (readableMarkdown != null) {
-                return readableMarkdown;
+                return addMarkdownItemIds(section, readableMarkdown);
             }
 
             return renderJson(buildEvidenceSectionPayload(section));
@@ -112,25 +146,35 @@ public class CopilotArtifactService {
     private List<ArtifactDescriptor> buildArtifactIndex(AnalysisAiAnalysisRequest request) {
         var descriptors = new ArrayList<ArtifactDescriptor>();
         descriptors.add(new ArtifactDescriptor(
-                "00-incident-manifest.json",
+                MANIFEST_ARTIFACT_ID,
                 "Artifact index and analysis context",
                 null,
                 null,
-                null
+                null,
+                List.of()
+        ));
+        descriptors.add(new ArtifactDescriptor(
+                DIGEST_ARTIFACT_ID,
+                "Compressed incident digest for fast grounding",
+                "copilot",
+                "incident-digest",
+                null,
+                List.of()
         ));
 
         var sections = request.evidenceSections();
         for (int index = 0; index < sections.size(); index++) {
             var section = sections.get(index);
             descriptors.add(new ArtifactDescriptor(
-                    buildSectionFileName(index + 1, section),
+                    buildSectionFileName(index + 2, section),
                     "Evidence section from provider `%s` in category `%s`".formatted(
                             normalizeDescriptorValue(section.provider()),
                             normalizeDescriptorValue(section.category())
                     ),
                     section.provider(),
                     section.category(),
-                    section.items().size()
+                    section.items().size(),
+                    itemIdGenerator.itemIds(section)
             ));
         }
 
@@ -158,7 +202,10 @@ public class CopilotArtifactService {
         payload.put("gitLabBranch", blankToNull(request.gitLabBranch()));
         payload.put("gitLabGroup", blankToNull(request.gitLabGroup()));
         payload.put("generatedAt", Instant.now().toString());
-        payload.put("readFirst", "00-incident-manifest.json");
+        payload.put("artifactFormatVersion", CopilotArtifactFormatVersion.V2.value());
+        payload.put("readFirst", MANIFEST_ARTIFACT_ID);
+        payload.put("readNext", DIGEST_ARTIFACT_ID);
+        payload.put("readOrder", List.of(MANIFEST_ARTIFACT_ID, DIGEST_ARTIFACT_ID));
         payload.put("artifactPolicy", Map.of(
                 "artifactsArePrimarySourceOfTruth", true,
                 "useToolsOnlyForGapFilling", true,
@@ -221,6 +268,7 @@ public class CopilotArtifactService {
         payload.put("provider", blankToNull(descriptor.provider()));
         payload.put("category", blankToNull(descriptor.category()));
         payload.put("itemCount", descriptor.itemCount());
+        payload.put("itemIds", descriptor.itemIds());
         return payload;
     }
 
@@ -229,12 +277,21 @@ public class CopilotArtifactService {
         payload.put("provider", section.provider());
         payload.put("category", section.category());
         payload.put("itemCount", section.items().size());
-        payload.put("items", section.items().stream().map(this::toEvidenceItemPayload).toList());
+        var items = new ArrayList<Map<String, Object>>();
+        for (int index = 0; index < section.items().size(); index++) {
+            items.add(toEvidenceItemPayload(section, section.items().get(index), index));
+        }
+        payload.put("items", items);
         return payload;
     }
 
-    private Map<String, Object> toEvidenceItemPayload(AnalysisEvidenceItem item) {
+    private Map<String, Object> toEvidenceItemPayload(
+            AnalysisEvidenceSection section,
+            AnalysisEvidenceItem item,
+            int index
+    ) {
         var payload = new LinkedHashMap<String, Object>();
+        payload.put("itemId", itemIdGenerator.itemId(section, index));
         payload.put("title", item.title());
         payload.put("attributes", item.attributes().stream().map(this::toAttributePayload).toList());
         payload.put("attributeMap", toAttributeMap(item.attributes()));
@@ -287,6 +344,45 @@ public class CopilotArtifactService {
         return null;
     }
 
+    private String addMarkdownItemIds(AnalysisEvidenceSection section, String markdown) {
+        var lines = new ArrayList<String>();
+        var heading = firstLine(markdown);
+        if (heading != null) {
+            lines.add(heading);
+            lines.add("");
+        }
+
+        for (int index = 0; index < section.items().size(); index++) {
+            var item = section.items().get(index);
+            lines.add("## itemId: " + itemIdGenerator.itemId(section, index));
+            lines.add("- title: `" + escapeInlineCode(normalizeDescriptorValue(item.title())) + "`");
+            lines.add("");
+        }
+
+        lines.add("## Evidence details");
+        lines.add("");
+        lines.add(markdownWithoutFirstLine(markdown).strip());
+        return String.join(System.lineSeparator(), lines).strip() + System.lineSeparator();
+    }
+
+    private String firstLine(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.lines().findFirst().orElse(null);
+    }
+
+    private String markdownWithoutFirstLine(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        var lineSeparatorIndex = value.indexOf('\n');
+        if (lineSeparatorIndex < 0) {
+            return "";
+        }
+        return value.substring(lineSeparatorIndex + 1);
+    }
+
     private String sanitize(String value) {
         var normalized = value == null ? "unknown" : value.trim().toLowerCase(Locale.ROOT);
         normalized = normalized.replaceAll("[^a-z0-9]+", "-");
@@ -302,13 +398,21 @@ public class CopilotArtifactService {
         return value != null && !value.isBlank() ? value : null;
     }
 
+    private String escapeInlineCode(String value) {
+        return value.replace('`', '\'');
+    }
+
     public record ArtifactDescriptor(
             String displayName,
             String role,
             String provider,
             String category,
-            Integer itemCount
+            Integer itemCount,
+            List<String> itemIds
     ) {
+        public ArtifactDescriptor {
+            itemIds = itemIds != null ? List.copyOf(itemIds) : List.of();
+        }
     }
 
     public record Artifact(
@@ -321,7 +425,7 @@ public class CopilotArtifactService {
             String content
     ) {
         public ArtifactDescriptor descriptor() {
-            return new ArtifactDescriptor(displayName, role, provider, category, itemCount);
+            return new ArtifactDescriptor(displayName, role, provider, category, itemCount, List.of());
         }
     }
 }
