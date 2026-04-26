@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbToolScope;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

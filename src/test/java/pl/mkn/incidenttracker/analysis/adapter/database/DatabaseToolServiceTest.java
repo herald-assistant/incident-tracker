@@ -2,19 +2,7 @@ package pl.mkn.incidenttracker.analysis.adapter.database;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbCheckOrphansRequest;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbCountRowsRequest;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbFilter;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbFindColumnsRequest;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbFindTablesRequest;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbGroupCountRequest;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbJoinCondition;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbJoinCountRequest;
 import pl.mkn.incidenttracker.analysis.mcp.database.DbOperator;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbQualifiedFilter;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbSampleRowsRequest;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbTableRef;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbToolScope;
 import pl.mkn.incidenttracker.analysis.mcp.database.JoinType;
 import pl.mkn.incidenttracker.analysis.mcp.database.SortDirection;
 
@@ -32,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
 
 class DatabaseToolServiceTest {
 
@@ -273,12 +262,12 @@ class DatabaseToolServiceTest {
                                 new DbTableRef("common_dict", "order_status")
                         ),
                         List.of(new DbJoinCondition(
-                                new pl.mkn.incidenttracker.analysis.mcp.database.DbColumnRef(new DbTableRef("orders_app", "order_event"), "status_id"),
-                                new pl.mkn.incidenttracker.analysis.mcp.database.DbColumnRef(new DbTableRef("common_dict", "order_status"), "id"),
+                                new DbColumnRef(new DbTableRef("orders_app", "order_event"), "status_id"),
+                                new DbColumnRef(new DbTableRef("common_dict", "order_status"), "id"),
                                 JoinType.INNER
                         )),
                         List.of(new DbQualifiedFilter(
-                                new pl.mkn.incidenttracker.analysis.mcp.database.DbColumnRef(new DbTableRef("common_dict", "order_status"), "status"),
+                                new DbColumnRef(new DbTableRef("common_dict", "order_status"), "status"),
                                 DbOperator.EQ,
                                 List.of("ACTIVE")
                         ))

@@ -9,6 +9,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
 
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor

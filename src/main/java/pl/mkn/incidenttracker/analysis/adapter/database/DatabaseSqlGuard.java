@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbTableRef;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbToolScope;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbTableRef;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
 
 import java.util.LinkedHashSet;
 import java.util.List;

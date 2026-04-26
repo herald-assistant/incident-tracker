@@ -1,8 +1,6 @@
 package pl.mkn.incidenttracker.analysis.adapter.database;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbTableRef;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbToolScope;
 
 import java.util.List;
 
@@ -11,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbTableRef;
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
 
 class DatabaseSqlGuardTest {
 

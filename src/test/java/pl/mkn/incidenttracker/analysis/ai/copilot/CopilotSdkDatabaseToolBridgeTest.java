@@ -15,8 +15,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContex
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbCountResult;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbTableRef;
 import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseMcpTools;
 
 import java.util.List;
@@ -34,6 +32,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbCountResult;
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbTableRef;
 
 class CopilotSdkDatabaseToolBridgeTest {
 

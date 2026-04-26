@@ -10,10 +10,10 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabFileChunkResult;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabReadRepositoryFileChunkToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabReadRepositoryFileChunksToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabReadRepositoryFileToolResponse;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkResult;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
 
 import java.util.ArrayList;
 import java.util.List;

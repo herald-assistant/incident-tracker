@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
 
 class DbToolScopeTest {
 
