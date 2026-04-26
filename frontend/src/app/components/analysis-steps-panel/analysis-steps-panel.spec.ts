@@ -223,7 +223,9 @@ describe('AnalysisStepsPanelComponent', () => {
 
     expect(content).toContain('GitLab · Pliki pobrane przez AI');
     expect(content).toContain('Baza danych · Dane pobrane przez AI');
-    expect(content).toContain('db_count_rows');
+    expect(content).toContain('Policzenie rekordów');
+    expect(content).toContain('Powód sprawdzenia');
+    expect(content).toContain('Sprawdzam, czy istnieją rekordy dla correlationId.');
     expect(content).toContain('"tableName": "ORDER_EVENT"');
     expect(content).toContain('"count": 3');
     expect(content.indexOf('GitLab · Pliki pobrane przez AI')).toBeLessThan(
@@ -563,24 +565,7 @@ function buildAiToolDatabaseSection(): AnalysisEvidenceSection {
       {
         title: 'db_count_rows',
         attributes: [
-          { name: 'environment', value: 'zt002' },
-          { name: 'databaseAlias', value: 'oracle' },
-          {
-            name: 'parameters',
-            value: `{
-  "table": {
-    "schema": "CLP",
-    "tableName": "ORDER_EVENT"
-  },
-  "filters": [
-    {
-      "column": "correlation_id",
-      "operator": "EQ",
-      "values": ["corr-123"]
-    }
-  ]
-}`
-          },
+          { name: 'reason', value: 'Sprawdzam, czy istnieją rekordy dla correlationId.' },
           {
             name: 'result',
             value: `{

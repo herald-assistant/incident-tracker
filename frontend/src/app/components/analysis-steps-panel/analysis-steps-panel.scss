@@ -215,6 +215,22 @@
   line-height: 1.6;
 }
 
+.database-tool-card__reason {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(11, 89, 61, 0.16);
+  border-radius: 8px;
+  background: #f8fffb;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.database-tool-card__reason span {
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
 .database-tool-card__metric {
   display: inline-grid;
   gap: 4px;
@@ -269,6 +285,16 @@
   margin: 0;
   font-size: 0.86rem;
   line-height: 1.4;
+}
+
+.database-tool-card__result {
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre;
+  color: var(--text-main);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .database-tool-card__lists,

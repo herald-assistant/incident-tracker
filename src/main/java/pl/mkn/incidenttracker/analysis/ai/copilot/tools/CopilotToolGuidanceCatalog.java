@@ -3,11 +3,16 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class CopilotToolGuidanceCatalog {
+
+    private static final List<String> DATABASE_REASON_GUIDANCE = List.of(
+            "Always provide reason as one short Polish sentence for the operator."
+    );
 
     private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.ofEntries(
             Map.entry(
@@ -97,6 +102,14 @@ public class CopilotToolGuidanceCatalog {
             return List.of();
         }
 
-        return GUIDANCE_BY_TOOL_NAME.getOrDefault(toolName.trim(), List.of());
+        var normalizedToolName = toolName.trim();
+        var guidance = GUIDANCE_BY_TOOL_NAME.getOrDefault(normalizedToolName, List.of());
+        if (!normalizedToolName.startsWith("db_")) {
+            return guidance;
+        }
+
+        var databaseGuidance = new ArrayList<>(guidance);
+        databaseGuidance.addAll(DATABASE_REASON_GUIDANCE);
+        return List.copyOf(databaseGuidance);
     }
 }

@@ -57,12 +57,12 @@ class CopilotSdkDatabaseToolBridgeTest {
 
         assertSchemaProperties(
                 toolsByName.get("db_find_tables"),
-                Set.of("applicationNamePattern", "tableNamePattern", "entityOrKeywordHint", "limit"),
+                Set.of("applicationNamePattern", "tableNamePattern", "entityOrKeywordHint", "limit", "reason"),
                 Set.of("environment", "schemaPattern", "toolContext", "request")
         );
         assertSchemaProperties(
                 toolsByName.get("db_find_columns"),
-                Set.of("applicationNamePattern", "tableNamePattern", "columnNamePattern", "javaFieldNameHint", "limit"),
+                Set.of("applicationNamePattern", "tableNamePattern", "columnNamePattern", "javaFieldNameHint", "limit", "reason"),
                 Set.of("environment", "schemaPattern", "toolContext", "request")
         );
         assertSchemaProperties(
@@ -111,6 +111,7 @@ class CopilotSdkDatabaseToolBridgeTest {
                 .setToolName("db_count_rows")
                 .setArguments(objectMapper.valueToTree(Map.of(
                         "table", Map.of("schema", "CLP", "tableName", "ORDER_EVENT"),
+                        "reason", "Sprawdzam liczbe rekordow dla korelacji.",
                         "filters", List.of(Map.of(
                                 "column", "correlation_id",
                                 "operator", "EQ",
@@ -133,10 +134,7 @@ class CopilotSdkDatabaseToolBridgeTest {
                         attribute -> attribute.value()
                 ));
 
-        assertEquals("zt002", attributes.get("environment"));
-        assertEquals("oracle", attributes.get("databaseAlias"));
-        assertTrue(attributes.get("parameters").contains("\"tableName\" : \"ORDER_EVENT\""));
-        assertTrue(attributes.get("parameters").contains("\"correlation_id\""));
+        assertEquals("Sprawdzam liczbe rekordow dla korelacji.", attributes.get("reason"));
         assertTrue(attributes.get("result").contains("\"count\" : 3"));
         assertTrue(attributes.get("result").contains("\"schema\" : \"CLP\""));
     }

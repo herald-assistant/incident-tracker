@@ -17,6 +17,8 @@ import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
 @ConditionalOnProperty(prefix = "analysis.database", name = "enabled", havingValue = "true")
 public class DatabaseMcpTools {
 
+    private static final String REASON_DESCRIPTION = "Short reason in Polish for the operator. Use one practical sentence.";
+
     private final DatabaseToolService databaseToolService;
 
     @Tool(
@@ -27,7 +29,11 @@ public class DatabaseMcpTools {
                     before broader DB diagnostics. The environment is taken from hidden ToolContext.
                     """
     )
-    public DbScopeResult getScope(ToolContext toolContext) {
+    public DbScopeResult getScope(
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
+            ToolContext toolContext
+    ) {
         var scope = DbToolScope.from(toolContext);
         var startedAt = System.nanoTime();
         logRequest("db_get_scope", scope, "request=no-args");
@@ -60,6 +66,8 @@ public class DatabaseMcpTools {
             String entityOrKeywordHint,
             @ToolParam(required = false, description = "Maximum number of ranked candidates to return.")
             Integer limit,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -101,6 +109,8 @@ public class DatabaseMcpTools {
             String javaFieldNameHint,
             @ToolParam(required = false, description = "Maximum number of ranked candidates to return.")
             Integer limit,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -140,6 +150,8 @@ public class DatabaseMcpTools {
     public DbTableDescription describeTable(
             @ToolParam(description = "Exact schema.table reference returned by prior DB discovery or confirmed evidence.")
             DbTableRef table,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -174,6 +186,8 @@ public class DatabaseMcpTools {
             java.util.List<DbKeyValue> keyValues,
             @ToolParam(required = false, description = "Optional projection columns to return when the row exists. Prefer a small technical projection.")
             java.util.List<String> projectionColumns,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -215,6 +229,8 @@ public class DatabaseMcpTools {
             DbTableRef table,
             @ToolParam(required = false, description = "Typed filters applied with bind parameters.")
             java.util.List<DbFilter> filters,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -255,6 +271,8 @@ public class DatabaseMcpTools {
             java.util.List<DbFilter> filters,
             @ToolParam(required = false, description = "Maximum number of grouped rows to return.")
             Integer limit,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -298,6 +316,8 @@ public class DatabaseMcpTools {
             java.util.List<DbOrderBy> orderBy,
             @ToolParam(required = false, description = "Maximum number of rows to return.")
             Integer limit,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -344,6 +364,8 @@ public class DatabaseMcpTools {
             java.util.List<DbFilter> childFilters,
             @ToolParam(required = false, description = "Maximum number of sample orphan rows to return.")
             Integer sampleLimit,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -398,6 +420,8 @@ public class DatabaseMcpTools {
             Integer depth,
             @ToolParam(required = false, description = "Whether to include inferred *_ID naming-based hints in addition to declared foreign keys.")
             Boolean includeInferred,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -436,6 +460,8 @@ public class DatabaseMcpTools {
             java.util.List<DbJoinCondition> joins,
             @ToolParam(required = false, description = "Typed qualified filters applied with bind parameters.")
             java.util.List<DbQualifiedFilter> filters,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -478,6 +504,8 @@ public class DatabaseMcpTools {
             java.util.List<DbQualifiedFilter> filters,
             @ToolParam(required = false, description = "Maximum number of rows to return.")
             Integer limit,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -522,6 +550,8 @@ public class DatabaseMcpTools {
             java.util.List<ExpectedColumn> expectedColumns,
             @ToolParam(required = false, description = "Expected relationships from code or evidence.")
             java.util.List<ExpectedRelationship> expectedRelationships,
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
+            String reason,
             ToolContext toolContext
     ) {
         var scope = DbToolScope.from(toolContext);
@@ -561,7 +591,7 @@ public class DatabaseMcpTools {
     public DbReadonlySqlResult executeReadonlySql(
             @ToolParam(description = "Single SELECT or WITH ... SELECT statement. Semicolons and mutating SQL are forbidden.")
             String sql,
-            @ToolParam(required = false, description = "Short reason why typed DB tools were insufficient.")
+            @ToolParam(required = false, description = REASON_DESCRIPTION)
             String reason,
             @ToolParam(required = false, description = "Maximum number of rows to return.")
             Integer maxRows,

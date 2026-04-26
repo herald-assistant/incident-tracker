@@ -38,6 +38,22 @@ Use the environment from manifest/prompt only for explanation in the final answe
 If DB tools are not available in the current session, do not pretend that DB data was verified.
 State that the data hypothesis requires DB verification.
 
+Every DB tool call must include the optional `reason` argument.
+
+Write `reason` in Polish as one short, practical sentence for a junior analyst.
+
+The operator UI shows this reason next to the DB result, so make it concrete and readable.
+
+Do not include hidden reasoning, long analysis, or step-by-step deliberation.
+
+Good examples:
+
+```text
+Sprawdzam, czy istnieje rekord dla identyfikatora z bledu.
+Licze rekordy, zeby porownac klucz z pelnym filtrem aplikacji.
+Sprawdzam statusy rekordow powiazanych z correlationId.
+```
+
 ---
 
 ## Oracle application schema model
@@ -243,7 +259,7 @@ Do not ask the user for the application name during normal incident analysis.
 
 Do not browse the database.
 
-Each DB call should answer one diagnostic question, for example:
+Each DB call should have one focused purpose, for example:
 
 - Does the row exist by ID?
 - Does it exist by business key?
@@ -633,6 +649,7 @@ Do not use `db_execute_readonly_sql` if the check can be expressed with:
 Raw SQL is never the first DB tool.
 
 If raw SQL is used, explain why typed tools were insufficient.
+Put that explanation in the Polish `reason` argument.
 
 ---
 

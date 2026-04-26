@@ -70,7 +70,7 @@ class CopilotPromptRendererTest {
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
         assertTrue(prompt.contains("- Elasticsearch logs: fetch additional logs only for listed log coverage gaps for the current incident correlationId."));
         assertTrue(prompt.contains("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code and flow coverage gaps."));
-        assertTrue(prompt.contains("- Database diagnostics: use discovery tools for POSSIBLE data gaps; verify data-dependent hypotheses only when coverage marks dataDiagnosticNeed as LIKELY or REQUIRED and the environment is resolved."));
+        assertTrue(prompt.contains("- Database diagnostics: use discovery tools for POSSIBLE data gaps; verify data-dependent hypotheses only when coverage marks dataDiagnosticNeed as LIKELY or REQUIRED and the environment is resolved. Include a short Polish `reason` in every Database tool call."));
     }
 
     @Test

@@ -25,7 +25,7 @@ class DatabaseMcpToolsTest {
     void shouldDelegateGetScopeWithSessionBoundScope() {
         when(databaseToolService.getScope(argThat(this::scopeMatches))).thenReturn(scopeResult());
 
-        tools.getScope(toolContext());
+        tools.getScope("Sprawdzam zakres dostepu DB.", toolContext());
 
         verify(databaseToolService).getScope(argThat(this::scopeMatches));
     }
@@ -35,7 +35,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.findTables(argThat(this::scopeMatches), eq(new DbFindTablesRequest("orders-service", "ORDER", "OrderEntity", 10))))
                 .thenReturn(tableSearchResult());
 
-        tools.findTables("orders-service", "ORDER", "OrderEntity", 10, toolContext());
+        tools.findTables("orders-service", "ORDER", "OrderEntity", 10, "Szukam tabeli zamowien.", toolContext());
 
         verify(databaseToolService).findTables(
                 argThat(this::scopeMatches),
@@ -48,7 +48,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.findColumns(argThat(this::scopeMatches), eq(new DbFindColumnsRequest("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10))))
                 .thenReturn(columnSearchResult());
 
-        tools.findColumns("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10, toolContext());
+        tools.findColumns("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10, "Szukam kolumny statusu.", toolContext());
 
         verify(databaseToolService).findColumns(
                 argThat(this::scopeMatches),
@@ -62,7 +62,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.describeTable(argThat(this::scopeMatches), eq(new DbDescribeTableRequest(table))))
                 .thenReturn(tableDescription());
 
-        tools.describeTable(table, toolContext());
+        tools.describeTable(table, "Sprawdzam strukture tabeli.", toolContext());
 
         verify(databaseToolService).describeTable(
                 argThat(this::scopeMatches),
@@ -78,7 +78,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.existsByKey(argThat(this::scopeMatches), eq(new DbExistsByKeyRequest(table, keyValues, projectionColumns))))
                 .thenReturn(existsResult());
 
-        tools.existsByKey(table, keyValues, projectionColumns, toolContext());
+        tools.existsByKey(table, keyValues, projectionColumns, "Sprawdzam, czy rekord istnieje.", toolContext());
 
         verify(databaseToolService).existsByKey(
                 argThat(this::scopeMatches),
@@ -93,7 +93,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.countRows(argThat(this::scopeMatches), eq(new DbCountRowsRequest(table, filters))))
                 .thenReturn(countResult());
 
-        tools.countRows(table, filters, toolContext());
+        tools.countRows(table, filters, "Licze rekordy dla filtra statusu.", toolContext());
 
         verify(databaseToolService).countRows(
                 argThat(this::scopeMatches),
@@ -108,7 +108,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.groupCount(argThat(this::scopeMatches), eq(new DbGroupCountRequest(table, List.of("STATUS"), filters, 5))))
                 .thenReturn(groupCountResult());
 
-        tools.groupCount(table, List.of("STATUS"), filters, 5, toolContext());
+        tools.groupCount(table, List.of("STATUS"), filters, 5, "Sprawdzam rozklad statusow.", toolContext());
 
         verify(databaseToolService).groupCount(
                 argThat(this::scopeMatches),
@@ -124,7 +124,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.sampleRows(argThat(this::scopeMatches), eq(new DbSampleRowsRequest(table, List.of("ID"), filters, orderBy, 5))))
                 .thenReturn(sampleRowsResult());
 
-        tools.sampleRows(table, List.of("ID"), filters, orderBy, 5, toolContext());
+        tools.sampleRows(table, List.of("ID"), filters, orderBy, 5, "Pobieram mala probke techniczna.", toolContext());
 
         verify(databaseToolService).sampleRows(
                 argThat(this::scopeMatches),
@@ -142,7 +142,7 @@ class DatabaseMcpToolsTest {
                 eq(new DbCheckOrphansRequest(childTable, "ORDER_ID", parentTable, "ID", filters, 5))
         )).thenReturn(orphanCheckResult());
 
-        tools.checkOrphans(childTable, "ORDER_ID", parentTable, "ID", filters, 5, toolContext());
+        tools.checkOrphans(childTable, "ORDER_ID", parentTable, "ID", filters, 5, "Sprawdzam osierocone relacje.", toolContext());
 
         verify(databaseToolService).checkOrphans(
                 argThat(this::scopeMatches),
@@ -156,7 +156,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.findRelationships(argThat(this::scopeMatches), eq(new DbFindRelationshipsRequest(tables, 2, true))))
                 .thenReturn(relationshipsResult());
 
-        tools.findRelationships(tables, 2, true, toolContext());
+        tools.findRelationships(tables, 2, true, "Sprawdzam relacje tabel.", toolContext());
 
         verify(databaseToolService).findRelationships(
                 argThat(this::scopeMatches),
@@ -183,7 +183,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.joinCount(argThat(this::scopeMatches), eq(new DbJoinCountRequest(tables, joins, filters))))
                 .thenReturn(joinCountResult());
 
-        tools.joinCount(tables, joins, filters, toolContext());
+        tools.joinCount(tables, joins, filters, "Licze wynik joina.", toolContext());
 
         verify(databaseToolService).joinCount(
                 argThat(this::scopeMatches),
@@ -214,7 +214,7 @@ class DatabaseMcpToolsTest {
         when(databaseToolService.joinSample(argThat(this::scopeMatches), eq(new DbJoinSampleRequest(tables, joins, columns, filters, 5))))
                 .thenReturn(joinSampleResult());
 
-        tools.joinSample(tables, joins, columns, filters, 5, toolContext());
+        tools.joinSample(tables, joins, columns, filters, 5, "Pobieram probke joina.", toolContext());
 
         verify(databaseToolService).joinSample(
                 argThat(this::scopeMatches),
@@ -232,7 +232,7 @@ class DatabaseMcpToolsTest {
                 eq(new DbMappingComparisonRequest(table, expectedColumns, expectedRelationships))
         )).thenReturn(mappingComparisonResult());
 
-        tools.compareTableToExpectedMapping(table, expectedColumns, expectedRelationships, toolContext());
+        tools.compareTableToExpectedMapping(table, expectedColumns, expectedRelationships, "Porownuje tabele z mapowaniem.", toolContext());
 
         verify(databaseToolService).compareTableToExpectedMapping(
                 argThat(this::scopeMatches),
@@ -244,14 +244,14 @@ class DatabaseMcpToolsTest {
     void shouldDelegateExecuteReadonlySql() {
         when(databaseToolService.executeReadonlySql(
                 argThat(this::scopeMatches),
-                eq(new DbReadonlySqlRequest("SELECT 1 FROM dual", "fallback", 5))
+                eq(new DbReadonlySqlRequest("SELECT 1 FROM dual", "Sprawdzam wynik prostego SELECT.", 5))
         )).thenReturn(readonlySqlResult());
 
-        tools.executeReadonlySql("SELECT 1 FROM dual", "fallback", 5, toolContext());
+        tools.executeReadonlySql("SELECT 1 FROM dual", "Sprawdzam wynik prostego SELECT.", 5, toolContext());
 
         verify(databaseToolService).executeReadonlySql(
                 argThat(this::scopeMatches),
-                eq(new DbReadonlySqlRequest("SELECT 1 FROM dual", "fallback", 5))
+                eq(new DbReadonlySqlRequest("SELECT 1 FROM dual", "Sprawdzam wynik prostego SELECT.", 5))
         );
     }
 
@@ -329,6 +329,6 @@ class DatabaseMcpToolsTest {
     }
 
     private DbReadonlySqlResult readonlySqlResult() {
-        return new DbReadonlySqlResult("zt01", "oracle", "fallback", List.of(Map.of("VALUE", 1)), false, List.of());
+        return new DbReadonlySqlResult("zt01", "oracle", "Sprawdzam wynik prostego SELECT.", List.of(Map.of("VALUE", 1)), false, List.of());
     }
 }

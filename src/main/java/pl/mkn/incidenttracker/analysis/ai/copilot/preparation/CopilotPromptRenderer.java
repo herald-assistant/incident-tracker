@@ -50,6 +50,7 @@ public class CopilotPromptRenderer {
                 - If a JPA, repository or data-access symptom is suspected, first use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
                 - If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab search for that class and its imports/references before broad DB discovery when that can narrow the affected flow or target tables.
                 - Every GitLab tool call must include `reason`: one short Polish sentence that explains the practical purpose of this read/search for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
+                - Every Database tool call must include `reason`: one short Polish sentence that explains why this DB result is useful for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
                 - When possible, include evidenceReferences with artifactId and itemId for important claims.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
 
@@ -127,7 +128,7 @@ public class CopilotPromptRenderer {
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {
-            rendered.append("- Database diagnostics: use discovery tools for POSSIBLE data gaps; verify data-dependent hypotheses only when coverage marks dataDiagnosticNeed as LIKELY or REQUIRED and the environment is resolved.\n");
+            rendered.append("- Database diagnostics: use discovery tools for POSSIBLE data gaps; verify data-dependent hypotheses only when coverage marks dataDiagnosticNeed as LIKELY or REQUIRED and the environment is resolved. Include a short Polish `reason` in every Database tool call.\n");
         }
 
         return rendered.length() > 0
