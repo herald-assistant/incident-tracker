@@ -80,6 +80,11 @@ Runtime rejestruje tylko tools dozwolone przez `CopilotToolAccessPolicy`.
 Policy uzywa `CopilotEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
 sekcja evidence istnieje.
 
+Gdy GitLab scope jest resolved, manifest dostaje
+`AFFECTED_FUNCTION_GITLAB_RECOMMENDED`. To zostawia focused GitLab tools do
+malego lookupu przed finalna odpowiedzia, zeby `affectedFunction` bylo
+szczegolowe i opisane jezykiem techniczno-funkcjonalnym, nie jako lista klas.
+
 Gdy coverage wykryje DB-related symptom bez ugruntowanej encji/repozytorium w
 GitLab evidence, manifest dostaje `DB_CODE_GROUNDING_NEEDED`. Wtedy policy
 zostawia focused GitLab tools, zeby model mogl sprobowac znalezc mapowanie

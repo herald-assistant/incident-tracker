@@ -45,8 +45,11 @@ public class CopilotPromptRenderer {
                 - Use tools only for evidence gaps listed in `evidenceCoverage.gaps` in `00-incident-manifest.json`.
                 - Do not use tools just because they are available.
                 - GitLab, Elasticsearch and Database tools are coverage-aware and may be enabled for targeted gap filling even when some related evidence is already attached.
-                - If the incident artifacts already contain enough evidence and the affected flow is understandable, answer directly.
+                - Treat `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` as a targeted gap: when GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer to ground `affectedFunction`.
+                - If GitLab tools are not enabled or the GitLab attempt cannot find useful flow context, use the attached artifacts and state the visibility limit instead of guessing.
+                - If the incident artifacts already contain enough evidence but GitLab tools are enabled, still use a focused GitLab search/read to improve `affectedFunction`; if GitLab tools are not enabled, answer directly from artifacts.
                 - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
+                - Write `affectedFunction` in non-code, operator-friendly technical/functional language: explain the capability, trigger, main participants, data/object being handled, and where the incident interrupts the flow.
                 - If `DB_CODE_GROUNDING_NEEDED` is listed, do not start broad DB table/column discovery from guesses.
                 - Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom, you must either cite deterministic GitLab evidence that already identifies the entity/repository mapping, call an enabled GitLab tool to try to find that mapping, or state that GitLab grounding is unavailable and use DB discovery as a fallback.
                 - Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
@@ -114,6 +117,7 @@ public class CopilotPromptRenderer {
                 Prefer `evidenceReferences` for important claims and use the artifact display name as `artifactId`.
                 Use stable `itemId` values from the evidence artifacts whenever a claim is grounded in a specific evidence item.
                 `evidenceReferences` may be an empty array only when a claim cannot be tied to a specific artifact item.
+                `affectedFunction` must be detailed, non-code, technical/functional Polish. Mention code identifiers only as supporting details, not as the whole explanation.
                 `visibilityLimits` should list the most important unverified assumptions or missing data.
                 """.trim();
     }
@@ -126,7 +130,7 @@ public class CopilotPromptRenderer {
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow or DB code-grounding gaps. Include a short Polish `reason` in every GitLab tool call.\n");
+            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps. Include a short Polish `reason` in every GitLab tool call.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {

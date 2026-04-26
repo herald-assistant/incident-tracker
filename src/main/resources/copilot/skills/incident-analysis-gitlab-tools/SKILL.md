@@ -39,12 +39,14 @@ Good examples:
 
 ## When not to use GitLab tools
 
+The exception is `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`: when that gap is listed and GitLab tools are enabled, make one focused GitLab attempt to improve `affectedFunction`, even if deterministic code evidence already explains the local failure.
+
 Do not call GitLab tools when:
 
-- attached deterministic code evidence already contains the relevant stack frame, surrounding method, direct collaborator and enough flow context for a newcomer;
+- attached deterministic code evidence already contains the relevant stack frame, surrounding method, direct collaborator and enough flow context for a newcomer, and `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` is not listed;
 - the logs, runtime signals and attached code evidence already explain both:
     - the likely issue,
-    - and the affected function / broader flow;
+    - and the affected function / broader flow, and `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` is not listed;
 - the incident is clearly outside repository visibility;
 - another tool type is more direct for the current hypothesis, for example DB tools for a concrete data check.
 
@@ -64,6 +66,25 @@ The goal is to understand the smallest useful cross-file and, when relevant, cro
 - where the incident interrupts the function,
 - what a beginner or mid-level analyst should verify next,
 - which team or owner may need to receive the handoff when evidence supports it.
+
+## AffectedFunction grounding
+
+If `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` is listed in the manifest and GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer.
+
+Use the attempt to write `affectedFunction` in non-code, technical/functional language.
+The answer should explain:
+
+- what capability or operation is affected,
+- what starts it,
+- what data or business object is being handled,
+- which application components participate at a high level,
+- where the incident interrupts the flow,
+- whether the impact is read, write, validation, async processing, integration or handoff.
+
+Do not turn `affectedFunction` into a code walkthrough.
+Mention classes, methods, files or repositories only as supporting evidence.
+
+If the GitLab attempt finds no useful flow context, stop and state that limitation.
 
 ## Tool order
 

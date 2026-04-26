@@ -145,6 +145,7 @@ Przyklady luk:
 - `MISSING_CODE_CONTEXT`,
 - `MISSING_FLOW_CONTEXT`,
 - `DB_ENVIRONMENT_UNRESOLVED`,
+- `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`,
 - `DB_CODE_GROUNDING_NEEDED`,
 - `DB_DIAGNOSTIC_NEEDED`.
 
@@ -166,6 +167,9 @@ Elasticsearch tools:
 GitLab tools:
 
 - wlaczone, gdy brakuje code evidence albo flow context,
+- wlaczone przy luce `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`, zeby model zrobil
+  focused GitLab lookup i opisal `affectedFunction` szczegolowo, ale jezykiem
+  techniczno-funkcjonalnym zamiast code walkthrough,
 - wlaczone w focused toolset przy luce `DB_CODE_GROUNDING_NEEDED`, zeby model
   sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
   discovery,
@@ -186,10 +190,12 @@ DB tools:
 - `db_execute_readonly_sql` pozostaje domyslnie disabled.
 
 Prompt instruuje model, zeby uzywal tools tylko dla luk z
-`evidenceCoverage.gaps`. Dla `DB_CODE_GROUNDING_NEEDED` model ma przed pierwsza
-proba DB table/column/schema-table query uzyc deterministic GitLab evidence albo
-wykonac focused GitLab tool call; gdy to niemozliwe, DB discovery jest jawnym
-fallbackiem z limitation w `reason`.
+`evidenceCoverage.gaps`. Dla `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` model ma
+wykonac mala, focused probe GitLab tools przed finalna odpowiedzia, jesli
+GitLab tools sa wlaczone. Dla `DB_CODE_GROUNDING_NEEDED` model ma przed
+pierwsza proba DB table/column/schema-table query uzyc deterministic GitLab
+evidence albo wykonac focused GitLab tool call; gdy to niemozliwe, DB discovery
+jest jawnym fallbackiem z limitation w `reason`.
 
 ## 8. Session config i blokady lokalne
 

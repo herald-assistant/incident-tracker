@@ -21,6 +21,7 @@ class CopilotEvidenceCoverageEvaluatorTest {
 
         assertEquals(GitLabEvidenceCoverage.NONE, report.gitLab());
         assertTrue(report.hasGap("MISSING_CODE_CONTEXT"));
+        assertTrue(report.hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED"));
     }
 
     @Test
@@ -60,6 +61,7 @@ class CopilotEvidenceCoverageEvaluatorTest {
         ))));
 
         assertEquals(GitLabEvidenceCoverage.FLOW_CONTEXT_ATTACHED, report.gitLab());
+        assertTrue(report.hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED"));
     }
 
     @Test

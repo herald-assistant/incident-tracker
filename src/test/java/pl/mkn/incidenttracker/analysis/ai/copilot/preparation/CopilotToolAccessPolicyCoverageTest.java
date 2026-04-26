@@ -70,7 +70,7 @@ class CopilotToolAccessPolicyCoverageTest {
     }
 
     @Test
-    void shouldDisableGitLabToolsWhenFlowContextIsAttached() {
+    void shouldKeepFocusedGitLabToolsWhenFlowContextIsAttachedForAffectedFunctionGrounding() {
         var policy = policy(
                 request("dev3", List.of(gitLabSection(
                         "Flow context upstream and downstream for CheckoutService",
@@ -86,9 +86,13 @@ class CopilotToolAccessPolicyCoverageTest {
                 tools("gitlab_find_flow_context", "gitlab_read_repository_file_chunk")
         );
 
-        assertEquals(List.of(), policy.availableToolNames());
+        assertTrue(policy.evidenceCoverage().hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED"));
+        assertEquals(
+                Set.of("gitlab_find_flow_context", "gitlab_read_repository_file_chunk"),
+                Set.copyOf(policy.availableToolNames())
+        );
         assertTrue(policy.disabledCapabilityGroups().stream()
-                .anyMatch(group -> "gitlab".equals(group.get("name"))));
+                .noneMatch(group -> "gitlab".equals(group.get("name"))));
     }
 
     @Test

@@ -31,6 +31,7 @@ public class CopilotToolGuidanceCatalog {
                     List.of(
                             "Use when project or file is unclear.",
                             "Prefer focused terms from stacktrace, exception, class, entity, repository or service names.",
+                            "Use to ground a detailed non-code technical-functional affectedFunction when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed.",
                             "Do not use repeatedly with broad generic terms.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
@@ -63,6 +64,7 @@ public class CopilotToolGuidanceCatalog {
                     "gitlab_find_flow_context",
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
+                            "Use when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed to identify the smallest functional flow for affectedFunction.",
                             "Use focused keywords grounded in logs, stacktrace, code evidence or current tool results.",
                             "Use recommended next reads rather than launching broad searches.",
                             "Always provide reason as one short Polish sentence for the operator."

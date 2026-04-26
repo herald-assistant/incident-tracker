@@ -30,10 +30,11 @@ A good answer should help the reader:
 4. Treat incident artifacts, or their embedded prompt copies, as the primary source of truth.
 5. Form the initial hypothesis from logs, runtime signals, deterministic code evidence and operational context.
 6. Use tools only when they can materially confirm, reject or refine a concrete hypothesis.
-7. If existing artifacts are already sufficient and the affected flow is understandable, answer without extra tool calls.
-8. If the likely technical error is clear but the broader flow is not understandable for a beginner analyst, prefer focused GitLab reads over a shallow final answer.
-9. If a capability group is disabled because equivalent artifacts are already attached, use those artifacts directly instead of complaining about missing tool access.
-10. If visibility is incomplete, explain the limitation and provide the next verification step.
+7. Treat `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` as a concrete hypothesis about the affected flow. If GitLab tools are enabled, make a focused GitLab attempt before the final answer to improve `affectedFunction`.
+8. If existing artifacts are already sufficient but GitLab tools are enabled, still use a small focused GitLab search/read for `affectedFunction`; if GitLab tools are disabled, use those artifacts directly.
+9. If the likely technical error is clear but the broader flow is not understandable for a beginner analyst, prefer focused GitLab reads over a shallow final answer.
+10. If a capability group is disabled because equivalent artifacts are already attached, use those artifacts directly instead of complaining about missing tool access.
+11. If visibility is incomplete, explain the limitation and provide the next verification step.
 
 ## Session invariants
 
@@ -104,6 +105,12 @@ Explain the function in a way that a new analyst can understand:
 - where the failure interrupts the flow,
 - whether the failure blocks read, write, validation, async processing, integration call, or handoff,
 - which upstream or downstream collaborator is relevant if supported by evidence.
+
+When GitLab tools are enabled, use them to ground `affectedFunction` before the final answer.
+Keep the exploration focused: one flow-context/class-reference search plus outline/chunks is enough unless the result clearly points to a direct collaborator.
+
+Write `affectedFunction` in non-code but technical/functional language.
+It may mention classes, methods or repositories as evidence, but the main text should describe the capability, business/technical operation, input/object, participating components and interruption point.
 
 When the technical failure is already clear but the broader flow is not clear, use focused GitLab reads to make the final answer useful to a newcomer, not only to a developer who already knows the system.
 

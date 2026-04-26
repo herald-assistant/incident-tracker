@@ -177,8 +177,12 @@ resources, tylko korzysta z query-based adaptera i wystawia typed
 Policy zostawia focused GitLab tools przy luce `DB_CODE_GROUNDING_NEEDED`, zeby
 model sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
 discovery.
+Policy zostawia tez focused GitLab tools przy
+`AFFECTED_FUNCTION_GITLAB_RECOMMENDED`, zeby model zrobil maly lookup pod
+szczegolowy, techniczno-funkcjonalny opis `affectedFunction`.
 Naturalnym kolejnym krokiem jest mierzenie, czy to faktycznie zmniejsza liczbe
-zgadywanych tabel i czy nie zwieksza niepotrzebnie kosztu GitLab calls.
+zgadywanych tabel, poprawia jakosc `affectedFunction` i czy nie zwieksza
+niepotrzebnie kosztu GitLab calls.
 
 ### 2. Utrzymanie prostego widoku AI tool evidence
 

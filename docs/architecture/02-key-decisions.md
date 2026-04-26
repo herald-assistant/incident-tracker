@@ -183,6 +183,10 @@ Polityka:
   stacktrace.
 - GitLab tools sa wlaczane przy braku code evidence albo gdy jest tylko
   symbol, stack frame, failing method lub brakuje flow context.
+- Przy resolved GitLab scope coverage dodaje luke
+  `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`; wtedy model ma wykonac focused
+  przeszukanie GitLaba przez tools, zeby `affectedFunction` bylo szczegolowe,
+  techniczno-funkcjonalne i napisane jezykiem niekodowym.
 - Gdy GitLab zna projekt/plik, zostaje ograniczony focused toolset.
 - Przy DB-related symptomach coverage moze dodac luke
   `DB_CODE_GROUNDING_NEEDED`. Wtedy focused GitLab tools pozostaja dostepne do
@@ -227,6 +231,8 @@ lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 - full file read jest expensive i preferuje chunks/outline,
 - GitLab search/flow context powinien uzywac konkretnych, ugruntowanych
   keywordow,
+- GitLab flow/search guidance przypomina, ze `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`
+  jest powodem do malego, focused GitLab lookupu pod opis funkcji,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow
   najpierw trzeba sprobowac ugruntowac encje, repozytorium, tabele i relacje z

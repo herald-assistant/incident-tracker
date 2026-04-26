@@ -41,6 +41,9 @@ Reguly:
 
 - Elastic tools sa aktywne przy brakujacych, obcietych albo niepelnych logach.
 - GitLab tools sa aktywne przy brakujacym code/flow context.
+- Przy `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` focused GitLab tools sa aktywne,
+  zeby Copilot zrobil male przeszukanie kodu i opisal `affectedFunction`
+  jezykiem techniczno-funkcjonalnym, nie jako code walkthrough.
 - Gdy GitLab evidence zna projekt/plik, zostaje focused toolset zamiast
   szerokiego browse.
 - Przy `DB_CODE_GROUNDING_NEEDED` focused GitLab tools sa aktywne takze po to,
@@ -62,6 +65,8 @@ Przyklady guidance:
 - full file read jest expensive i powinien byc uzywany dopiero po outline/chunk,
 - GitLab search/flow context powinien uzywac konkretnych keywordow ze
   stacktrace, exception, klasy, repozytorium albo service name,
+- GitLab flow/search guidance wspiera `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`,
+  czyli focused lookup pod szczegolowy opis funkcji,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja, ze DB discovery dla JPA/repository/data-access
   symptomow jest fallbackiem po deterministic GitLab evidence albo probie

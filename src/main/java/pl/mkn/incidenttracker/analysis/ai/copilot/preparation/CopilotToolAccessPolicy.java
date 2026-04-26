@@ -107,8 +107,7 @@ public record CopilotToolAccessPolicy(
         if (gitLabToolsRegistered && !gitLabToolsEnabled()) {
             groups.add(Map.of(
                     "name", "gitlab",
-                    "reason", "GitLab coverage is %s and no code or flow evidence gap requires GitLab tools."
-                            .formatted(evidenceCoverage.gitLab())
+                    "reason", gitLabDisabledReason()
             ));
         }
         if (databaseToolsRegistered && !databaseToolsEnabled()) {
@@ -146,6 +145,17 @@ public record CopilotToolAccessPolicy(
         }
         return "Data diagnostic need is %s, so DB tools are not enabled for this session."
                 .formatted(evidenceCoverage.dataDiagnosticNeed());
+    }
+
+    private String gitLabDisabledReason() {
+        if (evidenceCoverage.affectedFunctionGitLabRecommended()) {
+            return "GitLab affectedFunction grounding is recommended, but no eligible focused GitLab tools are enabled in this session.";
+        }
+        if (evidenceCoverage.databaseCodeGroundingNeedsTooling()) {
+            return "GitLab DB code grounding is recommended, but no eligible focused GitLab tools are enabled in this session.";
+        }
+        return "GitLab coverage is %s and no code or flow evidence gap requires GitLab tools."
+                .formatted(evidenceCoverage.gitLab());
     }
 
     private static boolean isEnabled(String toolName, CopilotEvidenceCoverageReport evidenceCoverage) {

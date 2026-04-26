@@ -57,6 +57,13 @@ public class CopilotEvidenceCoverageEvaluator {
             ));
         }
 
+        if (gitLabScopeResolved(request)) {
+            gaps.add(gap(
+                    "AFFECTED_FUNCTION_GITLAB_RECOMMENDED",
+                    "Use enabled GitLab tools to ground a detailed non-code technical-functional affectedFunction description for the operator."
+            ));
+        }
+
         return new CopilotEvidenceCoverageReport(
                 elasticCoverage,
                 gitLabCoverage,
@@ -308,6 +315,12 @@ public class CopilotEvidenceCoverageEvaluator {
         }
 
         return false;
+    }
+
+    private boolean gitLabScopeResolved(AnalysisAiAnalysisRequest request) {
+        return request != null
+                && StringUtils.hasText(request.gitLabBranch())
+                && StringUtils.hasText(request.gitLabGroup());
     }
 
     private String allEvidenceText(List<AnalysisEvidenceSection> sections) {

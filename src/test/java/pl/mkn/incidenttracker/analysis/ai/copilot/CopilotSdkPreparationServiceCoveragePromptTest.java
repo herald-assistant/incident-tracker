@@ -70,12 +70,13 @@ class CopilotSdkPreparationServiceCoveragePromptTest {
             assertTrue(prompt.contains("Do not use tools just because they are available."));
             assertTrue(prompt.contains("coverage-aware and may be enabled for targeted gap filling"));
             assertFalse(prompt.contains("GitLab and Elasticsearch tools are fallback-only"));
-            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow or DB code-grounding gaps."));
+            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps."));
 
             var manifest = prepared.artifactContents().get("00-incident-manifest.json");
             assertTrue(manifest.contains("\"evidenceCoverage\""));
             assertTrue(manifest.contains("\"gitLab\" : \"FAILING_METHOD_ONLY\""));
             assertTrue(manifest.contains("\"code\" : \"MISSING_FLOW_CONTEXT\""));
+            assertTrue(manifest.contains("\"code\" : \"AFFECTED_FUNCTION_GITLAB_RECOMMENDED\""));
             assertTrue(manifest.contains("\"enabledToolNames\""));
             assertTrue(manifest.contains("\"gitlab_find_flow_context\""));
             assertFalse(manifest.contains("\"gitlab_search_repository_candidates\""));

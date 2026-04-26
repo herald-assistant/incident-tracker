@@ -69,9 +69,10 @@ class CopilotPromptRendererTest {
         assertTrue(prompt.contains("{\"readFirst\":\"00-incident-manifest.json\"}"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
         assertTrue(prompt.contains("- Elasticsearch logs: fetch additional logs only for listed log coverage gaps for the current incident correlationId."));
-        assertTrue(prompt.contains("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow or DB code-grounding gaps."));
+        assertTrue(prompt.contains("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps."));
         assertTrue(prompt.contains("- Database diagnostics: before table/column discovery, ground table and relation hints from deterministic GitLab evidence or enabled GitLab tools when `DB_CODE_GROUNDING_NEEDED` is listed"));
         assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
+        assertTrue(prompt.contains("Write `affectedFunction` in non-code, operator-friendly technical/functional language"));
     }
 
     @Test
