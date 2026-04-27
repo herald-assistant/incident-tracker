@@ -198,6 +198,17 @@ interface DatabaseToolCardView {
   result: string;
 }
 
+interface ToolEvidenceTimelineItemView {
+  key: string;
+  reason: string;
+  captureOrder: number | null;
+  fallbackOrder: number;
+  sourceLabel: string;
+  codePanel: RepoCodePanelView | null;
+  databaseTool: DatabaseToolCardView | null;
+  defaultItem: StepEvidenceItemView | null;
+}
+
 interface StepEvidenceSectionView {
   key: string;
   title: string;
@@ -207,13 +218,15 @@ interface StepEvidenceSectionView {
     | 'elasticsearch-log-table'
     | 'gitlab-code-panels'
     | 'dynatrace-runtime-panels'
-    | 'database-tool-panels';
+    | 'database-tool-panels'
+    | 'tool-evidence-timeline';
   items: StepEvidenceItemView[];
   logRows: ElasticsearchLogRowView[];
   codePanels: RepoCodePanelView[];
   dynatraceRuntime: DynatraceRuntimeSectionView | null;
   databaseTools: DatabaseToolCardView[];
   databaseToolTypeCount: number;
+  toolEvents: ToolEvidenceTimelineItemView[];
 }
 
 interface StepView {
@@ -288,11 +301,6 @@ const GITLAB_ATTRIBUTE_ORDER: Record<string, number> = {
   content: 999
 };
 
-const TOOL_EVIDENCE_SECTION_ORDER: Record<string, number> = {
-  'gitlab|tool-fetched-code': 10,
-  'database|tool-results': 20
-};
-
 const DATABASE_TOOL_LABELS: Record<string, string> = {
   db_get_scope: 'Sprawdzenie zakresu dostępu',
   db_find_tables: 'Wyszukiwanie tabel',
@@ -312,6 +320,8 @@ const DATABASE_TOOL_LABELS: Record<string, string> = {
 
 const DATABASE_TABLE_MAX_ROWS = 8;
 const DATABASE_TABLE_MAX_COLUMNS = 8;
+const TOOL_CAPTURE_ORDER_ATTRIBUTE = 'toolCaptureOrder';
+const TOOL_TIMELINE_INTERNAL_ATTRIBUTES = new Set(['reason', TOOL_CAPTURE_ORDER_ATTRIBUTE]);
 
 const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
   {
@@ -384,8 +394,10 @@ export class AnalysisStepsPanelComponent {
 
   protected readonly preparedSteps = computed<StepView[]>(() =>
     this.steps().map((step, index) => {
-      const detailSections = prepareEvidenceSections(
-        resolveStepSections(step, this.evidenceSections(), this.toolEvidenceSections())
+      const detailSections = prepareStepDetailSections(
+        step,
+        this.evidenceSections(),
+        this.toolEvidenceSections()
       );
       const showResultPreview = step.code === 'AI_ANALYSIS' && this.result() !== null;
       const stepPreparedPrompt = resolvePreparedPrompt(
@@ -528,13 +540,8 @@ export class AnalysisStepsPanelComponent {
 
 function resolveStepSections(
   step: AnalysisJobStepResponse,
-  sections: AnalysisEvidenceSection[],
-  toolEvidenceSections: AnalysisEvidenceSection[]
+  sections: AnalysisEvidenceSection[]
 ): AnalysisEvidenceSection[] {
-  if (step.code === 'AI_ANALYSIS') {
-    return [...toolEvidenceSections].sort(compareToolEvidenceSections);
-  }
-
   const links = resolveProducedEvidenceLinks(step);
   if (links.length === 0) {
     return [];
@@ -545,22 +552,6 @@ function resolveStepSections(
       (link) => section.provider === link.provider && section.category === link.category
     )
   );
-}
-
-function compareToolEvidenceSections(
-  left: AnalysisEvidenceSection,
-  right: AnalysisEvidenceSection
-): number {
-  const leftKey = `${String(left.provider || '')}|${String(left.category || '')}`;
-  const rightKey = `${String(right.provider || '')}|${String(right.category || '')}`;
-  const leftOrder = TOOL_EVIDENCE_SECTION_ORDER[leftKey] ?? 500;
-  const rightOrder = TOOL_EVIDENCE_SECTION_ORDER[rightKey] ?? 500;
-
-  if (leftOrder !== rightOrder) {
-    return leftOrder - rightOrder;
-  }
-
-  return leftKey.localeCompare(rightKey);
 }
 
 function buildEvidenceFlowMeta(step: AnalysisJobStepResponse): string[] {
@@ -675,6 +666,132 @@ function buildPreparedPromptDescription(stepCode: string | null | undefined): st
   return 'To jest dokładny input, który zasila końcową analizę AI. Gdy sesja Copilota nie zadziała, ten prompt zostaje dostępny do ręcznego użycia poza aplikacją.';
 }
 
+function prepareStepDetailSections(
+  step: AnalysisJobStepResponse,
+  evidenceSections: AnalysisEvidenceSection[],
+  toolEvidenceSections: AnalysisEvidenceSection[]
+): StepEvidenceSectionView[] {
+  if (step.code === 'AI_ANALYSIS') {
+    return prepareToolEvidenceTimelineSections(toolEvidenceSections);
+  }
+
+  return prepareEvidenceSections(resolveStepSections(step, evidenceSections));
+}
+
+function prepareToolEvidenceTimelineSections(
+  sections: AnalysisEvidenceSection[]
+): StepEvidenceSectionView[] {
+  const toolEvents = sections
+    .flatMap((section, sectionIndex) =>
+      (section.items || []).map((item, itemIndex) =>
+        prepareToolEvidenceTimelineItem(section, item, itemIndex, sectionIndex)
+      )
+    )
+    .sort(compareToolEvidenceTimelineItems);
+
+  if (toolEvents.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      key: 'ai-tool-evidence-timeline',
+      title: 'Historia pobrań przez AI',
+      itemCount: toolEvents.length,
+      variant: 'tool-evidence-timeline',
+      items: [],
+      logRows: [],
+      codePanels: [],
+      dynatraceRuntime: null,
+      databaseTools: [],
+      databaseToolTypeCount: new Set(
+        toolEvents.map((event) => event.databaseTool?.toolName).filter(Boolean)
+      ).size,
+      toolEvents
+    }
+  ];
+}
+
+function prepareToolEvidenceTimelineItem(
+  section: AnalysisEvidenceSection,
+  item: { title: string; attributes: AnalysisEvidenceAttribute[] },
+  itemIndex: number,
+  sectionIndex: number
+): ToolEvidenceTimelineItemView {
+  const attributesByName = mapAttributesByName(item.attributes || []);
+  const captureOrder = integerValue(attributesByName, TOOL_CAPTURE_ORDER_ATTRIBUTE);
+  const fallbackOrder = sectionIndex * 10_000 + itemIndex;
+
+  if (isGitLabCodeSection(section)) {
+    const codePanel = prepareRepoCodePanel(section, item, itemIndex, {
+      hideToolTimelineAttributes: true
+    });
+
+    return {
+      key: codePanel.key,
+      reason: nonEmptyValue(codePanel.reason) || 'Model nie podał powodu pobrania tego pliku.',
+      captureOrder,
+      fallbackOrder,
+      sourceLabel: 'GitLab',
+      codePanel,
+      databaseTool: null,
+      defaultItem: null
+    };
+  }
+
+  if (isDatabaseToolSection(section)) {
+    const databaseTool = prepareDatabaseToolCard(section, item, itemIndex);
+
+    return {
+      key: databaseTool.key,
+      reason: databaseTool.reason,
+      captureOrder,
+      fallbackOrder,
+      sourceLabel: 'Baza danych',
+      codePanel: null,
+      databaseTool,
+      defaultItem: null
+    };
+  }
+
+  const defaultItem = prepareDefaultEvidenceItem(section, item, itemIndex, {
+    hideToolTimelineAttributes: true
+  });
+
+  return {
+    key: defaultItem.key,
+    reason:
+      nonEmptyValue(attributesByName.get('reason')) ||
+      nonEmptyValue(item.title) ||
+      formatEvidenceSectionTitle(section),
+    captureOrder,
+    fallbackOrder,
+    sourceLabel: formatEvidenceSectionTitle(section),
+    codePanel: null,
+    databaseTool: null,
+    defaultItem
+  };
+}
+
+function compareToolEvidenceTimelineItems(
+  left: ToolEvidenceTimelineItemView,
+  right: ToolEvidenceTimelineItemView
+): number {
+  if (left.captureOrder !== null && right.captureOrder !== null) {
+    return left.captureOrder - right.captureOrder || left.fallbackOrder - right.fallbackOrder;
+  }
+
+  if (left.captureOrder !== null) {
+    return -1;
+  }
+
+  if (right.captureOrder !== null) {
+    return 1;
+  }
+
+  return left.fallbackOrder - right.fallbackOrder;
+}
+
 function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvidenceSectionView[] {
   return sections.map((section, sectionIndex) => {
     const sectionKey = buildEvidenceSectionKey(section, sectionIndex);
@@ -694,7 +811,8 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         codePanels: [],
         dynatraceRuntime: null,
         databaseTools: [],
-        databaseToolTypeCount: 0
+        databaseToolTypeCount: 0,
+        toolEvents: []
       };
     }
 
@@ -713,7 +831,8 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         codePanels,
         dynatraceRuntime: null,
         databaseTools: [],
-        databaseToolTypeCount: 0
+        databaseToolTypeCount: 0,
+        toolEvents: []
       };
     }
 
@@ -732,7 +851,8 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         codePanels: [],
         dynatraceRuntime: null,
         databaseTools,
-        databaseToolTypeCount: new Set(databaseTools.map((tool) => tool.toolName)).size
+        databaseToolTypeCount: new Set(databaseTools.map((tool) => tool.toolName)).size,
+        toolEvents: []
       };
     }
 
@@ -748,7 +868,8 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
         codePanels: [],
         dynatraceRuntime: runtimeSection.runtime,
         databaseTools: [],
-        databaseToolTypeCount: 0
+        databaseToolTypeCount: 0,
+        toolEvents: []
       };
     }
 
@@ -766,7 +887,8 @@ function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvide
       codePanels: [],
       dynatraceRuntime: null,
       databaseTools: [],
-      databaseToolTypeCount: 0
+      databaseToolTypeCount: 0,
+      toolEvents: []
     };
   });
 }
@@ -865,12 +987,17 @@ function looksLikeDynatraceMetric(attributesByName: ReadonlyMap<string, string>)
 function prepareDefaultEvidenceItem(
   section: AnalysisEvidenceSection,
   item: { title: string; attributes: AnalysisEvidenceAttribute[] },
-  itemIndex: number
+  itemIndex: number,
+  options: { hideToolTimelineAttributes?: boolean } = {}
 ): StepEvidenceItemView {
   const itemKey = buildEvidenceItemKey(section, item, itemIndex);
-  const normalizedAttributes = (item.attributes || []).map((attribute) =>
-    normalizeDefaultEvidenceAttribute(section, attribute)
-  );
+  const normalizedAttributes = (item.attributes || [])
+    .filter(
+      (attribute) =>
+        !options.hideToolTimelineAttributes ||
+        !TOOL_TIMELINE_INTERNAL_ATTRIBUTES.has(attribute.name)
+    )
+    .map((attribute) => normalizeDefaultEvidenceAttribute(section, attribute));
   const compactAttributes = normalizedAttributes.filter((attribute) => !isLargeAttribute(attribute));
   const blockAttributes = normalizedAttributes.filter(isLargeAttribute);
 
@@ -1073,7 +1200,8 @@ function prepareDynatraceCollectionStatus(
 function prepareRepoCodePanel(
   section: AnalysisEvidenceSection,
   item: { title: string; attributes: AnalysisEvidenceAttribute[] },
-  itemIndex: number
+  itemIndex: number,
+  options: { hideToolTimelineAttributes?: boolean } = {}
 ): RepoCodePanelView {
   const itemKey = buildEvidenceItemKey(section, item, itemIndex);
   const attributes = [...(item.attributes || [])].sort(compareGitLabAttributes);
@@ -1104,7 +1232,12 @@ function prepareRepoCodePanel(
     section.category === 'tool-fetched-code'
       ? nonEmptyValue(attributesByName.get('reason')) || 'Model nie podał powodu pobrania tego pliku.'
       : nonEmptyValue(attributesByName.get('reason'));
-  const metaAttributes = attributes.filter((attribute) => attribute.name !== 'content');
+  const metaAttributes = attributes.filter(
+    (attribute) =>
+      attribute.name !== 'content' &&
+      (!options.hideToolTimelineAttributes ||
+        !TOOL_TIMELINE_INTERNAL_ATTRIBUTES.has(attribute.name))
+  );
 
   return {
     key: itemKey,

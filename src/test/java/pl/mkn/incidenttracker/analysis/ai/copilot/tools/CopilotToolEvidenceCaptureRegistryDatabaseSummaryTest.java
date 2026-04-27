@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -63,6 +64,48 @@ class CopilotToolEvidenceCaptureRegistryDatabaseSummaryTest {
         assertEquals("Sprawdzam, czy istnieja rekordy dla correlationId.", attributes.get("reason"));
         assertTrue(attributes.get("result").contains("\"count\" : 3"));
         assertTrue(attributes.get("result").contains("\"tableName\" : \"ORDER_EVENT\""));
+    }
+
+    @Test
+    void shouldAttachMonotonicCaptureOrderAcrossToolEvidenceGroups() {
+        var registry = toolEvidenceCaptureRegistry(objectMapper);
+        var capturedSections = new ArrayList<AnalysisEvidenceSection>();
+        registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
+            @Override
+            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
+                capturedSections.add(section);
+            }
+        });
+
+        registry.captureToolResult(
+                "session-1",
+                "tool-call-gitlab-1",
+                "gitlab_read_repository_file",
+                "{\"reason\":\"Czytam plik.\"}",
+                """
+                        {
+                          "group": "sample/runtime",
+                          "projectName": "orders-api",
+                          "branch": "main",
+                          "filePath": "src/main/java/pl/mkn/orders/OrderService.java",
+                          "content": "class OrderService {}",
+                          "truncated": false
+                        }
+                        """
+        );
+        registry.captureToolResult(
+                "session-1",
+                "tool-call-db-1",
+                "db_count_rows",
+                "{\"reason\":\"Sprawdzam rekordy.\"}",
+                "{\"count\":3}"
+        );
+
+        assertEquals(2, capturedSections.size());
+        assertEquals("gitlab", capturedSections.get(0).provider());
+        assertEquals("1", attributes(capturedSections.get(0)).get("toolCaptureOrder"));
+        assertEquals("database", capturedSections.get(1).provider());
+        assertEquals("2", attributes(capturedSections.get(1)).get("toolCaptureOrder"));
     }
 
     private Map<String, String> attributes(AnalysisEvidenceSection section) {

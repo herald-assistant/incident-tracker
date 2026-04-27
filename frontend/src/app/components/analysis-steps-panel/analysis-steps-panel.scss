@@ -215,37 +215,111 @@
   background: #fff;
 }
 
-.database-tool-table__header,
-.database-tool-table__row {
-  display: grid;
-  grid-template-columns: repeat(var(--database-tool-columns, 4), minmax(140px, 1fr));
-  min-width: max-content;
-}
-
-.database-tool-table__header {
-  background: #f4f7fb;
-  border-bottom: 1px solid rgba(216, 224, 235, 0.72);
-}
-
-.database-tool-table__row + .database-tool-table__row {
-  border-top: 1px solid rgba(216, 224, 235, 0.72);
+.database-tool-table__grid {
+  width: max(100%, calc(var(--database-tool-columns, 4) * 180px));
+  min-width: max(100%, calc(var(--database-tool-columns, 4) * 180px));
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .database-tool-table__cell {
-  display: block;
   padding: 10px 12px;
+  border-top: 1px solid rgba(216, 224, 235, 0.72);
+  border-left: 1px solid rgba(216, 224, 235, 0.72);
   color: var(--text-main);
   font-size: 0.83rem;
   line-height: 1.5;
+  text-align: left;
+  vertical-align: top;
   overflow-wrap: anywhere;
 }
 
+.database-tool-table__grid tr:first-child .database-tool-table__cell {
+  border-top: 0;
+}
+
+.database-tool-table__grid .database-tool-table__cell:first-child {
+  border-left: 0;
+}
+
 .database-tool-table__cell--header {
+  background: #f4f7fb;
   color: var(--text-soft);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.evidence-section--tool-timeline {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.evidence-section--tool-timeline .evidence-section__items {
+  padding: 0;
+}
+
+.tool-evidence-timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.tool-evidence-panel {
+  border: 1px solid #e6edf5;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.tool-evidence-panel::before {
+  display: none;
+}
+
+.tool-evidence-panel .mat-expansion-panel-header {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 10px 12px;
+}
+
+.tool-evidence-panel .mat-expansion-panel-body {
+  padding: 0 12px 12px;
+}
+
+.tool-evidence-panel__header .mat-content {
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-evidence-panel__reason {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--text-main);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.tool-evidence-panel__expand-icon {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  transition: transform 140ms ease;
+}
+
+.tool-evidence-panel.mat-expanded .tool-evidence-panel__expand-icon {
+  transform: rotate(180deg);
+}
+
+.tool-evidence-panel__body {
+  display: grid;
+  gap: 12px;
+}
+
+.tool-evidence-panel__meta + .tool-evidence-panel__meta {
+  padding-top: 2px;
 }
 
 .repo-code-panel__reason {

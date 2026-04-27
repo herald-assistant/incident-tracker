@@ -205,7 +205,10 @@
             @if (step.detailSections.length > 0) {
               <div class="stepper-detail__sections">
                 @for (section of step.detailSections; track section.key) {
-                  <article class="evidence-section">
+                  <article
+                    class="evidence-section"
+                    [class.evidence-section--tool-timeline]="section.variant === 'tool-evidence-timeline'"
+                  >
                     <div class="evidence-section__items">
                       @if (section.variant === 'elasticsearch-log-table') {
                         @if (section.logRows.length === 0) {
@@ -340,6 +343,144 @@
                             }
                           </div>
                         }
+                      } @else if (section.variant === 'tool-evidence-timeline') {
+                        <mat-accordion class="tool-evidence-timeline">
+                          @for (event of section.toolEvents; track event.key) {
+                            <mat-expansion-panel class="tool-evidence-panel" hideToggle>
+                              <mat-expansion-panel-header class="tool-evidence-panel__header">
+                                <span class="tool-evidence-panel__reason">{{ event.reason }}</span>
+                                <mat-icon
+                                  class="tool-evidence-panel__expand-icon"
+                                  fontSet="material-symbols-outlined"
+                                >
+                                  expand_more
+                                </mat-icon>
+                              </mat-expansion-panel-header>
+
+                              <div class="tool-evidence-panel__body">
+                                @if (event.codePanel; as panel) {
+                                  <div class="attribute-grid tool-evidence-panel__meta">
+                                    <span class="attribute-name">Źródło</span>
+                                    <span class="attribute-value">{{ event.sourceLabel }}</span>
+                                  </div>
+
+                                  @if (panel.compactAttributes.length > 0) {
+                                    <div class="attribute-grid tool-evidence-panel__meta">
+                                      @for (attribute of panel.compactAttributes; track attribute.name + $index) {
+                                        <span class="attribute-name">{{ attribute.name }}</span>
+                                        <span class="attribute-value">{{ attribute.value }}</span>
+                                      }
+                                    </div>
+                                  }
+
+                                  @for (attribute of panel.blockAttributes; track attribute.name + $index) {
+                                    <div class="attribute-row attribute-row--block">
+                                      <span class="attribute-name">{{ attribute.name }}</span>
+                                      <pre class="attribute-block">{{ attribute.value }}</pre>
+                                    </div>
+                                  }
+
+                                  @if (panel.hasContent) {
+                                    <div class="repo-code-viewer repo-code-viewer--tool-evidence">
+                                      @for (line of panel.codeLines; track line.lineNumber ?? $index) {
+                                        <div
+                                          class="repo-code-viewer__row"
+                                          [class.repo-code-viewer__row--highlight]="line.highlighted"
+                                        >
+                                          <span
+                                            class="repo-code-viewer__line-number"
+                                            [class.repo-code-viewer__line-number--highlight]="line.highlighted"
+                                          >
+                                            {{ line.lineNumber }}
+                                          </span>
+                                          <span class="repo-code-viewer__line-content">{{
+                                            line.content || ' '
+                                          }}</span>
+                                        </div>
+                                      }
+                                    </div>
+                                  }
+                                } @else if (event.databaseTool; as tool) {
+                                  <div class="attribute-grid tool-evidence-panel__meta">
+                                    <span class="attribute-name">Źródło</span>
+                                    <span class="attribute-value">{{ event.sourceLabel }}</span>
+                                    <span class="attribute-name">Sprawdzenie</span>
+                                    <span class="attribute-value">{{ tool.title }}</span>
+                                  </div>
+
+                                  @if (tool.tableViews.length > 0) {
+                                    <div class="database-tool-card__tables">
+                                      @for (table of tool.tableViews; track table.title) {
+                                        <section class="database-tool-card__section">
+                                          <div class="database-tool-card__table-header">
+                                            <h6 class="database-tool-card__section-title">{{ table.title }}</h6>
+                                            @if (table.truncated) {
+                                              <span class="database-tool-card__table-note">
+                                                Pokazano pierwsze {{ table.rows.length }} wierszy
+                                              </span>
+                                            }
+                                          </div>
+
+                                          <div
+                                            class="database-tool-table"
+                                            [style.--database-tool-columns]="table.columns.length"
+                                          >
+                                            <table class="database-tool-table__grid">
+                                              <thead>
+                                                <tr>
+                                                  @for (column of table.columns; track column) {
+                                                    <th class="database-tool-table__cell database-tool-table__cell--header">
+                                                      {{ column }}
+                                                    </th>
+                                                  }
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                @for (row of table.rows; track $index) {
+                                                  <tr>
+                                                    @for (cell of row; track $index) {
+                                                      <td class="database-tool-table__cell">{{ cell }}</td>
+                                                    }
+                                                  </tr>
+                                                }
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        </section>
+                                      }
+                                    </div>
+                                  } @else {
+                                    <section class="database-tool-card__section">
+                                      <h6 class="database-tool-card__section-title">Rezultat</h6>
+                                      <pre class="database-tool-card__result">{{ tool.result }}</pre>
+                                    </section>
+                                  }
+                                } @else if (event.defaultItem; as item) {
+                                  <div class="attribute-grid tool-evidence-panel__meta">
+                                    <span class="attribute-name">Źródło</span>
+                                    <span class="attribute-value">{{ event.sourceLabel }}</span>
+                                  </div>
+
+                                  @if (item.compactAttributes.length > 0) {
+                                    <div class="attribute-grid">
+                                      @for (attribute of item.compactAttributes; track attribute.name + $index) {
+                                        <span class="attribute-name">{{ attribute.name }}</span>
+                                        <span class="attribute-value">{{ attribute.value }}</span>
+                                      }
+                                    </div>
+                                  }
+
+                                  @for (attribute of item.blockAttributes; track attribute.name + $index) {
+                                    <div class="attribute-row attribute-row--block">
+                                      <span class="attribute-name">{{ attribute.name }}</span>
+                                      <pre class="attribute-block">{{ attribute.value }}</pre>
+                                    </div>
+                                  }
+                                }
+                              </div>
+                            </mat-expansion-panel>
+                          }
+                        </mat-accordion>
                       } @else {
                         <div class="evidence-section__header">
                           <h4 class="evidence-section__title">{{ section.title }}</h4>
@@ -782,21 +923,26 @@
                                               class="database-tool-table"
                                               [style.--database-tool-columns]="table.columns.length"
                                             >
-                                              <div class="database-tool-table__header">
-                                                @for (column of table.columns; track column) {
-                                                  <span class="database-tool-table__cell database-tool-table__cell--header">
-                                                    {{ column }}
-                                                  </span>
-                                                }
-                                              </div>
-
-                                              @for (row of table.rows; track $index) {
-                                                <div class="database-tool-table__row">
-                                                  @for (cell of row; track $index) {
-                                                    <span class="database-tool-table__cell">{{ cell }}</span>
+                                              <table class="database-tool-table__grid">
+                                                <thead>
+                                                  <tr>
+                                                    @for (column of table.columns; track column) {
+                                                      <th class="database-tool-table__cell database-tool-table__cell--header">
+                                                        {{ column }}
+                                                      </th>
+                                                    }
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  @for (row of table.rows; track $index) {
+                                                    <tr>
+                                                      @for (cell of row; track $index) {
+                                                        <td class="database-tool-table__cell">{{ cell }}</td>
+                                                      }
+                                                    </tr>
                                                   }
-                                                </div>
-                                              }
+                                                </tbody>
+                                              </table>
                                             </div>
                                           </section>
                                         }

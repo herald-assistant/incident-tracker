@@ -198,20 +198,24 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    const panel = compiled.querySelector('.tool-evidence-panel') as HTMLElement | null;
+    const reason = compiled.querySelector('.tool-evidence-panel__reason') as HTMLElement | null;
 
-    expect(compiled.textContent).toContain('GitLab · Pliki pobrane przez AI');
+    expect(panel).not.toBeNull();
+    expect(panel?.classList.contains('mat-expanded')).toBeFalsy();
+    expect(reason?.textContent?.trim()).toBe('Sprawdzam fragment klienta z timeoutem.');
     expect(compiled.textContent).toContain('CatalogGatewayClient');
-    expect(compiled.textContent).toContain('Powód pobrania');
-    expect(compiled.textContent).toContain('Sprawdzam fragment klienta z timeoutem.');
+    expect(compiled.textContent).toContain('GitLab');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
+    expect(compiled.textContent).not.toContain('Powód pobrania');
   });
 
-  it('should render database tool results below GitLab tool evidence on the final analysis step', async () => {
+  it('should render AI tool evidence as one chronological accordion', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
     fixture.componentRef.setInput('toolEvidenceSections', [
-      buildAiToolDatabaseSection(),
-      buildAiToolGitLabSection()
+      buildAiToolGitLabSection('2'),
+      buildAiToolDatabaseSection('1')
     ]);
 
     fixture.detectChanges();
@@ -219,18 +223,20 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    const reasons = Array.from(compiled.querySelectorAll('.tool-evidence-panel__reason')).map(
+      (element) => element.textContent?.trim()
+    );
     const content = compiled.textContent || '';
 
-    expect(content).toContain('GitLab · Pliki pobrane przez AI');
-    expect(content).toContain('Baza danych · Dane pobrane przez AI');
+    expect(reasons).toEqual([
+      'Sprawdzam, czy istnieją rekordy dla correlationId.',
+      'Sprawdzam fragment klienta z timeoutem.'
+    ]);
     expect(content).toContain('Policzenie rekordów');
-    expect(content).toContain('Powód sprawdzenia');
     expect(content).toContain('Sprawdzam, czy istnieją rekordy dla correlationId.');
     expect(content).toContain('"tableName": "ORDER_EVENT"');
     expect(content).toContain('"count": 3');
-    expect(content.indexOf('GitLab · Pliki pobrane przez AI')).toBeLessThan(
-      content.indexOf('Baza danych · Dane pobrane przez AI')
-    );
+    expect(content).not.toContain('Powód sprawdzenia');
   });
 });
 
@@ -532,7 +538,7 @@ Provider: dynatrace, category: runtime-signals
 - Dynatrace problem P-230415 Gateway timeout | signalCategories=database-connectivity, availability`;
 }
 
-function buildAiToolGitLabSection(): AnalysisEvidenceSection {
+function buildAiToolGitLabSection(captureOrder = '1'): AnalysisEvidenceSection {
   return {
     provider: 'gitlab',
     category: 'tool-fetched-code',
@@ -545,6 +551,7 @@ function buildAiToolGitLabSection(): AnalysisEvidenceSection {
             value: 'src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java'
           },
           { name: 'reason', value: 'Sprawdzam fragment klienta z timeoutem.' },
+          { name: 'toolCaptureOrder', value: captureOrder },
           { name: 'startLine', value: '5' },
           {
             name: 'content',
@@ -557,7 +564,7 @@ function buildAiToolGitLabSection(): AnalysisEvidenceSection {
   };
 }
 
-function buildAiToolDatabaseSection(): AnalysisEvidenceSection {
+function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection {
   return {
     provider: 'database',
     category: 'tool-results',
@@ -566,6 +573,7 @@ function buildAiToolDatabaseSection(): AnalysisEvidenceSection {
         title: 'db_count_rows',
         attributes: [
           { name: 'reason', value: 'Sprawdzam, czy istnieją rekordy dla correlationId.' },
+          { name: 'toolCaptureOrder', value: captureOrder },
           {
             name: 'result',
             value: `{

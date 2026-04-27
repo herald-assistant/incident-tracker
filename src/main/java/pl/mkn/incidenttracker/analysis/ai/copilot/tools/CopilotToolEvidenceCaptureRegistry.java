@@ -5,13 +5,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @Slf4j
@@ -21,6 +24,7 @@ public class CopilotToolEvidenceCaptureRegistry {
     private static final String DATABASE_TOOL_CATEGORY = "tool-results";
     private static final String GITLAB_PROVIDER = "gitlab";
     private static final String GITLAB_TOOL_CATEGORY = "tool-fetched-code";
+    private static final String TOOL_CAPTURE_ORDER_ATTRIBUTE = "toolCaptureOrder";
 
     private final GitLabToolEvidenceMapper gitLabMapper;
     private final DatabaseToolEvidenceMapper databaseMapper;
@@ -99,13 +103,17 @@ public class CopilotToolEvidenceCaptureRegistry {
     static record SessionArtifactAccumulator(
             AnalysisAiToolEvidenceListener listener,
             LinkedHashMap<String, AnalysisEvidenceItem> gitLabItems,
-            LinkedHashMap<String, AnalysisEvidenceItem> databaseItems
+            LinkedHashMap<String, AnalysisEvidenceItem> databaseItems,
+            LinkedHashMap<String, Integer> itemCaptureOrders,
+            AtomicInteger nextCaptureOrder
     ) {
         SessionArtifactAccumulator(AnalysisAiToolEvidenceListener listener) {
             this(
                     listener,
                     new LinkedHashMap<>(),
-                    new LinkedHashMap<>()
+                    new LinkedHashMap<>(),
+                    new LinkedHashMap<>(),
+                    new AtomicInteger(1)
             );
         }
 
@@ -119,7 +127,11 @@ public class CopilotToolEvidenceCaptureRegistry {
                 );
             }
 
-            gitLabItems.put(key, candidate);
+            var orderedCandidate = withCaptureOrder(
+                    candidate,
+                    captureOrderFor("gitlab", key)
+            );
+            gitLabItems.put(key, orderedCandidate);
             return new AnalysisEvidenceSection(
                     GITLAB_PROVIDER,
                     GITLAB_TOOL_CATEGORY,
@@ -131,7 +143,7 @@ public class CopilotToolEvidenceCaptureRegistry {
                 String key,
                 AnalysisEvidenceItem candidate
         ) {
-            appendItem(databaseItems, key, "db-tool", candidate);
+            appendItem(databaseItems, key, "database", "db-tool", candidate);
             return new AnalysisEvidenceSection(
                     DATABASE_PROVIDER,
                     DATABASE_TOOL_CATEGORY,
@@ -142,6 +154,7 @@ public class CopilotToolEvidenceCaptureRegistry {
         private void appendItem(
                 LinkedHashMap<String, AnalysisEvidenceItem> items,
                 String key,
+                String orderNamespace,
                 String fallbackKey,
                 AnalysisEvidenceItem candidate
         ) {
@@ -152,7 +165,34 @@ public class CopilotToolEvidenceCaptureRegistry {
                         + (items.size() + 1);
             }
 
-            items.put(effectiveKey, candidate);
+            var orderedCandidate = withCaptureOrder(
+                    candidate,
+                    captureOrderFor(orderNamespace, effectiveKey)
+            );
+            items.put(effectiveKey, orderedCandidate);
+        }
+
+        private int captureOrderFor(String namespace, String key) {
+            var orderKey = namespace + "::" + key;
+            return itemCaptureOrders.computeIfAbsent(
+                    orderKey,
+                    ignored -> nextCaptureOrder.getAndIncrement()
+            );
+        }
+
+        private AnalysisEvidenceItem withCaptureOrder(AnalysisEvidenceItem item, int captureOrder) {
+            var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+            for (var attribute : item.attributes()) {
+                if (!TOOL_CAPTURE_ORDER_ATTRIBUTE.equals(attribute.name())) {
+                    attributes.add(attribute);
+                }
+            }
+            attributes.add(new AnalysisEvidenceAttribute(
+                    TOOL_CAPTURE_ORDER_ATTRIBUTE,
+                    String.valueOf(captureOrder)
+            ));
+
+            return new AnalysisEvidenceItem(item.title(), List.copyOf(attributes));
         }
 
         private static boolean isChunkItem(AnalysisEvidenceItem item) {
