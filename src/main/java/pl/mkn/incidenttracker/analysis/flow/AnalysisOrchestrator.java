@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
@@ -27,6 +28,14 @@ public class AnalysisOrchestrator {
     }
 
     public AnalysisExecution analyze(String correlationId, AnalysisExecutionListener listener) {
+        return analyze(correlationId, AnalysisAiOptions.DEFAULT, listener);
+    }
+
+    public AnalysisExecution analyze(
+            String correlationId,
+            AnalysisAiOptions options,
+            AnalysisExecutionListener listener
+    ) {
         var context = analysisEvidenceCollector.collect(correlationId, adaptEvidenceListener(listener));
 
         if (!context.hasAnyEvidence()) {
@@ -39,7 +48,8 @@ public class AnalysisOrchestrator {
                 deploymentContext.environment(),
                 deploymentContext.gitLabBranch(),
                 gitLabProperties.getGroup(),
-                context.evidenceSections()
+                context.evidenceSections(),
+                options
         );
 
         listener.onAiStarted(aiRequest, context);

@@ -6,6 +6,7 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.PreToolUseHookInput;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
@@ -74,6 +75,26 @@ class CopilotSessionConfigFactoryTest {
 
         assertEquals("allow", allowedToolDecision.permissionDecision());
         assertEquals("deny", deniedToolDecision.permissionDecision());
+    }
+
+    @Test
+    void shouldPreferRequestAiOptionsOverConfiguredDefaults() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.setModel("gpt-5.4");
+        properties.setReasoningEffort("medium");
+        var factory = new CopilotSessionConfigFactory(properties);
+
+        var sessionConfig = factory.sessionConfig(
+                context(),
+                List.of(),
+                CopilotToolAccessPolicy.empty(),
+                List.of(),
+                new AnalysisAiOptions("gpt-5.3-codex", "high")
+        );
+
+        assertEquals("gpt-5.3-codex", sessionConfig.getModel());
+        assertEquals("high", sessionConfig.getReasoningEffort());
     }
 
     @Test

@@ -42,6 +42,12 @@ export interface AnalysisResultResponse {
   prompt: string;
 }
 
+export interface AnalysisStartRequest {
+  correlationId: string;
+  model?: string;
+  reasoningEffort?: string;
+}
+
 export interface AnalysisEvidenceAttribute {
   name: string;
   value: string;
@@ -79,6 +85,8 @@ export interface AnalysisJobStepResponse {
 export interface AnalysisJobResponse {
   analysisId: string;
   correlationId: string;
+  aiModel: string;
+  reasoningEffort: string;
   status: AnalysisJobStatus;
   currentStepCode: string;
   currentStepLabel: string;

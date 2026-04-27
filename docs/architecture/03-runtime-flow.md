@@ -18,13 +18,18 @@ POST /analysis/jobs
 GET /analysis/jobs/{analysisId}
 ```
 
-Request publiczny niesie tylko `correlationId`. Pozostale scope'y sa
-ustalane przez backend:
+Sync request publiczny niesie tylko `correlationId`. Job request dla UI niesie
+`correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
+`reasoningEffort`. Pozostale scope'y sa ustalane przez backend:
 
 - `environment` z evidence runtime/deployment,
 - `gitLabBranch` z deployment context,
 - `gitLabGroup` z konfiguracji,
 - DB scope z resolved environment i konfiguracji database tools.
+
+Wybor modelu i `reasoningEffort` trafia tylko do konfiguracji sesji AI. Nie
+jest evidence, nie zmienia `environment`, `gitLabBranch`, `gitLabGroup` ani
+hidden `ToolContext`.
 
 ## 2. Orkiestracja wysokiego poziomu
 
@@ -81,6 +86,8 @@ Preparation obejmuje:
 - osadzenie artifact contents inline w promptcie,
 - zaladowanie runtime skills,
 - zbudowanie `CopilotClientOptions` i `SessionConfig`,
+- zastosowanie requestowych preferencji AI (`model`, `reasoningEffort`) albo
+  fallback do properties,
 - zebranie metryk preparation.
 
 Serwis preparation sklada zaleznosci, ale nie zawiera juz calej logiki
@@ -350,9 +357,10 @@ jest dostepny nawet wtedy, gdy execution failuje.
 `toolEvidenceSections` sa osobnym polem job response i moga byc aktualizowane
 podczas sesji AI przez listener. UI nie zalezy od typow Copilot SDK.
 
-Publiczne kontrakty sync/job pozostaja bez zmian: request zawiera tylko
-`correlationId`, `gitLabGroup` pochodzi z konfiguracji, a `environment` i
-`gitLabBranch` sa wyprowadzane z evidence.
+Publiczny sync request zawiera tylko `correlationId`. Job request UI zawiera
+`correlationId` oraz opcjonalne preferencje AI (`model`, `reasoningEffort`).
+`gitLabGroup` pochodzi z konfiguracji, a `environment` i `gitLabBranch` sa
+wyprowadzane z evidence.
 
 ## 16. Najwazniejsze properties
 

@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.analysis.job;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
@@ -27,6 +28,7 @@ final class AnalysisJobState {
 
     private final String analysisId;
     private final String correlationId;
+    private final AnalysisAiOptions aiOptions;
     private final Instant createdAt;
     private final List<StepState> steps;
     private final List<AnalysisEvidenceSection> evidenceSections;
@@ -44,9 +46,15 @@ final class AnalysisJobState {
     private Instant completedAt;
     private AnalysisResultResponse result;
 
-    AnalysisJobState(String analysisId, String correlationId, List<AnalysisEvidenceProviderDescriptor> providerDescriptors) {
+    AnalysisJobState(
+            String analysisId,
+            String correlationId,
+            AnalysisAiOptions aiOptions,
+            List<AnalysisEvidenceProviderDescriptor> providerDescriptors
+    ) {
         this.analysisId = analysisId;
         this.correlationId = correlationId;
+        this.aiOptions = aiOptions != null ? aiOptions : AnalysisAiOptions.DEFAULT;
         this.createdAt = Instant.now();
         this.updatedAt = createdAt;
         this.status = AnalysisJobStatus.QUEUED;
@@ -156,6 +164,8 @@ final class AnalysisJobState {
         return new AnalysisJobResponse(
                 analysisId,
                 correlationId,
+                aiOptions.model(),
+                aiOptions.reasoningEffort(),
                 status.name(),
                 currentStepCode,
                 currentStepLabel,

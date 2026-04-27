@@ -24,7 +24,9 @@ Synchroniczny kontrakt API. Cienki wrapper na wspolny `AnalysisOrchestrator`.
 
 ### `POST /analysis/jobs`
 
-Start asynchronicznej analizy dla UI.
+Start asynchronicznej analizy dla UI. Request zawiera `correlationId` oraz
+opcjonalne preferencje AI (`model`, `reasoningEffort`), ktore nie zmieniaja
+scope'u evidence.
 
 ### `GET /analysis/jobs/{analysisId}`
 

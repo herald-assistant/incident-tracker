@@ -81,6 +81,8 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobResponse {
   return {
     analysisId: normalizeString(jobObject['analysisId']),
     correlationId: normalizeString(jobObject['correlationId']),
+    aiModel: normalizeString(jobObject['aiModel']),
+    reasoningEffort: normalizeString(jobObject['reasoningEffort']),
     status: normalizeString(jobObject['status']),
     currentStepCode: normalizeString(jobObject['currentStepCode']),
     currentStepLabel: normalizeString(jobObject['currentStepLabel']),

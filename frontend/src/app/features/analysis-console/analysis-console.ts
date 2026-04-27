@@ -35,6 +35,21 @@ import { AnalysisOverviewCardComponent } from '../../components/analysis-overvie
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
 const POLL_INTERVAL_MS = 1500;
+const AI_MODEL_OPTIONS = [
+  { value: '', label: 'Domyślny backend' },
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+  { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
+  { value: 'gpt-5.3-codex-spark', label: 'GPT-5.3 Codex Spark' },
+  { value: 'gpt-5.2', label: 'GPT-5.2' }
+] as const;
+const REASONING_EFFORT_OPTIONS = [
+  { value: '', label: 'Domyślny backend' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'xhigh', label: 'XHigh' }
+] as const;
 
 @Component({
   selector: 'app-analysis-console',
@@ -57,6 +72,10 @@ export class AnalysisConsoleComponent {
     nonNullable: true,
     validators: [Validators.required]
   });
+  readonly aiModelControl = new FormControl('', { nonNullable: true });
+  readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
+  readonly aiModelOptions = AI_MODEL_OPTIONS;
+  readonly reasoningEffortOptions = REASONING_EFFORT_OPTIONS;
 
   readonly isLoading = signal(false);
   readonly formError = signal('');
@@ -115,8 +134,15 @@ export class AnalysisConsoleComponent {
     this.loadingCorrelationId.set(correlationId);
     this.scrollResponseIntoView();
 
+    const aiModel = this.aiModelControl.value.trim();
+    const reasoningEffort = this.reasoningEffortControl.value.trim();
+
     this.analysisApi
-      .startAnalysis(correlationId)
+      .startAnalysis({
+        correlationId,
+        model: aiModel || undefined,
+        reasoningEffort: reasoningEffort || undefined
+      })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoading.set(false))
@@ -187,6 +213,8 @@ export class AnalysisConsoleComponent {
       if (imported.job.correlationId) {
         this.correlationIdControl.setValue(imported.job.correlationId);
       }
+      this.aiModelControl.setValue(imported.job.aiModel || '');
+      this.reasoningEffortControl.setValue(imported.job.reasoningEffort || '');
 
       this.scrollResponseIntoView();
     } catch (error) {

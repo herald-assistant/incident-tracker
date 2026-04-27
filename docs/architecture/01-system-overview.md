@@ -30,6 +30,7 @@ Na dzisiaj projekt ma:
   GitLaba,
 - glowne API `POST /analysis`,
 - job-based API dla UI: `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
+  z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
 - AI-first flow oparty o `AnalysisEvidenceProvider` i `AnalysisAiProvider`,
 - przygotowany bridge pomiedzy Spring tools a GitHub Copilot Java SDK,
 - MCP tools dla Elastica, GitLaba i warunkowo dla Database,
@@ -49,7 +50,9 @@ Na dzisiaj projekt ma:
   Angularowy ekran pomocniczy do recznego testowania helper endpointow
   Elastica i GitLaba oraz podgladu odpowiedzi JSON.
 - `POST /analysis/jobs`
-  Asynchroniczny start analizy wykorzystywany przez UI Angular.
+  Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
+  `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
+  `reasoningEffort`.
 - `GET /analysis/jobs/{analysisId}`
   Odczyt statusu, evidence i wyniku asynchronicznej analizy.
 - `POST /analysis`
@@ -148,6 +151,9 @@ Na dzisiaj projekt ma:
   bezposrednio przez sam provider enrichmentu.
 - Flow synchroniczny i jobowy reuse'uja ta sama orchestration warstwe
   `AnalysisOrchestrator`.
+- Flow jobowy moze przekazac do generycznego requestu AI opcjonalny wybor
+  modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,
+  srodowiska ani GitLab group.
 - Runtime AI providerem jest GitHub Copilot SDK.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
   katalogu runtime.

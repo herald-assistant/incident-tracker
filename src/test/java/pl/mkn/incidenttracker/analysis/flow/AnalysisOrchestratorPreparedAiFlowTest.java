@@ -11,6 +11,7 @@ import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalCon
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
@@ -46,6 +47,21 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         assertTrue(provider.prepared.closed);
         assertEquals("Prepared prompt for timeout-123", execution.preparedPrompt());
         assertEquals("Prepared prompt for timeout-123", execution.result().prompt());
+    }
+
+    @Test
+    void shouldPassAiOptionsToPreparedAnalysisRequest() {
+        var provider = new PreparedFlowProvider(false);
+        var orchestrator = orchestrator(provider);
+
+        orchestrator.analyze(
+                "timeout-123",
+                new AnalysisAiOptions("gpt-5.4", "high"),
+                AnalysisExecutionListener.NO_OP
+        );
+
+        assertEquals("gpt-5.4", provider.preparedRequest.options().model());
+        assertEquals("high", provider.preparedRequest.options().reasoningEffort());
     }
 
     @Test
@@ -108,6 +124,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         private int analyzeRequestCalls;
         private TrackingPreparedAnalysis prepared;
         private AnalysisAiPreparedAnalysis analyzedPrepared;
+        private AnalysisAiAnalysisRequest preparedRequest;
 
         private PreparedFlowProvider(boolean failOnAnalyze) {
             this.failOnAnalyze = failOnAnalyze;
@@ -116,6 +133,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         @Override
         public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
             prepareCalls++;
+            preparedRequest = request;
             prepared = new TrackingPreparedAnalysis(
                     "prepared-test-provider",
                     request.correlationId(),

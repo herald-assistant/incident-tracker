@@ -10,6 +10,8 @@ import com.github.copilot.sdk.json.SessionHooks;
 import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
 
 import java.util.List;
@@ -45,6 +47,16 @@ public class CopilotSessionConfigFactory {
             CopilotToolAccessPolicy policy,
             List<String> skillDirectories
     ) {
+        return sessionConfig(context, tools, policy, skillDirectories, AnalysisAiOptions.DEFAULT);
+    }
+
+    public SessionConfig sessionConfig(
+            CopilotToolSessionContext context,
+            List<ToolDefinition> tools,
+            CopilotToolAccessPolicy policy,
+            List<String> skillDirectories,
+            AnalysisAiOptions options
+    ) {
         var sessionConfig = new SessionConfig()
                 .setSessionId(context.copilotSessionId())
                 .setClientName(properties.getClientName())
@@ -57,15 +69,29 @@ public class CopilotSessionConfigFactory {
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
 
-        if (properties.getModel() != null && !properties.getModel().isBlank()) {
-            sessionConfig.setModel(properties.getModel());
+        var model = selectedModel(options);
+        if (StringUtils.hasText(model)) {
+            sessionConfig.setModel(model);
         }
 
-        if (properties.getReasoningEffort() != null && !properties.getReasoningEffort().isBlank()) {
-            sessionConfig.setReasoningEffort(properties.getReasoningEffort());
+        var reasoningEffort = selectedReasoningEffort(options);
+        if (StringUtils.hasText(reasoningEffort)) {
+            sessionConfig.setReasoningEffort(reasoningEffort);
         }
 
         return sessionConfig;
+    }
+
+    private String selectedModel(AnalysisAiOptions options) {
+        return options != null && StringUtils.hasText(options.model())
+                ? options.model()
+                : properties.getModel();
+    }
+
+    private String selectedReasoningEffort(AnalysisAiOptions options) {
+        return options != null && StringUtils.hasText(options.reasoningEffort())
+                ? options.reasoningEffort()
+                : properties.getReasoningEffort();
     }
 
     private PermissionHandler permissionHandler() {

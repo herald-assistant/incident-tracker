@@ -50,6 +50,36 @@
             </p>
           </div>
 
+          <div class="analysis-settings">
+            <label class="field-control" for="aiModel">
+              <span class="field-label">Model AI</span>
+              <select
+                id="aiModel"
+                class="select-input"
+                [formControl]="aiModelControl"
+                (change)="clearFormError()"
+              >
+                @for (option of aiModelOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field-control" for="reasoningEffort">
+              <span class="field-label">Reasoning effort</span>
+              <select
+                id="reasoningEffort"
+                class="select-input"
+                [formControl]="reasoningEffortControl"
+                (change)="clearFormError()"
+              >
+                @for (option of reasoningEffortOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
           <div class="analysis-toolbar">
             <input
               id="correlationId"

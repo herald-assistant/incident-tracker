@@ -35,7 +35,8 @@ public class CopilotSdkPreparationService {
                 toolSessionContext,
                 tools,
                 toolAccessPolicy,
-                skillDirectories
+                skillDirectories,
+                request.options()
         );
 
         String prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);

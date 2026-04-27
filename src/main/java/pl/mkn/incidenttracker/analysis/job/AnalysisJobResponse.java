@@ -9,6 +9,8 @@ import java.util.List;
 public record AnalysisJobResponse(
         String analysisId,
         String correlationId,
+        String aiModel,
+        String reasoningEffort,
         String status,
         String currentStepCode,
         String currentStepLabel,

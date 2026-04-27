@@ -11,6 +11,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
@@ -393,6 +394,28 @@ class CopilotSdkPreparationServiceTest {
         try (var prepared = service.prepare(request)) {
             assertEquals("ghp_test_token", prepared.clientOptions().getGithubToken());
             assertEquals(Boolean.FALSE, prepared.clientOptions().getUseLoggedInUser());
+        }
+    }
+
+    @Test
+    void shouldUseRequestAiOptionsForSessionConfigWhenProvided() {
+        var properties = baseProperties();
+        properties.setModel("gpt-5.4");
+        properties.setReasoningEffort("medium");
+
+        var service = createService(properties);
+        var request = new AnalysisAiAnalysisRequest(
+                "corr-123",
+                "dev1",
+                "main",
+                "sample/runtime",
+                List.of(),
+                new AnalysisAiOptions("gpt-5.3-codex", "high")
+        );
+
+        try (var prepared = service.prepare(request)) {
+            assertEquals("gpt-5.3-codex", prepared.sessionConfig().getModel());
+            assertEquals("high", prepared.sessionConfig().getReasoningEffort());
         }
     }
 

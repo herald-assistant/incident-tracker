@@ -11,6 +11,7 @@ import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalCon
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
@@ -56,6 +57,8 @@ class AnalysisJobServiceTest {
 
         assertNotNull(started.analysisId());
         assertEquals("timeout-123", started.correlationId());
+        assertNull(started.aiModel());
+        assertNull(started.reasoningEffort());
         assertEquals("QUEUED", started.status());
         assertEquals(6, started.steps().size());
         assertEquals("PENDING", started.steps().get(0).status());
@@ -84,6 +87,26 @@ class AnalysisJobServiceTest {
         assertEquals("Billing Context", completed.result().affectedBoundedContext());
         assertEquals("Core Integration Team", completed.result().affectedTeam());
         assertEquals("COMPLETED", completed.steps().get(5).status());
+    }
+
+    @Test
+    void shouldPassSelectedAiOptionsToAnalysisFlow() {
+        var provider = new CapturingOptionsAnalysisAiProvider();
+        var optionsTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(provider, optionsTaskExecutor);
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", "gpt-5.4", "high"));
+
+        assertEquals("gpt-5.4", started.aiModel());
+        assertEquals("high", started.reasoningEffort());
+
+        optionsTaskExecutor.runNext();
+
+        assertEquals("gpt-5.4", provider.lastPreparedRequest.options().model());
+        assertEquals("high", provider.lastPreparedRequest.options().reasoningEffort());
+        var completed = service.getAnalysis(started.analysisId());
+        assertEquals("gpt-5.4", completed.aiModel());
+        assertEquals("high", completed.reasoningEffort());
     }
 
     @Test
@@ -251,6 +274,55 @@ class AnalysisJobServiceTest {
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             throw new IllegalStateException("AI gateway timeout");
+        }
+    }
+
+    private static final class CapturingOptionsAnalysisAiProvider implements AnalysisAiProvider {
+
+        private AnalysisAiAnalysisRequest lastPreparedRequest;
+
+        @Override
+        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+            lastPreparedRequest = request;
+            return new TestPreparedAnalysis(
+                    "capturing-options-ai-provider",
+                    request.correlationId(),
+                    "Prepared prompt for model=%s effort=%s".formatted(
+                            request.options().model(),
+                            request.options().reasoningEffort()
+                    ),
+                    request
+            );
+        }
+
+        @Override
+        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
+            try (var prepared = prepare(request)) {
+                return analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
+            }
+        }
+
+        @Override
+        public AnalysisAiAnalysisResponse analyze(
+                AnalysisAiPreparedAnalysis preparedAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            var prepared = testPreparedAnalysis(preparedAnalysis);
+            var options = prepared.request().options() != null
+                    ? prepared.request().options()
+                    : AnalysisAiOptions.DEFAULT;
+            return new AnalysisAiAnalysisResponse(
+                    "capturing-options-ai-provider",
+                    "Selected model " + options.model(),
+                    "OPTIONS_CAPTURED",
+                    "Use selected AI runtime options.",
+                    "The request carried AI runtime options.",
+                    "Selected model analysis path",
+                    "Options process",
+                    "Options Context",
+                    "Options Team",
+                    prepared.prompt()
+            );
         }
     }
 

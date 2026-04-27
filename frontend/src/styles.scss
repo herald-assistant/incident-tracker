@@ -343,6 +343,18 @@ app-root {
   max-width: 34ch;
 }
 
+.analysis-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 240px));
+  gap: 12px;
+  align-items: end;
+}
+
+.field-control {
+  display: grid;
+  min-width: 0;
+}
+
 .analysis-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -390,11 +402,24 @@ app-root {
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
+.select-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
 .text-input::placeholder {
   color: #8993a4;
 }
 
-.text-input:focus {
+.text-input:focus,
+.select-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.16);
@@ -1915,7 +1940,8 @@ body.is-column-resizing {
   }
 
   .analysis-form__header,
-  .analysis-toolbar {
+  .analysis-toolbar,
+  .analysis-settings {
     grid-template-columns: 1fr;
     display: grid;
   }

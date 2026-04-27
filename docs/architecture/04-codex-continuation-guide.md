@@ -110,6 +110,10 @@ Przyklad:
 `environment` i `gitLabBranch` sa rozwiazywane podczas zbierania evidence przez
 osobny krok deployment context, a nie podawane przez klienta.
 
+`POST /analysis/jobs` dla UI nadal nie przyjmuje scope'ow evidence, ale moze
+przyjac opcjonalne preferencje AI: `model` i `reasoningEffort`. Te pola trafiaja
+do `AnalysisAiOptions` i `SessionConfig`, nie do deployment/GitLab/DB scope'u.
+
 ### `gitLabGroup`
 
 Pochodzi z konfiguracji aplikacji.
@@ -135,6 +139,8 @@ Produkcjny build zapisuje `index.html`, `js`, `css` i assets do
 `src/main/resources/static`, skad frontend jest serwowany przez Spring Boot.
 Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
+Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
+albo wybrac `model` i `reasoningEffort` dla sesji AI.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba dociagniete
 przez AI tools podczas kroku `AI_ANALYSIS`.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,

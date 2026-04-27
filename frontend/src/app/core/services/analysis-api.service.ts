@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-import { AnalysisJobResponse } from '../models/analysis.models';
+import { AnalysisJobResponse, AnalysisStartRequest } from '../models/analysis.models';
 
 @Injectable({
   providedIn: 'root'
@@ -10,8 +10,8 @@ import { AnalysisJobResponse } from '../models/analysis.models';
 export class AnalysisApiService {
   private readonly http = inject(HttpClient);
 
-  startAnalysis(correlationId: string): Observable<AnalysisJobResponse> {
-    return this.http.post<AnalysisJobResponse>('/analysis/jobs', { correlationId });
+  startAnalysis(request: AnalysisStartRequest): Observable<AnalysisJobResponse> {
+    return this.http.post<AnalysisJobResponse>('/analysis/jobs', request);
   }
 
   getAnalysis(analysisId: string): Observable<AnalysisJobResponse> {

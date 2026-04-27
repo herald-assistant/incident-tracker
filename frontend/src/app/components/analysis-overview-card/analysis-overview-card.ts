@@ -27,6 +27,8 @@ export class AnalysisOverviewCardComponent {
   protected readonly metaItems = computed(() => [
     { label: 'Analysis ID', value: valueOrFallback(this.job().analysisId) },
     { label: 'Correlation ID', value: this.job().correlationId || 'n/a' },
+    { label: 'Model AI', value: this.job().aiModel || 'domyślny backend' },
+    { label: 'Reasoning', value: this.job().reasoningEffort || 'domyślny backend' },
     { label: 'Środowisko', value: valueOrFallback(this.job().environment) },
     { label: 'Gałąź GitLab', value: valueOrFallback(this.job().gitLabBranch) }
   ]);

@@ -29,10 +29,15 @@ public class AnalysisJobService {
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
 
     public AnalysisJobResponse startAnalysis(AnalysisRequest request) {
+        return startAnalysis(AnalysisJobStartRequest.from(request));
+    }
+
+    public AnalysisJobResponse startAnalysis(AnalysisJobStartRequest request) {
         var analysisId = UUID.randomUUID().toString();
         var job = new AnalysisJobState(
                 analysisId,
                 request.correlationId(),
+                request.aiOptions(),
                 analysisOrchestrator.providerDescriptors()
         );
 
@@ -48,9 +53,13 @@ public class AnalysisJobService {
         }).snapshot();
     }
 
-    private void runAnalysis(AnalysisJobState job, AnalysisRequest request) {
+    private void runAnalysis(AnalysisJobState job, AnalysisJobStartRequest request) {
         try {
-            var execution = analysisOrchestrator.analyze(request.correlationId(), new JobProgressListener(job));
+            var execution = analysisOrchestrator.analyze(
+                    request.correlationId(),
+                    request.aiOptions(),
+                    new JobProgressListener(job)
+            );
             job.markCompleted(execution.result());
         } catch (AnalysisDataNotFoundException exception) {
             job.markNotFound("ANALYSIS_DATA_NOT_FOUND", exception.getMessage());

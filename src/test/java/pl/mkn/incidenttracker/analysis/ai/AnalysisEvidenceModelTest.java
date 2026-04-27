@@ -15,9 +15,20 @@ class AnalysisEvidenceModelTest {
         var item = new AnalysisEvidenceItem("title", null);
 
         assertEquals(0, request.evidenceSections().size());
+        assertEquals(AnalysisAiOptions.DEFAULT, request.options());
         assertEquals(0, section.items().size());
         assertEquals(0, item.attributes().size());
         assertFalse(section.hasItems());
+    }
+
+    @Test
+    void shouldNormalizeAiOptions() {
+        var options = new AnalysisAiOptions(" gpt-5.4 ", " high ");
+
+        assertEquals("gpt-5.4", options.model());
+        assertEquals("high", options.reasoningEffort());
+        assertNull(new AnalysisAiOptions(" ", "").model());
+        assertNull(new AnalysisAiOptions(" ", "").reasoningEffort());
     }
 
     @Test

@@ -7,7 +7,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
 
 import java.time.Instant;
@@ -33,10 +32,12 @@ class AnalysisJobControllerTest {
 
     @Test
     void shouldStartAnalysisJob() throws Exception {
-        when(analysisJobService.startAnalysis(any(AnalysisRequest.class)))
+        when(analysisJobService.startAnalysis(any(AnalysisJobStartRequest.class)))
                 .thenReturn(new AnalysisJobResponse(
                         "job-123",
                         "timeout-123",
+                        "gpt-5.4",
+                        "high",
                         "QUEUED",
                         null,
                         null,
@@ -71,17 +72,36 @@ class AnalysisJobControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "correlationId": "timeout-123"
+                                  "correlationId": "timeout-123",
+                                  "model": "gpt-5.4",
+                                  "reasoningEffort": "high"
                                 }
                                 """))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.analysisId").value("job-123"))
                 .andExpect(jsonPath("$.correlationId").value("timeout-123"))
+                .andExpect(jsonPath("$.aiModel").value("gpt-5.4"))
+                .andExpect(jsonPath("$.reasoningEffort").value("high"))
                 .andExpect(jsonPath("$.status").value("QUEUED"))
                 .andExpect(jsonPath("$.steps", hasSize(1)))
                 .andExpect(jsonPath("$.result").doesNotExist());
 
-        verify(analysisJobService).startAnalysis(new AnalysisRequest("timeout-123"));
+        verify(analysisJobService).startAnalysis(new AnalysisJobStartRequest("timeout-123", "gpt-5.4", "high"));
+    }
+
+    @Test
+    void shouldRejectUnsupportedReasoningEffort() throws Exception {
+        mockMvc.perform(post("/analysis/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "correlationId": "timeout-123",
+                                  "reasoningEffort": "extreme"
+                                }
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("reasoningEffort"));
     }
 
     @Test
@@ -90,6 +110,8 @@ class AnalysisJobControllerTest {
                 .thenReturn(new AnalysisJobResponse(
                         "job-123",
                         "timeout-123",
+                        "gpt-5.4",
+                        "medium",
                         "COMPLETED",
                         null,
                         null,

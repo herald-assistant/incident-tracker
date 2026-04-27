@@ -5,9 +5,12 @@ utrzymaniu flow analizy incydentu i integracji AI.
 
 ## 1. Publiczny request analizy pozostaje minimalny
 
-`POST /analysis` i `POST /analysis/jobs` przyjmuja tylko `correlationId`.
+`POST /analysis` przyjmuje tylko `correlationId`. `POST /analysis/jobs` dla UI
+przyjmuje `correlationId` oraz opcjonalne preferencje wykonania AI:
+`model` i `reasoningEffort`.
+
 Runtime nie przywraca `branch`, `environment`, `gitLabGroup` ani innych pol
-sterujacych do publicznego requestu.
+sterujacych evidence scope'em do publicznego requestu.
 
 Konsekwencje:
 
@@ -17,6 +20,8 @@ Konsekwencje:
 - `gitLabGroup` pochodzi z konfiguracji aplikacji.
 - uzytkownik nie moze recznie przesterowac zakresu GitLaba albo DB przez
   publiczne API analizy.
+- wybor modelu i `reasoningEffort` dotyczy tylko konfiguracji sesji AI, nie
+  zmienia deterministycznie zbieranego evidence ani ukrytych scope'ow tools.
 
 ## 2. Flow pozostaje AI-first
 
@@ -302,10 +307,11 @@ Job state moze przechowywac prepared prompt i `toolEvidenceSections`, ale UI
 nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
 analizy aplikacji.
 
-Refaktory w `analysis.ai` i `analysis.ai.copilot` nie zmieniaja publicznego
-kontraktu produktu: `POST /analysis` i `POST /analysis/jobs` nadal przyjmuja
-tylko `correlationId`, response pozostaje mapowany do dotychczasowych pol
-aplikacji, a artefakty Copilota nadal sa embedded inline w promptcie.
+Refaktory w `analysis.ai` i `analysis.ai.copilot` nie powinny wymagac wiedzy o
+typach SDK w UI: `POST /analysis` nadal przyjmuje tylko `correlationId`, a
+`POST /analysis/jobs` moze przyjac tylko generyczne preferencje AI (`model`,
+`reasoningEffort`). Response pozostaje mapowany do pol aplikacji, a artefakty
+Copilota nadal sa embedded inline w promptcie.
 
 ## 20. Optymalizacje Copilota prowadzimy inkrementalnie
 

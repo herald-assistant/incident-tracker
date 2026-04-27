@@ -47,6 +47,9 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,
   `SessionConfig`, permission handler, hooks, safe lists, skill directories i
   disabled skills.
+- `AnalysisAiOptions` z requestu jobowego moze nadpisac skonfigurowany
+  `model` i `reasoningEffort` dla pojedynczej sesji; brak wyboru oznacza
+  fallback do properties albo domyslow SDK.
 
 Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 
@@ -194,7 +197,9 @@ Mutable stan licznikow jest oddzielony od registry, ale pola
 
 Refaktory runtime Copilota nie zmieniaja kontraktow zewnetrznych:
 
-- `POST /analysis` i `POST /analysis/jobs` przyjmuja tylko `correlationId`,
+- `POST /analysis` przyjmuje tylko `correlationId`,
+- `POST /analysis/jobs` przyjmuje `correlationId` oraz opcjonalne generyczne
+  preferencje AI: `model` i `reasoningEffort`,
 - `gitLabGroup` pochodzi z konfiguracji,
 - `environment` i `gitLabBranch` sa wyprowadzane z evidence,
 - artefakty Copilota sa embedded inline w promptcie, nie SDK attachments,
