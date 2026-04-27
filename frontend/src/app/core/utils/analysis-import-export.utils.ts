@@ -2,6 +2,7 @@ import {
   AnalysisEvidenceAttribute,
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
+  AnalysisChatMessageResponse,
   AnalysisExportEnvelope,
   AnalysisJobResponse,
   AnalysisJobStepResponse,
@@ -10,7 +11,8 @@ import {
 import { isTerminalStatus } from './analysis-display.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
-export const EXPORT_VERSION = 2;
+export const EXPORT_VERSION = 3;
+const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3]);
 
 export function buildExportEnvelope(
   job: AnalysisJobResponse,
@@ -40,7 +42,7 @@ export function parseImportedAnalysis(payload: unknown): {
   let jobPayload: unknown = payloadObject;
 
   if (payloadObject['schema'] === EXPORT_SCHEMA) {
-    if (payloadObject['version'] !== EXPORT_VERSION) {
+    if (!SUPPORTED_EXPORT_VERSIONS.has(Number(payloadObject['version']))) {
       throw new Error('Ten plik eksportu ma nieobsługiwaną wersję formatu.');
     }
 
@@ -102,6 +104,9 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobResponse {
     toolEvidenceSections: Array.isArray(jobObject['toolEvidenceSections'])
       ? jobObject['toolEvidenceSections'].map(normalizeEvidenceSection)
       : [],
+    chatMessages: Array.isArray(jobObject['chatMessages'])
+      ? jobObject['chatMessages'].map(normalizeChatMessage)
+      : [],
     preparedPrompt: normalizeString(jobObject['preparedPrompt']),
     result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
   };
@@ -151,6 +156,25 @@ function normalizeEvidenceItem(item: unknown): AnalysisEvidenceItem {
     attributes: Array.isArray(itemObject?.['attributes'])
       ? itemObject['attributes'].map(normalizeAttribute)
       : []
+  };
+}
+
+function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
+  const messageObject = asObject(message);
+  return {
+    id: normalizeString(messageObject?.['id']),
+    role: normalizeString(messageObject?.['role']),
+    status: normalizeString(messageObject?.['status']),
+    content: normalizeString(messageObject?.['content']),
+    errorCode: normalizeString(messageObject?.['errorCode']),
+    errorMessage: normalizeString(messageObject?.['errorMessage']),
+    createdAt: normalizeString(messageObject?.['createdAt']),
+    updatedAt: normalizeString(messageObject?.['updatedAt']),
+    completedAt: normalizeString(messageObject?.['completedAt']),
+    toolEvidenceSections: Array.isArray(messageObject?.['toolEvidenceSections'])
+      ? messageObject['toolEvidenceSections'].map(normalizeEvidenceSection)
+      : [],
+    prompt: normalizeString(messageObject?.['prompt'])
   };
 }
 

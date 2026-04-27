@@ -72,6 +72,7 @@ Po przejsciu calej sciezki powinienes umiec:
 
 - znalezc w kodzie glowny flow analizy po `correlationId`,
 - odroznic adapter, provider evidence, tool i provider AI,
+- odroznic finalna analize od follow-up chatu po zakonczonym jobie,
 - zrozumiec, jak Copilot reuse'uje Spring tools,
 - bezpiecznie dodac nowy krok evidence, nowy adapter albo nowy tool,
 - ocenic, w ktorym module zmiana powinna wyladowac.

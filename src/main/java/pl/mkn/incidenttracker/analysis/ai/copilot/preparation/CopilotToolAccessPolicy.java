@@ -81,6 +81,33 @@ public record CopilotToolAccessPolicy(
         );
     }
 
+    public static CopilotToolAccessPolicy fromFollowUpSession(
+            List<ToolDefinition> registeredTools,
+            boolean environmentResolved,
+            boolean gitLabScopeResolved
+    ) {
+        List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
+        var elasticToolsRegistered = hasToolPrefix(tools, "elastic_");
+        var gitLabToolsRegistered = hasToolPrefix(tools, "gitlab_");
+        var databaseToolsRegistered = hasToolPrefix(tools, "db_");
+        var enabledTools = tools.stream()
+                .filter(tool -> isFollowUpEnabled(tool.name(), environmentResolved, gitLabScopeResolved))
+                .toList();
+        var availableToolNames = enabledTools.stream()
+                .map(ToolDefinition::name)
+                .toList();
+
+        return new CopilotToolAccessPolicy(
+                enabledTools,
+                availableToolNames,
+                true,
+                elasticToolsRegistered,
+                gitLabToolsRegistered,
+                databaseToolsRegistered,
+                CopilotEvidenceCoverageReport.empty()
+        );
+    }
+
     public List<String> enabledCapabilityGroups() {
         var groups = new LinkedHashSet<String>();
         if (elasticToolsEnabled()) {
@@ -195,5 +222,25 @@ public record CopilotToolAccessPolicy(
             return true;
         }
         return evidenceCoverage.databaseDiscoveryOnly() && DB_DISCOVERY_TOOLS.contains(toolName);
+    }
+
+    private static boolean isFollowUpEnabled(
+            String toolName,
+            boolean environmentResolved,
+            boolean gitLabScopeResolved
+    ) {
+        if (toolName == null || toolName.isBlank()) {
+            return false;
+        }
+        if (toolName.startsWith("elastic_")) {
+            return true;
+        }
+        if (toolName.startsWith("gitlab_")) {
+            return gitLabScopeResolved;
+        }
+        if (toolName.startsWith("db_")) {
+            return environmentResolved && !"db_execute_readonly_sql".equals(toolName);
+        }
+        return true;
     }
 }

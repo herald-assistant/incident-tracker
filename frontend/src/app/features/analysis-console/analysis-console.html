@@ -187,6 +187,107 @@
             [preparedPrompt]="currentJob.preparedPrompt"
             [result]="currentJob.result"
           ></app-analysis-steps-panel>
+
+          <section class="analysis-chat panel-card">
+            <div class="panel-card__header panel-card__header--compact">
+              <div>
+                <p class="section-eyebrow">Chat</p>
+                <h3>Kontynuacja analizy</h3>
+              </div>
+              <p class="analysis-chat__hint">{{ chatHint() }}</p>
+            </div>
+
+            <div class="analysis-chat__messages" aria-live="polite">
+              @if (!currentJob.chatMessages.length) {
+                <div class="empty-state">
+                  Po zakończeniu analizy możesz dopytać AI o wynik albo zlecić dodatkową weryfikację.
+                </div>
+              } @else {
+                @for (message of currentJob.chatMessages; track message.id) {
+                  <article
+                    class="chat-message"
+                    [class.chat-message--user]="message.role === 'USER'"
+                    [class.chat-message--assistant]="message.role === 'ASSISTANT'"
+                    [class.chat-message--failed]="message.status === 'FAILED'"
+                  >
+                    <div class="chat-message__header">
+                      <strong>{{ chatMessageTitle(message) }}</strong>
+                      <span>{{ chatMessageMeta(message) }}</span>
+                    </div>
+
+                    @if (message.status === 'IN_PROGRESS') {
+                      <p class="chat-message__pending">
+                        AI analizuje polecenie i w razie potrzeby korzysta z dostępnych narzędzi.
+                      </p>
+                    } @else if (message.status === 'FAILED') {
+                      <p class="chat-message__error">
+                        {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
+                      </p>
+                    } @else if (message.role === 'ASSISTANT') {
+                      <app-markdown-content [content]="message.content"></app-markdown-content>
+                    } @else {
+                      <p class="chat-message__text">{{ message.content }}</p>
+                    }
+
+                    @if (message.toolEvidenceSections.length > 0) {
+                      <details class="chat-message__evidence">
+                        <summary>Dane pobrane w tej odpowiedzi</summary>
+                        <div class="chat-message__evidence-sections">
+                          @for (section of message.toolEvidenceSections; track section.provider + section.category) {
+                            <section class="chat-evidence-section">
+                              <h4>{{ evidenceSectionTitle(section) }}</h4>
+                              @for (item of section.items; track item.title + $index) {
+                                <details class="chat-evidence-item">
+                                  <summary>{{ item.title }}</summary>
+                                  <div class="attribute-list">
+                                    @for (attribute of item.attributes; track attribute.name + $index) {
+                                      <div class="attribute-row attribute-row--block">
+                                        <span class="attribute-name">{{ attribute.name }}</span>
+                                        <pre class="attribute-block">{{ attribute.value }}</pre>
+                                      </div>
+                                    }
+                                  </div>
+                                </details>
+                              }
+                            </section>
+                          }
+                        </div>
+                      </details>
+                    }
+                  </article>
+                }
+              }
+            </div>
+
+            <form class="analysis-chat__form" novalidate (submit)="submitChat($event)">
+              <label class="field-label" for="analysisChatMessage">Wiadomość do AI</label>
+              <textarea
+                id="analysisChatMessage"
+                class="chat-input"
+                rows="4"
+                placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
+                [formControl]="chatMessageControl"
+                (input)="clearChatError()"
+              ></textarea>
+
+              <div class="analysis-chat__actions">
+                <button
+                  class="primary-button"
+                  type="submit"
+                  [disabled]="!canUseChat() || isChatSubmitting()"
+                  [class.is-loading]="isChatSubmitting()"
+                  [attr.aria-busy]="isChatSubmitting()"
+                >
+                  <span class="button-label">Wyślij</span>
+                  <span class="button-spinner" aria-hidden="true"></span>
+                </button>
+              </div>
+
+              @if (chatError()) {
+                <p class="form-error">{{ chatError() }}</p>
+              }
+            </form>
+          </section>
         </div>
       }
     </section>

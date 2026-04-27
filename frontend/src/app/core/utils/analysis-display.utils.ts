@@ -49,6 +49,14 @@ export function isTerminalStatus(status: string | null | undefined): boolean {
   return TERMINAL_STATUSES.has(status ?? '');
 }
 
+export function hasInProgressChat(job: AnalysisJobResponse | null | undefined): boolean {
+  return Boolean(
+    job?.chatMessages?.some(
+      (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'
+    )
+  );
+}
+
 export function formatStatus(status: string | null | undefined): string {
   return STATUS_LABELS[status ?? ''] || status || 'Nieznany';
 }

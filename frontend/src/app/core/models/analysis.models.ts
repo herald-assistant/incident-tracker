@@ -48,6 +48,10 @@ export interface AnalysisStartRequest {
   reasoningEffort?: string;
 }
 
+export interface AnalysisChatMessageRequest {
+  message: string;
+}
+
 export interface AnalysisAiModelOption {
   id: string;
   name: string;
@@ -97,6 +101,23 @@ export interface AnalysisJobStepResponse {
   producesEvidence?: AnalysisEvidenceReference[];
 }
 
+export type AnalysisChatMessageRole = 'USER' | 'ASSISTANT' | string;
+export type AnalysisChatMessageStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | string;
+
+export interface AnalysisChatMessageResponse {
+  id: string;
+  role: AnalysisChatMessageRole;
+  status: AnalysisChatMessageStatus;
+  content: string;
+  errorCode: string;
+  errorMessage: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string;
+  toolEvidenceSections: AnalysisEvidenceSection[];
+  prompt: string;
+}
+
 export interface AnalysisJobResponse {
   analysisId: string;
   correlationId: string;
@@ -115,6 +136,7 @@ export interface AnalysisJobResponse {
   steps: AnalysisJobStepResponse[];
   evidenceSections: AnalysisEvidenceSection[];
   toolEvidenceSections: AnalysisEvidenceSection[];
+  chatMessages: AnalysisChatMessageResponse[];
   preparedPrompt: string;
   result: AnalysisResultResponse | null;
 }

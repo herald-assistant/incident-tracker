@@ -16,6 +16,7 @@ Async:
 ```http
 POST /analysis/jobs
 GET /analysis/jobs/{analysisId}
+POST /analysis/jobs/{analysisId}/chat/messages
 GET /analysis/ai/options
 ```
 
@@ -36,6 +37,11 @@ hidden `ToolContext`.
 modeli. Backend mapuje `CopilotClient.listModels()` na generyczne DTO aplikacji
 i cache'uje wynik; jesli SDK jest chwilowo niedostepne, zwraca tylko
 skonfigurowane domysly.
+
+`POST /analysis/jobs/{analysisId}/chat/messages` jest dostepny dopiero po
+`COMPLETED`. Request niesie tylko tresc wiadomosci operatora. Scope follow-up
+(`correlationId`, `environment`, `gitLabBranch`, `gitLabGroup`) pochodzi z
+zakonczonego joba i ukrytego requestu AI zapisanego po finalnej analizie.
 
 ## 2. Orkiestracja wysokiego poziomu
 
@@ -111,6 +117,30 @@ renderingu i konfiguracji SDK:
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.
+
+## 4a. Follow-up chat po analizie
+
+Po zakonczonej analizie `AnalysisJobService` moze dopisac pare wiadomosci
+chatu: user message jako `COMPLETED` i assistant message jako `IN_PROGRESS`.
+W tle uruchamiany jest osobny task, ktory wywoluje `AnalysisAiChatProvider`.
+
+Follow-up runtime:
+
+1. bierze `AnalysisAiAnalysisRequest` zapisany z finalnej analizy,
+2. dolacza deterministyczne evidence, finalny wynik, historie chatu i tool
+   evidence z wczesniejszych sesji,
+3. buduje nowy prompt kontynuacyjny,
+4. tworzy nowa sesje Copilota z tym samym hidden scope,
+5. wystawia tylko session-bound tools sensowne dla rozwiazanego scope'u:
+   - Elasticsearch po aktualnym `correlationId`,
+   - GitLab gdy jest `gitLabGroup` i `gitLabBranch`,
+   - Database gdy jest resolved `environment`,
+6. publikuje GitLab/DB tool evidence do aktualnej odpowiedzi chatu,
+7. zapisuje odpowiedz albo blad w `chatMessages` joba.
+
+Chat nie dodaje nowego providerowego kroku evidence i nie uruchamia ponownie
+deterministycznego collectora. To jest warstwa operatorskiej kontynuacji nad
+zakonczonym snapshotem analizy.
 
 ## 5. Artefakty incydentu
 
@@ -370,6 +400,11 @@ Publiczny sync request zawiera tylko `correlationId`. Job request UI zawiera
 `correlationId` oraz opcjonalne preferencje AI (`model`, `reasoningEffort`).
 `gitLabGroup` pochodzi z konfiguracji, a `environment` i `gitLabBranch` sa
 wyprowadzane z evidence.
+
+Job response zawiera tez `chatMessages`. UI pokazuje chat dopiero po
+`COMPLETED`; dla wiadomosci chatu z `IN_PROGRESS` polluje ten sam endpoint
+`GET /analysis/jobs/{analysisId}`. Importowany eksport analizy jest read-only,
+bo lokalny backend nie ma odpowiadajacego mu stanu joba.
 
 Przed startem joba UI pobiera `GET /analysis/ai/options`. Select modelu i
 `reasoningEffort` sa budowane z odpowiedzi backendu; jesli wybrany model nie

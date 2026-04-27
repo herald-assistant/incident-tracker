@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatProvider;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AnalysisJobService {
 
     private final AnalysisOrchestrator analysisOrchestrator;
+    private final AnalysisAiChatProvider analysisAiChatProvider;
     @Qualifier("applicationTaskExecutor")
     private final TaskExecutor taskExecutor;
 
@@ -48,9 +51,18 @@ public class AnalysisJobService {
     }
 
     public AnalysisJobResponse getAnalysis(String analysisId) {
-        return jobs.computeIfAbsent(analysisId, missingId -> {
-            throw new AnalysisJobNotFoundException(missingId);
-        }).snapshot();
+        return jobOrThrow(analysisId).snapshot();
+    }
+
+    public AnalysisJobResponse startChatMessage(String analysisId, AnalysisChatMessageRequest request) {
+        var job = jobOrThrow(analysisId);
+        var userMessageId = UUID.randomUUID().toString();
+        var assistantMessageId = UUID.randomUUID().toString();
+        var chatRequest = job.startChatMessage(userMessageId, assistantMessageId, request.message());
+
+        taskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest));
+
+        return job.snapshot();
     }
 
     private void runAnalysis(AnalysisJobState job, AnalysisJobStartRequest request) {
@@ -60,7 +72,7 @@ public class AnalysisJobService {
                     request.aiOptions(),
                     new JobProgressListener(job)
             );
-            job.markCompleted(execution.result());
+            job.markCompleted(execution);
         } catch (AnalysisDataNotFoundException exception) {
             job.markNotFound("ANALYSIS_DATA_NOT_FOUND", exception.getMessage());
         } catch (RuntimeException exception) {
@@ -77,6 +89,42 @@ public class AnalysisJobService {
                             : "Unexpected analysis failure."
             );
         }
+    }
+
+    private void runChat(
+            AnalysisJobState job,
+            String assistantMessageId,
+            AnalysisAiChatRequest request
+    ) {
+        try {
+            var response = analysisAiChatProvider.chat(
+                    request,
+                    section -> job.markChatToolEvidenceUpdated(assistantMessageId, section)
+            );
+            job.markChatCompleted(assistantMessageId, response.content(), response.prompt());
+        } catch (RuntimeException exception) {
+            log.error(
+                    "Analysis chat failed correlationId={} errorCode=ANALYSIS_CHAT_FAILED message={}",
+                    request.correlationId(),
+                    exception.getMessage(),
+                    exception
+            );
+            job.markChatFailed(
+                    assistantMessageId,
+                    "ANALYSIS_CHAT_FAILED",
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Unexpected follow-up chat failure."
+            );
+        }
+    }
+
+    private AnalysisJobState jobOrThrow(String analysisId) {
+        var job = jobs.get(analysisId);
+        if (job == null) {
+            throw new AnalysisJobNotFoundException(analysisId);
+        }
+        return job;
     }
 
     private static final class JobProgressListener implements AnalysisExecutionListener {

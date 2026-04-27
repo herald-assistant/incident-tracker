@@ -54,6 +54,12 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do promptu
   albo job state.
 
+Follow-up chat po zakonczonym jobie nie reuse'uje `AnalysisAiProvider`.
+Ma osobny kontrakt `AnalysisAiChatProvider` i przygotowanie
+`CopilotSdkFollowUpPreparationService`, bo odpowiedz nie jest JSON-only
+diagnoza, tylko operatorska kontynuacja. Prompt follow-up dostaje finalny
+wynik, historie rozmowy, evidence i poprzednie tool evidence.
+
 Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 
 ```text
@@ -103,6 +109,15 @@ od coverage evaluatora nie byla zaszyta w samym recordzie policy.
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal.
 GitLab, Elasticsearch i DB tools pracuja przez hidden `ToolContext`.
 
+W follow-up chat policy nie jest coverage-only. Najnowsza wiadomosc operatora
+moze byc powodem do targeted uzycia tools, ale scope nadal pochodzi z
+zakonczonej analizy:
+
+- Elasticsearch wymaga aktualnego `correlationId`,
+- GitLab wymaga `gitLabGroup` i `gitLabBranch`,
+- Database wymaga resolved `environment`,
+- raw SQL pozostaje domyslnie wylaczony.
+
 `CopilotToolDescriptionDecorator` dodaje Copilot-facing guidance do opisow
 drogich albo ryzykownych tools.
 
@@ -142,6 +157,9 @@ references pozostaja pomocniczymi toolami dla modelu, bez osobnych sekcji UI.
 DB user-facing evidence pokazuje `reason` podany przez model oraz wynik toola
 jako `result`. Nie utrzymujemy juz diagnostycznego pytania, parametrow ani
 dodatkowego streszczenia wyniku w payloadzie dla operatora.
+
+Tool evidence z follow-up chatu jest zapisywane przy konkretnej odpowiedzi
+`chatMessages`, a nie jako nowy deterministyczny provider evidence.
 
 Registry capture zarzadza sesjami i routingiem. Mapowanie GitLab/DB wynikow
 jest przeniesione do mapperow, zeby lifecycle sesji nie mieszal sie z
@@ -203,6 +221,8 @@ Refaktory runtime Copilota nie zmieniaja kontraktow zewnetrznych:
 - `POST /analysis` przyjmuje tylko `correlationId`,
 - `POST /analysis/jobs` przyjmuje `correlationId` oraz opcjonalne generyczne
   preferencje AI: `model` i `reasoningEffort`,
+- `POST /analysis/jobs/{analysisId}/chat/messages` przyjmuje tylko tresc
+  wiadomosci follow-up dla zakonczonego joba,
 - `GET /analysis/ai/options` zwraca modele i `reasoningEffort` dostepne wedlug
   Copilot SDK, a frontend nie hardcoduje tych list,
 - `gitLabGroup` pochodzi z konfiguracji,

@@ -11,6 +11,9 @@ import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalCon
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatProvider;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
@@ -49,7 +52,11 @@ class AnalysisJobServiceTest {
     private final GitLabProperties gitLabProperties = gitLabProperties();
     private final DeploymentContextResolver deploymentContextResolver = new DeploymentContextResolver();
     private final CapturingTaskExecutor taskExecutor = new CapturingTaskExecutor();
-    private final AnalysisJobService analysisJobService = analysisJobService(new TestAnalysisAiProvider(), taskExecutor);
+    private final AnalysisJobService analysisJobService = analysisJobService(
+            new TestAnalysisAiProvider(),
+            new TestAnalysisChatProvider(),
+            taskExecutor
+    );
 
     @Test
     void shouldReturnQueuedJobThenCompleteItAfterWorkerRuns() {
@@ -93,7 +100,7 @@ class AnalysisJobServiceTest {
     void shouldPassSelectedAiOptionsToAnalysisFlow() {
         var provider = new CapturingOptionsAnalysisAiProvider();
         var optionsTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(provider, optionsTaskExecutor);
+        var service = analysisJobService(provider, new TestAnalysisChatProvider(), optionsTaskExecutor);
 
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", "gpt-5.4", "high"));
 
@@ -127,7 +134,11 @@ class AnalysisJobServiceTest {
     @Test
     void shouldKeepPreparedPromptWhenAiAnalysisFails() {
         var failingTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(new FailingAnalysisAiProvider(), failingTaskExecutor);
+        var service = analysisJobService(
+                new FailingAnalysisAiProvider(),
+                new TestAnalysisChatProvider(),
+                failingTaskExecutor
+        );
 
         var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
 
@@ -152,7 +163,11 @@ class AnalysisJobServiceTest {
     void shouldExposeAiToolFetchedGitLabFilesDuringPollingWhileAiStepIsRunning() throws Exception {
         var toolAwareProvider = new BlockingToolAwareAnalysisAiProvider();
         var blockingTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(toolAwareProvider, blockingTaskExecutor);
+        var service = analysisJobService(
+                toolAwareProvider,
+                new TestAnalysisChatProvider(),
+                blockingTaskExecutor
+        );
 
         var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
         var worker = new Thread(blockingTaskExecutor::runNext);
@@ -186,7 +201,45 @@ class AnalysisJobServiceTest {
         assertEquals(1, completed.toolEvidenceSections().get(0).items().size());
     }
 
-    private AnalysisJobService analysisJobService(AnalysisAiProvider analysisAiProvider, TaskExecutor taskExecutor) {
+    @Test
+    void shouldRunFollowUpChatAfterCompletedAnalysis() {
+        var chatProvider = new ToolAwareTestAnalysisChatProvider();
+        var chatTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(new TestAnalysisAiProvider(), chatProvider, chatTaskExecutor);
+
+        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
+        chatTaskExecutor.runNext();
+
+        var afterChatStart = service.startChatMessage(
+                started.analysisId(),
+                new AnalysisChatMessageRequest("Potwierdz w repo gdzie ustawiany jest timeout.")
+        );
+
+        assertEquals(2, afterChatStart.chatMessages().size());
+        assertEquals("USER", afterChatStart.chatMessages().get(0).role());
+        assertEquals("ASSISTANT", afterChatStart.chatMessages().get(1).role());
+        assertEquals("IN_PROGRESS", afterChatStart.chatMessages().get(1).status());
+        assertFalse(chatTaskExecutor.isEmpty());
+
+        chatTaskExecutor.runNext();
+
+        var completed = service.getAnalysis(started.analysisId());
+        var assistantMessage = completed.chatMessages().get(1);
+        assertEquals("COMPLETED", assistantMessage.status());
+        assertEquals(
+                "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie katalogu.",
+                assistantMessage.content()
+        );
+        assertEquals("Synthetic follow-up prompt for timeout-123", assistantMessage.prompt());
+        assertEquals(1, assistantMessage.toolEvidenceSections().size());
+        assertEquals("gitlab", assistantMessage.toolEvidenceSections().get(0).provider());
+    }
+
+    private AnalysisJobService analysisJobService(
+            AnalysisAiProvider analysisAiProvider,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor taskExecutor
+    ) {
         return new AnalysisJobService(
                 new AnalysisOrchestrator(
                         new AnalysisEvidenceCollector(
@@ -205,6 +258,7 @@ class AnalysisJobServiceTest {
                         analysisAiProvider,
                         gitLabProperties
                 ),
+                analysisAiChatProvider,
                 taskExecutor
         );
     }
@@ -407,6 +461,58 @@ class AnalysisJobServiceTest {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted while waiting to finish AI analysis.", exception);
             }
+        }
+    }
+
+    private static final class TestAnalysisChatProvider implements AnalysisAiChatProvider {
+
+        @Override
+        public AnalysisAiChatResponse chat(
+                AnalysisAiChatRequest request,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            return new AnalysisAiChatResponse(
+                    "test-chat-provider",
+                    "Follow-up answer for " + request.message(),
+                    "Synthetic follow-up prompt for " + request.correlationId()
+            );
+        }
+    }
+
+    private static final class ToolAwareTestAnalysisChatProvider implements AnalysisAiChatProvider {
+
+        @Override
+        public AnalysisAiChatResponse chat(
+                AnalysisAiChatRequest request,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            toolEvidenceListener.onToolEvidenceUpdated(new AnalysisEvidenceSection(
+                    "gitlab",
+                    "tool-fetched-code",
+                    List.of(new AnalysisEvidenceItem(
+                            "edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                            List.of(
+                                    new AnalysisEvidenceAttribute(
+                                            "filePath",
+                                            "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"
+                                    ),
+                                    new AnalysisEvidenceAttribute(
+                                            "reason",
+                                            "Potwierdzam miejsce konfiguracji timeoutu."
+                                    ),
+                                    new AnalysisEvidenceAttribute(
+                                            "content",
+                                            "timeout(Duration.ofSeconds(2));"
+                                    )
+                            )
+                    ))
+            ));
+
+            return new AnalysisAiChatResponse(
+                    "test-chat-provider",
+                    "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie katalogu.",
+                    "Synthetic follow-up prompt for " + request.correlationId()
+            );
         }
     }
 

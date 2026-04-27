@@ -16,6 +16,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import {
   AnalysisAiModelOptionsResponse,
   ApiErrorResponse,
+  AnalysisChatMessageResponse,
+  AnalysisEvidenceSection,
   AnalysisJobResponse,
   ExportState,
   TransportErrorState
@@ -24,6 +26,10 @@ import { AnalysisApiService } from '../../core/services/analysis-api.service';
 import {
   buildAnalysisActionsHint,
   defaultErrorMessage,
+  formatDateTime,
+  formatEvidenceSectionTitle,
+  formatStatus,
+  hasInProgressChat,
   isTerminalStatus
 } from '../../core/utils/analysis-display.utils';
 import {
@@ -34,6 +40,7 @@ import {
 } from '../../core/utils/analysis-import-export.utils';
 import { AnalysisOverviewCardComponent } from '../../components/analysis-overview-card/analysis-overview-card';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
+import { MarkdownContentComponent } from '../../components/markdown-content/markdown-content';
 
 const POLL_INTERVAL_MS = 1500;
 const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
@@ -50,7 +57,8 @@ const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
     RouterLink,
     RouterLinkActive,
     AnalysisOverviewCardComponent,
-    AnalysisStepsPanelComponent
+    AnalysisStepsPanelComponent,
+    MarkdownContentComponent
   ],
   templateUrl: './analysis-console.html',
   styleUrl: './analysis-console.scss'
@@ -66,9 +74,15 @@ export class AnalysisConsoleComponent {
   });
   readonly aiModelControl = new FormControl('', { nonNullable: true });
   readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
+  readonly chatMessageControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required]
+  });
 
   readonly isLoading = signal(false);
+  readonly isChatSubmitting = signal(false);
   readonly formError = signal('');
+  readonly chatError = signal('');
   readonly placeholderMode = signal<'idle' | 'loading'>('idle');
   readonly loadingCorrelationId = signal('');
   readonly transportError = signal<TransportErrorState | null>(null);
@@ -100,6 +114,30 @@ export class AnalysisConsoleComponent {
       this.placeholderMode() === 'loading' || this.transportError() !== null || this.job() !== null
   );
   readonly analysisActionsHint = computed(() => buildAnalysisActionsHint(this.exportState()));
+  readonly canUseChat = computed(() => {
+    const currentJob = this.job();
+    return (
+      currentJob?.status === 'COMPLETED' &&
+      this.exportState()?.origin === 'live' &&
+      !hasInProgressChat(currentJob)
+    );
+  });
+  readonly chatHint = computed(() => {
+    const currentJob = this.job();
+    if (!currentJob) {
+      return 'Chat będzie dostępny po zakończeniu analizy.';
+    }
+    if (this.exportState()?.origin === 'imported') {
+      return 'Importowany zapis jest tylko do odczytu. Chat działa dla analiz żywych w backendzie.';
+    }
+    if (currentJob.status !== 'COMPLETED') {
+      return 'Chat będzie dostępny po zakończeniu analizy.';
+    }
+    if (hasInProgressChat(currentJob)) {
+      return 'AI przygotowuje odpowiedź na poprzednie polecenie.';
+    }
+    return 'Możesz dopytać o wynik, poprosić o weryfikację w repo lub DB albo wygenerować raport.';
+  });
   readonly placeholderKicker = computed(() =>
     this.placeholderMode() === 'loading' ? 'Trwa' : 'Gotowe'
   );
@@ -140,6 +178,7 @@ export class AnalysisConsoleComponent {
     this.job.set(null);
     this.transportError.set(null);
     this.exportState.set(null);
+    this.chatError.set('');
     this.isLoading.set(true);
     this.placeholderMode.set('loading');
     this.loadingCorrelationId.set(correlationId);
@@ -185,6 +224,10 @@ export class AnalysisConsoleComponent {
     this.formError.set('');
   }
 
+  clearChatError(): void {
+    this.chatError.set('');
+  }
+
   triggerImport(fileInput: HTMLInputElement): void {
     this.clearFormError();
     fileInput.value = '';
@@ -217,6 +260,7 @@ export class AnalysisConsoleComponent {
       this.placeholderMode.set('idle');
       this.transportError.set(null);
       this.job.set(imported.job);
+      this.chatError.set('');
       this.syncExportableState(imported.job, {
         origin: 'imported',
         exportedAt: imported.exportedAt,
@@ -272,6 +316,88 @@ export class AnalysisConsoleComponent {
     this.clearFormError();
   }
 
+  submitChat(event: Event): void {
+    event.preventDefault();
+
+    const currentJob = this.job();
+    const analysisId = this.activeAnalysisId || currentJob?.analysisId || '';
+    const message = this.chatMessageControl.value.trim();
+
+    if (!message) {
+      this.chatError.set('Wpisz pytanie albo polecenie do AI.');
+      return;
+    }
+
+    if (!currentJob || currentJob.status !== 'COMPLETED' || !analysisId) {
+      this.chatError.set('Chat jest dostępny dopiero dla zakończonej analizy uruchomionej w backendzie.');
+      return;
+    }
+
+    if (hasInProgressChat(currentJob)) {
+      this.chatError.set('Poczekaj na zakończenie poprzedniej odpowiedzi AI.');
+      return;
+    }
+
+    this.chatError.set('');
+    this.isChatSubmitting.set(true);
+    this.chatMessageControl.disable({ emitEvent: false });
+
+    this.analysisApi
+      .sendChatMessage(analysisId, { message })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.isChatSubmitting.set(false);
+          this.chatMessageControl.enable({ emitEvent: false });
+        })
+      )
+      .subscribe({
+        next: (job) => {
+          this.chatMessageControl.setValue('', { emitEvent: false });
+          this.activeAnalysisId = job.analysisId;
+          this.applyJob(job, {
+            origin: 'live',
+            exportedAt: '',
+            fileName: ''
+          });
+
+          if (this.shouldKeepPolling(job)) {
+            this.schedulePoll(job.analysisId);
+          }
+        },
+        error: (error) => {
+          const transportError = this.toTransportError(
+            error,
+            'Nie udało się wysłać wiadomości do backendu.'
+          );
+          this.chatError.set(transportError.message);
+        }
+      });
+  }
+
+  protected chatMessageTitle(message: AnalysisChatMessageResponse): string {
+    if (message.role === 'USER') {
+      return 'Operator';
+    }
+    if (message.status === 'IN_PROGRESS') {
+      return 'AI odpowiada';
+    }
+    if (message.status === 'FAILED') {
+      return 'AI zakończyło odpowiedź błędem';
+    }
+    return 'AI';
+  }
+
+  protected chatMessageMeta(message: AnalysisChatMessageResponse): string {
+    const status = message.role === 'ASSISTANT' ? formatStatus(message.status) : '';
+    const timestamp = formatDateTime(message.completedAt || message.updatedAt || message.createdAt);
+    return [status, timestamp].filter(Boolean).join(' · ');
+  }
+
+  protected evidenceSectionTitle(section: AnalysisEvidenceSection): string {
+    return formatEvidenceSectionTitle(section);
+  }
+
   private pollAnalysis(analysisId: string): void {
     this.analysisApi
       .getAnalysis(analysisId)
@@ -288,7 +414,7 @@ export class AnalysisConsoleComponent {
             fileName: ''
           });
 
-          if (!isTerminalStatus(job.status)) {
+          if (this.shouldKeepPolling(job)) {
             this.schedulePoll(analysisId);
           }
         },
@@ -426,7 +552,7 @@ export class AnalysisConsoleComponent {
     job: AnalysisJobResponse,
     metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>
   ): void {
-    if (!isTerminalStatus(job.status)) {
+    if (!isTerminalStatus(job.status) || hasInProgressChat(job)) {
       this.exportState.set(null);
       return;
     }
@@ -447,6 +573,10 @@ export class AnalysisConsoleComponent {
     this.placeholderMode.set('idle');
     this.transportError.set(this.toTransportError(error, networkFallbackMessage));
     this.scrollResponseIntoView();
+  }
+
+  private shouldKeepPolling(job: AnalysisJobResponse): boolean {
+    return !isTerminalStatus(job.status) || hasInProgressChat(job);
   }
 
   private toTransportError(

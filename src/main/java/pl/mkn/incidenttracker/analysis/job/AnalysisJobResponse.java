@@ -24,6 +24,7 @@ public record AnalysisJobResponse(
         List<AnalysisJobStepResponse> steps,
         List<AnalysisEvidenceSection> evidenceSections,
         List<AnalysisEvidenceSection> toolEvidenceSections,
+        List<AnalysisChatMessageResponse> chatMessages,
         String preparedPrompt,
         AnalysisResultResponse result
 ) {

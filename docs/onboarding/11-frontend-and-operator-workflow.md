@@ -11,6 +11,7 @@ job flow.
 - jak prezentowany jest progres i evidence,
 - po co UI pokazuje prepared prompt i dane diagnostyczne,
 - jak wyglada drugi widok `/evidence`,
+- jak dziala follow-up chat po zakonczonej analizie,
 - jak dziala import i eksport zakonczonej analizy.
 
 ## Model pracy operatora
@@ -21,8 +22,10 @@ job flow.
 3. frontend startuje job,
 4. frontend polluje status,
 5. pokazuje overview, kroki evidence, prompt i finalny wynik,
-6. moze wyeksportowac zakonczony job do JSON albo zaimportowac go z pliku,
-7. w razie potrzeby operator uzywa tez widoku `GET /evidence`.
+6. po `COMPLETED` operator moze wyslac follow-up message do AI,
+7. frontend polluje `chatMessages` w tym samym job snapshotcie,
+8. moze wyeksportowac zakonczony job do JSON albo zaimportowac go z pliku,
+9. w razie potrzeby operator uzywa tez widoku `GET /evidence`.
 
 Aktualny frontend ma dwa route'y Angulara:
 
@@ -41,6 +44,8 @@ Aktualny frontend ma dwa route'y Angulara:
   zawiedzie,
 - `toolEvidenceSections` jest osobna lista od `evidenceSections`, bo pokazuje
   dane dociagniete przez AI tools juz w trakcie kroku `AI_ANALYSIS`,
+- `chatMessages` jest historia kontynuacji po analizie; kazda odpowiedz
+  assistant moze miec wlasne `toolEvidenceSections`,
 - widok krokow ma specjalne rendery dla logow Elasticsearch, code/tool evidence
   z GitLaba, runtime signals Dynatrace i wynikow DB tools,
 - GitLab tool evidence pokazuje juniorowi tylko nazwe/sciezke pliku, powod
@@ -49,6 +54,8 @@ Aktualny frontend ma dwa route'y Angulara:
   tabela albo JSON bez diagnostycznych pytan, parametrow i technicznych badge'y,
 - route `/evidence` nie zna polaczen do backendow zewnetrznych; odpala tylko
   helper endpointy Spring Boot.
+- importowany JSON jest read-only dla chatu, bo backend nie ma odpowiadajacego
+  mu live joba w pamieci.
 
 ## Przeczytaj w kodzie
 
@@ -63,6 +70,8 @@ Aktualny frontend ma dwa route'y Angulara:
 - przejdz przez widok analizy i evidence,
 - zobacz, ktore pola pochodza z job snapshotu,
 - sprawdz import/eksport zakonczonego joba,
+- po zakonczonej live analizie wyslij follow-up message i obserwuj polling
+  odpowiedzi,
 - przejdz do `/evidence` i odpal helper endpointy bez opuszczania SPA.
 
 ## Checkpoint
@@ -71,3 +80,4 @@ Aktualny frontend ma dwa route'y Angulara:
 - Jakie dane sa diagnostycznie wazniejsze w job flow niz w sync response?
 - Ktore elementy UI sa projekcja runtime `toolEvidenceSections`, a ktore
   glownych `evidenceSections`?
+- Dlaczego follow-up chat jest dostepny tylko dla live joba po `COMPLETED`?

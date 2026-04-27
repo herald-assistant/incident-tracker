@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import {
+  AnalysisChatMessageRequest,
   AnalysisAiModelOptionsResponse,
   AnalysisJobResponse,
   AnalysisStartRequest
@@ -24,5 +25,15 @@ export class AnalysisApiService {
 
   getAnalysis(analysisId: string): Observable<AnalysisJobResponse> {
     return this.http.get<AnalysisJobResponse>(`/analysis/jobs/${encodeURIComponent(analysisId)}`);
+  }
+
+  sendChatMessage(
+    analysisId: string,
+    request: AnalysisChatMessageRequest
+  ): Observable<AnalysisJobResponse> {
+    return this.http.post<AnalysisJobResponse>(
+      `/analysis/jobs/${encodeURIComponent(analysisId)}/chat/messages`,
+      request
+    );
   }
 }

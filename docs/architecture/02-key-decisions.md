@@ -325,7 +325,37 @@ Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac
 model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
 `AnalysisAiModelOptionsProvider`, nie z kodu Angulara.
 
-## 20. Optymalizacje Copilota prowadzimy inkrementalnie
+## 20. Follow-up chat jest kontynuacja joba
+
+Po `COMPLETED` operator moze wyslac pytanie albo polecenie przez
+`POST /analysis/jobs/{analysisId}/chat/messages`. To nie zmienia minimalnego
+kontraktu `POST /analysis` ani nie dodaje recznego scope'u do publicznego
+requestu.
+
+Decyzje:
+
+- wiadomosc chatu jest asynchroniczna i pollowana przez ten sam
+  `GET /analysis/jobs/{analysisId}`,
+- kazda odpowiedz chatu uruchamia nowa sesje AI, zamiast trzymac otwarta sesje
+  SDK po finalnej analizie,
+- follow-up prompt dostaje evidence, wynik koncowy, historie rozmowy i
+  poprzednie tool evidence,
+- GitLab/Elasticsearch/Database tools nadal sa session-bound przez hidden
+  `ToolContext`,
+- scope tools pochodzi z zakonczonej analizy: `correlationId`, `environment`,
+  `gitLabBranch` i `gitLabGroup`,
+- raw SQL pozostaje wylaczony domyslnie; chat preferuje typed DB tools,
+- tool evidence pobrane w follow-up jest przypisane do odpowiedzi chatu, a nie
+  do deterministycznego pipeline evidence.
+
+Konsekwencje:
+
+- importowany zapis analizy jest read-only dla UI chatu, bo backend nie ma
+  pamieci tego joba,
+- chat moze prosic AI o weryfikacje w repo, DB albo wygenerowanie raportu, ale
+  model nie powinien wymyslac scope'u ani obchodzic blokady lokalnego workspace.
+
+## 21. Optymalizacje Copilota prowadzimy inkrementalnie
 
 Kolejnosc prac:
 

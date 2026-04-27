@@ -64,6 +64,7 @@ class AnalysisJobControllerTest {
                         ),
                         List.of(),
                         List.of(),
+                        List.of(),
                         null,
                         null
                 ));
@@ -125,6 +126,7 @@ class AnalysisJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         "Prompt body for timeout-123",
                         new AnalysisResultResponse(
                                 "COMPLETED",
@@ -157,6 +159,62 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.result.prompt").value("Prompt body for timeout-123"));
 
         verify(analysisJobService).getAnalysis("job-123");
+    }
+
+    @Test
+    void shouldStartFollowUpChatMessage() throws Exception {
+        when(analysisJobService.startChatMessage(any(String.class), any(AnalysisChatMessageRequest.class)))
+                .thenReturn(new AnalysisJobResponse(
+                        "job-123",
+                        "timeout-123",
+                        "gpt-5.4",
+                        "medium",
+                        "COMPLETED",
+                        null,
+                        null,
+                        "dev3",
+                        "dev/atlas",
+                        null,
+                        null,
+                        Instant.parse("2026-04-12T18:00:00Z"),
+                        Instant.parse("2026-04-12T18:02:00Z"),
+                        Instant.parse("2026-04-12T18:01:00Z"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new AnalysisChatMessageResponse(
+                                "msg-1",
+                                "USER",
+                                "COMPLETED",
+                                "Sprawdz jeszcze repo.",
+                                null,
+                                null,
+                                Instant.parse("2026-04-12T18:02:00Z"),
+                                Instant.parse("2026-04-12T18:02:00Z"),
+                                Instant.parse("2026-04-12T18:02:00Z"),
+                                List.of(),
+                                null
+                        )),
+                        "Prompt body for timeout-123",
+                        null
+                ));
+
+        mockMvc.perform(post("/analysis/jobs/job-123/chat/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": "Sprawdz jeszcze repo."
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.analysisId").value("job-123"))
+                .andExpect(jsonPath("$.chatMessages", hasSize(1)))
+                .andExpect(jsonPath("$.chatMessages[0].role").value("USER"));
+
+        verify(analysisJobService).startChatMessage(
+                "job-123",
+                new AnalysisChatMessageRequest("Sprawdz jeszcze repo.")
+        );
     }
 
     @Test

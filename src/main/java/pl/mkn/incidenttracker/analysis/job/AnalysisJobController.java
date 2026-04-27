@@ -29,4 +29,13 @@ public class AnalysisJobController {
         return analysisJobService.getAnalysis(analysisId);
     }
 
+    @PostMapping("/{analysisId}/chat/messages")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public AnalysisJobResponse chat(
+            @PathVariable String analysisId,
+            @Valid @RequestBody AnalysisChatMessageRequest request
+    ) {
+        return analysisJobService.startChatMessage(analysisId, request);
+    }
+
 }

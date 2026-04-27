@@ -561,6 +561,146 @@ app-root {
   gap: 14px;
 }
 
+.analysis-chat {
+  display: grid;
+  gap: 14px;
+}
+
+.analysis-chat__hint {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.analysis-chat__messages {
+  display: grid;
+  gap: 12px;
+}
+
+.chat-message {
+  display: grid;
+  gap: 10px;
+  max-width: min(860px, 100%);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.chat-message--user {
+  justify-self: end;
+  background: var(--primary-soft);
+  border-color: rgba(12, 102, 228, 0.24);
+}
+
+.chat-message--assistant {
+  justify-self: start;
+}
+
+.chat-message--failed {
+  border-color: rgba(174, 46, 36, 0.3);
+  background: var(--danger-soft);
+}
+
+.chat-message__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.chat-message__header strong {
+  color: var(--text-main);
+}
+
+.chat-message__text,
+.chat-message__pending,
+.chat-message__error {
+  margin: 0;
+  line-height: 1.58;
+}
+
+.chat-message__pending {
+  color: var(--text-muted);
+}
+
+.chat-message__error {
+  color: var(--danger-text);
+  font-weight: 700;
+}
+
+.chat-message__evidence {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.chat-message__evidence summary,
+.chat-evidence-item summary {
+  cursor: pointer;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.chat-message__evidence-sections {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.chat-evidence-section {
+  display: grid;
+  gap: 8px;
+}
+
+.chat-evidence-section h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.chat-evidence-item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+.analysis-chat__form {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.chat-input {
+  width: 100%;
+  min-height: 116px;
+  resize: vertical;
+  padding: 13px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.5;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.16);
+}
+
+.analysis-chat__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .job-banner {
   margin-top: 14px;
   padding: 12px 14px;

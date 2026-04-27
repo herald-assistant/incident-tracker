@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchExce
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveException;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveResponse;
+import pl.mkn.incidenttracker.analysis.job.AnalysisJobChatUnavailableException;
 import pl.mkn.incidenttracker.analysis.job.AnalysisJobNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +59,19 @@ public class ApiExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(AnalysisJobChatUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleAnalysisJobChatUnavailable(
+            AnalysisJobChatUnavailableException exception
+    ) {
+        var response = new ApiErrorResponse(
+                exception.code(),
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(GitLabSourceResolveException.class)

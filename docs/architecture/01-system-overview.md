@@ -31,6 +31,9 @@ Na dzisiaj projekt ma:
 - glowne API `POST /analysis`,
 - job-based API dla UI: `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
+- follow-up chat dla zakonczonego joba przez
+  `POST /analysis/jobs/{analysisId}/chat/messages`, ktory uruchamia nowa
+  sesje AI z kontekstem tej samej analizy,
 - endpoint `GET /analysis/ai/options`, ktory zwraca katalog modeli i
   dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby frontend nie trzymal
   lokalnej listy modeli,
@@ -57,7 +60,12 @@ Na dzisiaj projekt ma:
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
   `reasoningEffort`.
 - `GET /analysis/jobs/{analysisId}`
-  Odczyt statusu, evidence i wyniku asynchronicznej analizy.
+  Odczyt statusu, evidence, wyniku asynchronicznej analizy i historii
+  follow-up chatu.
+- `POST /analysis/jobs/{analysisId}/chat/messages`
+  Asynchroniczne polecenie lub pytanie do AI po zakonczonej analizie. Backend
+  reuse'uje evidence, wynik, historie rozmowy, model/reasoning oraz hidden
+  scope tools z oryginalnego joba.
 - `GET /analysis/ai/options`
   Katalog modeli AI dla UI. Backend pobiera go z Copilot SDK i zwraca
   `reasoningEffort` tylko dla modeli, ktore SDK opisuje jako wspierajace te
@@ -161,6 +169,10 @@ Na dzisiaj projekt ma:
 - Flow jobowy moze przekazac do generycznego requestu AI opcjonalny wybor
   modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,
   srodowiska ani GitLab group.
+- Follow-up chat jest kontynuacja zakonczonego joba, a nie nowym publicznym
+  requestem analizy. Kazda wiadomosc uruchamia osobna sesje AI, osadza
+  evidence i finalny wynik w promptcie oraz wystawia session-bound tools tylko
+  w zakresie rozwiazanym przez pierwotna analize.
 - Lista modeli i dostepnych `reasoningEffort` dla UI pochodzi z Copilot SDK
   przez backendowy endpoint opcji AI. Frontend nie jest source of truth dla
   mozliwosci modeli.
@@ -195,6 +207,10 @@ flowchart LR
     N --> S["AnalysisResultResponse"]
     B --> T["GET /analysis/jobs/{analysisId}"]
     T --> D
+    B --> U2["POST /analysis/jobs/{analysisId}/chat/messages"]
+    U2 --> D
+    D --> V["Background follow-up chat task"]
+    V --> N
 ```
 
 ## Dodatkowy use case Elasticsearch log search

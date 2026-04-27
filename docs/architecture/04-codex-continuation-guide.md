@@ -24,6 +24,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
 - `AnalysisAiProvider`
+- `AnalysisAiChatProvider`
 - `AnalysisAiModelOptionsProvider`
 - `analysis.adapter.database`
 - `analysis.evidence.provider.deployment`
@@ -149,9 +150,30 @@ albo wybrac `model` i dostepny dla niego `reasoningEffort` dla sesji AI. Opcje
 sa pobierane z backendu przez `GET /analysis/ai/options`.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba dociagniete
 przez AI tools podczas kroku `AI_ANALYSIS`.
+Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
+`POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
+tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.
+Follow-up chat dziala tylko dla live joba w pamieci backendu; importowany
+zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
 a route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
 GitLaba.
+
+### Follow-up chat
+
+Kontynuacja analizy po finalnym wyniku ma osobny kontrakt AI:
+
+- `AnalysisAiChatProvider`,
+- `AnalysisAiChatRequest`,
+- `AnalysisAiChatResponse`.
+
+Nie rozszerzaj `POST /analysis` o tresc rozmowy ani dodatkowy scope. Chat ma
+reuse'owac scope zakonczonego joba oraz hidden `ToolContext` dla GitLaba,
+Elastica i Database. Kazda wiadomosc tworzy nowa sesje Copilota, zeby nie
+utrzymywac sesji SDK po zakonczeniu finalnej analizy.
+
+Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
+chatu, a nie mieszane z deterministycznym pipeline evidence.
 
 ### Elastic helper flow
 
