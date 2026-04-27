@@ -200,10 +200,13 @@ describe('AnalysisStepsPanelComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const panel = compiled.querySelector('.tool-evidence-panel') as HTMLElement | null;
     const reason = compiled.querySelector('.tool-evidence-panel__reason') as HTMLElement | null;
+    const icon = compiled.querySelector('.tool-evidence-panel__source-icon') as HTMLElement | null;
 
     expect(panel).not.toBeNull();
     expect(panel?.classList.contains('mat-expanded')).toBeFalsy();
     expect(reason?.textContent?.trim()).toBe('Sprawdzam fragment klienta z timeoutem.');
+    expect(icon?.textContent?.trim()).toBe('code');
+    expect(icon?.getAttribute('aria-label')).toBe('GitLab');
     expect(compiled.textContent).toContain('CatalogGatewayClient');
     expect(compiled.textContent).toContain('GitLab');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
@@ -226,12 +229,16 @@ describe('AnalysisStepsPanelComponent', () => {
     const reasons = Array.from(compiled.querySelectorAll('.tool-evidence-panel__reason')).map(
       (element) => element.textContent?.trim()
     );
+    const icons = Array.from(compiled.querySelectorAll('.tool-evidence-panel__source-icon')).map(
+      (element) => element.textContent?.trim()
+    );
     const content = compiled.textContent || '';
 
     expect(reasons).toEqual([
       'Sprawdzam, czy istnieją rekordy dla correlationId.',
       'Sprawdzam fragment klienta z timeoutem.'
     ]);
+    expect(icons).toEqual(['storage', 'code']);
     expect(content).toContain('Policzenie rekordów');
     expect(content).toContain('Sprawdzam, czy istnieją rekordy dla correlationId.');
     expect(content).toContain('"tableName": "ORDER_EVENT"');

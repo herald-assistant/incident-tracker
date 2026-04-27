@@ -348,6 +348,13 @@
                           @for (event of section.toolEvents; track event.key) {
                             <mat-expansion-panel class="tool-evidence-panel" hideToggle>
                               <mat-expansion-panel-header class="tool-evidence-panel__header">
+                                <mat-icon
+                                  class="tool-evidence-panel__source-icon"
+                                  fontSet="material-symbols-outlined"
+                                  [attr.aria-label]="event.sourceLabel"
+                                >
+                                  {{ event.iconName }}
+                                </mat-icon>
                                 <span class="tool-evidence-panel__reason">{{ event.reason }}</span>
                                 <mat-icon
                                   class="tool-evidence-panel__expand-icon"

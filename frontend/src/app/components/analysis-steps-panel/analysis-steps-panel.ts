@@ -204,6 +204,7 @@ interface ToolEvidenceTimelineItemView {
   captureOrder: number | null;
   fallbackOrder: number;
   sourceLabel: string;
+  iconName: string;
   codePanel: RepoCodePanelView | null;
   databaseTool: DatabaseToolCardView | null;
   defaultItem: StepEvidenceItemView | null;
@@ -733,6 +734,7 @@ function prepareToolEvidenceTimelineItem(
       captureOrder,
       fallbackOrder,
       sourceLabel: 'GitLab',
+      iconName: 'code',
       codePanel,
       databaseTool: null,
       defaultItem: null
@@ -748,6 +750,7 @@ function prepareToolEvidenceTimelineItem(
       captureOrder,
       fallbackOrder,
       sourceLabel: 'Baza danych',
+      iconName: 'storage',
       codePanel: null,
       databaseTool,
       defaultItem: null
@@ -767,6 +770,7 @@ function prepareToolEvidenceTimelineItem(
     captureOrder,
     fallbackOrder,
     sourceLabel: formatEvidenceSectionTitle(section),
+    iconName: 'fact_check',
     codePanel: null,
     databaseTool: null,
     defaultItem

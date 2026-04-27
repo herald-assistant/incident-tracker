@@ -272,6 +272,7 @@
   border-radius: 8px !important;
   background: #fff !important;
   box-shadow: none !important;
+  font-family: var(--font-sans);
 }
 
 .tool-evidence-panel::before {
@@ -282,10 +283,12 @@
   height: auto !important;
   min-height: 0 !important;
   padding: 10px 12px;
+  font-family: var(--font-sans);
 }
 
 .tool-evidence-panel .mat-expansion-panel-body {
   padding: 0 12px 12px;
+  font-family: var(--font-sans);
 }
 
 .tool-evidence-panel__header .mat-content {
@@ -297,10 +300,25 @@
   min-width: 0;
   flex: 1 1 auto;
   color: var(--text-main);
+  font-family: var(--font-sans);
   font-size: 0.94rem;
   font-weight: 700;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.tool-evidence-panel__source-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(12, 102, 228, 0.16);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--primary-dark);
+  font-size: 18px;
 }
 
 .tool-evidence-panel__expand-icon {
