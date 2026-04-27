@@ -32,6 +32,12 @@ scope'u evidence.
 
 Polling statusu, krokow, prepared promptu, evidence i wyniku.
 
+### `GET /analysis/ai/options`
+
+Katalog modeli i dostepnych `reasoningEffort` dla UI. Endpoint mapuje
+metadane Copilot SDK na generyczny kontrakt aplikacji, zeby frontend nie
+przechowywal lokalnej listy modeli.
+
 ## Wejscia pomocnicze
 
 ### `GET /evidence`
@@ -53,6 +59,7 @@ Nie ma osobnego helper endpointu Database capability.
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/sync/AnalysisController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobController.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/ai/AnalysisAiOptionsController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/elasticsearch/ElasticLogSearchController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRepositorySearchController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/source/GitLabSourceResolveController.java`
@@ -60,6 +67,7 @@ Nie ma osobnego helper endpointu Database capability.
 ## Sprawdz lokalnie
 
 - otworz `GET /`,
+- sprawdz `GET /analysis/ai/options`,
 - otworz `GET /evidence`,
 - porownaj, jakie dane zwraca `POST /analysis` i `GET /analysis/jobs/{analysisId}`,
 - zobacz, ze job snapshot zwraca tez `preparedPrompt` i `toolEvidenceSections`.

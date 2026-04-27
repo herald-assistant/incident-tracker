@@ -50,6 +50,9 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 - `AnalysisAiOptions` z requestu jobowego moze nadpisac skonfigurowany
   `model` i `reasoningEffort` dla pojedynczej sesji; brak wyboru oznacza
   fallback do properties albo domyslow SDK.
+- `CopilotSdkModelOptionsProvider` udostepnia osobny katalog modeli dla UI
+  przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do promptu
+  albo job state.
 
 Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 
@@ -200,6 +203,8 @@ Refaktory runtime Copilota nie zmieniaja kontraktow zewnetrznych:
 - `POST /analysis` przyjmuje tylko `correlationId`,
 - `POST /analysis/jobs` przyjmuje `correlationId` oraz opcjonalne generyczne
   preferencje AI: `model` i `reasoningEffort`,
+- `GET /analysis/ai/options` zwraca modele i `reasoningEffort` dostepne wedlug
+  Copilot SDK, a frontend nie hardcoduje tych list,
 - `gitLabGroup` pochodzi z konfiguracji,
 - `environment` i `gitLabBranch` sa wyprowadzane z evidence,
 - artefakty Copilota sa embedded inline w promptcie, nie SDK attachments,
@@ -212,6 +217,8 @@ Refaktory runtime Copilota nie zmieniaja kontraktow zewnetrznych:
 analysis.ai.copilot.working-directory=${user.dir}
 analysis.ai.copilot.permission-mode=approve-all
 analysis.ai.copilot.send-and-wait-timeout=5m
+analysis.ai.copilot.model-options-timeout=20s
+analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
 analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
 

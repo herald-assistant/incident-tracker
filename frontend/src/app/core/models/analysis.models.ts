@@ -48,6 +48,21 @@ export interface AnalysisStartRequest {
   reasoningEffort?: string;
 }
 
+export interface AnalysisAiModelOption {
+  id: string;
+  name: string;
+  supportsReasoningEffort: boolean;
+  reasoningEfforts: string[];
+  defaultReasoningEffort: string;
+}
+
+export interface AnalysisAiModelOptionsResponse {
+  defaultModel: string;
+  defaultReasoningEffort: string;
+  defaultReasoningEfforts: string[];
+  models: AnalysisAiModelOption[];
+}
+
 export interface AnalysisEvidenceAttribute {
   name: string;
   value: string;

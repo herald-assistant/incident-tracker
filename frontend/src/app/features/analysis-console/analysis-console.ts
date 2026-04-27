@@ -14,6 +14,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import {
+  AnalysisAiModelOptionsResponse,
   ApiErrorResponse,
   AnalysisJobResponse,
   ExportState,
@@ -35,21 +36,12 @@ import { AnalysisOverviewCardComponent } from '../../components/analysis-overvie
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
 const POLL_INTERVAL_MS = 1500;
-const AI_MODEL_OPTIONS = [
-  { value: '', label: 'Domyślny backend' },
-  { value: 'gpt-5.4', label: 'GPT-5.4' },
-  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
-  { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
-  { value: 'gpt-5.3-codex-spark', label: 'GPT-5.3 Codex Spark' },
-  { value: 'gpt-5.2', label: 'GPT-5.2' }
-] as const;
-const REASONING_EFFORT_OPTIONS = [
-  { value: '', label: 'Domyślny backend' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'xhigh', label: 'XHigh' }
-] as const;
+const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
+  defaultModel: '',
+  defaultReasoningEffort: '',
+  defaultReasoningEfforts: [],
+  models: []
+};
 
 @Component({
   selector: 'app-analysis-console',
@@ -74,8 +66,6 @@ export class AnalysisConsoleComponent {
   });
   readonly aiModelControl = new FormControl('', { nonNullable: true });
   readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
-  readonly aiModelOptions = AI_MODEL_OPTIONS;
-  readonly reasoningEffortOptions = REASONING_EFFORT_OPTIONS;
 
   readonly isLoading = signal(false);
   readonly formError = signal('');
@@ -84,6 +74,26 @@ export class AnalysisConsoleComponent {
   readonly transportError = signal<TransportErrorState | null>(null);
   readonly job = signal<AnalysisJobResponse | null>(null);
   readonly exportState = signal<ExportState | null>(null);
+  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
+  readonly selectedAiModel = signal('');
+
+  readonly aiModelOptions = computed(() => [
+    { value: '', label: this.defaultModelLabel() },
+    ...this.aiModelCatalog().models.map((model) => ({
+      value: model.id,
+      label: this.modelLabel(model.id, model.name)
+    }))
+  ]);
+  readonly availableReasoningEfforts = computed(() =>
+    this.reasoningEffortsForModel(this.selectedAiModel())
+  );
+  readonly reasoningEffortOptions = computed(() => [
+    { value: '', label: this.defaultReasoningEffortLabel() },
+    ...this.availableReasoningEfforts().map((effort) => ({
+      value: effort,
+      label: this.reasoningEffortLabel(effort)
+    }))
+  ]);
 
   readonly hasActiveState = computed(
     () =>
@@ -110,6 +120,7 @@ export class AnalysisConsoleComponent {
   private pollHandle: number | null = null;
 
   constructor() {
+    this.loadAiModelOptions();
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
@@ -135,7 +146,9 @@ export class AnalysisConsoleComponent {
     this.scrollResponseIntoView();
 
     const aiModel = this.aiModelControl.value.trim();
-    const reasoningEffort = this.reasoningEffortControl.value.trim();
+    const reasoningEffort = this.reasoningEffortControl.enabled
+      ? this.reasoningEffortControl.value.trim()
+      : '';
 
     this.analysisApi
       .startAnalysis({
@@ -214,7 +227,9 @@ export class AnalysisConsoleComponent {
         this.correlationIdControl.setValue(imported.job.correlationId);
       }
       this.aiModelControl.setValue(imported.job.aiModel || '');
+      this.selectedAiModel.set(imported.job.aiModel || '');
       this.reasoningEffortControl.setValue(imported.job.reasoningEffort || '');
+      this.syncReasoningEffortSelection();
 
       this.scrollResponseIntoView();
     } catch (error) {
@@ -249,6 +264,12 @@ export class AnalysisConsoleComponent {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  onAiModelChanged(): void {
+    this.selectedAiModel.set(this.aiModelControl.value.trim());
+    this.syncReasoningEffortSelection();
+    this.clearFormError();
   }
 
   private pollAnalysis(analysisId: string): void {
@@ -294,6 +315,103 @@ export class AnalysisConsoleComponent {
       window.clearTimeout(this.pollHandle);
       this.pollHandle = null;
     }
+  }
+
+  private loadAiModelOptions(): void {
+    this.analysisApi
+      .getAiModelOptions()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (options) => {
+          this.aiModelCatalog.set(this.normalizeAiModelOptions(options));
+          this.syncReasoningEffortSelection();
+        },
+        error: () => {
+          this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
+          this.syncReasoningEffortSelection();
+        }
+      });
+  }
+
+  private normalizeAiModelOptions(
+    options: AnalysisAiModelOptionsResponse | null
+  ): AnalysisAiModelOptionsResponse {
+    if (!options) {
+      return EMPTY_AI_MODEL_OPTIONS;
+    }
+
+    return {
+      defaultModel: typeof options.defaultModel === 'string' ? options.defaultModel : '',
+      defaultReasoningEffort:
+        typeof options.defaultReasoningEffort === 'string' ? options.defaultReasoningEffort : '',
+      defaultReasoningEfforts: Array.isArray(options.defaultReasoningEfforts)
+        ? options.defaultReasoningEfforts.filter((effort) => typeof effort === 'string')
+        : [],
+      models: Array.isArray(options.models)
+        ? options.models
+            .filter((model) => model && typeof model.id === 'string')
+            .map((model) => ({
+              id: model.id,
+              name: typeof model.name === 'string' ? model.name : model.id,
+              supportsReasoningEffort: Boolean(model.supportsReasoningEffort),
+              reasoningEfforts: Array.isArray(model.reasoningEfforts)
+                ? model.reasoningEfforts.filter((effort) => typeof effort === 'string')
+                : [],
+              defaultReasoningEffort:
+                typeof model.defaultReasoningEffort === 'string'
+                  ? model.defaultReasoningEffort
+                  : ''
+            }))
+        : []
+    };
+  }
+
+  private syncReasoningEffortSelection(): void {
+    const availableEfforts = this.reasoningEffortsForModel(this.selectedAiModel());
+    const currentEffort = this.reasoningEffortControl.value.trim();
+
+    if (!availableEfforts.length) {
+      this.reasoningEffortControl.setValue('', { emitEvent: false });
+      this.reasoningEffortControl.disable({ emitEvent: false });
+      return;
+    }
+
+    this.reasoningEffortControl.enable({ emitEvent: false });
+    if (currentEffort && !availableEfforts.includes(currentEffort)) {
+      this.reasoningEffortControl.setValue('', { emitEvent: false });
+    }
+  }
+
+  private reasoningEffortsForModel(modelId: string): string[] {
+    const catalog = this.aiModelCatalog();
+    if (!modelId) {
+      return catalog.defaultReasoningEfforts;
+    }
+
+    const model = catalog.models.find((candidate) => candidate.id === modelId);
+    return model?.supportsReasoningEffort ? model.reasoningEfforts : [];
+  }
+
+  private defaultModelLabel(): string {
+    const defaultModel = this.aiModelCatalog().defaultModel;
+    return defaultModel ? `Domyślny backend (${defaultModel})` : 'Domyślny backend';
+  }
+
+  private defaultReasoningEffortLabel(): string {
+    const defaultEffort = this.aiModelCatalog().defaultReasoningEffort;
+    return defaultEffort ? `Domyślny backend (${defaultEffort})` : 'Domyślny backend';
+  }
+
+  private modelLabel(id: string, name: string): string {
+    if (!name || name === id) {
+      return id;
+    }
+
+    return `${name} (${id})`;
+  }
+
+  private reasoningEffortLabel(effort: string): string {
+    return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
   }
 
   private applyJob(job: AnalysisJobResponse, metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>): void {

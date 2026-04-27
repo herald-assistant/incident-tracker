@@ -31,6 +31,9 @@ Na dzisiaj projekt ma:
 - glowne API `POST /analysis`,
 - job-based API dla UI: `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
+- endpoint `GET /analysis/ai/options`, ktory zwraca katalog modeli i
+  dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby frontend nie trzymal
+  lokalnej listy modeli,
 - AI-first flow oparty o `AnalysisEvidenceProvider` i `AnalysisAiProvider`,
 - przygotowany bridge pomiedzy Spring tools a GitHub Copilot Java SDK,
 - MCP tools dla Elastica, GitLaba i warunkowo dla Database,
@@ -55,6 +58,10 @@ Na dzisiaj projekt ma:
   `reasoningEffort`.
 - `GET /analysis/jobs/{analysisId}`
   Odczyt statusu, evidence i wyniku asynchronicznej analizy.
+- `GET /analysis/ai/options`
+  Katalog modeli AI dla UI. Backend pobiera go z Copilot SDK i zwraca
+  `reasoningEffort` tylko dla modeli, ktore SDK opisuje jako wspierajace te
+  ustawienia.
 - `POST /analysis`
   GLOWNY endpoint analizy incydentu.
 - `POST /api/gitlab/source/resolve`
@@ -154,6 +161,9 @@ Na dzisiaj projekt ma:
 - Flow jobowy moze przekazac do generycznego requestu AI opcjonalny wybor
   modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,
   srodowiska ani GitLab group.
+- Lista modeli i dostepnych `reasoningEffort` dla UI pochodzi z Copilot SDK
+  przez backendowy endpoint opcji AI. Frontend nie jest source of truth dla
+  mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
   katalogu runtime.
@@ -165,6 +175,7 @@ Na dzisiaj projekt ma:
 ```mermaid
 flowchart LR
     A["GET /"] --> B["Angular bundle from static resources"]
+    B --> U["GET /analysis/ai/options"]
     B --> C["POST /analysis/jobs"]
     C --> D["AnalysisJobService"]
     D --> E["Background analysis task"]

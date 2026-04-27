@@ -57,9 +57,9 @@
                 id="aiModel"
                 class="select-input"
                 [formControl]="aiModelControl"
-                (change)="clearFormError()"
+                (change)="onAiModelChanged()"
               >
-                @for (option of aiModelOptions; track option.value) {
+                @for (option of aiModelOptions(); track option.value) {
                   <option [value]="option.value">{{ option.label }}</option>
                 }
               </select>
@@ -73,7 +73,7 @@
                 [formControl]="reasoningEffortControl"
                 (change)="clearFormError()"
               >
-                @for (option of reasoningEffortOptions; track option.value) {
+                @for (option of reasoningEffortOptions(); track option.value) {
                   <option [value]="option.value">{{ option.label }}</option>
                 }
               </select>

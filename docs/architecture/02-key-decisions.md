@@ -9,6 +9,11 @@ utrzymaniu flow analizy incydentu i integracji AI.
 przyjmuje `correlationId` oraz opcjonalne preferencje wykonania AI:
 `model` i `reasoningEffort`.
 
+Lista dostepnych modeli dla UI pochodzi z `GET /analysis/ai/options`.
+Endpoint mapuje metadane Copilot SDK na generyczny kontrakt aplikacji i zwraca
+`reasoningEffort` tylko tam, gdzie SDK wystawia support albo domyslna wartosc
+dla danego modelu.
+
 Runtime nie przywraca `branch`, `environment`, `gitLabGroup` ani innych pol
 sterujacych evidence scope'em do publicznego requestu.
 
@@ -22,6 +27,9 @@ Konsekwencje:
   publiczne API analizy.
 - wybor modelu i `reasoningEffort` dotyczy tylko konfiguracji sesji AI, nie
   zmienia deterministycznie zbieranego evidence ani ukrytych scope'ow tools.
+- frontend nie hardcoduje mozliwosci modeli; backend pozostaje source of truth
+  i moze uzyc fallbacku do skonfigurowanych domyslow, gdy SDK chwilowo nie
+  zwroci katalogu.
 
 ## 2. Flow pozostaje AI-first
 
@@ -312,6 +320,10 @@ typach SDK w UI: `POST /analysis` nadal przyjmuje tylko `correlationId`, a
 `POST /analysis/jobs` moze przyjac tylko generyczne preferencje AI (`model`,
 `reasoningEffort`). Response pozostaje mapowany do pol aplikacji, a artefakty
 Copilota nadal sa embedded inline w promptcie.
+
+Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac
+model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
+`AnalysisAiModelOptionsProvider`, nie z kodu Angulara.
 
 ## 20. Optymalizacje Copilota prowadzimy inkrementalnie
 

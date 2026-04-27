@@ -24,6 +24,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
 - `AnalysisAiProvider`
+- `AnalysisAiModelOptionsProvider`
 - `analysis.adapter.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
@@ -114,6 +115,10 @@ osobny krok deployment context, a nie podawane przez klienta.
 przyjac opcjonalne preferencje AI: `model` i `reasoningEffort`. Te pola trafiaja
 do `AnalysisAiOptions` i `SessionConfig`, nie do deployment/GitLab/DB scope'u.
 
+Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
+Frontend pobiera ja z `GET /analysis/ai/options`, a backend mapuje metadane
+Copilot SDK przez `AnalysisAiModelOptionsProvider`.
+
 ### `gitLabGroup`
 
 Pochodzi z konfiguracji aplikacji.
@@ -140,7 +145,8 @@ Produkcjny build zapisuje `index.html`, `js`, `css` i assets do
 Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
 Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
-albo wybrac `model` i `reasoningEffort` dla sesji AI.
+albo wybrac `model` i dostepny dla niego `reasoningEffort` dla sesji AI. Opcje
+sa pobierane z backendu przez `GET /analysis/ai/options`.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba dociagniete
 przez AI tools podczas kroku `AI_ANALYSIS`.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,

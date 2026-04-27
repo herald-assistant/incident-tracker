@@ -90,15 +90,15 @@ class AnalysisJobControllerTest {
     }
 
     @Test
-    void shouldRejectUnsupportedReasoningEffort() throws Exception {
+    void shouldRejectTooLongReasoningEffort() throws Exception {
         mockMvc.perform(post("/analysis/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "correlationId": "timeout-123",
-                                  "reasoningEffort": "extreme"
+                                  "reasoningEffort": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                                 }
-                """))
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("reasoningEffort"));

@@ -16,6 +16,7 @@ Async:
 ```http
 POST /analysis/jobs
 GET /analysis/jobs/{analysisId}
+GET /analysis/ai/options
 ```
 
 Sync request publiczny niesie tylko `correlationId`. Job request dla UI niesie
@@ -30,6 +31,11 @@ Sync request publiczny niesie tylko `correlationId`. Job request dla UI niesie
 Wybor modelu i `reasoningEffort` trafia tylko do konfiguracji sesji AI. Nie
 jest evidence, nie zmienia `environment`, `gitLabBranch`, `gitLabGroup` ani
 hidden `ToolContext`.
+
+`GET /analysis/ai/options` jest osobnym kontraktem UI do pobrania katalogu
+modeli. Backend mapuje `CopilotClient.listModels()` na generyczne DTO aplikacji
+i cache'uje wynik; jesli SDK jest chwilowo niedostepne, zwraca tylko
+skonfigurowane domysly.
 
 ## 2. Orkiestracja wysokiego poziomu
 
@@ -99,6 +105,9 @@ renderingu i konfiguracji SDK:
   available capability groups i embedded artifacts,
 - `CopilotSessionConfigFactory` buduje client options, session config,
   permission handler, hooks, skill directories i disabled skills.
+- `CopilotSdkModelOptionsProvider` uzywa tego samego factory client options do
+  pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej z evidence
+  ani promptem incydentu.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.
@@ -362,12 +371,18 @@ Publiczny sync request zawiera tylko `correlationId`. Job request UI zawiera
 `gitLabGroup` pochodzi z konfiguracji, a `environment` i `gitLabBranch` sa
 wyprowadzane z evidence.
 
+Przed startem joba UI pobiera `GET /analysis/ai/options`. Select modelu i
+`reasoningEffort` sa budowane z odpowiedzi backendu; jesli wybrany model nie
+ma dostepnych effortow w SDK, UI nie wysyla `reasoningEffort`.
+
 ## 16. Najwazniejsze properties
 
 ```properties
 analysis.ai.copilot.working-directory=${user.dir}
 analysis.ai.copilot.permission-mode=approve-all
 analysis.ai.copilot.send-and-wait-timeout=5m
+analysis.ai.copilot.model-options-timeout=20s
+analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
 analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
 

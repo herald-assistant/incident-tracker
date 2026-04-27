@@ -15,13 +15,14 @@ job flow.
 
 ## Model pracy operatora
 
-1. operator wpisuje `correlationId` i opcjonalnie wybiera model AI oraz
-   `reasoningEffort`,
-2. frontend startuje job,
-3. frontend polluje status,
-4. pokazuje overview, kroki evidence, prompt i finalny wynik,
-5. moze wyeksportowac zakonczony job do JSON albo zaimportowac go z pliku,
-6. w razie potrzeby operator uzywa tez widoku `GET /evidence`.
+1. frontend pobiera katalog modeli z `GET /analysis/ai/options`,
+2. operator wpisuje `correlationId` i opcjonalnie wybiera model AI oraz
+   dostepny dla niego `reasoningEffort`,
+3. frontend startuje job,
+4. frontend polluje status,
+5. pokazuje overview, kroki evidence, prompt i finalny wynik,
+6. moze wyeksportowac zakonczony job do JSON albo zaimportowac go z pliku,
+7. w razie potrzeby operator uzywa tez widoku `GET /evidence`.
 
 Aktualny frontend ma dwa route'y Angulara:
 
@@ -31,6 +32,8 @@ Aktualny frontend ma dwa route'y Angulara:
 ## Co jest wazne dla backend developera
 
 - `AnalysisJobResponse` jest projekcja dla UI, nie nowy model domenowy,
+- lista modeli i effortow pochodzi z backendu, a frontend tylko renderuje
+  odpowiedz `GET /analysis/ai/options`,
 - job snapshot pokazuje wybrane `aiModel` i `reasoningEffort`, ale te pola sa
   tylko preferencja sesji AI, nie scope'em evidence,
 - frontend potrzebuje aktualnego kroku, historii krokow, evidence i bledow,

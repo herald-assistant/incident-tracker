@@ -25,6 +25,8 @@ public class CopilotSdkProperties {
     private String reasoningEffort;
     private String clientName = "incidenttracker";
     private Duration sendAndWaitTimeout = Duration.ofMinutes(5);
+    private Duration modelOptionsTimeout = Duration.ofSeconds(20);
+    private Duration modelOptionsCacheTtl = Duration.ofMinutes(10);
     private String githubToken;
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
     private List<String> skillResourceRoots = List.of("copilot/skills");

@@ -1,7 +1,6 @@
 package pl.mkn.incidenttracker.analysis.job;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
@@ -10,10 +9,7 @@ import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 public record AnalysisJobStartRequest(
         @NotBlank(message = "correlationId must not be blank") String correlationId,
         @Size(max = 80, message = "model must not exceed 80 characters") String model,
-        @Pattern(
-                regexp = "low|medium|high|xhigh",
-                message = "reasoningEffort must be one of: low, medium, high, xhigh"
-        )
+        @Size(max = 40, message = "reasoningEffort must not exceed 40 characters")
         String reasoningEffort
 ) {
 
