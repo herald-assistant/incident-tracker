@@ -305,6 +305,9 @@
   font-weight: 700;
   line-height: 1.4;
   overflow-wrap: anywhere;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
 }
 
 .tool-evidence-panel__source-icon {
