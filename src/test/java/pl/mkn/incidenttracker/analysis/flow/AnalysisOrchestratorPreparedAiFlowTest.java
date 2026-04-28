@@ -9,6 +9,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
+import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
@@ -91,7 +92,8 @@ class AnalysisOrchestratorPreparedAiFlowTest {
                                 mock(GitLabRepositoryPort.class),
                                 gitLabProperties,
                                 mock(GitLabSourceResolveService.class),
-                                deploymentContextResolver
+                                deploymentContextResolver,
+                                TestOperationalContextProjectPathResolver.empty()
                         ),
                         disabledOperationalContextEvidenceProvider(),
                         directTaskExecutor()

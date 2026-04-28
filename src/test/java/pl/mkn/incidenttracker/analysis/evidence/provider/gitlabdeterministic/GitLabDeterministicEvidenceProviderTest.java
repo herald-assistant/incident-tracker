@@ -11,11 +11,15 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryProjectCan
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveMatch;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,7 +46,8 @@ class GitLabDeterministicEvidenceProviderTest {
                 repositoryPort,
                 properties,
                 sourceResolveService,
-                deploymentContextResolver
+                deploymentContextResolver,
+                emptyRepositoryProjectPathResolver()
         );
         var elasticProvider = new ElasticLogEvidenceProvider(new TestElasticLogPort());
         var baseContext = AnalysisContext.initialize("db-lock-123");
@@ -130,7 +135,8 @@ class GitLabDeterministicEvidenceProviderTest {
                 repositoryPort,
                 properties,
                 sourceResolveService,
-                deploymentContextResolver
+                deploymentContextResolver,
+                emptyRepositoryProjectPathResolver()
         );
         var elasticProvider = new ElasticLogEvidenceProvider(uat2ElasticPort());
         var baseContext = AnalysisContext.initialize("uat2-like");
@@ -195,7 +201,8 @@ class GitLabDeterministicEvidenceProviderTest {
                 repositoryPort,
                 properties,
                 sourceResolveService,
-                deploymentContextResolver
+                deploymentContextResolver,
+                emptyRepositoryProjectPathResolver()
         );
         var elasticProvider = new ElasticLogEvidenceProvider(agreementProcessElasticPort());
         var baseContext = AnalysisContext.initialize("agreement-123");
@@ -269,6 +276,88 @@ class GitLabDeterministicEvidenceProviderTest {
     }
 
     @Test
+    void shouldPreferRepoMapProjectPathForGenericDeploymentProjectHint() {
+        var properties = new GitLabProperties();
+        properties.setBaseUrl("https://gitlab.example.com");
+        properties.setGroup("TENANT-ALPHA");
+        properties.setMaxCandidateCount(1);
+
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var sourceResolveService = mock(GitLabSourceResolveService.class);
+        var provider = new GitLabDeterministicEvidenceProvider(
+                repositoryPort,
+                properties,
+                sourceResolveService,
+                deploymentContextResolver,
+                repositoryProjectPathResolver(List.of(repoMapEntry(
+                        "case-workflow-repo",
+                        "WORKFLOWS/CASE_BACKEND",
+                        "TENANT-ALPHA",
+                        List.of("backend"),
+                        List.of("case-evaluation-service"),
+                        List.of("backend")
+                )))
+        );
+        var elasticProvider = new ElasticLogEvidenceProvider(frameworkHeavyElasticPort());
+        var baseContext = AnalysisContext.initialize("resp4-like");
+        var context = baseContext.withSection(elasticProvider.collect(baseContext));
+
+        when(sourceResolveService.resolveMatch(argThat((GitLabSourceResolveRequest request) ->
+                request.groupPath().equals("TENANT-ALPHA")
+                        && request.projectPath().equals("WORKFLOWS/CASE_BACKEND")
+                        && request.effectiveRef().equals("dev/zephyr")
+                        && request.symbol().equals("com.example.synthetic.workflowstate.domain.core.ActiveCaseRecordDomainRepository")
+        ), any())).thenReturn(new GitLabSourceResolveMatch(
+                "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
+                130,
+                java.util.List.of("src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java")
+        ));
+
+        when(repositoryPort.readFileChunk(
+                "TENANT-ALPHA",
+                "WORKFLOWS/CASE_BACKEND",
+                "dev/zephyr",
+                "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
+                54,
+                94,
+                4_000
+        )).thenReturn(new GitLabRepositoryFileChunk(
+                "TENANT-ALPHA",
+                "WORKFLOWS/CASE_BACKEND",
+                "dev/zephyr",
+                "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
+                54,
+                94,
+                54,
+                94,
+                140,
+                "public class ActiveCaseRecordDomainRepository {\n    Optional<ActiveCaseRecord> getLatest() { return Optional.empty(); }\n}",
+                false
+        ));
+
+        var section = provider.collect(context);
+
+        assertEquals("gitlab", section.provider());
+        assertEquals("resolved-code", section.category());
+        assertEquals(1, section.items().size());
+        assertTrue(section.items().get(0).attributes().stream().anyMatch(attribute ->
+                attribute.name().equals("projectName")
+                        && attribute.value().equals("WORKFLOWS/CASE_BACKEND")
+        ));
+
+        verify(sourceResolveService).resolveMatch(
+                argThat((GitLabSourceResolveRequest request) ->
+                        request.projectPath().equals("WORKFLOWS/CASE_BACKEND")),
+                any()
+        );
+        verify(sourceResolveService, never()).resolveMatch(
+                argThat((GitLabSourceResolveRequest request) ->
+                        request.projectPath().equals("backend")),
+                any()
+        );
+    }
+
+    @Test
     void shouldIgnoreFrameworkStacktraceFramesAndMicroserviceNameAsProjectCandidate() {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
@@ -281,7 +370,8 @@ class GitLabDeterministicEvidenceProviderTest {
                 repositoryPort,
                 properties,
                 sourceResolveService,
-                deploymentContextResolver
+                deploymentContextResolver,
+                emptyRepositoryProjectPathResolver()
         );
         var elasticProvider = new ElasticLogEvidenceProvider(frameworkHeavyElasticPort());
         var baseContext = AnalysisContext.initialize("resp4-like");
@@ -318,6 +408,50 @@ class GitLabDeterministicEvidenceProviderTest {
                                 && request.symbol().equals("com.example.synthetic.workflowstate.services.core.ActiveCaseRecordQueryService")),
                 any()
         );
+    }
+
+    private static OperationalContextRepositoryProjectPathResolver emptyRepositoryProjectPathResolver() {
+        return repositoryProjectPathResolver(List.of());
+    }
+
+    private static OperationalContextRepositoryProjectPathResolver repositoryProjectPathResolver(
+            List<Map<String, Object>> repositories
+    ) {
+        return new OperationalContextRepositoryProjectPathResolver(query -> new OperationalContextCatalog(
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                repositories,
+                List.of(),
+                List.of(),
+                List.of(),
+                ""
+        ));
+    }
+
+    private static Map<String, Object> repoMapEntry(
+            String id,
+            String projectPath,
+            String group,
+            List<String> projectNames,
+            List<String> serviceNames,
+            List<String> containerNames
+    ) {
+        var repository = new LinkedHashMap<String, Object>();
+        repository.put("id", id);
+        repository.put("project", projectPath);
+        repository.put("group", group);
+        repository.put("gitLab", Map.of(
+                "projectPath", List.of(group + "/" + projectPath),
+                "groupPath", List.of(group)
+        ));
+        repository.put("runtimeMappings", Map.of(
+                "projectNames", projectNames,
+                "serviceNames", serviceNames,
+                "containerNames", containerNames
+        ));
+        return repository;
     }
 
     private static ElasticLogPort frameworkHeavyElasticPort() {

@@ -16,6 +16,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveSession;
+import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
@@ -69,6 +70,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     private final GitLabProperties gitLabProperties;
     private final GitLabSourceResolveService gitLabSourceResolveService;
     private final DeploymentContextResolver deploymentContextResolver;
+    private final OperationalContextRepositoryProjectPathResolver repositoryProjectPathResolver;
 
     @Override
     public AnalysisEvidenceSection collect(AnalysisContext context) {
@@ -394,6 +396,8 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
         }
 
         var resolvedProjectPaths = new LinkedHashSet<String>();
+        resolvedProjectPaths.addAll(resolveRepoMapProjectPaths(discoveryHints));
+
         var searchResults = searchProjectsByHints(discoveryHints);
         for (var searchResult : searchResults) {
             addValue(resolvedProjectPaths, searchResult.projectPath());
@@ -404,6 +408,21 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
         var result = List.copyOf(resolvedProjectPaths);
         projectPathCache.put(cacheKey, result);
         return result;
+    }
+
+    private List<String> resolveRepoMapProjectPaths(List<String> projectHints) {
+        try {
+            var resolvedProjectPaths = repositoryProjectPathResolver.resolveProjectPaths(gitLabProperties.getGroup(), projectHints);
+            return resolvedProjectPaths != null ? resolvedProjectPaths : List.of();
+        } catch (RuntimeException exception) {
+            log.debug(
+                    "Operational repo-map project resolution failed group={} projectHints={} reason={}",
+                    gitLabProperties.getGroup(),
+                    projectHints,
+                    exception.getMessage()
+            );
+            return List.of();
+        }
     }
 
     private List<GitLabRepositoryProjectCandidate> searchProjectsByHints(List<String> projectHints) {

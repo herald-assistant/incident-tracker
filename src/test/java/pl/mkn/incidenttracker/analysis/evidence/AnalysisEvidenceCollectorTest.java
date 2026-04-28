@@ -16,6 +16,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveSession;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
+import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
@@ -59,7 +60,8 @@ class AnalysisEvidenceCollectorTest {
                     mock(GitLabRepositoryPort.class),
                     gitLabProperties,
                     mock(GitLabSourceResolveService.class),
-                    deploymentContextResolver
+                    deploymentContextResolver,
+                    TestOperationalContextProjectPathResolver.empty()
             ),
             disabledOperationalContextEvidenceProvider(),
             directTaskExecutor()
@@ -130,7 +132,8 @@ class AnalysisEvidenceCollectorTest {
                             blockingGitLabPort,
                             gitLabProperties,
                             gitLabSourceResolveService,
-                            deploymentContextResolver
+                            deploymentContextResolver,
+                            TestOperationalContextProjectPathResolver.empty()
                     ),
                     disabledOperationalContextEvidenceProvider(),
                     taskExecutor
@@ -205,7 +208,8 @@ class AnalysisEvidenceCollectorTest {
                         gitLabRepositoryPort,
                         gitLabProperties,
                         gitLabSourceResolveService,
-                        deploymentContextResolver
+                        deploymentContextResolver,
+                        TestOperationalContextProjectPathResolver.empty()
                 ),
                 disabledOperationalContextEvidenceProvider(),
                 rejectingTaskExecutor()

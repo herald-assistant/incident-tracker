@@ -8,6 +8,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
@@ -42,7 +43,8 @@ class AnalysisServiceTest {
                                     mock(GitLabRepositoryPort.class),
                                     gitLabProperties,
                                     mock(GitLabSourceResolveService.class),
-                                    deploymentContextResolver
+                                    deploymentContextResolver,
+                                    TestOperationalContextProjectPathResolver.empty()
                             ),
                             disabledOperationalContextEvidenceProvider(),
                             directTaskExecutor()
