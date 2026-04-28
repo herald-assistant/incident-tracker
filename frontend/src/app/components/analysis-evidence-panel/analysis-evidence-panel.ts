@@ -10,6 +10,7 @@ import {
   formatEvidenceSectionTitle,
   isLargeAttribute
 } from '../../core/utils/analysis-display.utils';
+import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 
 interface EvidenceItemView {
   key: string;
@@ -28,7 +29,7 @@ interface EvidenceSectionView {
 
 @Component({
   selector: 'app-analysis-evidence-panel',
-  imports: [],
+  imports: [AttributeNamePipe],
   templateUrl: './analysis-evidence-panel.html',
   styleUrl: './analysis-evidence-panel.scss'
 })

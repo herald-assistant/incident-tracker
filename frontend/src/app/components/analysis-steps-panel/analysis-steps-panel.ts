@@ -27,6 +27,7 @@ import {
   hasMeaningfulValue,
   isLargeAttribute
 } from '../../core/utils/analysis-display.utils';
+import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
 interface StepEvidenceLink {
@@ -435,7 +436,8 @@ const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
     MatTooltipModule,
     ResizableColumnDirective,
     ResizableColumnsHostDirective,
-    MarkdownContentComponent
+    MarkdownContentComponent,
+    AttributeNamePipe
   ],
   templateUrl: './analysis-steps-panel.html',
   styleUrl: './analysis-steps-panel.scss',

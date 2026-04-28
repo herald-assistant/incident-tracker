@@ -242,7 +242,7 @@
                                   <div class="attribute-list">
                                     @for (attribute of item.attributes; track attribute.name + $index) {
                                       <div class="attribute-row attribute-row--block">
-                                        <span class="attribute-name">{{ attribute.name }}</span>
+                                        <span class="attribute-name">{{ attribute.name | attributeName }}</span>
                                         <pre class="attribute-block">{{ attribute.value }}</pre>
                                       </div>
                                     }

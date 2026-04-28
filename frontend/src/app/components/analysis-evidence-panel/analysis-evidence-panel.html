@@ -55,7 +55,7 @@
                   @if (item.compactAttributes.length > 0) {
                     <div class="attribute-grid">
                       @for (attribute of item.compactAttributes; track attribute.name + $index) {
-                        <span class="attribute-name">{{ attribute.name }}</span>
+                        <span class="attribute-name">{{ attribute.name | attributeName }}</span>
                         <span class="attribute-value">{{ attribute.value }}</span>
                       }
                     </div>
@@ -63,7 +63,7 @@
 
                   @for (attribute of item.blockAttributes; track attribute.name + $index) {
                     <div class="attribute-row attribute-row--block">
-                      <span class="attribute-name">{{ attribute.name }}</span>
+                      <span class="attribute-name">{{ attribute.name | attributeName }}</span>
                       <pre class="attribute-block">{{ attribute.value }}</pre>
                     </div>
                   }

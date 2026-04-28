@@ -41,6 +41,7 @@ import {
 import { AnalysisOverviewCardComponent } from '../../components/analysis-overview-card/analysis-overview-card';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../components/markdown-content/markdown-content';
+import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 
 const POLL_INTERVAL_MS = 1500;
 const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
@@ -58,7 +59,8 @@ const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
     RouterLinkActive,
     AnalysisOverviewCardComponent,
     AnalysisStepsPanelComponent,
-    MarkdownContentComponent
+    MarkdownContentComponent,
+    AttributeNamePipe
   ],
   templateUrl: './analysis-console.html',
   styleUrl: './analysis-console.scss'
