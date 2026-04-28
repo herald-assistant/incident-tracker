@@ -21,18 +21,18 @@ import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabSearchRep
 import java.util.ArrayList;
 import java.util.List;
 
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class GitLabToolEvidenceMapper {
-
-    private static final String TOOL_NAME_FILE = "gitlab_read_repository_file";
-    private static final String TOOL_NAME_FILE_CHUNK = "gitlab_read_repository_file_chunk";
-    private static final String TOOL_NAME_FILE_CHUNKS = "gitlab_read_repository_file_chunks";
-    private static final String TOOL_NAME_FILE_OUTLINE = "gitlab_read_repository_file_outline";
-    private static final String TOOL_NAME_SEARCH = "gitlab_search_repository_candidates";
-    private static final String TOOL_NAME_CLASS_REFERENCES = "gitlab_find_class_references";
-    private static final String TOOL_NAME_FLOW_CONTEXT = "gitlab_find_flow_context";
 
     private final ObjectMapper objectMapper;
     private final ToolJsonPayloadReader payloadReader;
@@ -43,13 +43,13 @@ public class GitLabToolEvidenceMapper {
         }
 
         return switch (toolName) {
-            case TOOL_NAME_FILE,
-                 TOOL_NAME_FILE_CHUNK,
-                 TOOL_NAME_FILE_CHUNKS,
-                 TOOL_NAME_FILE_OUTLINE,
-                 TOOL_NAME_SEARCH,
-                 TOOL_NAME_CLASS_REFERENCES,
-                 TOOL_NAME_FLOW_CONTEXT -> true;
+            case READ_REPOSITORY_FILE,
+                 READ_REPOSITORY_FILE_CHUNK,
+                 READ_REPOSITORY_FILE_CHUNKS,
+                 READ_REPOSITORY_FILE_OUTLINE,
+                 SEARCH_REPOSITORY_CANDIDATES,
+                 FIND_CLASS_REFERENCES,
+                 FIND_FLOW_CONTEXT -> true;
             default -> false;
         };
     }
@@ -62,18 +62,18 @@ public class GitLabToolEvidenceMapper {
             CopilotToolEvidenceCaptureRegistry.SessionArtifactAccumulator accumulator
     ) {
         return switch (toolName) {
-            case TOOL_NAME_FILE -> captureGitLabFile(rawArguments, rawResult, accumulator);
-            case TOOL_NAME_FILE_CHUNK -> captureGitLabFileChunk(rawArguments, rawResult, accumulator);
-            case TOOL_NAME_FILE_CHUNKS -> captureGitLabFileChunks(rawArguments, rawResult, accumulator);
-            case TOOL_NAME_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, accumulator);
-            case TOOL_NAME_SEARCH -> captureGitLabSearch(toolCallId, rawArguments, rawResult, accumulator);
-            case TOOL_NAME_CLASS_REFERENCES -> captureGitLabClassReferences(
+            case READ_REPOSITORY_FILE -> captureGitLabFile(rawArguments, rawResult, accumulator);
+            case READ_REPOSITORY_FILE_CHUNK -> captureGitLabFileChunk(rawArguments, rawResult, accumulator);
+            case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(rawArguments, rawResult, accumulator);
+            case READ_REPOSITORY_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, accumulator);
+            case SEARCH_REPOSITORY_CANDIDATES -> captureGitLabSearch(toolCallId, rawArguments, rawResult, accumulator);
+            case FIND_CLASS_REFERENCES -> captureGitLabClassReferences(
                     toolCallId,
                     rawArguments,
                     rawResult,
                     accumulator
             );
-            case TOOL_NAME_FLOW_CONTEXT -> captureGitLabFlowContext(toolCallId, rawArguments, rawResult, accumulator);
+            case FIND_FLOW_CONTEXT -> captureGitLabFlowContext(toolCallId, rawArguments, rawResult, accumulator);
             default -> null;
         };
     }
@@ -166,7 +166,7 @@ public class GitLabToolEvidenceMapper {
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileOutlineToolResponse.class);
-            var attributes = buildGitLabDiscoveryAttributes(TOOL_NAME_FILE_OUTLINE, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(READ_REPOSITORY_FILE_OUTLINE, rawArguments);
             addAttribute(attributes, "projectName", response.projectName());
             addAttribute(attributes, "filePath", response.filePath());
             addAttribute(attributes, "packageName", response.packageName());
@@ -180,9 +180,9 @@ public class GitLabToolEvidenceMapper {
             addJsonAttribute(attributes, "methodSignatures", response.methodSignatures());
 
             return accumulator.appendGitLabDiscoveryItem(
-                    discoveryKey(toolCallId, TOOL_NAME_FILE_OUTLINE),
+                    discoveryKey(toolCallId, READ_REPOSITORY_FILE_OUTLINE),
                     new AnalysisEvidenceItem(
-                            gitLabDiscoveryTitle(TOOL_NAME_FILE_OUTLINE),
+                            gitLabDiscoveryTitle(READ_REPOSITORY_FILE_OUTLINE),
                             List.copyOf(attributes)
                     )
             );
@@ -201,14 +201,14 @@ public class GitLabToolEvidenceMapper {
         try {
             var response = objectMapper.readValue(rawResult, GitLabSearchRepositoryCandidatesToolResponse.class);
             var candidates = safeList(response.candidates());
-            var attributes = buildGitLabDiscoveryAttributes(TOOL_NAME_SEARCH, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(SEARCH_REPOSITORY_CANDIDATES, rawArguments);
             addAttribute(attributes, "candidateCount", String.valueOf(candidates.size()));
             addJsonAttribute(attributes, "candidates", candidates);
 
             return accumulator.appendGitLabDiscoveryItem(
-                    discoveryKey(toolCallId, TOOL_NAME_SEARCH),
+                    discoveryKey(toolCallId, SEARCH_REPOSITORY_CANDIDATES),
                     new AnalysisEvidenceItem(
-                            gitLabDiscoveryTitle(TOOL_NAME_SEARCH),
+                            gitLabDiscoveryTitle(SEARCH_REPOSITORY_CANDIDATES),
                             List.copyOf(attributes)
                     )
             );
@@ -228,7 +228,7 @@ public class GitLabToolEvidenceMapper {
             var response = objectMapper.readValue(rawResult, GitLabFindClassReferencesToolResponse.class);
             var groups = safeList(response.groups());
             var recommendedNextReads = safeList(response.recommendedNextReads());
-            var attributes = buildGitLabDiscoveryAttributes(TOOL_NAME_CLASS_REFERENCES, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(FIND_CLASS_REFERENCES, rawArguments);
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "branch", response.branch());
             addAttribute(attributes, "searchedClass", response.searchedClass());
@@ -240,9 +240,9 @@ public class GitLabToolEvidenceMapper {
             addJsonAttribute(attributes, "recommendedNextReads", recommendedNextReads);
 
             return accumulator.appendGitLabDiscoveryItem(
-                    discoveryKey(toolCallId, TOOL_NAME_CLASS_REFERENCES),
+                    discoveryKey(toolCallId, FIND_CLASS_REFERENCES),
                     new AnalysisEvidenceItem(
-                            gitLabDiscoveryTitle(TOOL_NAME_CLASS_REFERENCES),
+                            gitLabDiscoveryTitle(FIND_CLASS_REFERENCES),
                             List.copyOf(attributes)
                     )
             );
@@ -262,7 +262,7 @@ public class GitLabToolEvidenceMapper {
             var response = objectMapper.readValue(rawResult, GitLabFindFlowContextToolResponse.class);
             var groups = safeList(response.groups());
             var recommendedNextReads = safeList(response.recommendedNextReads());
-            var attributes = buildGitLabDiscoveryAttributes(TOOL_NAME_FLOW_CONTEXT, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(FIND_FLOW_CONTEXT, rawArguments);
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "branch", response.branch());
             addAttribute(attributes, "groupCount", String.valueOf(groups.size()));
@@ -272,9 +272,9 @@ public class GitLabToolEvidenceMapper {
             addJsonAttribute(attributes, "recommendedNextReads", recommendedNextReads);
 
             return accumulator.appendGitLabDiscoveryItem(
-                    discoveryKey(toolCallId, TOOL_NAME_FLOW_CONTEXT),
+                    discoveryKey(toolCallId, FIND_FLOW_CONTEXT),
                     new AnalysisEvidenceItem(
-                            gitLabDiscoveryTitle(TOOL_NAME_FLOW_CONTEXT),
+                            gitLabDiscoveryTitle(FIND_FLOW_CONTEXT),
                             List.copyOf(attributes)
                     )
             );
@@ -380,10 +380,10 @@ public class GitLabToolEvidenceMapper {
 
     private String gitLabDiscoveryTitle(String toolName) {
         return switch (toolName) {
-            case TOOL_NAME_SEARCH -> "GitLab search candidates";
-            case TOOL_NAME_FILE_OUTLINE -> "GitLab file outline";
-            case TOOL_NAME_CLASS_REFERENCES -> "GitLab class references";
-            case TOOL_NAME_FLOW_CONTEXT -> "GitLab flow context";
+            case SEARCH_REPOSITORY_CANDIDATES -> "GitLab search candidates";
+            case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
+            case FIND_CLASS_REFERENCES -> "GitLab class references";
+            case FIND_FLOW_CONTEXT -> "GitLab flow context";
             default -> "GitLab tool result";
         };
     }

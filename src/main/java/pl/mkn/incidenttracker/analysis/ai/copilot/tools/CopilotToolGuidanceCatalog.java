@@ -2,6 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,16 +20,19 @@ public class CopilotToolGuidanceCatalog {
 
     private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.ofEntries(
             Map.entry(
-                    "gitlab_read_repository_file",
+                    GitLabToolNames.READ_REPOSITORY_FILE,
                     List.of(
                             "Expensive. Use only when outline/chunk tools are insufficient.",
-                            "Prefer gitlab_read_repository_file_chunk or gitlab_read_repository_file_chunks first.",
+                            "Prefer %s or %s first.".formatted(
+                                    GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                                    GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS
+                            ),
                             "Do not use for broad browsing.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
-                    "gitlab_search_repository_candidates",
+                    GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                     List.of(
                             "Use when project or file is unclear.",
                             "Prefer focused terms from stacktrace, exception, class, entity, repository or service names.",
@@ -37,7 +42,7 @@ public class CopilotToolGuidanceCatalog {
                     )
             ),
             Map.entry(
-                    "gitlab_read_repository_file_outline",
+                    GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE,
                     List.of(
                             "Use before full file reads to understand class role and available method signatures.",
                             "Follow up with focused chunks when a specific method, repository predicate or client call matters.",
@@ -45,7 +50,7 @@ public class CopilotToolGuidanceCatalog {
                     )
             ),
             Map.entry(
-                    "gitlab_read_repository_file_chunk",
+                    GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                     List.of(
                             "Preferred focused read for a known stack frame, method or predicate.",
                             "Keep line ranges tight and tied to a concrete evidence gap.",
@@ -53,7 +58,7 @@ public class CopilotToolGuidanceCatalog {
                     )
             ),
             Map.entry(
-                    "gitlab_read_repository_file_chunks",
+                    GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS,
                     List.of(
                             "Use for a small set of directly related files needed to explain the flow.",
                             "Avoid batch browsing unrelated candidates.",
@@ -61,7 +66,7 @@ public class CopilotToolGuidanceCatalog {
                     )
             ),
             Map.entry(
-                    "gitlab_find_flow_context",
+                    GitLabToolNames.FIND_FLOW_CONTEXT,
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
                             "Use when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed to identify the smallest functional flow for affectedFunction.",
@@ -71,7 +76,7 @@ public class CopilotToolGuidanceCatalog {
                     )
             ),
             Map.entry(
-                    "gitlab_find_class_references",
+                    GitLabToolNames.FIND_CLASS_REFERENCES,
                     List.of(
                             "Use when a concrete class from stacktrace or code evidence needs ownership or caller context.",
                             "Prefer class names and related hints from existing evidence.",
@@ -79,21 +84,21 @@ public class CopilotToolGuidanceCatalog {
                     )
             ),
             Map.entry(
-                    "db_sample_rows",
+                    DatabaseToolNames.SAMPLE_ROWS,
                     List.of(
                             "Use only after exact count/group checks and only for minimal technical projections.",
                             "Do not use to browse business data."
                     )
             ),
             Map.entry(
-                    "db_join_sample",
+                    DatabaseToolNames.JOIN_SAMPLE,
                     List.of(
                             "Use only after exact join counts and explicit projected columns are known.",
                             "Do not use to browse business data."
                     )
             ),
             Map.entry(
-                    "db_execute_readonly_sql",
+                    DatabaseToolNames.EXECUTE_READONLY_SQL,
                     List.of(
                             "Last resort only.",
                             "Use typed DB tools first.",
@@ -109,7 +114,7 @@ public class CopilotToolGuidanceCatalog {
 
         var normalizedToolName = toolName.trim();
         var guidance = GUIDANCE_BY_TOOL_NAME.getOrDefault(normalizedToolName, List.of());
-        if (!normalizedToolName.startsWith("db_")) {
+        if (!normalizedToolName.startsWith(DatabaseToolNames.PREFIX)) {
             return guidance;
         }
 

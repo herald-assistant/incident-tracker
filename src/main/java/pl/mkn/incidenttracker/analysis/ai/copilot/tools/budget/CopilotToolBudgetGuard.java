@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetDtos.Decision;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
 
 @Slf4j
 @Component
@@ -19,7 +20,7 @@ public class CopilotToolBudgetGuard {
             String toolName,
             String argumentsJson
     ) {
-        if ("db_execute_readonly_sql".equals(toolName)) {
+        if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
             metricsRegistry.recordBudgetRawSqlAttempt(sessionId);
         }
         var decision = budgetRegistry.state(sessionId)

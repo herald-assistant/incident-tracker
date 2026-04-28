@@ -3,6 +3,9 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.github.copilot.sdk.json.ToolDefinition;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.GitLabEvidenceCoverage;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -21,19 +24,19 @@ public record CopilotToolAccessPolicy(
 ) {
 
     private static final Set<String> FOCUSED_GITLAB_TOOLS = Set.of(
-            "gitlab_find_class_references",
-            "gitlab_find_flow_context",
-            "gitlab_read_repository_file_chunk",
-            "gitlab_read_repository_file_chunks",
-            "gitlab_read_repository_file_outline"
+            GitLabToolNames.FIND_CLASS_REFERENCES,
+            GitLabToolNames.FIND_FLOW_CONTEXT,
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS,
+            GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE
     );
 
     private static final Set<String> DB_DISCOVERY_TOOLS = Set.of(
-            "db_get_scope",
-            "db_find_tables",
-            "db_find_columns",
-            "db_describe_table",
-            "db_find_relationships"
+            DatabaseToolNames.GET_SCOPE,
+            DatabaseToolNames.FIND_TABLES,
+            DatabaseToolNames.FIND_COLUMNS,
+            DatabaseToolNames.DESCRIBE_TABLE,
+            DatabaseToolNames.FIND_RELATIONSHIPS
     );
 
     public CopilotToolAccessPolicy {
@@ -60,9 +63,9 @@ public record CopilotToolAccessPolicy(
     ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
         var coverage = evidenceCoverage != null ? evidenceCoverage : CopilotEvidenceCoverageReport.empty();
-        var elasticToolsRegistered = hasToolPrefix(tools, "elastic_");
-        var gitLabToolsRegistered = hasToolPrefix(tools, "gitlab_");
-        var databaseToolsRegistered = hasToolPrefix(tools, "db_");
+        var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
+        var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
+        var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
         var enabledTools = tools.stream()
                 .filter(tool -> isEnabled(tool.name(), coverage))
                 .toList();
@@ -87,9 +90,9 @@ public record CopilotToolAccessPolicy(
             boolean gitLabScopeResolved
     ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
-        var elasticToolsRegistered = hasToolPrefix(tools, "elastic_");
-        var gitLabToolsRegistered = hasToolPrefix(tools, "gitlab_");
-        var databaseToolsRegistered = hasToolPrefix(tools, "db_");
+        var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
+        var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
+        var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
         var enabledTools = tools.stream()
                 .filter(tool -> isFollowUpEnabled(tool.name(), environmentResolved, gitLabScopeResolved))
                 .toList();
@@ -147,15 +150,15 @@ public record CopilotToolAccessPolicy(
     }
 
     public boolean elasticToolsEnabled() {
-        return hasAvailableToolPrefix("elastic_");
+        return hasAvailableToolPrefix(ElasticToolNames.PREFIX);
     }
 
     public boolean gitLabToolsEnabled() {
-        return hasAvailableToolPrefix("gitlab_");
+        return hasAvailableToolPrefix(GitLabToolNames.PREFIX);
     }
 
     public boolean databaseToolsEnabled() {
-        return hasAvailableToolPrefix("db_");
+        return hasAvailableToolPrefix(DatabaseToolNames.PREFIX);
     }
 
     private boolean hasAvailableToolPrefix(String prefix) {
@@ -189,13 +192,13 @@ public record CopilotToolAccessPolicy(
         if (toolName == null || toolName.isBlank()) {
             return false;
         }
-        if (toolName.startsWith("elastic_")) {
+        if (toolName.startsWith(ElasticToolNames.PREFIX)) {
             return evidenceCoverage.elasticNeedsTooling();
         }
-        if (toolName.startsWith("gitlab_")) {
+        if (toolName.startsWith(GitLabToolNames.PREFIX)) {
             return gitLabToolEnabled(toolName, evidenceCoverage);
         }
-        if (toolName.startsWith("db_")) {
+        if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
             return databaseToolEnabled(toolName, evidenceCoverage);
         }
         return true;
@@ -215,7 +218,7 @@ public record CopilotToolAccessPolicy(
     }
 
     private static boolean databaseToolEnabled(String toolName, CopilotEvidenceCoverageReport evidenceCoverage) {
-        if ("db_execute_readonly_sql".equals(toolName)) {
+        if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
             return false;
         }
         if (evidenceCoverage.databaseNeedsTooling()) {
@@ -232,14 +235,14 @@ public record CopilotToolAccessPolicy(
         if (toolName == null || toolName.isBlank()) {
             return false;
         }
-        if (toolName.startsWith("elastic_")) {
+        if (toolName.startsWith(ElasticToolNames.PREFIX)) {
             return true;
         }
-        if (toolName.startsWith("gitlab_")) {
+        if (toolName.startsWith(GitLabToolNames.PREFIX)) {
             return gitLabScopeResolved;
         }
-        if (toolName.startsWith("db_")) {
-            return environmentResolved && !"db_execute_readonly_sql".equals(toolName);
+        if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
+            return environmentResolved && !DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName);
         }
         return true;
     }

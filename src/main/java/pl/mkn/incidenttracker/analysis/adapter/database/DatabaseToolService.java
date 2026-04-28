@@ -163,7 +163,7 @@ public class DatabaseToolService {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var keyValues = safeList(request.keyValues());
         if (keyValues.isEmpty()) {
-            throw new IllegalArgumentException("db_exists_by_key requires at least one key column/value.");
+            throw new IllegalArgumentException("%s requires at least one key column/value.".formatted(scope.toolName()));
         }
 
         var where = buildKeyWhereClause(scope, table, "t", keyValues);
@@ -231,7 +231,7 @@ public class DatabaseToolService {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var groupByColumns = sqlGuard.validateColumns(scope, table, request.groupByColumns());
         if (groupByColumns.isEmpty()) {
-            throw new IllegalArgumentException("db_group_count requires at least one groupBy column.");
+            throw new IllegalArgumentException("%s requires at least one groupBy column.".formatted(scope.toolName()));
         }
 
         var where = buildWhereClause(scope, table, "t", request.filters());
@@ -269,7 +269,7 @@ public class DatabaseToolService {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var columns = sqlGuard.validateColumns(scope, table, request.columns());
         if (columns.isEmpty()) {
-            throw new IllegalArgumentException("db_sample_rows requires explicit projection columns.");
+            throw new IllegalArgumentException("%s requires explicit projection columns.".formatted(scope.toolName()));
         }
 
         var where = buildWhereClause(scope, table, "t", request.filters());
@@ -445,7 +445,7 @@ public class DatabaseToolService {
 
     public DbJoinSampleResult joinSample(DbToolScope scope, DbJoinSampleRequest request) {
         if (safeList(request.columns()).isEmpty()) {
-            throw new IllegalArgumentException("db_join_sample requires explicit projected columns.");
+            throw new IllegalArgumentException("%s requires explicit projected columns.".formatted(scope.toolName()));
         }
 
         var joinPlan = buildJoinPlan(scope, request.tables(), request.joins(), request.filters());
@@ -464,7 +464,7 @@ public class DatabaseToolService {
             ));
         }
         if (selectColumns.isEmpty()) {
-            throw new IllegalArgumentException("db_join_sample requires at least one valid projected column.");
+            throw new IllegalArgumentException("%s requires at least one valid projected column.".formatted(scope.toolName()));
         }
 
         var effectiveLimit = normalizePositive(request.limit(), properties.getMaxRows());

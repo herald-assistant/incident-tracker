@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
 
+import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames.*;
 import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
 
 @Component
@@ -22,7 +23,7 @@ public class DatabaseMcpTools {
     private final DatabaseToolService databaseToolService;
 
     @Tool(
-            name = "db_get_scope",
+            name = GET_SCOPE,
             description = """
                     Returns the current incident database scope for the hidden session environment.
                     Use this to inspect configured application-to-schema mappings, allowed schemas and safety rules
@@ -36,10 +37,10 @@ public class DatabaseMcpTools {
     ) {
         var scope = DbToolScope.from(toolContext);
         var startedAt = System.nanoTime();
-        logRequest("db_get_scope", scope, "request=no-args");
+        logRequest(GET_SCOPE, scope, "request=no-args");
         var result = databaseToolService.getScope(scope);
         logResult(
-                "db_get_scope",
+                GET_SCOPE,
                 scope,
                 startedAt,
                 "applications=%d allowedSchemas=%d".formatted(result.applications().size(), result.allowedSchemas().size())
@@ -48,7 +49,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_find_tables",
+            name = FIND_TABLES,
             description = """
                     Finds ranked Oracle table/view candidates for an application on the current incident environment.
                     The environment is taken from hidden ToolContext. applicationNamePattern should be an application,
@@ -76,14 +77,14 @@ public class DatabaseMcpTools {
         var request = new DbFindTablesRequest(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_find_tables",
+                FIND_TABLES,
                 scope,
                 "applicationNamePattern=%s tableNamePattern=%s entityOrKeywordHint=%s limit=%s"
                         .formatted(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit)
         );
         var result = databaseToolService.findTables(scope, request);
         logResult(
-                "db_find_tables",
+                FIND_TABLES,
                 scope,
                 startedAt,
                 "resolvedApplication=%s resolvedSchemas=%s candidateCount=%d truncated=%s"
@@ -93,7 +94,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_find_columns",
+            name = FIND_COLUMNS,
             description = """
                     Finds ranked Oracle column candidates for an application on the current incident environment.
                     Use applicationNamePattern from evidence and optional table/column/Java field hints to locate ID,
@@ -126,14 +127,14 @@ public class DatabaseMcpTools {
         );
         var startedAt = System.nanoTime();
         logRequest(
-                "db_find_columns",
+                FIND_COLUMNS,
                 scope,
                 "applicationNamePattern=%s tableNamePattern=%s columnNamePattern=%s javaFieldNameHint=%s limit=%s"
                         .formatted(applicationNamePattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit)
         );
         var result = databaseToolService.findColumns(scope, request);
         logResult(
-                "db_find_columns",
+                FIND_COLUMNS,
                 scope,
                 startedAt,
                 "resolvedApplication=%s resolvedSchemas=%s candidateCount=%d truncated=%s"
@@ -143,7 +144,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_describe_table",
+            name = DESCRIBE_TABLE,
             description = """
                     Describes an exact Oracle schema.table on the current incident environment.
                     Use this only after discovery or when a prior result already grounded the exact schema.table.
@@ -159,10 +160,10 @@ public class DatabaseMcpTools {
     ) {
         var scope = DbToolScope.from(toolContext);
         var startedAt = System.nanoTime();
-        logRequest("db_describe_table", scope, "table=%s".formatted(table));
+        logRequest(DESCRIBE_TABLE, scope, "table=%s".formatted(table));
         var result = databaseToolService.describeTable(scope, new DbDescribeTableRequest(table));
         logResult(
-                "db_describe_table",
+                DESCRIBE_TABLE,
                 scope,
                 startedAt,
                 "table=%s.%s columnCount=%d fkCount=%d".formatted(
@@ -176,7 +177,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_exists_by_key",
+            name = EXISTS_BY_KEY,
             description = """
                     Checks whether an exact Oracle schema.table row exists by primary key or business key on the current
                     incident environment. Use this for direct entity existence checks after exact schema.table is known.
@@ -197,7 +198,7 @@ public class DatabaseMcpTools {
         var request = new DbExistsByKeyRequest(table, keyValues, projectionColumns);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_exists_by_key",
+                EXISTS_BY_KEY,
                 scope,
                 "table=%s keyCount=%d projectionColumnCount=%d".formatted(
                         table,
@@ -207,7 +208,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.existsByKey(scope, request);
         logResult(
-                "db_exists_by_key",
+                EXISTS_BY_KEY,
                 scope,
                 startedAt,
                 "table=%s exists=%s count=%d projectionRows=%d".formatted(
@@ -221,7 +222,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_count_rows",
+            name = COUNT_ROWS,
             description = """
                     Counts rows in an exact Oracle schema.table on the current incident environment using typed filters.
                     Use this before sampling rows to confirm key-only versus full-predicate behavior.
@@ -240,13 +241,13 @@ public class DatabaseMcpTools {
         var request = new DbCountRowsRequest(table, filters);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_count_rows",
+                COUNT_ROWS,
                 scope,
                 "table=%s filterCount=%d".formatted(table, filters != null ? filters.size() : 0)
         );
         var result = databaseToolService.countRows(scope, request);
         logResult(
-                "db_count_rows",
+                COUNT_ROWS,
                 scope,
                 startedAt,
                 "table=%s count=%d appliedFilters=%d".formatted(
@@ -259,7 +260,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_group_count",
+            name = GROUP_COUNT,
             description = """
                     Groups and counts rows in an exact Oracle schema.table on the current incident environment.
                     Use this for status, state, tenant, type, active/deleted or error-code distributions.
@@ -282,7 +283,7 @@ public class DatabaseMcpTools {
         var request = new DbGroupCountRequest(table, groupByColumns, filters, limit);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_group_count",
+                GROUP_COUNT,
                 scope,
                 "table=%s groupByCount=%d filterCount=%d limit=%s".formatted(
                         table,
@@ -293,7 +294,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.groupCount(scope, request);
         logResult(
-                "db_group_count",
+                GROUP_COUNT,
                 scope,
                 startedAt,
                 "table=%s groups=%d truncated=%s".formatted(result.table(), result.groups().size(), result.truncated())
@@ -302,7 +303,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_sample_rows",
+            name = SAMPLE_ROWS,
             description = """
                     Returns a small explicit technical projection from an exact Oracle schema.table on the current incident
                     environment. Use only after typed count/group checks and always provide explicit columns.
@@ -327,7 +328,7 @@ public class DatabaseMcpTools {
         var request = new DbSampleRowsRequest(table, columns, filters, orderBy, limit);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_sample_rows",
+                SAMPLE_ROWS,
                 scope,
                 "table=%s columnCount=%d filterCount=%d orderByCount=%d limit=%s".formatted(
                         table,
@@ -339,7 +340,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.sampleRows(scope, request);
         logResult(
-                "db_sample_rows",
+                SAMPLE_ROWS,
                 scope,
                 startedAt,
                 "table=%s rowCount=%d truncated=%s".formatted(result.table(), result.rows().size(), result.truncated())
@@ -348,7 +349,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_check_orphans",
+            name = CHECK_ORPHANS,
             description = """
                     Checks for orphan child rows by comparing an exact child schema.table reference to an exact parent
                     schema.table reference on the current incident environment. Use this for stale or missing references.
@@ -382,7 +383,7 @@ public class DatabaseMcpTools {
         );
         var startedAt = System.nanoTime();
         logRequest(
-                "db_check_orphans",
+                CHECK_ORPHANS,
                 scope,
                 "childTable=%s childColumn=%s parentTable=%s parentColumn=%s filterCount=%d sampleLimit=%s".formatted(
                         childTable,
@@ -395,7 +396,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.checkOrphans(scope, request);
         logResult(
-                "db_check_orphans",
+                CHECK_ORPHANS,
                 scope,
                 startedAt,
                 "childTable=%s parentTable=%s orphanCount=%d sampleRows=%d truncated=%s".formatted(
@@ -410,7 +411,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_find_relationships",
+            name = FIND_RELATIONSHIPS,
             description = """
                     Finds declared and optionally inferred relationships for exact Oracle schema.table references on the
                     current incident environment. Prefer this before broader join exploration when relation structure is unclear.
@@ -431,7 +432,7 @@ public class DatabaseMcpTools {
         var request = new DbFindRelationshipsRequest(tables, depth, includeInferred);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_find_relationships",
+                FIND_RELATIONSHIPS,
                 scope,
                 "tableCount=%d depth=%s includeInferred=%s".formatted(
                         tables != null ? tables.size() : 0,
@@ -441,7 +442,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.findRelationships(scope, request);
         logResult(
-                "db_find_relationships",
+                FIND_RELATIONSHIPS,
                 scope,
                 startedAt,
                 "relationshipCount=%d warnings=%d".formatted(result.relationships().size(), result.warnings().size())
@@ -450,7 +451,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_join_count",
+            name = JOIN_COUNT,
             description = """
                     Counts rows for an exact join plan across one or more Oracle schema.table references on the current
                     incident environment. Use typed join conditions and typed filters; do not use this for browsing.
@@ -471,7 +472,7 @@ public class DatabaseMcpTools {
         var request = new DbJoinCountRequest(tables, joins, filters);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_join_count",
+                JOIN_COUNT,
                 scope,
                 "tableCount=%d joinCount=%d filterCount=%d".formatted(
                         tables != null ? tables.size() : 0,
@@ -481,7 +482,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.joinCount(scope, request);
         logResult(
-                "db_join_count",
+                JOIN_COUNT,
                 scope,
                 startedAt,
                 "count=%d warnings=%d".formatted(result.count(), result.warnings().size())
@@ -490,7 +491,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_join_sample",
+            name = JOIN_SAMPLE,
             description = """
                     Returns a small explicit technical projection from an exact join plan across one or more Oracle
                     schema.table references on the current incident environment. Always provide explicit projected columns.
@@ -515,7 +516,7 @@ public class DatabaseMcpTools {
         var request = new DbJoinSampleRequest(tables, joins, columns, filters, limit);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_join_sample",
+                JOIN_SAMPLE,
                 scope,
                 "tableCount=%d joinCount=%d columnCount=%d filterCount=%d limit=%s".formatted(
                         tables != null ? tables.size() : 0,
@@ -527,7 +528,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.joinSample(scope, request);
         logResult(
-                "db_join_sample",
+                JOIN_SAMPLE,
                 scope,
                 startedAt,
                 "rowCount=%d truncated=%s warnings=%d".formatted(
@@ -540,7 +541,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_compare_table_to_expected_mapping",
+            name = COMPARE_TABLE_TO_EXPECTED_MAPPING,
             description = """
                     Compares an exact Oracle schema.table to an expected ORM-style mapping hint on the current incident
                     environment. Use this after data checks or when mapping/schema symptoms are explicit in evidence.
@@ -561,7 +562,7 @@ public class DatabaseMcpTools {
         var request = new DbMappingComparisonRequest(actualTable, expectedColumns, expectedRelationships);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_compare_table_to_expected_mapping",
+                COMPARE_TABLE_TO_EXPECTED_MAPPING,
                 scope,
                 "actualTable=%s expectedColumnCount=%d expectedRelationshipCount=%d".formatted(
                         actualTable,
@@ -571,7 +572,7 @@ public class DatabaseMcpTools {
         );
         var result = databaseToolService.compareTableToExpectedMapping(scope, request);
         logResult(
-                "db_compare_table_to_expected_mapping",
+                COMPARE_TABLE_TO_EXPECTED_MAPPING,
                 scope,
                 startedAt,
                 "actualTable=%s confirmedMatches=%d mismatches=%d".formatted(
@@ -584,7 +585,7 @@ public class DatabaseMcpTools {
     }
 
     @Tool(
-            name = "db_execute_readonly_sql",
+            name = EXECUTE_READONLY_SQL,
             description = """
                     Executes read-only SQL on the current incident environment only when explicitly enabled by backend
                     configuration. Prefer typed DB tools over raw SQL. The backend enforces read-only guards, bind-safe limits,
@@ -604,13 +605,13 @@ public class DatabaseMcpTools {
         var request = new DbReadonlySqlRequest(sql, reason, maxRows);
         var startedAt = System.nanoTime();
         logRequest(
-                "db_execute_readonly_sql",
+                EXECUTE_READONLY_SQL,
                 scope,
                 "reason=%s maxRows=%s".formatted(reason, maxRows)
         );
         var result = databaseToolService.executeReadonlySql(scope, request);
         logResult(
-                "db_execute_readonly_sql",
+                EXECUTE_READONLY_SQL,
                 scope,
                 startedAt,
                 "rowCount=%d truncated=%s warnings=%d".formatted(

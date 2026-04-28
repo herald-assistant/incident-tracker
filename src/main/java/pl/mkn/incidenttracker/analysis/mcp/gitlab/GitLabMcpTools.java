@@ -31,6 +31,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
+import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -64,7 +72,7 @@ public class GitLabMcpTools {
     private final GitLabRepositoryPort gitLabRepositoryPort;
 
     @Tool(
-            name = "gitlab_search_repository_candidates",
+            name = SEARCH_REPOSITORY_CANDIDATES,
             description = """
                     Search GitLab repository files in the current fixed session group and branch using candidate project names,
                     operation names, class names, method names, entity names, exception names and keywords inferred from logs,
@@ -90,7 +98,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} keywords={}",
-                "gitlab_search_repository_candidates",
+                SEARCH_REPOSITORY_CANDIDATES,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -115,7 +123,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} candidatePaths={}",
-                "gitlab_search_repository_candidates",
+                SEARCH_REPOSITORY_CANDIDATES,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -130,7 +138,7 @@ public class GitLabMcpTools {
     }
 
     @Tool(
-            name = "gitlab_read_repository_file",
+            name = READ_REPOSITORY_FILE,
             description = """
                     Read a file from the GitLab repository in the current fixed session group and branch.
                     Use only when full class/file context is necessary. Prefer outline/chunk/chunks before full file reads for large files.
@@ -152,7 +160,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
-                "gitlab_read_repository_file",
+                READ_REPOSITORY_FILE,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -175,7 +183,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} returnedCharacters={} truncated={}",
-                "gitlab_read_repository_file",
+                READ_REPOSITORY_FILE,
                 scope.correlationId(),
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
@@ -197,7 +205,7 @@ public class GitLabMcpTools {
     }
 
     @Tool(
-            name = "gitlab_read_repository_file_chunk",
+            name = READ_REPOSITORY_FILE_CHUNK,
             description = """
                     Read only a selected line range from a GitLab repository file in the current fixed session group and branch.
                     Line numbers are 1-based and inclusive. Prefer this over full file reads when investigating a stack frame,
@@ -224,7 +232,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} requestedStartLine={} requestedEndLine={} maxCharacters={}",
-                "gitlab_read_repository_file_chunk",
+                READ_REPOSITORY_FILE_CHUNK,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -251,7 +259,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} returnedStartLine={} returnedEndLine={} totalLines={} returnedCharacters={} truncated={}",
-                "gitlab_read_repository_file_chunk",
+                READ_REPOSITORY_FILE_CHUNK,
                 scope.correlationId(),
                 fileChunk != null ? fileChunk.group() : scope.group(),
                 fileChunk != null ? fileChunk.branch() : scope.branch(),
@@ -281,7 +289,7 @@ public class GitLabMcpTools {
     }
 
     @Tool(
-            name = "gitlab_read_repository_file_outline",
+            name = READ_REPOSITORY_FILE_OUTLINE,
             description = """
                     Read a lightweight outline of a GitLab repository file in the current fixed session group and branch:
                     package, imports summary, class/interface names, annotations, method signatures and inferred file role.
@@ -304,7 +312,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
-                "gitlab_read_repository_file_outline",
+                READ_REPOSITORY_FILE_OUTLINE,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -329,7 +337,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} packageName={} importCount={} classCount={} annotationCount={} methodSignatureCount={} inferredRole={} truncated={}",
-                "gitlab_read_repository_file_outline",
+                READ_REPOSITORY_FILE_OUTLINE,
                 scope.correlationId(),
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
@@ -361,7 +369,7 @@ public class GitLabMcpTools {
     }
 
     @Tool(
-            name = "gitlab_read_repository_file_chunks",
+            name = READ_REPOSITORY_FILE_CHUNKS,
             description = """
                     Read several focused line ranges from GitLab files in the current fixed session group and branch in one tool call.
                     Use when multiple directly related chunks are needed to explain the affected flow, for example service + repository + mapper
@@ -390,7 +398,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} requestedChunkCount={} processedChunkCount={} chunkTargets={} maxTotalCharacters={}",
-                "gitlab_read_repository_file_chunks",
+                READ_REPOSITORY_FILE_CHUNKS,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -455,7 +463,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} chunkCount={} chunkCountTruncated={} totalCharacterLimitReached={}",
-                "gitlab_read_repository_file_chunks",
+                READ_REPOSITORY_FILE_CHUNKS,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -475,7 +483,7 @@ public class GitLabMcpTools {
     }
 
     @Tool(
-            name = "gitlab_find_class_references",
+            name = FIND_CLASS_REFERENCES,
             description = """
                     Finds files in the current fixed session group and branch that declare, import or directly use a grounded class.
                     Use this when an exception, stacktrace or deterministic code evidence points to an entity, repository, DTO,
@@ -509,7 +517,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
-                "gitlab_find_class_references",
+                FIND_CLASS_REFERENCES,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -538,7 +546,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
-                "gitlab_find_class_references",
+                FIND_CLASS_REFERENCES,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -559,7 +567,7 @@ public class GitLabMcpTools {
     }
 
     @Tool(
-            name = "gitlab_find_flow_context",
+            name = FIND_FLOW_CONTEXT,
             description = """
                     Finds a small set of directly related files in the current fixed session group and branch that explain the functional
                     or technical flow around a failing class, method, entity, repository method, endpoint, queue, message type or integration keyword.
@@ -589,7 +597,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
-                "gitlab_find_flow_context",
+                FIND_FLOW_CONTEXT,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
@@ -617,7 +625,7 @@ public class GitLabMcpTools {
 
         log.info(
                 "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
-                "gitlab_find_flow_context",
+                FIND_FLOW_CONTEXT,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),

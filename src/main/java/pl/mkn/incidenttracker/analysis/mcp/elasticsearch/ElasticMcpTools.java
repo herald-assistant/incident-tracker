@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult;
 
+import static pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -16,20 +18,20 @@ public class ElasticMcpTools {
     private final ElasticLogPort elasticLogPort;
 
     @Tool(
-            name = "elastic_search_logs_by_correlation_id",
+            name = SEARCH_LOGS_BY_CORRELATION_ID,
             description = "Search Elasticsearch/Kibana logs by business correlationId using the configured Kibana console proxy and return structured log entries."
     )
     public ElasticLogSearchResult searchLogsByCorrelationId(
             @ToolParam(description = "Business correlationId of the analyzed incident.")
             String correlationId
     ) {
-        log.info("Tool request [{}] correlationId={}", "elastic_search_logs_by_correlation_id", correlationId);
+        log.info("Tool request [{}] correlationId={}", SEARCH_LOGS_BY_CORRELATION_ID, correlationId);
 
         var result = elasticLogPort.searchLogsByCorrelationId(correlationId);
 
         log.info(
                 "Tool result [{}] correlationId={} requestedSize={} returnedHits={} totalHits={} timedOut={}",
-                "elastic_search_logs_by_correlation_id",
+                SEARCH_LOGS_BY_CORRELATION_ID,
                 correlationId,
                 result.requestedSize(),
                 result.returnedHits(),

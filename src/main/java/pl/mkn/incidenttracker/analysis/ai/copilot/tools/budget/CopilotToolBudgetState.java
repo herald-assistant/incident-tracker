@@ -2,6 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget;
 
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetDtos.Decision;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -147,7 +149,7 @@ public class CopilotToolBudgetState {
                             properties.getMaxGitlabSearchCalls()
                     );
                 }
-                if ("gitlab_read_repository_file".equals(toolName)) {
+                if (GitLabToolNames.READ_REPOSITORY_FILE.equals(toolName)) {
                     addIfLimitExceeded(
                             exceeded,
                             "GitLab full file read budget exceeded",
@@ -222,18 +224,18 @@ public class CopilotToolBudgetState {
     }
 
     private boolean isGitLabSearchTool(String toolName) {
-        return "gitlab_search_repository_candidates".equals(toolName)
-                || "gitlab_find_class_references".equals(toolName)
-                || "gitlab_find_flow_context".equals(toolName);
+        return GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(toolName)
+                || GitLabToolNames.FIND_CLASS_REFERENCES.equals(toolName)
+                || GitLabToolNames.FIND_FLOW_CONTEXT.equals(toolName);
     }
 
     private boolean isGitLabChunkTool(String toolName) {
-        return "gitlab_read_repository_file_chunk".equals(toolName)
-                || "gitlab_read_repository_file_chunks".equals(toolName);
+        return GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(toolName)
+                || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(toolName);
     }
 
     private boolean isRawSqlTool(String toolName) {
-        return "db_execute_readonly_sql".equals(toolName);
+        return DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName);
     }
 
     public record CopilotToolBudgetSnapshot(

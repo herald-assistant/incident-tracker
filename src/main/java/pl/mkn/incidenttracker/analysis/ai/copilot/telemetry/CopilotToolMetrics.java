@@ -1,6 +1,9 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames;
+import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
 
 public record CopilotToolMetrics(
         String analysisRunId,
@@ -32,11 +35,11 @@ public record CopilotToolMetrics(
                 toolGroup(toolName),
                 latencyMs,
                 rawResult != null ? rawResult.length() : 0L,
-                "gitlab_read_repository_file".equals(toolName),
-                "gitlab_read_repository_file_chunk".equals(toolName)
-                        || "gitlab_read_repository_file_chunks".equals(toolName),
-                StringUtils.hasText(toolName) && toolName.startsWith("db_"),
-                "db_execute_readonly_sql".equals(toolName)
+                GitLabToolNames.READ_REPOSITORY_FILE.equals(toolName),
+                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(toolName)
+                        || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(toolName),
+                StringUtils.hasText(toolName) && toolName.startsWith(DatabaseToolNames.PREFIX),
+                DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)
         );
     }
 
@@ -44,13 +47,13 @@ public record CopilotToolMetrics(
         if (!StringUtils.hasText(toolName)) {
             return "unknown";
         }
-        if (toolName.startsWith("elastic_")) {
+        if (toolName.startsWith(ElasticToolNames.PREFIX)) {
             return "elasticsearch";
         }
-        if (toolName.startsWith("gitlab_")) {
+        if (toolName.startsWith(GitLabToolNames.PREFIX)) {
             return "gitlab";
         }
-        if (toolName.startsWith("db_")) {
+        if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
             return "database";
         }
         return "other";
