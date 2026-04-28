@@ -407,6 +407,104 @@
                                       }
                                     </div>
                                   }
+                                } @else if (event.gitLabLookup; as lookup) {
+                                  <div class="attribute-grid tool-evidence-panel__meta">
+                                    <span class="attribute-name">Źródło</span>
+                                    <span class="attribute-value">{{ event.sourceLabel }}</span>
+                                    <span class="attribute-name">Sprawdzenie</span>
+                                    <span class="attribute-value">{{ lookup.title }}</span>
+                                  </div>
+
+                                  <section class="gitlab-tool-card">
+                                    <p class="gitlab-tool-card__summary">{{ lookup.summary }}</p>
+
+                                    @if (lookup.compactAttributes.length > 0) {
+                                      <div class="attribute-grid gitlab-tool-card__meta">
+                                        @for (attribute of lookup.compactAttributes; track attribute.name + $index) {
+                                          <span class="attribute-name">{{ attribute.name }}</span>
+                                          <span class="attribute-value">{{ attribute.value }}</span>
+                                        }
+                                      </div>
+                                    }
+
+                                    @if (lookup.candidateGroups.length > 0) {
+                                      <div class="gitlab-tool-card__sections">
+                                        @for (group of lookup.candidateGroups; track group.key) {
+                                          <section class="gitlab-tool-card__section">
+                                            <div class="gitlab-tool-card__section-header">
+                                              <h6 class="gitlab-tool-card__section-title">{{ group.title }}</h6>
+                                              <span class="gitlab-tool-card__count">
+                                                {{ group.candidates.length }}
+                                              </span>
+                                            </div>
+
+                                            <div class="gitlab-candidate-list">
+                                              @for (candidate of group.candidates; track candidate.key) {
+                                                <article class="gitlab-candidate">
+                                                  <div class="gitlab-candidate__header">
+                                                    <div>
+                                                      <h6 class="gitlab-candidate__title">{{ candidate.title }}</h6>
+                                                      <p class="gitlab-candidate__subtitle">
+                                                        {{ candidate.subtitle }}
+                                                      </p>
+                                                    </div>
+                                                    @if (candidate.score) {
+                                                      <span class="gitlab-tool-card__score">
+                                                        score {{ candidate.score }}
+                                                      </span>
+                                                    }
+                                                  </div>
+
+                                                  @if (candidate.role || candidate.strategy) {
+                                                    <div class="attribute-grid gitlab-candidate__meta">
+                                                      @if (candidate.role) {
+                                                        <span class="attribute-name">Rola</span>
+                                                        <span class="attribute-value">{{ candidate.role }}</span>
+                                                      }
+                                                      @if (candidate.strategy) {
+                                                        <span class="attribute-name">Następny odczyt</span>
+                                                        <span class="attribute-value">{{ candidate.strategy }}</span>
+                                                      }
+                                                    </div>
+                                                  }
+
+                                                  @if (candidate.preview) {
+                                                    <p class="gitlab-candidate__preview">{{ candidate.preview }}</p>
+                                                  }
+                                                </article>
+                                              }
+                                            </div>
+                                          </section>
+                                        }
+                                      </div>
+                                    }
+
+                                    @if (lookup.outlineLists.length > 0) {
+                                      <div class="gitlab-tool-card__sections">
+                                        @for (list of lookup.outlineLists; track list.title) {
+                                          <section class="gitlab-tool-card__section">
+                                            <h6 class="gitlab-tool-card__section-title">{{ list.title }}</h6>
+                                            <div class="gitlab-tool-chip-list">
+                                              @for (value of list.values; track value) {
+                                                <span class="gitlab-tool-chip">{{ value }}</span>
+                                              }
+                                            </div>
+                                          </section>
+                                        }
+                                      </div>
+                                    }
+
+                                    @if (lookup.recommendedNextReads.length > 0) {
+                                      <section class="gitlab-tool-card__section">
+                                        <h6 class="gitlab-tool-card__section-title">Rekomendowane dalsze odczyty</h6>
+                                        <ul class="gitlab-tool-card__list">
+                                          @for (read of lookup.recommendedNextReads; track read) {
+                                            <li>{{ read }}</li>
+                                          }
+                                        </ul>
+                                      </section>
+                                    }
+                                  </section>
                                 } @else if (event.databaseTool; as tool) {
                                   <div class="attribute-grid tool-evidence-panel__meta">
                                     <span class="attribute-name">Źródło</span>

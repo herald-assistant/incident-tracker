@@ -213,6 +213,31 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).not.toContain('Powód pobrania');
   });
 
+  it('should render GitLab discovery tool details on the final analysis step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('toolEvidenceSections', [buildAiToolGitLabDiscoverySection()]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const reason = compiled.querySelector('.tool-evidence-panel__reason') as HTMLElement | null;
+    const icon = compiled.querySelector('.tool-evidence-panel__source-icon') as HTMLElement | null;
+    const content = compiled.textContent || '';
+
+    expect(reason?.textContent?.trim()).toBe('Szukam kontekstu przepływu wokół repozytorium.');
+    expect(icon?.textContent?.trim()).toBe('manage_search');
+    expect(icon?.getAttribute('aria-label')).toBe('GitLab');
+    expect(content).toContain('Kontekst przepływu');
+    expect(content).toContain('AI zebrało 1 kandydata w 1 grupie kontekstu przepływu.');
+    expect(content).toContain('repository');
+    expect(content).toContain('OrderRepository.java');
+    expect(content).toContain('orders-api · src/main/java/com/example/orders/OrderRepository.java · release/2026.04');
+    expect(content).toContain('orders-api:src/main/java/com/example/orders/OrderRepository.java');
+  });
+
   it('should render AI tool evidence as one chronological accordion', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
@@ -594,6 +619,52 @@ function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection
   "appliedFilters": ["CORRELATION_ID = corr-123"],
   "warnings": []
 }`
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function buildAiToolGitLabDiscoverySection(captureOrder = '3'): AnalysisEvidenceSection {
+  return {
+    provider: 'gitlab',
+    category: 'tool-discovery',
+    items: [
+      {
+        title: 'GitLab flow context',
+        attributes: [
+          { name: 'toolName', value: 'gitlab_find_flow_context' },
+          { name: 'reason', value: 'Szukam kontekstu przepływu wokół repozytorium.' },
+          { name: 'toolCaptureOrder', value: captureOrder },
+          { name: 'group', value: 'platform/backend' },
+          { name: 'branch', value: 'release/2026.04' },
+          { name: 'groupCount', value: '1' },
+          { name: 'candidateCount', value: '1' },
+          { name: 'recommendedNextReadCount', value: '1' },
+          {
+            name: 'groups',
+            value: JSON.stringify([
+              {
+                role: 'repository',
+                candidates: [
+                  {
+                    projectName: 'orders-api',
+                    branch: 'release/2026.04',
+                    filePath: 'src/main/java/com/example/orders/OrderRepository.java',
+                    matchReason: 'Dopasowanie po nazwie encji i repozytorium.',
+                    matchScore: 42,
+                    inferredRole: 'repository',
+                    recommendedReadStrategy: 'chunk',
+                    preview: 'interface OrderRepository'
+                  }
+                ]
+              }
+            ])
+          },
+          {
+            name: 'recommendedNextReads',
+            value: JSON.stringify(['orders-api:src/main/java/com/example/orders/OrderRepository.java'])
           }
         ]
       }

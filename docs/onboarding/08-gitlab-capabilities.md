@@ -60,11 +60,11 @@ po co model prosi o dany odczyt albo wyszukiwanie. `gitlab_find_flow_context`
 przyjmuje focused `keywords` z evidence/logow, bez osobnych parametrow klasy,
 metody albo pliku.
 
-User-facing capture z GitLaba pozostaje maksymalnie prosty. Do UI trafia tylko
-kod pobrany przez file/chunk/chunks: nazwa/sciezka pliku, tresc kodu,
-opcjonalny start line i `reason`. Search, outline, flow context i class
-references sa pomocnicze dla modelu i nie tworza osobnych sekcji evidence dla
-operatora.
+User-facing capture z GitLaba pozostaje maksymalnie prosty. Do UI trafia
+`reason` jako naglowek wpisu. File/chunk/chunks pokazuja nazwe/sciezke pliku,
+tresc kodu i opcjonalny start line. Search, outline, flow context i class
+references pokazuja szczegoly lookupu: kandydatow, grupy, outline i
+rekomendowane dalsze odczyty.
 
 ## Dwie stale decyzje
 

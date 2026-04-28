@@ -134,12 +134,13 @@ odpowiedzi assistant w `chatMessages[].toolEvidenceSections`.
 Capture obejmuje:
 
 - GitLab fetched code jako nazwa/sciezka pliku, tresc kodu i `reason`,
+- GitLab discovery jako kandydaci, grupy flow/class references, outline i
+  rekomendowane dalsze odczyty z `reason`,
 - DB tool results jako prosty wynik i `reason`.
 
 Dzieki temu audyt sesji pokazuje nie tylko finalna odpowiedz AI, ale tez
-material dociagniety przez tools bez dodatkowego szumu technicznego. GitLab
-search, outline, flow context i class references pomagaja modelowi, ale nie sa
-publikowane jako osobne sekcje user-facing evidence.
+material dociagniety przez tools bez dodatkowego szumu technicznego. `reason`
+pozostaje operatorskim naglowkiem wpisu, a szczegoly ida do tresci accordionu.
 
 Registry zarzadza lifecycle sesji i routingiem capture. Mapowanie szczegolow
 GitLab i DB jest w oddzielnych mapperach, dzieki czemu registry nie zna

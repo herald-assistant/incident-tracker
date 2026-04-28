@@ -48,10 +48,12 @@ Aktualny frontend ma dwa route'y Angulara:
   assistant moze miec wlasne `toolEvidenceSections`,
 - eksport analizy ma envelope `incident-tracker.analysis-export` w wersji 3,
   a importer wspiera wersje 2 i 3, zeby stare zapisy bez chatu nadal dzialaly,
-- widok krokow ma specjalne rendery dla logow Elasticsearch, code/tool evidence
-  z GitLaba, runtime signals Dynatrace i wynikow DB tools,
-- GitLab tool evidence pokazuje juniorowi tylko nazwe/sciezke pliku, powod
-  pobrania (`reason`) i kod,
+- widok krokow ma specjalne rendery dla logow Elasticsearch, code evidence i
+  discovery evidence z GitLaba, runtime signals Dynatrace i wynikow DB tools,
+- GitLab tool evidence pokazuje `reason` jako naglowek wpisu; dla pobranego
+  kodu pokazuje nazwe/sciezke pliku i kod, a dla discovery tools pokazuje
+  kandydatow, grupy flow/class references, outline i rekomendowane dalsze
+  odczyty,
 - DB tool evidence pokazuje powod sprawdzenia (`reason`) oraz wynik jako prosta
   tabela albo JSON bez diagnostycznych pytan, parametrow i technicznych badge'y,
 - route `/evidence` nie zna polaczen do backendow zewnetrznych; odpala tylko

@@ -149,8 +149,9 @@ Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
 albo wybrac `model` i dostepny dla niego `reasoningEffort` dla sesji AI. Opcje
 sa pobierane z backendu przez `GET /analysis/ai/options`.
-Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba dociagniete
-przez AI tools podczas kroku `AI_ANALYSIS`.
+Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba,
+kontekst lookupow GitLaba i wyniki DB dociagniete przez AI tools podczas kroku
+`AI_ANALYSIS`.
 Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
 `POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
 tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.

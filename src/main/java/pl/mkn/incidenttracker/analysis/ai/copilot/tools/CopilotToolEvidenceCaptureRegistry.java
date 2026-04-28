@@ -24,6 +24,7 @@ public class CopilotToolEvidenceCaptureRegistry {
     private static final String DATABASE_TOOL_CATEGORY = "tool-results";
     private static final String GITLAB_PROVIDER = "gitlab";
     private static final String GITLAB_TOOL_CATEGORY = "tool-fetched-code";
+    private static final String GITLAB_TOOL_DISCOVERY_CATEGORY = "tool-discovery";
     private static final String TOOL_CAPTURE_ORDER_ATTRIBUTE = "toolCaptureOrder";
 
     private final GitLabToolEvidenceMapper gitLabMapper;
@@ -103,6 +104,7 @@ public class CopilotToolEvidenceCaptureRegistry {
     static record SessionArtifactAccumulator(
             AnalysisAiToolEvidenceListener listener,
             LinkedHashMap<String, AnalysisEvidenceItem> gitLabItems,
+            LinkedHashMap<String, AnalysisEvidenceItem> gitLabDiscoveryItems,
             LinkedHashMap<String, AnalysisEvidenceItem> databaseItems,
             LinkedHashMap<String, Integer> itemCaptureOrders,
             AtomicInteger nextCaptureOrder
@@ -110,6 +112,7 @@ public class CopilotToolEvidenceCaptureRegistry {
         SessionArtifactAccumulator(AnalysisAiToolEvidenceListener listener) {
             this(
                     listener,
+                    new LinkedHashMap<>(),
                     new LinkedHashMap<>(),
                     new LinkedHashMap<>(),
                     new LinkedHashMap<>(),
@@ -148,6 +151,18 @@ public class CopilotToolEvidenceCaptureRegistry {
                     DATABASE_PROVIDER,
                     DATABASE_TOOL_CATEGORY,
                     List.copyOf(databaseItems.values())
+            );
+        }
+
+        synchronized AnalysisEvidenceSection appendGitLabDiscoveryItem(
+                String key,
+                AnalysisEvidenceItem candidate
+        ) {
+            appendItem(gitLabDiscoveryItems, key, "gitlab-discovery", "gitlab-tool", candidate);
+            return new AnalysisEvidenceSection(
+                    GITLAB_PROVIDER,
+                    GITLAB_TOOL_DISCOVERY_CATEGORY,
+                    List.copyOf(gitLabDiscoveryItems.values())
             );
         }
 

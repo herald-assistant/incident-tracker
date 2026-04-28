@@ -343,6 +343,132 @@
   padding-top: 2px;
 }
 
+.gitlab-tool-card {
+  display: grid;
+  gap: 12px;
+}
+
+.gitlab-tool-card__summary {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(12, 102, 228, 0.14);
+  border-radius: 8px;
+  background: #f7fbff;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.gitlab-tool-card__meta {
+  padding: 10px 12px;
+  border: 1px solid #e6edf5;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.gitlab-tool-card__sections {
+  display: grid;
+  gap: 10px;
+}
+
+.gitlab-tool-card__section {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(216, 224, 235, 0.72);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.gitlab-tool-card__section-header,
+.gitlab-candidate__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gitlab-tool-card__section-title,
+.gitlab-candidate__title {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.gitlab-tool-card__count,
+.gitlab-tool-card__score {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.gitlab-candidate-list {
+  display: grid;
+  gap: 8px;
+}
+
+.gitlab-candidate {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(216, 224, 235, 0.72);
+}
+
+.gitlab-candidate:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.gitlab-candidate__subtitle,
+.gitlab-candidate__preview {
+  margin: 3px 0 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.gitlab-candidate__preview {
+  color: var(--text-main);
+}
+
+.gitlab-candidate__meta {
+  grid-template-columns: minmax(100px, 0.28fr) minmax(0, 1fr);
+}
+
+.gitlab-tool-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gitlab-tool-chip {
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(12, 102, 228, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.gitlab-tool-card__list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.gitlab-tool-card__list li + li {
+  margin-top: 4px;
+}
+
 .repo-code-panel__reason {
   margin: 0 0 12px;
   padding: 10px 12px;
@@ -380,7 +506,9 @@
   }
 
   .database-tool-results__intro,
-  .database-tool-card__header {
+  .database-tool-card__header,
+  .gitlab-tool-card__section-header,
+  .gitlab-candidate__header {
     flex-direction: column;
   }
 

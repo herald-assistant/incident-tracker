@@ -198,6 +198,39 @@ interface DatabaseToolCardView {
   result: string;
 }
 
+interface GitLabToolCandidateView {
+  key: string;
+  title: string;
+  subtitle: string;
+  role: string;
+  score: string;
+  strategy: string;
+  preview: string;
+}
+
+interface GitLabToolCandidateGroupView {
+  key: string;
+  title: string;
+  candidates: GitLabToolCandidateView[];
+}
+
+interface GitLabToolListView {
+  title: string;
+  values: string[];
+}
+
+interface GitLabToolLookupView {
+  key: string;
+  toolName: string;
+  title: string;
+  reason: string;
+  summary: string;
+  compactAttributes: AnalysisEvidenceAttribute[];
+  candidateGroups: GitLabToolCandidateGroupView[];
+  outlineLists: GitLabToolListView[];
+  recommendedNextReads: string[];
+}
+
 interface ToolEvidenceTimelineItemView {
   key: string;
   reason: string;
@@ -206,6 +239,7 @@ interface ToolEvidenceTimelineItemView {
   sourceLabel: string;
   iconName: string;
   codePanel: RepoCodePanelView | null;
+  gitLabLookup: GitLabToolLookupView | null;
   databaseTool: DatabaseToolCardView | null;
   defaultItem: StepEvidenceItemView | null;
 }
@@ -319,10 +353,45 @@ const DATABASE_TOOL_LABELS: Record<string, string> = {
   db_execute_readonly_sql: 'Zapytanie SQL read-only'
 };
 
+const GITLAB_TOOL_LABELS: Record<string, string> = {
+  gitlab_search_repository_candidates: 'Wyszukiwanie kandydatów plików',
+  gitlab_read_repository_file_outline: 'Zarys pliku',
+  gitlab_find_class_references: 'Referencje klasy',
+  gitlab_find_flow_context: 'Kontekst przepływu'
+};
+
+const GITLAB_TOOL_ATTRIBUTE_LABELS: Record<string, string> = {
+  group: 'Grupa',
+  branch: 'Branch',
+  projectName: 'Projekt',
+  filePath: 'Plik',
+  packageName: 'Pakiet',
+  inferredRole: 'Rola pliku',
+  searchedClass: 'Szukana klasa',
+  candidateCount: 'Kandydaci',
+  groupCount: 'Grupy',
+  classCount: 'Klasy',
+  methodSignatureCount: 'Metody',
+  recommendedNextReadCount: 'Rekomendowane odczyty',
+  truncated: 'Wynik obcięty'
+};
+
 const DATABASE_TABLE_MAX_ROWS = 8;
 const DATABASE_TABLE_MAX_COLUMNS = 8;
 const TOOL_CAPTURE_ORDER_ATTRIBUTE = 'toolCaptureOrder';
 const TOOL_TIMELINE_INTERNAL_ATTRIBUTES = new Set(['reason', TOOL_CAPTURE_ORDER_ATTRIBUTE]);
+const GITLAB_TOOL_STRUCTURED_ATTRIBUTES = new Set([
+  'toolName',
+  'summary',
+  'candidates',
+  'groups',
+  'recommendedNextReads',
+  'searchKeywords',
+  'imports',
+  'classes',
+  'annotations',
+  'methodSignatures'
+]);
 
 const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
   {
@@ -736,6 +805,24 @@ function prepareToolEvidenceTimelineItem(
       sourceLabel: 'GitLab',
       iconName: 'code',
       codePanel,
+      gitLabLookup: null,
+      databaseTool: null,
+      defaultItem: null
+    };
+  }
+
+  if (isGitLabToolDiscoverySection(section)) {
+    const gitLabLookup = prepareGitLabToolLookup(section, item, itemIndex);
+
+    return {
+      key: gitLabLookup.key,
+      reason: gitLabLookup.reason,
+      captureOrder,
+      fallbackOrder,
+      sourceLabel: 'GitLab',
+      iconName: 'manage_search',
+      codePanel: null,
+      gitLabLookup,
       databaseTool: null,
       defaultItem: null
     };
@@ -752,6 +839,7 @@ function prepareToolEvidenceTimelineItem(
       sourceLabel: 'Baza danych',
       iconName: 'storage',
       codePanel: null,
+      gitLabLookup: null,
       databaseTool,
       defaultItem: null
     };
@@ -772,6 +860,7 @@ function prepareToolEvidenceTimelineItem(
     sourceLabel: formatEvidenceSectionTitle(section),
     iconName: 'fact_check',
     codePanel: null,
+    gitLabLookup: null,
     databaseTool: null,
     defaultItem
   };
@@ -906,6 +995,10 @@ function isGitLabCodeSection(section: AnalysisEvidenceSection): boolean {
     section.provider === 'gitlab' &&
     (section.category === 'resolved-code' || section.category === 'tool-fetched-code')
   );
+}
+
+function isGitLabToolDiscoverySection(section: AnalysisEvidenceSection): boolean {
+  return section.provider === 'gitlab' && section.category === 'tool-discovery';
 }
 
 function isDatabaseToolSection(section: AnalysisEvidenceSection): boolean {
@@ -1257,6 +1350,42 @@ function prepareRepoCodePanel(
   };
 }
 
+function prepareGitLabToolLookup(
+  section: AnalysisEvidenceSection,
+  item: { title: string; attributes: AnalysisEvidenceAttribute[] },
+  itemIndex: number
+): GitLabToolLookupView {
+  const itemKey = buildEvidenceItemKey(section, item, itemIndex);
+  const attributes = item.attributes || [];
+  const attributesByName = mapAttributesByName(attributes);
+  const toolName = nonEmptyValue(attributesByName.get('toolName')) || nonEmptyValue(item.title) || 'gitlab_tool';
+  const candidateGroups = buildGitLabToolCandidateGroups(attributesByName, itemKey);
+  const outlineLists = buildGitLabToolOutlineLists(attributesByName);
+  const recommendedNextReads = parseStringArrayAttribute(
+    attributesByName.get('recommendedNextReads')
+  ).slice(0, 8);
+
+  return {
+    key: itemKey,
+    toolName,
+    title: GITLAB_TOOL_LABELS[toolName] || nonEmptyValue(item.title) || toolName,
+    reason:
+      nonEmptyValue(attributesByName.get('reason')) ||
+      'Model nie podał powodu sprawdzenia kontekstu w GitLabie.',
+    summary: buildGitLabToolSummary(toolName, attributesByName, candidateGroups, outlineLists),
+    compactAttributes: attributes
+      .filter(
+        (attribute) =>
+          !TOOL_TIMELINE_INTERNAL_ATTRIBUTES.has(attribute.name) &&
+          !GITLAB_TOOL_STRUCTURED_ATTRIBUTES.has(attribute.name)
+      )
+      .map(normalizeGitLabToolAttribute),
+    candidateGroups,
+    outlineLists,
+    recommendedNextReads
+  };
+}
+
 function prepareDatabaseToolCard(
   section: AnalysisEvidenceSection,
   item: { title: string; attributes: AnalysisEvidenceAttribute[] },
@@ -1333,6 +1462,188 @@ function createTableViews(
       truncated: rows.length > DATABASE_TABLE_MAX_ROWS
     }
   ];
+}
+
+function normalizeGitLabToolAttribute(attribute: AnalysisEvidenceAttribute): AnalysisEvidenceAttribute {
+  return {
+    ...attribute,
+    name: GITLAB_TOOL_ATTRIBUTE_LABELS[attribute.name] || attribute.name
+  };
+}
+
+function buildGitLabToolSummary(
+  toolName: string,
+  attributesByName: ReadonlyMap<string, string>,
+  candidateGroups: GitLabToolCandidateGroupView[],
+  outlineLists: GitLabToolListView[]
+): string {
+  const candidateCount =
+    integerValue(attributesByName, 'candidateCount') ??
+    candidateGroups.reduce((count, group) => count + group.candidates.length, 0);
+  const groupCount = integerValue(attributesByName, 'groupCount') ?? candidateGroups.length;
+
+  if (toolName === 'gitlab_search_repository_candidates') {
+    return candidateCount > 0
+      ? `AI znalazło ${formatPolishCount(candidateCount, '1 kandydata pliku', 'kandydatów plików')} do dalszego sprawdzenia.`
+      : 'AI sprawdziło kandydatów w GitLabie, ale tool nie zwrócił pasujących plików.';
+  }
+
+  if (toolName === 'gitlab_read_repository_file_outline') {
+    const filePath = nonEmptyValue(attributesByName.get('filePath'));
+    const fileLabel = filePath ? lastPathSegment(filePath) : 'wybranego pliku';
+    const classCount = integerValue(attributesByName, 'classCount') ?? 0;
+    const methodCount = integerValue(attributesByName, 'methodSignatureCount') ?? 0;
+    return `AI sprawdziło zarys ${fileLabel}: ${classCount} klas i ${methodCount} sygnatur metod.`;
+  }
+
+  if (toolName === 'gitlab_find_class_references') {
+    const searchedClass = nonEmptyValue(attributesByName.get('searchedClass')) || 'wskazanej klasy';
+    return candidateCount > 0
+      ? `AI znalazło ${formatPolishCount(candidateCount, '1 kandydata', 'kandydatów')} wokół ${searchedClass}.`
+      : `AI szukało referencji ${searchedClass}, ale nie dostało kandydatów do pokazania.`;
+  }
+
+  if (toolName === 'gitlab_find_flow_context') {
+    return candidateCount > 0
+      ? `AI zebrało ${formatPolishCount(candidateCount, '1 kandydata', 'kandydatów')} w ${formatPolishCount(groupCount, '1 grupie', 'grupach')} kontekstu przepływu.`
+      : 'AI szukało kontekstu przepływu w GitLabie, ale nie dostało kandydatów do pokazania.';
+  }
+
+  if (outlineLists.length > 0) {
+    return 'GitLab zwrócił uporządkowane szczegóły sprawdzenia wykonanego przez AI.';
+  }
+
+  return 'GitLab zwrócił szczegóły pomocniczego sprawdzenia wykonanego przez AI.';
+}
+
+function buildGitLabToolCandidateGroups(
+  attributesByName: ReadonlyMap<string, string>,
+  itemKey: string
+): GitLabToolCandidateGroupView[] {
+  const groupedCandidates = parseRecordArrayAttribute(attributesByName.get('groups'))
+    .map((groupRecord, groupIndex) => {
+      const groupKey = `${itemKey}|group|${groupIndex}`;
+      const candidates = parseRecordArrayValue(groupRecord['candidates']).map((candidate, candidateIndex) =>
+        buildGitLabToolCandidate(candidate, `${groupKey}|candidate|${candidateIndex}`, candidateIndex)
+      );
+
+      return {
+        key: groupKey,
+        title: recordText(groupRecord, 'role') || `Grupa ${groupIndex + 1}`,
+        candidates
+      };
+    })
+    .filter((group) => group.candidates.length > 0);
+
+  if (groupedCandidates.length > 0) {
+    return groupedCandidates;
+  }
+
+  const candidates = parseRecordArrayAttribute(attributesByName.get('candidates')).map(
+    (candidate, candidateIndex) =>
+      buildGitLabToolCandidate(candidate, `${itemKey}|candidate|${candidateIndex}`, candidateIndex)
+  );
+
+  return candidates.length > 0
+    ? [
+        {
+          key: `${itemKey}|candidates`,
+          title: 'Kandydaci plików',
+          candidates
+        }
+      ]
+    : [];
+}
+
+function buildGitLabToolCandidate(
+  record: Record<string, unknown>,
+  key: string,
+  index: number
+): GitLabToolCandidateView {
+  const projectName = recordText(record, 'projectName');
+  const filePath = recordText(record, 'filePath');
+  const branch = recordText(record, 'branch');
+  const title =
+    firstDefinedText(filePath ? lastPathSegment(filePath) : null, projectName, `Kandydat ${index + 1}`) ||
+    `Kandydat ${index + 1}`;
+  const subtitle = [projectName, filePath, branch].filter(Boolean).join(' · ');
+
+  return {
+    key,
+    title,
+    subtitle,
+    role: recordText(record, 'inferredRole'),
+    score: recordText(record, 'matchScore'),
+    strategy: recordText(record, 'recommendedReadStrategy'),
+    preview: firstDefinedText(recordText(record, 'matchReason'), recordText(record, 'preview')) || ''
+  };
+}
+
+function buildGitLabToolOutlineLists(
+  attributesByName: ReadonlyMap<string, string>
+): GitLabToolListView[] {
+  return [
+    ['searchKeywords', 'Słowa kluczowe'],
+    ['classes', 'Klasy'],
+    ['methodSignatures', 'Metody'],
+    ['annotations', 'Adnotacje'],
+    ['imports', 'Importy']
+  ]
+    .map(([attributeName, title]) => ({
+      title,
+      values: parseStringArrayAttribute(attributesByName.get(attributeName)).slice(0, 12)
+    }))
+    .filter((list) => list.values.length > 0);
+}
+
+function parseRecordArrayAttribute(value: string | undefined): Record<string, unknown>[] {
+  if (!value || !value.trim()) {
+    return [];
+  }
+
+  return parseRecordArrayValue(parseJsonPayload(value));
+}
+
+function parseRecordArrayValue(value: unknown): Record<string, unknown>[] {
+  return objectArray(value);
+}
+
+function parseStringArrayAttribute(value: string | undefined): string[] {
+  if (!value || !value.trim()) {
+    return [];
+  }
+
+  const parsed = parseJsonPayload(value);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.map(formatTableCellValue).filter((item) => item.trim());
+}
+
+function recordText(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function formatPolishCount(count: number, singular: string, pluralNoun: string): string {
+  return count === 1 ? singular : `${count} ${pluralNoun}`;
 }
 
 function buildStepKey(step: AnalysisJobStepResponse, index: number): string {

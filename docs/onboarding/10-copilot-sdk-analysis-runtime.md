@@ -150,11 +150,14 @@ Soft mode nie blokuje. Hard mode zwraca kontrolowany result
 Invocation handler publikuje tool evidence przez listener:
 
 - `gitlab/tool-fetched-code`,
+- `gitlab/tool-discovery`,
 - `database/tool-results`.
 
-GitLab user-facing evidence pokazuje tylko plik/chunk, sciezke pliku, tresc
-kodu i `reason` podany przez model. Search, outline, flow context i class
-references pozostaja pomocniczymi toolami dla modelu, bez osobnych sekcji UI.
+GitLab user-facing evidence pokazuje `reason` podany przez model jako naglowek
+wpisu. Dla file/chunk/chunks UI pokazuje plik/chunk, sciezke pliku i tresc
+kodu. Dla search, outline, flow context i class references UI pokazuje
+uporzadkowane szczegoly lookupu: kandydatow, grupy, outline i rekomendowane
+dalsze odczyty.
 
 DB user-facing evidence pokazuje `reason` podany przez model oraz wynik toola
 jako `result`. Nie utrzymujemy juz diagnostycznego pytania, parametrow ani

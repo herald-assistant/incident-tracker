@@ -316,12 +316,15 @@ job listenera.
 Kategorie:
 
 - `gitlab/tool-fetched-code` dla file/chunk/chunks,
+- `gitlab/tool-discovery` dla search candidates, file outline, flow context i
+  class references,
 - `database/tool-results` dla DB tools.
 
-GitLab capture jest celowo prosty: user-facing evidence zawiera plik/chunk,
-sciezke pliku, tresc kodu, opcjonalny numer linii startowej i `reason` podany
-przez model. Search candidates, outline, flow context i class references nie
-sa osobnymi sekcjami UI.
+GitLab capture jest celowo prosty: user-facing evidence trzyma `reason` podany
+przez model jako naglowek wpisu. Dla code reads zawiera plik/chunk, sciezke
+pliku, tresc kodu i opcjonalny numer linii startowej. Dla discovery reads
+zawiera uporzadkowane szczegoly lookupu: kandydatow plikow, grupy flow/class
+references, outline pliku i rekomendowane dalsze odczyty.
 
 DB capture jest rowniez celowo prosty: user-facing evidence zawiera `reason`
 podany przez model oraz wynik toola jako `result`. Nie publikujemy juz osobnych

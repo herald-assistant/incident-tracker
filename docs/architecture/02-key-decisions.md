@@ -266,12 +266,16 @@ lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 Capture obejmuje:
 
 - GitLab file/chunk/chunks jako `gitlab/tool-fetched-code`,
+- GitLab search, outline, flow context i class references jako
+  `gitlab/tool-discovery`,
 - DB tools jako `database/tool-results`.
 
-GitLab search, outline, flow context i class references sa helperami dla
-modelu, ale nie sa publikowane jako osobne user-facing sekcje evidence.
-Widok uzytkownika dla GitLaba dostaje tylko nazwe/sciezke pliku, tresc kodu i
-`reason` podany przez model.
+Widok uzytkownika dla GitLaba nadal trzyma prosty kontrakt operatorski:
+`reason` podany przez model jest naglowkiem wpisu, a szczegoly sa pokazane w
+tresci. Dla pobranego kodu UI pokazuje nazwe/sciezke pliku, tresc kodu i
+metadata linii. Dla discovery tools UI pokazuje uporzadkowane szczegoly lookupu:
+kandydatow plikow, grupy flow/class references, outline pliku i rekomendowane
+dalsze odczyty.
 
 DB capture publikuje tylko prosty wynik i `reason` podany przez model. Nie
 utrzymujemy juz osobnych pytan diagnostycznych, technicznych parametrow ani
