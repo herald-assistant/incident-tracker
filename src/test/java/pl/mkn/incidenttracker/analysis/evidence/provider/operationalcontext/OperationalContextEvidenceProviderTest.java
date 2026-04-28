@@ -60,14 +60,23 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(titles.contains("Operational integration app-core-to-partner-sync"));
         assertTrue(titles.contains("Operational process main-process"));
         assertTrue(titles.contains("Operational repository app-core-repo"));
+        assertTrue(titles.contains("Operational repository app-shared-lib-repo"));
         assertTrue(titles.contains("Operational bounded context core-context"));
         assertTrue(titles.contains("Operational team core-team"));
         assertTrue(titles.contains("Operational glossary term soap-fault"));
         assertTrue(titles.contains("Operational handoff rule integration-external-sync-failure"));
         assertEquals("app-core", view.systems().get(0).systemId());
+        assertTrue(view.systems().get(0).repoIds().contains("app-shared-lib-repo"));
+        assertTrue(view.systems().get(0).codeSearchRepoIds().contains("app-shared-lib-repo"));
+        assertTrue(view.systems().get(0).codeSearchProjects().contains("libs/app-shared-lib"));
+        assertTrue(view.systems().get(0).sourcePackages().contains("com.example.shared"));
+        assertTrue(view.systems().get(0).classHints().contains("SharedPredicate"));
         assertEquals("app-core-to-partner-sync", view.integrations().get(0).integrationId());
         assertEquals("main-process", view.processes().get(0).processId());
         assertEquals("app-core-repo", view.repositories().get(0).repositoryId());
+        assertTrue(view.repositories().stream()
+                .anyMatch(repository -> repository.repositoryId().equals("app-shared-lib-repo")
+                        && repository.sourcePackages().contains("com.example.shared")));
         assertEquals("core-context", view.boundedContexts().get(0).boundedContextId());
         assertEquals("core-team", view.teams().get(0).teamId());
         assertEquals("soap-fault", view.glossaryTerms().get(0).termId());

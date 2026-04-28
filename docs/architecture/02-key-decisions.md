@@ -250,6 +250,9 @@ lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
   keywordow,
 - GitLab flow/search guidance przypomina, ze `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`
   jest powodem do malego, focused GitLab lookupu pod opis funkcji,
+- GitLab search/class/flow guidance przypomina, ze operational context moze
+  wskazywac kilka repozytoriow jednego komponentu wdrozeniowego; biblioteki i
+  shared modules z `codeSearchProjects` sa czescia scope'u szukania kodu,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow
   najpierw trzeba sprobowac ugruntowac encje, repozytorium, tabele i relacje z

@@ -66,6 +66,10 @@ Hard rules:
 - Use `type` to distinguish systems, for example `internal` vs `external`.
 - Do not invent ownership.
 - Do not invent repositories for external systems.
+- For internal systems, `repos` is the deployed component code scope, not only
+  the main service repo. Include internal library, shared module, generated
+  client, or integration-library repo ids when classes from those repos can
+  appear in stacktraces or decide incident behavior.
 - Do not create separate system entries for the same system just because incidents show different environments, branches, pods, namespaces, host variants, or deployment versions.
 - Do not model individual interfaces or single endpoints as separate systems; those belong in `integrations.yml`.
 - Keep one system entry per meaningful operational runtime component or external dependency.
@@ -79,6 +83,7 @@ Hard rules:
 What matters most:
 - each system must be recognizable from runtime evidence
 - `ownerTeamId`, `partnerTeamIds`, `processes`, `contexts`, and `repos` must stay consistent with the other attached operational-context files
+- `repos` should help later GitLab investigation search all repositories that compose the deployed component, including libraries and shared modules
 - internal and external systems may coexist in this file
 - `integrations.yml` describes contracts between systems, while `systems.yml` describes the systems themselves
 

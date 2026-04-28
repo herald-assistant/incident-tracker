@@ -155,6 +155,7 @@ Examples:
 ## Handoff and ownership
 
 Use `operational-context` evidence when available.
+When it contains `codeSearchProjects` or several repository projects for the matched system, treat them as the component's code scope, including libraries and shared modules that can be relevant to the incident.
 
 Do not name a specific process, bounded context, or team unless it is supported by:
 

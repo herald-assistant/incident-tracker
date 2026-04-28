@@ -312,7 +312,7 @@ public class OperationalContextCatalogMatcher {
             addSignalMatches(score, signals, textList(module, "sourceLookupHints.likelyEntryClasses"), 7, 4, "moduleEntryClass");
         }
 
-        if (anyOverlap(textList(repository, "topology.systemIds"), matchedIds(systemMatches))) {
+        if (anyOverlap(textListAny(repository, "systems", "topology.systemIds"), matchedIds(systemMatches))) {
             score.add(8, "topologySystemMatches");
         }
 
@@ -416,13 +416,13 @@ public class OperationalContextCatalogMatcher {
             addSignalMatches(score, signals, textList(relation, "via"), 6, 3, "relationVia");
         }
 
-        if (anyOverlap(textList(boundedContext, "scope.systemIds"), matchedIds(systemMatches))) {
+        if (anyOverlap(textListAny(boundedContext, "systems", "scope.systemIds"), matchedIds(systemMatches))) {
             score.add(8, "scopeSystemMatches");
         }
-        if (anyOverlap(textList(boundedContext, "scope.processIds"), matchedIds(processMatches))) {
+        if (anyOverlap(textListAny(boundedContext, "processes", "scope.processIds"), matchedIds(processMatches))) {
             score.add(8, "scopeProcessMatches");
         }
-        if (anyOverlap(textList(boundedContext, "scope.repositoryIds"), matchedIds(repositoryMatches))) {
+        if (anyOverlap(textListAny(boundedContext, "repos", "scope.repositoryIds"), matchedIds(repositoryMatches))) {
             score.add(8, "scopeRepositoryMatches");
         }
 

@@ -42,7 +42,7 @@ public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvi
             }
 
             var matches = catalogMatcher.match(catalog, signals);
-            return evidenceMapper.toEvidenceSection(matches);
+            return evidenceMapper.toEvidenceSection(matches, catalog);
         } catch (RuntimeException exception) {
             log.warn(
                     "Operational context enrichment skipped correlationId={} reason={}",

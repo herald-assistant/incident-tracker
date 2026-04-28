@@ -39,6 +39,8 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_PROCESS_IDS = "processIds";
     static final String ATTRIBUTE_CONTEXT_IDS = "contextIds";
     static final String ATTRIBUTE_REPO_IDS = "repoIds";
+    static final String ATTRIBUTE_CODE_SEARCH_REPO_IDS = "codeSearchRepoIds";
+    static final String ATTRIBUTE_CODE_SEARCH_PROJECTS = "codeSearchProjects";
     static final String ATTRIBUTE_MATCHED_BY = "matchedBy";
     static final String ATTRIBUTE_FROM = "from";
     static final String ATTRIBUTE_TO = "to";
@@ -50,6 +52,9 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_PROJECT = "project";
     static final String ATTRIBUTE_GROUP = "group";
     static final String ATTRIBUTE_MODULE_IDS = "moduleIds";
+    static final String ATTRIBUTE_SOURCE_PATHS = "sourcePaths";
+    static final String ATTRIBUTE_SOURCE_PACKAGES = "sourcePackages";
+    static final String ATTRIBUTE_CLASS_HINTS = "classHints";
     static final String ATTRIBUTE_TERMS = "terms";
     static final String ATTRIBUTE_INTEGRATION_IDS = "integrationIds";
     static final String ATTRIBUTE_DEFINITION = "definition";
@@ -111,6 +116,10 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CONTEXT_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_REPO_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPO_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_PROJECTS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PACKAGES)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CLASS_HINTS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
                 continue;
@@ -159,6 +168,9 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CONTEXT_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MODULE_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PATHS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PACKAGES)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CLASS_HINTS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
                 continue;
@@ -290,6 +302,10 @@ public record OperationalContextEvidenceView(
             List<String> processIds,
             List<String> contextIds,
             List<String> repoIds,
+            List<String> codeSearchRepoIds,
+            List<String> codeSearchProjects,
+            List<String> sourcePackages,
+            List<String> classHints,
             List<String> matchedBy
     ) {
         public SystemItem {
@@ -297,6 +313,10 @@ public record OperationalContextEvidenceView(
             processIds = immutable(processIds);
             contextIds = immutable(contextIds);
             repoIds = immutable(repoIds);
+            codeSearchRepoIds = immutable(codeSearchRepoIds);
+            codeSearchProjects = immutable(codeSearchProjects);
+            sourcePackages = immutable(sourcePackages);
+            classHints = immutable(classHints);
             matchedBy = immutable(matchedBy);
         }
     }
@@ -350,6 +370,9 @@ public record OperationalContextEvidenceView(
             List<String> processIds,
             List<String> contextIds,
             List<String> moduleIds,
+            List<String> sourcePaths,
+            List<String> sourcePackages,
+            List<String> classHints,
             List<String> matchedBy
     ) {
         public RepositoryItem {
@@ -357,6 +380,9 @@ public record OperationalContextEvidenceView(
             processIds = immutable(processIds);
             contextIds = immutable(contextIds);
             moduleIds = immutable(moduleIds);
+            sourcePaths = immutable(sourcePaths);
+            sourcePackages = immutable(sourcePackages);
+            classHints = immutable(classHints);
             matchedBy = immutable(matchedBy);
         }
     }

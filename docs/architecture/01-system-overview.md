@@ -169,6 +169,10 @@ Na dzisiaj projekt ma:
 - Operational context jest osobnym enrichment stepem nad juz zebranym evidence.
 - Bazowy curated operational context jest ladowany przez osobny adapter, a nie
   bezposrednio przez sam provider enrichmentu.
+- Operational context publikuje dla dopasowanego systemu jawny code search
+  scope: repozytoria/projekty, pakiety i class hints, zeby Copilot traktowal
+  repo glowne, biblioteki i shared modules jako kod jednego komponentu
+  wdrozeniowego.
 - Flow synchroniczny i jobowy reuse'uja ta sama orchestration warstwe
   `AnalysisOrchestrator`.
 - Flow jobowy moze przekazac do generycznego requestu AI opcjonalny wybor

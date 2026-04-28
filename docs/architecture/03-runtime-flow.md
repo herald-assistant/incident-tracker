@@ -165,7 +165,10 @@ Manifest zawiera:
 - indeks artefaktow i ich `itemIds`.
 
 Digest zawiera skompresowane fakty sesji, coverage, log signals, deployment,
-runtime, code highlights i znane luki evidence.
+operational code search scope, runtime, code highlights i znane luki evidence.
+Operational code search scope pokazuje projekty GitLaba z operational context,
+ktore razem skladaja sie na kod dopasowanego komponentu wdrozeniowego, w tym
+biblioteki i shared modules.
 
 `itemId` sa stabilne tylko w renderingu Copilota. Nie zmieniaja publicznego
 kontraktu `AnalysisEvidenceItem`.
@@ -227,6 +230,10 @@ GitLab tools:
 - broad search zostaje dla braku deterministic GitLab evidence,
 - `gitlab_find_flow_context` przyjmuje focused `keywords`, bez osobnych
   parametrow klasy/metody/pliku.
+- gdy operational context wskazuje `codeSearchProjects` albo kilka repo
+  dopasowanego systemu, Copilot ma traktowac te projekty jako jeden scope kodu
+  komponentu wdrozeniowego i wykonac focused probe takze po bibliotekach/shared
+  repozytoriach zanim uzna klase za niedostepna.
 
 DB tools:
 

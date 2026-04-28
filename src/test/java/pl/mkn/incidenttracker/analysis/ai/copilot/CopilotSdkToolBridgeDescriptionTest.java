@@ -48,6 +48,8 @@ class CopilotSdkToolBridgeDescriptionTest {
                 .contains("Prefer gitlab_read_repository_file_chunk"));
         assertTrue(descriptionsByName.get("gitlab_search_repository_candidates")
                 .contains("Use when project or file is unclear."));
+        assertTrue(descriptionsByName.get("gitlab_search_repository_candidates")
+                .contains("including library/shared repositories"));
     }
 
     private CopilotToolSessionContext sessionContext() {

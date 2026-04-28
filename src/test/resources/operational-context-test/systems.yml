@@ -10,13 +10,13 @@ systems:
     purpose: Executes the main application behavior.
     processes: [main-process]
     contexts: [core-context]
-    repos: [app-core-repo]
+    repos: [app-core-repo, app-shared-lib-repo]
     dependsOn: [partner-service]
     signals:
       serviceNames: [app-core]
       containerNames: [app-core]
-      projectNames: [app-core-repo]
-      packagePrefixes: [com.example.app]
+      projectNames: [app-core-repo, app-shared-lib]
+      packagePrefixes: [com.example.app, com.example.shared]
       endpoints: [/api/resources]
       hosts: []
       queues: []

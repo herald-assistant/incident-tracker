@@ -5,6 +5,8 @@ Update only `repo-map.yml`.
 ## Goal
 
 Keep a short map from runtime evidence to GitLab repositories and modules.
+This includes both main service repositories and library/shared repositories
+that can contain classes used by a deployed component.
 
 ## Instructions
 
@@ -16,6 +18,7 @@ Keep a short map from runtime evidence to GitLab repositories and modules.
 
 - Keep the structure minimal: `id`, `project`, `group`, `ownerTeamId`, `systems`, `processes`, `contexts`, `modules`, `signals`, `handoff`.
 - Prefer paths, packages, class hints, and project names over generic repo description.
+- Add library, shared module, generated client, or integration repositories when they are part of a system's code search scope. Link them back to the system through `systems`.
 - Do not create duplicate repository entries.
 - Preserve the top-level wrapper: `schemaVersion`, `repositories`, `openQuestions`.
 - If module ownership is unclear, keep the repo-level owner and add an `openQuestions` entry.
@@ -59,6 +62,36 @@ repositories:
       spans: [SyncGateway.call]
       markers: [APP_CORE]
       errors: [SOAPFault]
+    handoff:
+      target: core-team
+      requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]
+
+  - id: app-shared-lib-repo
+    project: libs/app-shared-lib
+    group: example/platform
+    ownerTeamId: core-team
+    systems: [app-core]
+    processes: [main-process]
+    contexts: [core-context]
+    modules:
+      - id: shared-domain-module
+        name: Shared Domain Module
+        paths: [src/main/java/com/example/shared]
+        packages: [com.example.shared]
+        classHints: [SharedPredicate, SharedLookupClient]
+    signals:
+      projectNames: [app-shared-lib]
+      serviceNames: []
+      containerNames: []
+      packagePrefixes: [com.example.shared]
+      endpoints: []
+      hosts: []
+      queues: []
+      topics: []
+      schemas: []
+      spans: []
+      markers: []
+      errors: []
     handoff:
       target: core-team
       requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]

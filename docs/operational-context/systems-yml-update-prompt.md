@@ -8,6 +8,7 @@ Keep a short map of systems:
 - who owns the system
 - what it does
 - how to recognize it in logs or telemetry
+- which repositories form the deployed component's code scope
 
 ## Instructions
 
@@ -18,6 +19,7 @@ Keep a short map of systems:
 ## Rules
 
 - Keep the structure minimal: `id`, `name`, `type`, `ownerTeamId`, `partnerTeamIds`, `externalOwner`, `purpose`, `processes`, `contexts`, `repos`, `dependsOn`, `signals`, `handoff`.
+- `repos` must include all repositories that can contain code relevant to the deployed component: the main service repository, internal libraries, shared modules, generated clients and integration libraries. Do not list only the main repo when runtime stacktraces or packaged code can point into a library repo.
 - Prefer concrete runtime signals over architecture prose.
 - Do not model every interface here; only keep the signals needed for incident routing.
 - Preserve the top-level wrapper: `schemaVersion`, `systems`, `openQuestions`.
@@ -44,13 +46,13 @@ systems:
     purpose: Executes the main application behavior and orchestrates the work-item flow.
     processes: [main-process]
     contexts: [core-context]
-    repos: [app-core-repo]
+    repos: [app-core-repo, app-shared-lib-repo]
     dependsOn: [partner-service]
     signals:
       serviceNames: [app-core]
       containerNames: [app-core]
-      projectNames: [app-core-repo]
-      packagePrefixes: [com.example.app]
+      projectNames: [app-core-repo, app-shared-lib]
+      packagePrefixes: [com.example.app, com.example.shared]
       endpoints: [/api/resources]
       hosts: []
       queues: []

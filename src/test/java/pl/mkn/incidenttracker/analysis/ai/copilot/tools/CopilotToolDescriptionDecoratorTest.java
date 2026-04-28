@@ -42,6 +42,14 @@ class CopilotToolDescriptionDecoratorTest {
     }
 
     @Test
+    void shouldAppendCrossRepositoryGuidanceForGitLabClassReferences() {
+        var description = decorator.decorate("gitlab_find_class_references", "Finds class references.");
+
+        assertTrue(description.contains("focused retry across operational-context codeSearchProjects"));
+        assertTrue(description.contains("before declaring it missing"));
+    }
+
+    @Test
     void shouldLeaveUnknownToolDescriptionUntouched() {
         var description = decorator.decorate("custom_tool", "  Custom description.  ");
 

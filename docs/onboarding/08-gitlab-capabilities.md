@@ -60,6 +60,12 @@ po co model prosi o dany odczyt albo wyszukiwanie. `gitlab_find_flow_context`
 przyjmuje focused `keywords` z evidence/logow, bez osobnych parametrow klasy,
 metody albo pliku.
 
+Operational context moze wskazac kilka repozytoriow dla jednego komponentu
+wdrozeniowego. Dla GitLab tools oznacza to jeden code search scope:
+repo glowne, biblioteki, shared modules i wygenerowane klienty powinny byc
+przeszukiwane razem, jesli klasa albo collaborator nie znajduje sie w main
+repo.
+
 User-facing capture z GitLaba pozostaje maksymalnie prosty. Do UI trafia
 `reason` jako naglowek wpisu. File/chunk/chunks pokazuja nazwe/sciezke pliku,
 tresc kodu i opcjonalny start line. Search, outline, flow context i class

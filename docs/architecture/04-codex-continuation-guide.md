@@ -212,7 +212,9 @@ a potem fan-outuje Dynatrace i GitLab deterministic rownolegle na tym samym
 snapshotcie `AnalysisContext`, zanim przejdzie do operational context.
 Sam provider operational context nie laduje juz katalogu bezposrednio z
 resources, tylko korzysta z query-based adaptera i wystawia typed
-`OperationalContextEvidenceView` dla downstreamow.
+`OperationalContextEvidenceView` dla downstreamow. Widok systemu zawiera tez
+`codeSearchProjects`, czyli projekty GitLaba skladajace sie na kod
+dopasowanego komponentu, lacznie z bibliotekami i shared modules.
 
 ## Najbardziej naturalne kolejne kierunki
 

@@ -9,8 +9,10 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentCo
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
+import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceView;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Service
@@ -28,6 +30,7 @@ public class CopilotIncidentDigestService {
         var deployments = DeploymentContextEvidenceView.from(evidenceSections);
         var dynatrace = DynatraceRuntimeEvidenceView.from(evidenceSections);
         var gitLab = GitLabResolvedCodeEvidenceView.from(evidenceSections);
+        var operationalContext = OperationalContextEvidenceView.from(evidenceSections);
         var lines = new ArrayList<String>();
 
         lines.add("# Incident digest");
@@ -36,6 +39,7 @@ public class CopilotIncidentDigestService {
         addCoverage(lines, effectiveCoverage);
         addStrongestLogSignals(lines, elastic);
         addDeploymentFacts(lines, deployments);
+        addOperationalCodeSearchScope(lines, operationalContext);
         addRuntimeSignals(lines, dynatrace);
         addCodeEvidence(lines, gitLab, effectiveCoverage);
         addEvidenceGaps(lines, effectiveCoverage);
@@ -94,6 +98,52 @@ public class CopilotIncidentDigestService {
         addInlineValue(lines, "containerName", item.containerName());
         addInlineValue(lines, "containerImage", item.containerImage());
         addInlineValue(lines, "commitSha", item.commitSha());
+        lines.add("");
+    }
+
+    private void addOperationalCodeSearchScope(
+            List<String> lines,
+            OperationalContextEvidenceView operationalContext
+    ) {
+        lines.add("## Operational code search scope");
+        if (operationalContext == null || operationalContext.isEmpty()) {
+            lines.add("- none");
+            lines.add("");
+            return;
+        }
+
+        var systems = distinct(operationalContext.systems().stream()
+                .map(system -> firstNonBlank(system.systemId(), system.name()))
+                .toList());
+        var projects = distinct(joinLists(
+                operationalContext.systems().stream()
+                        .flatMap(system -> system.codeSearchProjects().stream())
+                        .toList(),
+                operationalContext.repositories().stream()
+                        .map(OperationalContextEvidenceView.RepositoryItem::project)
+                        .toList()
+        ));
+        var packages = distinct(joinLists(
+                operationalContext.systems().stream()
+                        .flatMap(system -> system.sourcePackages().stream())
+                        .toList(),
+                operationalContext.repositories().stream()
+                        .flatMap(repository -> repository.sourcePackages().stream())
+                        .toList()
+        ));
+        var classHints = distinct(joinLists(
+                operationalContext.systems().stream()
+                        .flatMap(system -> system.classHints().stream())
+                        .toList(),
+                operationalContext.repositories().stream()
+                        .flatMap(repository -> repository.classHints().stream())
+                        .toList()
+        ));
+
+        addListValue(lines, "matched systems", systems);
+        addListValue(lines, "GitLab projects to search as one deployment component", projects);
+        addListValue(lines, "package roots", packages.stream().limit(8).toList());
+        addListValue(lines, "class hints", classHints.stream().limit(8).toList());
         lines.add("");
     }
 
@@ -170,6 +220,27 @@ public class CopilotIncidentDigestService {
                 .map("`%s`"::formatted)
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("`none`"));
+    }
+
+    private List<String> joinLists(List<String> first, List<String> second) {
+        var joined = new ArrayList<String>();
+        if (first != null) {
+            joined.addAll(first);
+        }
+        if (second != null) {
+            joined.addAll(second);
+        }
+        return joined;
+    }
+
+    private List<String> distinct(List<String> values) {
+        var distinct = new LinkedHashSet<String>();
+        for (var value : values) {
+            if (hasText(value)) {
+                distinct.add(value.trim());
+            }
+        }
+        return List.copyOf(distinct);
     }
 
     private String firstLine(String value) {

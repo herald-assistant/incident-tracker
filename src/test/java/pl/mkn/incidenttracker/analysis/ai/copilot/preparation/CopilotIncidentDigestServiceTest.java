@@ -34,6 +34,10 @@ class CopilotIncidentDigestServiceTest {
         assertTrue(digest.contains("## Deployment facts"));
         assertTrue(digest.contains("- projectNameHint: `billing-service`"));
         assertTrue(digest.contains("- commitSha: `abc123`"));
+        assertTrue(digest.contains("## Operational code search scope"));
+        assertTrue(digest.contains("- GitLab projects to search as one deployment component: `billing-service`, `libs/billing-shared`"));
+        assertTrue(digest.contains("- package roots: `com.example.billing.shared`"));
+        assertTrue(digest.contains("- class hints: `BillingRules`"));
         assertTrue(digest.contains("## Runtime signals"));
         assertTrue(digest.contains("- Dynatrace collection status: `COLLECTED`"));
         assertTrue(digest.contains("- matched services: `billing-service`"));
@@ -128,6 +132,30 @@ class CopilotIncidentDigestServiceTest {
                                                 """),
                                         attr("contentTruncated", "false")
                                 ))
+                        ),
+                        new AnalysisEvidenceSection(
+                                "operational-context",
+                                "matched-context",
+                                List.of(
+                                        item(
+                                                "Operational system billing",
+                                                attr("systemId", "billing"),
+                                                attr("name", "Billing"),
+                                                attr("repoIds", "billing-service-repo; billing-shared-repo"),
+                                                attr("codeSearchRepoIds", "billing-service-repo; billing-shared-repo"),
+                                                attr("codeSearchProjects", "billing-service; libs/billing-shared"),
+                                                attr("sourcePackages", "com.example.billing.shared"),
+                                                attr("classHints", "BillingRules")
+                                        ),
+                                        item(
+                                                "Operational repository billing-shared-repo",
+                                                attr("repositoryId", "billing-shared-repo"),
+                                                attr("project", "libs/billing-shared"),
+                                                attr("systems", "billing"),
+                                                attr("sourcePackages", "com.example.billing.shared"),
+                                                attr("classHints", "BillingRules")
+                                        )
+                                )
                         )
                 )
         );

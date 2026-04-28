@@ -20,7 +20,7 @@ class OperationalContextAdapterTest {
         assertEquals(2, catalog.systems().size());
         assertEquals(1, catalog.integrations().size());
         assertEquals(1, catalog.processes().size());
-        assertEquals(1, catalog.repositories().size());
+        assertEquals(2, catalog.repositories().size());
         assertEquals(1, catalog.boundedContexts().size());
         assertEquals(2, catalog.teams().size());
         assertEquals(1, catalog.glossaryTerms().size());

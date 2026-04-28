@@ -23,6 +23,30 @@ Do not switch group or branch.
 Do not invent project names.
 Infer project names and file paths only from evidence and repository exploration.
 
+## Deployment component repository scope
+
+A deployed component may be implemented by more than one GitLab project.
+Operational context can list several repositories for the same system/component, including:
+
+- the main service repository,
+- internal libraries,
+- shared domain modules,
+- generated clients or integration libraries,
+- supporting modules that are packaged into or called by the deployed service.
+
+When operational context provides `repoIds`, `codeSearchRepoIds`, `codeSearchProjects`, repository `project`, package roots or class hints for a matched system, treat that whole list as the code scope of the deployment component.
+
+If a grounded class, entity, DTO, mapper, client or repository is not found in the main service repository, do not conclude that the code is unavailable after one repository lookup. Make a focused GitLab attempt across the remaining `codeSearchProjects` or matched repository projects first.
+
+Use this especially when:
+
+- the stacktrace class belongs to a package prefix that looks like a library or shared module,
+- the failing method delegates to a shared client, mapper, validator or repository abstraction,
+- deterministic code evidence shows the service entry point but not the class that decides the failing predicate,
+- DB grounding depends on an entity/repository that may live in a library repository.
+
+Keep the search bounded: search the listed component repositories with the grounded class/package/method hints, read only the best matching outline/chunk, then stop if no useful library code is found.
+
 ## GitLab tool reason
 
 Every GitLab tool call must include the optional `reason` argument.
@@ -89,12 +113,14 @@ If the GitLab attempt finds no useful flow context, stop and state that limitati
 ## Tool order
 
 1. Prefer attached deterministic GitLab evidence.
-2. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
-3. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
-4. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear; pass focused `keywords` grounded in logs, stacktrace, code evidence or current tool results.
-5. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
-6. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
-7. Use `gitlab_read_repository_file` only when:
+2. If operational context lists multiple `codeSearchProjects` for the matched system, use those projects as one component scope before treating a class as missing.
+3. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
+4. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
+5. When `gitlab_find_class_references` returns no useful result for the main project, retry once across the other operational-context projects for that component.
+6. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear; pass focused `keywords` grounded in logs, stacktrace, code evidence or current tool results.
+7. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
+8. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
+9. Use `gitlab_read_repository_file` only when:
     - the file is short,
     - the chunk is insufficient,
     - class-level context is necessary,
@@ -115,6 +141,7 @@ Use inputs inferred from evidence:
 - queue/topic/message names,
 - downstream client names,
 - service/container/project hints,
+- operational-context `codeSearchProjects`, repository `project`, package roots and class hints,
 - business identifiers from logs.
 
 Search broadly enough to find the relevant project and direct collaborators, but do not read every candidate.

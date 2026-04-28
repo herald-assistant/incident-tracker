@@ -26,4 +26,29 @@ repositories:
       target: core-team
       requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]
 
+  - id: app-shared-lib-repo
+    project: libs/app-shared-lib
+    group: example/platform
+    ownerTeamId: core-team
+    systems: [app-core]
+    processes: [main-process]
+    contexts: [core-context]
+    modules:
+      - id: shared-domain-module
+        name: Shared Domain Module
+        paths: [src/main/java/com/example/shared]
+        packages: [com.example.shared]
+        classHints: [SharedPredicate, SharedLookupClient]
+    signals:
+      projectNames: [app-shared-lib]
+      serviceNames: []
+      containerNames: []
+      packagePrefixes: [com.example.shared]
+      paths: [src/main/java/com/example/shared]
+      endpoints: []
+      schemas: []
+    handoff:
+      target: core-team
+      requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]
+
 openQuestions: []

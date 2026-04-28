@@ -79,9 +79,14 @@ tool policy oraz indeks `itemIds`.
 - coverage summary,
 - strongest log signals,
 - deployment facts,
+- operational code search scope,
 - runtime highlights,
 - code highlights,
 - known evidence gaps.
+
+Operational code search scope pochodzi z operational context i pokazuje
+projekty GitLaba, pakiety oraz class hints dla dopasowanego systemu. To pomaga
+Copilotowi szukac klas takze w bibliotekach i shared repozytoriach komponentu.
 
 `itemId` sa generowane tylko w Copilot artifact rendering. Markdown artifacts
 dostaja naglowki `## itemId: ...`, a JSON artifacts pole `itemId`.
@@ -96,6 +101,11 @@ Gdy GitLab scope jest resolved, manifest dostaje
 `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`. To zostawia focused GitLab tools do
 malego lookupu przed finalna odpowiedzia, zeby `affectedFunction` bylo
 szczegolowe i opisane jezykiem techniczno-funkcjonalnym, nie jako lista klas.
+
+Jesli operational context wskazuje kilka `codeSearchProjects` dla tego samego
+systemu, GitLab skill i tool descriptions kaza traktowac je jako jeden scope
+kodu komponentu: main repo plus biblioteki/shared modules. Model nie powinien
+uznawac klasy za niedostepna po jednym nietrafionym lookupie w main repo.
 
 Gdy coverage wykryje DB-related symptom bez ugruntowanej encji/repozytorium w
 GitLab evidence, manifest dostaje `DB_CODE_GROUNDING_NEEDED`. Wtedy policy

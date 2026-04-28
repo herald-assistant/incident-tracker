@@ -90,6 +90,7 @@ Hard rules:
 - Reuse ids from attached files exactly as they appear. Do not rename team, system, process, context, or integration ids.
 - Do not invent ownership.
 - Do not create duplicate repository entries for the same GitLab project.
+- Add internal library, shared module, generated client, or integration-library repositories when they are part of a deployed component's code scope; link them through `systems` so incident analysis can search them with the main service repo.
 - Do not create one repository entry per file or per stacktrace frame.
 - Use `modules` for meaningful subareas inside one repository when the evidence points to stable code zones.
 - If module boundaries are weak, keep the repo-level entry and add an `openQuestions` item instead of inventing modules.
@@ -108,6 +109,7 @@ What matters most:
 - `ownerTeamId`, `systems`, `processes`, and `contexts` must stay consistent with the other attached operational-context files
 - `project`, `group`, and `gitLab.*` should identify the repository more reliably than runtime aliases
 - `modules` should help narrow investigation inside a repository, not mirror every directory in the tree
+- library/shared repositories should carry package roots and class hints that let GitLab tools find classes missing from the main service repo
 
 Repository-specific guidance:
 - This repo enriches incidents from Elasticsearch, Dynatrace, and deterministic GitLab code resolution, so repository mapping should combine runtime signals with actual code references.
