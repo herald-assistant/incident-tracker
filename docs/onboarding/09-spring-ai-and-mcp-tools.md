@@ -26,6 +26,13 @@ Zakres narzedzi jest session-bound. `ToolContext` niesie ukryte dane:
 Model nie powinien podawac tych wartosci jako argumentow. Publiczny request
 analizy nadal ma tylko `correlationId`.
 
+Aktualny kod jest juz w pelni hidden-scope dla GitLab i Database tools.
+`ElasticMcpTools.searchLogsByCorrelationId(...)` nadal ma jawny parametr
+`correlationId`, mimo ze policy sesji ogranicza dostep do toola. Traktuj to
+jako znany drift wzgledem docelowego invariantu MCP: przy najblizszej zmianie
+Elastic tool powinien przejsc na `ToolContext`, a model-facing schema nie
+powinna wymagac `correlationId`.
+
 ## Coverage-aware allowlista
 
 `CopilotToolAccessPolicy` nie wlacza tools tylko dlatego, ze sa
@@ -54,6 +61,15 @@ Reguly:
 - Raw SQL jest domyslnie zablokowany.
 
 Coverage i evidence gaps sa widoczne w `00-incident-manifest.json`.
+
+Follow-up chat po zakonczonym jobie nie uzywa coverage jako glownego powodu
+wlaczenia tools. `CopilotToolAccessPolicy.fromFollowUpSession(...)` wystawia
+targeted tools na podstawie resolved scope'u z zakonczonej analizy:
+
+- Elasticsearch dla aktualnego `correlationId`,
+- GitLab tylko przy resolved `gitLabGroup` i `gitLabBranch`,
+- Database tylko przy resolved `environment`,
+- raw SQL nadal pozostaje zablokowany.
 
 ## Opisy tools dla Copilota
 
@@ -111,7 +127,9 @@ bledu jako pustego wyniku.
 ## Capture tool evidence
 
 `CopilotToolEvidenceCaptureRegistry` przeksztalca wybrane wyniki tools w
-`AnalysisEvidenceSection`, ktore job flow publikuje jako `toolEvidenceSections`.
+`AnalysisEvidenceSection`. Dla finalnej analizy job flow publikuje je jako
+top-level `toolEvidenceSections`, a dla follow-up chatu zapisuje przy konkretnej
+odpowiedzi assistant w `chatMessages[].toolEvidenceSections`.
 
 Capture obejmuje:
 
@@ -137,8 +155,10 @@ formatu kazdego toola.
 - Jesli wynik toola jest diagnostycznie wazny, dodaj capture do
   odpowiedniego mappera evidence capture.
 - Nie eksportuj DTO adapterow jako publicznego kontraktu AI.
-- Nie zmieniaj publicznego requestu analizy: `/analysis` i `/analysis/jobs`
-  nadal przyjmuja tylko `correlationId`.
+- Nie zmieniaj publicznego scope'u analizy: `/analysis` przyjmuje tylko
+  `correlationId`, `/analysis/jobs` tylko `correlationId` oraz generyczne
+  preferencje AI (`model`, `reasoningEffort`), a follow-up chat tylko
+  `message`.
 
 ## Najwazniejsze properties
 

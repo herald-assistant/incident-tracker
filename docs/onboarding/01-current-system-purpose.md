@@ -10,7 +10,8 @@ rozwiazuje.
 - dlaczego jedynym wejsciem biznesowym jest `correlationId`,
 - jaki wynik ma dostac operator albo developer,
 - dlaczego system jest `AI-first`, ale nie jest "AI-only",
-- jakie dane sa zbierane zanim model zacznie interpretacje.
+- jakie dane sa zbierane zanim model zacznie interpretacje,
+- co operator moze zrobic po finalnym wyniku przez follow-up chat.
 
 ## Glowny model
 
@@ -25,6 +26,12 @@ Wynik ma byc praktyczny:
 - rekomendowany kolejny krok,
 - uzasadnienie oparte o evidence.
 
+Po zakonczonej analizie live joba operator moze kontynuowac prace w formie
+chatu: dopytac o wynik, poprosic o sprawdzenie dodatkowego faktu w repo albo
+DB tools, albo wygenerowac raport z juz zebranym kontekstem. To nie jest nowa
+analiza od zera, tylko kontynuacja nad tym samym snapshotem evidence i
+scope'em tools wyprowadzonym przez backend.
+
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisRequest.java`
@@ -36,10 +43,14 @@ Wynik ma byc praktyczny:
 
 - uruchom backend i otworz `GET /`,
 - zobacz, ze UI prosi tylko o `correlationId`,
-- przejrzyj strukture odpowiedzi API dla `POST /analysis` albo job flow.
+- przejrzyj strukture odpowiedzi API dla `POST /analysis` albo job flow,
+- po zakonczonym live jobie sprawdz, ze chat reuse'uje `chatMessages` z
+  `GET /analysis/jobs/{analysisId}`.
 
 ## Checkpoint
 
 - Dlaczego `branch` nie przychodzi z requestu?
 - Jakie sa dwa glowne etapy systemu przed zwroceniem wyniku?
 - Co oznacza w tym projekcie `AI-first`?
+- Dlaczego follow-up chat nie przyjmuje recznego `environment`, branch ani
+  GitLab group?

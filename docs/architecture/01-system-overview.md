@@ -24,8 +24,9 @@ Na dzisiaj projekt ma:
   zapisu zakonczonej analizy jako JSON,
 - w ekranie `GET /` widok promptu przygotowanego dla AI, mozliwy do skopiowania
   nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
-- w ekranie `GET /` ostatni krok AI pokazuje tez pliki GitLaba dociagniete przez
-  tools w trakcie sesji Copilota i odswieza je wraz z pollingiem joba,
+- w ekranie `GET /` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
+  dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
+  pollingiem joba,
 - ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
   GitLaba,
 - glowne API `POST /analysis`,
@@ -37,7 +38,8 @@ Na dzisiaj projekt ma:
 - endpoint `GET /analysis/ai/options`, ktory zwraca katalog modeli i
   dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby frontend nie trzymal
   lokalnej listy modeli,
-- AI-first flow oparty o `AnalysisEvidenceProvider` i `AnalysisAiProvider`,
+- AI-first flow oparty o `AnalysisEvidenceProvider`, `AnalysisAiProvider` i
+  osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - przygotowany bridge pomiedzy Spring tools a GitHub Copilot Java SDK,
 - MCP tools dla Elastica, GitLaba i warunkowo dla Database,
 - pierwszy realny adapter REST do Elasticsearch/Kibana proxy,
@@ -92,14 +94,17 @@ Na dzisiaj projekt ma:
 - `pl.mkn.incidenttracker.analysis.sync`
   Synchroniczny feature `POST /analysis`.
 - `pl.mkn.incidenttracker.analysis.job`
-  Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
+  Asynchroniczny feature `POST /analysis/jobs`,
+  `GET /analysis/jobs/{analysisId}` i
+  `POST /analysis/jobs/{analysisId}/chat/messages`.
 - `pl.mkn.incidenttracker.analysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
 - `pl.mkn.incidenttracker.analysis.ai`
-  Generyczny kontrakt AI i model evidence przekazywany do AI.
+  Generyczne kontrakty AI dla finalnej analizy, follow-up chatu, katalogu
+  modeli oraz evidence przekazywanego do AI.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.incidenttracker.analysis.adapter.operationalcontext`
@@ -210,7 +215,8 @@ flowchart LR
     B --> U2["POST /analysis/jobs/{analysisId}/chat/messages"]
     U2 --> D
     D --> V["Background follow-up chat task"]
-    V --> N
+    V --> W["AnalysisAiChatProvider"]
+    W --> O
 ```
 
 ## Dodatkowy use case Elasticsearch log search

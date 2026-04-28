@@ -253,8 +253,11 @@ sesji i nie przebudowuje policy ani promptu.
 w glownym flow analizy. Integracyjne tools GitLab/Elastic/DB sa wywolywane
 przez Spring tool callbacks i hidden `ToolContext`.
 
-Model nie podaje jawnie scope'ow takich jak `correlationId`, `gitLabGroup`,
-`gitLabBranch` czy `environment`.
+Model nie powinien podawac jawnie scope'ow takich jak `correlationId`,
+`gitLabGroup`, `gitLabBranch` czy `environment`. Aktualnie GitLab i DB tools
+spelniaja to przez hidden `ToolContext`; Elastic MCP tool nadal ma jawny
+parametr `correlationId` i powinien byc traktowany jako znany drift do
+migracji, a nie wzorzec dla nowych tools.
 
 ## 9. Tool bridge
 

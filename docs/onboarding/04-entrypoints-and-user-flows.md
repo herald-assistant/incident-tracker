@@ -8,6 +8,7 @@ glowne, a ktore tylko pomocnicze.
 ## Po tym kroku rozumiesz
 
 - roznice miedzy `GET /`, `POST /analysis` i job flow,
+- gdzie wpina sie follow-up chat po zakonczonym jobie,
 - po co istnieje `GET /evidence`,
 - ktore endpointy sa czescia produktu, a ktore diagnostyki integracji.
 
@@ -30,7 +31,14 @@ scope'u evidence.
 
 ### `GET /analysis/jobs/{analysisId}`
 
-Polling statusu, krokow, prepared promptu, evidence i wyniku.
+Polling statusu, krokow, prepared promptu, evidence, wyniku i historii
+follow-up chatu.
+
+### `POST /analysis/jobs/{analysisId}/chat/messages`
+
+Asynchroniczne pytanie albo polecenie operatora po `COMPLETED`. Request zawiera
+tylko `message`; backend reuse'uje finalny wynik, evidence, historie rozmowy,
+model/reasoning oraz scope tools z zakonczonego joba.
 
 ### `GET /analysis/ai/options`
 
@@ -70,7 +78,10 @@ Nie ma osobnego helper endpointu Database capability.
 - sprawdz `GET /analysis/ai/options`,
 - otworz `GET /evidence`,
 - porownaj, jakie dane zwraca `POST /analysis` i `GET /analysis/jobs/{analysisId}`,
-- zobacz, ze job snapshot zwraca tez `preparedPrompt` i `toolEvidenceSections`.
+- zobacz, ze job snapshot zwraca tez `preparedPrompt`, `toolEvidenceSections`
+  i `chatMessages`,
+- po zakonczonym live jobie wyslij `POST /analysis/jobs/{analysisId}/chat/messages`
+  i sprawdz polling odpowiedzi.
 
 ## Checkpoint
 
@@ -78,3 +89,4 @@ Nie ma osobnego helper endpointu Database capability.
 - Ktore endpointy mozna zmieniac tylko wtedy, gdy zmienia sie realna potrzeba
   operatorska?
 - Ktore dane sa tylko projekcja UI joba, a nie osobnym modelem domenowym?
+- Dlaczego importowany eksport analizy nie moze uruchomic backendowego chatu?

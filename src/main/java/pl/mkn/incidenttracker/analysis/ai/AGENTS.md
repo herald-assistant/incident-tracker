@@ -9,8 +9,11 @@ Obejmuje:
 
 - kontrakty `AnalysisAiProvider`, request/response i generyczne modele
   evidence przekazywane do AI,
+- kontrakty `AnalysisAiChatProvider`, request/response i turny follow-up
+  chatu po zakonczonym jobie,
 - `copilot/preparation/`
-  budowe promptu, konfiguracji klienta, tool definitions i runtime skills,
+  budowe promptu, konfiguracji klienta, tool definitions, follow-up promptu i
+  runtime skills,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
@@ -26,6 +29,8 @@ Nie obejmuje:
 
 - `AnalysisAiProvider` ma pozostac stabilna granica miedzy flow a konkretnym
   SDK lub modelem.
+- `AnalysisAiChatProvider` ma pozostac osobna granica kontynuacji joba; nie
+  mieszaj jego tekstowej odpowiedzi z JSON-only kontraktem finalnej analizy.
 - AI dostaje tylko `AnalysisAiAnalysisRequest` i generyczne
   `AnalysisEvidenceSection`. Nie wciskaj tu klas adapter-specific.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
@@ -39,10 +44,13 @@ Nie obejmuje:
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.
 - Permission handling musi byc jawnie ustawione. Nie zostawiaj domyslnego,
   nieczytelnego zachowania SDK.
-- Parsing odpowiedzi modelu ma pozostac odporny na formatowanie, ale kontrakt
-  pol `detectedProblem`, `summary`, `recommendedAction`, `rationale`,
+- Parsing finalnej odpowiedzi modelu ma pozostac odporny na formatowanie, ale
+  kontrakt pol `detectedProblem`, `summary`, `recommendedAction`, `rationale`,
   `affectedFunction`, `affectedProcess`, `affectedBoundedContext`,
   `affectedTeam` powinien pozostac stabilny dla flow i UI.
+- Follow-up chat moze odpowiadac operatorskim tekstem, ale nadal ma reuse'owac
+  finalny snapshot analizy, historie rozmowy, hidden tool context i prosty
+  user-facing tool evidence.
 - Jesli kiedys dojda kolejne providery AI, trzymaj ich szczegoly lokalnie i nie
   rozlewaj zaleznosci SDK poza ten katalog.
 

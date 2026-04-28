@@ -46,6 +46,8 @@ Aktualny frontend ma dwa route'y Angulara:
   dane dociagniete przez AI tools juz w trakcie kroku `AI_ANALYSIS`,
 - `chatMessages` jest historia kontynuacji po analizie; kazda odpowiedz
   assistant moze miec wlasne `toolEvidenceSections`,
+- eksport analizy ma envelope `incident-tracker.analysis-export` w wersji 3,
+  a importer wspiera wersje 2 i 3, zeby stare zapisy bez chatu nadal dzialaly,
 - widok krokow ma specjalne rendery dla logow Elasticsearch, code/tool evidence
   z GitLaba, runtime signals Dynatrace i wynikow DB tools,
 - GitLab tool evidence pokazuje juniorowi tylko nazwe/sciezke pliku, powod

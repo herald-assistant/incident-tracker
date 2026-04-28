@@ -22,7 +22,8 @@ Synchroniczny endpoint `POST /analysis`.
 
 ### `analysis/job`
 
-Asynchroniczny flow z jobami i projekcja stanu dla UI.
+Asynchroniczny flow z jobami, follow-up chatem po zakonczonej analizie i
+projekcja stanu dla UI.
 
 ### `analysis/evidence`
 
@@ -52,7 +53,8 @@ Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
 
 ### `analysis/ai`
 
-Generyczny kontrakt AI i implementacja oparta o Copilot SDK.
+Generyczne kontrakty finalnej analizy, follow-up chatu, katalogu modeli i
+implementacja oparta o Copilot SDK.
 
 ### `api`
 

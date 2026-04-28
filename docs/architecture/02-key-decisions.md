@@ -227,9 +227,13 @@ read file/chunk, returned characters oraz raw SQL attempts.
 
 ## 14. Tools sa session-bound i ukrywaja scope
 
-GitLab, Elasticsearch i DB tools dostaja scope przez ukryty `ToolContext`.
-Model nie powinien podawac `correlationId`, `gitLabGroup`, `gitLabBranch` ani
-`environment` jako jawnych argumentow dla tych scope'ow.
+GitLab, Elasticsearch i DB tools powinny dostawac scope przez ukryty
+`ToolContext`. Model nie powinien podawac `correlationId`, `gitLabGroup`,
+`gitLabBranch` ani `environment` jako jawnych argumentow dla tych scope'ow.
+
+Stan kodu na dzisiaj: GitLab i DB spelniaja ten invariant; Elastic MCP tool
+nadal ma jawny parametr `correlationId`. To jest znany drift implementacyjny,
+nie nowy kontrakt do rozszerzania.
 
 SessionConfig ma jawna allowliste tools, a `SessionHooks.onPreToolUse`
 blokuje lokalny workspace/filesystem/shell/terminal w glownym flow analizy.

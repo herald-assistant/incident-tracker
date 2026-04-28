@@ -107,7 +107,9 @@ Policy powstaje przez `CopilotToolAccessPolicyFactory`, aby ukryta zaleznosc
 od coverage evaluatora nie byla zaszyta w samym recordzie policy.
 
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal.
-GitLab, Elasticsearch i DB tools pracuja przez hidden `ToolContext`.
+GitLab i DB tools pracuja przez hidden `ToolContext`. Elasticsearch ma jeszcze
+zastany model-facing parametr `correlationId`; traktuj go jako drift do
+migracji, nie jako wzorzec dla nowych tools.
 
 W follow-up chat policy nie jest coverage-only. Najnowsza wiadomosc operatora
 moze byc powodem do targeted uzycia tools, ale scope nadal pochodzi z

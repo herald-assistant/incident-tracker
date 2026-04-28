@@ -20,7 +20,7 @@ Collector uruchamia providerow w jawnie opisanym pipeline:
 1. Elasticsearch,
 2. deployment context,
 3. rownolegle: Dynatrace + GitLab deterministic,
-5. operational context.
+4. operational context.
 
 Kazdy provider:
 

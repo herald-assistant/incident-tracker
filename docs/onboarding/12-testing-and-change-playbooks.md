@@ -85,6 +85,20 @@ architektonicznych.
 5. odpal `cd frontend && npm test`,
 6. potwierdz `cd frontend && npm run build` albo `mvn -q -DskipTests package`.
 
+## Playbook 6: zmiana follow-up chatu
+
+1. nie rozszerzaj `POST /analysis`; chat zostaje pod
+   `POST /analysis/jobs/{analysisId}/chat/messages`,
+2. utrzymaj request chatu jako `message`, bez recznego `environment`, branch,
+   GitLab group ani DB scope'u,
+3. jesli zmieniasz prompt lub policy chatu, sprawdz
+   `CopilotSdkFollowUpPreparationService`, `CopilotFollowUpPromptRenderer` i
+   `CopilotToolAccessPolicy.fromFollowUpSession(...)`,
+4. jesli zmieniasz payload, zaktualizuj `AnalysisChatMessageResponse`, modele
+   TS i import/eksport analizy,
+5. odpal testy job controller/service oraz celowane testy Copilot preparation
+   albo tool policy.
+
 ## Checkpoint
 
 - Gdy chcesz dodac nowe dane do promptu, czy powinny wpasc najpierw jako
@@ -92,3 +106,5 @@ architektonicznych.
 - Jak rozpoznasz, ze logika incidentowa trafila przypadkiem do adaptera?
 - Jakie testy odpalic po zmianie w `analysis.mcp`?
 - Jakie testy odpalic po zmianie job snapshotu albo komponentu Angular?
+- Jak odroznisz zmiane finalnej analizy JSON-only od zmiany follow-up chatu,
+  ktory odpowiada operatorskim tekstem?

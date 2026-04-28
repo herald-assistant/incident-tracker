@@ -29,6 +29,9 @@ Nie obejmuje:
 - Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
   `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden
   `ToolContext`, a nie przez model-facing parametry.
+- Uwaga na stan zastany: `ElasticMcpTools` nadal ma jawny parametr
+  `correlationId`. Nie powielaj tego wzorca; przy zmianach w Elastic MCP
+  migruj go do hidden `ToolContext` i zaktualizuj testy schema/bridge.
 - Dla GitLab i Database tools jedyny operator-facing powod wywolania to
   opcjonalny `reason`. Nie dodawaj model-facing parametrow eksploracyjnych,
   pytan diagnostycznych ani innych pol, ktore probuja zastapic prosty powod.

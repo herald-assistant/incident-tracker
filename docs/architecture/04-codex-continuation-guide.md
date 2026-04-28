@@ -43,6 +43,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
 - `CopilotArtifactService`
+- `CopilotSdkFollowUpPreparationService`
 
 ### Za GitLaba odpowiadaja glownie
 
@@ -174,6 +175,14 @@ utrzymywac sesji SDK po zakonczeniu finalnej analizy.
 
 Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
 chatu, a nie mieszane z deterministycznym pipeline evidence.
+
+### Znany drift MCP Elasticsearch
+
+Docelowy invariant mowi, ze scope tools ma przychodzic z hidden `ToolContext`.
+GitLab i Database tools juz tak dzialaja. `ElasticMcpTools` nadal ma
+model-facing parametr `correlationId`; jesli dotykasz MCP Elastica, pierwszym
+bezpiecznym kierunkiem jest migracja tego parametru do `ToolContext` i
+aktualizacja testow bridge/schema.
 
 ### Elastic helper flow
 
