@@ -81,7 +81,12 @@
                     matTooltipClass="analysis-token-tooltip"
                     [matTooltipShowDelay]="120"
                   >
-                    {{ step.usageSummary }}
+                    @for (stat of step.usageStats; track stat.label) {
+                      <span class="usage-pill__metric">
+                        <span class="usage-pill__label">{{ stat.label }}</span>
+                        <span class="usage-pill__value">{{ stat.value }}</span>
+                      </span>
+                    }
                   </span>
                 }
               </div>

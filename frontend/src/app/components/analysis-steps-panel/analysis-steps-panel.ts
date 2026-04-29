@@ -28,6 +28,11 @@ import {
   hasMeaningfulValue,
   isLargeAttribute
 } from '../../core/utils/analysis-display.utils';
+import {
+  AnalysisAiCostEstimate,
+  estimateAnalysisAiCost,
+  GITHUB_AI_CREDIT_USD
+} from '../../core/utils/analysis-ai-usage-cost.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
@@ -285,9 +290,14 @@ interface StepView {
   promptPanelTitle: string;
   promptPanelDescription: string;
   showUsage: boolean;
-  usageSummary: string;
+  usageStats: UsageStatView[];
   usageTooltip: string;
   emptyStateMessage: string;
+}
+
+interface UsageStatView {
+  label: string;
+  value: string;
 }
 
 type StepIndicatorState = 'number' | 'running' | 'done' | 'error' | 'skipped';
@@ -483,7 +493,8 @@ export class AnalysisStepsPanelComponent {
       );
       const showPreparedPromptView = Boolean(stepPreparedPrompt);
       const key = buildStepKey(step, index);
-      const usageSummary = buildUsageSummary(step.usage ?? null);
+      const usageEstimate = estimateAnalysisAiCost(step.usage ?? null);
+      const usageStats = buildUsageStats(step.usage ?? null, usageEstimate);
 
       return {
         key,
@@ -503,9 +514,9 @@ export class AnalysisStepsPanelComponent {
         preparedPrompt: stepPreparedPrompt,
         promptPanelTitle: buildPreparedPromptTitle(step.code),
         promptPanelDescription: buildPreparedPromptDescription(step.code),
-        showUsage: Boolean(usageSummary),
-        usageSummary,
-        usageTooltip: buildUsageTooltip(step.usage ?? null),
+        showUsage: usageStats.length > 0,
+        usageStats,
+        usageTooltip: buildUsageTooltip(step.usage ?? null, usageEstimate),
         emptyStateMessage: buildEmptyStateMessage(
           step,
           detailSections.length,
@@ -650,59 +661,155 @@ function buildEvidenceFlowMeta(step: AnalysisJobStepResponse): string[] {
   return meta;
 }
 
-function buildUsageSummary(usage: AnalysisAiUsage | null): string {
-  if (!usage || usage.totalTokens <= 0) {
-    return '';
+function buildUsageStats(
+  usage: AnalysisAiUsage | null,
+  estimate: AnalysisAiCostEstimate | null
+): UsageStatView[] {
+  if (!usage || usage.totalTokens <= 0 || !estimate) {
+    return [];
   }
 
-  return `Tokeny ${formatTokenCount(usage.totalTokens)}`;
+  return [
+    { label: 'Tokens', value: formatCompactTokenCount(usage.totalTokens) },
+    { label: 'Credits', value: formatCredits(estimate.credits) },
+    { label: 'Dollars', value: formatDollars(estimate.dollars) }
+  ];
 }
 
-function buildUsageTooltip(usage: AnalysisAiUsage | null): string {
-  if (!usage) {
+function buildUsageTooltip(
+  usage: AnalysisAiUsage | null,
+  estimate: AnalysisAiCostEstimate | null
+): string {
+  if (!usage || !estimate) {
     return '';
   }
 
   const lines = [
-    `Suma: ${formatTokenCount(usage.totalTokens)}`,
-    `Wejście: ${formatTokenCount(usage.inputTokens)}`,
-    `Wyjście: ${formatTokenCount(usage.outputTokens)}`
+    'Szacowany koszt analizy AI',
+    '',
+    `Tokens: ${formatTokenCount(usage.totalTokens)} - łączna ilość tekstu odczytanego przez model i wygenerowanej odpowiedzi.`,
+    `Credits: ${formatCredits(estimate.credits)} - przeliczenie tokenów na GitHub AI Credits.`,
+    `Dollars: ${formatDollars(estimate.dollars)} - orientacyjny koszt dodatkowego użycia po wykorzystaniu pakietu.`,
+    '',
+    'Jak to liczymy:',
+    `Nowy kontekst wysłany do AI: ${formatTokenCount(
+      estimate.newInputTokens
+    )} tokenów × ${formatUsdRate(estimate.inputUsdPerMillion)} / 1M.`,
+    `Kontekst odczytany z cache: ${formatTokenCount(
+      estimate.cachedInputTokens
+    )} tokenów × ${formatUsdRate(
+      estimate.cachedInputUsdPerMillion
+    )} / 1M. To ponownie użyty kontekst rozmowy/evidence, zwykle dużo tańszy niż nowy input.`,
+    `Odpowiedź AI: ${formatTokenCount(estimate.outputTokens)} tokenów × ${formatUsdRate(
+      estimate.outputUsdPerMillion
+    )} / 1M.`
   ];
 
-  if (usage.cacheReadTokens > 0 || usage.cacheWriteTokens > 0) {
-    lines.push(`Cache read: ${formatTokenCount(usage.cacheReadTokens)}`);
-    lines.push(`Cache write: ${formatTokenCount(usage.cacheWriteTokens)}`);
+  if (estimate.cacheWriteTokens > 0) {
+    if (estimate.cacheWriteUsdPerMillion !== null) {
+      lines.push(
+        `Zapis do cache: ${formatTokenCount(estimate.cacheWriteTokens)} tokenów × ${formatUsdRate(
+          estimate.cacheWriteUsdPerMillion
+        )} / 1M.`
+      );
+    } else {
+      lines.push(
+        `Zapis do cache: ${formatTokenCount(
+          estimate.cacheWriteTokens
+        )} tokenów. Ten model nie ma osobnej stawki cache-write w tabeli, więc pokazujemy to informacyjnie.`
+      );
+    }
   }
 
+  lines.push('');
+  lines.push(
+    `Stawki: ${estimate.pricingModel}${
+      estimate.usedFallbackPricing ? ' (model nierozpoznany, użyty domyślny przelicznik)' : ''
+    }, 1 credit = ${formatDollars(GITHUB_AI_CREDIT_USD)}.`
+  );
+
   if (usage.apiCallCount > 0) {
-    lines.push(`Wywołania API: ${formatTokenCount(usage.apiCallCount)}`);
+    lines.push(
+      `Wywołania modelu: ${formatTokenCount(
+        usage.apiCallCount
+      )}. Jedna analiza może mieć kilka rund, zwłaszcza gdy AI pobiera dodatkowe dane przez tools.`
+    );
   }
 
   if (usage.apiDurationMs > 0) {
-    lines.push(`Czas API: ${formatDurationMs(usage.apiDurationMs)}`);
+    lines.push(`Czas po stronie API: ${formatDurationMs(usage.apiDurationMs)}.`);
   }
 
   if (usage.model) {
-    lines.push(`Model: ${usage.model}`);
+    lines.push(`Model zgłoszony przez SDK: ${usage.model}.`);
   }
 
   if (usage.contextCurrentTokens !== null && usage.contextTokenLimit !== null) {
     lines.push(
-      `Kontekst: ${formatTokenCount(usage.contextCurrentTokens)} / ${formatTokenCount(
+      `Aktualny rozmiar kontekstu sesji: ${formatTokenCount(
+        usage.contextCurrentTokens
+      )} / ${formatTokenCount(
         usage.contextTokenLimit
-      )}`
+      )} tokenów. To snapshot pamięci rozmowy, a nie osobna pozycja do doliczenia.`
     );
   }
 
   if (usage.contextMessages !== null) {
-    lines.push(`Wiadomości w sesji: ${formatTokenCount(usage.contextMessages)}`);
+    lines.push(
+      `Wiadomości w sesji: ${formatTokenCount(
+        usage.contextMessages
+      )}; obejmują też techniczne komunikaty SDK i wyniki tools.`
+    );
   }
+
+  lines.push('');
+  lines.push(
+    'To uproszczona estymacja do oceny opłacalności, nie faktura. Rzeczywisty billing zależy od planu, dostępnego pakietu credits i aktualnego cennika GitHub.'
+  );
 
   return lines.join('\n');
 }
 
 function formatTokenCount(value: number | null | undefined): string {
   return String(Math.round(Number(value ?? 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+function formatCompactTokenCount(value: number): string {
+  const roundedValue = Math.round(value);
+  if (roundedValue >= 1_000_000) {
+    return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 1 }).format(
+      roundedValue / 1_000_000
+    )}M`;
+  }
+
+  if (roundedValue >= 10_000) {
+    return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(
+      roundedValue / 1_000
+    )}k`;
+  }
+
+  return formatTokenCount(roundedValue);
+}
+
+function formatCredits(value: number): string {
+  return new Intl.NumberFormat('pl-PL', {
+    minimumFractionDigits: value < 10 ? 2 : 1,
+    maximumFractionDigits: value < 10 ? 2 : 1
+  }).format(value);
+}
+
+function formatDollars(value: number): string {
+  return `$${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)}`;
+}
+
+function formatUsdRate(value: number): string {
+  return `$${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: value < 1 ? 3 : 2,
+    maximumFractionDigits: 3
+  }).format(value)}`;
 }
 
 function formatDurationMs(value: number): string {

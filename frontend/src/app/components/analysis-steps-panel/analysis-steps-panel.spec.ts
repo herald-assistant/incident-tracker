@@ -184,10 +184,17 @@ describe('AnalysisStepsPanelComponent', () => {
     const tooltip = usagePill?.getAttribute('aria-label') ?? '';
 
     expect(usagePill).not.toBeNull();
-    expect(usagePill?.textContent?.trim()).toBe('Tokeny 2 820');
-    expect(tooltip).toContain('Wejście: 2 400');
-    expect(tooltip).toContain('Wyjście: 420');
-    expect(tooltip).toContain('Model: gpt-5.4');
+    expect(usagePill?.textContent).toContain('Tokens');
+    expect(usagePill?.textContent).toContain('2 820');
+    expect(usagePill?.textContent).toContain('Credits');
+    expect(usagePill?.textContent).toContain('1,16');
+    expect(usagePill?.textContent).toContain('Dollars');
+    expect(usagePill?.textContent).toContain('$0.01');
+    expect(tooltip).toContain('Szacowany koszt analizy AI');
+    expect(tooltip).toContain('Nowy kontekst wysłany do AI: 2 100');
+    expect(tooltip).toContain('Kontekst odczytany z cache: 300');
+    expect(tooltip).toContain('Odpowiedź AI: 420');
+    expect(tooltip).toContain('Model zgłoszony przez SDK: gpt-5.4');
   });
 
   it('should hide the prepared prompt on a failed AI step when no result is available', async () => {

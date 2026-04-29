@@ -231,7 +231,10 @@ Metryki obejmuja:
 Mutable stan licznikow jest oddzielony od registry, ale pola
 `CopilotAnalysisMetrics` i JSON summary log pozostaja generyczne dla aplikacji.
 Provider mapuje token usage na `AnalysisAiUsage`, dzieki czemu job UI pokazuje
-sume tokenow w ostatnim kroku bez zaleznosci od typow SDK.
+sume tokenow w ostatnim kroku bez zaleznosci od typow SDK. Frontend dodatkowo
+liczy product-facing estymacje GitHub AI Credits i USD na podstawie tokenow,
+modelu i prostego cennika. To ma pokazywac rzad wielkosci kosztu analizy, nie
+zastepowac rozliczen GitHuba.
 
 ## Publiczny kontrakt produktu
 

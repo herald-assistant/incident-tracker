@@ -329,8 +329,11 @@ nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
 analizy aplikacji.
 
 Zuzycie tokenow jest wystawiane jako generyczne `AnalysisAiUsage`, a nie jako
-event albo typ Copilot SDK. Dzieki temu UI moze pokazac sumaryczne tokeny i
-szczegoly sesji AI bez znajomosci mechaniki event streamu.
+event albo typ Copilot SDK. Dzieki temu UI moze pokazac sumaryczne tokeny,
+uproszczone GitHub AI Credits/USD oraz szczegoly sesji AI bez znajomosci
+mechaniki event streamu. Estymacja kosztu jest liczona w frontendzie z tokenow
+i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
+analizy, a nie do rozliczen finansowych.
 
 Refaktory w `analysis.ai` i `analysis.ai.copilot` nie powinny wymagac wiedzy o
 typach SDK w UI: `POST /analysis` nadal przyjmuje tylko `correlationId`, a
