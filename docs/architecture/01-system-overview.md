@@ -92,6 +92,8 @@ Na dzisiaj projekt ma:
 
 - `pl.mkn.incidenttracker.analysis`
   Wspolne DTO, wynik i wyjatki analizy.
+- `pl.mkn.incidenttracker.common`
+  Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.analysis.flow`
   Orkiestracja runtime analizy i listenery postepu flow.
 - `pl.mkn.incidenttracker.analysis.sync`
@@ -119,9 +121,8 @@ Na dzisiaj projekt ma:
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
   Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory`,
-  `CopilotToolInvocationHandler`, `CopilotToolEvidenceSessionStore` i wspolny
-  helper JSON. Root trzyma tylko klasy, przez ktore wchodzi sie do warstwy
-  tools.
+  `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`. Root
+  trzyma tylko klasy, przez ktore wchodzi sie do warstwy tools.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`

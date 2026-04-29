@@ -11,6 +11,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvoca
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationOutcome;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceCaptureListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceMapper;
+import pl.mkn.incidenttracker.common.JsonPayloadReader;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -176,14 +177,14 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
     ) {
         return new DatabaseToolEvidenceCaptureListener(
                 registry,
-                new DatabaseToolEvidenceMapper(new ToolJsonPayloadReader(objectMapper))
+                new DatabaseToolEvidenceMapper(new JsonPayloadReader(objectMapper))
         );
     }
 
     private GitLabToolEvidenceCaptureListener gitLabToolEvidenceListener(
             CopilotToolEvidenceSessionStore registry
     ) {
-        var payloadReader = new ToolJsonPayloadReader(objectMapper);
+        var payloadReader = new JsonPayloadReader(objectMapper);
         return new GitLabToolEvidenceCaptureListener(
                 registry,
                 new GitLabToolEvidenceMapper(objectMapper, payloadReader)

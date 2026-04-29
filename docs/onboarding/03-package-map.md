@@ -67,7 +67,7 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
 - `copilot/tools` - root z klasami wejsciowymi runtime tools:
   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
-  `CopilotToolEvidenceSessionStore` i helper JSON,
+  `CopilotToolEvidenceSessionStore`,
 - `copilot/tools/context` - hidden `ToolContext` i session-bound scope,
 - `copilot/tools/description` - Copilot-facing guidance doklejane do opisow
   Spring tools,
@@ -77,6 +77,12 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/tools/logging` - listener logujacy invocation,
 - `copilot/tools/gitlab` i `copilot/tools/database` - listener + mapper
   user-facing tool evidence dla konkretnych capability.
+
+### `common`
+
+Male, neutralne helpery wspolne dla aplikacji. Aktualnie m.in.
+`JsonPayloadReader`, uzywany przez mappery payloadow JSON bez przywiazywania go
+do Copilot tools.
 
 ### `api`
 

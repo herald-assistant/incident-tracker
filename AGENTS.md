@@ -65,9 +65,10 @@ Przed wieksza zmiana zacznij od:
   user-facing evidence.
 - `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
-  `CopilotToolEvidenceSessionStore` i helper JSON. Pomocnicze klasy trzymaj w
-  podpakietach `context`, `description`, `events`, `logging`, `policy`, a
-  logike konkretnej capability w `tools.<capability>`.
+  `CopilotToolEvidenceSessionStore`. Pomocnicze klasy trzymaj w podpakietach
+  `context`, `description`, `events`, `logging`, `policy`, a logike konkretnej
+  capability w `tools.<capability>`. Generyczne helpery aplikacyjne, np.
+  `JsonPayloadReader`, trzymaj poza Copilotem w `pl.mkn.incidenttracker.common`.
 - `CopilotToolInvocationHandler` nie powinien zawierac logiki konkretnego
   toola. Walidacje i limity dodawaj jako `CopilotToolInvocationPolicy`, a
   logowanie, telemetryke i evidence capture jako listenery eventow invocation.
@@ -99,6 +100,8 @@ Przed wieksza zmiana zacznij od:
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
   MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
   case'ow.
+- `src/main/java/pl/mkn/incidenttracker/common`
+  Male helpery wspolne dla calej aplikacji.
 - `frontend`
   Zrodlowy workspace Angular dla operatora i helper widoku `/evidence`.
 - `src/main/resources/static`

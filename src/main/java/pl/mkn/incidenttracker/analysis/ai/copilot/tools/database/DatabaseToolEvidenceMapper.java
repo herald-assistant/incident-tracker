@@ -7,7 +7,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.ToolJsonPayloadReader;
+import pl.mkn.incidenttracker.common.JsonPayloadReader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ public class DatabaseToolEvidenceMapper {
     private static final String DATABASE_ORDER_NAMESPACE = "database";
     private static final String DATABASE_FALLBACK_KEY = "db-tool";
 
-    private final ToolJsonPayloadReader payloadReader;
+    private final JsonPayloadReader payloadReader;
 
     public boolean supports(String toolName) {
         return StringUtils.hasText(toolName) && toolName.trim().startsWith("db_");

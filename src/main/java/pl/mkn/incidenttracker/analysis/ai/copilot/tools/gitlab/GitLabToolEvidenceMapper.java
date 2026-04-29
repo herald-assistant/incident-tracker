@@ -10,7 +10,6 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.ToolJsonPayloadReader;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFlowContextGroup;
@@ -19,6 +18,7 @@ import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepos
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
+import pl.mkn.incidenttracker.common.JsonPayloadReader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +45,7 @@ public class GitLabToolEvidenceMapper {
     private static final String GITLAB_DISCOVERY_FALLBACK_KEY = "gitlab-tool";
 
     private final ObjectMapper objectMapper;
-    private final ToolJsonPayloadReader payloadReader;
+    private final JsonPayloadReader payloadReader;
 
     public boolean supports(String toolName) {
         if (!StringUtils.hasText(toolName)) {

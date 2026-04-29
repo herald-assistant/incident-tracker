@@ -204,14 +204,16 @@ Root `analysis.ai.copilot.tools` ma byc czytelna bramka do runtime tools:
   `ToolCallback`,
 - `CopilotToolInvocationHandler` wykonuje callback przez hidden `ToolContext`,
   policies i eventy invocation,
-- `CopilotToolEvidenceSessionStore` trzyma lifecycle tool evidence dla sesji,
-- `ToolJsonPayloadReader` jest wspolnym helperem JSON.
+- `CopilotToolEvidenceSessionStore` trzyma lifecycle tool evidence dla sesji.
 
 Logika pomocnicza jest w podpakietach. Context, description, events, logging i
 policy sa generyczne. GitLab i Database maja wlasne listenery oraz mappery
 evidence capture. Przy kolejnych toolach unikaj dopisywania specjalnych
 przypadkow do handlera; dodaj policy albo listener eventu w odpowiednim
 pakiecie.
+
+Generyczne helpery JSON nie naleza do root `tools`. Wspolny reader payloadow to
+`pl.mkn.incidenttracker.common.JsonPayloadReader`.
 
 ### Elastic helper flow
 

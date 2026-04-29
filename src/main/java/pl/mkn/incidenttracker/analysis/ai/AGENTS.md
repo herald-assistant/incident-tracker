@@ -18,8 +18,8 @@ Obejmuje:
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
   root runtime tools z klasami wejsciowymi: `CopilotSdkToolFactory`,
-  `CopilotToolInvocationHandler`, `CopilotToolEvidenceSessionStore` i helper
-  JSON. Szczegoly trzymamy w podpakietach:
+  `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`.
+  Szczegoly trzymamy w podpakietach:
   - `context/` hidden `ToolContext` i session-bound scope,
   - `description/` dekorowanie opisow tools,
   - `events/` eventy invocation,

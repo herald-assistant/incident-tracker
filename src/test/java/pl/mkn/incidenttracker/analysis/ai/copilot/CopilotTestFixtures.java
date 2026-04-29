@@ -17,7 +17,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolD
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolGuidanceCatalog;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolInvocationHandler;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.ToolJsonPayloadReader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationEventPublisher;
@@ -29,6 +28,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToo
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.session.CopilotToolSessionValidationPolicy;
+import pl.mkn.incidenttracker.common.JsonPayloadReader;
 
 import java.util.List;
 
@@ -105,7 +105,7 @@ public final class CopilotTestFixtures {
             CopilotSessionMetricsRegistry metricsRegistry,
             CopilotMetricsLogger metricsLogger
     ) {
-        var payloadReader = new ToolJsonPayloadReader(objectMapper);
+        var payloadReader = new JsonPayloadReader(objectMapper);
         var gitLabListener = new GitLabToolEvidenceCaptureListener(
                 toolEvidenceSessionStore,
                 new GitLabToolEvidenceMapper(objectMapper, payloadReader)
