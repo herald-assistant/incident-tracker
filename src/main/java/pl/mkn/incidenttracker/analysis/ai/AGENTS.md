@@ -17,7 +17,15 @@ Obejmuje:
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
-  bridge pomiedzy Spring tools a tool definitions Copilot SDK.
+  root runtime tools z klasami wejsciowymi: `CopilotSdkToolFactory`,
+  `CopilotToolInvocationHandler`, `CopilotToolEvidenceSessionStore` i helper
+  JSON. Szczegoly trzymamy w podpakietach:
+  - `context/` hidden `ToolContext` i session-bound scope,
+  - `description/` dekorowanie opisow tools,
+  - `events/` eventy invocation,
+  - `policy/` session validation, budget i przyszle policies,
+  - `logging/` operacyjne logowanie invocation,
+  - `gitlab/` i `database/` capture evidence konkretnych capability.
 
 Nie obejmuje:
 
@@ -37,8 +45,17 @@ Nie obejmuje:
   evidence powinny trafac do skilla albo jawnej konfiguracji preparation.
 - Skill pozostaje runtime resource aplikacji w
   `src/main/resources/copilot/skills`, a nie plikiem w `.github`.
-- Tool bridge ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
+- Tool factory ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
   ich implementacje.
+- `CopilotSdkToolFactory` ma tylko tworzyc `ToolDefinition`; wykonanie zostaje
+  w `CopilotToolInvocationHandler`.
+- `CopilotToolInvocationHandler` ma pozostac czysta granica invocation:
+  policies, hidden context, callback, eventy i parsing wyniku. Nie dopisuj do
+  niego logiki konkretnego toola, metryk, logowania ani mapowania evidence.
+- Nowe walidacje i limity runtime dodawaj jako `CopilotToolInvocationPolicy`,
+  a side-effecty jako listenery eventow invocation.
+- Logike per capability, np. GitLab albo DB evidence capture, trzymaj w
+  `copilot/tools/<capability>`.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.

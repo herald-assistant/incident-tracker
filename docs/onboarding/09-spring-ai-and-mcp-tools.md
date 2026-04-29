@@ -17,14 +17,15 @@ Najwazniejsze grupy:
 
 ## Hidden ToolContext
 
-Zakres narzedzi jest session-bound. `ToolContext` niesie ukryte dane:
+Zakres narzedzi jest session-bound. Session context zna dane potrzebne
+integracyjnym tools:
 
 - `correlationId` dla Elasticsearch,
 - `gitLabGroup` i `gitLabBranch` dla GitLaba,
 - `environment` i database scope dla DB.
 
-Model nie powinien podawac tych wartosci jako argumentow. Publiczny request
-analizy nadal ma tylko `correlationId`.
+Model docelowo nie powinien podawac tych wartosci jako argumentow. Publiczny
+request analizy nadal ma tylko `correlationId`.
 
 Aktualny kod jest juz w pelni hidden-scope dla GitLab i Database tools.
 `ElasticMcpTools.searchLogsByCorrelationId(...)` nadal ma jawny parametr
@@ -73,8 +74,8 @@ targeted tools na podstawie resolved scope'u z zakonczonej analizy:
 
 ## Opisy tools dla Copilota
 
-`CopilotToolDescriptionDecorator` dokleja do Spring tool descriptions krotkie
-guidance dla modelu. To nie zmienia implementacji tools.
+`CopilotToolDescriptionDecorator` w `tools.description` dokleja do Spring tool
+descriptions krotkie guidance dla modelu. To nie zmienia implementacji tools.
 
 Przyklady guidance:
 
@@ -90,11 +91,13 @@ Przyklady guidance:
 - DB sample rows nie sluzy do przegladania danych biznesowych,
 - raw SQL jest last resort i moze byc zablokowany przez policy/budget.
 
-## Budget guard
+## Budget policy
 
-`CopilotToolBudgetGuard` pilnuje limitow na sesje. Domyslnie dziala w trybie
-`soft`, czyli ostrzega i metrykuje, ale nie blokuje. Tryb `hard` zwraca
-kontrolowany wynik `denied_by_tool_budget`.
+`CopilotToolBudgetPolicy` w `tools.policy.budget` pilnuje limitow na sesje jako
+`CopilotToolInvocationPolicy`. Domyslnie dziala w trybie `soft`, czyli
+ostrzega i metrykuje, ale nie blokuje. Tryb `hard` rzuca kontrolowany
+`CopilotToolInvocationRejectedException`; handler zamienia go na wynik
+`denied_by_tool_budget` dla SDK.
 
 Limity obejmuja:
 
@@ -105,31 +108,45 @@ Limity obejmuja:
 - returned characters,
 - DB raw SQL calls.
 
-## Bridge i invocation handler
+## Tool factory i invocation handler
 
-`CopilotSdkToolBridge` jest waska warstwa adaptera Spring tools -> Copilot
+`CopilotSdkToolFactory` jest waska warstwa adaptera Spring tools -> Copilot
 SDK. Zbiera `ToolCallback`, deduplikuje po nazwie, sortuje, dekoruje opis,
 parsuje input schema i tworzy `ToolDefinition`.
 
+Factory nie jest miejscem na side-effecty invocation. Jej odpowiedzialnosc
+konczy sie na definicji toola i podpietym handlerze wykonania.
+
 Wykonanie toola jest w `CopilotToolInvocationHandler`. Handler:
 
-- sprawdza session id,
-- wywoluje `CopilotToolBudgetGuard` przed i po callbacku,
-- buduje hidden `ToolContext` przez `CopilotToolContextFactory`,
+- wywoluje generyczne `CopilotToolInvocationPolicy` przed i po callbacku,
+- buduje hidden `ToolContext` przez `tools.context.CopilotToolContextFactory`,
 - wywoluje Spring `ToolCallback`,
-- zapisuje metryki i loguje tool event,
-- publikuje tool evidence,
+- publikuje `Started` oraz terminalny `Finished` z outcome
+  `COMPLETED`, `REJECTED` albo `FAILED`,
 - parsuje result do obiektu zwracanego SDK.
 
-Blad callbacka pozostaje failed future dla SDK. Bridge nie ukrywa takiego
+Walidacje session id robi `CopilotToolSessionValidationPolicy` w
+`tools.policy.session`, przed publikacja eventu `Started`.
+
+Logowanie, telemetryka i capture evidence sa listenerami tych eventow.
+Dzieki temu definicja i invocation toola zostaja czyste, a GitLab/DB maja
+wlasne pakiety odpowiedzialne za interpretacje wynikow.
+
+`CopilotToolInvocationEventPublisher` izoluje bledy listenerow. Awaria
+logowania, metryk albo capture evidence nie powinna zamieniac poprawnego
+wyniku toola w blad SDK.
+
+Blad callbacka pozostaje failed future dla SDK. Handler nie ukrywa takiego
 bledu jako pustego wyniku.
 
 ## Capture tool evidence
 
-`CopilotToolEvidenceCaptureRegistry` przeksztalca wybrane wyniki tools w
-`AnalysisEvidenceSection`. Dla finalnej analizy job flow publikuje je jako
-top-level `toolEvidenceSections`, a dla follow-up chatu zapisuje przy konkretnej
-odpowiedzi assistant w `chatMessages[].toolEvidenceSections`.
+`CopilotToolEvidenceSessionStore` zarzadza sesja capture i publikuje
+zaktualizowane `AnalysisEvidenceSection`. Dla finalnej analizy job flow
+publikuje je jako top-level `toolEvidenceSections`, a dla follow-up chatu
+zapisuje przy konkretnej odpowiedzi assistant w
+`chatMessages[].toolEvidenceSections`.
 
 Capture obejmuje:
 
@@ -142,9 +159,14 @@ Dzieki temu audyt sesji pokazuje nie tylko finalna odpowiedz AI, ale tez
 material dociagniety przez tools bez dodatkowego szumu technicznego. `reason`
 pozostaje operatorskim naglowkiem wpisu, a szczegoly ida do tresci accordionu.
 
-Registry zarzadza lifecycle sesji i routingiem capture. Mapowanie szczegolow
-GitLab i DB jest w oddzielnych mapperach, dzieki czemu registry nie zna
-formatu kazdego toola.
+GitLab i DB subskrybuja terminalny event `Finished(COMPLETED)` w odpowiednich
+pakietach: `tools.gitlab` oraz `tools.database`. Mapowanie szczegolow GitLab i
+DB jest w oddzielnych mapperach, dzieki czemu handler nie zna formatu kazdego
+toola.
+
+Root `tools` powinien pozostac czytelny: klasy pomocnicze trzymaj w
+`context`, `description`, `events`, `logging` albo `policy`, a logike
+konkretnej capability w `tools.<capability>`.
 
 ## Zasady przy dodawaniu tools
 
@@ -152,9 +174,13 @@ formatu kazdego toola.
 - Scope incydentu ma pochodzic z `ToolContext`, nie od modelu.
 - Dodaj test dla rejestracji i zachowania toola.
 - Jesli tool jest drogi albo ryzykowny, dodaj guidance w
-  `CopilotToolGuidanceCatalog`.
+  `tools.description.CopilotToolGuidanceCatalog`.
 - Jesli wynik toola jest diagnostycznie wazny, dodaj capture do
-  odpowiedniego mappera evidence capture.
+  odpowiedniego listenera i mappera w `tools.<capability>`.
+- Jesli tool potrzebuje blokady, limitu albo walidacji, dodaj
+  `CopilotToolInvocationPolicy`, zamiast dopisywac warunek do handlera.
+- Jesli tool potrzebuje tylko logowania albo telemetryki, subskrybuj eventy
+  invocation, zamiast zmieniac factory lub handler.
 - Nie eksportuj DTO adapterow jako publicznego kontraktu AI.
 - Nie zmieniaj publicznego scope'u analizy: `/analysis` przyjmuje tylko
   `correlationId`, `/analysis/jobs` tylko `correlationId` oraz generyczne

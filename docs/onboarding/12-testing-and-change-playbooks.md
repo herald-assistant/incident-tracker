@@ -67,7 +67,17 @@ architektonicznych.
 1. dodaj go do `analysis.mcp.<capability>`,
 2. deleguj do adaptera albo use case'u,
 3. dopisz rejestracje przez `ToolCallbackProvider`,
-4. sprawdz bridge Copilota, policyke dostepu do tooli i testy MCP context.
+4. sprawdz `CopilotSdkToolFactory`, policyke dostepu do tooli i testy MCP
+   context,
+5. jesli tool ma ukryty scope, dodaj go przez `tools.context`,
+6. jesli tool jest drogi lub ryzykowny, dodaj guidance w `tools.description`,
+7. jesli tool ma limit albo walidacje runtime, dodaj
+   `CopilotToolInvocationPolicy` w `tools.policy`,
+8. jesli wynik ma trafic do user-facing evidence, dodaj listener i mapper w
+   `analysis.ai.copilot.tools.<capability>`.
+
+Nie dopisuj logiki konkretnego toola do `CopilotToolInvocationHandler`.
+Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 
 ## Playbook 4: zmiana AI
 
@@ -98,6 +108,27 @@ architektonicznych.
    TS i import/eksport analizy,
 5. odpal testy job controller/service oraz celowane testy Copilot preparation
    albo tool policy.
+
+## Playbook 7: zmiana runtime Copilot tools
+
+1. rejestracje definicji zmieniaj w `CopilotSdkToolFactory`,
+2. hidden scope i `ToolContext` zmieniaj w `tools.context`,
+3. session validation, budget albo inne blokady zmieniaj jako
+   `CopilotToolInvocationPolicy`,
+4. logowanie/metryki/audyt dopinaj jako listenery eventow invocation,
+5. GitLab/DB albo przyszla capability evidence mapuj w swoim
+   `tools.<capability>`,
+6. lifecycle publikacji sekcji evidence trzymaj w
+   `CopilotToolEvidenceSessionStore`, bez payload-specific logiki.
+
+Celowane testy po takiej zmianie:
+
+- `CopilotSdkToolFactory*Test`,
+- `CopilotToolBudgetPolicyTest`,
+- `CopilotToolBudgetRegistryTest`,
+- `CopilotToolEvidenceSessionStore*Test`,
+- testy MCP konkretnego toola i testy preparation/follow-up, jesli zmienia sie
+  allowlista tools.
 
 ## Checkpoint
 

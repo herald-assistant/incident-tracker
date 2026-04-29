@@ -25,8 +25,8 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessP
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.nio.file.Path;
@@ -44,8 +44,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolBridge;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceCaptureRegistry;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolFactory;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
 class CopilotSdkPreparationServiceTest {
 
@@ -53,14 +53,14 @@ class CopilotSdkPreparationServiceTest {
     Path tempDirectory;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final CopilotSdkToolBridge toolBridge = toolBridge(
+    private final CopilotSdkToolFactory toolFactory = toolFactory(
             List.of(
                     MethodToolCallbackProvider.builder()
                             .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort()))
                             .build()
             ),
             objectMapper,
-            toolEvidenceCaptureRegistry(objectMapper),
+            toolEvidenceSessionStore(objectMapper),
             metricsRegistry(),
             metricsLogger()
     );
@@ -243,17 +243,17 @@ class CopilotSdkPreparationServiceTest {
         var properties = baseProperties();
         properties.setSkillResourceRoots(List.of("copilot/skills"));
         var request = requestWithoutToolCoveredEvidence();
-        var bridge = mock(CopilotSdkToolBridge.class);
+        var factory = mock(CopilotSdkToolFactory.class);
         var expectedTools = List.of(ToolDefinition.createSkipPermission(
                 "gitlab_read_repository_file",
                 "Read repository file",
                 Map.of("type", "object", "properties", Map.of()),
                 invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
         ));
-        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
+        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
         var service = new CopilotSdkPreparationService(
-                bridge,
+                factory,
                 new CopilotSkillRuntimeLoader(properties),
                 artifactService(objectMapper),
                 policyFactory(),
@@ -263,7 +263,7 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            verify(bridge).buildToolDefinitions(org.mockito.ArgumentMatchers.argThat(context ->
+            verify(factory).createToolDefinitions(org.mockito.ArgumentMatchers.argThat(context ->
                     "timeout-123".equals(context.correlationId())
                             && "dev3".equals(context.environment())
                             && "release/2026.04".equals(context.gitLabBranch())
@@ -292,7 +292,7 @@ class CopilotSdkPreparationServiceTest {
     void shouldAllowOnlyExplicitSpringToolsWhenArtifactsDoNotAlreadyCoverThem() {
         var properties = baseProperties();
         var request = requestWithoutToolCoveredEvidence();
-        var bridge = mock(CopilotSdkToolBridge.class);
+        var factory = mock(CopilotSdkToolFactory.class);
         var expectedTools = List.of(
                 ToolDefinition.createSkipPermission(
                         "gitlab_read_repository_file",
@@ -307,10 +307,10 @@ class CopilotSdkPreparationServiceTest {
                         invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
                 )
         );
-        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
+        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
         var service = new CopilotSdkPreparationService(
-                bridge,
+                factory,
                 new CopilotSkillRuntimeLoader(properties),
                 artifactService(objectMapper),
                 policyFactory(),
@@ -332,7 +332,7 @@ class CopilotSdkPreparationServiceTest {
     void shouldFilterRegisteredToolsWhenCoverageDoesNotAllowTheirSpecificUse() {
         var properties = baseProperties();
         var request = sampleRequest();
-        var bridge = mock(CopilotSdkToolBridge.class);
+        var factory = mock(CopilotSdkToolFactory.class);
         var elasticTool = ToolDefinition.createSkipPermission(
                 "elastic_search_logs_by_correlation_id",
                 "Search logs",
@@ -351,11 +351,11 @@ class CopilotSdkPreparationServiceTest {
                 Map.of("type", "object", "properties", Map.of()),
                 invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
         );
-        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class)))
+        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class)))
                 .thenReturn(List.of(elasticTool, gitLabTool, dbTool));
 
         var service = new CopilotSdkPreparationService(
-                bridge,
+                factory,
                 new CopilotSkillRuntimeLoader(properties),
                 artifactService(objectMapper),
                 policyFactory(),
@@ -487,7 +487,7 @@ class CopilotSdkPreparationServiceTest {
 
     private CopilotSdkPreparationService createService(CopilotSdkProperties properties) {
         return new CopilotSdkPreparationService(
-                toolBridge,
+                toolFactory,
                 new CopilotSkillRuntimeLoader(properties),
                 artifactService(objectMapper),
                 policyFactory(),

@@ -7,8 +7,8 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -17,7 +17,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CopilotSdkFollowUpPreparationService {
 
-    private final CopilotSdkToolBridge toolBridge;
+    private final CopilotSdkToolFactory toolFactory;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
     private final CopilotArtifactService artifactService;
     private final CopilotFollowUpPromptRenderer promptRenderer;
@@ -25,7 +25,7 @@ public class CopilotSdkFollowUpPreparationService {
 
     public CopilotSdkPreparedRequest prepare(AnalysisAiChatRequest request) {
         var toolSessionContext = buildToolSessionContext(request);
-        var registeredTools = toolBridge.buildToolDefinitions(toolSessionContext);
+        var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = CopilotToolAccessPolicy.fromFollowUpSession(
                 registeredTools,
                 StringUtils.hasText(request.environment()),

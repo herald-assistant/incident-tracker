@@ -20,7 +20,7 @@ public class ToolJsonPayloadReader {
 
     private final ObjectMapper objectMapper;
 
-    JsonNode readJsonNode(String rawPayload) {
+    public JsonNode readJsonNode(String rawPayload) {
         if (!StringUtils.hasText(rawPayload)) {
             return null;
         }
@@ -33,7 +33,7 @@ public class ToolJsonPayloadReader {
         }
     }
 
-    String prettyPayload(JsonNode payload, String rawPayload, String fallback) {
+    public String prettyPayload(JsonNode payload, String rawPayload, String fallback) {
         if (payload == null || payload.isNull()) {
             return StringUtils.hasText(rawPayload) ? rawPayload.trim() : fallback;
         }
@@ -46,7 +46,7 @@ public class ToolJsonPayloadReader {
         }
     }
 
-    String readTopLevelText(JsonNode payload, String fieldName) {
+    public String readTopLevelText(JsonNode payload, String fieldName) {
         if (payload == null || !payload.isObject()) {
             return null;
         }

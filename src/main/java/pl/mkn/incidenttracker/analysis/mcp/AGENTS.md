@@ -31,7 +31,7 @@ Nie obejmuje:
   `ToolContext`, a nie przez model-facing parametry.
 - Uwaga na stan zastany: `ElasticMcpTools` nadal ma jawny parametr
   `correlationId`. Nie powielaj tego wzorca; przy zmianach w Elastic MCP
-  migruj go do hidden `ToolContext` i zaktualizuj testy schema/bridge.
+  migruj go do hidden `ToolContext` i zaktualizuj testy schema/factory.
 - Dla GitLab i Database tools jedyny operator-facing powod wywolania to
   opcjonalny `reason`. Nie dodawaj model-facing parametrow eksploracyjnych,
   pytan diagnostycznych ani innych pol, ktore probuja zastapic prosty powod.
@@ -49,7 +49,7 @@ Nie obejmuje:
 ## Testy
 
 - Dla kazdego toola miej test klasy oraz test rejestracji w kontekscie.
-- Gdy zmieniasz kontrakt DTO tooli, sprawdz tez bridge Copilota w `../ai`.
+- Gdy zmieniasz kontrakt DTO tooli, sprawdz tez tool factory Copilota w `../ai`.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie
 

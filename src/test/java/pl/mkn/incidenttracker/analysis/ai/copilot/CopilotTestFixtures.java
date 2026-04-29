@@ -10,18 +10,25 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperti
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolContextFactory;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolDescriptionDecorator;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceCaptureRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolGuidanceCatalog;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolInvocationTelemetryListener;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolDescriptionDecorator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolGuidanceCatalog;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolInvocationHandler;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.DatabaseToolEvidenceMapper;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.GitLabToolEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.ToolJsonPayloadReader;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetGuard;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.budget.CopilotToolBudgetRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceMapper;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationEventPublisher;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationFinishedEvent;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationOutcome;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceCaptureListener;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceMapper;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.session.CopilotToolSessionValidationPolicy;
 
 import java.util.List;
 
@@ -38,69 +45,96 @@ public final class CopilotTestFixtures {
         );
     }
 
-    public static CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry(ObjectMapper objectMapper) {
-        var payloadReader = new ToolJsonPayloadReader(objectMapper);
-        return new CopilotToolEvidenceCaptureRegistry(
-                new GitLabToolEvidenceMapper(objectMapper, payloadReader),
-                new DatabaseToolEvidenceMapper(payloadReader)
-        );
+    public static CopilotToolEvidenceSessionStore toolEvidenceSessionStore(ObjectMapper objectMapper) {
+        return new CopilotToolEvidenceSessionStore();
     }
 
     public static CopilotToolDescriptionDecorator toolDescriptionDecorator() {
         return new CopilotToolDescriptionDecorator(new CopilotToolGuidanceCatalog());
     }
 
-    public static CopilotSdkToolBridge toolBridge(
+    public static CopilotSdkToolFactory toolFactory(
             List<ToolCallbackProvider> toolCallbackProviders,
             ObjectMapper objectMapper,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
             CopilotSessionMetricsRegistry metricsRegistry,
             CopilotMetricsLogger metricsLogger
     ) {
-        return toolBridge(
+        return toolFactory(
                 toolCallbackProviders,
                 objectMapper,
-                toolEvidenceCaptureRegistry,
+                toolEvidenceSessionStore,
                 metricsRegistry,
                 metricsLogger,
-                new CopilotToolBudgetGuard(
+                new CopilotToolBudgetPolicy(
                         new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
                         metricsRegistry
                 )
         );
     }
 
-    public static CopilotSdkToolBridge toolBridge(
+    public static CopilotSdkToolFactory toolFactory(
             List<ToolCallbackProvider> toolCallbackProviders,
             ObjectMapper objectMapper,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
             CopilotSessionMetricsRegistry metricsRegistry,
             CopilotMetricsLogger metricsLogger,
-            CopilotToolBudgetGuard budgetGuard
+            CopilotToolBudgetPolicy budgetPolicy
     ) {
-        return new CopilotSdkToolBridge(
+        return new CopilotSdkToolFactory(
                 toolCallbackProviders,
                 objectMapper,
                 toolDescriptionDecorator(),
                 new CopilotToolInvocationHandler(
                         objectMapper,
                         new CopilotToolContextFactory(),
-                        toolEvidenceCaptureRegistry,
-                        metricsRegistry,
-                        metricsLogger,
-                        budgetGuard
+                        List.of(new CopilotToolSessionValidationPolicy(), budgetPolicy),
+                        toolInvocationEventPublisher(
+                                objectMapper,
+                                toolEvidenceSessionStore,
+                                metricsRegistry,
+                                metricsLogger
+                        )
                 )
         );
     }
 
+    public static CopilotToolInvocationEventPublisher toolInvocationEventPublisher(
+            ObjectMapper objectMapper,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
+            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotMetricsLogger metricsLogger
+    ) {
+        var payloadReader = new ToolJsonPayloadReader(objectMapper);
+        var gitLabListener = new GitLabToolEvidenceCaptureListener(
+                toolEvidenceSessionStore,
+                new GitLabToolEvidenceMapper(objectMapper, payloadReader)
+        );
+        var databaseListener = new DatabaseToolEvidenceCaptureListener(
+                toolEvidenceSessionStore,
+                new DatabaseToolEvidenceMapper(payloadReader)
+        );
+        var telemetryListener = new CopilotToolInvocationTelemetryListener(metricsRegistry, metricsLogger);
+
+        return new CopilotToolInvocationEventPublisher(event -> {
+            if (event instanceof CopilotToolInvocationFinishedEvent finishedEvent) {
+                telemetryListener.onToolInvocationFinished(finishedEvent);
+                if (finishedEvent.outcome() == CopilotToolInvocationOutcome.COMPLETED) {
+                    gitLabListener.onToolInvocationFinished(finishedEvent);
+                    databaseListener.onToolInvocationFinished(finishedEvent);
+                }
+            }
+        });
+    }
+
     public static CopilotSdkExecutionGateway executionGateway(
             CopilotSdkProperties properties,
-            CopilotToolEvidenceCaptureRegistry toolEvidenceCaptureRegistry,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
             CopilotSessionMetricsRegistry metricsRegistry
     ) {
         return new CopilotSdkExecutionGateway(
                 properties,
-                toolEvidenceCaptureRegistry,
+                toolEvidenceSessionStore,
                 metricsRegistry,
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties())
         );

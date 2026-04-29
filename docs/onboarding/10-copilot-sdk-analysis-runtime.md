@@ -130,20 +130,30 @@ zakonczonej analizy:
 - Database wymaga resolved `environment`,
 - raw SQL pozostaje domyslnie wylaczony.
 
-`CopilotToolDescriptionDecorator` dodaje Copilot-facing guidance do opisow
-drogich albo ryzykownych tools.
+`CopilotToolDescriptionDecorator` w `tools.description` dodaje Copilot-facing
+guidance do opisow drogich albo ryzykownych tools.
 
-`CopilotSdkToolBridge` odpowiada za rejestracje definicji tools: zbiera Spring
+`CopilotSdkToolFactory` odpowiada za rejestracje definicji tools: zbiera Spring
 callbacks, sortuje je, dekoruje description, parsuje input schema i tworzy
 `ToolDefinition`. `CopilotToolInvocationHandler` odpowiada za wykonanie:
-waliduje session id, buduje hidden context, pilnuje budgetu before/after,
-wywoluje callback, zapisuje metryki, publikuje evidence capture i parsuje
-result preview.
+uruchamia generyczne `CopilotToolInvocationPolicy` before/after, buduje hidden
+context, wywoluje callback, publikuje wewnetrzne eventy tool invocation i
+parsuje wynik dla SDK. Hidden context jest w `tools.context`, walidacja
+session id jest policy w `tools.policy.session`, budzet jest policy w
+`tools.policy.budget`, a logowanie w `tools.logging`. Telemetryka i capture
+GitLab/DB sa listenerami tych eventow, dzieki czemu handler pozostaje granica
+wykonania, a semantyka poszczegolnych tool capability siedzi w dedykowanych
+pakietach.
+
+`CopilotToolInvocationEventPublisher` traktuje eventy jako warstwe
+obserwowalnosci i audytu: lapie wyjatki listenerow i loguje ostrzezenie, ale
+nie zmienia wyniku tool callbacka.
 
 ## Budget
 
 `CopilotToolBudgetRegistry` tworzy state per `copilotSessionId`.
-`CopilotToolBudgetGuard` jest wywolywany w bridge przed i po tool callbacku.
+`CopilotToolBudgetPolicy` implementuje `CopilotToolInvocationPolicy` i jest
+wywolywany przez handler przed i po tool callbacku.
 
 Domyslnie:
 
@@ -152,12 +162,18 @@ analysis.ai.copilot.tool-budget.enabled=true
 analysis.ai.copilot.tool-budget.mode=soft
 ```
 
-Soft mode nie blokuje. Hard mode zwraca kontrolowany result
-`denied_by_tool_budget`.
+Soft mode nie blokuje. Hard mode rzuca kontrolowany rejection, ktory handler
+zamienia na result `denied_by_tool_budget`.
+
+Rejection publikuje terminalny event `Finished(REJECTED)`, ale nie publikuje
+`Started`, bo invocation nie przeszlo wszystkich before-policies. Telemetryka
+nie liczy rejection jako wykonanego tool calla.
 
 ## Tool evidence
 
-Invocation handler publikuje tool evidence przez listener:
+Invocation handler publikuje terminalny event `Finished(COMPLETED)` po udanym
+callbacku. Dedykowane listenery tool capability publikuja tool evidence przez
+`CopilotToolEvidenceSessionStore`:
 
 - `gitlab/tool-fetched-code`,
 - `gitlab/tool-discovery`,
@@ -176,9 +192,14 @@ dodatkowego streszczenia wyniku w payloadzie dla operatora.
 Tool evidence z follow-up chatu jest zapisywane przy konkretnej odpowiedzi
 `chatMessages`, a nie jako nowy deterministyczny provider evidence.
 
-Registry capture zarzadza sesjami i routingiem. Mapowanie GitLab/DB wynikow
-jest przeniesione do mapperow, zeby lifecycle sesji nie mieszal sie z
+Session store zarzadza sesjami i publikacja zaktualizowanych sekcji.
+Mapowanie GitLab/DB wynikow jest przeniesione do listenerow i mapperow w
+`tools.gitlab` oraz `tools.database`, zeby lifecycle sesji nie mieszal sie z
 formatem payloadow poszczegolnych tools.
+
+W root `tools` powinny zostac tylko klasy wejscia/lifecycle. Nowe helpery
+trzymaj w wyspecjalizowanych podpakietach, a logike per tool/capability blisko
+`tools.<capability>`.
 
 ## Response parsing
 

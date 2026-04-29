@@ -42,6 +42,14 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.copilot.preparation`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
+- `analysis.ai.copilot.tools.context`
+- `analysis.ai.copilot.tools.description`
+- `analysis.ai.copilot.tools.events`
+- `analysis.ai.copilot.tools.policy`
+- `analysis.ai.copilot.tools.logging`
+- `analysis.ai.copilot.tools.gitlab`
+- `analysis.ai.copilot.tools.database`
+- `analysis.ai.copilot.telemetry`
 - `CopilotArtifactService`
 - `CopilotSdkFollowUpPreparationService`
 
@@ -186,7 +194,24 @@ Docelowy invariant mowi, ze scope tools ma przychodzic z hidden `ToolContext`.
 GitLab i Database tools juz tak dzialaja. `ElasticMcpTools` nadal ma
 model-facing parametr `correlationId`; jesli dotykasz MCP Elastica, pierwszym
 bezpiecznym kierunkiem jest migracja tego parametru do `ToolContext` i
-aktualizacja testow bridge/schema.
+aktualizacja testow tool factory/schema.
+
+### Copilot tools po refaktorze eventowym
+
+Root `analysis.ai.copilot.tools` ma byc czytelna bramka do runtime tools:
+
+- `CopilotSdkToolFactory` tworzy `ToolDefinition` z istniejacych Spring
+  `ToolCallback`,
+- `CopilotToolInvocationHandler` wykonuje callback przez hidden `ToolContext`,
+  policies i eventy invocation,
+- `CopilotToolEvidenceSessionStore` trzyma lifecycle tool evidence dla sesji,
+- `ToolJsonPayloadReader` jest wspolnym helperem JSON.
+
+Logika pomocnicza jest w podpakietach. Context, description, events, logging i
+policy sa generyczne. GitLab i Database maja wlasne listenery oraz mappery
+evidence capture. Przy kolejnych toolach unikaj dopisywania specjalnych
+przypadkow do handlera; dodaj policy albo listener eventu w odpowiednim
+pakiecie.
 
 ### Elastic helper flow
 

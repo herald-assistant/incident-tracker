@@ -54,13 +54,23 @@ Przed wieksza zmiana zacznij od:
 - Sesja Copilota ma jawna allowliste tools przez `SessionConfig.availableTools`
   i `SessionHooks.onPreToolUse`; lokalny workspace, filesystem, shell i terminal
   pozostaja zablokowane w glownym flow analizy.
-- GitLab, Elasticsearch i Database tools pozostaja session-bound przez hidden
-  `ToolContext`. Model nie powinien podawac `gitLabGroup`, `gitLabBranch`,
-  `environment` ani `correlationId` dla tych ukrytych scope'ow.
+- GitLab i Database tools pozostaja session-bound przez hidden `ToolContext`.
+  Model nie powinien podawac `gitLabGroup`, `gitLabBranch` ani `environment`
+  dla tych ukrytych scope'ow. Elasticsearch nadal ma zastany jawny
+  `correlationId` w model-facing schema; traktuj to jako drift do migracji, a
+  nie wzorzec dla nowych tools.
 - GitLab i Database tools moga miec tylko prosty operator-facing `reason` jako
   powod wywolania. Nie przywracaj dodatkowych model-facing parametrow
   eksploracyjnych, pytan diagnostycznych ani technicznych pseudo-heurystyk do
   user-facing evidence.
+- `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
+  `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
+  `CopilotToolEvidenceSessionStore` i helper JSON. Pomocnicze klasy trzymaj w
+  podpakietach `context`, `description`, `events`, `logging`, `policy`, a
+  logike konkretnej capability w `tools.<capability>`.
+- `CopilotToolInvocationHandler` nie powinien zawierac logiki konkretnego
+  toola. Walidacje i limity dodawaj jako `CopilotToolInvocationPolicy`, a
+  logowanie, telemetryke i evidence capture jako listenery eventow invocation.
 - GitLab i Elasticsearch tools sa fallback-only, gdy odpowiadajace evidence nie
   jest juz osadzone w artefaktach. Database tools sa opcjonalna capability
   AI-guided, nie providerem evidence.

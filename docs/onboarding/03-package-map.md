@@ -56,6 +56,28 @@ Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
 Generyczne kontrakty finalnej analizy, follow-up chatu, katalogu modeli i
 implementacja oparta o Copilot SDK.
 
+Najwazniejsze podpakiety Copilota:
+
+- `copilot/preparation` - przygotowanie promptu, artefaktow, policy tools,
+  skilli, client options i `SessionConfig`,
+- `copilot/execution` - lifecycle klienta/sesji SDK i usage events SDK,
+- `copilot/coverage` - coverage report i evidence gaps sterujace tool policy,
+- `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
+- `copilot/quality` - report-only quality gate,
+- `copilot/telemetry` - metryki preparation/execution/tools i summary log,
+- `copilot/tools` - root z klasami wejsciowymi runtime tools:
+  `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
+  `CopilotToolEvidenceSessionStore` i helper JSON,
+- `copilot/tools/context` - hidden `ToolContext` i session-bound scope,
+- `copilot/tools/description` - Copilot-facing guidance doklejane do opisow
+  Spring tools,
+- `copilot/tools/events` - eventy `Started`/`Finished` dla invocation,
+- `copilot/tools/policy` - generyczne policies invocation, session validation
+  i budget,
+- `copilot/tools/logging` - listener logujacy invocation,
+- `copilot/tools/gitlab` i `copilot/tools/database` - listener + mapper
+  user-facing tool evidence dla konkretnych capability.
+
 ### `api`
 
 Wspolny kontrakt bledow HTTP i walidacji dla endpointow backendu.

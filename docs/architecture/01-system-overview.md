@@ -43,7 +43,7 @@ Na dzisiaj projekt ma:
   lokalnej listy modeli,
 - AI-first flow oparty o `AnalysisEvidenceProvider`, `AnalysisAiProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
-- przygotowany bridge pomiedzy Spring tools a GitHub Copilot Java SDK,
+- factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
 - MCP tools dla Elastica, GitLaba i warunkowo dla Database,
 - pierwszy realny adapter REST do Elasticsearch/Kibana proxy,
 - pierwszy realny adapter REST do Dynatrace Managed,
@@ -118,7 +118,27 @@ Na dzisiaj projekt ma:
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
-  Most pomiedzy Spring tool callbacks a tool definitions Copilot SDK.
+  Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory`,
+  `CopilotToolInvocationHandler`, `CopilotToolEvidenceSessionStore` i wspolny
+  helper JSON. Root trzyma tylko klasy, przez ktore wchodzi sie do warstwy
+  tools.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.context`
+  Budowanie hidden `ToolContext` i session-bound scope dla Spring tools.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`
+  Dekorowanie opisow Spring tools guidance'em dla Copilota.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.events`
+  Wewnetrzne eventy tool invocation: `Started` oraz terminalny `Finished` z
+  outcome `COMPLETED`, `REJECTED` albo `FAILED`.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy`
+  Generyczne polityki invocation, w tym session validation i budget.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.logging`
+  Subskrypcja eventow invocation do operacyjnego logowania request/result.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab`
+  Subskrypcja eventow GitLab tools i mapowanie wynikow do user-facing evidence.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.database`
+  Subskrypcja eventow Database tools i mapowanie wynikow do user-facing evidence.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.telemetry`
+  Metryki sesji Copilota, usage events SDK, tool metrics i summary log.
 - `pl.mkn.incidenttracker.analysis.adapter.elasticsearch`
   Properties, porty, adapter REST, modele logow oraz endpoint testowy dla
   Elasticsearch/Kibana.

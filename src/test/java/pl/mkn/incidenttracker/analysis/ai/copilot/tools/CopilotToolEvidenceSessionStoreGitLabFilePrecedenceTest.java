@@ -1,0 +1,153 @@
+package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationFinishedEvent;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationOutcome;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceCaptureListener;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceMapper;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
+
+class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
+
+    private static final String FILE_PATH = "src/main/java/pl/mkn/orders/OrderService.java";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void shouldKeepFullGitLabFileWhenChunkForSameFileArrivesLater() {
+        var registry = toolEvidenceSessionStore(objectMapper);
+        var toolEvidenceListener = gitLabToolEvidenceListener(registry);
+        var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
+        var updateCount = new AtomicInteger();
+        registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
+            @Override
+            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
+                capturedSection.set(section);
+                updateCount.incrementAndGet();
+            }
+        });
+
+        capture(
+                toolEvidenceListener,
+                "session-1",
+                "tool-call-chunk-1",
+                "gitlab_read_repository_file_chunk",
+                "{\"reason\":\"Sprawdzam fragment pliku.\"}",
+                chunkResult("focused chunk")
+        );
+        assertEquals("Sprawdzam fragment pliku.", attributes(capturedSection.get()).get("reason"));
+        assertEquals("5", attributes(capturedSection.get()).get("startLine"));
+
+        capture(
+                toolEvidenceListener,
+                "session-1",
+                "tool-call-full-1",
+                "gitlab_read_repository_file",
+                "{\"reason\":\"Czytam caly plik.\"}",
+                fullFileResult("full file content")
+        );
+        assertEquals("Czytam caly plik.", attributes(capturedSection.get()).get("reason"));
+        assertEquals("full file content", attributes(capturedSection.get()).get("content"));
+
+        capture(
+                toolEvidenceListener,
+                "session-1",
+                "tool-call-chunk-2",
+                "gitlab_read_repository_file_chunk",
+                "{\"reason\":\"Sprawdzam pozniejszy fragment.\"}",
+                chunkResult("later focused chunk")
+        );
+
+        var attributes = attributes(capturedSection.get());
+        assertEquals(3, updateCount.get());
+        assertEquals("gitlab", capturedSection.get().provider());
+        assertEquals("tool-fetched-code", capturedSection.get().category());
+        assertEquals("Czytam caly plik.", attributes.get("reason"));
+        assertEquals("full file content", attributes.get("content"));
+        assertFalse(attributes.containsKey("startLine"));
+        assertTrue(attributes.get("filePath").contains("OrderService.java"));
+    }
+
+    private String fullFileResult(String content) {
+        return """
+                {
+                  "group": "sample/runtime",
+                  "projectName": "orders-api",
+                  "branch": "main",
+                  "filePath": "%s",
+                  "content": "%s",
+                  "truncated": false
+                }
+                """.formatted(FILE_PATH, content);
+    }
+
+    private String chunkResult(String content) {
+        return """
+                {
+                  "group": "sample/runtime",
+                  "projectName": "orders-api",
+                  "branch": "main",
+                  "filePath": "%s",
+                  "requestedStartLine": 5,
+                  "requestedEndLine": 10,
+                  "returnedStartLine": 5,
+                  "returnedEndLine": 10,
+                  "totalLines": 100,
+                  "content": "%s",
+                  "truncated": false
+                }
+                """.formatted(FILE_PATH, content);
+    }
+
+    private Map<String, String> attributes(AnalysisEvidenceSection section) {
+        return section.items().get(0).attributes().stream()
+                .collect(Collectors.toMap(
+                        attribute -> attribute.name(),
+                        attribute -> attribute.value()
+                ));
+    }
+
+    private void capture(
+            GitLabToolEvidenceCaptureListener listener,
+            String sessionId,
+            String toolCallId,
+            String toolName,
+            String rawArguments,
+            String rawResult
+    ) {
+        listener.onToolInvocationFinished(new CopilotToolInvocationFinishedEvent(
+                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "sample/runtime"),
+                sessionId,
+                toolCallId,
+                toolName,
+                rawArguments,
+                CopilotToolInvocationOutcome.COMPLETED,
+                rawResult,
+                1L,
+                null
+        ));
+    }
+
+    private GitLabToolEvidenceCaptureListener gitLabToolEvidenceListener(
+            CopilotToolEvidenceSessionStore registry
+    ) {
+        var payloadReader = new ToolJsonPayloadReader(objectMapper);
+        return new GitLabToolEvidenceCaptureListener(
+                registry,
+                new GitLabToolEvidenceMapper(objectMapper, payloadReader)
+        );
+    }
+}

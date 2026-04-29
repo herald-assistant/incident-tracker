@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.UUID;
 
@@ -14,7 +14,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CopilotSdkPreparationService {
 
-    private final CopilotSdkToolBridge toolBridge;
+    private final CopilotSdkToolFactory toolFactory;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
     private final CopilotArtifactService artifactService;
     private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
@@ -25,7 +25,7 @@ public class CopilotSdkPreparationService {
     public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
         var preparationStart = System.nanoTime();
         var toolSessionContext = buildToolSessionContext(request);
-        var registeredTools = toolBridge.buildToolDefinitions(toolSessionContext);
+        var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = toolAccessPolicyFactory.create(request, registeredTools);
         var tools = toolAccessPolicy.enabledTools();
         var renderedArtifacts = artifactService.renderArtifacts(request, toolAccessPolicy);

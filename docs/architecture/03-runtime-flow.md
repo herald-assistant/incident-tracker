@@ -257,8 +257,9 @@ jest jawnym fallbackiem z limitation w `reason`.
 sesji i nie przebudowuje policy ani promptu.
 
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal
-w glownym flow analizy. Integracyjne tools GitLab/Elastic/DB sa wywolywane
-przez Spring tool callbacks i hidden `ToolContext`.
+w glownym flow analizy. Integracyjne tools sa wywolywane przez Spring tool
+callbacks. GitLab i DB dostaja scope przez hidden `ToolContext`; Elastic nadal
+ma zastany model-facing `correlationId`, mimo ze jest ograniczany policy sesji.
 
 Model nie powinien podawac jawnie scope'ow takich jak `correlationId`,
 `gitLabGroup`, `gitLabBranch` czy `environment`. Aktualnie GitLab i DB tools
@@ -266,28 +267,46 @@ spelniaja to przez hidden `ToolContext`; Elastic MCP tool nadal ma jawny
 parametr `correlationId` i powinien byc traktowany jako znany drift do
 migracji, a nie wzorzec dla nowych tools.
 
-## 9. Tool bridge
+## 9. Tool factory
 
-`CopilotSdkToolBridge` konwertuje Spring tools na definicje Copilota.
+`CopilotSdkToolFactory` konwertuje Spring tools na definicje Copilota.
 
-Po refaktorze bridge robi tylko rejestracje definicji:
+Po refaktorze factory robi tylko rejestracje definicji i jest glowna klasa
+wejsciowa pakietu `tools` dla preparation:
 
-- dekorowanie opisow przez `CopilotToolDescriptionDecorator`,
+- dekorowanie opisow przez `tools.description.CopilotToolDescriptionDecorator`,
 - parsowanie input schema,
 - utworzenie `ToolDefinition` z handlerem wykonania.
 
 `CopilotToolInvocationHandler` obsluguje runtime invocation:
 
-- walidacje session id,
-- budget guard przed i po callbacku,
-- capture tool evidence,
-- klasyfikacje tools dla telemetryki,
-- logowanie request/result preview,
+- generyczne `CopilotToolInvocationPolicy` przed i po callbacku,
+- budowe hidden `ToolContext`,
+- wywolanie Spring `ToolCallback`,
+- publikacje eventu `Started` i terminalnego `Finished` z outcome
+  `COMPLETED`, `REJECTED` albo `FAILED`,
 - parsowanie wyniku callbacka,
-- normalizacje denied budget result w trybie hard.
+- normalizacje kontrolowanego rejection na wynik zwracany do SDK.
 
-`CopilotToolContextFactory` buduje hidden `ToolContext` na podstawie
-`CopilotToolSessionContext` i invocation.
+Walidacje session id robi `CopilotToolSessionValidationPolicy` w
+`tools.policy.session`; budzet robi `CopilotToolBudgetPolicy` w
+`tools.policy.budget`.
+
+Side-effecty tool invocation sa subskrybowane przez Spring event listeners:
+
+- `tools.logging.CopilotToolInvocationLoggingListener` loguje request/result preview,
+- `telemetry.CopilotToolInvocationTelemetryListener` zapisuje metryki tooli,
+- `tools.gitlab.GitLabToolEvidenceCaptureListener` mapuje wyniki GitLaba do
+  tool evidence,
+- `tools.database.DatabaseToolEvidenceCaptureListener` mapuje wyniki DB do
+  tool evidence.
+
+`tools.context.CopilotToolContextFactory` buduje hidden `ToolContext` na
+podstawie `CopilotToolSessionContext` i invocation.
+
+`tools.events.CopilotToolInvocationEventPublisher` lapie wyjatki listenerow i
+loguje ostrzezenie. Eventy sa wiec warstwa obserwowalnosci/audytu, a nie druga
+sciezka wykonania toola.
 
 Decorated descriptions sa guidance dla modelu, nie zmieniaja implementacji
 adapterow.
@@ -297,11 +316,15 @@ adapterow.
 Budzet jest session-bound:
 
 1. gateway rejestruje session state,
-2. invocation handler pyta `CopilotToolBudgetGuard.beforeInvocation(...)`,
-3. callback Spring tool jest wykonany albo zwrocony jest kontrolowany denied
-   result,
-4. invocation handler wywoluje `afterInvocation(...)` z raw result,
-5. gateway usuwa state w `finally`.
+2. invocation handler uruchamia `CopilotToolInvocationPolicy.beforeInvocation(...)`,
+3. `CopilotToolBudgetPolicy` jako policy moze rzucic kontrolowany
+   `CopilotToolInvocationRejectedException`,
+4. callback Spring tool jest wykonany albo handler zwraca kontrolowany denied
+   result do SDK,
+5. po udanym callbacku handler uruchamia
+   `CopilotToolInvocationPolicy.afterInvocation(...)` z raw result i publikuje
+   terminalny event `Finished(COMPLETED)`,
+6. gateway usuwa state w `finally`.
 
 Domyslny tryb to `soft`: przekroczenia sa logowane i metrykowane, ale nie
 blokuja. `hard` zwraca:
@@ -315,10 +338,21 @@ blokuja. `hard` zwraca:
 }
 ```
 
+`Finished(REJECTED)` jest traktowany jako odmowa przed faktycznym wykonaniem
+toola. Telemetry listener nie liczy takiego zdarzenia jako executed tool call;
+budget state nadal zachowuje informacje o denialu.
+
 ## 11. Tool evidence capture
 
-`CopilotToolEvidenceCaptureRegistry` publikuje dodatkowe sekcje evidence do
-job listenera.
+`CopilotToolEvidenceSessionStore` zarzadza sesja capture i publikuje
+dodatkowe sekcje evidence do job listenera. Samo mapowanie wynikow jest
+subskrybowane z eventow tool invocation przez pakiety capability:
+`tools.gitlab` i `tools.database`.
+
+Store nie zna JSON payloadow konkretnych tools. Udostepnia per-session
+`SessionToolEvidence`, pilnuje kolejnosci `toolCaptureOrder`, scala albo
+dopisuje itemy i publikuje zaktualizowana sekcje przez
+`AnalysisAiToolEvidenceListener`.
 
 Kategorie:
 

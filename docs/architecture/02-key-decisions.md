@@ -214,20 +214,28 @@ Coverage i luki evidence sa widoczne w manifest/prompt.
 
 ## 13. Tool budget jest egzekwowany w backendzie
 
-Budzet tools jest session-bound i dziala w `CopilotToolInvocationHandler`
-przed i po wywolaniu callbacka.
+Budzet tools jest session-bound i dziala jako generyczna
+`CopilotToolInvocationPolicy` uruchamiana przez `CopilotToolInvocationHandler`
+przed i po wywolaniu callbacka. Handler nie zna szczegolow budzetu ani
+payloadu odmowy.
 
 Domyslnie `analysis.ai.copilot.tool-budget.mode=soft`, czyli przekroczenia sa
 logowane i trafiaja do telemetryki, ale tool call nie jest blokowany. Tryb
 `hard` zwraca kontrolowany wynik `denied_by_tool_budget`, zamiast zabijac cala
-sesje wyjatkiem.
+sesje wyjatkiem. Technicznie `CopilotToolBudgetPolicy` rzuca kontrolowany
+`CopilotToolInvocationRejectedException`, a handler zamienia go na wynik dla
+SDK i event terminalny `REJECTED`.
+
+Budget policy mieszka w `tools.policy.budget`. Walidacja session id jest takim
+samym mechanizmem policy w `tools.policy.session`, dzieki czemu handler nie ma
+osobnych warunkow dla konkretnych regul runtime.
 
 Budzet rozroznia m.in. total calls, grupy Elastic/GitLab/DB, GitLab search,
 read file/chunk, returned characters oraz raw SQL attempts.
 
 ## 14. Tools sa session-bound i ukrywaja scope
 
-GitLab, Elasticsearch i DB tools powinny dostawac scope przez ukryty
+Docelowo wszystkie integracyjne tools powinny dostawac scope przez ukryty
 `ToolContext`. Model nie powinien podawac `correlationId`, `gitLabGroup`,
 `gitLabBranch` ani `environment` jako jawnych argumentow dla tych scope'ow.
 
@@ -242,8 +250,9 @@ skill directories i disabled skills buduje `CopilotSessionConfigFactory`.
 
 ## 15. Tool descriptions moga byc dekorowane dla Copilota
 
-`CopilotToolDescriptionDecorator` dokleja krotkie guidance do opisow drogich
-lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
+`CopilotToolDescriptionDecorator` w `tools.description` dokleja krotkie
+guidance do opisow drogich lub ryzykownych tools bez zmiany implementacji
+Spring tools. Przyklady:
 
 - full file read jest expensive i preferuje chunks/outline,
 - GitLab search/flow context powinien uzywac konkretnych, ugruntowanych
@@ -263,7 +272,7 @@ lub ryzykownych tools bez zmiany implementacji Spring tools. Przyklady:
 
 ## 16. Tool evidence jest czescia audytu
 
-`CopilotToolEvidenceCaptureRegistry` publikuje tool evidence przez
+`CopilotToolEvidenceSessionStore` publikuje tool evidence przez
 `AnalysisAiToolEvidenceListener`.
 
 Capture obejmuje:
@@ -284,14 +293,33 @@ DB capture publikuje tylko prosty wynik i `reason` podany przez model. Nie
 utrzymujemy juz osobnych pytan diagnostycznych, technicznych parametrow ani
 dodatkowych streszczen wyniku w user-facing evidence.
 
-Registry zarzadza sesja i routingiem capture, a szczegoly mapowania wynikow
+Session store zarzadza sesja i routingiem capture, a szczegoly mapowania wynikow
 GitLab/DB sa oddzielone od lifecycle sesji.
 
-`CopilotSdkToolBridge` pozostaje warstwa rejestracji tools: zbiera Spring
+`CopilotSdkToolFactory` pozostaje warstwa rejestracji tools: zbiera Spring
 `ToolCallback`, sortuje je, dekoruje opisy, parsuje input schema i tworzy
-`ToolDefinition`. Wykonanie callbacka, walidacja session id, budget
-before/after, telemetryka, evidence capture i parsowanie wyniku sa w
-`CopilotToolInvocationHandler`.
+`ToolDefinition`. Nie wykonuje tooli i nie interpretuje wynikow.
+
+`CopilotToolInvocationHandler` pozostaje runtime boundary: serializuje
+argumenty, uruchamia generyczne invocation policies, buduje hidden
+`ToolContext`, wywoluje callback, publikuje wewnetrzne eventy tool invocation i
+parsuje wynik dla SDK. Handler nie zna logiki GitLaba, DB, metryk ani budget
+payloadu poza generycznym kontrolowanym rejection.
+
+Event lifecycle:
+
+1. policy before-invocation, w tym session validation i budget,
+2. `Started` tylko po zaakceptowaniu invocation przez policies,
+3. callback Spring tool,
+4. policy after-invocation tylko po udanym callbacku,
+5. terminalny `Finished(COMPLETED|REJECTED|FAILED)`.
+
+Side-effecty sa subskrybowane przez dedykowane listenery: telemetry/logging,
+GitLab evidence capture i Database evidence capture. Publikator eventow izoluje
+bledy listenerow, zeby awaria audytu albo logowania nie zmieniala wyniku toola.
+`CopilotToolEvidenceSessionStore` zarzadza lifecycle sesji i publikacja
+zaktualizowanych sekcji, ale szczegoly mapowania GitLab/DB pozostaja w
+odpowiednich pakietach tool capability.
 
 ## 17. Telemetry jest pierwsza warstwa optymalizacji
 
@@ -360,8 +388,9 @@ Decyzje:
   SDK po finalnej analizie,
 - follow-up prompt dostaje evidence, wynik koncowy, historie rozmowy i
   poprzednie tool evidence,
-- GitLab/Elasticsearch/Database tools nadal sa session-bound przez hidden
-  `ToolContext`,
+- GitLab i Database tools nadal sa session-bound przez hidden `ToolContext`;
+  Elasticsearch korzysta z zakonczonej analizy jako scope'u sesji, ale ma
+  jeszcze zastany jawny `correlationId` w schema toola,
 - scope tools pochodzi z zakonczonej analizy: `correlationId`, `environment`,
   `gitLabBranch` i `gitLabGroup`,
 - raw SQL pozostaje wylaczony domyslnie; chat preferuje typed DB tools,

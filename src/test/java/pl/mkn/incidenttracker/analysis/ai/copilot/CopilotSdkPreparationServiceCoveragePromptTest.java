@@ -17,8 +17,8 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntim
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolBridge;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -44,14 +44,14 @@ class CopilotSdkPreparationServiceCoveragePromptTest {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
-        var bridge = mock(CopilotSdkToolBridge.class);
-        when(bridge.buildToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.of(
+        var factory = mock(CopilotSdkToolFactory.class);
+        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.of(
                 tool("gitlab_search_repository_candidates"),
                 tool("gitlab_find_flow_context"),
                 tool("gitlab_read_repository_file_chunk")
         ));
         var service = new CopilotSdkPreparationService(
-                bridge,
+                factory,
                 new CopilotSkillRuntimeLoader(properties),
                 artifactService(objectMapper),
                 new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),

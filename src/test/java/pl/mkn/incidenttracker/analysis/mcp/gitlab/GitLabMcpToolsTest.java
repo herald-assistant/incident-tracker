@@ -7,7 +7,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolContextKeys;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFlowContextGroup;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabToolScope;

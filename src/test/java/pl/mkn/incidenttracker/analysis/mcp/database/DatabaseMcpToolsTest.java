@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.mcp.database;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolContextKeys;
+import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys;
 
 import java.util.LinkedHashMap;
 import java.util.List;
