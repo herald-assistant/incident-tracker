@@ -4,9 +4,9 @@ import com.github.copilot.sdk.json.MessageOptions;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 

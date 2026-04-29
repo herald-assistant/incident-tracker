@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
 
 import java.util.List;

@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatProvider;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatProvider;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
@@ -143,7 +143,7 @@ public class AnalysisJobService {
         @Override
         public void onProviderCompleted(
                 AnalysisEvidenceProvider provider,
-                pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection section,
+                pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection section,
                 AnalysisContext updatedContext
         ) {
             job.markEvidenceStepCompleted(provider.descriptor(), section);
@@ -151,7 +151,7 @@ public class AnalysisJobService {
 
         @Override
         public void onAiStarted(
-                pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest request,
+                pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest request,
                 AnalysisContext context
         ) {
             job.markAiStarted();
@@ -159,7 +159,7 @@ public class AnalysisJobService {
 
         @Override
         public void onAiPromptPrepared(
-                pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest request,
+                pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest request,
                 String preparedPrompt,
                 AnalysisContext context
         ) {
@@ -167,7 +167,7 @@ public class AnalysisJobService {
         }
 
         @Override
-        public void onAiToolEvidenceUpdated(pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection section) {
+        public void onAiToolEvidenceUpdated(pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection section) {
             job.markAiToolEvidenceUpdated(section);
         }
     }

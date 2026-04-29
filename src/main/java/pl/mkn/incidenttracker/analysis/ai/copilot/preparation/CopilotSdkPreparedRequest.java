@@ -3,8 +3,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.github.copilot.sdk.json.CopilotClientOptions;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

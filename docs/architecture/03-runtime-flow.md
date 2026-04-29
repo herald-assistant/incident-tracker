@@ -111,9 +111,11 @@ renderingu i konfiguracji SDK:
   available capability groups i embedded artifacts,
 - `CopilotSessionConfigFactory` buduje client options, session config,
   permission handler, hooks, skill directories i disabled skills.
-- `CopilotSdkModelOptionsProvider` uzywa tego samego factory client options do
-  pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej z evidence
-  ani promptem incydentu.
+
+`CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
+obok providera finalnej analizy i follow-up chatu. Uzywa zaleznosci z
+preparation do pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej
+z evidence ani promptem incydentu.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.

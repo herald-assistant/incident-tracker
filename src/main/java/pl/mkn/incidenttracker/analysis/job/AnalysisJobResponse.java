@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.job;
 
 import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
 import java.util.List;

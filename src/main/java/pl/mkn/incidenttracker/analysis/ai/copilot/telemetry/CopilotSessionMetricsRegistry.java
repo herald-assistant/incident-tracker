@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
@@ -172,7 +172,7 @@ public class CopilotSessionMetricsRegistry {
     ) {
         var evidenceSections = request != null
                 ? request.evidenceSections()
-                : List.<pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection>of();
+                : List.<pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection>of();
         var safeArtifacts = artifacts != null ? artifacts : List.<CopilotArtifactService.Artifact>of();
 
         return new CopilotArtifactMetrics(

@@ -23,9 +23,12 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.job`
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
-- `AnalysisAiProvider`
-- `AnalysisAiChatProvider`
-- `AnalysisAiModelOptionsProvider`
+- `analysis.ai.analysis.AnalysisAiProvider`
+- `analysis.ai.chat.AnalysisAiChatProvider`
+- `analysis.options.AnalysisAiModelOptionsProvider`
+- `analysis.ai.evidence`
+- `analysis.ai.prepared`
+- `analysis.ai.usage`
 - `analysis.adapter.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
@@ -39,6 +42,7 @@ Przy nowej sesji najlepiej zaczac od:
 
 ### Za GitHub Copilot SDK odpowiadaja glownie
 
+- `analysis.ai.copilot`
 - `analysis.ai.copilot.preparation`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`

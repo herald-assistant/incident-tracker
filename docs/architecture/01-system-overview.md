@@ -102,14 +102,31 @@ Na dzisiaj projekt ma:
   Asynchroniczny feature `POST /analysis/jobs`,
   `GET /analysis/jobs/{analysisId}` i
   `POST /analysis/jobs/{analysisId}/chat/messages`.
+- `pl.mkn.incidenttracker.analysis.options`
+  Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
+  Pakiet jest wspolnym kontraktem dla flow, jobow, chatu i UI, a nie
+  wewnetrzna czescia providera AI.
 - `pl.mkn.incidenttracker.analysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
 - `pl.mkn.incidenttracker.analysis.ai`
-  Generyczne kontrakty AI dla finalnej analizy, follow-up chatu, katalogu
-  modeli oraz evidence przekazywanego do AI.
+  Modul generycznych kontraktow AI. Root jest tylko katalogiem modulowym;
+  kontrakty sa pogrupowane w podpakietach.
+- `pl.mkn.incidenttracker.analysis.ai.analysis`
+  Finalna analiza: provider, request i response JSON-only diagnozy.
+- `pl.mkn.incidenttracker.analysis.ai.chat`
+  Follow-up chat po zakonczonym jobie.
+- `pl.mkn.incidenttracker.analysis.ai.evidence`
+  Generyczne modele evidence przekazywane do AI oraz listener tool evidence.
+- `pl.mkn.incidenttracker.analysis.ai.prepared`
+  Generyczny lifecycle prepared analysis.
+- `pl.mkn.incidenttracker.analysis.ai.usage`
+  Generyczny kontrakt token/cost/usage dla UI.
+- `pl.mkn.incidenttracker.analysis.ai.copilot`
+  Root aktualnej integracji AI. Wystawia `CopilotSdkAnalysisAiProvider`,
+  `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.incidenttracker.analysis.adapter.operationalcontext`

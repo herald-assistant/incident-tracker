@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.chat;
 
 public record AnalysisAiChatResponse(
         String providerName,
@@ -6,3 +6,4 @@ public record AnalysisAiChatResponse(
         String prompt
 ) {
 }
+

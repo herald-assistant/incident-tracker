@@ -1,4 +1,6 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.chat;
+
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 
 public interface AnalysisAiChatProvider {
 
@@ -8,3 +10,4 @@ public interface AnalysisAiChatProvider {
     );
 
 }
+

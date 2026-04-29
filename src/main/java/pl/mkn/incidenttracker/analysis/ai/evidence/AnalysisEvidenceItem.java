@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.evidence;
 
 import java.util.List;
 
@@ -11,3 +11,4 @@ public record AnalysisEvidenceItem(
         attributes = attributes != null ? List.copyOf(attributes) : List.of();
     }
 }
+

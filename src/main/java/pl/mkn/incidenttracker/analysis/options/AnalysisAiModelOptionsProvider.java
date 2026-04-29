@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.options;
 
 public interface AnalysisAiModelOptionsProvider {
 

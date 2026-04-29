@@ -1,11 +1,11 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;

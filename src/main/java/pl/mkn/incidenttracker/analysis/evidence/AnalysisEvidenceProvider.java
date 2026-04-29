@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 

@@ -2,12 +2,12 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
+import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;

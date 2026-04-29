@@ -1,11 +1,11 @@
 package pl.mkn.incidenttracker.analysis;
 
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 
 import java.util.Locale;
 

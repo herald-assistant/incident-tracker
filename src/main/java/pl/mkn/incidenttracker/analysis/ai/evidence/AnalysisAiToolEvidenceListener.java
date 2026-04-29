@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.evidence;
 
 public interface AnalysisAiToolEvidenceListener {
 
@@ -8,3 +8,4 @@ public interface AnalysisAiToolEvidenceListener {
     void onToolEvidenceUpdated(AnalysisEvidenceSection section);
 
 }
+

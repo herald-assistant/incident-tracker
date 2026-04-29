@@ -86,6 +86,8 @@ Przed wieksza zmiana zacznij od:
   Synchroniczny feature `POST /analysis`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
   Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
+- `src/main/java/pl/mkn/incidenttracker/analysis/options`
+  Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
   Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
   krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -170,5 +172,6 @@ podkatalogow, zeby granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/sync/AGENTS.md`

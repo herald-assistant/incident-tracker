@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.github.copilot.sdk.json.MessageOptions;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;

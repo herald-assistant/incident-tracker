@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.evidence.provider.deployment;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceAttributes;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;

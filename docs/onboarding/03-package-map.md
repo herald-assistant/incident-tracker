@@ -25,6 +25,12 @@ Synchroniczny endpoint `POST /analysis`.
 Asynchroniczny flow z jobami, follow-up chatem po zakonczonej analizie i
 projekcja stanu dla UI.
 
+### `analysis/options`
+
+Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
+Ten pakiet jest wspolnym kontraktem dla `flow`, `job`, `chat` i UI, a nie
+wewnetrzna czescia providera AI.
+
 ### `analysis/evidence`
 
 `AnalysisContext`, collector, kontrakt providera i jawne metadata krokow.
@@ -53,11 +59,23 @@ Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
 
 ### `analysis/ai`
 
-Generyczne kontrakty finalnej analizy, follow-up chatu, katalogu modeli i
-implementacja oparta o Copilot SDK.
+Generyczne kontrakty AI i implementacja oparta o Copilot SDK.
+
+Root `analysis/ai` nie powinien trzymac klas kontraktu bezposrednio. Klasy sa
+pogrupowane wedlug funkcji:
+
+- `analysis` - finalna analiza: `AnalysisAiProvider`,
+  `AnalysisAiAnalysisRequest`, `AnalysisAiAnalysisResponse`,
+- `chat` - follow-up chat po zakonczonym jobie,
+- `evidence` - generyczne `AnalysisEvidenceSection`, items, attributes i tool
+  evidence listener,
+- `prepared` - generyczny lifecycle prepared analysis,
+- `usage` - generyczny usage/token/cost contract dla job UI.
 
 Najwazniejsze podpakiety Copilota:
 
+- `copilot` - root aktualnego providera: `CopilotSdkAnalysisAiProvider`,
+  `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation` - przygotowanie promptu, artefaktow, policy tools,
   skilli, client options i `SessionConfig`,
 - `copilot/execution` - lifecycle klienta/sesji SDK i usage events SDK,
@@ -111,6 +129,7 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow`
 - `src/main/java/pl/mkn/incidenttracker/analysis/sync`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
+- `src/main/java/pl/mkn/incidenttracker/analysis/options`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`

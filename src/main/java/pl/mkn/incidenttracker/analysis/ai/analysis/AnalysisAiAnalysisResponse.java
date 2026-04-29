@@ -1,4 +1,6 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.analysis;
+
+import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
 
 public record AnalysisAiAnalysisResponse(
         String providerName,
@@ -41,3 +43,4 @@ public record AnalysisAiAnalysisResponse(
         );
     }
 }
+

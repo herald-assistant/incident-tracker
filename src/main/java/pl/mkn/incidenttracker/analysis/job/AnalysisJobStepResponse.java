@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.job;
 
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
+import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 
 import java.time.Instant;

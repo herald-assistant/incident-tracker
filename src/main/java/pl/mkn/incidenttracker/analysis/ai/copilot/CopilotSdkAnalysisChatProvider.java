@@ -2,10 +2,10 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatProvider;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatResponse;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatProvider;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatResponse;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkFollowUpPreparationService;
 

@@ -7,10 +7,22 @@ o GitHub Copilot Java SDK.
 
 Obejmuje:
 
-- kontrakty `AnalysisAiProvider`, request/response i generyczne modele
-  evidence przekazywane do AI,
-- kontrakty `AnalysisAiChatProvider`, request/response i turny follow-up
-  chatu po zakonczonym jobie,
+- `analysis/`
+  kontrakt finalnej analizy: `AnalysisAiProvider`,
+  `AnalysisAiAnalysisRequest` i `AnalysisAiAnalysisResponse`,
+- `chat/`
+  kontrakt follow-up chatu: `AnalysisAiChatProvider`, request/response, turny
+  i snapshot finalnej analizy,
+- `evidence/`
+  generyczne modele evidence przekazywane do AI oraz
+  `AnalysisAiToolEvidenceListener`,
+- `prepared/`
+  generyczny lifecycle prepared analysis,
+- `usage/`
+  generyczny kontrakt zuzycia tokenow/cost/usage dla UI,
+- `copilot/`
+  root aktualnego providera AI: `CopilotSdkAnalysisAiProvider`,
+  `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
   budowe promptu, konfiguracji klienta, tool definitions, follow-up promptu i
   runtime skills,
@@ -31,16 +43,20 @@ Nie obejmuje:
 
 - klas adapterow integracyjnych z `../adapter`,
 - sekwencyjnego pipeline evidence z `../evidence`,
+- opcji AI, katalogu modeli i endpointu `GET /analysis/ai/options` z
+  `../options`,
 - kontrolerow HTTP i job flow z `../sync` i `../job`.
 
 ## Zasady modyfikacji
 
 - `AnalysisAiProvider` ma pozostac stabilna granica miedzy flow a konkretnym
-  SDK lub modelem.
+  SDK lub modelem i mieszka w `analysis/`.
 - `AnalysisAiChatProvider` ma pozostac osobna granica kontynuacji joba; nie
   mieszaj jego tekstowej odpowiedzi z JSON-only kontraktem finalnej analizy.
+  Kontrakty chatu trzymamy w `chat/`.
 - AI dostaje tylko `AnalysisAiAnalysisRequest` i generyczne
-  `AnalysisEvidenceSection`. Nie wciskaj tu klas adapter-specific.
+  `AnalysisEvidenceSection`. Nie wciskaj tu klas adapter-specific. Evidence
+  models trzymamy w `evidence/`.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
   evidence powinny trafac do skilla albo jawnej konfiguracji preparation.
 - Skill pozostaje runtime resource aplikacji w

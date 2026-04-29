@@ -1,10 +1,10 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.quality;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 

@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.flow;
 
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
+import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
 
 public record AnalysisResultResponse(
         String status,

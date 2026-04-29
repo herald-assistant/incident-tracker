@@ -1,13 +1,13 @@
 package pl.mkn.incidenttracker.analysis.job;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatAnalysisSnapshot;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatTurn;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;

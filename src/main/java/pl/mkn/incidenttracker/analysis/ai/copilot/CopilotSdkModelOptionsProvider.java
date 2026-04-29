@@ -1,13 +1,15 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
+package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import com.github.copilot.sdk.json.ModelInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiModelOption;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiModelOptionsProvider;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiModelOptionsResponse;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkModelLister;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiModelOption;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiModelOptionsProvider;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiModelOptionsResponse;
 
 import java.time.Duration;
 import java.time.Instant;

@@ -1,4 +1,7 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.chat;
+
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;
 

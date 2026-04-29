@@ -4,7 +4,7 @@ import com.github.copilot.sdk.json.ModelInfo;
 
 import java.util.List;
 
-interface CopilotSdkModelLister {
+public interface CopilotSdkModelLister {
 
     List<ModelInfo> listModels();
 }

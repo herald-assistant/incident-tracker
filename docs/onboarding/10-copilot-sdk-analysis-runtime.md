@@ -50,7 +50,8 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 - `AnalysisAiOptions` z requestu jobowego moze nadpisac skonfigurowany
   `model` i `reasoningEffort` dla pojedynczej sesji; brak wyboru oznacza
   fallback do properties albo domyslow SDK.
-- `CopilotSdkModelOptionsProvider` udostepnia osobny katalog modeli dla UI
+- `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
+  obok providerow analizy i chatu. Udostepnia osobny katalog modeli dla UI
   przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do promptu
   albo job state.
 

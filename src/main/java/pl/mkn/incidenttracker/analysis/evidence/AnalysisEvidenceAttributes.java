@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
-import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;

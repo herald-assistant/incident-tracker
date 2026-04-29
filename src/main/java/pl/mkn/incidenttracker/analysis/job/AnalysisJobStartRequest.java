@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.job;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 
 public record AnalysisJobStartRequest(

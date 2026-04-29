@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai;
+package pl.mkn.incidenttracker.analysis.ai.prepared;
 
 public interface AnalysisAiPreparedAnalysis extends AutoCloseable {
 
@@ -12,3 +12,4 @@ public interface AnalysisAiPreparedAnalysis extends AutoCloseable {
     default void close() {
     }
 }
+
