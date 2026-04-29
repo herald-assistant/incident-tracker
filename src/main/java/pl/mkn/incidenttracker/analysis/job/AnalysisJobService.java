@@ -8,11 +8,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisExecutionListener;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageRequest;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobResponse;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStartRequest;
+import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.incidenttracker.analysis.job.state.AnalysisJobState;
+import pl.mkn.incidenttracker.analysis.job.state.AnalysisJobStateListener;
 
 import java.util.Map;
 import java.util.UUID;
@@ -65,7 +68,7 @@ public class AnalysisJobService {
             var execution = analysisOrchestrator.analyze(
                     request.correlationId(),
                     request.aiOptions(),
-                    new JobProgressListener(job)
+                    new AnalysisJobStateListener(job)
             );
             job.markCompleted(execution);
         } catch (AnalysisDataNotFoundException exception) {
@@ -121,50 +124,4 @@ public class AnalysisJobService {
         }
         return job;
     }
-
-    private static final class JobProgressListener implements AnalysisExecutionListener {
-
-        private final AnalysisJobState job;
-
-        private JobProgressListener(AnalysisJobState job) {
-            this.job = job;
-        }
-
-        @Override
-        public void onProviderStarted(AnalysisEvidenceProvider provider, AnalysisContext context) {
-            job.markEvidenceStepStarted(provider.descriptor());
-        }
-
-        @Override
-        public void onProviderCompleted(
-                AnalysisEvidenceProvider provider,
-                pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection section,
-                AnalysisContext updatedContext
-        ) {
-            job.markEvidenceStepCompleted(provider.descriptor(), section);
-        }
-
-        @Override
-        public void onAiStarted(
-                pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest request,
-                AnalysisContext context
-        ) {
-            job.markAiStarted();
-        }
-
-        @Override
-        public void onAiPromptPrepared(
-                pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest request,
-                String preparedPrompt,
-                AnalysisContext context
-        ) {
-            job.markAiPromptPrepared(preparedPrompt);
-        }
-
-        @Override
-        public void onAiToolEvidenceUpdated(pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection section) {
-            job.markAiToolEvidenceUpdated(section);
-        }
-    }
-
 }

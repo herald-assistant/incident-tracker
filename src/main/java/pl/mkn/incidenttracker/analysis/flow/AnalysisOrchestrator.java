@@ -4,14 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollectionListener;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.evidence.*;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;
 
@@ -95,19 +93,12 @@ public class AnalysisOrchestrator {
     private AnalysisEvidenceCollectionListener adaptEvidenceListener(AnalysisExecutionListener listener) {
         return new AnalysisEvidenceCollectionListener() {
             @Override
-            public void onProviderStarted(
-                    pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider provider,
-                    pl.mkn.incidenttracker.analysis.evidence.AnalysisContext context
-            ) {
+            public void onProviderStarted(AnalysisEvidenceProvider provider, AnalysisContext context) {
                 listener.onProviderStarted(provider, context);
             }
 
             @Override
-            public void onProviderCompleted(
-                    pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider provider,
-                    AnalysisEvidenceSection section,
-                    pl.mkn.incidenttracker.analysis.evidence.AnalysisContext updatedContext
-            ) {
+            public void onProviderCompleted(AnalysisEvidenceProvider provider, AnalysisEvidenceSection section, AnalysisContext updatedContext) {
                 listener.onProviderCompleted(provider, section, updatedContext);
             }
         };

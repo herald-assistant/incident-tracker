@@ -19,7 +19,13 @@ Orkiestracja runtime analizy, request/response i listenery progresu.
 ### `analysis/job`
 
 Asynchroniczny flow z jobami, follow-up chatem po zakonczonej analizie i
-projekcja stanu dla UI.
+projekcja stanu dla UI. Root trzyma glowny `AnalysisJobService`, a szczegoly
+sa rozbite na:
+
+- `api` - kontroler oraz request/response DTO,
+- `state` - `AnalysisJobState`, `AnalysisJobStateListener`, statusy, kroki i
+  chat message state,
+- `error` - wyjatki job API.
 
 ### `analysis/options`
 

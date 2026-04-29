@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job;
+package pl.mkn.incidenttracker.analysis.job.api;
 
 import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;

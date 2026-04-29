@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job;
+package pl.mkn.incidenttracker.analysis.job.api;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import pl.mkn.incidenttracker.analysis.job.AnalysisJobService;
 
 @RestController
 @RequestMapping("/analysis/jobs")

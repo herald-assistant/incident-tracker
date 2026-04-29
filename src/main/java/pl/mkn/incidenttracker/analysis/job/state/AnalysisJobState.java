@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job;
+package pl.mkn.incidenttracker.analysis.job.state;
 
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
@@ -14,12 +14,16 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisExecution;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobResponse;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStepResponse;
+import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobChatUnavailableException;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-final class AnalysisJobState {
+public final class AnalysisJobState {
 
     private static final String AI_STEP_CODE = "AI_ANALYSIS";
     private static final String AI_STEP_LABEL = "Budowanie koncowej analizy AI";
@@ -54,7 +58,7 @@ final class AnalysisJobState {
     private AnalysisResultResponse result;
     private InitialAnalysisRequest completedAiRequest;
 
-    AnalysisJobState(
+    public AnalysisJobState(
             String analysisId,
             String correlationId,
             AnalysisAiOptions aiOptions,
@@ -126,12 +130,12 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized void markCompleted(AnalysisExecution execution) {
+    public synchronized void markCompleted(AnalysisExecution execution) {
         this.completedAiRequest = execution.aiRequest();
         markCompleted(execution.result());
     }
 
-    synchronized void markCompleted(AnalysisResultResponse result) {
+    public synchronized void markCompleted(AnalysisResultResponse result) {
         this.result = result;
         this.environment = result.environment();
         this.gitLabBranch = result.gitLabBranch();
@@ -148,7 +152,7 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized AnalysisAiChatRequest startChatMessage(
+    public synchronized AnalysisAiChatRequest startChatMessage(
             String userMessageId,
             String assistantMessageId,
             String message
@@ -196,7 +200,7 @@ final class AnalysisJobState {
         );
     }
 
-    synchronized void markChatToolEvidenceUpdated(String assistantMessageId, AnalysisEvidenceSection section) {
+    public synchronized void markChatToolEvidenceUpdated(String assistantMessageId, AnalysisEvidenceSection section) {
         if (section == null || !section.hasItems()) {
             return;
         }
@@ -205,17 +209,17 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized void markChatCompleted(String assistantMessageId, String content, String prompt) {
+    public synchronized void markChatCompleted(String assistantMessageId, String content, String prompt) {
         assistantMessage(assistantMessageId).markCompleted(content, prompt);
         touch();
     }
 
-    synchronized void markChatFailed(String assistantMessageId, String code, String message) {
+    public synchronized void markChatFailed(String assistantMessageId, String code, String message) {
         assistantMessage(assistantMessageId).markFailed(code, message);
         touch();
     }
 
-    synchronized void markNotFound(String code, String message) {
+    public synchronized void markNotFound(String code, String message) {
         this.status = AnalysisJobStatus.NOT_FOUND;
         this.errorCode = code;
         this.errorMessage = message;
@@ -226,7 +230,7 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized void markFailed(String code, String message) {
+    public synchronized void markFailed(String code, String message) {
         this.status = AnalysisJobStatus.FAILED;
         this.errorCode = code;
         this.errorMessage = message;
@@ -243,7 +247,7 @@ final class AnalysisJobState {
         touch();
     }
 
-    synchronized AnalysisJobResponse snapshot() {
+    public synchronized AnalysisJobResponse snapshot() {
         return new AnalysisJobResponse(
                 analysisId,
                 correlationId,

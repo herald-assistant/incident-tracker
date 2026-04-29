@@ -33,6 +33,8 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.Oper
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageRequest;
+import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.incidenttracker.analysis.TestInitialAnalysisProvider;
 
 import java.util.ArrayDeque;

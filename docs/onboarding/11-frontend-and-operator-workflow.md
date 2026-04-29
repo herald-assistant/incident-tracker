@@ -63,8 +63,8 @@ Aktualny frontend ma dwa route'y Angulara:
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobResponse.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobState.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/job/api/AnalysisJobResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/job/state/AnalysisJobState.java`
 - `src/main/java/pl/mkn/incidenttracker/ui/FrontendRouteController.java`
 - `frontend/src/app`
 

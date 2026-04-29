@@ -7,8 +7,8 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchExce
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveException;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveResponse;
-import pl.mkn.incidenttracker.analysis.job.AnalysisJobChatUnavailableException;
-import pl.mkn.incidenttracker.analysis.job.AnalysisJobNotFoundException;
+import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobChatUnavailableException;
+import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

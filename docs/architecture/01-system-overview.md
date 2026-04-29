@@ -98,6 +98,13 @@ Na dzisiaj projekt ma:
   Asynchroniczny feature `POST /analysis/jobs`,
   `GET /analysis/jobs/{analysisId}` i
   `POST /analysis/jobs/{analysisId}/chat/messages`.
+- `pl.mkn.incidenttracker.analysis.job.api`
+  Kontroler job API oraz request/response DTO dla UI.
+- `pl.mkn.incidenttracker.analysis.job.state`
+  In-memory projekcja joba: statusy, kroki, chat messages, snapshot i listener
+  mapujacy zdarzenia orkiestratora na stan joba.
+- `pl.mkn.incidenttracker.analysis.job.error`
+  Wyjatki job API mapowane przez globalny handler bledow.
 - `pl.mkn.incidenttracker.analysis.options`
   Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
   Pakiet jest wspolnym kontraktem dla flow, jobow, chatu i UI, a nie

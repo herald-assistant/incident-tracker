@@ -9,9 +9,12 @@ Obejmuje:
 
 - `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
 - `POST /analysis/jobs/{analysisId}/chat/messages`,
-- `AnalysisJobService` i uruchamianie analizy w tle,
-- `AnalysisJobState`, statusy, kroki, `chatMessages` i snapshot odpowiedzi dla
-  frontendu.
+- `AnalysisJobService` jako glowna klasa wejscia feature'a i uruchamianie
+  analizy w tle,
+- `api/` z kontrolerem oraz request/response DTO,
+- `state/` z `AnalysisJobState`, `AnalysisJobStateListener`, statusami,
+  krokami, `chatMessages` i snapshotem odpowiedzi dla frontendu,
+- `error/` z wyjatkami job API.
 
 Nie obejmuje:
 
@@ -23,8 +26,13 @@ Nie obejmuje:
 
 - Job flow ma reuse'owac `AnalysisOrchestrator`. Nie skladaj analizy osobno w
   `AnalysisJobService`.
+- Root pakietu powinien pozostac czytelny: trzymaj tu tylko glowna klase
+  wejscia feature'a. Kontrakty HTTP trzymaj w `api`, projekcje w `state`, a
+  wyjatki w `error`.
 - `AnalysisJobState` jest projekcja stanu dla UI, a nie drugim orchestratem.
   Nie dodawaj tu heurystyk incidentowych ani logiki adapterow.
+- `AnalysisJobStateListener` jest adapterem zdarzen `AnalysisExecutionListener`
+  na mutacje `AnalysisJobState`; trzymaj go przy `state`, nie w serwisie.
 - Lista krokow evidence ma wynikac z descriptorow providerow. Lokalnie w job
   mozna dodawac tylko krok AI i metadata potrzebne frontendowi.
 - Snapshot joba powinien pozostac uzyteczny operacyjnie: status, current step,

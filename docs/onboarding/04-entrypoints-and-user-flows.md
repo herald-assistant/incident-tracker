@@ -61,7 +61,7 @@ Nie ma osobnego helper endpointu Database capability.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobController.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/job/api/AnalysisJobController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AnalysisAiOptionsController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/elasticsearch/ElasticLogSearchController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab/GitLabRepositorySearchController.java`

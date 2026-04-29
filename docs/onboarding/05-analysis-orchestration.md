@@ -41,6 +41,7 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisExecution.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisExecutionListener.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobService.java`
+- `src/main/java/pl/mkn/incidenttracker/analysis/job/state/AnalysisJobStateListener.java`
 
 ## Na co zwrocic uwage
 
@@ -49,6 +50,8 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 - `gitLabGroup` pochodzi z konfiguracji, nie z requestu,
 - `environment` i `gitLabBranch` sa rozwiazywane z evidence,
 - job flow nie ma osobnego orchestratora, tylko projekcje postepu,
+- `AnalysisJobStateListener` tlumaczy zdarzenia `AnalysisExecutionListener` na
+  mutacje `AnalysisJobState`,
 - follow-up chat nie ma osobnego publicznego scope'u; reuse'uje request AI
   zapisany po poczatkowej analizie,
 - `AnalysisExecutionListener` obsluguje nie tylko kroki evidence, ale tez
