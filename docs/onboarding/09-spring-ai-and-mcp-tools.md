@@ -25,7 +25,8 @@ integracyjnym tools:
 - `environment` i database scope dla DB.
 
 Model docelowo nie powinien podawac tych wartosci jako argumentow. Publiczny
-request analizy nadal ma tylko `correlationId`.
+start analizy przyjmuje `correlationId`, ale scope integracji nadal jest
+rozwiazywany i ukrywany po stronie backendu.
 
 Aktualny kod jest juz w pelni hidden-scope dla GitLab i Database tools.
 `ElasticMcpTools.searchLogsByCorrelationId(...)` nadal ma jawny parametr
@@ -182,10 +183,9 @@ konkretnej capability w `tools.<capability>`.
 - Jesli tool potrzebuje tylko logowania albo telemetryki, subskrybuj eventy
   invocation, zamiast zmieniac factory lub handler.
 - Nie eksportuj DTO adapterow jako publicznego kontraktu AI.
-- Nie zmieniaj publicznego scope'u analizy: `/analysis` przyjmuje tylko
-  `correlationId`, `/analysis/jobs` tylko `correlationId` oraz generyczne
-  preferencje AI (`model`, `reasoningEffort`), a follow-up chat tylko
-  `message`.
+- Nie zmieniaj publicznego scope'u analizy: `/analysis/jobs` przyjmuje tylko
+  `correlationId` oraz generyczne preferencje AI (`model`, `reasoningEffort`),
+  a follow-up chat tylko `message`.
 
 ## Najwazniejsze properties
 

@@ -21,10 +21,9 @@ architektonicznych.
 
 - `src/test/java/pl/mkn/incidenttracker/analysis/evidence`
 
-### Job i sync
+### Job
 
 - `src/test/java/pl/mkn/incidenttracker/analysis/job`
-- `src/test/java/pl/mkn/incidenttracker/analysis/sync`
 
 ### MCP i AI
 
@@ -97,7 +96,7 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 
 ## Playbook 6: zmiana follow-up chatu
 
-1. nie rozszerzaj `POST /analysis`; chat zostaje pod
+1. nie rozszerzaj startu joba o tresc rozmowy; chat zostaje pod
    `POST /analysis/jobs/{analysisId}/chat/messages`,
 2. utrzymaj request chatu jako `message`, bez recznego `environment`, branch,
    GitLab group ani DB scope'u,

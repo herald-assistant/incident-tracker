@@ -28,7 +28,7 @@ public class CopilotFollowUpPromptRenderer {
                 - gitLabGroup: %s
 
                 Hard rules:
-                - This is a continuation of the existing analysis, not a new `/analysis` run.
+                - This is a continuation of the existing analysis job, not a new initial analysis run.
                 - Use the original incident artifacts, the final analysis result, previously captured tool evidence and the chat history as context.
                 - The latest user message is allowed to request targeted verification in GitLab, Elasticsearch or Database tools.
                 - Use tools when the latest message asks to check, confirm, verify, inspect, compare, or generate an answer that needs fresh repository, log or database evidence.

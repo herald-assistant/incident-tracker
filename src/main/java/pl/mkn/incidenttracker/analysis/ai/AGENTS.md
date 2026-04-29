@@ -44,7 +44,7 @@ Nie obejmuje:
 - sekwencyjnego pipeline evidence z `../evidence`,
 - opcji AI, katalogu modeli i endpointu `GET /analysis/ai/options` z
   `../options`,
-- kontrolerow HTTP i job flow z `../sync` i `../job`.
+- kontrolerow HTTP i job flow z `../job`.
 
 ## Zasady modyfikacji
 

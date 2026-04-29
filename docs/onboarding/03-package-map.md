@@ -16,10 +16,6 @@ Nauczyc sie czytac repo po granicach odpowiedzialnosci, a nie po nazwach klas.
 
 Orkiestracja runtime analizy, request/response i listenery progresu.
 
-### `analysis/sync`
-
-Synchroniczny endpoint `POST /analysis`.
-
 ### `analysis/job`
 
 Asynchroniczny flow z jobami, follow-up chatem po zakonczonej analizie i
@@ -127,7 +123,6 @@ operational context enrichment.
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow`
-- `src/main/java/pl/mkn/incidenttracker/analysis/sync`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`

@@ -3,17 +3,17 @@
 ## Zakres
 
 Ten katalog odpowiada za glowna orkiestracje runtime analizy, kontrakt flow i
-obiekty przechodzace miedzy sync/job a evidence/AI.
+obiekty przechodzace miedzy job API a evidence/AI.
 
 Obejmuje:
 
 - `AnalysisOrchestrator`,
 - `AnalysisExecution` i listenery progresu,
-- request, response i wyjatki domenowe glownego flow.
+- response i wyjatki domenowe glownego flow.
 
 Nie obejmuje:
 
-- kontrolerow HTTP z `../sync` i `../job`,
+- kontrolerow HTTP z `../job`,
 - integracji z systemami zewnetrznymi z `../adapter`,
 - implementacji providerow evidence i AI.
 
@@ -21,10 +21,10 @@ Nie obejmuje:
 
 - `AnalysisOrchestrator` jest source of truth dla calego runtime flow:
   evidence collection -> AI request -> prompt -> AI response -> final result.
-- Sync i job maja reuse'owac to samo flow. Nie duplikuj tu alternatywnej
-  orkiestracji dla roznych endpointow.
-- `AnalysisRequest` przyjmuje tylko `correlationId`. Nie przywracaj `branch`,
-  `environment` ani `gitLabGroup` do requestu glownego `/analysis`.
+- Job ma reuse'owac to samo flow. Nie duplikuj tu alternatywnej orkiestracji.
+- `AnalysisJobStartRequest` przyjmuje tylko `correlationId` oraz opcjonalne
+  preferencje AI. Nie przywracaj `branch`, `environment` ani `gitLabGroup` do
+  publicznego requestu startu analizy.
 - `AnalysisResultResponse` ma zwracac fakty rozwiazane z evidence, glownie
   `environment` i `gitLabBranch`, a nie dane dostarczane przez klienta.
 - Collector jest wlascicielem lifecycle krokow evidence. Flow powinno tylko
@@ -38,7 +38,7 @@ Nie obejmuje:
 
 - Zmiany w orkiestracji powinny miec testy jednostkowe albo integracyjne,
   ktore potwierdzaja kolejnosc flow i mapowanie wyniku.
-- Gdy zmienia sie kontrakt request/response, sprawdz downstream w `../sync`,
+- Gdy zmienia sie kontrakt response albo job payload, sprawdz downstream w
   `../job` i `src/main/java/pl/mkn/incidenttracker/api`.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie

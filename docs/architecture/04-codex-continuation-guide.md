@@ -19,7 +19,6 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za architekture odpowiadaja glownie
 
 - `analysis.flow`
-- `analysis.sync`
 - `analysis.job`
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
@@ -111,7 +110,7 @@ Przyklad:
 ## Czego teraz nie robic
 
 - nie wracac do centralnego rule-based flow jako glownej sciezki analizy,
-- nie przywracac `branch` jako pola requestu `/analysis`,
+- nie przywracac `branch` jako pola requestu startu analizy,
 - nie dedukowac `gitLabGroup` z evidence,
 - nie mieszac skilli z kodem Java,
 - nie robic globalnego "trust all SSL" dla calej aplikacji,
@@ -121,13 +120,12 @@ Przyklad:
 
 ### `correlationId`, `environment` i `gitLabBranch`
 
-`POST /analysis` przyjmuje tylko `correlationId`.
+`POST /analysis/jobs` dla UI przyjmuje `correlationId` oraz opcjonalne
+preferencje AI: `model` i `reasoningEffort`. Nie przyjmuje scope'ow evidence.
 `environment` i `gitLabBranch` sa rozwiazywane podczas zbierania evidence przez
-osobny krok deployment context, a nie podawane przez klienta.
-
-`POST /analysis/jobs` dla UI nadal nie przyjmuje scope'ow evidence, ale moze
-przyjac opcjonalne preferencje AI: `model` i `reasoningEffort`. Te pola trafiaja
-do `AnalysisAiOptions` i `SessionConfig`, nie do deployment/GitLab/DB scope'u.
+osobny krok deployment context, a nie podawane przez klienta. Preferencje AI
+trafiaja do `AnalysisAiOptions` i `SessionConfig`, nie do
+deployment/GitLab/DB scope'u.
 
 Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
 Frontend pobiera ja z `GET /analysis/ai/options`, a backend mapuje metadane
@@ -146,8 +144,8 @@ Zmienia sie razem z capability i powinien byc traktowany jako zasob wdrozeniowy.
 ### Source resolver
 
 Endpoint `resolve` jest pomocniczy.
-To nie jest jeszcze centralna czesc orchestration flow `/analysis`, ale jest
-reuse'owany przez deterministic provider do rozwiazywania symboli z logs.
+To nie jest centralna czesc job flow analizy, ale jest reuse'owany przez
+deterministic provider do rozwiazywania symboli z logs.
 Jego cache drzewa repo ma pozostac request-scoped, nie globalny.
 
 ### Frontend starter
@@ -184,7 +182,7 @@ Kontynuacja po wyniku poczatkowej analizy ma osobny kontrakt AI:
 - `AnalysisAiChatRequest`,
 - `AnalysisAiChatResponse`.
 
-Nie rozszerzaj `POST /analysis` o tresc rozmowy ani dodatkowy scope. Chat ma
+Nie doklejaj tresci rozmowy ani dodatkowego scope'u do startu joba. Chat ma
 reuse'owac scope zakonczonego joba oraz hidden `ToolContext` dla GitLaba,
 Elastica i Database. Kazda wiadomosc tworzy nowa sesje Copilota, zeby nie
 utrzymywac sesji SDK po zakonczeniu poczatkowej analizy.

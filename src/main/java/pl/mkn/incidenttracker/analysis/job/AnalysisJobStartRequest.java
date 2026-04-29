@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 
 public record AnalysisJobStartRequest(
         @NotBlank(message = "correlationId must not be blank") String correlationId,
@@ -17,10 +16,6 @@ public record AnalysisJobStartRequest(
         correlationId = StringUtils.hasText(correlationId) ? correlationId.trim() : correlationId;
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
-    }
-
-    public static AnalysisJobStartRequest from(AnalysisRequest request) {
-        return new AnalysisJobStartRequest(request.correlationId(), null, null);
     }
 
     public AnalysisAiOptions aiOptions() {

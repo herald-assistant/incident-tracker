@@ -7,7 +7,7 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 ## Po tym kroku rozumiesz
 
 - role `AnalysisOrchestrator`,
-- jak sync i job reuse'uja ten sam flow,
+- jak job reuse'uje wspolny flow,
 - gdzie wpiete sa listenery progresu,
 - gdzie budowany jest request do AI,
 - co trafia do `AnalysisExecution`,
@@ -15,8 +15,8 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 
 ## Glowna sekwencja
 
-1. kontroler przyjmuje `AnalysisRequest`,
-2. `sync` albo `job` deleguje do `AnalysisOrchestrator`,
+1. kontroler joba przyjmuje `AnalysisJobStartRequest`,
+2. `AnalysisJobService` deleguje do `AnalysisOrchestrator`,
 3. orchestrator uruchamia `AnalysisEvidenceCollector`,
 4. po zebraniu danych buduje `InitialAnalysisRequest`,
 5. provider AI przygotowuje prompt i wykonuje analize,
@@ -40,12 +40,12 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisOrchestrator.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisExecution.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisExecutionListener.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/sync/AnalysisService.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobService.java`
 
 ## Na co zwrocic uwage
 
-- `AnalysisRequest` przyjmuje tylko `correlationId`,
+- `AnalysisJobStartRequest` przyjmuje `correlationId` oraz opcjonalne
+  preferencje AI,
 - `gitLabGroup` pochodzi z konfiguracji, nie z requestu,
 - `environment` i `gitLabBranch` sa rozwiazywane z evidence,
 - job flow nie ma osobnego orchestratora, tylko projekcje postepu,
@@ -58,7 +58,7 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 ## Sprawdz lokalnie
 
 - przejdz przez `AnalysisOrchestrator.analyze(...)`,
-- porownaj, jak `sync` i `job` wchodza do tego samego flow,
+- zobacz, jak `AnalysisJobService` wchodzi do wspolnego flow,
 - zobacz, gdzie job zapisuje `preparedPrompt`,
 - zobacz, gdzie do joba trafia `toolEvidenceSections`,
 - przejdz przez `AnalysisJobState.startChatMessage(...)` i zobacz, jak powstaje

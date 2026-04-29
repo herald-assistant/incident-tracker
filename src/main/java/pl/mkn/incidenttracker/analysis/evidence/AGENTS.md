@@ -18,7 +18,7 @@ Nie obejmuje:
 
 - adapterow integracyjnych z `../adapter`,
 - AI promptu i wykonania modelu z `../ai`,
-- HTTP flow z `../sync` i `../job`.
+- HTTP job flow z `../job`.
 
 ## Zasady modyfikacji
 

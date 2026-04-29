@@ -25,7 +25,8 @@ Przed wieksza zmiana zacznij od:
 
 ## Najwazniejsze niezmienniki
 
-- `POST /analysis` przyjmuje tylko `correlationId`.
+- `POST /analysis/jobs` jest publicznym startem analizy; przyjmuje
+  `correlationId` oraz opcjonalne preferencje AI (`model`, `reasoningEffort`).
 - `gitLabBranch` i `environment` sa wyprowadzane z evidence, glownie z logow
   Elasticsearch.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji, nie z evidence.
@@ -81,11 +82,10 @@ Przed wieksza zmiana zacznij od:
 ## Gdzie czego szukac
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow`
-  Glowna orkiestracja runtime analizy, request/response i listenery flow.
-- `src/main/java/pl/mkn/incidenttracker/analysis/sync`
-  Synchroniczny feature `POST /analysis`.
+  Glowna orkiestracja runtime analizy, response i listenery flow.
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
-  Asynchroniczny feature `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`.
+  Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
+  follow-up chat.
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
   Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
@@ -137,7 +137,7 @@ Przed wieksza zmiana zacznij od:
 ## Czego nie robic
 
 - Nie przenosic `correlationId` do headerow glownego flow.
-- Nie przywracac `branch` jako pola requestu `/analysis`.
+- Nie przywracac `branch` jako pola requestu startu analizy.
 - Nie dedukowac `gitLabGroup` z logs lub trace.
 - Nie mieszac skilli z kodem Java.
 - Nie robic globalnego "trust all SSL" dla calej aplikacji.
@@ -174,4 +174,3 @@ podkatalogow, zeby granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/sync/AGENTS.md`

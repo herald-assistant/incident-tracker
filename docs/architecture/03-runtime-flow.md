@@ -1,17 +1,9 @@
 # Runtime Flow
 
-Ten dokument opisuje aktualny przeplyw analizy incydentu dla sync API,
-job API, evidence pipeline i providera AI opartego o Copilot SDK.
+Ten dokument opisuje aktualny przeplyw analizy incydentu dla job API, evidence
+pipeline i providera AI opartego o Copilot SDK.
 
 ## 1. Publiczne wejscia
-
-Sync:
-
-```http
-POST /analysis
-```
-
-Async:
 
 ```http
 POST /analysis/jobs
@@ -20,9 +12,8 @@ POST /analysis/jobs/{analysisId}/chat/messages
 GET /analysis/ai/options
 ```
 
-Sync request publiczny niesie tylko `correlationId`. Job request dla UI niesie
-`correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
-`reasoningEffort`. Pozostale scope'y sa ustalane przez backend:
+Job request dla UI niesie `correlationId` oraz opcjonalne preferencje wykonania
+AI: `model` i `reasoningEffort`. Pozostale scope'y sa ustalane przez backend:
 
 - `environment` z evidence runtime/deployment,
 - `gitLabBranch` z deployment context,
@@ -453,10 +444,9 @@ Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
 `AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
 szczegolami zebranymi z eventow Copilota.
 
-Publiczny sync request zawiera tylko `correlationId`. Job request UI zawiera
-`correlationId` oraz opcjonalne preferencje AI (`model`, `reasoningEffort`).
-`gitLabGroup` pochodzi z konfiguracji, a `environment` i `gitLabBranch` sa
-wyprowadzane z evidence.
+Job request UI zawiera `correlationId` oraz opcjonalne preferencje AI
+(`model`, `reasoningEffort`). `gitLabGroup` pochodzi z konfiguracji, a
+`environment` i `gitLabBranch` sa wyprowadzane z evidence.
 
 Job response zawiera tez `chatMessages`. UI pokazuje chat dopiero po
 `COMPLETED`; dla wiadomosci chatu z `IN_PROGRESS` polluje ten sam endpoint

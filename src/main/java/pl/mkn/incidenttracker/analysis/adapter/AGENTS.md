@@ -27,7 +27,7 @@ Nie obejmuje:
 
 - krokow pipeline evidence z `../evidence/provider`,
 - MCP tools z `../mcp`,
-- glownej orkiestracji `/analysis` z `../flow`, `../sync` i `../job`,
+- glownej orkiestracji analizy z `../flow` i `../job`,
 - promptu, skilli i providera AI z `../ai`.
 
 ## Zasady modyfikacji
@@ -47,7 +47,7 @@ Nie obejmuje:
 - Kontrakty portow maja pozostac generyczne i reuse'owalne z evidence, MCP i
   helper endpointow.
 - Dla GitLaba trzymaj `group` w konfiguracji aplikacji. Nie dedukuj go z
-  evidence ani z requestu glownego flow `/analysis`.
+  evidence ani z requestu startu analizy.
 - Dla source resolve cache drzewa repozytorium moze byc tylko request-scoped.
 - Dla Database capability nie wprowadzaj globalnego `spring.datasource`.
   Routing DataSource ma pozostac lokalny i per environment.

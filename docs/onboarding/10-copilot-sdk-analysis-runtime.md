@@ -266,7 +266,6 @@ zastepowac rozliczen GitHuba.
 
 Refaktory runtime Copilota nie zmieniaja kontraktow zewnetrznych:
 
-- `POST /analysis` przyjmuje tylko `correlationId`,
 - `POST /analysis/jobs` przyjmuje `correlationId` oraz opcjonalne generyczne
   preferencje AI: `model` i `reasoningEffort`,
 - `POST /analysis/jobs/{analysisId}/chat/messages` przyjmuje tylko tresc

@@ -32,8 +32,8 @@ Na dzisiaj projekt ma:
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
 - ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
   GitLaba,
-- glowne API `POST /analysis`,
-- job-based API dla UI: `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
+- glowne job-based API: `POST /analysis/jobs` i
+  `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
 - follow-up chat dla zakonczonego joba przez
   `POST /analysis/jobs/{analysisId}/chat/messages`, ktory uruchamia nowa
@@ -75,8 +75,6 @@ Na dzisiaj projekt ma:
   Katalog modeli AI dla UI. Backend pobiera go z Copilot SDK i zwraca
   `reasoningEffort` tylko dla modeli, ktore SDK opisuje jako wspierajace te
   ustawienia.
-- `POST /analysis`
-  GLOWNY endpoint analizy incydentu.
 - `POST /api/gitlab/source/resolve`
   Narzedzie pomocnicze do znalezienia pliku po symbolu.
 - `POST /api/gitlab/source/resolve/preview`
@@ -96,8 +94,6 @@ Na dzisiaj projekt ma:
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.analysis.flow`
   Orkiestracja runtime analizy i listenery postepu flow.
-- `pl.mkn.incidenttracker.analysis.sync`
-  Synchroniczny feature `POST /analysis`.
 - `pl.mkn.incidenttracker.analysis.job`
   Asynchroniczny feature `POST /analysis/jobs`,
   `GET /analysis/jobs/{analysisId}` i
@@ -213,9 +209,8 @@ Na dzisiaj projekt ma:
   scope: repozytoria/projekty, pakiety i class hints, zeby Copilot traktowal
   repo glowne, biblioteki i shared modules jako kod jednego komponentu
   wdrozeniowego.
-- Flow synchroniczny i jobowy reuse'uja ta sama orchestration warstwe
-  `AnalysisOrchestrator`.
-- Flow jobowy moze przekazac do generycznego requestu AI opcjonalny wybor
+- Job flow reuse'uje orchestration warstwe `AnalysisOrchestrator`.
+- Job flow moze przekazac do generycznego requestu AI opcjonalny wybor
   modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,
   srodowiska ani GitLab group.
 - Follow-up chat jest kontynuacja zakonczonego joba, a nie nowym publicznym
@@ -298,8 +293,8 @@ To jest osobny, pomocniczy flow:
 5. serwis pobiera raw content,
 6. endpoint zwraca kandydatow i tresc pliku.
 
-Ten endpoint nie jest centralnym krokiem glownego `/analysis`, ale ten sam
-serwis jest reuse'owany przez GitLab deterministic provider.
+Ten endpoint nie jest centralnym krokiem job flow analizy, ale ten sam serwis
+jest reuse'owany przez GitLab deterministic provider.
 
 ## Dodatkowy use case GitLab repository search
 
@@ -314,6 +309,6 @@ To jest osobny, pomocniczy flow do recznego testowania mapowania repozytorium:
    szuka kandydatow plikow,
 5. endpoint zwraca rozwiazane repozytoria i opcjonalnie kandydatow plikow.
 
-Ten endpoint nie jest czescia glownego `/analysis`, ale pomaga recznie
-zweryfikowac te sama logike mapowania, z ktorej korzysta deterministic provider
-i AI-guided exploration przez tools.
+Ten endpoint nie jest czescia glownego job flow analizy, ale pomaga recznie
+zweryfikowac te sama logike mapowania, z ktorej korzysta deterministic
+provider i AI-guided exploration przez tools.

@@ -7,7 +7,7 @@ glowne, a ktore tylko pomocnicze.
 
 ## Po tym kroku rozumiesz
 
-- roznice miedzy `GET /`, `POST /analysis` i job flow,
+- roznice miedzy `GET /`, job flow i helper endpointami,
 - gdzie wpina sie follow-up chat po zakonczonym jobie,
 - po co istnieje `GET /evidence`,
 - ktore endpointy sa czescia produktu, a ktore diagnostyki integracji.
@@ -18,10 +18,6 @@ glowne, a ktore tylko pomocnicze.
 
 Frontend operatorski, ktory uruchamia job-based flow i pokazuje postep,
 evidence, prompt, wynik oraz import/eksport zakonczonej analizy.
-
-### `POST /analysis`
-
-Synchroniczny kontrakt API. Cienki wrapper na wspolny `AnalysisOrchestrator`.
 
 ### `POST /analysis/jobs`
 
@@ -65,7 +61,6 @@ Nie ma osobnego helper endpointu Database capability.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/sync/AnalysisController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AnalysisAiOptionsController.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/elasticsearch/ElasticLogSearchController.java`
@@ -77,15 +72,15 @@ Nie ma osobnego helper endpointu Database capability.
 - otworz `GET /`,
 - sprawdz `GET /analysis/ai/options`,
 - otworz `GET /evidence`,
-- porownaj, jakie dane zwraca `POST /analysis` i `GET /analysis/jobs/{analysisId}`,
-- zobacz, ze job snapshot zwraca tez `preparedPrompt`, `toolEvidenceSections`
+- sprawdz dane zwracane przez `GET /analysis/jobs/{analysisId}`,
+- zobacz, ze job snapshot zwraca `preparedPrompt`, `toolEvidenceSections`
   i `chatMessages`,
 - po zakonczonym live jobie wyslij `POST /analysis/jobs/{analysisId}/chat/messages`
   i sprawdz polling odpowiedzi.
 
 ## Checkpoint
 
-- Dlaczego UI korzysta glownie z job flow zamiast z `POST /analysis`?
+- Dlaczego publiczna analiza jest job flow, a nie synchronicznym requestem?
 - Ktore endpointy mozna zmieniac tylko wtedy, gdy zmienia sie realna potrzeba
   operatorska?
 - Ktore dane sa tylko projekcja UI joba, a nie osobnym modelem domenowym?

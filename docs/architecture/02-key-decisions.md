@@ -5,9 +5,9 @@ utrzymaniu flow analizy incydentu i integracji AI.
 
 ## 1. Publiczny request analizy pozostaje minimalny
 
-`POST /analysis` przyjmuje tylko `correlationId`. `POST /analysis/jobs` dla UI
-przyjmuje `correlationId` oraz opcjonalne preferencje wykonania AI:
-`model` i `reasoningEffort`.
+`POST /analysis/jobs` jest publicznym startem analizy. Przyjmuje
+`correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
+`reasoningEffort`.
 
 Lista dostepnych modeli dla UI pochodzi z `GET /analysis/ai/options`.
 Endpoint mapuje metadane Copilot SDK na generyczny kontrakt aplikacji i zwraca
@@ -368,10 +368,10 @@ i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
 analizy, a nie do rozliczen finansowych.
 
 Refaktory w `analysis.ai` i `analysis.ai.copilot` nie powinny wymagac wiedzy o
-typach SDK w UI: `POST /analysis` nadal przyjmuje tylko `correlationId`, a
-`POST /analysis/jobs` moze przyjac tylko generyczne preferencje AI (`model`,
-`reasoningEffort`). Response pozostaje mapowany do pol aplikacji, a artefakty
-Copilota nadal sa embedded inline w promptcie.
+typach SDK w UI: `POST /analysis/jobs` moze przyjac tylko `correlationId` oraz
+generyczne preferencje AI (`model`, `reasoningEffort`). Response pozostaje
+mapowany do pol aplikacji, a artefakty Copilota nadal sa embedded inline w
+promptcie.
 
 Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac
 model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
@@ -380,9 +380,8 @@ model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
 ## 20. Follow-up chat jest kontynuacja joba
 
 Po `COMPLETED` operator moze wyslac pytanie albo polecenie przez
-`POST /analysis/jobs/{analysisId}/chat/messages`. To nie zmienia minimalnego
-kontraktu `POST /analysis` ani nie dodaje recznego scope'u do publicznego
-requestu.
+`POST /analysis/jobs/{analysisId}/chat/messages`. To nie dodaje recznego
+scope'u do publicznego requestu startu analizy.
 
 Decyzje:
 

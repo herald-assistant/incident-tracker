@@ -34,7 +34,6 @@ scope'em tools wyprowadzonym przez backend.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisRequest.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisResultResponse.java`
 - `docs/architecture/01-system-overview.md`
 - `docs/architecture/02-key-decisions.md`
@@ -43,7 +42,7 @@ scope'em tools wyprowadzonym przez backend.
 
 - uruchom backend i otworz `GET /`,
 - zobacz, ze UI prosi tylko o `correlationId`,
-- przejrzyj strukture odpowiedzi API dla `POST /analysis` albo job flow,
+- przejrzyj strukture odpowiedzi job flow,
 - po zakonczonym live jobie sprawdz, ze chat reuse'uje `chatMessages` z
   `GET /analysis/jobs/{analysisId}`.
 

@@ -13,7 +13,6 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisExecutionListener;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 
 import java.util.Map;
 import java.util.UUID;
@@ -30,10 +29,6 @@ public class AnalysisJobService {
     private final TaskExecutor taskExecutor;
 
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
-
-    public AnalysisJobResponse startAnalysis(AnalysisRequest request) {
-        return startAnalysis(AnalysisJobStartRequest.from(request));
-    }
 
     public AnalysisJobResponse startAnalysis(AnalysisJobStartRequest request) {
         var analysisId = UUID.randomUUID().toString();

@@ -32,7 +32,6 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.Git
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogMatcher;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.analysis.TestInitialAnalysisProvider;
 
@@ -62,7 +61,7 @@ class AnalysisJobServiceTest {
 
     @Test
     void shouldReturnQueuedJobThenCompleteItAfterWorkerRuns() {
-        var started = analysisJobService.startAnalysis(new AnalysisRequest("timeout-123"));
+        var started = analysisJobService.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
 
         assertNotNull(started.analysisId());
         assertEquals("timeout-123", started.correlationId());
@@ -127,7 +126,7 @@ class AnalysisJobServiceTest {
                 usageTaskExecutor
         );
 
-        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
         usageTaskExecutor.runNext();
 
         var completed = service.getAnalysis(started.analysisId());
@@ -144,7 +143,7 @@ class AnalysisJobServiceTest {
 
     @Test
     void shouldMarkJobAsNotFoundWhenEvidenceIsMissing() {
-        var started = analysisJobService.startAnalysis(new AnalysisRequest("not-found"));
+        var started = analysisJobService.startAnalysis(new AnalysisJobStartRequest("not-found", null, null));
 
         assertEquals("QUEUED", started.status());
         taskExecutor.runNext();
@@ -166,7 +165,7 @@ class AnalysisJobServiceTest {
                 failingTaskExecutor
         );
 
-        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
 
         assertEquals("QUEUED", started.status());
         failingTaskExecutor.runNext();
@@ -195,7 +194,7 @@ class AnalysisJobServiceTest {
                 blockingTaskExecutor
         );
 
-        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
         var worker = new Thread(blockingTaskExecutor::runNext);
         worker.start();
 
@@ -233,7 +232,7 @@ class AnalysisJobServiceTest {
         var chatTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
 
-        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
         chatTaskExecutor.runNext();
 
         var afterChatStart = service.startChatMessage(
