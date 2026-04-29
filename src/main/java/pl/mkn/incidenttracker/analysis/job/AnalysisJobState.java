@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
@@ -141,7 +142,9 @@ final class AnalysisJobState {
         this.currentStepCode = null;
         this.currentStepLabel = null;
         this.completedAt = Instant.now();
-        step(AI_STEP_CODE).markCompleted("Analiza zakonczona.", null);
+        var aiStep = step(AI_STEP_CODE);
+        aiStep.markCompleted("Analiza zakonczona.", null);
+        aiStep.markUsage(result.usage());
         touch();
     }
 
@@ -354,6 +357,7 @@ final class AnalysisJobState {
         private AnalysisJobStepStatus status;
         private String message;
         private Integer itemCount;
+        private AnalysisAiUsage usage;
         private Instant startedAt;
         private Instant completedAt;
 
@@ -400,6 +404,10 @@ final class AnalysisJobState {
             completedAt = Instant.now();
         }
 
+        private void markUsage(AnalysisAiUsage usage) {
+            this.usage = usage;
+        }
+
         private AnalysisJobStepResponse snapshot() {
             return new AnalysisJobStepResponse(
                     code,
@@ -411,7 +419,8 @@ final class AnalysisJobState {
                     startedAt,
                     completedAt,
                     consumesEvidence,
-                    producesEvidence
+                    producesEvidence,
+                    usage
             );
         }
     }

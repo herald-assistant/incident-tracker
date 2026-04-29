@@ -6,6 +6,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
+  AnalysisAiUsage,
   AnalysisEvidenceAttribute,
   AnalysisEvidenceReference,
   AnalysisEvidenceSection,
@@ -283,6 +284,9 @@ interface StepView {
   preparedPrompt: string;
   promptPanelTitle: string;
   promptPanelDescription: string;
+  showUsage: boolean;
+  usageSummary: string;
+  usageTooltip: string;
   emptyStateMessage: string;
 }
 
@@ -479,6 +483,7 @@ export class AnalysisStepsPanelComponent {
       );
       const showPreparedPromptView = Boolean(stepPreparedPrompt);
       const key = buildStepKey(step, index);
+      const usageSummary = buildUsageSummary(step.usage ?? null);
 
       return {
         key,
@@ -498,6 +503,9 @@ export class AnalysisStepsPanelComponent {
         preparedPrompt: stepPreparedPrompt,
         promptPanelTitle: buildPreparedPromptTitle(step.code),
         promptPanelDescription: buildPreparedPromptDescription(step.code),
+        showUsage: Boolean(usageSummary),
+        usageSummary,
+        usageTooltip: buildUsageTooltip(step.usage ?? null),
         emptyStateMessage: buildEmptyStateMessage(
           step,
           detailSections.length,
@@ -640,6 +648,69 @@ function buildEvidenceFlowMeta(step: AnalysisJobStepResponse): string[] {
   }
 
   return meta;
+}
+
+function buildUsageSummary(usage: AnalysisAiUsage | null): string {
+  if (!usage || usage.totalTokens <= 0) {
+    return '';
+  }
+
+  return `Tokeny ${formatTokenCount(usage.totalTokens)}`;
+}
+
+function buildUsageTooltip(usage: AnalysisAiUsage | null): string {
+  if (!usage) {
+    return '';
+  }
+
+  const lines = [
+    `Suma: ${formatTokenCount(usage.totalTokens)}`,
+    `Wejście: ${formatTokenCount(usage.inputTokens)}`,
+    `Wyjście: ${formatTokenCount(usage.outputTokens)}`
+  ];
+
+  if (usage.cacheReadTokens > 0 || usage.cacheWriteTokens > 0) {
+    lines.push(`Cache read: ${formatTokenCount(usage.cacheReadTokens)}`);
+    lines.push(`Cache write: ${formatTokenCount(usage.cacheWriteTokens)}`);
+  }
+
+  if (usage.apiCallCount > 0) {
+    lines.push(`Wywołania API: ${formatTokenCount(usage.apiCallCount)}`);
+  }
+
+  if (usage.apiDurationMs > 0) {
+    lines.push(`Czas API: ${formatDurationMs(usage.apiDurationMs)}`);
+  }
+
+  if (usage.model) {
+    lines.push(`Model: ${usage.model}`);
+  }
+
+  if (usage.contextCurrentTokens !== null && usage.contextTokenLimit !== null) {
+    lines.push(
+      `Kontekst: ${formatTokenCount(usage.contextCurrentTokens)} / ${formatTokenCount(
+        usage.contextTokenLimit
+      )}`
+    );
+  }
+
+  if (usage.contextMessages !== null) {
+    lines.push(`Wiadomości w sesji: ${formatTokenCount(usage.contextMessages)}`);
+  }
+
+  return lines.join('\n');
+}
+
+function formatTokenCount(value: number | null | undefined): string {
+  return String(Math.round(Number(value ?? 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+function formatDurationMs(value: number): string {
+  if (value >= 1000) {
+    return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value / 1000)} s`;
+  }
+
+  return `${formatTokenCount(value)} ms`;
 }
 
 function resolveProducedEvidenceLinks(step: AnalysisJobStepResponse): StepEvidenceLink[] {

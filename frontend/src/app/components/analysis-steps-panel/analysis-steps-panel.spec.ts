@@ -171,6 +171,25 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea).toBeNull();
   });
 
+  it('should show token usage under the final AI step status', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStepWithUsage()]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const usagePill = compiled.querySelector('.usage-pill') as HTMLElement | null;
+    const tooltip = usagePill?.getAttribute('aria-label') ?? '';
+
+    expect(usagePill).not.toBeNull();
+    expect(usagePill?.textContent?.trim()).toBe('Tokeny 2 820');
+    expect(tooltip).toContain('Wejście: 2 400');
+    expect(tooltip).toContain('Wyjście: 420');
+    expect(tooltip).toContain('Model: gpt-5.4');
+  });
+
   it('should hide the prepared prompt on a failed AI step when no result is available', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildFailedAiStep()]);
@@ -546,6 +565,26 @@ function buildCompletedAiStep(): AnalysisJobStepResponse {
   };
 }
 
+function buildCompletedAiStepWithUsage(): AnalysisJobStepResponse {
+  return {
+    ...buildCompletedAiStep(),
+    usage: {
+      inputTokens: 2400,
+      outputTokens: 420,
+      cacheReadTokens: 300,
+      cacheWriteTokens: 50,
+      totalTokens: 2820,
+      cost: 2.3,
+      apiDurationMs: 1100,
+      apiCallCount: 1,
+      model: 'gpt-5.4',
+      contextTokenLimit: 128000,
+      contextCurrentTokens: 9200,
+      contextMessages: 6
+    }
+  };
+}
+
 function buildFailedAiStep(): AnalysisJobStepResponse {
   return {
     code: 'AI_ANALYSIS',
@@ -683,6 +722,10 @@ function buildAnalysisResult() {
     recommendedAction: 'Sprawdź połączenia backendu z bazą danych.',
     rationale: 'Wzrost czasu odpowiedzi koreluje z błędami połączenia do bazy.',
     affectedFunction: 'CustomerController',
-    prompt: buildAiPrompt()
+    affectedProcess: 'Obsługa klienta',
+    affectedBoundedContext: 'Customer Context',
+    affectedTeam: 'Customer Team',
+    prompt: buildAiPrompt(),
+    usage: null
   };
 }

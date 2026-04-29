@@ -3,6 +3,7 @@ import {
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
   AnalysisChatMessageResponse,
+  AnalysisAiUsage,
   AnalysisExportEnvelope,
   AnalysisJobResponse,
   AnalysisJobStepResponse,
@@ -11,8 +12,8 @@ import {
 import { isTerminalStatus } from './analysis-display.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
-export const EXPORT_VERSION = 3;
-const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3]);
+export const EXPORT_VERSION = 4;
+const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4]);
 
 export function buildExportEnvelope(
   job: AnalysisJobResponse,
@@ -134,7 +135,22 @@ function normalizeStep(step: unknown): AnalysisJobStepResponse {
     message: normalizeString(stepObject?.['message']),
     itemCount: typeof stepObject?.['itemCount'] === 'number' ? stepObject['itemCount'] : null,
     startedAt: normalizeString(stepObject?.['startedAt']),
-    completedAt: normalizeString(stepObject?.['completedAt'])
+    completedAt: normalizeString(stepObject?.['completedAt']),
+    consumesEvidence: Array.isArray(stepObject?.['consumesEvidence'])
+      ? stepObject['consumesEvidence'].map(normalizeEvidenceReference)
+      : [],
+    producesEvidence: Array.isArray(stepObject?.['producesEvidence'])
+      ? stepObject['producesEvidence'].map(normalizeEvidenceReference)
+      : [],
+    usage: normalizeUsage(stepObject?.['usage'])
+  };
+}
+
+function normalizeEvidenceReference(reference: unknown): { provider: string; category: string } {
+  const referenceObject = asObject(reference);
+  return {
+    provider: normalizeString(referenceObject?.['provider']),
+    category: normalizeString(referenceObject?.['category'])
   };
 }
 
@@ -201,12 +217,51 @@ function normalizeResult(result: unknown): AnalysisResultResponse {
     affectedProcess: normalizeString(resultObject?.['affectedProcess']),
     affectedBoundedContext: normalizeString(resultObject?.['affectedBoundedContext']),
     affectedTeam: normalizeString(resultObject?.['affectedTeam']),
-    prompt: normalizeString(resultObject?.['prompt'])
+    prompt: normalizeString(resultObject?.['prompt']),
+    usage: normalizeUsage(resultObject?.['usage'])
+  };
+}
+
+function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
+  const usageObject = asObject(usage);
+  if (!usageObject) {
+    return null;
+  }
+
+  const totalTokens = normalizeNumber(usageObject['totalTokens']);
+  const inputTokens = normalizeNumber(usageObject['inputTokens']);
+  const outputTokens = normalizeNumber(usageObject['outputTokens']);
+
+  if (totalTokens <= 0 && inputTokens <= 0 && outputTokens <= 0) {
+    return null;
+  }
+
+  return {
+    inputTokens,
+    outputTokens,
+    cacheReadTokens: normalizeNumber(usageObject['cacheReadTokens']),
+    cacheWriteTokens: normalizeNumber(usageObject['cacheWriteTokens']),
+    totalTokens,
+    cost: normalizeNumber(usageObject['cost']),
+    apiDurationMs: normalizeNumber(usageObject['apiDurationMs']),
+    apiCallCount: normalizeNumber(usageObject['apiCallCount']),
+    model: normalizeString(usageObject['model']),
+    contextTokenLimit: normalizeNullableNumber(usageObject['contextTokenLimit']),
+    contextCurrentTokens: normalizeNullableNumber(usageObject['contextCurrentTokens']),
+    contextMessages: normalizeNullableNumber(usageObject['contextMessages'])
   };
 }
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function normalizeNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function normalizeNullableNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function sanitizeFileNamePart(value: string): string {

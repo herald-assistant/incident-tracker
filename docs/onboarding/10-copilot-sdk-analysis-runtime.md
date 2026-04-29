@@ -218,6 +218,8 @@ Findings sa widoczne w telemetryce/logach, ale nie zmieniaja runtime result.
 Metryki obejmuja:
 
 - rozmiary promptu i artefaktow,
+- token usage z eventow `assistant.usage` oraz ostatni snapshot wykorzystania
+  context window z `session.usage_info`,
 - duration preparation/client/create session/sendAndWait/total,
 - tool calls wedlug grup,
 - drogie tool counters i returned characters,
@@ -227,7 +229,9 @@ Metryki obejmuja:
 - budget warnings/denials.
 
 Mutable stan licznikow jest oddzielony od registry, ale pola
-`CopilotAnalysisMetrics` i JSON summary log pozostaja bez zmian.
+`CopilotAnalysisMetrics` i JSON summary log pozostaja generyczne dla aplikacji.
+Provider mapuje token usage na `AnalysisAiUsage`, dzieki czemu job UI pokazuje
+sume tokenow w ostatnim kroku bez zaleznosci od typow SDK.
 
 ## Publiczny kontrakt produktu
 

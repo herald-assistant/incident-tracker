@@ -1,6 +1,10 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.execution;
 
 import com.github.copilot.sdk.CopilotClient;
+import com.github.copilot.sdk.CopilotSession;
+import com.github.copilot.sdk.events.AbstractSessionEvent;
+import com.github.copilot.sdk.events.AssistantUsageEvent;
+import com.github.copilot.sdk.events.SessionUsageInfoEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -78,7 +82,7 @@ public class CopilotSdkExecutionGateway {
                         );
                         toolBudgetRegistry.registerSession(session.getSessionId());
 
-                        session.on(event -> logSessionEvent(event, session, sessionSummary));
+                        session.on(event -> handleSessionEvent(event, session, sessionSummary));
 
                         try {
                             var sendAndWaitStart = System.nanoTime();
@@ -154,6 +158,50 @@ public class CopilotSdkExecutionGateway {
         }
 
         return current;
+    }
+
+    private void handleSessionEvent(
+            AbstractSessionEvent event,
+            CopilotSession session,
+            SessionLogSummary sessionSummary
+    ) {
+        logSessionEvent(event, session, sessionSummary);
+        recordUsageEvent(event, session.getSessionId());
+    }
+
+    private void recordUsageEvent(AbstractSessionEvent event, String sessionId) {
+        if (event instanceof AssistantUsageEvent assistantUsageEvent) {
+            var data = assistantUsageEvent.getData();
+            if (data == null) {
+                return;
+            }
+
+            metricsRegistry.recordAssistantUsage(
+                    sessionId,
+                    data.model(),
+                    data.inputTokens(),
+                    data.outputTokens(),
+                    data.cacheReadTokens(),
+                    data.cacheWriteTokens(),
+                    data.cost(),
+                    data.duration()
+            );
+            return;
+        }
+
+        if (event instanceof SessionUsageInfoEvent sessionUsageInfoEvent) {
+            var data = sessionUsageInfoEvent.getData();
+            if (data == null) {
+                return;
+            }
+
+            metricsRegistry.recordSessionUsageInfo(
+                    sessionId,
+                    data.tokenLimit(),
+                    data.currentTokens(),
+                    data.messagesLength()
+            );
+        }
     }
 
     private String buildFailureMessage(Throwable rootCause) {

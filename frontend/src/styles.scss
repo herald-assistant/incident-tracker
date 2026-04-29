@@ -754,6 +754,14 @@ app-root {
   color: var(--danger-text);
 }
 
+.usage-pill {
+  border: 1px solid rgba(12, 102, 228, 0.18);
+  background: #f8fbff;
+  color: var(--primary-dark);
+  white-space: nowrap;
+  cursor: help;
+}
+
 .meta-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1510,6 +1518,24 @@ body.is-column-resizing {
   overscroll-behavior: contain;
   font-size: 0.82rem;
   line-height: 1.5;
+  text-align: left;
+}
+
+.analysis-token-tooltip,
+.analysis-token-tooltip .mat-mdc-tooltip-surface {
+  max-width: min(360px, calc(100vw - 32px));
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  border-radius: 14px;
+  background: rgba(7, 71, 166, 0.96);
+  color: #f8fbff;
+  box-shadow: 0 18px 42px rgba(9, 30, 66, 0.28);
+}
+
+.analysis-token-tooltip .mat-mdc-tooltip-surface {
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  line-height: 1.55;
   text-align: left;
 }
 

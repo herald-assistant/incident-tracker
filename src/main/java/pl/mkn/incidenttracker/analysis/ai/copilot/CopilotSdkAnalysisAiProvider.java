@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
@@ -71,7 +72,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             );
             var parseResult = responseParser.parse(assistantContent);
             var qualityReport = qualityGate.evaluate(request, parseResult.response());
-            var response = toAiResponse(parseResult.response(), preparedRequest.prompt());
+            var response = toAiResponse(parseResult.response(), preparedRequest.prompt(), null);
             metricsRegistry.recordResponse(
                     copilotSessionId,
                     parseResult.structuredResponse(),
@@ -81,7 +82,14 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             );
             metricsRegistry.recordQualityReport(copilotSessionId, qualityReport);
             metricsLogger.logQualityReport(request.correlationId(), qualityReport);
-            metricsRegistry.remove(copilotSessionId).ifPresent(metricsLogger::logSummary);
+            var metrics = metricsRegistry.remove(copilotSessionId);
+            metrics.ifPresent(metricsLogger::logSummary);
+            response = toAiResponse(
+                    parseResult.response(),
+                    preparedRequest.prompt(),
+                    metrics.map(pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotAnalysisMetrics::usage)
+                            .orElse(null)
+            );
 
             log.info(
                     "Copilot response parse correlationId={} parsedKeys={} structuredResponse={} fallbackResponseUsed={} qualityPassed={} qualityFindingCount={}",
@@ -133,7 +141,8 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
 
     private AnalysisAiAnalysisResponse toAiResponse(
             StructuredAnalysisResponse structuredResponse,
-            String prompt
+            String prompt,
+            AnalysisAiUsage usage
     ) {
         return new AnalysisAiAnalysisResponse(
                 "copilot-sdk",
@@ -145,7 +154,8 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
                 structuredResponse.affectedProcess(),
                 structuredResponse.affectedBoundedContext(),
                 structuredResponse.affectedTeam(),
-                prompt
+                prompt,
+                usage
         );
     }
 

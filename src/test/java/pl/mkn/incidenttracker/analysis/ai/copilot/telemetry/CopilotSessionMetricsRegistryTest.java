@@ -32,6 +32,27 @@ class CopilotSessionMetricsRegistryTest {
                 12L
         );
         registry.recordExecutionDurations(context.copilotSessionId(), 1L, 2L, 3L, 4L);
+        registry.recordAssistantUsage(
+                context.copilotSessionId(),
+                "gpt-5.4",
+                1200D,
+                340D,
+                100D,
+                25D,
+                1.5D,
+                900D
+        );
+        registry.recordAssistantUsage(
+                context.copilotSessionId(),
+                "gpt-5.4",
+                300D,
+                60D,
+                null,
+                null,
+                0.4D,
+                250D
+        );
+        registry.recordSessionUsageInfo(context.copilotSessionId(), 128000D, 15600D, 8D);
         registry.recordToolCall(CopilotToolMetrics.from(
                 context.analysisRunId(),
                 context.copilotSessionId(),
@@ -85,6 +106,16 @@ class CopilotSessionMetricsRegistryTest {
         assertEquals(2L, metrics.createSessionDurationMs());
         assertEquals(3L, metrics.sendAndWaitDurationMs());
         assertEquals(4L, metrics.totalExecutionDurationMs());
+        assertEquals(1500L, metrics.usage().inputTokens());
+        assertEquals(400L, metrics.usage().outputTokens());
+        assertEquals(1900L, metrics.usage().totalTokens());
+        assertEquals(100L, metrics.usage().cacheReadTokens());
+        assertEquals(25L, metrics.usage().cacheWriteTokens());
+        assertEquals(2, metrics.usage().apiCallCount());
+        assertEquals("gpt-5.4", metrics.usage().model());
+        assertEquals(128000L, metrics.usage().contextTokenLimit());
+        assertEquals(15600L, metrics.usage().contextCurrentTokens());
+        assertEquals(8L, metrics.usage().contextMessages());
         assertEquals(2, metrics.totalToolCalls());
         assertEquals(1, metrics.gitLabToolCalls());
         assertEquals(1, metrics.databaseToolCalls());

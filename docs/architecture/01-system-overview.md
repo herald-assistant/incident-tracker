@@ -27,6 +27,8 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
   dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
   pollingiem joba,
+- w ekranie `GET /` ostatni krok AI pokazuje sumaryczne zuzycie tokenow sesji
+  oraz tooltip ze szczegolami z eventow Copilota,
 - ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
   GitLaba,
 - glowne API `POST /analysis`,
@@ -186,6 +188,8 @@ Na dzisiaj projekt ma:
   przez backendowy endpoint opcji AI. Frontend nie jest source of truth dla
   mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
+- Zuzycie tokenow jest zbierane z eventow sesji Copilota i wystawiane do UI
+  jako generyczne `AnalysisAiUsage`, bez typow SDK w kontrakcie frontendu.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
   katalogu runtime.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego

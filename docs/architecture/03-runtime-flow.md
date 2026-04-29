@@ -392,6 +392,10 @@ Zbierane sa:
 - counts evidence sections/items/artifacts,
 - artifact total characters,
 - prompt characters,
+- token usage z eventow `assistant.usage`:
+  input/output/cache read/cache write, liczba wywolan API, model i czas API,
+- ostatni snapshot `session.usage_info`, czyli context token limit/current
+  tokens/messages length,
 - preparation/client/create session/sendAndWait/total durations,
 - tool calls total i wedlug grup,
 - drogie GitLab/DB tool counters,
@@ -408,6 +412,10 @@ jest dostepny nawet wtedy, gdy execution failuje.
 
 `toolEvidenceSections` sa osobnym polem job response i moga byc aktualizowane
 podczas sesji AI przez listener. UI nie zalezy od typow Copilot SDK.
+
+Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
+`AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
+szczegolami zebranymi z eventow Copilota.
 
 Publiczny sync request zawiera tylko `correlationId`. Job request UI zawiera
 `correlationId` oraz opcjonalne preferencje AI (`model`, `reasoningEffort`).

@@ -19,6 +19,7 @@ import pl.mkn.incidenttracker.analysis.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiPreparedAnalysis;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiProvider;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.AnalysisEvidenceSection;
@@ -115,6 +116,30 @@ class AnalysisJobServiceTest {
         var completed = service.getAnalysis(started.analysisId());
         assertEquals("gpt-5.4", completed.aiModel());
         assertEquals("high", completed.reasoningEffort());
+    }
+
+    @Test
+    void shouldExposeAiTokenUsageOnFinalAiStep() {
+        var usageTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                new UsageAwareAnalysisAiProvider(),
+                new TestAnalysisChatProvider(),
+                usageTaskExecutor
+        );
+
+        var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
+        usageTaskExecutor.runNext();
+
+        var completed = service.getAnalysis(started.analysisId());
+        var aiStep = completed.steps().get(5);
+
+        assertNotNull(completed.result().usage());
+        assertEquals(1700L, completed.result().usage().totalTokens());
+        assertNotNull(aiStep.usage());
+        assertEquals(1700L, aiStep.usage().totalTokens());
+        assertEquals(1200L, aiStep.usage().inputTokens());
+        assertEquals(500L, aiStep.usage().outputTokens());
+        assertEquals("gpt-5.4", aiStep.usage().model());
     }
 
     @Test
@@ -330,6 +355,60 @@ class AnalysisJobServiceTest {
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             throw new IllegalStateException("AI gateway timeout");
+        }
+    }
+
+    private static final class UsageAwareAnalysisAiProvider implements AnalysisAiProvider {
+
+        @Override
+        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+            return new TestPreparedAnalysis(
+                    "usage-aware-ai-provider",
+                    request.correlationId(),
+                    "Prepared prompt with token usage correlationId=%s".formatted(request.correlationId()),
+                    request
+            );
+        }
+
+        @Override
+        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
+            try (var prepared = prepare(request)) {
+                return analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
+            }
+        }
+
+        @Override
+        public AnalysisAiAnalysisResponse analyze(
+                AnalysisAiPreparedAnalysis preparedAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            var prepared = testPreparedAnalysis(preparedAnalysis);
+            return new AnalysisAiAnalysisResponse(
+                    "usage-aware-ai-provider",
+                    "Structured evidence points to a downstream timeout in the catalog-service call chain.",
+                    "DOWNSTREAM_TIMEOUT",
+                    "Inspect recent HTTP client timeout changes first.",
+                    "The test provider exposes token usage for UI projection.",
+                    "The affected function is the outbound catalog lookup path.",
+                    "Billing catalog lookup",
+                    "Billing Context",
+                    "Core Integration Team",
+                    prepared.prompt(),
+                    new AnalysisAiUsage(
+                            1200L,
+                            500L,
+                            300L,
+                            40L,
+                            1700L,
+                            1.25D,
+                            900L,
+                            2,
+                            "gpt-5.4",
+                            128000L,
+                            6400L,
+                            7L
+                    )
+            );
         }
     }
 

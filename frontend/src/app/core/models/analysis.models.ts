@@ -40,6 +40,22 @@ export interface AnalysisResultResponse {
   affectedBoundedContext: string;
   affectedTeam: string;
   prompt: string;
+  usage: AnalysisAiUsage | null;
+}
+
+export interface AnalysisAiUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+  cost: number;
+  apiDurationMs: number;
+  apiCallCount: number;
+  model: string;
+  contextTokenLimit: number | null;
+  contextCurrentTokens: number | null;
+  contextMessages: number | null;
 }
 
 export interface AnalysisStartRequest {
@@ -99,6 +115,7 @@ export interface AnalysisJobStepResponse {
   completedAt: string;
   consumesEvidence?: AnalysisEvidenceReference[];
   producesEvidence?: AnalysisEvidenceReference[];
+  usage?: AnalysisAiUsage | null;
 }
 
 export type AnalysisChatMessageRole = 'USER' | 'ASSISTANT' | string;

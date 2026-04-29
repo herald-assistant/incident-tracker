@@ -152,6 +152,9 @@ sa pobierane z backendu przez `GET /analysis/ai/options`.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba,
 kontekst lookupow GitLaba i wyniki DB dociagniete przez AI tools podczas kroku
 `AI_ANALYSIS`.
+Krok `AI_ANALYSIS` moze tez zawierac `usage`: sumaryczne tokeny oraz szczegoly
+input/output/cache/context zebrane z eventow Copilot SDK i zmapowane na
+generyczny kontrakt aplikacji.
 Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
 `POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
 tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.

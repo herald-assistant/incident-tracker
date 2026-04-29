@@ -299,6 +299,8 @@ Copilot zbiera metryki per analiza/sesja:
 
 - liczby sekcji/items/artifacts,
 - rozmiary artifacts i promptu,
+- token usage z eventow SDK `assistant.usage` oraz ostatni snapshot okna
+  kontekstu z `session.usage_info`,
 - duration preparation/client/session/sendAndWait/total,
 - liczby tool calls wedlug grup,
 - liczniki drogich tools,
@@ -325,6 +327,10 @@ metryki i audyt wyniku.
 Job state moze przechowywac prepared prompt i `toolEvidenceSections`, ale UI
 nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
 analizy aplikacji.
+
+Zuzycie tokenow jest wystawiane jako generyczne `AnalysisAiUsage`, a nie jako
+event albo typ Copilot SDK. Dzieki temu UI moze pokazac sumaryczne tokeny i
+szczegoly sesji AI bez znajomosci mechaniki event streamu.
 
 Refaktory w `analysis.ai` i `analysis.ai.copilot` nie powinny wymagac wiedzy o
 typach SDK w UI: `POST /analysis` nadal przyjmuje tylko `correlationId`, a

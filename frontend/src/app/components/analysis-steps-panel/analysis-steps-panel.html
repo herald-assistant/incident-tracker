@@ -68,9 +68,23 @@
                 <p class="result-card-label">Szczegóły kroku</p>
                 <h4 class="stepper-detail__title">{{ step.label }}</h4>
               </div>
-              <span [attr.class]="'status-pill ' + step.statusClass">
-                {{ step.statusLabel }}
-              </span>
+              <div class="stepper-detail__status-stack">
+                <span [attr.class]="'status-pill ' + step.statusClass">
+                  {{ step.statusLabel }}
+                </span>
+                @if (step.showUsage) {
+                  <span
+                    class="status-pill usage-pill"
+                    [attr.aria-label]="step.usageTooltip"
+                    [matTooltip]="step.usageTooltip"
+                    matTooltipPosition="above"
+                    matTooltipClass="analysis-token-tooltip"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ step.usageSummary }}
+                  </span>
+                }
+              </div>
             </div>
 
             @if (step.meta.length > 0) {

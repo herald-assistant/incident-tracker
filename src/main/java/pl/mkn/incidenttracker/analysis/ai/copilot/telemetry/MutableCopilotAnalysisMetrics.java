@@ -1,11 +1,15 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
+import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.analysis.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 final class MutableCopilotAnalysisMetrics {
 
@@ -22,6 +26,18 @@ final class MutableCopilotAnalysisMetrics {
     private long createSessionDurationMs;
     private long sendAndWaitDurationMs;
     private long totalExecutionDurationMs;
+    private int aiUsageCallCount;
+    private double aiInputTokens;
+    private double aiOutputTokens;
+    private double aiCacheReadTokens;
+    private double aiCacheWriteTokens;
+    private double aiCost;
+    private double aiApiDurationMs;
+    private final Set<String> aiUsageModels = new LinkedHashSet<>();
+    private boolean hasContextUsageInfo;
+    private double contextTokenLimit;
+    private double contextCurrentTokens;
+    private double contextMessages;
     private int totalToolCalls;
     private int elasticToolCalls;
     private int gitLabToolCalls;
@@ -74,6 +90,38 @@ final class MutableCopilotAnalysisMetrics {
         this.createSessionDurationMs = createSessionDurationMs;
         this.sendAndWaitDurationMs = sendAndWaitDurationMs;
         this.totalExecutionDurationMs = totalExecutionDurationMs;
+    }
+
+    synchronized void recordAssistantUsage(
+            String model,
+            Double inputTokens,
+            Double outputTokens,
+            Double cacheReadTokens,
+            Double cacheWriteTokens,
+            Double cost,
+            Double durationMs
+    ) {
+        aiUsageCallCount++;
+        aiInputTokens += numeric(inputTokens);
+        aiOutputTokens += numeric(outputTokens);
+        aiCacheReadTokens += numeric(cacheReadTokens);
+        aiCacheWriteTokens += numeric(cacheWriteTokens);
+        aiCost += numeric(cost);
+        aiApiDurationMs += numeric(durationMs);
+        if (StringUtils.hasText(model)) {
+            aiUsageModels.add(model);
+        }
+    }
+
+    synchronized void recordSessionUsageInfo(
+            double tokenLimit,
+            double currentTokens,
+            double messagesLength
+    ) {
+        hasContextUsageInfo = true;
+        contextTokenLimit = tokenLimit;
+        contextCurrentTokens = currentTokens;
+        contextMessages = messagesLength;
     }
 
     synchronized void recordToolCall(CopilotToolMetrics toolMetrics) {
@@ -154,6 +202,7 @@ final class MutableCopilotAnalysisMetrics {
                 createSessionDurationMs,
                 sendAndWaitDurationMs,
                 totalExecutionDurationMs,
+                usageSnapshot(),
                 totalToolCalls,
                 elasticToolCalls,
                 gitLabToolCalls,
@@ -178,5 +227,36 @@ final class MutableCopilotAnalysisMetrics {
                 budgetRawSqlAttempts,
                 budgetWarnings
         );
+    }
+
+    private AnalysisAiUsage usageSnapshot() {
+        if (aiUsageCallCount <= 0) {
+            return null;
+        }
+
+        var inputTokens = rounded(aiInputTokens);
+        var outputTokens = rounded(aiOutputTokens);
+        return new AnalysisAiUsage(
+                inputTokens,
+                outputTokens,
+                rounded(aiCacheReadTokens),
+                rounded(aiCacheWriteTokens),
+                inputTokens + outputTokens,
+                aiCost,
+                rounded(aiApiDurationMs),
+                aiUsageCallCount,
+                aiUsageModels.isEmpty() ? null : String.join(", ", aiUsageModels),
+                hasContextUsageInfo ? rounded(contextTokenLimit) : null,
+                hasContextUsageInfo ? rounded(contextCurrentTokens) : null,
+                hasContextUsageInfo ? rounded(contextMessages) : null
+        );
+    }
+
+    private double numeric(Double value) {
+        return value != null ? value : 0D;
+    }
+
+    private long rounded(double value) {
+        return Math.round(value);
     }
 }

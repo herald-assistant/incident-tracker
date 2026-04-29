@@ -57,6 +57,40 @@ public class CopilotSessionMetricsRegistry {
         ));
     }
 
+    public void recordAssistantUsage(
+            String copilotSessionId,
+            String model,
+            Double inputTokens,
+            Double outputTokens,
+            Double cacheReadTokens,
+            Double cacheWriteTokens,
+            Double cost,
+            Double durationMs
+    ) {
+        withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordAssistantUsage(
+                model,
+                inputTokens,
+                outputTokens,
+                cacheReadTokens,
+                cacheWriteTokens,
+                cost,
+                durationMs
+        ));
+    }
+
+    public void recordSessionUsageInfo(
+            String copilotSessionId,
+            double tokenLimit,
+            double currentTokens,
+            double messagesLength
+    ) {
+        withMetrics(copilotSessionId).ifPresent(metrics -> metrics.recordSessionUsageInfo(
+                tokenLimit,
+                currentTokens,
+                messagesLength
+        ));
+    }
+
     public void recordToolCall(CopilotToolMetrics toolMetrics) {
         if (toolMetrics == null) {
             return;

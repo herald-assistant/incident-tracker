@@ -74,7 +74,8 @@ public class AnalysisOrchestrator {
                     aiResponse.affectedProcess(),
                     aiResponse.affectedBoundedContext(),
                     aiResponse.affectedTeam(),
-                    aiResponse.prompt()
+                    aiResponse.prompt(),
+                    aiResponse.usage()
             );
 
             return new AnalysisExecution(

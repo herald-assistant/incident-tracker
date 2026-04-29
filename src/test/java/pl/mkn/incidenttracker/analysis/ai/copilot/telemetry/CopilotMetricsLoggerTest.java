@@ -33,6 +33,7 @@ class CopilotMetricsLoggerTest {
                 0L,
                 0L,
                 0L,
+                null,
                 0,
                 0,
                 0,
