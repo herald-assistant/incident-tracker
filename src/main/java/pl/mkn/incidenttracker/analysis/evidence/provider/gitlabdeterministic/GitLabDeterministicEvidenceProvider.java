@@ -395,8 +395,14 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
             return projectPathCache.get(cacheKey);
         }
 
+        var operationalProjectPaths = resolveRepoMapProjectPaths(discoveryHints);
+        if (!operationalProjectPaths.isEmpty()) {
+            var result = List.copyOf(new LinkedHashSet<>(operationalProjectPaths));
+            projectPathCache.put(cacheKey, result);
+            return result;
+        }
+
         var resolvedProjectPaths = new LinkedHashSet<String>();
-        resolvedProjectPaths.addAll(resolveRepoMapProjectPaths(discoveryHints));
 
         var searchResults = searchProjectsByHints(discoveryHints);
         for (var searchResult : searchResults) {

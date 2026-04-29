@@ -289,14 +289,17 @@ class GitLabDeterministicEvidenceProviderTest {
                 properties,
                 sourceResolveService,
                 deploymentContextResolver,
-                repositoryProjectPathResolver(List.of(repoMapEntry(
-                        "case-workflow-repo",
-                        "WORKFLOWS/CASE_BACKEND",
-                        "TENANT-ALPHA",
-                        List.of("backend"),
-                        List.of("case-evaluation-service"),
-                        List.of("backend")
-                )))
+                repositoryProjectPathResolver(
+                        List.of(systemEntry("backend", List.of("case-workflow-repo"))),
+                        List.of(repoMapEntry(
+                                "case-workflow-repo",
+                                "WORKFLOWS/CASE_BACKEND",
+                                "TENANT-ALPHA",
+                                List.of("backend"),
+                                List.of("case-evaluation-service"),
+                                List.of("backend")
+                        ))
+                )
         );
         var elasticProvider = new ElasticLogEvidenceProvider(frameworkHeavyElasticPort());
         var baseContext = AnalysisContext.initialize("resp4-like");
@@ -355,6 +358,7 @@ class GitLabDeterministicEvidenceProviderTest {
                         request.projectPath().equals("backend")),
                 any()
         );
+        verify(repositoryPort, never()).searchProjects(any(), any());
     }
 
     @Test
@@ -411,16 +415,17 @@ class GitLabDeterministicEvidenceProviderTest {
     }
 
     private static OperationalContextRepositoryProjectPathResolver emptyRepositoryProjectPathResolver() {
-        return repositoryProjectPathResolver(List.of());
+        return repositoryProjectPathResolver(List.of(), List.of());
     }
 
     private static OperationalContextRepositoryProjectPathResolver repositoryProjectPathResolver(
+            List<Map<String, Object>> systems,
             List<Map<String, Object>> repositories
     ) {
         return new OperationalContextRepositoryProjectPathResolver(query -> new OperationalContextCatalog(
                 List.of(),
                 List.of(),
-                List.of(),
+                systems,
                 List.of(),
                 repositories,
                 List.of(),
@@ -428,6 +433,13 @@ class GitLabDeterministicEvidenceProviderTest {
                 List.of(),
                 ""
         ));
+    }
+
+    private static Map<String, Object> systemEntry(String id, List<String> repositoryIds) {
+        var system = new LinkedHashMap<String, Object>();
+        system.put("id", id);
+        system.put("repos", repositoryIds);
+        return system;
     }
 
     private static Map<String, Object> repoMapEntry(

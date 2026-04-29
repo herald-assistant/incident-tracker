@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -19,8 +18,8 @@ import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.Operati
 @RequiredArgsConstructor
 public class OperationalContextRepositoryProjectPathResolver {
 
-    private static final Set<OperationalContextEntryType> REPOSITORY_ONLY =
-            Set.of(OperationalContextEntryType.REPOSITORY);
+    private static final Set<OperationalContextEntryType> SYSTEM_AND_REPOSITORY =
+            Set.of(OperationalContextEntryType.SYSTEM, OperationalContextEntryType.REPOSITORY);
 
     private final OperationalContextPort operationalContextPort;
 
@@ -31,40 +30,28 @@ public class OperationalContextRepositoryProjectPathResolver {
         }
 
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
-                REPOSITORY_ONLY,
+                SYSTEM_AND_REPOSITORY,
                 List.of(),
                 false
         ));
-        var candidates = new LinkedHashMap<String, ProjectPathCandidate>();
+        var repositoriesById = repositoriesById(catalog.repositories());
+        var resolvedProjectPaths = new LinkedHashSet<String>();
 
-        for (var repository : catalog.repositories()) {
-            var groupMatches = groupMatches(configuredGroup, repository);
-            var projectPaths = projectPaths(configuredGroup, repository);
-            if (!groupMatches) {
+        for (var system : catalog.systems()) {
+            if (!matchesSystemId(system, normalizedHints)) {
                 continue;
             }
 
-            var score = matchScore(repository, normalizedHints);
-            if (score <= 0) {
-                continue;
-            }
-
-            for (var projectPath : projectPaths) {
-                candidates.merge(
-                        projectPath,
-                        new ProjectPathCandidate(projectPath, score),
-                        (current, replacement) -> replacement.score() > current.score() ? replacement : current
-                );
+            for (var repositoryId : systemRepositoryIds(system)) {
+                var repository = repositoriesById.get(normalizeComparable(repositoryId));
+                if (repository == null || !groupMatches(configuredGroup, repository)) {
+                    continue;
+                }
+                resolvedProjectPaths.addAll(projectPaths(configuredGroup, repository));
             }
         }
 
-        return candidates.values().stream()
-                .sorted(Comparator
-                        .comparingInt(ProjectPathCandidate::score)
-                        .reversed()
-                        .thenComparing(ProjectPathCandidate::projectPath))
-                .map(ProjectPathCandidate::projectPath)
-                .toList();
+        return List.copyOf(resolvedProjectPaths);
     }
 
     private LinkedHashSet<String> normalizedHints(List<String> projectHints) {
@@ -78,12 +65,37 @@ public class OperationalContextRepositoryProjectPathResolver {
         return hints;
     }
 
+    private Map<String, Map<String, Object>> repositoriesById(List<Map<String, Object>> repositories) {
+        var repositoriesById = new LinkedHashMap<String, Map<String, Object>>();
+        for (var repository : repositories) {
+            var normalizedId = normalizeComparable(text(repository, "id"));
+            if (StringUtils.hasText(normalizedId)) {
+                repositoriesById.putIfAbsent(normalizedId, repository);
+            }
+        }
+        return repositoriesById;
+    }
+
+    private boolean matchesSystemId(Map<String, Object> system, Set<String> normalizedHints) {
+        var normalizedSystemId = normalizeComparable(text(system, "id"));
+        return StringUtils.hasText(normalizedSystemId) && normalizedHints.contains(normalizedSystemId);
+    }
+
+    private List<String> systemRepositoryIds(Map<String, Object> system) {
+        var repositoryIds = new LinkedHashSet<String>();
+        repositoryIds.addAll(textList(system, "repos"));
+        repositoryIds.addAll(textList(system, "repositories.primary"));
+        repositoryIds.addAll(textList(system, "repositories.secondary"));
+        repositoryIds.addAll(textList(system, "repositories.backendModules"));
+        repositoryIds.addAll(textList(system, "repositories.frontendModules"));
+        return List.copyOf(repositoryIds);
+    }
+
     private List<String> projectPaths(String configuredGroup, Map<String, Object> repository) {
         var projectPaths = new LinkedHashSet<String>();
         for (var projectPath : textList(repository, "gitLab.projectPath")) {
             addProjectPath(projectPaths, configuredGroup, projectPath);
         }
-        addProjectPath(projectPaths, configuredGroup, text(repository, "project"));
         return List.copyOf(projectPaths);
     }
 
@@ -115,45 +127,6 @@ public class OperationalContextRepositoryProjectPathResolver {
         return repositoryGroups.stream()
                 .map(this::normalizeGroupPath)
                 .anyMatch(normalizedConfiguredGroup::equals);
-    }
-
-    private int matchScore(Map<String, Object> repository, Set<String> normalizedHints) {
-        var score = 0;
-        score += scoreValues(normalizedHints, textList(repository, "project"), 60, 35);
-        score += scoreValues(normalizedHints, textList(repository, "gitLab.projectPath"), 60, 35);
-        score += scoreValues(normalizedHints, textList(repository, "runtimeMappings.projectNames"), 55, 35);
-        score += scoreValues(normalizedHints, textList(repository, "signals.projectNames"), 55, 35);
-        score += scoreValues(normalizedHints, textList(repository, "runtimeMappings.serviceNames"), 35, 20);
-        score += scoreValues(normalizedHints, textList(repository, "signals.serviceNames"), 35, 20);
-        score += scoreValues(normalizedHints, textList(repository, "runtimeMappings.containerNames"), 35, 20);
-        score += scoreValues(normalizedHints, textList(repository, "signals.containerNames"), 35, 20);
-        score += scoreValues(normalizedHints, textList(repository, "runtimeMappings.applicationNames"), 30, 16);
-        return score;
-    }
-
-    private int scoreValues(
-            Set<String> normalizedHints,
-            List<String> candidateValues,
-            int exactPoints,
-            int containsPoints
-    ) {
-        var score = 0;
-        for (var candidateValue : candidateValues) {
-            var normalizedCandidate = normalizeComparable(candidateValue);
-            if (!StringUtils.hasText(normalizedCandidate)) {
-                continue;
-            }
-
-            for (var normalizedHint : normalizedHints) {
-                if (normalizedHint.equals(normalizedCandidate)
-                        || normalizedCandidate.endsWith("/" + normalizedHint)) {
-                    score += exactPoints;
-                } else if (normalizedCandidate.contains(normalizedHint)) {
-                    score += containsPoints;
-                }
-            }
-        }
-        return score;
     }
 
     private String relativeProjectPath(String configuredGroup, String rawProjectPath) {
@@ -198,11 +171,5 @@ public class OperationalContextRepositoryProjectPathResolver {
                         .replace('-', '_')
                         .replaceAll("[^a-z0-9/_]+", "_")
                 : null;
-    }
-
-    private record ProjectPathCandidate(
-            String projectPath,
-            int score
-    ) {
     }
 }
