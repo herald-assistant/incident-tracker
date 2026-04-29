@@ -453,6 +453,10 @@ Job response zawiera tez `chatMessages`. UI pokazuje chat dopiero po
 `GET /analysis/jobs/{analysisId}`. Importowany eksport analizy jest read-only,
 bo lokalny backend nie ma odpowiadajacego mu stanu joba.
 
+Job state przechowuje `InitialAnalysisRequest` z zakonczonej analizy, zeby
+follow-up chat reuse'owal resolved scope i evidence bez publicznego requestu
+scope'u od operatora.
+
 Przed startem joba UI pobiera `GET /analysis/ai/options`. Select modelu i
 `reasoningEffort` sa budowane z odpowiedzi backendu; jesli wybrany model nie
 ma dostepnych effortow w SDK, UI nie wysyla `reasoningEffort`.

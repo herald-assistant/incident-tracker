@@ -4,20 +4,21 @@
 
 Ten dokument rozdziela dwa rozne widoki zaleznosci:
 
-- runtime/data-flow: skad plyna dane i kto uruchamia kolejny krok,
+- runtime ownership: kto inicjuje kolejny krok i gdzie deleguje wykonanie,
 - compile-time imports: ktory pakiet importuje klasy z innego pakietu.
 
-Te widoki sa celowo osobne. W runtime dane plyna od adapterow do evidence,
-AI i joba. W kodzie orkiestracja naturalnie importuje nizsze warstwy, wiec
-czesc strzalek kompilacyjnych idzie w przeciwna strone.
+Te widoki sa celowo osobne. Diagram runtime ownership pokazuje kierunek
+wywolania/delegowania, a nie powrot wyniku. Compile-time graph pokazuje
+rzeczywiste importy Javy.
 
 Import graph ponizej powstal ze skanu `src/main/java` z uwzglednieniem
 zwyklych i static importow.
 
-## Runtime / Data Flow
+## Runtime Ownership Flow
 
-Strzalka oznacza tutaj przeplyw danych albo sterowania runtime, nie import
-Javy.
+Strzalka oznacza tutaj, kto inicjuje kolejny krok runtime albo do kogo
+deleguje wykonanie. Nie pokazujemy tutaj powrotu wartosci do callera, bo taka
+strzalka wyglada jak odwrotna zaleznosc pakietowa.
 
 ```mermaid
 flowchart LR
@@ -25,40 +26,41 @@ flowchart LR
     JOBAPI --> JOB["analysis.job"]
     JOB --> FLOW["analysis.flow"]
 
-    EXT["External systems"] --> ADAPTER["analysis.adapter"]
-    ADAPTER --> EVIDENCE["analysis.evidence"]
-    EVIDENCE --> FLOW
+    FLOW --> EVIDENCE["analysis.evidence"]
+    EVIDENCE --> ADAPTER["analysis.adapter"]
+    ADAPTER --> EXT["External systems"]
 
     FLOW --> INITIAL["analysis.ai.initial"]
-    INITIAL --> FLOW
-    FLOW --> JOB
-
-    ADAPTER --> MCP["analysis.mcp"]
-    MCP --> TOOLS["analysis.ai.copilot.tools"]
-    TOOLS --> INITIAL
-    TOOLS --> CHAT["analysis.ai.chat"]
-    TOOLS --> TOOL_EVIDENCE["analysis.ai.evidence tool sections"]
-    TOOL_EVIDENCE --> JOB
+    INITIAL --> TOOLS["analysis.ai.copilot.tools"]
+    TOOLS --> MCP["analysis.mcp"]
+    MCP --> ADAPTER
 
     JOB --> CHAT
-    CHAT --> JOB
+    CHAT["analysis.ai.chat"] --> TOOLS
 
-    OPTIONS["analysis.options"] --> JOB
-    OPTIONS --> FLOW
-    OPTIONS --> INITIAL
-    OPTIONS --> CHAT
+    JOB --> OPTIONS["analysis.options"]
+    FLOW --> OPTIONS
+    INITIAL --> OPTIONS
+    CHAT --> OPTIONS
 ```
 
-Najwazniejsze lancuchy runtime:
+Wyniki wracaja do callera jako return values albo listener callbacks:
+`AnalysisExecution`, `AnalysisResultResponse`, `preparedPrompt`,
+`toolEvidenceSections` i `chatMessages`. To nie tworzy importu zwrotnego.
+
+Najwazniejsze lancuchy ownership/dependency:
 
 - deterministic initial analysis:
-  `analysis.adapter -> analysis.evidence -> analysis.flow -> analysis.ai.initial -> analysis.flow -> analysis.job`,
+  `analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter`,
+- initial AI:
+  `analysis.flow -> analysis.ai.initial`,
 - AI-guided tools podczas initial analysis:
-  `analysis.adapter -> analysis.mcp -> analysis.ai.copilot.tools -> analysis.ai.initial -> analysis.job`,
+  `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp -> analysis.adapter`,
 - follow-up chat:
-  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> analysis.job`,
+  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> analysis.mcp -> analysis.adapter`,
 - model/options:
-  `analysis.options` jest bocznym kontraktem dla UI, joba, flow i providerow AI.
+  `analysis.job`, `analysis.flow` i `analysis.ai` korzystaja z bocznego
+  kontraktu `analysis.options`.
 
 ## Compile-Time Import Graph
 
@@ -102,7 +104,7 @@ flowchart LR
 | Krawedz importow | Liczba | Status | Co oznacza |
 | --- | ---: | --- | --- |
 | `analysis.job -> analysis.flow` | 6 | oczekiwane | Job uruchamia orchestrator i mapuje wynik flow do snapshotu UI. |
-| `analysis.job -> analysis.ai` | 13 | oczekiwane | Job trzyma chat, usage i tool evidence w kontrakcie UI. |
+| `analysis.job -> analysis.ai` | 13 | oczekiwane | Job trzyma chat, usage, tool evidence i zapisany `InitialAnalysisRequest` dla follow-up. |
 | `analysis.job -> analysis.evidence` | 7 | oczekiwane | Job pokazuje kroki pipeline i runtime facts wyprowadzone z evidence. |
 | `analysis.job -> analysis.options` | 2 | oczekiwane | Start joba niesie opcjonalne preferencje AI. |
 | `analysis.flow -> analysis.evidence` | 5 | oczekiwane | Orchestrator uruchamia deterministic evidence collector. |
@@ -164,6 +166,7 @@ Preferowany kierunek kompilacyjny dla nowych feature'ow:
 
 ```text
 analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
+analysis.flow -> analysis.ai.initial
 analysis.ai.copilot -> analysis.mcp -> analysis.adapter
 analysis.job/flow/ai -> analysis.options
 api -> feature exceptions
