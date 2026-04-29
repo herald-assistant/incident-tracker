@@ -12,7 +12,8 @@ Przy nowej sesji najlepiej zaczac od:
 1. `docs/architecture/01-system-overview.md`
 2. `docs/architecture/02-key-decisions.md`
 3. `docs/architecture/03-runtime-flow.md`
-4. `docs/onboarding/README.md`
+4. `docs/architecture/05-package-dependencies.md`
+5. `docs/onboarding/README.md`
 
 ## Co jest "source of truth"
 
@@ -315,6 +316,7 @@ Te dokumenty warto aktualizowac wtedy, gdy zmienia sie jedno z ponizszych:
 - glowny runtime flow,
 - source of truth dla konfiguracji,
 - granice odpowiedzialnosci pakietow,
+- kierunek zaleznosci pomiedzy glownymi pakietami,
 - podstawowe decyzje architektoniczne,
 - preferowany sposob rozbudowy capability.
 

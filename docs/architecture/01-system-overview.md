@@ -88,6 +88,9 @@ Na dzisiaj projekt ma:
 
 ## Glowny podzial pakietow
 
+Szczegolowy diagram runtime/data-flow i compile-time importow jest w
+`05-package-dependencies.md`.
+
 - `pl.mkn.incidenttracker.analysis`
   Wspolne DTO, wynik i wyjatki analizy.
 - `pl.mkn.incidenttracker.common`

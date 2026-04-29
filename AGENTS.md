@@ -21,7 +21,8 @@ Przed wieksza zmiana zacznij od:
 2. `docs/architecture/02-key-decisions.md`
 3. `docs/architecture/03-runtime-flow.md`
 4. `docs/architecture/04-codex-continuation-guide.md`
-5. `docs/onboarding/README.md`
+5. `docs/architecture/05-package-dependencies.md`
+6. `docs/onboarding/README.md`
 
 ## Najwazniejsze niezmienniki
 

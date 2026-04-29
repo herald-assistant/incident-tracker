@@ -36,6 +36,7 @@ Te dokumenty sa nadal source of truth dla architektury:
 2. `../architecture/02-key-decisions.md`
 3. `../architecture/03-runtime-flow.md`
 4. `../architecture/04-codex-continuation-guide.md`
+5. `../architecture/05-package-dependencies.md`
 
 Przy pracy runtime warto miec obok jeszcze:
 

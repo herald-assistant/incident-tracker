@@ -4,6 +4,9 @@
 
 Nauczyc sie czytac repo po granicach odpowiedzialnosci, a nie po nazwach klas.
 
+Szczegolowy diagram runtime/data-flow i compile-time importow jest w
+`../architecture/05-package-dependencies.md`.
+
 ## Po tym kroku rozumiesz
 
 - za co odpowiada kazdy glowny podkatalog `analysis/*`,
