@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.evidence;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +12,7 @@ class AnalysisEvidenceModelTest {
 
     @Test
     void shouldNormalizeNullEvidenceListsToEmptyLists() {
-        var request = new AnalysisAiAnalysisRequest("corr-123", null, null, null, null);
+        var request = new InitialAnalysisRequest("corr-123", null, null, null, null);
         var section = new AnalysisEvidenceSection("x", "y", null);
         var item = new AnalysisEvidenceItem("title", null);
 

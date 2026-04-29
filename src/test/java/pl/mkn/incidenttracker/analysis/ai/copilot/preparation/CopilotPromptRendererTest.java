@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
 
 import java.util.List;
@@ -14,7 +14,7 @@ class CopilotPromptRendererTest {
 
     @Test
     void shouldRenderIncidentPromptWithArtifactsAndEnabledCapabilityGroups() {
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev3",
                 "main",
@@ -77,7 +77,7 @@ class CopilotPromptRendererTest {
 
     @Test
     void shouldRenderPlaceholdersWhenSessionContextAndToolsAreMissing() {
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-blank",
                 null,
                 "",

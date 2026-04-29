@@ -12,8 +12,8 @@ import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
@@ -51,7 +51,7 @@ class CopilotSdkExecutionGatewayTest {
                 toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
                 metricsRegistry()
         );
-        var preparedRequest = new CopilotSdkPreparedRequest(
+        var preparedRequest = new CopilotPreparedSession(
                 "corr-123",
                 new CopilotClientOptions(),
                 new SessionConfig(),
@@ -89,7 +89,7 @@ class CopilotSdkExecutionGatewayTest {
                 toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
                 metricsRegistry()
         );
-        var preparedRequest = new CopilotSdkPreparedRequest(
+        var preparedRequest = new CopilotPreparedSession(
                 "corr-456",
                 new CopilotClientOptions(),
                 new SessionConfig(),
@@ -127,7 +127,7 @@ class CopilotSdkExecutionGatewayTest {
                 metricsRegistry()
         );
 
-        var preparedRequest = new CopilotSdkPreparedRequest(
+        var preparedRequest = new CopilotPreparedSession(
                 "corr-cleanup",
                 new CopilotClientOptions(),
                 new SessionConfig(),
@@ -170,12 +170,12 @@ class CopilotSdkExecutionGatewayTest {
                         "main",
                         "sample/runtime"
                 ),
-                new AnalysisAiAnalysisRequest("corr-usage", "dev3", "main", "sample/runtime", List.of()),
+                new InitialAnalysisRequest("corr-usage", "dev3", "main", "sample/runtime", List.of()),
                 List.of(),
                 "Diagnose incident",
                 1L
         );
-        var preparedRequest = new CopilotSdkPreparedRequest(
+        var preparedRequest = new CopilotPreparedSession(
                 "corr-usage",
                 new CopilotClientOptions(),
                 new SessionConfig().setSessionId(sessionId),
@@ -233,7 +233,7 @@ class CopilotSdkExecutionGatewayTest {
                 metricsRegistry()
         );
         var messageOptions = new MessageOptions().setPrompt("Diagnose incident");
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var preparedRequest = mock(CopilotPreparedSession.class);
 
         when(preparedRequest.correlationId()).thenReturn("corr-gateway-owned");
         when(preparedRequest.clientOptions()).thenReturn(new CopilotClientOptions());

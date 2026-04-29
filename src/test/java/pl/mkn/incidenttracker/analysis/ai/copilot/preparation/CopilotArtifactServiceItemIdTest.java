@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -60,12 +60,12 @@ class CopilotArtifactServiceItemIdTest {
         assertTrue(content.contains("\"title\" : \"event 1\""));
     }
 
-    private CopilotToolAccessPolicy policy(AnalysisAiAnalysisRequest request) {
+    private CopilotToolAccessPolicy policy(InitialAnalysisRequest request) {
         return policyFactory.create(request, List.of());
     }
 
-    private AnalysisAiAnalysisRequest request(List<AnalysisEvidenceSection> sections) {
-        return new AnalysisAiAnalysisRequest("corr-123", "dev3", "main", "sample/runtime", sections);
+    private InitialAnalysisRequest request(List<AnalysisEvidenceSection> sections) {
+        return new InitialAnalysisRequest("corr-123", "dev3", "main", "sample/runtime", sections);
     }
 
     private AnalysisEvidenceItem item(String title, AnalysisEvidenceAttribute... attributes) {

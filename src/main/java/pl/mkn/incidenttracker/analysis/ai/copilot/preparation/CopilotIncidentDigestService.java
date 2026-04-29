@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
@@ -19,7 +19,7 @@ import java.util.List;
 public class CopilotIncidentDigestService {
 
     public String renderDigest(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             CopilotEvidenceCoverageReport coverage
     ) {
         var evidenceSections = request != null
@@ -47,7 +47,7 @@ public class CopilotIncidentDigestService {
         return String.join(System.lineSeparator(), lines) + System.lineSeparator();
     }
 
-    private void addSession(List<String> lines, AnalysisAiAnalysisRequest request) {
+    private void addSession(List<String> lines, InitialAnalysisRequest request) {
         lines.add("## Session");
         addInlineValue(lines, "correlationId", request != null ? request.correlationId() : null);
         addInlineValue(lines, "environment", request != null ? request.environment() : null);

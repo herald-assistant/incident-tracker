@@ -23,11 +23,11 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.job`
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
-- `analysis.ai.analysis.AnalysisAiProvider`
+- `analysis.ai.initial.InitialAnalysisProvider`
 - `analysis.ai.chat.AnalysisAiChatProvider`
 - `analysis.options.AnalysisAiModelOptionsProvider`
 - `analysis.ai.evidence`
-- `analysis.ai.prepared`
+- `analysis.ai.initial`
 - `analysis.ai.usage`
 - `analysis.adapter.database`
 - `analysis.evidence.provider.deployment`
@@ -178,7 +178,7 @@ GitLaba.
 
 ### Follow-up chat
 
-Kontynuacja analizy po finalnym wyniku ma osobny kontrakt AI:
+Kontynuacja po wyniku poczatkowej analizy ma osobny kontrakt AI:
 
 - `AnalysisAiChatProvider`,
 - `AnalysisAiChatRequest`,
@@ -187,7 +187,7 @@ Kontynuacja analizy po finalnym wyniku ma osobny kontrakt AI:
 Nie rozszerzaj `POST /analysis` o tresc rozmowy ani dodatkowy scope. Chat ma
 reuse'owac scope zakonczonego joba oraz hidden `ToolContext` dla GitLaba,
 Elastica i Database. Kazda wiadomosc tworzy nowa sesje Copilota, zeby nie
-utrzymywac sesji SDK po zakonczeniu finalnej analizy.
+utrzymywac sesji SDK po zakonczeniu poczatkowej analizy.
 
 Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
 chatu, a nie mieszane z deterministycznym pipeline evidence.

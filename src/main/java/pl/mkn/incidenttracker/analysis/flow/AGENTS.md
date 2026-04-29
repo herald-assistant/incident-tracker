@@ -30,7 +30,7 @@ Nie obejmuje:
 - Collector jest wlascicielem lifecycle krokow evidence. Flow powinno tylko
   adaptowac albo przekazywac te zdarzenia dalej do wyzszych warstw.
 - Orchestrator nie powinien znac szczegolow adapterow. Pracuje na `AnalysisContext`,
-  descriptorach providerow i kontrakcie `AnalysisAiProvider`.
+  descriptorach providerow i kontrakcie `InitialAnalysisProvider`.
 - Wyjatki domenowe zwiazane z brakiem danych albo przebiegiem analizy trzymaj
   tutaj, a nie w kontrolerach.
 

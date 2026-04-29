@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -50,7 +50,7 @@ class CopilotIncidentDigestServiceTest {
 
     @Test
     void shouldRenderDigestEvenWhenEvidenceIsMissing() {
-        var request = new AnalysisAiAnalysisRequest("corr-123", null, null, "sample/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-123", null, null, "sample/runtime", List.of());
         var digest = service.renderDigest(request, coverageEvaluator.evaluate(request));
 
         assertTrue(digest.contains("# Incident digest"));
@@ -61,8 +61,8 @@ class CopilotIncidentDigestServiceTest {
         assertTrue(digest.contains("`MISSING_CODE_CONTEXT`"));
     }
 
-    private AnalysisAiAnalysisRequest requestWithEvidence() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest requestWithEvidence() {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 "dev3",
                 "release/2026.04",

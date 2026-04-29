@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.job;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
@@ -52,7 +52,7 @@ final class AnalysisJobState {
     private Instant updatedAt;
     private Instant completedAt;
     private AnalysisResultResponse result;
-    private AnalysisAiAnalysisRequest completedAiRequest;
+    private InitialAnalysisRequest completedAiRequest;
 
     AnalysisJobState(
             String analysisId,

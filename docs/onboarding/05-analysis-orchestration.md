@@ -18,7 +18,7 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 1. kontroler przyjmuje `AnalysisRequest`,
 2. `sync` albo `job` deleguje do `AnalysisOrchestrator`,
 3. orchestrator uruchamia `AnalysisEvidenceCollector`,
-4. po zebraniu danych buduje `AnalysisAiAnalysisRequest`,
+4. po zebraniu danych buduje `InitialAnalysisRequest`,
 5. provider AI przygotowuje prompt i wykonuje analize,
 6. orchestrator mapuje wynik na `AnalysisResultResponse`.
 
@@ -31,7 +31,7 @@ Zrozumiec, jak system sklada caly runtime flow od `correlationId` do wyniku.
 - wynik API.
 
 Follow-up chat po `COMPLETED` jest obslugiwany w `AnalysisJobService` osobnym
-kontraktem `AnalysisAiChatProvider`. Chat bierze zapisany `AnalysisAiAnalysisRequest`,
+kontraktem `AnalysisAiChatProvider`. Chat bierze zapisany `InitialAnalysisRequest`,
 wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 `AnalysisEvidenceCollector` ani nie tworzy nowego `AnalysisExecution`.
 
@@ -50,7 +50,7 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 - `environment` i `gitLabBranch` sa rozwiazywane z evidence,
 - job flow nie ma osobnego orchestratora, tylko projekcje postepu,
 - follow-up chat nie ma osobnego publicznego scope'u; reuse'uje request AI
-  zapisany po finalnej analizie,
+  zapisany po poczatkowej analizie,
 - `AnalysisExecutionListener` obsluguje nie tylko kroki evidence, ale tez
   `onAiStarted`, `onAiPromptPrepared` i `onAiToolEvidenceUpdated`,
 - job snapshot jest projekcja in-memory, a nie trwala historia analiz.

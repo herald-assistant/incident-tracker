@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -158,8 +158,8 @@ class CopilotSessionMetricsRegistryTest {
         );
     }
 
-    private AnalysisAiAnalysisRequest requestWithEvidence() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest requestWithEvidence() {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 "zt01",
                 "release/2026.04",

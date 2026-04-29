@@ -41,7 +41,7 @@ Na dzisiaj projekt ma:
 - endpoint `GET /analysis/ai/options`, ktory zwraca katalog modeli i
   dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby frontend nie trzymal
   lokalnej listy modeli,
-- AI-first flow oparty o `AnalysisEvidenceProvider`, `AnalysisAiProvider` i
+- AI-first flow oparty o `AnalysisEvidenceProvider`, `InitialAnalysisProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
 - MCP tools dla Elastica, GitLaba i warunkowo dla Database,
@@ -114,18 +114,17 @@ Na dzisiaj projekt ma:
 - `pl.mkn.incidenttracker.analysis.ai`
   Modul generycznych kontraktow AI. Root jest tylko katalogiem modulowym;
   kontrakty sa pogrupowane w podpakietach.
-- `pl.mkn.incidenttracker.analysis.ai.analysis`
-  Finalna analiza: provider, request i response JSON-only diagnozy.
+- `pl.mkn.incidenttracker.analysis.ai.initial`
+  Poczatkowa analiza joba: provider, request, preparation i response JSON-only
+  diagnozy.
 - `pl.mkn.incidenttracker.analysis.ai.chat`
   Follow-up chat po zakonczonym jobie.
 - `pl.mkn.incidenttracker.analysis.ai.evidence`
   Generyczne modele evidence przekazywane do AI oraz listener tool evidence.
-- `pl.mkn.incidenttracker.analysis.ai.prepared`
-  Generyczny lifecycle prepared analysis.
 - `pl.mkn.incidenttracker.analysis.ai.usage`
   Generyczny kontrakt token/cost/usage dla UI.
 - `pl.mkn.incidenttracker.analysis.ai.copilot`
-  Root aktualnej integracji AI. Wystawia `CopilotSdkAnalysisAiProvider`,
+  Root aktualnej integracji AI. Wystawia `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
@@ -253,7 +252,7 @@ flowchart LR
     G --> K["GitLab deterministic evidence provider"]
     G --> L["Operational context evidence provider"]
     L --> M["AnalysisContext"]
-    F --> N["AnalysisAiProvider"]
+    F --> N["InitialAnalysisProvider"]
     N --> O["Copilot SDK"]
     O --> P["Elastic tools (optional during session)"]
     O --> R["GitLab tools (optional during session)"]

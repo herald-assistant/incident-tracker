@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -227,14 +227,14 @@ class CopilotToolAccessPolicyCoverageTest {
     }
 
     private CopilotToolAccessPolicy policy(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             List<ToolDefinition> tools
     ) {
         return policyFactory.create(request, tools);
     }
 
-    private AnalysisAiAnalysisRequest request(String environment, List<AnalysisEvidenceSection> sections) {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest request(String environment, List<AnalysisEvidenceSection> sections) {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 environment,
                 "release/2026.04",

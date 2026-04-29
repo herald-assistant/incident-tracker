@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 
 import java.util.List;
@@ -15,7 +15,7 @@ public class CopilotToolAccessPolicyFactory {
     private final CopilotEvidenceCoverageEvaluator coverageEvaluator;
 
     public CopilotToolAccessPolicy create(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             List<ToolDefinition> registeredTools
     ) {
         return CopilotToolAccessPolicy.fromCoverage(

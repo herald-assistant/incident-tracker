@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
@@ -51,7 +51,7 @@ class CopilotSdkToolFactoryMetricsTest {
         var context = sessionContext();
         metricsRegistry.recordPreparation(
                 context,
-                new AnalysisAiAnalysisRequest("corr-123", "zt01", "main", "sample/runtime", List.of()),
+                new InitialAnalysisRequest("corr-123", "zt01", "main", "sample/runtime", List.of()),
                 List.of(),
                 "prompt",
                 1L

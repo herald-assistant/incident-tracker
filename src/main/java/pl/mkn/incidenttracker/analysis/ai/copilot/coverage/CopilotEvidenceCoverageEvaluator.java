@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -22,7 +22,7 @@ public class CopilotEvidenceCoverageEvaluator {
 
     private static final int SHORT_CODE_CONTEXT_CHARACTERS = 300;
 
-    public CopilotEvidenceCoverageReport evaluate(AnalysisAiAnalysisRequest request) {
+    public CopilotEvidenceCoverageReport evaluate(InitialAnalysisRequest request) {
         var sections = request != null
                 ? request.evidenceSections()
                 : List.<AnalysisEvidenceSection>of();
@@ -317,7 +317,7 @@ public class CopilotEvidenceCoverageEvaluator {
         return false;
     }
 
-    private boolean gitLabScopeResolved(AnalysisAiAnalysisRequest request) {
+    private boolean gitLabScopeResolved(InitialAnalysisRequest request) {
         return request != null
                 && StringUtils.hasText(request.gitLabBranch())
                 && StringUtils.hasText(request.gitLabGroup());

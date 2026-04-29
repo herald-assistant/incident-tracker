@@ -49,10 +49,10 @@ zakonczonego joba i ukrytego requestu AI zapisanego po finalnej analizie.
 
 1. tworzy `AnalysisContext`,
 2. uruchamia deterministic evidence collector,
-3. buduje `AnalysisAiAnalysisRequest`,
-4. wywoluje `AnalysisAiProvider.prepare(request)`,
+3. buduje `InitialAnalysisRequest`,
+4. wywoluje `InitialAnalysisProvider.prepare(request)`,
 5. zapisuje `prepared.prompt()` w stanie joba,
-6. uruchamia `AnalysisAiProvider.analyze(prepared, listener)`,
+6. uruchamia `InitialAnalysisProvider.analyze(prepared, listener)`,
 7. mapuje odpowiedz AI i tool evidence do response/job state,
 8. zamyka prepared analysis.
 
@@ -61,8 +61,7 @@ promptem, ktory poszedl do Copilota.
 
 Ownership jest po stronie kodu, ktory wywolal `prepare(request)`.
 `AnalysisOrchestrator` uzywa try-with-resources i zamyka prepared analysis po
-zakonczeniu kroku AI. Provider zamyka tylko prepared analysis utworzone przez
-wlasne `analyze(request)`. `analyze(prepared, listener)` oraz gateway SDK nie
+zakonczeniu kroku AI. `analyze(prepared, listener)` oraz gateway SDK nie
 zamykaja obiektu przekazanego przez caller.
 
 ## 3. Evidence pipeline
@@ -86,8 +85,9 @@ zostaja tylko generyczne `AnalysisEvidenceSection`, `AnalysisEvidenceItem` i
 
 ## 4. Przygotowanie Copilota
 
-`CopilotSdkPreparationService` buduje `CopilotSdkPreparedRequest`.
-Prepared request implementuje `AnalysisAiPreparedAnalysis`.
+`CopilotSdkPreparationService` buduje `CopilotInitialAnalysisPreparation`.
+Ten adapter implementuje `InitialAnalysisPreparation` i zawiera neutralna
+techniczna sesje `CopilotPreparedSession`.
 
 Preparation obejmuje:
 
@@ -113,7 +113,7 @@ renderingu i konfiguracji SDK:
   permission handler, hooks, skill directories i disabled skills.
 
 `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
-obok providera finalnej analizy i follow-up chatu. Uzywa zaleznosci z
+obok providera poczatkowej analizy i follow-up chatu. Uzywa zaleznosci z
 preparation do pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej
 z evidence ani promptem incydentu.
 
@@ -128,7 +128,7 @@ W tle uruchamiany jest osobny task, ktory wywoluje `AnalysisAiChatProvider`.
 
 Follow-up runtime:
 
-1. bierze `AnalysisAiAnalysisRequest` zapisany z finalnej analizy,
+1. bierze `InitialAnalysisRequest` zapisany z poczatkowej analizy,
 2. dolacza deterministyczne evidence, finalny wynik, historie chatu i tool
    evidence z wczesniejszych sesji,
 3. buduje nowy prompt kontynuacyjny,
@@ -254,7 +254,7 @@ jest jawnym fallbackiem z limitation w `reason`.
 
 ## 8. Session config i blokady lokalne
 
-`CopilotSdkPreparedRequest` niesie `SessionConfig` utworzony przez
+`CopilotPreparedSession` niesie `SessionConfig` utworzony przez
 `CopilotSessionConfigFactory`. Gateway wykonuje przygotowana konfiguracje
 sesji i nie przebudowuje policy ani promptu.
 

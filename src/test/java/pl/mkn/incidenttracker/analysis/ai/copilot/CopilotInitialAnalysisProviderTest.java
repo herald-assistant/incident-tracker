@@ -1,7 +1,8 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
@@ -9,7 +10,8 @@ import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
@@ -25,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class CopilotSdkAnalysisAiProviderTest {
+class CopilotInitialAnalysisProviderTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -35,7 +37,7 @@ class CopilotSdkAnalysisAiProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "timeout-123",
                 "dev3",
                 "release/2026.04",
@@ -76,9 +78,9 @@ class CopilotSdkAnalysisAiProviderTest {
                         )
                 )
         );
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var preparedRequest = mock(CopilotPreparedSession.class);
 
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
+        when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for timeout-123");
         when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
                 {
@@ -96,7 +98,7 @@ class CopilotSdkAnalysisAiProviderTest {
                 }
                 """.trim());
 
-        var response = provider.analyze(request);
+        var response = analyze(provider, request);
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals(
@@ -134,15 +136,15 @@ class CopilotSdkAnalysisAiProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new AnalysisAiAnalysisRequest("corr-123", "dev1", "main", "sample/runtime", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var request = new InitialAnalysisRequest("corr-123", "dev1", "main", "sample/runtime", List.of());
+        var preparedRequest = mock(CopilotPreparedSession.class);
 
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
+        when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-123");
         when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP)))
                 .thenReturn("Looks like a timeout, but the answer is not formatted.");
 
-        var response = provider.analyze(request);
+        var response = analyze(provider, request);
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals("AI_UNSTRUCTURED_RESPONSE", response.detectedProblem());
@@ -168,10 +170,10 @@ class CopilotSdkAnalysisAiProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new AnalysisAiAnalysisRequest("corr-456", "dev1", "dev/zephyr", "TENANT-ALPHA", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var request = new InitialAnalysisRequest("corr-456", "dev1", "dev/zephyr", "TENANT-ALPHA", List.of());
+        var preparedRequest = mock(CopilotPreparedSession.class);
 
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
+        when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-456");
         when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
                 {
@@ -189,7 +191,7 @@ class CopilotSdkAnalysisAiProviderTest {
                 }
                 """.trim());
 
-        var response = provider.analyze(request);
+        var response = analyze(provider, request);
 
         assertEquals(
                 "EntityNotFoundException thrown when no ActiveCaseRecord exists for caseId 7001234567 matching the active-status filter",
@@ -240,10 +242,10 @@ class CopilotSdkAnalysisAiProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new AnalysisAiAnalysisRequest("corr-999", "dev1", "main", "sample/runtime", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var request = new InitialAnalysisRequest("corr-999", "dev1", "main", "sample/runtime", List.of());
+        var preparedRequest = mock(CopilotPreparedSession.class);
 
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
+        when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-999");
         when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
                 {
@@ -260,7 +262,7 @@ class CopilotSdkAnalysisAiProviderTest {
                 }
                 """.trim());
 
-        var response = provider.analyze(request);
+        var response = analyze(provider, request);
 
         assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
         assertEquals("", response.affectedFunction());
@@ -269,14 +271,14 @@ class CopilotSdkAnalysisAiProviderTest {
         assertEquals("Orders Team", response.affectedTeam());
     }
 
-    private CopilotSdkAnalysisAiProvider provider(
+    private CopilotInitialAnalysisProvider provider(
             CopilotSdkPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
         var properties = new CopilotMetricsProperties();
         var registry = new CopilotSessionMetricsRegistry(properties);
         var logger = new CopilotMetricsLogger(properties, objectMapper);
-        return new CopilotSdkAnalysisAiProvider(
+        return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
@@ -284,6 +286,19 @@ class CopilotSdkAnalysisAiProviderTest {
                 registry,
                 logger
         );
+    }
+
+    private CopilotInitialAnalysisPreparation preparedAnalysis(
+            InitialAnalysisRequest request,
+            CopilotPreparedSession preparedSession
+    ) {
+        return new CopilotInitialAnalysisPreparation(request, preparedSession);
+    }
+
+    private InitialAnalysisResponse analyze(CopilotInitialAnalysisProvider provider, InitialAnalysisRequest request) {
+        try (var prepared = provider.prepare(request)) {
+            return provider.analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
+        }
     }
 
 }

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
@@ -78,18 +78,18 @@ class CopilotSdkPreparationServiceTest {
         var request = sampleRequest();
 
         try (var prepared = service.prepare(request)) {
-            assertEquals("C:\\tools\\copilot.exe", prepared.clientOptions().getCliPath());
-            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.clientOptions().getCwd());
-            assertEquals(Boolean.TRUE, prepared.clientOptions().getUseLoggedInUser());
-            assertEquals(null, prepared.clientOptions().getGithubToken());
+            assertEquals("C:\\tools\\copilot.exe", prepared.session().clientOptions().getCliPath());
+            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().clientOptions().getCwd());
+            assertEquals(Boolean.TRUE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals(null, prepared.session().clientOptions().getGithubToken());
 
-            assertEquals("incidenttracker-test", prepared.sessionConfig().getClientName());
-            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.sessionConfig().getWorkingDirectory());
-            assertEquals("gpt-5.4", prepared.sessionConfig().getModel());
-            assertEquals("medium", prepared.sessionConfig().getReasoningEffort());
-            assertNotNull(prepared.sessionConfig().getSessionId());
-            assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
-            assertFalse(prepared.sessionConfig().isStreaming());
+            assertEquals("incidenttracker-test", prepared.session().sessionConfig().getClientName());
+            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
+            assertEquals("gpt-5.4", prepared.session().sessionConfig().getModel());
+            assertEquals("medium", prepared.session().sessionConfig().getReasoningEffort());
+            assertNotNull(prepared.session().sessionConfig().getSessionId());
+            assertTrue(prepared.session().sessionConfig().getSessionId().startsWith("analysis-"));
+            assertFalse(prepared.session().sessionConfig().isStreaming());
             assertEquals(
                     Set.of(
                             "gitlab_find_class_references",
@@ -98,16 +98,16 @@ class CopilotSdkPreparationServiceTest {
                             "gitlab_read_repository_file_chunks",
                             "gitlab_read_repository_file_outline"
                     ),
-                    Set.copyOf(prepared.sessionConfig().getAvailableTools())
+                    Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
-            assertEquals(5, prepared.sessionConfig().getTools().size());
-            assertEquals(1, prepared.sessionConfig().getSkillDirectories().size());
-            assertTrue(prepared.sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
-            assertEquals(PermissionHandler.APPROVE_ALL, prepared.sessionConfig().getOnPermissionRequest());
-            assertEquals(List.of(), prepared.sessionConfig().getDisabledSkills());
-            assertNotNull(prepared.sessionConfig().getHooks());
+            assertEquals(5, prepared.session().sessionConfig().getTools().size());
+            assertEquals(1, prepared.session().sessionConfig().getSkillDirectories().size());
+            assertTrue(prepared.session().sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
+            assertEquals(PermissionHandler.APPROVE_ALL, prepared.session().sessionConfig().getOnPermissionRequest());
+            assertEquals(List.of(), prepared.session().sessionConfig().getDisabledSkills());
+            assertNotNull(prepared.session().sessionConfig().getHooks());
 
-            var prompt = prepared.messageOptions().getPrompt();
+            var prompt = prepared.session().messageOptions().getPrompt();
             assertTrue(prompt.contains("correlationId: timeout-123"));
             assertTrue(prompt.contains("environment: dev3"));
             assertTrue(prompt.contains("gitLabBranch: release/2026.04"));
@@ -177,9 +177,9 @@ class CopilotSdkPreparationServiceTest {
             assertFalse(prompt.contains("metricLabel=service.response.time.p95"));
             assertEquals(prompt, prepared.prompt());
 
-            assertTrue(prepared.messageOptions().getAttachments() == null || prepared.messageOptions().getAttachments().isEmpty());
-            assertEquals(5, prepared.artifactContents().size());
-            var manifestContent = prepared.artifactContents().get("00-incident-manifest.json");
+            assertTrue(prepared.session().messageOptions().getAttachments() == null || prepared.session().messageOptions().getAttachments().isEmpty());
+            assertEquals(5, prepared.session().artifactContents().size());
+            var manifestContent = prepared.session().artifactContents().get("00-incident-manifest.json");
             assertTrue(manifestContent.contains("\"readFirst\""));
             assertTrue(manifestContent.contains("\"readNext\""));
             assertTrue(manifestContent.contains("\"artifactFormatVersion\" : \"copilot-artifacts-v2\""));
@@ -201,13 +201,13 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(manifestContent.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(manifestContent.contains("\"artifactsArePrimarySourceOfTruth\" : true"));
 
-            var digestContent = prepared.artifactContents().get("01-incident-digest.md");
+            var digestContent = prepared.session().artifactContents().get("01-incident-digest.md");
             assertTrue(digestContent.contains("# Incident digest"));
             assertTrue(digestContent.contains("- correlationId: `timeout-123`"));
             assertTrue(digestContent.contains("- GitLab: `DIRECT_COLLABORATOR_ATTACHED`"));
             assertTrue(digestContent.contains("## Known evidence gaps"));
 
-            var logsContent = prepared.artifactContents().get("02-elasticsearch-logs.md");
+            var logsContent = prepared.session().artifactContents().get("02-elasticsearch-logs.md");
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
             assertTrue(logsContent.contains("## itemId: elastic-logs-001"));
             assertTrue(logsContent.contains("Log entry `1` `ERROR` `billing-service`"));
@@ -215,7 +215,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(logsContent.contains("Read timed out while calling catalog-service"));
             assertFalse(logsContent.contains("\"provider\""));
 
-            var dynatraceContent = prepared.artifactContents().get("03-dynatrace-runtime-signals.md");
+            var dynatraceContent = prepared.session().artifactContents().get("03-dynatrace-runtime-signals.md");
             assertTrue(dynatraceContent.contains("Dynatrace runtime signals"));
             assertTrue(dynatraceContent.contains("## itemId: dynatrace-runtime-signals-001"));
             assertTrue(dynatraceContent.contains("- collection status: COLLECTED"));
@@ -223,7 +223,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertFalse(dynatraceContent.contains("\"metricLabel\""));
 
-            var gitLabContent = prepared.artifactContents().get("04-gitlab-resolved-code.md");
+            var gitLabContent = prepared.session().artifactContents().get("04-gitlab-resolved-code.md");
             assertTrue(gitLabContent.contains("GitLab resolved code references"));
             assertTrue(gitLabContent.contains("## itemId: gitlab-resolved-code-001"));
             assertTrue(gitLabContent.contains("- repository: `edge-client-service`"));
@@ -231,7 +231,7 @@ class CopilotSdkPreparationServiceTest {
             assertTrue(gitLabContent.contains("```java"));
             assertFalse(gitLabContent.contains("\"content\""));
 
-            var deniedToolDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+            var deniedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("read_file"), null)
                     .join();
             assertEquals("deny", deniedToolDecision.permissionDecision());
@@ -273,18 +273,18 @@ class CopilotSdkPreparationServiceTest {
                             && context.copilotSessionId() != null
                             && context.copilotSessionId().startsWith("analysis-")
             ));
-            assertEquals(expectedTools, prepared.sessionConfig().getTools());
-            assertEquals(List.of("gitlab_read_repository_file"), prepared.sessionConfig().getAvailableTools());
-            var allowedToolDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+            assertEquals(expectedTools, prepared.session().sessionConfig().getTools());
+            assertEquals(List.of("gitlab_read_repository_file"), prepared.session().sessionConfig().getAvailableTools());
+            var allowedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("gitlab_read_repository_file"), null)
                     .join();
             assertEquals("allow", allowedToolDecision.permissionDecision());
-            var deniedToolDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+            var deniedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("read_file"), null)
                     .join();
             assertEquals("deny", deniedToolDecision.permissionDecision());
-            assertNotNull(prepared.sessionConfig().getSessionId());
-            assertTrue(prepared.sessionConfig().getSessionId().startsWith("analysis-"));
+            assertNotNull(prepared.session().sessionConfig().getSessionId());
+            assertTrue(prepared.session().sessionConfig().getSessionId().startsWith("analysis-"));
         }
     }
 
@@ -320,10 +320,10 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(List.of(expectedTools.get(0)), prepared.sessionConfig().getTools());
+            assertEquals(List.of(expectedTools.get(0)), prepared.session().sessionConfig().getTools());
             assertEquals(
                     Set.of("gitlab_read_repository_file"),
-                    Set.copyOf(prepared.sessionConfig().getAvailableTools())
+                    Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
         }
     }
@@ -365,12 +365,12 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(List.of(), prepared.sessionConfig().getTools());
-            assertEquals(List.of(), prepared.sessionConfig().getAvailableTools());
+            assertEquals(List.of(), prepared.session().sessionConfig().getTools());
+            assertEquals(List.of(), prepared.session().sessionConfig().getAvailableTools());
             assertFalse(prepared.prompt().contains("Database diagnostics:"));
             assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
             assertFalse(prepared.prompt().contains("GitLab code: inspect class references/imports"));
-            var deniedElasticDecision = prepared.sessionConfig().getHooks().getOnPreToolUse()
+            var deniedElasticDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("elastic_search_logs_by_correlation_id"), null)
                     .join();
             assertEquals("deny", deniedElasticDecision.permissionDecision());
@@ -383,7 +383,7 @@ class CopilotSdkPreparationServiceTest {
         properties.setGithubToken("ghp_test_token");
 
         var service = createService(properties);
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev1",
                 "main",
@@ -392,8 +392,8 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals("ghp_test_token", prepared.clientOptions().getGithubToken());
-            assertEquals(Boolean.FALSE, prepared.clientOptions().getUseLoggedInUser());
+            assertEquals("ghp_test_token", prepared.session().clientOptions().getGithubToken());
+            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser());
         }
     }
 
@@ -404,7 +404,7 @@ class CopilotSdkPreparationServiceTest {
         properties.setReasoningEffort("medium");
 
         var service = createService(properties);
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev1",
                 "main",
@@ -414,8 +414,8 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals("gpt-5.3-codex", prepared.sessionConfig().getModel());
-            assertEquals("high", prepared.sessionConfig().getReasoningEffort());
+            assertEquals("gpt-5.3-codex", prepared.session().sessionConfig().getModel());
+            assertEquals("high", prepared.session().sessionConfig().getReasoningEffort());
         }
     }
 
@@ -423,7 +423,7 @@ class CopilotSdkPreparationServiceTest {
     void shouldFallbackToLoggedInUserWhenGithubTokenIsMissing() {
         var properties = baseProperties();
         var service = createService(properties);
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev1",
                 "main",
@@ -432,13 +432,13 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals("incidenttracker", prepared.sessionConfig().getClientName());
-            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.sessionConfig().getWorkingDirectory());
-            assertEquals(Boolean.TRUE, prepared.clientOptions().getUseLoggedInUser());
-            assertEquals(null, prepared.clientOptions().getGithubToken());
-            assertEquals(null, prepared.sessionConfig().getModel());
-            assertEquals(null, prepared.sessionConfig().getReasoningEffort());
-            assertEquals(1, prepared.sessionConfig().getSkillDirectories().size());
+            assertEquals("incidenttracker", prepared.session().sessionConfig().getClientName());
+            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
+            assertEquals(Boolean.TRUE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals(null, prepared.session().clientOptions().getGithubToken());
+            assertEquals(null, prepared.session().sessionConfig().getModel());
+            assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());
+            assertEquals(1, prepared.session().sessionConfig().getSkillDirectories().size());
         }
     }
 
@@ -448,7 +448,7 @@ class CopilotSdkPreparationServiceTest {
         properties.setDisabledSkills(List.of("incident-analysis-gitlab-tools"));
 
         var service = createService(properties);
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev1",
                 "main",
@@ -457,7 +457,7 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(List.of("incident-analysis-gitlab-tools"), prepared.sessionConfig().getDisabledSkills());
+            assertEquals(List.of("incident-analysis-gitlab-tools"), prepared.session().sessionConfig().getDisabledSkills());
         }
     }
 
@@ -467,7 +467,7 @@ class CopilotSdkPreparationServiceTest {
         properties.setPermissionMode(CopilotSdkProperties.PermissionMode.DENY_ALL);
 
         var service = createService(properties);
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev1",
                 "main",
@@ -476,7 +476,7 @@ class CopilotSdkPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            var decision = prepared.sessionConfig()
+            var decision = prepared.session().sessionConfig()
                     .getOnPermissionRequest()
                     .handle(new PermissionRequest(), null)
                     .join();
@@ -524,8 +524,8 @@ class CopilotSdkPreparationServiceTest {
         return properties;
     }
 
-    private AnalysisAiAnalysisRequest sampleRequest() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest sampleRequest() {
+        return new InitialAnalysisRequest(
                 "timeout-123",
                 "dev3",
                 "release/2026.04",
@@ -622,8 +622,8 @@ class CopilotSdkPreparationServiceTest {
         );
     }
 
-    private AnalysisAiAnalysisRequest requestWithoutToolCoveredEvidence() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest requestWithoutToolCoveredEvidence() {
+        return new InitialAnalysisRequest(
                 "timeout-123",
                 "dev3",
                 "release/2026.04",

@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollectionListener;
@@ -20,7 +20,7 @@ import java.util.List;
 public class AnalysisOrchestrator {
 
     private final AnalysisEvidenceCollector analysisEvidenceCollector;
-    private final AnalysisAiProvider analysisAiProvider;
+    private final InitialAnalysisProvider initialAnalysisProvider;
     private final GitLabProperties gitLabProperties;
 
     public AnalysisExecution analyze(String correlationId) {
@@ -43,7 +43,7 @@ public class AnalysisOrchestrator {
         }
 
         var deploymentContext = DeploymentContextEvidenceView.from(context);
-        var aiRequest = new AnalysisAiAnalysisRequest(
+        var aiRequest = new InitialAnalysisRequest(
                 correlationId,
                 deploymentContext.environment(),
                 deploymentContext.gitLabBranch(),
@@ -53,11 +53,11 @@ public class AnalysisOrchestrator {
         );
 
         listener.onAiStarted(aiRequest, context);
-        try (var preparedAnalysis = analysisAiProvider.prepare(aiRequest)) {
+        try (var preparedAnalysis = initialAnalysisProvider.prepare(aiRequest)) {
             var preparedPrompt = preparedAnalysis.prompt();
             listener.onAiPromptPrepared(aiRequest, preparedPrompt, context);
 
-            var aiResponse = analysisAiProvider.analyze(
+            var aiResponse = initialAnalysisProvider.analyze(
                     preparedAnalysis,
                     listener::onAiToolEvidenceUpdated
             );

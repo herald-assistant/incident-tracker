@@ -3,10 +3,12 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
@@ -22,7 +24,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class CopilotSdkAnalysisAiProviderJsonResponseTest {
+class CopilotInitialAnalysisProviderJsonResponseTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -31,10 +33,10 @@ class CopilotSdkAnalysisAiProviderJsonResponseTest {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new AnalysisAiAnalysisRequest("corr-json", "zt01", "main", "sample/runtime", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var request = new InitialAnalysisRequest("corr-json", "zt01", "main", "sample/runtime", List.of());
+        var preparedRequest = mock(CopilotPreparedSession.class);
 
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
+        when(preparationService.prepare(request)).thenReturn(new CopilotInitialAnalysisPreparation(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared JSON prompt");
         when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-json"));
         when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
@@ -53,7 +55,7 @@ class CopilotSdkAnalysisAiProviderJsonResponseTest {
                 }
                 """);
 
-        var response = provider.analyze(request);
+        var response = analyze(provider, request);
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
@@ -66,13 +68,13 @@ class CopilotSdkAnalysisAiProviderJsonResponseTest {
         assertEquals("Prepared JSON prompt", response.prompt());
     }
 
-    private CopilotSdkAnalysisAiProvider provider(
+    private CopilotInitialAnalysisProvider provider(
             CopilotSdkPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
         var metricsProperties = new CopilotMetricsProperties();
         var registry = new CopilotSessionMetricsRegistry(metricsProperties);
-        return new CopilotSdkAnalysisAiProvider(
+        return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
@@ -80,5 +82,11 @@ class CopilotSdkAnalysisAiProviderJsonResponseTest {
                 registry,
                 new CopilotMetricsLogger(metricsProperties, objectMapper)
         );
+    }
+
+    private InitialAnalysisResponse analyze(CopilotInitialAnalysisProvider provider, InitialAnalysisRequest request) {
+        try (var prepared = provider.prepare(request)) {
+            return provider.analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
+        }
     }
 }

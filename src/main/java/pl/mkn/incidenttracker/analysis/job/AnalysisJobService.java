@@ -151,7 +151,7 @@ public class AnalysisJobService {
 
         @Override
         public void onAiStarted(
-                pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest request,
+                pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest request,
                 AnalysisContext context
         ) {
             job.markAiStarted();
@@ -159,7 +159,7 @@ public class AnalysisJobService {
 
         @Override
         public void onAiPromptPrepared(
-                pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest request,
+                pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest request,
                 String preparedPrompt,
                 AnalysisContext context
         ) {

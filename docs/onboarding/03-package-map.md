@@ -64,17 +64,17 @@ Generyczne kontrakty AI i implementacja oparta o Copilot SDK.
 Root `analysis/ai` nie powinien trzymac klas kontraktu bezposrednio. Klasy sa
 pogrupowane wedlug funkcji:
 
-- `analysis` - finalna analiza: `AnalysisAiProvider`,
-  `AnalysisAiAnalysisRequest`, `AnalysisAiAnalysisResponse`,
+- `initial` - poczatkowa analiza joba: `InitialAnalysisProvider`,
+  `InitialAnalysisRequest`, `InitialAnalysisPreparation`,
+  `InitialAnalysisResponse`,
 - `chat` - follow-up chat po zakonczonym jobie,
 - `evidence` - generyczne `AnalysisEvidenceSection`, items, attributes i tool
   evidence listener,
-- `prepared` - generyczny lifecycle prepared analysis,
 - `usage` - generyczny usage/token/cost contract dla job UI.
 
 Najwazniejsze podpakiety Copilota:
 
-- `copilot` - root aktualnego providera: `CopilotSdkAnalysisAiProvider`,
+- `copilot` - root aktualnego providera: `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation` - przygotowanie promptu, artefaktow, policy tools,
   skilli, client options i `SessionConfig`,

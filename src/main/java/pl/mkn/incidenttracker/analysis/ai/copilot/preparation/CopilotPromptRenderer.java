@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
 
@@ -9,7 +9,7 @@ import java.util.List;
 public class CopilotPromptRenderer {
 
     public String render(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy,
             List<CopilotArtifactService.Artifact> renderedArtifacts
     ) {

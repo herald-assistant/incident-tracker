@@ -1,18 +1,18 @@
 package pl.mkn.incidenttracker.analysis;
 
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 
 import java.util.Locale;
 
-public final class TestAnalysisAiProvider implements AnalysisAiProvider {
+public final class TestInitialAnalysisProvider implements InitialAnalysisProvider {
 
     @Override
-    public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+    public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
         return new TestPreparedAnalysis(
                 "test-ai-provider",
                 request.correlationId(),
@@ -21,10 +21,9 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
         );
     }
 
-    @Override
-    public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
+    private InitialAnalysisResponse responseFor(InitialAnalysisRequest request) {
         if (hasTimeoutEvidence(request)) {
-            return new AnalysisAiAnalysisResponse(
+            return new InitialAnalysisResponse(
                     "test-ai-provider",
                     "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                     "DOWNSTREAM_TIMEOUT",
@@ -39,7 +38,7 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
         }
 
         if (hasDatabaseLockEvidence(request)) {
-            return new AnalysisAiAnalysisResponse(
+            return new InitialAnalysisResponse(
                     "test-ai-provider",
                     "Structured evidence points to database lock contention during order write operations.",
                     "DATABASE_LOCK",
@@ -53,7 +52,7 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
             );
         }
 
-        return new AnalysisAiAnalysisResponse(
+        return new InitialAnalysisResponse(
                 "test-ai-provider",
                 "Structured evidence is not yet strong enough for a confident diagnosis.",
                 "UNKNOWN",
@@ -68,29 +67,29 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
     }
 
     @Override
-    public AnalysisAiAnalysisResponse analyze(
-            AnalysisAiPreparedAnalysis preparedAnalysis,
+    public InitialAnalysisResponse analyze(
+            InitialAnalysisPreparation preparedAnalysis,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
         if (preparedAnalysis instanceof TestPreparedAnalysis testPreparedAnalysis) {
-            return analyze(testPreparedAnalysis.request());
+            return responseFor(testPreparedAnalysis.request());
         }
 
         throw new IllegalArgumentException("Unsupported prepared analysis: " + preparedAnalysis);
     }
 
-    private String syntheticPrompt(AnalysisAiAnalysisRequest request) {
+    private String syntheticPrompt(InitialAnalysisRequest request) {
         return "Synthetic AI prompt for correlationId=%s, environment=%s, gitLabBranch=%s"
                 .formatted(request.correlationId(), request.environment(), request.gitLabBranch());
     }
 
-    private boolean hasTimeoutEvidence(AnalysisAiAnalysisRequest request) {
+    private boolean hasTimeoutEvidence(InitialAnalysisRequest request) {
         return request.evidenceSections().stream()
                 .flatMap(section -> section.items().stream())
                 .anyMatch(item -> isErrorLogMessage(item, "timed out") || hasAttributeValue(item, "timeoutDetected", "true"));
     }
 
-    private boolean hasDatabaseLockEvidence(AnalysisAiAnalysisRequest request) {
+    private boolean hasDatabaseLockEvidence(InitialAnalysisRequest request) {
         return request.evidenceSections().stream()
                 .flatMap(section -> section.items().stream())
                 .anyMatch(item -> isErrorLogMessage(item, "deadlock") || hasAttributeValue(item, "databaseLockDetected", "true"));
@@ -117,8 +116,8 @@ public final class TestAnalysisAiProvider implements AnalysisAiProvider {
             String providerName,
             String correlationId,
             String prompt,
-            AnalysisAiAnalysisRequest request
-    ) implements AnalysisAiPreparedAnalysis {
+            InitialAnalysisRequest request
+    ) implements InitialAnalysisPreparation {
     }
 
 }

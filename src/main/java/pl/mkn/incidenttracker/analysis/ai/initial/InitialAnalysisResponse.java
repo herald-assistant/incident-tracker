@@ -1,8 +1,8 @@
-package pl.mkn.incidenttracker.analysis.ai.analysis;
+package pl.mkn.incidenttracker.analysis.ai.initial;
 
 import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
 
-public record AnalysisAiAnalysisResponse(
+public record InitialAnalysisResponse(
         String providerName,
         String summary,
         String detectedProblem,
@@ -16,7 +16,7 @@ public record AnalysisAiAnalysisResponse(
         AnalysisAiUsage usage
 ) {
 
-    public AnalysisAiAnalysisResponse(
+    public InitialAnalysisResponse(
             String providerName,
             String summary,
             String detectedProblem,

@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
@@ -43,23 +43,23 @@ public class CopilotSdkExecutionGateway {
         this.toolBudgetRegistry = toolBudgetRegistry;
     }
 
-    public String execute(CopilotSdkPreparedRequest preparedRequest) {
-        return execute(preparedRequest, AnalysisAiToolEvidenceListener.NO_OP);
+    public String execute(CopilotPreparedSession preparedSession) {
+        return execute(preparedSession, AnalysisAiToolEvidenceListener.NO_OP);
     }
 
     public String execute(
-            CopilotSdkPreparedRequest preparedRequest,
+            CopilotPreparedSession preparedSession,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
         var overallStart = System.nanoTime();
-        var correlationId = preparedRequest.correlationId();
-        var copilotSessionId = preparedRequest.sessionConfig().getSessionId();
+        var correlationId = preparedSession.correlationId();
+        var copilotSessionId = preparedSession.sessionConfig().getSessionId();
         long clientStartDurationMs = 0L;
         long createSessionDurationMs = 0L;
         long sendAndWaitDurationMs = 0L;
 
         try {
-            try (var client = new CopilotClient(preparedRequest.clientOptions())) {
+            try (var client = new CopilotClient(preparedSession.clientOptions())) {
                 client.onLifecycle(event -> logSession(event, correlationId));
                 logClientState("before-start", client.getState(), correlationId);
                 var clientStart = System.nanoTime();
@@ -71,7 +71,7 @@ public class CopilotSdkExecutionGateway {
                 try {
                     var createSessionStart = System.nanoTime();
 
-                    try (var session = client.createSession(preparedRequest.sessionConfig()).join()) {
+                    try (var session = client.createSession(preparedSession.sessionConfig()).join()) {
                         createSessionDurationMs = nanosToMillis(createSessionStart);
                         logDuration("create-session", correlationId, createSessionDurationMs);
                         var sessionSummary = newSessionLogSummary(correlationId);
@@ -92,7 +92,7 @@ public class CopilotSdkExecutionGateway {
                                     correlationId,
                                     timeoutMs
                             );
-                            var response = session.sendAndWait(preparedRequest.messageOptions(), timeoutMs).join();
+                            var response = session.sendAndWait(preparedSession.messageOptions(), timeoutMs).join();
 
                             sendAndWaitDurationMs = nanosToMillis(sendAndWaitStart);
                             logDuration("send-and-wait", correlationId, sendAndWaitDurationMs);

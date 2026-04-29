@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -56,13 +56,13 @@ class CopilotSdkPreparationServiceMetricsTest {
         );
 
         try (var prepared = service.prepare(requestWithEvidence())) {
-            var metrics = metricsRegistry.snapshot(prepared.sessionConfig().getSessionId()).orElseThrow();
+            var metrics = metricsRegistry.snapshot(prepared.session().sessionConfig().getSessionId()).orElseThrow();
 
             assertEquals(2, metrics.evidenceSectionCount());
             assertEquals(3, metrics.evidenceItemCount());
             assertEquals(4, metrics.artifactCount());
             assertEquals(
-                    prepared.artifactContents().values().stream().mapToLong(String::length).sum(),
+                    prepared.session().artifactContents().values().stream().mapToLong(String::length).sum(),
                     metrics.artifactTotalCharacters()
             );
             assertEquals(prepared.prompt().length(), metrics.promptCharacters());
@@ -70,8 +70,8 @@ class CopilotSdkPreparationServiceMetricsTest {
         }
     }
 
-    private AnalysisAiAnalysisRequest requestWithEvidence() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest requestWithEvidence() {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 "zt01",
                 "release/2026.04",

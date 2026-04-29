@@ -1,6 +1,6 @@
-package pl.mkn.incidenttracker.analysis.ai.prepared;
+package pl.mkn.incidenttracker.analysis.ai.initial;
 
-public interface AnalysisAiPreparedAnalysis extends AutoCloseable {
+public interface InitialAnalysisPreparation extends AutoCloseable {
 
     String providerName();
 

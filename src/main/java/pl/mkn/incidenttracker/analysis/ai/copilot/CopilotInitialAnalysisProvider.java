@@ -2,15 +2,16 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
-import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
@@ -21,7 +22,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
+public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
 
     private final CopilotSdkPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
@@ -31,48 +32,41 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
     private final CopilotMetricsLogger metricsLogger;
 
     @Override
-    public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+    public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
         return preparationService.prepare(request);
     }
 
     @Override
-    public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-        try (var preparedAnalysis = prepare(request)) {
-            return analyzePrepared(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP, request);
-        }
-    }
-
-    @Override
-    public AnalysisAiAnalysisResponse analyze(
-            AnalysisAiPreparedAnalysis preparedAnalysis,
+    public InitialAnalysisResponse analyze(
+            InitialAnalysisPreparation preparedAnalysis,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
-        return analyzePrepared(preparedAnalysis, toolEvidenceListener, null);
+        return analyzePrepared(preparedAnalysis, toolEvidenceListener);
     }
 
-    private AnalysisAiAnalysisResponse analyzePrepared(
-            AnalysisAiPreparedAnalysis preparedAnalysis,
-            AnalysisAiToolEvidenceListener toolEvidenceListener,
-            AnalysisAiAnalysisRequest requestOverride
+    private InitialAnalysisResponse analyzePrepared(
+            InitialAnalysisPreparation preparedAnalysis,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
-        if (!(preparedAnalysis instanceof CopilotSdkPreparedRequest preparedRequest)) {
+        if (!(preparedAnalysis instanceof CopilotInitialAnalysisPreparation initialPreparation)) {
             throw new IllegalArgumentException(
-                    "Copilot SDK provider requires CopilotSdkPreparedRequest, got %s"
+                    "Copilot initial analysis provider requires CopilotInitialAnalysisPreparation, got %s"
                             .formatted(preparedAnalysis != null ? preparedAnalysis.getClass().getName() : "null")
             );
         }
 
-        var request = requestOverride != null ? requestOverride : request(preparedRequest);
+        var preparedSession = initialPreparation.session();
+        var request = initialPreparation.request();
         var analysisStart = System.nanoTime();
-        var copilotSessionId = copilotSessionId(preparedRequest);
+        var copilotSessionId = copilotSessionId(preparedSession);
         try {
             var assistantContent = executionGateway.execute(
-                    preparedRequest,
+                    preparedSession,
                     toolEvidenceListener != null ? toolEvidenceListener : AnalysisAiToolEvidenceListener.NO_OP
             );
             var parseResult = responseParser.parse(assistantContent);
             var qualityReport = qualityGate.evaluate(request, parseResult.response());
-            var response = toAiResponse(parseResult.response(), preparedRequest.prompt(), null);
+            var response = toAiResponse(parseResult.response(), preparedSession.prompt(), null);
             metricsRegistry.recordResponse(
                     copilotSessionId,
                     parseResult.structuredResponse(),
@@ -86,7 +80,7 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
             metrics.ifPresent(metricsLogger::logSummary);
             response = toAiResponse(
                     parseResult.response(),
-                    preparedRequest.prompt(),
+                    preparedSession.prompt(),
                     metrics.map(pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotAnalysisMetrics::usage)
                             .orElse(null)
             );
@@ -117,34 +111,20 @@ public class CopilotSdkAnalysisAiProvider implements AnalysisAiProvider {
         }
     }
 
-    private AnalysisAiAnalysisRequest request(CopilotSdkPreparedRequest preparedRequest) {
-        if (preparedRequest.request() != null) {
-            return preparedRequest.request();
-        }
-
-        return new AnalysisAiAnalysisRequest(
-                preparedRequest.correlationId(),
-                null,
-                null,
-                null,
-                java.util.List.of()
-        );
-    }
-
-    private String copilotSessionId(CopilotSdkPreparedRequest preparedRequest) {
-        if (preparedRequest == null || preparedRequest.sessionConfig() == null) {
+    private String copilotSessionId(CopilotPreparedSession preparedSession) {
+        if (preparedSession == null || preparedSession.sessionConfig() == null) {
             return null;
         }
 
-        return preparedRequest.sessionConfig().getSessionId();
+        return preparedSession.sessionConfig().getSessionId();
     }
 
-    private AnalysisAiAnalysisResponse toAiResponse(
+    private InitialAnalysisResponse toAiResponse(
             StructuredAnalysisResponse structuredResponse,
             String prompt,
             AnalysisAiUsage usage
     ) {
-        return new AnalysisAiAnalysisResponse(
+        return new InitialAnalysisResponse(
                 "copilot-sdk",
                 structuredResponse.summary(),
                 structuredResponse.detectedProblem(),

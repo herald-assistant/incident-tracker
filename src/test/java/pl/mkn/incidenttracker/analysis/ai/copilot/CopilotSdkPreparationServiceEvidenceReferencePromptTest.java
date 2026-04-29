@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -65,8 +65,8 @@ class CopilotSdkPreparationServiceEvidenceReferencePromptTest {
         assertTrue(prompt.contains("## itemId: elastic-logs-001"));
     }
 
-    private AnalysisAiAnalysisRequest request() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest request() {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 "dev3",
                 "main",

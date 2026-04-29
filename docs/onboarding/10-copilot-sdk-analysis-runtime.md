@@ -1,31 +1,33 @@
 # Copilot SDK Analysis Runtime
 
 Ten onboarding opisuje aktualny runtime providera
-`CopilotSdkAnalysisAiProvider`.
+`CopilotInitialAnalysisProvider`.
 
 ## Najwazniejszy kontrakt
 
-Copilot dostaje przygotowany request przez generyczne
-`AnalysisAiPreparedAnalysis`.
+Initial flow dostaje przygotowana analize przez generyczne
+`InitialAnalysisPreparation`. Copilot runtime wykonuje neutralna techniczna
+sesje `CopilotPreparedSession`.
 
 Flow:
 
-1. `AnalysisAiProvider.prepare(request)` buduje `CopilotSdkPreparedRequest`,
+1. `InitialAnalysisProvider.prepare(request)` buduje
+   `CopilotInitialAnalysisPreparation`,
 2. orchestrator zapisuje `prepared.prompt()`,
-3. `AnalysisAiProvider.analyze(prepared, listener)` uruchamia sesje SDK,
-4. prepared request jest zamykany po execution.
+3. `CopilotInitialAnalysisProvider` wyciaga z niej `CopilotPreparedSession`,
+4. `CopilotSdkExecutionGateway` uruchamia sesje SDK,
+5. initial preparation jest zamykane po execution.
 
-Ownership prepared requestu:
+Ownership initial preparation:
 
 - kod, ktory wywolal `prepare(request)`, zamyka returned
-  `AnalysisAiPreparedAnalysis`,
-- `analyze(request)` zamyka tylko prepared request utworzony przez siebie,
+  `InitialAnalysisPreparation`,
 - `analyze(prepared, listener)` nie zamyka obiektu przekazanego przez caller,
-- `CopilotSdkExecutionGateway` nie zamyka prepared requestu.
+- `CopilotSdkExecutionGateway` nie zamyka `CopilotPreparedSession`.
 
-Nie ma juz podwojnego budowania promptu przez produkcyjne
-`preparePrompt(...)` i `analyze(request)`. Preview promptu ma pochodzic z
-realnego `prepare(request).prompt()`.
+Nie ma produkcyjnego shortcutu `analyze(request)` ani oddzielnego
+`preparePrompt(...)`. Preview promptu ma pochodzic z realnego
+`prepare(request).prompt()`.
 
 ## Preparation
 
@@ -55,11 +57,13 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do promptu
   albo job state.
 
-Follow-up chat po zakonczonym jobie nie reuse'uje `AnalysisAiProvider`.
+Follow-up chat po zakonczonym jobie nie reuse'uje `InitialAnalysisProvider`.
 Ma osobny kontrakt `AnalysisAiChatProvider` i przygotowanie
 `CopilotSdkFollowUpPreparationService`, bo odpowiedz nie jest JSON-only
 diagnoza, tylko operatorska kontynuacja. Prompt follow-up dostaje finalny
 wynik, historie rozmowy, evidence i poprzednie tool evidence.
+Follow-up przygotowuje `CopilotPreparedSession` bez
+`CopilotInitialAnalysisPreparation`, wiec chat nie udaje initial analysis.
 
 Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 

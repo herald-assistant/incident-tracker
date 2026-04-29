@@ -77,7 +77,7 @@ niesie prompt i artefakty przygotowane w runtime.
 
 ## 6. Granica AI pozostaje generyczna
 
-Kontrakt wejscia do AI to `AnalysisAiAnalysisRequest` i lista
+Kontrakt wejscia do AI to `InitialAnalysisRequest` i lista
 `AnalysisEvidenceSection`. Prompt builder i provider AI nie przyjmuja klas
 adapter-specific.
 
@@ -92,28 +92,32 @@ wykonywanego przez AI.
 
 Aktualny flow:
 
-1. orchestrator buduje `AnalysisAiAnalysisRequest`,
-2. wywoluje `AnalysisAiProvider.prepare(request)`,
+1. orchestrator buduje `InitialAnalysisRequest`,
+2. wywoluje `InitialAnalysisProvider.prepare(request)`,
 3. zapisuje `prepared.prompt()` w stanie joba,
-4. wykonuje `AnalysisAiProvider.analyze(prepared, listener)`,
-5. zamyka `AnalysisAiPreparedAnalysis` w `finally`/try-with-resources.
+4. wykonuje `InitialAnalysisProvider.analyze(prepared, listener)`,
+5. zamyka `InitialAnalysisPreparation` w `finally`/try-with-resources.
 
 Ownership prepared analysis jest jawny:
 
 - wlasciciel obiektu zwroconego z `prepare(request)` zamyka go po uzyciu,
-- `analyze(request)` zamyka prepared analysis, ktore sam przygotowal,
 - `analyze(prepared, listener)` nie zamyka prepared analysis przekazanego
   przez caller,
-- gateway wykonujacy SDK nie przejmuje ownership i nie zamyka prepared
-  requestu.
+- gateway wykonujacy SDK nie przejmuje ownership i nie zamyka przygotowanej
+  sesji.
 
-`CopilotSdkPreparedRequest` implementuje generyczny
-`AnalysisAiPreparedAnalysis`, ale typ SDK nie wycieka poza pakiet
-`analysis.ai.copilot`.
+W Copilocie sa dwa jawne poziomy:
 
-`AnalysisAiProvider` nie ma produkcyjnych shortcutow dodanych tylko dla
-testow, takich jak oddzielne `preparePrompt(...)` albo domyslne prepared
-adaptery. Testy tworza wlasne prepared fixtures.
+- `CopilotInitialAnalysisPreparation` implementuje initial-facing
+  `InitialAnalysisPreparation` i niesie `InitialAnalysisRequest`,
+- `CopilotPreparedSession` jest neutralnym technicznym obiektem wykonania SDK,
+  uzywanym przez execution gateway oraz follow-up chat.
+
+Follow-up chat nie implementuje ani nie reuse'uje `InitialAnalysisPreparation`.
+
+`InitialAnalysisProvider` nie ma produkcyjnych shortcutow dodanych tylko dla
+testow, takich jak `analyze(request)`, oddzielne `preparePrompt(...)` albo
+domyslne prepared adaptery. Testy tworza wlasne prepared fixtures.
 
 ## 8. Artefakty Copilota sa inline w promptcie
 

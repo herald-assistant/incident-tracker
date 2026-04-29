@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.flow;
 
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
@@ -20,11 +20,11 @@ public interface AnalysisExecutionListener {
     ) {
     }
 
-    default void onAiStarted(AnalysisAiAnalysisRequest request, AnalysisContext context) {
+    default void onAiStarted(InitialAnalysisRequest request, AnalysisContext context) {
     }
 
     default void onAiPromptPrepared(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             String preparedPrompt,
             AnalysisContext context
     ) {

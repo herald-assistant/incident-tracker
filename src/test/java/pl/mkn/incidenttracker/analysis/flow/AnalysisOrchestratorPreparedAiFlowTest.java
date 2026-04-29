@@ -10,11 +10,11 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
@@ -43,7 +43,6 @@ class AnalysisOrchestratorPreparedAiFlowTest {
 
         assertEquals(1, provider.prepareCalls);
         assertEquals(1, provider.analyzePreparedCalls);
-        assertEquals(0, provider.analyzeRequestCalls);
         assertSame(provider.prepared, provider.analyzedPrepared);
         assertTrue(provider.prepared.closed);
         assertEquals("Prepared prompt for timeout-123", execution.preparedPrompt());
@@ -78,7 +77,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         assertTrue(provider.prepared.closed);
     }
 
-    private AnalysisOrchestrator orchestrator(AnalysisAiProvider analysisAiProvider) {
+    private AnalysisOrchestrator orchestrator(InitialAnalysisProvider initialAnalysisProvider) {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup("sample/runtime");
         var deploymentContextResolver = new DeploymentContextResolver();
@@ -98,7 +97,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
                         disabledOperationalContextEvidenceProvider(),
                         directTaskExecutor()
                 ),
-                analysisAiProvider,
+                initialAnalysisProvider,
                 gitLabProperties
         );
     }
@@ -118,22 +117,21 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         return Runnable::run;
     }
 
-    private static final class PreparedFlowProvider implements AnalysisAiProvider {
+    private static final class PreparedFlowProvider implements InitialAnalysisProvider {
 
         private final boolean failOnAnalyze;
         private int prepareCalls;
         private int analyzePreparedCalls;
-        private int analyzeRequestCalls;
         private TrackingPreparedAnalysis prepared;
-        private AnalysisAiPreparedAnalysis analyzedPrepared;
-        private AnalysisAiAnalysisRequest preparedRequest;
+        private InitialAnalysisPreparation analyzedPrepared;
+        private InitialAnalysisRequest preparedRequest;
 
         private PreparedFlowProvider(boolean failOnAnalyze) {
             this.failOnAnalyze = failOnAnalyze;
         }
 
         @Override
-        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
             prepareCalls++;
             preparedRequest = request;
             prepared = new TrackingPreparedAnalysis(
@@ -145,8 +143,8 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         }
 
         @Override
-        public AnalysisAiAnalysisResponse analyze(
-                AnalysisAiPreparedAnalysis preparedAnalysis,
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             analyzePreparedCalls++;
@@ -157,14 +155,8 @@ class AnalysisOrchestratorPreparedAiFlowTest {
             return response(preparedAnalysis.prompt());
         }
 
-        @Override
-        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-            analyzeRequestCalls++;
-            return response("Legacy response prompt for " + request.correlationId());
-        }
-
-        private AnalysisAiAnalysisResponse response(String prompt) {
-            return new AnalysisAiAnalysisResponse(
+        private InitialAnalysisResponse response(String prompt) {
+            return new InitialAnalysisResponse(
                     "prepared-test-provider",
                     "Prepared flow summary",
                     "PREPARED_FLOW",
@@ -179,7 +171,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         }
     }
 
-    private static final class TrackingPreparedAnalysis implements AnalysisAiPreparedAnalysis {
+    private static final class TrackingPreparedAnalysis implements InitialAnalysisPreparation {
 
         private final String providerName;
         private final String correlationId;

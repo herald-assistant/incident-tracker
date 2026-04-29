@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.quality;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -75,7 +75,7 @@ public class CopilotResponseQualityGate {
     private final CopilotResponseQualityProperties properties;
 
     public Report evaluate(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             StructuredAnalysisResponse response
     ) {
         if (properties == null || !properties.isEnabled()) {
@@ -324,7 +324,7 @@ public class CopilotResponseQualityGate {
             boolean runtimeSignal
     ) {
 
-        private static EvidenceSummary from(AnalysisAiAnalysisRequest request) {
+        private static EvidenceSummary from(InitialAnalysisRequest request) {
             var sections = request != null
                     ? request.evidenceSections()
                     : List.<AnalysisEvidenceSection>of();

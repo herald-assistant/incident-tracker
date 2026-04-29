@@ -43,7 +43,7 @@ Przed wieksza zmiana zacznij od:
 ## Niezmienniki Copilot SDK i optymalizacji
 
 - Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko
-  `AnalysisAiAnalysisRequest` oraz `AnalysisEvidenceSection`; nie wciskaj klas
+  `InitialAnalysisRequest` oraz `AnalysisEvidenceSection`; nie wciskaj klas
   adapter-specific do prompt buildera ani kontraktu AI.
 - Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
   incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie,

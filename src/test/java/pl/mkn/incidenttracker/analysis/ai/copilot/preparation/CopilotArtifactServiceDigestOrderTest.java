@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -22,7 +22,7 @@ class CopilotArtifactServiceDigestOrderTest {
 
     @Test
     void shouldRenderManifestThenDigestThenEvidenceArtifacts() {
-        var request = new AnalysisAiAnalysisRequest(
+        var request = new InitialAnalysisRequest(
                 "corr-123",
                 "dev3",
                 "main",

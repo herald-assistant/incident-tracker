@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -44,7 +44,7 @@ public class CopilotArtifactService {
     }
 
     public List<Artifact> renderArtifacts(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         var descriptors = buildArtifactIndex(request);
@@ -95,7 +95,7 @@ public class CopilotArtifactService {
     }
 
     public Map<String, String> toArtifactContentMap(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         return toArtifactContentMap(renderArtifacts(request, toolAccessPolicy));
@@ -111,7 +111,7 @@ public class CopilotArtifactService {
     }
 
     private String renderManifestArtifact(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             List<ArtifactDescriptor> descriptors,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
@@ -139,7 +139,7 @@ public class CopilotArtifactService {
         return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
     }
 
-    private List<ArtifactDescriptor> buildArtifactIndex(AnalysisAiAnalysisRequest request) {
+    private List<ArtifactDescriptor> buildArtifactIndex(InitialAnalysisRequest request) {
         var descriptors = new ArrayList<ArtifactDescriptor>();
         descriptors.add(new ArtifactDescriptor(
                 MANIFEST_ARTIFACT_ID,
@@ -188,7 +188,7 @@ public class CopilotArtifactService {
     }
 
     private Map<String, Object> buildManifestPayload(
-            AnalysisAiAnalysisRequest request,
+            InitialAnalysisRequest request,
             List<ArtifactDescriptor> descriptors,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {

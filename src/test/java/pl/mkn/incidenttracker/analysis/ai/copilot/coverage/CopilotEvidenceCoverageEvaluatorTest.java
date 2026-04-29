@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -100,8 +100,8 @@ class CopilotEvidenceCoverageEvaluatorTest {
         assertTrue(report.hasGap("DB_ENVIRONMENT_UNRESOLVED"));
     }
 
-    private AnalysisAiAnalysisRequest request(String environment, List<AnalysisEvidenceSection> sections) {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest request(String environment, List<AnalysisEvidenceSection> sections) {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 environment,
                 "release/2026.04",

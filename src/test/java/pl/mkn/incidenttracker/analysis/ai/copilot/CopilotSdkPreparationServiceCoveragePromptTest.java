@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -61,9 +61,9 @@ class CopilotSdkPreparationServiceCoveragePromptTest {
         );
 
         try (var prepared = service.prepare(failingMethodOnlyRequest())) {
-            assertTrue(prepared.sessionConfig().getAvailableTools().contains("gitlab_find_flow_context"));
-            assertTrue(prepared.sessionConfig().getAvailableTools().contains("gitlab_read_repository_file_chunk"));
-            assertFalse(prepared.sessionConfig().getAvailableTools().contains("gitlab_search_repository_candidates"));
+            assertTrue(prepared.session().sessionConfig().getAvailableTools().contains("gitlab_find_flow_context"));
+            assertTrue(prepared.session().sessionConfig().getAvailableTools().contains("gitlab_read_repository_file_chunk"));
+            assertFalse(prepared.session().sessionConfig().getAvailableTools().contains("gitlab_search_repository_candidates"));
 
             var prompt = prepared.prompt();
             assertTrue(prompt.contains("Use tools only for evidence gaps listed in `evidenceCoverage.gaps`"));
@@ -72,7 +72,7 @@ class CopilotSdkPreparationServiceCoveragePromptTest {
             assertFalse(prompt.contains("GitLab and Elasticsearch tools are fallback-only"));
             assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps."));
 
-            var manifest = prepared.artifactContents().get("00-incident-manifest.json");
+            var manifest = prepared.session().artifactContents().get("00-incident-manifest.json");
             assertTrue(manifest.contains("\"evidenceCoverage\""));
             assertTrue(manifest.contains("\"gitLab\" : \"FAILING_METHOD_ONLY\""));
             assertTrue(manifest.contains("\"code\" : \"MISSING_FLOW_CONTEXT\""));
@@ -83,8 +83,8 @@ class CopilotSdkPreparationServiceCoveragePromptTest {
         }
     }
 
-    private AnalysisAiAnalysisRequest failingMethodOnlyRequest() {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest failingMethodOnlyRequest() {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 "dev3",
                 "release/2026.04",

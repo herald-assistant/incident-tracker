@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.github.copilot.sdk.json.MessageOptions;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
@@ -22,7 +22,7 @@ public class CopilotSdkPreparationService {
     private final CopilotSessionConfigFactory sessionConfigFactory;
     private final CopilotSessionMetricsRegistry metricsRegistry;
 
-    public CopilotSdkPreparedRequest prepare(AnalysisAiAnalysisRequest request) {
+    public CopilotInitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
         var preparationStart = System.nanoTime();
         var toolSessionContext = buildToolSessionContext(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
@@ -50,18 +50,20 @@ public class CopilotSdkPreparationService {
                 (System.nanoTime() - preparationStart) / 1_000_000
         );
 
-        return new CopilotSdkPreparedRequest(
-                request.correlationId(),
-                clientOptions,
-                sessionConfig,
-                messageOptions,
-                prompt,
-                artifactContents,
-                request
+        return new CopilotInitialAnalysisPreparation(
+                request,
+                new CopilotPreparedSession(
+                        request.correlationId(),
+                        clientOptions,
+                        sessionConfig,
+                        messageOptions,
+                        prompt,
+                        artifactContents
+                )
         );
     }
 
-    private CopilotToolSessionContext buildToolSessionContext(AnalysisAiAnalysisRequest request) {
+    private CopilotToolSessionContext buildToolSessionContext(InitialAnalysisRequest request) {
         var analysisRunId = UUID.randomUUID().toString();
         var copilotSessionId = "analysis-" + analysisRunId;
 

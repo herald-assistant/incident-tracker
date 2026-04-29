@@ -1,13 +1,13 @@
 package pl.mkn.incidenttracker.analysis.flow;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 
 public record AnalysisExecution(
         AnalysisContext context,
-        AnalysisAiAnalysisRequest aiRequest,
+        InitialAnalysisRequest aiRequest,
         String preparedPrompt,
-        AnalysisAiAnalysisResponse aiResponse,
+        InitialAnalysisResponse aiResponse,
         AnalysisResultResponse result
 ) {
 }

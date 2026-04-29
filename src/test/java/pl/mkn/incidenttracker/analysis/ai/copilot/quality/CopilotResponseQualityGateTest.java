@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.quality;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -208,15 +208,15 @@ class CopilotResponseQualityGateTest {
         return "Flow obslugi zamowienia przechodzi przez `OrderController`, warstwe serwisu i klienta katalogu, a incydent przerywa krok pobrania danych produktu z downstream.";
     }
 
-    private AnalysisAiAnalysisRequest runtimeAndCodeRequest() {
+    private InitialAnalysisRequest runtimeAndCodeRequest() {
         return request(List.of(
                 section("gitlab", "resolved-code", "filePath=src/main/java/pl/mkn/orders/OrderController.java method=getOrder"),
                 section("elasticsearch", "logs", "SocketTimeoutException calling catalog-service")
         ));
     }
 
-    private AnalysisAiAnalysisRequest request(List<AnalysisEvidenceSection> sections) {
-        return new AnalysisAiAnalysisRequest(
+    private InitialAnalysisRequest request(List<AnalysisEvidenceSection> sections) {
+        return new InitialAnalysisRequest(
                 "corr-123",
                 "zt01",
                 "release/2026.04",

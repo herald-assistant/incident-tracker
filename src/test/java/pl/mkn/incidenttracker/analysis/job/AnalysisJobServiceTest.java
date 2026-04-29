@@ -10,14 +10,14 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolve
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisResponse;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatResponse;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.prepared.AnalysisAiPreparedAnalysis;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
@@ -34,7 +34,7 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.Oper
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisRequest;
 import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
-import pl.mkn.incidenttracker.analysis.TestAnalysisAiProvider;
+import pl.mkn.incidenttracker.analysis.TestInitialAnalysisProvider;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -55,7 +55,7 @@ class AnalysisJobServiceTest {
     private final DeploymentContextResolver deploymentContextResolver = new DeploymentContextResolver();
     private final CapturingTaskExecutor taskExecutor = new CapturingTaskExecutor();
     private final AnalysisJobService analysisJobService = analysisJobService(
-            new TestAnalysisAiProvider(),
+            new TestInitialAnalysisProvider(),
             new TestAnalysisChatProvider(),
             taskExecutor
     );
@@ -100,7 +100,7 @@ class AnalysisJobServiceTest {
 
     @Test
     void shouldPassSelectedAiOptionsToAnalysisFlow() {
-        var provider = new CapturingOptionsAnalysisAiProvider();
+        var provider = new CapturingOptionsInitialAnalysisProvider();
         var optionsTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(provider, new TestAnalysisChatProvider(), optionsTaskExecutor);
 
@@ -122,7 +122,7 @@ class AnalysisJobServiceTest {
     void shouldExposeAiTokenUsageOnFinalAiStep() {
         var usageTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(
-                new UsageAwareAnalysisAiProvider(),
+                new UsageAwareInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 usageTaskExecutor
         );
@@ -161,7 +161,7 @@ class AnalysisJobServiceTest {
     void shouldKeepPreparedPromptWhenAiAnalysisFails() {
         var failingTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(
-                new FailingAnalysisAiProvider(),
+                new FailingInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 failingTaskExecutor
         );
@@ -187,7 +187,7 @@ class AnalysisJobServiceTest {
 
     @Test
     void shouldExposeAiToolFetchedGitLabFilesDuringPollingWhileAiStepIsRunning() throws Exception {
-        var toolAwareProvider = new BlockingToolAwareAnalysisAiProvider();
+        var toolAwareProvider = new BlockingToolAwareInitialAnalysisProvider();
         var blockingTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(
                 toolAwareProvider,
@@ -231,7 +231,7 @@ class AnalysisJobServiceTest {
     void shouldRunFollowUpChatAfterCompletedAnalysis() {
         var chatProvider = new ToolAwareTestAnalysisChatProvider();
         var chatTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(new TestAnalysisAiProvider(), chatProvider, chatTaskExecutor);
+        var service = analysisJobService(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
 
         var started = service.startAnalysis(new AnalysisRequest("timeout-123"));
         chatTaskExecutor.runNext();
@@ -262,7 +262,7 @@ class AnalysisJobServiceTest {
     }
 
     private AnalysisJobService analysisJobService(
-            AnalysisAiProvider analysisAiProvider,
+            InitialAnalysisProvider initialAnalysisProvider,
             AnalysisAiChatProvider analysisAiChatProvider,
             TaskExecutor taskExecutor
     ) {
@@ -282,7 +282,7 @@ class AnalysisJobServiceTest {
                                 disabledOperationalContextEvidenceProvider(),
                                 directTaskExecutor()
                         ),
-                        analysisAiProvider,
+                        initialAnalysisProvider,
                         gitLabProperties
                 ),
                 analysisAiChatProvider,
@@ -332,10 +332,10 @@ class AnalysisJobServiceTest {
         }
     }
 
-    private static final class FailingAnalysisAiProvider implements AnalysisAiProvider {
+    private static final class FailingInitialAnalysisProvider implements InitialAnalysisProvider {
 
         @Override
-        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
             return new TestPreparedAnalysis(
                     "failing-ai-provider",
                     request.correlationId(),
@@ -345,23 +345,18 @@ class AnalysisJobServiceTest {
         }
 
         @Override
-        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-            throw new IllegalStateException("AI gateway timeout");
-        }
-
-        @Override
-        public AnalysisAiAnalysisResponse analyze(
-                AnalysisAiPreparedAnalysis preparedAnalysis,
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             throw new IllegalStateException("AI gateway timeout");
         }
     }
 
-    private static final class UsageAwareAnalysisAiProvider implements AnalysisAiProvider {
+    private static final class UsageAwareInitialAnalysisProvider implements InitialAnalysisProvider {
 
         @Override
-        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
             return new TestPreparedAnalysis(
                     "usage-aware-ai-provider",
                     request.correlationId(),
@@ -371,19 +366,12 @@ class AnalysisJobServiceTest {
         }
 
         @Override
-        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-            try (var prepared = prepare(request)) {
-                return analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
-            }
-        }
-
-        @Override
-        public AnalysisAiAnalysisResponse analyze(
-                AnalysisAiPreparedAnalysis preparedAnalysis,
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             var prepared = testPreparedAnalysis(preparedAnalysis);
-            return new AnalysisAiAnalysisResponse(
+            return new InitialAnalysisResponse(
                     "usage-aware-ai-provider",
                     "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                     "DOWNSTREAM_TIMEOUT",
@@ -412,12 +400,12 @@ class AnalysisJobServiceTest {
         }
     }
 
-    private static final class CapturingOptionsAnalysisAiProvider implements AnalysisAiProvider {
+    private static final class CapturingOptionsInitialAnalysisProvider implements InitialAnalysisProvider {
 
-        private AnalysisAiAnalysisRequest lastPreparedRequest;
+        private InitialAnalysisRequest lastPreparedRequest;
 
         @Override
-        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
             lastPreparedRequest = request;
             return new TestPreparedAnalysis(
                     "capturing-options-ai-provider",
@@ -431,22 +419,15 @@ class AnalysisJobServiceTest {
         }
 
         @Override
-        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-            try (var prepared = prepare(request)) {
-                return analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
-            }
-        }
-
-        @Override
-        public AnalysisAiAnalysisResponse analyze(
-                AnalysisAiPreparedAnalysis preparedAnalysis,
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             var prepared = testPreparedAnalysis(preparedAnalysis);
             var options = prepared.request().options() != null
                     ? prepared.request().options()
                     : AnalysisAiOptions.DEFAULT;
-            return new AnalysisAiAnalysisResponse(
+            return new InitialAnalysisResponse(
                     "capturing-options-ai-provider",
                     "Selected model " + options.model(),
                     "OPTIONS_CAPTURED",
@@ -461,13 +442,13 @@ class AnalysisJobServiceTest {
         }
     }
 
-    private static final class BlockingToolAwareAnalysisAiProvider implements AnalysisAiProvider {
+    private static final class BlockingToolAwareInitialAnalysisProvider implements InitialAnalysisProvider {
 
         private final CountDownLatch toolEvidencePublished = new CountDownLatch(1);
         private final CountDownLatch finishSignal = new CountDownLatch(1);
 
         @Override
-        public AnalysisAiPreparedAnalysis prepare(AnalysisAiAnalysisRequest request) {
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
             return new TestPreparedAnalysis(
                     "blocking-tool-ai-provider",
                     request.correlationId(),
@@ -477,15 +458,8 @@ class AnalysisJobServiceTest {
         }
 
         @Override
-        public AnalysisAiAnalysisResponse analyze(AnalysisAiAnalysisRequest request) {
-            try (var prepared = prepare(request)) {
-                return analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
-            }
-        }
-
-        @Override
-        public AnalysisAiAnalysisResponse analyze(
-                AnalysisAiPreparedAnalysis preparedAnalysis,
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             var prepared = testPreparedAnalysis(preparedAnalysis);
@@ -513,7 +487,7 @@ class AnalysisJobServiceTest {
             ));
             toolEvidencePublished.countDown();
             awaitFinishSignal();
-            return new AnalysisAiAnalysisResponse(
+            return new InitialAnalysisResponse(
                     "blocking-tool-ai-provider",
                     "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                     "DOWNSTREAM_TIMEOUT",
@@ -597,7 +571,7 @@ class AnalysisJobServiceTest {
         }
     }
 
-    private static TestPreparedAnalysis testPreparedAnalysis(AnalysisAiPreparedAnalysis preparedAnalysis) {
+    private static TestPreparedAnalysis testPreparedAnalysis(InitialAnalysisPreparation preparedAnalysis) {
         if (preparedAnalysis instanceof TestPreparedAnalysis testPreparedAnalysis) {
             return testPreparedAnalysis;
         }
@@ -609,8 +583,8 @@ class AnalysisJobServiceTest {
             String providerName,
             String correlationId,
             String prompt,
-            AnalysisAiAnalysisRequest request
-    ) implements AnalysisAiPreparedAnalysis {
+            InitialAnalysisRequest request
+    ) implements InitialAnalysisPreparation {
     }
 
 }

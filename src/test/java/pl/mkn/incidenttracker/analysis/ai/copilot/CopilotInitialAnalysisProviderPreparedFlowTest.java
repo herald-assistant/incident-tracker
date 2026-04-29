@@ -5,10 +5,12 @@ import com.github.copilot.sdk.json.CopilotClientOptions;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparedRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
@@ -28,7 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-class CopilotSdkAnalysisAiProviderPreparedFlowTest {
+class CopilotInitialAnalysisProviderPreparedFlowTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -37,18 +39,18 @@ class CopilotSdkAnalysisAiProviderPreparedFlowTest {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new AnalysisAiAnalysisRequest("corr-prepared", "zt01", "main", "sample/runtime", List.of());
-        var preparedRequest = new CopilotSdkPreparedRequest(
+        var request = new InitialAnalysisRequest("corr-prepared", "zt01", "main", "sample/runtime", List.of());
+        var preparedSession = new CopilotPreparedSession(
                 request.correlationId(),
                 new CopilotClientOptions(),
                 new SessionConfig().setSessionId("analysis-prepared"),
                 new MessageOptions().setPrompt("Prepared prompt body"),
                 "Prepared prompt body",
-                Map.of(),
-                request
+                Map.of()
         );
+        var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
 
-        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP)))
+        when(executionGateway.execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP)))
                 .thenReturn("""
                         {
                           "detectedProblem": "PREPARED_RESPONSE",
@@ -65,33 +67,37 @@ class CopilotSdkAnalysisAiProviderPreparedFlowTest {
                         }
                         """);
 
-        var response = provider.analyze(preparedRequest, AnalysisAiToolEvidenceListener.NO_OP);
+        var response = provider.analyze(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP);
 
         assertEquals("PREPARED_RESPONSE", response.detectedProblem());
         assertEquals("Prepared prompt body", response.prompt());
         verifyNoInteractions(preparationService);
-        verify(executionGateway).execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP));
+        verify(executionGateway).execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP));
     }
 
     @Test
-    void shouldClosePreparedRequestOwnedByAnalyzeRequest() {
+    void shouldClosePreparedAnalysisWhenCallerOwnsPreparation() {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new AnalysisAiAnalysisRequest("corr-owned", "zt01", "main", "sample/runtime", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var request = new InitialAnalysisRequest("corr-owned", "zt01", "main", "sample/runtime", List.of());
+        var preparedSession = mock(CopilotPreparedSession.class);
+        var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
 
-        when(preparationService.prepare(request)).thenReturn(preparedRequest);
-        when(preparedRequest.prompt()).thenReturn("Owned prompt body");
-        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP)))
+        when(preparationService.prepare(request)).thenReturn(preparedAnalysis);
+        when(preparedSession.prompt()).thenReturn("Owned prompt body");
+        when(executionGateway.execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP)))
                 .thenReturn(structuredResponse("OWNED_RESPONSE"));
 
-        var response = provider.analyze(request);
+        InitialAnalysisResponse response;
+        try (var prepared = provider.prepare(request)) {
+            response = provider.analyze(prepared, AnalysisAiToolEvidenceListener.NO_OP);
+        }
 
         assertEquals("OWNED_RESPONSE", response.detectedProblem());
         assertEquals("Owned prompt body", response.prompt());
-        verify(executionGateway).execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP));
-        verify(preparedRequest).close();
+        verify(executionGateway).execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP));
+        verify(preparedSession).close();
     }
 
     @Test
@@ -99,32 +105,32 @@ class CopilotSdkAnalysisAiProviderPreparedFlowTest {
         var preparationService = mock(CopilotSdkPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new AnalysisAiAnalysisRequest("corr-caller-owned", "zt01", "main", "sample/runtime", List.of());
-        var preparedRequest = mock(CopilotSdkPreparedRequest.class);
+        var request = new InitialAnalysisRequest("corr-caller-owned", "zt01", "main", "sample/runtime", List.of());
+        var preparedSession = mock(CopilotPreparedSession.class);
+        var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
         var listener = mock(AnalysisAiToolEvidenceListener.class);
 
-        when(preparedRequest.request()).thenReturn(request);
-        when(preparedRequest.prompt()).thenReturn("Caller-owned prompt body");
-        when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-caller-owned"));
-        when(executionGateway.execute(same(preparedRequest), same(listener)))
+        when(preparedSession.prompt()).thenReturn("Caller-owned prompt body");
+        when(preparedSession.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-caller-owned"));
+        when(executionGateway.execute(same(preparedSession), same(listener)))
                 .thenReturn(structuredResponse("CALLER_OWNED_RESPONSE"));
 
-        var response = provider.analyze(preparedRequest, listener);
+        var response = provider.analyze(preparedAnalysis, listener);
 
         assertEquals("CALLER_OWNED_RESPONSE", response.detectedProblem());
         assertEquals("Caller-owned prompt body", response.prompt());
         verifyNoInteractions(preparationService);
-        verify(executionGateway).execute(same(preparedRequest), same(listener));
-        verify(preparedRequest, never()).close();
+        verify(executionGateway).execute(same(preparedSession), same(listener));
+        verify(preparedSession, never()).close();
     }
 
-    private CopilotSdkAnalysisAiProvider provider(
+    private CopilotInitialAnalysisProvider provider(
             CopilotSdkPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
         var metricsProperties = new CopilotMetricsProperties();
         var registry = new CopilotSessionMetricsRegistry(metricsProperties);
-        return new CopilotSdkAnalysisAiProvider(
+        return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),

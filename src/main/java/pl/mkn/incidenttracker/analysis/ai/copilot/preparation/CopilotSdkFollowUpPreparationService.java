@@ -4,7 +4,7 @@ import com.github.copilot.sdk.json.MessageOptions;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.analysis.AnalysisAiAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
@@ -23,7 +23,7 @@ public class CopilotSdkFollowUpPreparationService {
     private final CopilotFollowUpPromptRenderer promptRenderer;
     private final CopilotSessionConfigFactory sessionConfigFactory;
 
-    public CopilotSdkPreparedRequest prepare(AnalysisAiChatRequest request) {
+    public CopilotPreparedSession prepare(AnalysisAiChatRequest request) {
         var toolSessionContext = buildToolSessionContext(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = CopilotToolAccessPolicy.fromFollowUpSession(
@@ -46,14 +46,13 @@ public class CopilotSdkFollowUpPreparationService {
         var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
         var messageOptions = new MessageOptions().setPrompt(prompt);
 
-        return new CopilotSdkPreparedRequest(
+        return new CopilotPreparedSession(
                 request.correlationId(),
                 clientOptions,
                 sessionConfig,
                 messageOptions,
                 prompt,
-                artifactService.toArtifactContentMap(renderedArtifacts),
-                artifactRequest
+                artifactService.toArtifactContentMap(renderedArtifacts)
         );
     }
 
@@ -71,12 +70,12 @@ public class CopilotSdkFollowUpPreparationService {
         );
     }
 
-    private AnalysisAiAnalysisRequest artifactRequest(AnalysisAiChatRequest request) {
+    private InitialAnalysisRequest artifactRequest(AnalysisAiChatRequest request) {
         var sections = new ArrayList<AnalysisEvidenceSection>();
         sections.addAll(request.evidenceSections());
         sections.addAll(request.toolEvidenceSections());
 
-        return new AnalysisAiAnalysisRequest(
+        return new InitialAnalysisRequest(
                 request.correlationId(),
                 request.environment(),
                 request.gitLabBranch(),

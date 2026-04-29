@@ -7,21 +7,20 @@ o GitHub Copilot Java SDK.
 
 Obejmuje:
 
-- `analysis/`
-  kontrakt finalnej analizy: `AnalysisAiProvider`,
-  `AnalysisAiAnalysisRequest` i `AnalysisAiAnalysisResponse`,
+- `initial/`
+  kontrakt poczatkowej analizy joba: `InitialAnalysisProvider`,
+  `InitialAnalysisRequest`, `InitialAnalysisPreparation` i
+  `InitialAnalysisResponse`,
 - `chat/`
   kontrakt follow-up chatu: `AnalysisAiChatProvider`, request/response, turny
-  i snapshot finalnej analizy,
+  i snapshot poczatkowej analizy,
 - `evidence/`
   generyczne modele evidence przekazywane do AI oraz
   `AnalysisAiToolEvidenceListener`,
-- `prepared/`
-  generyczny lifecycle prepared analysis,
 - `usage/`
   generyczny kontrakt zuzycia tokenow/cost/usage dla UI,
 - `copilot/`
-  root aktualnego providera AI: `CopilotSdkAnalysisAiProvider`,
+  root aktualnego providera AI: `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
   budowe promptu, konfiguracji klienta, tool definitions, follow-up promptu i
@@ -49,12 +48,16 @@ Nie obejmuje:
 
 ## Zasady modyfikacji
 
-- `AnalysisAiProvider` ma pozostac stabilna granica miedzy flow a konkretnym
-  SDK lub modelem i mieszka w `analysis/`.
+- `InitialAnalysisProvider` ma pozostac stabilna granica miedzy flow a konkretnym
+  SDK lub modelem i mieszka w `initial/`.
+- `InitialAnalysisPreparation` jest kontraktem initial flow. Copilotowy wrapper
+  `CopilotInitialAnalysisPreparation` moze go implementowac, ale neutralna
+  sesja wykonania SDK (`CopilotPreparedSession`) nie powinna udawac initial
+  analysis, bo jest uzywana takze przez follow-up chat.
 - `AnalysisAiChatProvider` ma pozostac osobna granica kontynuacji joba; nie
-  mieszaj jego tekstowej odpowiedzi z JSON-only kontraktem finalnej analizy.
+  mieszaj jego tekstowej odpowiedzi z JSON-only kontraktem poczatkowej analizy.
   Kontrakty chatu trzymamy w `chat/`.
-- AI dostaje tylko `AnalysisAiAnalysisRequest` i generyczne
+- AI dostaje tylko `InitialAnalysisRequest` i generyczne
   `AnalysisEvidenceSection`. Nie wciskaj tu klas adapter-specific. Evidence
   models trzymamy w `evidence/`.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
@@ -77,12 +80,12 @@ Nie obejmuje:
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.
 - Permission handling musi byc jawnie ustawione. Nie zostawiaj domyslnego,
   nieczytelnego zachowania SDK.
-- Parsing finalnej odpowiedzi modelu ma pozostac odporny na formatowanie, ale
+- Parsing odpowiedzi initial analysis ma pozostac odporny na formatowanie, ale
   kontrakt pol `detectedProblem`, `summary`, `recommendedAction`, `rationale`,
   `affectedFunction`, `affectedProcess`, `affectedBoundedContext`,
   `affectedTeam` powinien pozostac stabilny dla flow i UI.
 - Follow-up chat moze odpowiadac operatorskim tekstem, ale nadal ma reuse'owac
-  finalny snapshot analizy, historie rozmowy, hidden tool context i prosty
+  snapshot poczatkowej analizy, historie rozmowy, hidden tool context i prosty
   user-facing tool evidence.
 - Jesli kiedys dojda kolejne providery AI, trzymaj ich szczegoly lokalnie i nie
   rozlewaj zaleznosci SDK poza ten katalog.

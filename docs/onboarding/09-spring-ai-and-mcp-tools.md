@@ -41,7 +41,7 @@ zarejestrowane. Najpierw `CopilotEvidenceCoverageEvaluator` ocenia generyczne
 evidence i tworzy `CopilotEvidenceCoverageReport`.
 
 W runtime policy jest tworzona przez `CopilotToolAccessPolicyFactory`.
-Fabryka dostaje `AnalysisAiAnalysisRequest` oraz zarejestrowane
+Fabryka dostaje `InitialAnalysisRequest` oraz zarejestrowane
 `ToolDefinition`, uruchamia evaluator coverage i przekazuje gotowy report do
 `CopilotToolAccessPolicy.fromCoverage(...)`.
 
@@ -143,7 +143,7 @@ bledu jako pustego wyniku.
 ## Capture tool evidence
 
 `CopilotToolEvidenceSessionStore` zarzadza sesja capture i publikuje
-zaktualizowane `AnalysisEvidenceSection`. Dla finalnej analizy job flow
+zaktualizowane `AnalysisEvidenceSection`. Dla poczatkowej analizy job flow
 publikuje je jako top-level `toolEvidenceSections`, a dla follow-up chatu
 zapisuje przy konkretnej odpowiedzi assistant w
 `chatMessages[].toolEvidenceSections`.
