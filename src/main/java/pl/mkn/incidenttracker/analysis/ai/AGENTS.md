@@ -29,9 +29,9 @@ Obejmuje:
   platformy Copilot,
 - `copilot/runtime/`
   neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
-  `CopilotPreparedSession`, `CopilotPreparedSessionRequest`,
-  `CopilotSessionConfigRequest` oraz factory budujace `SessionConfig` i
-  `MessageOptions` bez znajomosci incident policy,
+  `CopilotModelSelection`, `CopilotPreparedSession`,
+  `CopilotPreparedSessionRequest`, `CopilotSessionConfigRequest` oraz factory
+  budujace `SessionConfig` i `MessageOptions` bez znajomosci incident policy,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`

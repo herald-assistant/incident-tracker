@@ -2,7 +2,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
 
 import com.github.copilot.sdk.json.ToolDefinition;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;
 
@@ -11,7 +10,7 @@ public record CopilotSessionConfigRequest(
         List<ToolDefinition> tools,
         List<String> availableToolNames,
         List<String> skillDirectories,
-        AnalysisAiOptions options,
+        CopilotModelSelection modelSelection,
         String deniedToolUseMessage
 ) {
 
@@ -22,7 +21,7 @@ public record CopilotSessionConfigRequest(
         tools = tools != null ? List.copyOf(tools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
         skillDirectories = skillDirectories != null ? List.copyOf(skillDirectories) : List.of();
-        options = options != null ? options : AnalysisAiOptions.DEFAULT;
+        modelSelection = modelSelection != null ? modelSelection : CopilotModelSelection.DEFAULT;
         deniedToolUseMessage = hasText(deniedToolUseMessage)
                 ? deniedToolUseMessage
                 : DEFAULT_DENIED_TOOL_USE_MESSAGE;

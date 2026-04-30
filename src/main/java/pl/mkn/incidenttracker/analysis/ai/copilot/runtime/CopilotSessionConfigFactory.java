@@ -10,7 +10,6 @@ import com.github.copilot.sdk.json.SessionHooks;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -52,12 +51,12 @@ public class CopilotSessionConfigFactory {
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
 
-        var model = selectedModel(request.options());
+        var model = selectedModel(request.modelSelection());
         if (StringUtils.hasText(model)) {
             sessionConfig.setModel(model);
         }
 
-        var reasoningEffort = selectedReasoningEffort(request.options());
+        var reasoningEffort = selectedReasoningEffort(request.modelSelection());
         if (StringUtils.hasText(reasoningEffort)) {
             sessionConfig.setReasoningEffort(reasoningEffort);
         }
@@ -65,15 +64,15 @@ public class CopilotSessionConfigFactory {
         return sessionConfig;
     }
 
-    private String selectedModel(AnalysisAiOptions options) {
-        return options != null && StringUtils.hasText(options.model())
-                ? options.model()
+    private String selectedModel(CopilotModelSelection modelSelection) {
+        return modelSelection != null && StringUtils.hasText(modelSelection.model())
+                ? modelSelection.model()
                 : properties.getModel();
     }
 
-    private String selectedReasoningEffort(AnalysisAiOptions options) {
-        return options != null && StringUtils.hasText(options.reasoningEffort())
-                ? options.reasoningEffort()
+    private String selectedReasoningEffort(CopilotModelSelection modelSelection) {
+        return modelSelection != null && StringUtils.hasText(modelSelection.reasoningEffort())
+                ? modelSelection.reasoningEffort()
                 : properties.getReasoningEffort();
     }
 

@@ -2,11 +2,13 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotModelSelection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.UUID;
 
@@ -35,7 +37,7 @@ public class CopilotInitialAnalysisRunAssembler {
                 toolAccessPolicy.enabledTools(),
                 toolAccessPolicy.availableToolNames(),
                 skillRuntimeLoader.resolveSkillDirectories(),
-                request.options(),
+                modelSelection(request.options()),
                 INCIDENT_TOOL_DENIED_MESSAGE
         );
 
@@ -61,5 +63,11 @@ public class CopilotInitialAnalysisRunAssembler {
                 copilotSessionId,
                 hiddenToolContextFactory.fromInitialRequest(request)
         );
+    }
+
+    private CopilotModelSelection modelSelection(AnalysisAiOptions options) {
+        return options != null
+                ? new CopilotModelSelection(options.model(), options.reasoningEffort())
+                : CopilotModelSelection.DEFAULT;
     }
 }

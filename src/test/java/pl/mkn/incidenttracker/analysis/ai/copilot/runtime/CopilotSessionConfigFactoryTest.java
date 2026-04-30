@@ -7,7 +7,6 @@ import com.github.copilot.sdk.json.PreToolUseHookInput;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;
 import java.util.Map;
@@ -37,7 +36,7 @@ class CopilotSessionConfigFactoryTest {
                 tools,
                 List.of("gitlab_find_flow_context"),
                 List.of("C:\\runtime\\copilot_skills"),
-                AnalysisAiOptions.DEFAULT,
+                CopilotModelSelection.DEFAULT,
                 "Use only the enabled test tools."
         ));
 
@@ -82,7 +81,7 @@ class CopilotSessionConfigFactoryTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                new AnalysisAiOptions("gpt-5.3-codex", "high"),
+                new CopilotModelSelection("gpt-5.3-codex", "high"),
                 null
         ));
 
@@ -115,7 +114,7 @@ class CopilotSessionConfigFactoryTest {
                 List.of(),
                 List.of(),
                 null,
-                AnalysisAiOptions.DEFAULT,
+                CopilotModelSelection.DEFAULT,
                 null
         ));
 
