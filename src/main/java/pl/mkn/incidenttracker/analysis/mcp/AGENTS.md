@@ -26,6 +26,9 @@ Nie obejmuje:
   orchestratora. Nie sklejaj calego flow bezposrednio w metodzie `@Tool`.
 - Kontrakty tooli maja pozostac jawne i male: tylko dane potrzebne do
   wykonania jednego konkretnego kroku eksploracji.
+- Neutralne kontrakty wielokrotnego uzycia, np. hidden tool context keys albo
+  DB request/result/scope/operator DTO, trzymaj w `pl.mkn.incidenttracker.agenttools`,
+  a w tym pakiecie zostawiaj ekspozycje Spring AI/MCP.
 - Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
   `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden
   `ToolContext`, a nie przez model-facing parametry.

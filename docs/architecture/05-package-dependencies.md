@@ -138,13 +138,15 @@ flowchart LR
     EVIDENCE --> AI
 
     AI --> MCP["analysis.mcp"]
+    AI --> AGENTTOOLS["agenttools"]
     AI --> EVIDENCE
     AI --> OPTIONS
     AI --> COMMON["common"]
 
     MCP --> ADAPTER
+    MCP --> AGENTTOOLS
 
-    ADAPTER -.-> MCP
+    ADAPTER --> AGENTTOOLS
 
     API["api"] --> ADAPTER
     API --> FLOW
@@ -167,10 +169,12 @@ flowchart LR
 | `analysis.evidence -> analysis.ai` | 26 | oczekiwane, ale sprzegajace | Evidence publikuje generyczne `AnalysisEvidenceSection` z pakietu `analysis.ai.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane dla Copilota | Copilot policy, telemetry i capture znaja nazwy tools i DTO capability. |
+| `analysis.ai -> agenttools` | 1 | oczekiwane przejsciowo | Copilot runtime buduje hidden `ToolContext` z neutralnych context keys. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.mcp -> analysis.adapter` | 7 | oczekiwane | Spring AI tools deleguja do adapterow/capability services. |
-| `analysis.adapter -> analysis.mcp` | 9 | do obserwacji | DB adapter uzywa `DatabaseToolDtos`, `DbToolScope` i operatorow z pakietu MCP. |
+| `analysis.mcp -> agenttools` | 10 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych context keys i DB tool contracts. |
+| `analysis.adapter -> agenttools` | 9 | oczekiwane przejsciowo | DB adapter uzywa neutralnych DB request/result/scope/operator contracts. |
 | `api -> analysis.adapter` | 6 | oczekiwane | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
@@ -182,14 +186,7 @@ operacyjny, a nie wzorzec dla nowych zmian. Kazdy nowy import w tych miejscach
 powinien przyblizac kod do modelu reusable adaptery -> reusable tools/MCP ->
 platforma AI -> dedykowane feature'y, a nie utrwalac cykl.
 
-1. `analysis.adapter.database <-> analysis.mcp.database`
-
-   MCP deleguje do DB adaptera, ale DB adapter importuje DTO tools z MCP.
-   Najbardziej naturalny ruch to przeniesienie typed DB
-   request/result/scope/operator contracts do neutralnego pakietu capability, a
-   w `analysis.mcp.database` zostawienie tylko ekspozycji Spring AI tools.
-
-2. `analysis.ai <-> analysis.evidence`
+1. `analysis.ai <-> analysis.evidence`
 
    To wynika z tego, ze generyczny model evidence (`AnalysisEvidenceSection`)
    mieszka w `analysis.ai.evidence`, a Copilot coverage/artifacts czytaja typed
@@ -205,6 +202,7 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
 analysis.flow -> analysis.ai.initial
 analysis.ai.copilot -> analysis.mcp -> analysis.adapter
+analysis.ai.copilot/analysis.mcp/analysis.adapter -> agenttools
 analysis.job/flow/ai -> analysis.options
 api -> feature exceptions
 any package -> common
@@ -226,8 +224,11 @@ Zamkniete krawedzie, ktorych nie przywracac:
   query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
   evidence providerow.
 - `analysis.mcp -> analysis.ai.copilot`: hidden tool context keys mieszkaja
-  teraz w neutralnym `analysis.mcp.context.AgentToolContextKeys`, a Copilot
+  teraz w neutralnym `agenttools.context.AgentToolContextKeys`, a Copilot
   runtime jest ich konsumentem.
+- `analysis.adapter -> analysis.mcp`: DB request/result/scope/operator
+  contracts mieszkaja teraz w `agenttools.database`, a
+  `analysis.mcp.database` zostaje ekspozycja Spring AI tools.
 
 Przy dodawaniu kolejnych dedykowanych analiz nie traktowac
 `analysis.job/flow/evidence` incydentow jako generycznego core. Najpierw

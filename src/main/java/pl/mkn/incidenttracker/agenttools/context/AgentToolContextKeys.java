@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.context;
+package pl.mkn.incidenttracker.agenttools.context;
 
 public final class AgentToolContextKeys {
 

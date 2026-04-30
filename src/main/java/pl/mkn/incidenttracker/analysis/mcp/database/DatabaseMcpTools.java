@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
 
 import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames.*;
-import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
+import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.*;
 
 @Component
 @Slf4j

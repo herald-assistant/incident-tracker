@@ -4,7 +4,7 @@ import com.github.copilot.sdk.json.ToolInvocation;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys;
+import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

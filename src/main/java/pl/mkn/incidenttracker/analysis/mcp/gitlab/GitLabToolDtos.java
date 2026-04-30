@@ -6,15 +6,15 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandid
 import java.util.List;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.ANALYSIS_RUN_ID;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.CORRELATION_ID;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.ENVIRONMENT;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.GITLAB_BRANCH;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.GITLAB_GROUP;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.TOOL_CALL_ID;
-import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.TOOL_NAME;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ANALYSIS_RUN_ID;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.COPILOT_SESSION_ID;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.CORRELATION_ID;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ENVIRONMENT;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.GITLAB_BRANCH;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.GITLAB_GROUP;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.TOOL_CALL_ID;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.TOOL_NAME;
 
 public final class GitLabToolDtos {
 

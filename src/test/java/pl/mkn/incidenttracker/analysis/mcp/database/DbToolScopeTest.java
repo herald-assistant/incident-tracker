@@ -2,13 +2,13 @@ package pl.mkn.incidenttracker.analysis.mcp.database;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys;
+import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 
 import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
+import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
 
 class DbToolScopeTest {
 

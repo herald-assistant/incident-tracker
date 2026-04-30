@@ -53,6 +53,9 @@ Nie obejmuje:
   Routing DataSource ma pozostac lokalny i per environment.
 - Dla Database capability nie zgaduj schematow domenowo w kodzie.
   Application-to-schema mapping ma pochodzic z konfiguracji.
+- Dla Database capability typed request/result/scope/operator contracts sa w
+  `pl.mkn.incidenttracker.agenttools.database`. Adapter moze ich uzywac, ale
+  nie powinien importowac `analysis.mcp.database`.
 
 ## Testy
 

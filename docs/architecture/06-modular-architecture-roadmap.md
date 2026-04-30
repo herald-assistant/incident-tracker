@@ -219,12 +219,14 @@ Najbardziej oplacalne ruchy:
 
 1. Przeniesc keys ukrytego tool contextu z Copilota do neutralnej warstwy
    tools, np. `agenttools.context.AgentToolContextKeys`.
-   Stan przejsciowy: keys mieszkaja w
-   `analysis.mcp.context.AgentToolContextKeys`, zeby MCP nie importowalo
-   Copilota przed pelna ekstrakcja `agenttools`.
+   Stan obecny: keys mieszkaja w `agenttools.context.AgentToolContextKeys`,
+   zeby MCP i Copilot runtime importowaly neutralny kontrakt.
 2. Przeniesc typed DB request/result/scope/operator contracts z
    `analysis.mcp.database` do neutralnego capability, np.
    `agenttools.database`.
+   Stan obecny: DB request/result/scope/operator contracts mieszkaja w
+   `agenttools.database`, a `analysis.mcp.database` jest wrapperem Spring AI
+   nad adapterem DB.
 3. Przeniesc generyczne evidence DTO z `analysis.ai.evidence` do neutralnego
    modelu, np. `shared.evidence` albo przejsciowo `analysis.evidence.model`.
 4. Zostawic `AnalysisAiToolEvidenceListener` po stronie AI/platform/feature

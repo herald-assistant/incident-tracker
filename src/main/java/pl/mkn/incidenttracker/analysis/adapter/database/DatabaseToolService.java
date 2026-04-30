@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.mcp.database.DbOperator;
-import pl.mkn.incidenttracker.analysis.mcp.database.JoinType;
-import pl.mkn.incidenttracker.analysis.mcp.database.SortDirection;
+import pl.mkn.incidenttracker.agenttools.database.DbOperator;
+import pl.mkn.incidenttracker.agenttools.database.JoinType;
+import pl.mkn.incidenttracker.agenttools.database.SortDirection;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.*;
+import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.*;
 
 @Service
 @RequiredArgsConstructor

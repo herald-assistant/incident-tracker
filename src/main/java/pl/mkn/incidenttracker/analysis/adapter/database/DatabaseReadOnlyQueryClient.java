@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolDtos.DbToolScope;
+import pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
 
 import java.util.List;
 import java.util.Map;

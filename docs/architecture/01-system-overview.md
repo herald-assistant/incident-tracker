@@ -93,6 +93,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 
 - `pl.mkn.incidenttracker.analysis`
   Wspolne DTO, wynik i wyjatki analizy.
+- `pl.mkn.incidenttracker.agenttools`
+  Neutralne kontrakty reusable tools/capability uzywane przez adaptery, MCP
+  wrappers i platforme AI, np. hidden tool context keys i DB tool contracts.
 - `pl.mkn.incidenttracker.common`
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.analysis.flow`
@@ -171,7 +174,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Routing polaczen, metadata Oracle, readonly query execution i SQL guard DB
   capability.
 - `pl.mkn.incidenttracker.analysis.mcp.database`
-  Session-bound MCP tools diagnostyki danych.
+  Session-bound MCP tools diagnostyki danych. Kontrakty request/result/scope i
+  operatory DB mieszkaja w `pl.mkn.incidenttracker.agenttools.database`.
 - `pl.mkn.incidenttracker.analysis.adapter.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).
