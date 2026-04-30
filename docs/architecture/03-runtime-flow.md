@@ -248,7 +248,9 @@ jest jawnym fallbackiem z limitation w `reason`.
 
 `CopilotPreparedSession` niesie `SessionConfig` utworzony przez
 `CopilotSessionConfigFactory`. Gateway wykonuje przygotowana konfiguracje
-sesji i nie przebudowuje policy ani promptu.
+sesji i nie przebudowuje policy ani promptu. Do logowania runtime uzywa
+neutralnego `runReference`; incident assembler przekazuje tam obecny
+`correlationId`.
 
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal
 w glownym flow analizy. Integracyjne tools sa wywolywane przez Spring tool

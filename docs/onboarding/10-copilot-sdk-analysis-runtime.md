@@ -35,7 +35,9 @@ selection i mapowanie GitLab/DB tool evidence sa docelowo w
 
 Initial flow dostaje przygotowana analize przez generyczne
 `InitialAnalysisPreparation`. Copilot runtime wykonuje neutralna techniczna
-sesje `CopilotPreparedSession`.
+sesje `CopilotPreparedSession`. Sesja runtime ma neutralny `runReference`;
+incident analysis mapuje tam `correlationId` tylko jako wartosc identyfikujaca
+konkretne uruchomienie.
 
 Flow:
 

@@ -13,37 +13,37 @@ import java.util.concurrent.atomic.AtomicInteger;
 @UtilityClass
 public class CopilotSessionEventLogger {
 
-    public SessionLogSummary newSessionLogSummary(String correlationId) {
-        return new SessionLogSummary(correlationId);
+    public SessionLogSummary newSessionLogSummary(String runReference) {
+        return new SessionLogSummary(runReference);
     }
 
     public void logSessionEvent(AbstractSessionEvent event, CopilotSession session, SessionLogSummary summary) {
         String sessionId = session.getSessionId();
-        String correlationId = summary.correlationId();
+        String runReference = summary.runReference();
 
         if (event instanceof ToolExecutionStartEvent toolExecutionStartEvent) {
-            logToolExecutionStart(toolExecutionStartEvent, correlationId, sessionId, summary);
+            logToolExecutionStart(toolExecutionStartEvent, runReference, sessionId, summary);
             return;
         }
 
         if (event instanceof ToolExecutionCompleteEvent toolExecutionCompleteEvent) {
-            logToolExecutionComplete(toolExecutionCompleteEvent, correlationId, sessionId, summary);
+            logToolExecutionComplete(toolExecutionCompleteEvent, runReference, sessionId, summary);
             return;
         }
 
         if (event instanceof SessionErrorEvent sessionErrorEvent) {
-            logSessionError(sessionErrorEvent, correlationId, sessionId);
+            logSessionError(sessionErrorEvent, runReference, sessionId);
             return;
         }
 
         if (event instanceof AssistantMessageEvent assistantMessageEvent) {
-            logAssistantMessage(assistantMessageEvent, correlationId, sessionId);
+            logAssistantMessage(assistantMessageEvent, runReference, sessionId);
             return;
         }
 
         log.debug(
-                "Copilot session event correlationId={} sessionId={} type={} eventId={} parentId={} timestamp={}",
-                correlationId,
+                "Copilot session event runReference={} sessionId={} type={} eventId={} parentId={} timestamp={}",
+                runReference,
                 sessionId,
                 event.getType(),
                 event.getId(),
@@ -54,8 +54,8 @@ public class CopilotSessionEventLogger {
 
     public void logSessionSummary(String sessionId, SessionLogSummary summary, long durationMs) {
         log.info(
-                "Copilot session summary correlationId={} sessionId={} durationMs={} toolCalls={} toolFailures={} toolsUsed={}",
-                summary.correlationId(),
+                "Copilot session summary runReference={} sessionId={} durationMs={} toolCalls={} toolFailures={} toolsUsed={}",
+                summary.runReference(),
                 sessionId,
                 durationMs,
                 summary.toolCalls().get(),
@@ -64,10 +64,10 @@ public class CopilotSessionEventLogger {
         );
     }
 
-    private void logToolExecutionStart(ToolExecutionStartEvent event, String correlationId, String sessionId, SessionLogSummary summary) {
+    private void logToolExecutionStart(ToolExecutionStartEvent event, String runReference, String sessionId, SessionLogSummary summary) {
         var data = event.getData();
         if (data == null) {
-            log.info("Copilot tool execution started correlationId={} sessionId={} eventId={} type={}", correlationId, sessionId, event.getId(), event.getType());
+            log.info("Copilot tool execution started runReference={} sessionId={} eventId={} type={}", runReference, sessionId, event.getId(), event.getType());
             return;
         }
 
@@ -77,8 +77,8 @@ public class CopilotSessionEventLogger {
         }
 
         log.info(
-                "Copilot tool execution started correlationId={} sessionId={} eventId={} toolCallId={} toolName={} mcpServerName={} mcpToolName={} parentToolCallId={} argumentsPreview={}",
-                correlationId,
+                "Copilot tool execution started runReference={} sessionId={} eventId={} toolCallId={} toolName={} mcpServerName={} mcpToolName={} parentToolCallId={} argumentsPreview={}",
+                runReference,
                 sessionId,
                 event.getId(),
                 data.toolCallId(),
@@ -90,10 +90,10 @@ public class CopilotSessionEventLogger {
         );
     }
 
-    private void logToolExecutionComplete(ToolExecutionCompleteEvent event, String correlationId, String sessionId, SessionLogSummary summary) {
+    private void logToolExecutionComplete(ToolExecutionCompleteEvent event, String runReference, String sessionId, SessionLogSummary summary) {
         var data = event.getData();
         if (data == null) {
-            log.info("Copilot tool execution completed correlationId={} sessionId={} eventId={} type={}", correlationId, sessionId, event.getId(), event.getType());
+            log.info("Copilot tool execution completed runReference={} sessionId={} eventId={} type={}", runReference, sessionId, event.getId(), event.getType());
             return;
         }
 
@@ -102,8 +102,8 @@ public class CopilotSessionEventLogger {
         }
 
         log.info(
-                "Copilot tool execution completed correlationId={} sessionId={} eventId={} toolCallId={} success={} model={} interactionId={} parentToolCallId={} resultPreview={} errorPreview={}",
-                correlationId,
+                "Copilot tool execution completed runReference={} sessionId={} eventId={} toolCallId={} success={} model={} interactionId={} parentToolCallId={} resultPreview={} errorPreview={}",
+                runReference,
                 sessionId,
                 event.getId(),
                 data.toolCallId(),
@@ -116,16 +116,16 @@ public class CopilotSessionEventLogger {
         );
     }
 
-    private void logSessionError(SessionErrorEvent event, String correlationId, String sessionId) {
+    private void logSessionError(SessionErrorEvent event, String runReference, String sessionId) {
         var data = event.getData();
         if (data == null) {
-            log.error("Copilot session error correlationId={} sessionId={} eventId={} type={}", correlationId, sessionId, event.getId(), event.getType());
+            log.error("Copilot session error runReference={} sessionId={} eventId={} type={}", runReference, sessionId, event.getId(), event.getType());
             return;
         }
 
         log.error(
-                "Copilot session error correlationId={} sessionId={} eventId={} errorType={} statusCode={} providerCallId={} message={} stackPreview={}",
-                correlationId,
+                "Copilot session error runReference={} sessionId={} eventId={} errorType={} statusCode={} providerCallId={} message={} stackPreview={}",
+                runReference,
                 sessionId,
                 event.getId(),
                 data.errorType(),
@@ -136,16 +136,16 @@ public class CopilotSessionEventLogger {
         );
     }
 
-    private void logAssistantMessage(AssistantMessageEvent event, String correlationId, String sessionId) {
+    private void logAssistantMessage(AssistantMessageEvent event, String runReference, String sessionId) {
         var data = event.getData();
         if (data == null) {
-            log.info("Copilot assistant message correlationId={} sessionId={} eventId={} type={}", correlationId, sessionId, event.getId(), event.getType());
+            log.info("Copilot assistant message runReference={} sessionId={} eventId={} type={}", runReference, sessionId, event.getId(), event.getType());
             return;
         }
 
         log.info(
-                "Copilot assistant message correlationId={} sessionId={} eventId={} messageId={} interactionId={} toolRequestCount={} contentPreview={}",
-                correlationId,
+                "Copilot assistant message runReference={} sessionId={} eventId={} messageId={} interactionId={} toolRequestCount={} contentPreview={}",
+                runReference,
                 sessionId,
                 event.getId(),
                 data.messageId(),
@@ -166,13 +166,13 @@ public class CopilotSessionEventLogger {
     }
 
     public record SessionLogSummary(
-            String correlationId,
+            String runReference,
             AtomicInteger toolCalls,
             AtomicInteger toolFailures,
             Set<String> toolsUsed
     ) {
-        public SessionLogSummary(String correlationId) {
-            this(correlationId, new AtomicInteger(), new AtomicInteger(), new LinkedHashSet<>());
+        public SessionLogSummary(String runReference) {
+            this(runReference, new AtomicInteger(), new AtomicInteger(), new LinkedHashSet<>());
         }
     }
 

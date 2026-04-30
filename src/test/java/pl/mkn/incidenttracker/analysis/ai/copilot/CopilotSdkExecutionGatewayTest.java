@@ -235,7 +235,7 @@ class CopilotSdkExecutionGatewayTest {
         var messageOptions = new MessageOptions().setPrompt("Diagnose incident");
         var preparedRequest = mock(CopilotPreparedSession.class);
 
-        when(preparedRequest.correlationId()).thenReturn("corr-gateway-owned");
+        when(preparedRequest.runReference()).thenReturn("corr-gateway-owned");
         when(preparedRequest.clientOptions()).thenReturn(new CopilotClientOptions());
         when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig());
         when(preparedRequest.messageOptions()).thenReturn(messageOptions);

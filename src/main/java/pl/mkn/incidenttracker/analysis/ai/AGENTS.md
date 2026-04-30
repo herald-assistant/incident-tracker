@@ -79,6 +79,9 @@ Nie obejmuje:
 - Docelowo Copilot runtime nie powinien sam wybierac promptu, skilli,
   available tools, hidden contextu ani parsera odpowiedzi dla incydentu. Te
   elementy powinny przychodzic z feature'a w platformowym run request.
+- Copilot runtime uzywa neutralnego `runReference` do logow i execution
+  identity. Incident feature moze przekazac tam `correlationId`, ale runtime
+  nie powinien miec pola ani kontraktu `correlationId`.
 - Tool factory ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
   ich implementacje.
 - `CopilotSdkToolFactory` ma tylko tworzyc `ToolDefinition`; wykonanie zostaje

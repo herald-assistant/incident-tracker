@@ -111,7 +111,9 @@ W Copilocie sa dwa jawne poziomy:
 - `CopilotInitialAnalysisPreparation` implementuje initial-facing
   `InitialAnalysisPreparation` i niesie `InitialAnalysisRequest`,
 - `CopilotPreparedSession` jest neutralnym technicznym obiektem wykonania SDK,
-  uzywanym przez execution gateway oraz follow-up chat.
+  uzywanym przez execution gateway oraz follow-up chat. Niesie neutralny
+  `runReference`; incident analysis moze mapowac na niego `correlationId`, ale
+  runtime nie traktuje `correlationId` jako wlasnego pola.
 
 Follow-up chat nie implementuje ani nie reuse'uje `InitialAnalysisPreparation`.
 
@@ -440,6 +442,7 @@ Feature ma przekazac platformie gotowa konfiguracje uruchomienia, np.:
 - tool definitions/callbacks oraz allowliste `availableTools`,
 - hidden tool context jako mape danych sesji,
 - evidence sink/listeners dla wynikow tooli,
+- neutralny identyfikator runu do logow, np. `runReference`,
 - parser albo handler odpowiedzi feature'a.
 
 Platforma nie powinna sama wybierac incident promptu, incident skilli,

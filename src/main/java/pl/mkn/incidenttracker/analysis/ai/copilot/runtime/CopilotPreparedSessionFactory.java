@@ -12,7 +12,7 @@ public class CopilotPreparedSessionFactory {
 
     public CopilotPreparedSession prepare(CopilotPreparedSessionRequest request) {
         return new CopilotPreparedSession(
-                request.correlationId(),
+                request.runReference(),
                 sessionConfigFactory.clientOptions(),
                 sessionConfigFactory.sessionConfig(request.sessionConfigRequest()),
                 new MessageOptions().setPrompt(request.prompt()),

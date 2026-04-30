@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public record CopilotPreparedSessionRequest(
-        String correlationId,
+        String runReference,
         String prompt,
         CopilotSessionConfigRequest sessionConfigRequest,
         Map<String, String> artifactContents

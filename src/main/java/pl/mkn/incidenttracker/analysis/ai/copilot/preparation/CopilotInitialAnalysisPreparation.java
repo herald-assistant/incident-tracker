@@ -16,7 +16,7 @@ public record CopilotInitialAnalysisPreparation(
 
     @Override
     public String correlationId() {
-        return session.correlationId();
+        return request.correlationId();
     }
 
     @Override

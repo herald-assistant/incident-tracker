@@ -54,7 +54,7 @@ public class CopilotSdkExecutionGateway {
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
         var overallStart = System.nanoTime();
-        var correlationId = preparedSession.correlationId();
+        var runReference = preparedSession.runReference();
         var copilotSessionId = preparedSession.sessionConfig().getSessionId();
         long clientStartDurationMs = 0L;
         long createSessionDurationMs = 0L;
@@ -62,21 +62,21 @@ public class CopilotSdkExecutionGateway {
 
         try {
             try (var client = new CopilotClient(preparedSession.clientOptions())) {
-                client.onLifecycle(event -> logSession(event, correlationId));
-                logClientState("before-start", client.getState(), correlationId);
+                client.onLifecycle(event -> logSession(event, runReference));
+                logClientState("before-start", client.getState(), runReference);
                 var clientStart = System.nanoTime();
                 client.start().join();
-                logClientState("after-start", client.getState(), correlationId);
+                logClientState("after-start", client.getState(), runReference);
                 clientStartDurationMs = nanosToMillis(clientStart);
-                logDuration("client-start", correlationId, clientStartDurationMs);
+                logDuration("client-start", runReference, clientStartDurationMs);
 
                 try {
                     var createSessionStart = System.nanoTime();
 
                     try (var session = client.createSession(preparedSession.sessionConfig()).join()) {
                         createSessionDurationMs = nanosToMillis(createSessionStart);
-                        logDuration("create-session", correlationId, createSessionDurationMs);
-                        var sessionSummary = newSessionLogSummary(correlationId);
+                        logDuration("create-session", runReference, createSessionDurationMs);
+                        var sessionSummary = newSessionLogSummary(runReference);
 
                         toolEvidenceSessionStore.registerSession(
                                 session.getSessionId(),
@@ -90,14 +90,14 @@ public class CopilotSdkExecutionGateway {
                             var sendAndWaitStart = System.nanoTime();
                             var timeoutMs = sendAndWaitTimeoutMs();
                             log.info(
-                                    "Copilot sendAndWait configuration correlationId={} timeoutMs={}",
-                                    correlationId,
+                                    "Copilot sendAndWait configuration runReference={} timeoutMs={}",
+                                    runReference,
                                     timeoutMs
                             );
                             var response = session.sendAndWait(preparedSession.messageOptions(), timeoutMs).join();
 
                             sendAndWaitDurationMs = nanosToMillis(sendAndWaitStart);
-                            logDuration("send-and-wait", correlationId, sendAndWaitDurationMs);
+                            logDuration("send-and-wait", runReference, sendAndWaitDurationMs);
                             var content = response.getData() != null ? response.getData().content() : null;
                             if (content == null || content.isBlank()) {
                                 throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
@@ -118,13 +118,13 @@ public class CopilotSdkExecutionGateway {
                         }
                     }
                 } finally {
-                    logClientState("before-stop", client.getState(), correlationId);
+                    logClientState("before-stop", client.getState(), runReference);
 
                     var clientStop = System.nanoTime();
                     client.stop().join();
 
-                    logClientState("after-stop", client.getState(), correlationId);
-                    logDuration("client-stop", correlationId, nanosToMillis(clientStop));
+                    logClientState("after-stop", client.getState(), runReference);
+                    logDuration("client-stop", runReference, nanosToMillis(clientStop));
                 }
             }
         } catch (CopilotSdkInvocationException exception) {
@@ -132,8 +132,8 @@ public class CopilotSdkExecutionGateway {
         } catch (Exception exception) {
             var rootCause = unwrapCompletionException(exception);
             log.error(
-                    "Copilot SDK invocation failed correlationId={} exceptionType={} rootCauseType={} rootCauseMessage={}",
-                    correlationId,
+                    "Copilot SDK invocation failed runReference={} exceptionType={} rootCauseType={} rootCauseMessage={}",
+                    runReference,
                     exception.getClass().getName(),
                     rootCause.getClass().getName(),
                     rootCause.getMessage(),

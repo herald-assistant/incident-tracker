@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 @UtilityClass
 public class CopilotClientLifecycleLogger {
 
-    public void logSession(SessionLifecycleEvent event, String correlationId) {
+    public void logSession(SessionLifecycleEvent event, String runReference) {
         if (event == null) {
             return;
         }
@@ -19,9 +19,9 @@ public class CopilotClientLifecycleLogger {
 
         if ("session.updated".equals(event.getType()) && (summary == null || summary.isBlank())) {
             log.debug(
-                    "Copilot client lifecycle event type={} correlationId={} sessionId={} startTime={} modifiedTime={} summary={}",
+                    "Copilot client lifecycle event type={} runReference={} sessionId={} startTime={} modifiedTime={} summary={}",
                     event.getType(),
-                    correlationId,
+                    runReference,
                     event.getSessionId(),
                     metadata != null ? metadata.startTime() : null,
                     metadata != null ? metadata.modifiedTime() : null,
@@ -31,9 +31,9 @@ public class CopilotClientLifecycleLogger {
         }
 
         log.info(
-                "Copilot client lifecycle event type={} correlationId={} sessionId={} startTime={} modifiedTime={} summary={}",
+                "Copilot client lifecycle event type={} runReference={} sessionId={} startTime={} modifiedTime={} summary={}",
                 event.getType(),
-                correlationId,
+                runReference,
                 event.getSessionId(),
                 metadata != null ? metadata.startTime() : null,
                 metadata != null ? metadata.modifiedTime() : null,
@@ -41,12 +41,12 @@ public class CopilotClientLifecycleLogger {
         );
     }
 
-    public void logClientState(String action, ConnectionState state, String correlationId) {
-        log.info("Copilot client state action={} correlationId={} state={}", action, correlationId, state);
+    public void logClientState(String action, ConnectionState state, String runReference) {
+        log.info("Copilot client state action={} runReference={} state={}", action, runReference, state);
     }
 
-    public void logDuration(String stage, String correlationId, long durationMs) {
-        log.info("Copilot execution timing stage={} correlationId={} durationMs={}", stage, correlationId, durationMs);
+    public void logDuration(String stage, String runReference, long durationMs) {
+        log.info("Copilot execution timing stage={} runReference={} durationMs={}", stage, runReference, durationMs);
     }
 
     public long nanosToMillis(long startedAtNanos) {

@@ -9,7 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public record CopilotPreparedSession(
-        String correlationId,
+        String runReference,
         CopilotClientOptions clientOptions,
         SessionConfig sessionConfig,
         MessageOptions messageOptions,
