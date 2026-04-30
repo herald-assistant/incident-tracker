@@ -100,9 +100,11 @@ renderingu i konfiguracji SDK:
   tools i zwraca coverage-aware policy,
 - `CopilotPromptRenderer` renderuje prompt, JSON-only response contract,
   available capability groups i embedded artifacts,
-- `CopilotPreparedSessionFactory` przekazuje platformowe parametry do runtime,
-  a `CopilotSessionConfigFactory` buduje client options, session config,
-  permission handler, hooks i disabled skills.
+- run assembler buduje neutralny `CopilotRunRequest` z promptem, artifactami,
+  parametrami sesji, `runReference` i evidence sink,
+- `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na
+  `CopilotPreparedSession`, a `CopilotSessionConfigFactory` buduje client
+  options, session config, permission handler, hooks i disabled skills.
 
 `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
 obok providera poczatkowej analizy i follow-up chatu. Uzywa zaleznosci runtime

@@ -88,8 +88,9 @@ Zasady granic:
 - Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko
   `InitialAnalysisRequest` oraz `shared.evidence.AnalysisEvidenceSection`;
   nie wciskaj klas adapter-specific do prompt buildera ani kontraktu AI.
-- Docelowa platforma Copilot ma byc parametryzowana przez feature: prompt,
-  skille, available tools, hidden context, evidence sink i response parser maja
+- Docelowa platforma Copilot ma byc parametryzowana przez feature. Aktualnym
+  pierwszym inputem runtime jest `CopilotRunRequest`; prompt, skille,
+  available tools, hidden context, evidence sink i response parser maja
   przychodzic w inpucie uruchomienia, a nie byc zakodowane jako stale zalozenia
   platformy.
 - Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty

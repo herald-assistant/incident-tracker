@@ -35,9 +35,11 @@ selection i mapowanie GitLab/DB tool evidence sa docelowo w
 
 Initial flow dostaje przygotowana analize przez generyczne
 `InitialAnalysisPreparation`. Copilot runtime wykonuje neutralna techniczna
-sesje `CopilotPreparedSession`. Sesja runtime ma neutralny `runReference`;
-incident analysis mapuje tam `correlationId` tylko jako wartosc identyfikujaca
-konkretne uruchomienie.
+sesje `CopilotPreparedSession`, zbudowana z platformowego
+`CopilotRunRequest`. Run request jest miejscem, w ktorym feature przekazuje
+runtime prompt, parametry sesji, logical artifacts, evidence sink i neutralny
+`runReference`; incident analysis mapuje tam `correlationId` tylko jako
+wartosc identyfikujaca konkretne uruchomienie.
 
 Flow:
 
@@ -76,7 +78,9 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   registered tools,
 - `CopilotPromptRenderer` zawiera tekst promptu, JSON response contract,
   rendering capability groups i embedded artifact contents,
-- `CopilotPreparedSessionFactory` przekazuje gotowe parametry do runtime,
+- initial/follow-up run assembler buduje `CopilotRunRequest`,
+- `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na techniczna
+  `CopilotPreparedSession`,
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,
   `SessionConfig`, permission handler, hooks, safe lists, skill directories i
   disabled skills.
@@ -93,8 +97,9 @@ Ma osobny kontrakt `AnalysisAiChatProvider` i przygotowanie
 `CopilotSdkFollowUpPreparationService`, bo odpowiedz nie jest JSON-only
 diagnoza, tylko operatorska kontynuacja. Prompt follow-up dostaje finalny
 wynik, historie rozmowy, evidence i poprzednie tool evidence.
-Follow-up przygotowuje `CopilotPreparedSession` bez
-`CopilotInitialAnalysisPreparation`, wiec chat nie udaje initial analysis.
+Follow-up buduje wlasny `CopilotRunRequest` i przygotowuje
+`CopilotPreparedSession` bez `CopilotInitialAnalysisPreparation`, wiec chat nie
+udaje initial analysis.
 
 Artefakty nie sa SDK attachments. Prompt zawiera logiczne pliki w kolejnosci:
 

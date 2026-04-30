@@ -106,14 +106,17 @@ Ownership prepared analysis jest jawny:
 - gateway wykonujacy SDK nie przejmuje ownership i nie zamyka przygotowanej
   sesji.
 
-W Copilocie sa dwa jawne poziomy:
+W Copilocie sa trzy jawne poziomy:
 
 - `CopilotInitialAnalysisPreparation` implementuje initial-facing
   `InitialAnalysisPreparation` i niesie `InitialAnalysisRequest`,
+- `CopilotRunRequest` jest platformowym inputem wykonania. Niesie neutralny
+  `runReference`, prompt, parametry sesji, logiczne artefakty i evidence sink,
+  czyli to, co feature przekazuje do runtime,
 - `CopilotPreparedSession` jest neutralnym technicznym obiektem wykonania SDK,
-  uzywanym przez execution gateway oraz follow-up chat. Niesie neutralny
-  `runReference`; incident analysis moze mapowac na niego `correlationId`, ale
-  runtime nie traktuje `correlationId` jako wlasnego pola.
+  uzywanym przez execution gateway oraz follow-up chat. Powstaje z
+  `CopilotRunRequest`; incident analysis moze mapowac `correlationId` na
+  `runReference`, ale runtime nie traktuje `correlationId` jako wlasnego pola.
 
 Follow-up chat nie implementuje ani nie reuse'uje `InitialAnalysisPreparation`.
 

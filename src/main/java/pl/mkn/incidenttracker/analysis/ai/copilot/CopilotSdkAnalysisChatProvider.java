@@ -8,9 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkFollowUpPreparationService;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-
-import java.util.function.Consumer;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
 
 @Service
 @RequiredArgsConstructor
@@ -26,8 +24,7 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
     ) {
         try (var preparedSession = preparationService.prepare(request)) {
             var content = executionGateway.execute(
-                    preparedSession,
-                    toolEvidenceSink(toolEvidenceListener)
+                    withToolEvidenceSink(preparedSession, toolEvidenceListener)
             );
 
             return new AnalysisAiChatResponse(
@@ -38,8 +35,14 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
         }
     }
 
-    private Consumer<AnalysisEvidenceSection> toolEvidenceSink(AnalysisAiToolEvidenceListener listener) {
-        var effectiveListener = listener != null ? listener : AnalysisAiToolEvidenceListener.NO_OP;
-        return effectiveListener::onToolEvidenceUpdated;
+    private CopilotPreparedSession withToolEvidenceSink(
+            CopilotPreparedSession preparedSession,
+            AnalysisAiToolEvidenceListener listener
+    ) {
+        if (listener == null || listener == AnalysisAiToolEvidenceListener.NO_OP) {
+            return preparedSession;
+        }
+
+        return preparedSession.withEvidenceSink(listener::onToolEvidenceUpdated);
     }
 }

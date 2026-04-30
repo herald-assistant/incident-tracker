@@ -22,13 +22,14 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -53,7 +54,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         );
         var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
 
-        when(executionGateway.execute(same(preparedSession), any()))
+        when(executionGateway.execute(same(preparedSession)))
                 .thenReturn("""
                         {
                           "detectedProblem": "PREPARED_RESPONSE",
@@ -75,7 +76,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         assertEquals("PREPARED_RESPONSE", response.detectedProblem());
         assertEquals("Prepared prompt body", response.prompt());
         verifyNoInteractions(preparationService);
-        verify(executionGateway).execute(same(preparedSession), any());
+        verify(executionGateway).execute(same(preparedSession));
     }
 
     @Test
@@ -89,7 +90,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis);
         when(preparedSession.prompt()).thenReturn("Owned prompt body");
-        when(executionGateway.execute(same(preparedSession), any()))
+        when(executionGateway.execute(same(preparedSession)))
                 .thenReturn(structuredResponse("OWNED_RESPONSE"));
 
         InitialAnalysisResponse response;
@@ -99,7 +100,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
 
         assertEquals("OWNED_RESPONSE", response.detectedProblem());
         assertEquals("Owned prompt body", response.prompt());
-        verify(executionGateway).execute(same(preparedSession), any());
+        verify(executionGateway).execute(same(preparedSession));
         verify(preparedSession).close();
     }
 
@@ -109,17 +110,21 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
         var request = new InitialAnalysisRequest("corr-caller-owned", "zt01", "main", "sample/runtime", List.of());
-        var preparedSession = mock(CopilotPreparedSession.class);
+        var preparedSession = spy(new CopilotPreparedSession(
+                request.correlationId(),
+                new CopilotClientOptions(),
+                new SessionConfig().setSessionId("analysis-caller-owned"),
+                new MessageOptions().setPrompt("Caller-owned prompt body"),
+                "Caller-owned prompt body",
+                Map.of()
+        ));
         var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
         var listener = mock(AnalysisAiToolEvidenceListener.class);
 
-        when(preparedSession.prompt()).thenReturn("Caller-owned prompt body");
-        when(preparedSession.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-caller-owned"));
-        when(executionGateway.execute(same(preparedSession), any()))
+        when(executionGateway.execute(any(CopilotPreparedSession.class)))
                 .thenAnswer(invocation -> {
-                    @SuppressWarnings("unchecked")
-                    var sink = (Consumer<AnalysisEvidenceSection>) invocation.getArgument(1);
-                    sink.accept(new AnalysisEvidenceSection("test", "tool-results", List.of()));
+                    var session = (CopilotPreparedSession) invocation.getArgument(0);
+                    session.evidenceSink().accept(new AnalysisEvidenceSection("test", "tool-results", List.of()));
                     return structuredResponse("CALLER_OWNED_RESPONSE");
                 });
 
@@ -129,7 +134,8 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         assertEquals("Caller-owned prompt body", response.prompt());
         verifyNoInteractions(preparationService);
         verify(listener).onToolEvidenceUpdated(any(AnalysisEvidenceSection.class));
-        verify(executionGateway).execute(same(preparedSession), any());
+        verify(executionGateway).execute(argThat(session -> session != preparedSession
+                && "Caller-owned prompt body".equals(session.prompt())));
         verify(preparedSession, never()).close();
     }
 

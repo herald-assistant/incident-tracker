@@ -153,7 +153,10 @@ Warstwa platformy AI nie posiada:
 Platforma powinna byc parametryzowanym runtime. Feature dostarcza gotowe dane
 uruchomienia, a platforma tylko wykonuje je przez Copilot SDK.
 
-Docelowy input platformy, roboczo `CopilotRunRequest`, powinien niesc:
+Docelowy input platformy istnieje jako pierwszy inkrement
+`CopilotRunRequest`. Dzis niesie prompt, parametry sesji, logical artifacts,
+evidence sink i `runReference`; docelowo powinien zostac rozszerzony tak, aby
+mogl niesc:
 
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,

@@ -27,7 +27,7 @@ public class CopilotSdkPreparationService {
 
         return new CopilotInitialAnalysisPreparation(
                 request,
-                preparedSessionFactory.prepare(assembly.preparedSessionRequest())
+                preparedSessionFactory.prepare(assembly.runRequest())
         );
     }
 

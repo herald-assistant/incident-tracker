@@ -13,9 +13,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
-import java.util.function.Consumer;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -25,9 +23,6 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSessio
 @Service
 @Slf4j
 public class CopilotSdkExecutionGateway {
-
-    private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
-    };
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
@@ -48,13 +43,6 @@ public class CopilotSdkExecutionGateway {
     }
 
     public String execute(CopilotPreparedSession preparedSession) {
-        return execute(preparedSession, NO_OP_EVIDENCE_SINK);
-    }
-
-    public String execute(
-            CopilotPreparedSession preparedSession,
-            Consumer<AnalysisEvidenceSection> toolEvidenceSink
-    ) {
         var overallStart = System.nanoTime();
         var runReference = preparedSession.runReference();
         var copilotSessionId = preparedSession.sessionConfig().getSessionId();
@@ -82,7 +70,7 @@ public class CopilotSdkExecutionGateway {
 
                         toolEvidenceSessionStore.registerSession(
                                 session.getSessionId(),
-                                toolEvidenceSink != null ? toolEvidenceSink : NO_OP_EVIDENCE_SINK
+                                preparedSession.evidenceSink()
                         );
                         toolBudgetRegistry.registerSession(session.getSessionId());
 

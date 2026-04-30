@@ -14,6 +14,6 @@ public class CopilotSdkFollowUpPreparationService {
     private final CopilotPreparedSessionFactory preparedSessionFactory;
 
     public CopilotPreparedSession prepare(AnalysisAiChatRequest request) {
-        return preparedSessionFactory.prepare(runAssembler.assemble(request).preparedSessionRequest());
+        return preparedSessionFactory.prepare(runAssembler.assemble(request).runRequest());
     }
 }

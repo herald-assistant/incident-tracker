@@ -29,10 +29,10 @@ Obejmuje:
   platformy Copilot,
 - `copilot/runtime/`
   neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
-  `CopilotModelSelection`, `CopilotPreparedSession`,
-  `CopilotPreparedSessionRequest`, `CopilotSessionConfigRequest` oraz factory
-  budujace `SessionConfig` i `MessageOptions` bez znajomosci incident policy
-  ani pelnego tool/session contextu feature'a,
+  `CopilotModelSelection`, `CopilotRunRequest`, `CopilotPreparedSession`,
+  `CopilotSessionConfigRequest` oraz factory budujace `SessionConfig` i
+  `MessageOptions` bez znajomosci incident policy ani pelnego tool/session
+  contextu feature'a,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
@@ -92,8 +92,10 @@ Nie obejmuje:
 - `CopilotToolEvidenceSessionStore` ma publikowac evidence przez neutralny
   session-bound sink, a nie bezposrednio zalezec od
   `AnalysisAiToolEvidenceListener`.
-- `CopilotSdkExecutionGateway` ma przyjmowac neutralny evidence sink; adapter
-  z `AnalysisAiToolEvidenceListener` trzymaj po stronie providera AI.
+- `CopilotSdkExecutionGateway` ma wykonywac neutralna `CopilotPreparedSession`.
+  Evidence sink powinien przychodzic z platformowego run requestu albo
+  przygotowanej sesji; adapter z `AnalysisAiToolEvidenceListener` trzymaj po
+  stronie providera AI.
 - Nowe walidacje i limity runtime dodawaj jako `CopilotToolInvocationPolicy`,
   a side-effecty jako listenery eventow invocation.
 - Obecnie logike per capability, np. GitLab albo DB evidence capture, trzymaj

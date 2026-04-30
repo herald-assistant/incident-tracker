@@ -20,7 +20,6 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -40,7 +39,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
         when(preparationService.prepare(request)).thenReturn(new CopilotInitialAnalysisPreparation(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared JSON prompt");
         when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-json"));
-        when(executionGateway.execute(same(preparedRequest), any())).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest))).thenReturn("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Timeout w `CatalogClient`.",

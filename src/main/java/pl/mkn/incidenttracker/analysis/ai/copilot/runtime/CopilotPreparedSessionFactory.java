@@ -10,14 +10,15 @@ public class CopilotPreparedSessionFactory {
 
     private final CopilotSessionConfigFactory sessionConfigFactory;
 
-    public CopilotPreparedSession prepare(CopilotPreparedSessionRequest request) {
+    public CopilotPreparedSession prepare(CopilotRunRequest request) {
         return new CopilotPreparedSession(
                 request.runReference(),
                 sessionConfigFactory.clientOptions(),
                 sessionConfigFactory.sessionConfig(request.sessionConfigRequest()),
                 new MessageOptions().setPrompt(request.prompt()),
                 request.prompt(),
-                request.artifactContents()
+                request.artifactContents(),
+                request.evidenceSink()
         );
     }
 }
