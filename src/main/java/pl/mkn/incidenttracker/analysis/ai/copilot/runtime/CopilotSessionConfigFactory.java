@@ -10,7 +10,6 @@ import com.github.copilot.sdk.json.SessionHooks;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;

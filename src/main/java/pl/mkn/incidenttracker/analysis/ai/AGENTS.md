@@ -24,13 +24,14 @@ Obejmuje:
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
   obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
-  runtime skills. To jest stan przejsciowy: docelowo incident prompt, skill
+  skill runtime loading. To jest stan przejsciowy: docelowo incident prompt, skill
   selection i tool policy powinny byc parametrami feature'a przekazanymi do
   platformy Copilot,
 - `copilot/runtime/`
-  neutralne przygotowanie sesji SDK: `CopilotPreparedSession`,
-  `CopilotPreparedSessionRequest`, `CopilotSessionConfigRequest` oraz factory
-  budujace `SessionConfig`/`MessageOptions` bez znajomosci incident policy,
+  neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
+  `CopilotPreparedSession`, `CopilotPreparedSessionRequest`,
+  `CopilotSessionConfigRequest` oraz factory budujace `SessionConfig` i
+  `MessageOptions` bez znajomosci incident policy,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
@@ -107,8 +108,10 @@ Nie obejmuje:
 
 ## Testy
 
-- Zmiany w `copilot/preparation` powinny miec testy promptu, konfiguracji sesji
-  i ladowania skilli.
+- Zmiany w `copilot/preparation` powinny miec testy promptu, incident run
+  assembly i ladowania skilli.
+- Zmiany w `copilot/runtime` powinny miec testy konfiguracji sesji, properties
+  i model listing, jesli dotykaja tych mechanizmow.
 - Zmiany w `copilot/tools` powinny miec testy mapowania Spring tools na tool
   definitions.
 - Zmiany w `copilot/execution` powinny zachowac kontrakty i obserwowalnosc

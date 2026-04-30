@@ -147,9 +147,14 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Query-based adapter curated operational context catalog i filtrowania go do
   reuse'u przez evidence i kolejne capability.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.preparation`
-  Obecne budowanie konfiguracji, promptu, skilli i requestu do Copilot SDK.
+  Obecne budowanie incident promptu, artifact digestu, skill loadingu, tool
+  policy i initial/follow-up run assembly.
   To jest stan przejsciowy; docelowo incident prompt, skille, tool policy,
   hidden context i parser odpowiedzi maja byc parametrami feature'a.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.runtime`
+  Neutralne elementy runtime SDK: properties, model listing, client options,
+  `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
+  promptu ani incident policy.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`

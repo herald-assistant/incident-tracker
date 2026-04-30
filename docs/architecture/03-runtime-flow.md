@@ -88,7 +88,7 @@ Preparation obejmuje:
 - wyrenderowanie manifestu, digestu i evidence artifacts,
 - osadzenie artifact contents inline w promptcie,
 - zaladowanie runtime skills,
-- zbudowanie `CopilotClientOptions` i `SessionConfig`,
+- zbudowanie platformowego requestu sesji,
 - zastosowanie requestowych preferencji AI (`model`, `reasoningEffort`) albo
   fallback do properties,
 - zebranie metryk preparation.
@@ -100,12 +100,13 @@ renderingu i konfiguracji SDK:
   tools i zwraca coverage-aware policy,
 - `CopilotPromptRenderer` renderuje prompt, JSON-only response contract,
   available capability groups i embedded artifacts,
-- `CopilotSessionConfigFactory` buduje client options, session config,
-  permission handler, hooks, skill directories i disabled skills.
+- `CopilotPreparedSessionFactory` przekazuje platformowe parametry do runtime,
+  a `CopilotSessionConfigFactory` buduje client options, session config,
+  permission handler, hooks i disabled skills.
 
 `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
-obok providera poczatkowej analizy i follow-up chatu. Uzywa zaleznosci z
-preparation do pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej
+obok providera poczatkowej analizy i follow-up chatu. Uzywa zaleznosci runtime
+do pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej
 z evidence ani promptem incydentu.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa

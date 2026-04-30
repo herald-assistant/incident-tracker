@@ -74,6 +74,7 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   registered tools,
 - `CopilotPromptRenderer` zawiera tekst promptu, JSON response contract,
   rendering capability groups i embedded artifact contents,
+- `CopilotPreparedSessionFactory` przekazuje gotowe parametry do runtime,
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,
   `SessionConfig`, permission handler, hooks, safe lists, skill directories i
   disabled skills.

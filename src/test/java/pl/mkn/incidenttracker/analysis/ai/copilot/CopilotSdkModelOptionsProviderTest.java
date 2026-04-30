@@ -4,8 +4,8 @@ import com.github.copilot.sdk.json.ModelCapabilities;
 import com.github.copilot.sdk.json.ModelInfo;
 import com.github.copilot.sdk.json.ModelSupports;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkModelLister;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkModelLister;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 
 import java.time.Duration;
 import java.util.List;

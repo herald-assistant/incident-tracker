@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 
 import java.io.IOException;
 import java.net.URLDecoder;

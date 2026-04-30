@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
+package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
 
 import lombok.Getter;
 import lombok.Setter;
