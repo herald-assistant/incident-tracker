@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
 
 import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames.*;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.*;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
 
 @Component
 @Slf4j
@@ -35,7 +35,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var startedAt = System.nanoTime();
         logRequest(GET_SCOPE, scope, "request=no-args");
         var result = databaseToolService.getScope(scope);
@@ -73,7 +73,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbFindTablesRequest(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit);
         var startedAt = System.nanoTime();
         logRequest(
@@ -117,7 +117,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbFindColumnsRequest(
                 applicationNamePattern,
                 tableNamePattern,
@@ -158,7 +158,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var startedAt = System.nanoTime();
         logRequest(DESCRIBE_TABLE, scope, "table=%s".formatted(table));
         var result = databaseToolService.describeTable(scope, new DbDescribeTableRequest(table));
@@ -194,7 +194,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbExistsByKeyRequest(table, keyValues, projectionColumns);
         var startedAt = System.nanoTime();
         logRequest(
@@ -237,7 +237,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbCountRowsRequest(table, filters);
         var startedAt = System.nanoTime();
         logRequest(
@@ -279,7 +279,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbGroupCountRequest(table, groupByColumns, filters, limit);
         var startedAt = System.nanoTime();
         logRequest(
@@ -324,7 +324,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbSampleRowsRequest(table, columns, filters, orderBy, limit);
         var startedAt = System.nanoTime();
         logRequest(
@@ -372,7 +372,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbCheckOrphansRequest(
                 childTable,
                 childColumn,
@@ -428,7 +428,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbFindRelationshipsRequest(tables, depth, includeInferred);
         var startedAt = System.nanoTime();
         logRequest(
@@ -468,7 +468,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbJoinCountRequest(tables, joins, filters);
         var startedAt = System.nanoTime();
         logRequest(
@@ -512,7 +512,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbJoinSampleRequest(tables, joins, columns, filters, limit);
         var startedAt = System.nanoTime();
         logRequest(
@@ -558,7 +558,7 @@ public class DatabaseMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbMappingComparisonRequest(actualTable, expectedColumns, expectedRelationships);
         var startedAt = System.nanoTime();
         logRequest(
@@ -601,7 +601,7 @@ public class DatabaseMcpTools {
             Integer maxRows,
             ToolContext toolContext
     ) {
-        var scope = DbToolScope.from(toolContext);
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbReadonlySqlRequest(sql, reason, maxRows);
         var startedAt = System.nanoTime();
         logRequest(
@@ -623,7 +623,7 @@ public class DatabaseMcpTools {
         return result;
     }
 
-    private void logRequest(String toolName, DbToolScope scope, String details) {
+    private void logRequest(String toolName, DbCapabilityScope scope, String details) {
         log.info(
                 "Tool request [{}] correlationId={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} details={}",
                 toolName,
@@ -636,7 +636,7 @@ public class DatabaseMcpTools {
         );
     }
 
-    private void logResult(String toolName, DbToolScope scope, long startedAt, String details) {
+    private void logResult(String toolName, DbCapabilityScope scope, long startedAt, String details) {
         log.info(
                 "Tool result [{}] correlationId={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} durationMs={} details={}",
                 toolName,

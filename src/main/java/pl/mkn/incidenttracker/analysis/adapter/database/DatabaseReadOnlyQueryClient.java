@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
+import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +16,7 @@ public class DatabaseReadOnlyQueryClient {
 
     private final DatabaseConnectionRouter connectionRouter;
 
-    public long queryForCount(DbToolScope scope, String sqlTemplate, Map<String, ?> parameters) {
+    public long queryForCount(DbCapabilityScope scope, String sqlTemplate, Map<String, ?> parameters) {
         var handle = connectionRouter.route(scope);
         var result = handle.namedParameterJdbcTemplate().queryForObject(
                 sqlTemplate,
@@ -26,7 +26,7 @@ public class DatabaseReadOnlyQueryClient {
         return result != null ? result : 0L;
     }
 
-    public List<Map<String, Object>> queryForRows(DbToolScope scope, String sqlTemplate, Map<String, ?> parameters) {
+    public List<Map<String, Object>> queryForRows(DbCapabilityScope scope, String sqlTemplate, Map<String, ?> parameters) {
         var handle = connectionRouter.route(scope);
         return handle.namedParameterJdbcTemplate().queryForList(
                 sqlTemplate,

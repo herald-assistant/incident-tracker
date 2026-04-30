@@ -203,7 +203,7 @@ Kroki:
 3. Dodac maly test architektoniczny dopiero po pierwszym wygaszeniu cykli albo
    dodac go w trybie "known exceptions".
    Stan obecny: `PackageDependencyGuardTest` blokuje powrot zamknietych
-   krawedzi importow, m.in. `adapter -> evidence/mcp/ai`,
+   krawedzi importow, m.in. `adapter -> evidence/mcp/ai/agenttools`,
    `mcp -> ai`, `evidence -> ai` oraz importy aplikacyjne w `shared`.
 4. Mierzyc import graph skryptem albo ArchUnit, ale nie blokowac refactoru
    przez caly zastany dlug naraz.
@@ -225,11 +225,10 @@ Najbardziej oplacalne ruchy:
    Stan obecny: keys mieszkaja w `agenttools.context.AgentToolContextKeys`,
    zeby MCP i Copilot runtime importowaly neutralny kontrakt.
 2. Przeniesc typed DB request/result/scope/operator contracts z
-   `analysis.mcp.database` do neutralnego capability, np.
-   `agenttools.database`.
+   `analysis.mcp.database` do capability adaptera, np. `analysis.adapter.database`.
    Stan obecny: DB request/result/scope/operator contracts mieszkaja w
-   `agenttools.database`, a `analysis.mcp.database` jest wrapperem Spring AI
-   nad adapterem DB.
+   `analysis.adapter.database`, a `analysis.mcp.database` jest wrapperem Spring
+   AI nad adapterem DB i mapuje hidden `ToolContext` na adapterowy scope.
 3. Przeniesc generyczne evidence DTO z `analysis.ai.evidence` do neutralnego
    modelu, np. `shared.evidence` albo przejsciowo `analysis.evidence.model`.
    Stan obecny: generic evidence DTO mieszkaja w `shared.evidence`, a
@@ -241,6 +240,8 @@ Kryterium done:
 
 - MCP nie importuje Copilota tylko po to, zeby odczytac context keys,
 - adapter DB nie importuje MCP DTO,
+- adapter DB nie importuje `agenttools`; zaleznosc idzie od MCP/tools do
+  adaptera,
 - evidence pipeline nie importuje AI tylko po to, zeby zwrocic
   `AnalysisEvidenceSection`; neutralny model jest w `shared.evidence`.
 
@@ -255,17 +256,20 @@ Kroki:
    adapterowi przekazywac czysty `DynatraceIncidentQuery`.
 2. Usunac `analysis.adapter.database -> analysis.mcp.database`.
    DB adapter ma pracowac na neutralnych DB contracts.
-3. Usunac `analysis.mcp -> analysis.ai.copilot`.
+3. Usunac `analysis.adapter -> agenttools`.
+   DB capability DTO i scope maja byc przy adapterze, a hidden `ToolContext`
+   mapowany po stronie MCP/tools.
+4. Usunac `analysis.mcp -> analysis.ai.copilot`.
    Tool context keys i scope parsers maja byc neutralne dla platformy AI.
-4. Usunac `analysis.evidence -> analysis.ai`.
+5. Usunac `analysis.evidence -> analysis.ai`.
    Generic evidence model ma byc poza `analysis.ai`.
    Stan obecny: generic evidence model mieszka w `shared.evidence`, a
    `analysis.evidence` nie importuje `analysis.ai`.
 
 Kryterium done:
 
-- `analysis.adapter` nie importuje `analysis.evidence`, `analysis.mcp` ani
-  `analysis.ai`,
+- `analysis.adapter` nie importuje `analysis.evidence`, `analysis.mcp`,
+  `analysis.ai` ani `agenttools`,
 - `analysis.mcp` nie importuje `analysis.ai.copilot`,
 - cykle pozostaja tylko tam, gdzie sa jawnie zaakceptowane jako przejsciowe.
 
@@ -436,7 +440,7 @@ Kryterium done:
 5. PR: przeniesc generic evidence DTO poza `analysis.ai`.
 6. PR: dodac reguly zakazujace nowych importow `adapter -> evidence/mcp/ai`.
 7. PR: przeniesc Dynatrace adapter do `integrations.dynatrace`.
-8. PR: przeniesc DB contracts/tools do `agenttools.database`.
+8. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
 9. PR: przeniesc reszte adapterow capability po jednym obszarze.
 10. PR: wydzielic generic Copilot runtime od incident prompt/digest.
 11. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.

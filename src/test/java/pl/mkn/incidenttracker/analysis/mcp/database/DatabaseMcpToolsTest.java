@@ -2,9 +2,9 @@ package pl.mkn.incidenttracker.analysis.mcp.database;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.incidenttracker.agenttools.database.DbOperator;
-import pl.mkn.incidenttracker.agenttools.database.JoinType;
-import pl.mkn.incidenttracker.agenttools.database.SortDirection;
+import pl.mkn.incidenttracker.analysis.adapter.database.DbOperator;
+import pl.mkn.incidenttracker.analysis.adapter.database.JoinType;
+import pl.mkn.incidenttracker.analysis.adapter.database.SortDirection;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 
@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.*;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
 
 class DatabaseMcpToolsTest {
 
@@ -258,7 +258,7 @@ class DatabaseMcpToolsTest {
         );
     }
 
-    private boolean scopeMatches(DbToolScope scope) {
+    private boolean scopeMatches(DbCapabilityScope scope) {
         return scope != null
                 && "corr-123".equals(scope.correlationId())
                 && "zt01".equals(scope.environment())

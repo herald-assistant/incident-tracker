@@ -143,8 +143,8 @@ Zasady granic:
   MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
   case'ow.
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
-  Neutralne kontrakty tools/capability wspolne dla adapterow, MCP wrappers i
-  platform AI, np. hidden tool context keys oraz DB tool DTO/scope/operator.
+  Neutralne kontrakty tools/capability wspolne dla MCP wrappers i platform AI,
+  np. hidden tool context keys. Adaptery nie powinny importowac `agenttools`.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.

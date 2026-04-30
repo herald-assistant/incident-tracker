@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.agenttools.database.DbOperator;
-import pl.mkn.incidenttracker.agenttools.database.JoinType;
-import pl.mkn.incidenttracker.agenttools.database.SortDirection;
+import pl.mkn.incidenttracker.analysis.adapter.database.DbOperator;
+import pl.mkn.incidenttracker.analysis.adapter.database.JoinType;
+import pl.mkn.incidenttracker.analysis.adapter.database.SortDirection;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.*;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +33,7 @@ public class DatabaseToolService {
     private final DatabaseResultMasker resultMasker;
     private final DatabaseResultLimiter resultLimiter;
 
-    public DbScopeResult getScope(DbToolScope scope) {
+    public DbScopeResult getScope(DbCapabilityScope scope) {
         var environment = scopeResolver.requiredEnvironment(scope.environment());
         var warnings = new ArrayList<String>();
         if (properties.isAllowAllSchemas()) {
@@ -57,7 +57,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbTableSearchResult findTables(DbToolScope scope, DbFindTablesRequest request) {
+    public DbTableSearchResult findTables(DbCapabilityScope scope, DbFindTablesRequest request) {
         var resolvedScope = scopeResolver.resolveDiscoveryScope(scope.environment(), request.applicationNamePattern());
         var effectiveLimit = normalizeDiscoveryLimit(request.limit(), properties.getMaxTablesPerSearch());
         var fetchLimit = effectiveLimit + 1;
@@ -88,7 +88,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbColumnSearchResult findColumns(DbToolScope scope, DbFindColumnsRequest request) {
+    public DbColumnSearchResult findColumns(DbCapabilityScope scope, DbFindColumnsRequest request) {
         var resolvedScope = scopeResolver.resolveDiscoveryScope(scope.environment(), request.applicationNamePattern());
         var effectiveLimit = normalizeDiscoveryLimit(request.limit(), properties.getMaxColumnsPerSearch());
         var fetchLimit = effectiveLimit + 1;
@@ -125,7 +125,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbTableDescription describeTable(DbToolScope scope, DbDescribeTableRequest request) {
+    public DbTableDescription describeTable(DbCapabilityScope scope, DbDescribeTableRequest request) {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var description = metadataClient.describeTable(scope.environment(), table.schema(), table.tableName());
 
@@ -159,7 +159,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbExistsResult existsByKey(DbToolScope scope, DbExistsByKeyRequest request) {
+    public DbExistsResult existsByKey(DbCapabilityScope scope, DbExistsByKeyRequest request) {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var keyValues = safeList(request.keyValues());
         if (keyValues.isEmpty()) {
@@ -204,7 +204,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbCountResult countRows(DbToolScope scope, DbCountRowsRequest request) {
+    public DbCountResult countRows(DbCapabilityScope scope, DbCountRowsRequest request) {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var where = buildWhereClause(scope, table, "t", request.filters());
         var count = queryClient.queryForCount(
@@ -227,7 +227,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbGroupCountResult groupCount(DbToolScope scope, DbGroupCountRequest request) {
+    public DbGroupCountResult groupCount(DbCapabilityScope scope, DbGroupCountRequest request) {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var groupByColumns = sqlGuard.validateColumns(scope, table, request.groupByColumns());
         if (groupByColumns.isEmpty()) {
@@ -265,7 +265,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbSampleRowsResult sampleRows(DbToolScope scope, DbSampleRowsRequest request) {
+    public DbSampleRowsResult sampleRows(DbCapabilityScope scope, DbSampleRowsRequest request) {
         var table = sqlGuard.normalizeTableRef(scope, request.table());
         var columns = sqlGuard.validateColumns(scope, table, request.columns());
         if (columns.isEmpty()) {
@@ -300,7 +300,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbOrphanCheckResult checkOrphans(DbToolScope scope, DbCheckOrphansRequest request) {
+    public DbOrphanCheckResult checkOrphans(DbCapabilityScope scope, DbCheckOrphansRequest request) {
         var childTable = sqlGuard.normalizeTableRef(scope, request.childTable());
         var parentTable = sqlGuard.normalizeTableRef(scope, request.parentTable());
         var childColumn = sqlGuard.validateColumn(scope, childTable, request.childColumn());
@@ -371,7 +371,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbRelationshipsResult findRelationships(DbToolScope scope, DbFindRelationshipsRequest request) {
+    public DbRelationshipsResult findRelationships(DbCapabilityScope scope, DbFindRelationshipsRequest request) {
         var includeInferred = Boolean.TRUE.equals(request.includeInferred());
         var effectiveDepth = Math.min(Math.max(normalizePositive(request.depth(), 1), 1), 2);
         var warnings = new ArrayList<String>();
@@ -427,7 +427,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbJoinCountResult joinCount(DbToolScope scope, DbJoinCountRequest request) {
+    public DbJoinCountResult joinCount(DbCapabilityScope scope, DbJoinCountRequest request) {
         var joinPlan = buildJoinPlan(scope, request.tables(), request.joins(), request.filters());
         var count = queryClient.queryForCount(
                 scope,
@@ -443,7 +443,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbJoinSampleResult joinSample(DbToolScope scope, DbJoinSampleRequest request) {
+    public DbJoinSampleResult joinSample(DbCapabilityScope scope, DbJoinSampleRequest request) {
         if (safeList(request.columns()).isEmpty()) {
             throw new IllegalArgumentException("%s requires explicit projected columns.".formatted(scope.toolName()));
         }
@@ -490,7 +490,7 @@ public class DatabaseToolService {
     }
 
     public DbMappingComparisonResult compareTableToExpectedMapping(
-            DbToolScope scope,
+            DbCapabilityScope scope,
             DbMappingComparisonRequest request
     ) {
         var table = sqlGuard.normalizeTableRef(scope, request.actualTable());
@@ -518,7 +518,7 @@ public class DatabaseToolService {
         );
     }
 
-    public DbReadonlySqlResult executeReadonlySql(DbToolScope scope, DbReadonlySqlRequest request) {
+    public DbReadonlySqlResult executeReadonlySql(DbCapabilityScope scope, DbReadonlySqlRequest request) {
         var validatedSql = sqlGuard.validateReadonlySql(scope, request.sql());
         var effectiveLimit = normalizePositive(request.maxRows(), properties.getMaxRows());
         var limitedSql = "SELECT * FROM (%s) raw_query WHERE ROWNUM <= %d".formatted(validatedSql, effectiveLimit);
@@ -710,7 +710,7 @@ public class DatabaseToolService {
     }
 
     private JoinPlan buildJoinPlan(
-            DbToolScope scope,
+            DbCapabilityScope scope,
             List<DbTableRef> tables,
             List<DbJoinCondition> joins,
             List<DbQualifiedFilter> filters
@@ -773,7 +773,7 @@ public class DatabaseToolService {
     }
 
     private WhereClause buildKeyWhereClause(
-            DbToolScope scope,
+            DbCapabilityScope scope,
             DbTableRef table,
             String alias,
             List<DbKeyValue> keyValues
@@ -802,7 +802,7 @@ public class DatabaseToolService {
     }
 
     private WhereClause buildWhereClause(
-            DbToolScope scope,
+            DbCapabilityScope scope,
             DbTableRef table,
             String alias,
             List<DbFilter> filters
@@ -833,7 +833,7 @@ public class DatabaseToolService {
     }
 
     private WhereClause buildQualifiedWhereClause(
-            DbToolScope scope,
+            DbCapabilityScope scope,
             Map<TableKey, String> aliasByTableKey,
             List<DbQualifiedFilter> filters
     ) {
@@ -954,7 +954,7 @@ public class DatabaseToolService {
     }
 
     private String buildOrderByClause(
-            DbToolScope scope,
+            DbCapabilityScope scope,
             DbTableRef table,
             String alias,
             List<DbOrderBy> orderBy
@@ -1017,7 +1017,7 @@ public class DatabaseToolService {
                 .toList();
     }
 
-    private String databaseAlias(DbToolScope scope) {
+    private String databaseAlias(DbCapabilityScope scope) {
         return scopeResolver.requiredEnvironment(scope.environment()).getDatabaseAlias();
     }
 

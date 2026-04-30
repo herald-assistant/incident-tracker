@@ -180,7 +180,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   capability.
 - `pl.mkn.incidenttracker.analysis.mcp.database`
   Session-bound MCP tools diagnostyki danych. Kontrakty request/result/scope i
-  operatory DB mieszkaja w `pl.mkn.incidenttracker.agenttools.database`.
+  operatory DB mieszkaja w `pl.mkn.incidenttracker.analysis.adapter.database`.
 - `pl.mkn.incidenttracker.analysis.adapter.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).

@@ -1,21 +1,11 @@
-package pl.mkn.incidenttracker.agenttools.database;
-
-import org.springframework.ai.chat.model.ToolContext;
+package pl.mkn.incidenttracker.analysis.adapter.database;
 
 import java.util.List;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ANALYSIS_RUN_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.CORRELATION_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ENVIRONMENT;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.TOOL_CALL_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.TOOL_NAME;
+public final class DatabaseCapabilityDtos {
 
-public final class DatabaseToolDtos {
-
-    private DatabaseToolDtos() {
+    private DatabaseCapabilityDtos() {
     }
 
     public record DbApplicationScopeInfo(
@@ -394,7 +384,7 @@ public final class DatabaseToolDtos {
     ) {
     }
 
-    public record DbToolScope(
+    public record DbCapabilityScope(
             String correlationId,
             String environment,
             String analysisRunId,
@@ -402,51 +392,6 @@ public final class DatabaseToolDtos {
             String toolCallId,
             String toolName
     ) {
-
-        public static DbToolScope from(ToolContext toolContext) {
-            if (toolContext == null || toolContext.getContext() == null) {
-                throw new IllegalStateException("Missing Copilot tool context; database tools require session-bound scope.");
-            }
-
-            var context = toolContext.getContext();
-
-            return new DbToolScope(
-                    required(
-                            context,
-                            CORRELATION_ID,
-                            "Missing correlationId in Copilot tool context; database tools require current incident correlationId."
-                    ),
-                    required(
-                            context,
-                            ENVIRONMENT,
-                            "Missing environment in Copilot tool context; database tools require session-bound environment."
-                    ),
-                    optional(context, ANALYSIS_RUN_ID),
-                    firstNonBlank(optional(context, ACTUAL_COPILOT_SESSION_ID), optional(context, COPILOT_SESSION_ID)),
-                    optional(context, TOOL_CALL_ID),
-                    optional(context, TOOL_NAME)
-            );
-        }
-
-        private static String required(Map<String, Object> context, String key, String message) {
-            var value = context.get(key);
-            if (value == null || value.toString().isBlank()) {
-                throw new IllegalStateException(message);
-            }
-            return value.toString();
-        }
-
-        private static String optional(Map<String, Object> context, String key) {
-            var value = context.get(key);
-            return value != null && !value.toString().isBlank() ? value.toString() : null;
-        }
-
-        private static String firstNonBlank(String primary, String fallback) {
-            if (primary != null && !primary.isBlank()) {
-                return primary;
-            }
-            return fallback;
-        }
     }
 
     public record ExpectedColumn(

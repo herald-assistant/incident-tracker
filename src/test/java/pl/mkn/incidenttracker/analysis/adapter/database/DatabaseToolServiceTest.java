@@ -2,8 +2,8 @@ package pl.mkn.incidenttracker.analysis.adapter.database;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import pl.mkn.incidenttracker.agenttools.database.DbOperator;
-import pl.mkn.incidenttracker.agenttools.database.JoinType;
+import pl.mkn.incidenttracker.analysis.adapter.database.DbOperator;
+import pl.mkn.incidenttracker.analysis.adapter.database.JoinType;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.*;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
 
 class DatabaseToolServiceTest {
 
@@ -330,7 +330,7 @@ class DatabaseToolServiceTest {
         return guard;
     }
 
-    private DbToolScope scope() {
-        return new DbToolScope("corr-123", "zt01", "run-1", "analysis-run-1", "tool-call-1", "db_test_tool");
+    private DbCapabilityScope scope() {
+        return new DbCapabilityScope("corr-123", "zt01", "run-1", "analysis-run-1", "tool-call-1", "db_test_tool");
     }
 }

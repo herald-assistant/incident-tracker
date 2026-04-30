@@ -30,8 +30,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbCountResult;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbTableRef;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCountResult;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbTableRef;
 
 class CopilotSdkDatabaseToolFactoryTest {
 

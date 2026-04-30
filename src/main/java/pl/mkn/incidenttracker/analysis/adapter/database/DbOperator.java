@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.agenttools.database;
+package pl.mkn.incidenttracker.analysis.adapter.database;
 
 public enum DbOperator {
     EQ,

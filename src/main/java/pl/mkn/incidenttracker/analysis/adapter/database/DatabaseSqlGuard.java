@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbTableRef;
-import pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
+import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbTableRef;
+import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -56,7 +56,7 @@ public class DatabaseSqlGuard {
         return normalized;
     }
 
-    public DbTableRef normalizeTableRef(DbToolScope scope, DbTableRef table) {
+    public DbTableRef normalizeTableRef(DbCapabilityScope scope, DbTableRef table) {
         if (table == null) {
             throw new IllegalArgumentException("DbTableRef must not be null.");
         }
@@ -75,7 +75,7 @@ public class DatabaseSqlGuard {
         return new DbTableRef(normalizedSchema, normalizedTableName);
     }
 
-    public String validateColumn(DbToolScope scope, DbTableRef table, String column) {
+    public String validateColumn(DbCapabilityScope scope, DbTableRef table, String column) {
         var normalizedTable = normalizeTableRef(scope, table);
         var normalizedColumn = normalizeIdentifier(column);
         if (!metadataClient.columnExists(
@@ -92,7 +92,7 @@ public class DatabaseSqlGuard {
         return normalizedColumn;
     }
 
-    public List<String> validateColumns(DbToolScope scope, DbTableRef table, List<String> columns) {
+    public List<String> validateColumns(DbCapabilityScope scope, DbTableRef table, List<String> columns) {
         var validated = new LinkedHashSet<String>();
         for (var column : columns != null ? columns : List.<String>of()) {
             validated.add(validateColumn(scope, table, column));
@@ -100,7 +100,7 @@ public class DatabaseSqlGuard {
         return List.copyOf(validated);
     }
 
-    public void assertSchemaAllowed(DbToolScope scope, String schema) {
+    public void assertSchemaAllowed(DbCapabilityScope scope, String schema) {
         var normalizedSchema = normalizeIdentifier(schema);
         if (properties.isAllowAllSchemas()) {
             return;
@@ -117,7 +117,7 @@ public class DatabaseSqlGuard {
         }
     }
 
-    public String validateReadonlySql(DbToolScope scope, String sql) {
+    public String validateReadonlySql(DbCapabilityScope scope, String sql) {
         if (!properties.isRawSqlEnabled()) {
             throw new IllegalStateException("Raw read-only SQL is disabled for database tools.");
         }

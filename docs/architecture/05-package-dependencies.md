@@ -149,8 +149,6 @@ flowchart LR
     MCP --> ADAPTER
     MCP --> AGENTTOOLS
 
-    ADAPTER --> AGENTTOOLS
-
     API["api"] --> ADAPTER
     API --> FLOW
     API --> JOB
@@ -178,9 +176,8 @@ flowchart LR
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 24 | oczekiwane | Providerzy AI, Copilot preparation i evidence capture konsumuja neutralny model evidence. |
-| `analysis.mcp -> analysis.adapter` | 7 | oczekiwane | Spring AI tools deleguja do adapterow/capability services. |
-| `analysis.mcp -> agenttools` | 10 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych context keys i DB tool contracts. |
-| `analysis.adapter -> agenttools` | 9 | oczekiwane przejsciowo | DB adapter uzywa neutralnych DB request/result/scope/operator contracts. |
+| `analysis.mcp -> analysis.adapter` | 9 | oczekiwane | Spring AI tools deleguja do adapterow/capability services i uzywaja capability DTO adaptera DB. |
+| `analysis.mcp -> agenttools` | 16 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych hidden context keys. |
 | `api -> analysis.adapter` | 6 | oczekiwane | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
@@ -208,7 +205,7 @@ analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
 analysis.ai.copilot -> analysis.mcp -> analysis.adapter
-analysis.ai.copilot/analysis.mcp/analysis.adapter -> agenttools
+analysis.ai.copilot/analysis.mcp -> agenttools
 analysis.job/flow/ai -> analysis.options
 analysis.job/flow/ai -> shared
 api -> feature exceptions
@@ -220,6 +217,7 @@ Unikac nowych zaleznosci:
 - `analysis.adapter -> analysis.evidence`,
 - `analysis.adapter -> analysis.mcp`,
 - `analysis.adapter -> analysis.ai`,
+- `analysis.adapter -> agenttools`,
 - `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
@@ -234,8 +232,10 @@ Zamkniete krawedzie, ktorych nie przywracac:
   teraz w neutralnym `agenttools.context.AgentToolContextKeys`, a Copilot
   runtime jest ich konsumentem.
 - `analysis.adapter -> analysis.mcp`: DB request/result/scope/operator
-  contracts mieszkaja teraz w `agenttools.database`, a
+  contracts mieszkaja teraz w `analysis.adapter.database`, a
   `analysis.mcp.database` zostaje ekspozycja Spring AI tools.
+- `analysis.adapter -> agenttools`: adapter DB ma wlasne capability DTO i scope
+  w `analysis.adapter.database`; MCP mapuje hidden `ToolContext` na ten scope.
 - `analysis.evidence -> analysis.ai`: generyczne DTO evidence mieszkaja teraz
   w `shared.evidence`, a `analysis.ai.evidence` nie jest wlascicielem modelu
   evidence.

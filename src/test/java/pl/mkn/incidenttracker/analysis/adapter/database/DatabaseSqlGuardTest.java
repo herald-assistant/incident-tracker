@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbTableRef;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbTableRef;
+import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 class DatabaseSqlGuardTest {
 
@@ -82,8 +82,8 @@ class DatabaseSqlGuardTest {
         return new DatabaseSqlGuard(properties, resolver, metadataClient);
     }
 
-    private DbToolScope scope() {
-        return new DbToolScope("corr-123", "zt01", "run-1", "analysis-run-1", "tool-call-1", "db_count_rows");
+    private DbCapabilityScope scope() {
+        return new DbCapabilityScope("corr-123", "zt01", "run-1", "analysis-run-1", "tool-call-1", "db_count_rows");
     }
 
     private static void assertTrue(boolean value) {

@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
+import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,7 +24,7 @@ public class DatabaseConnectionRouter implements AutoCloseable {
     private final Map<String, HikariDataSource> dataSources = new ConcurrentHashMap<>();
     private final Map<String, NamedParameterJdbcTemplate> namedTemplates = new ConcurrentHashMap<>();
 
-    public DatabaseEnvironmentHandle route(DbToolScope scope) {
+    public DatabaseEnvironmentHandle route(DbCapabilityScope scope) {
         return route(scope.environment());
     }
 

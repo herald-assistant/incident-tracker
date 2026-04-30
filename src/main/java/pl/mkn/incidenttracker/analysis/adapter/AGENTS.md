@@ -54,8 +54,8 @@ Nie obejmuje:
 - Dla Database capability nie zgaduj schematow domenowo w kodzie.
   Application-to-schema mapping ma pochodzic z konfiguracji.
 - Dla Database capability typed request/result/scope/operator contracts sa w
-  `pl.mkn.incidenttracker.agenttools.database`. Adapter moze ich uzywac, ale
-  nie powinien importowac `analysis.mcp.database`.
+  `pl.mkn.incidenttracker.analysis.adapter.database`. Adapter moze ich uzywac,
+  ale nie powinien importowac `analysis.mcp.database` ani `agenttools`.
 
 ## Testy
 

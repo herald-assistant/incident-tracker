@@ -8,13 +8,12 @@ import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolDtos.DbToolScope;
 
-class DbToolScopeTest {
+class DatabaseMcpToolScopeResolverTest {
 
     @Test
     void shouldCreateScopeFromToolContext() {
-        var scope = DbToolScope.from(toolContext("zt01", "corr-123"));
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext("zt01", "corr-123"));
 
         assertEquals("corr-123", scope.correlationId());
         assertEquals("zt01", scope.environment());
@@ -26,7 +25,10 @@ class DbToolScopeTest {
 
     @Test
     void shouldFailWhenEnvironmentIsMissing() {
-        var exception = assertThrows(IllegalStateException.class, () -> DbToolScope.from(toolContext(null, "corr-123")));
+        var exception = assertThrows(
+                IllegalStateException.class,
+                () -> DatabaseMcpToolScopeResolver.from(toolContext(null, "corr-123"))
+        );
 
         assertEquals(
                 "Missing environment in Copilot tool context; database tools require session-bound environment.",
@@ -36,7 +38,10 @@ class DbToolScopeTest {
 
     @Test
     void shouldFailWhenCorrelationIdIsMissing() {
-        var exception = assertThrows(IllegalStateException.class, () -> DbToolScope.from(toolContext("zt01", null)));
+        var exception = assertThrows(
+                IllegalStateException.class,
+                () -> DatabaseMcpToolScopeResolver.from(toolContext("zt01", null))
+        );
 
         assertEquals(
                 "Missing correlationId in Copilot tool context; database tools require current incident correlationId.",
