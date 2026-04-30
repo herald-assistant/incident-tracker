@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
+package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

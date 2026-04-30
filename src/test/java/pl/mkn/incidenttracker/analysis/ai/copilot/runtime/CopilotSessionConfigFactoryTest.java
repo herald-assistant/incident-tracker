@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
+package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
 
 import com.github.copilot.sdk.json.PermissionHandler;
 import com.github.copilot.sdk.json.PermissionRequest;
@@ -6,8 +6,9 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.PreToolUseHookInput;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;
 import java.util.Map;

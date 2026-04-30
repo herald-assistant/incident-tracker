@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;

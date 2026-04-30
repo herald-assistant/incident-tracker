@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;

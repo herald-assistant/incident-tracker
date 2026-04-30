@@ -13,7 +13,7 @@ import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;

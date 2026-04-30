@@ -23,10 +23,14 @@ Obejmuje:
   root aktualnego providera AI: `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
-  obecna budowe promptu, konfiguracji klienta, tool definitions, follow-up
-  promptu i runtime skills. To jest stan przejsciowy: docelowo incident prompt,
-  skill selection i tool policy powinny byc parametrami feature'a przekazanymi
-  do platformy Copilot,
+  obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
+  runtime skills. To jest stan przejsciowy: docelowo incident prompt, skill
+  selection i tool policy powinny byc parametrami feature'a przekazanymi do
+  platformy Copilot,
+- `copilot/runtime/`
+  neutralne przygotowanie sesji SDK: `CopilotPreparedSession`,
+  `CopilotPreparedSessionRequest`, `CopilotSessionConfigRequest` oraz factory
+  budujace `SessionConfig`/`MessageOptions` bez znajomosci incident policy,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`

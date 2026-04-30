@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 

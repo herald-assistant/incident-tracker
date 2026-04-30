@@ -10,7 +10,7 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSession;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;

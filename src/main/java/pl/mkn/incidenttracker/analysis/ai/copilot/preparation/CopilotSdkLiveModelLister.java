@@ -4,6 +4,7 @@ import com.github.copilot.sdk.CopilotClient;
 import com.github.copilot.sdk.json.ModelInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
 
 import java.time.Duration;
 import java.util.List;
