@@ -22,6 +22,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -82,7 +83,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for timeout-123");
-        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest), any())).thenReturn("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Downstream timeout is likely tied to recent HTTP client timeout changes.",
@@ -127,7 +128,7 @@ class CopilotInitialAnalysisProviderTest {
         assertEquals("Prepared prompt for timeout-123", response.prompt());
 
         verify(preparationService).prepare(request);
-        verify(executionGateway).execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP));
+        verify(executionGateway).execute(same(preparedRequest), any());
     }
 
     @Test
@@ -141,7 +142,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-123");
-        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP)))
+        when(executionGateway.execute(same(preparedRequest), any()))
                 .thenReturn("Looks like a timeout, but the answer is not formatted.");
 
         var response = analyze(provider, request);
@@ -175,7 +176,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-456");
-        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest), any())).thenReturn("""
                 {
                   "detectedProblem": "EntityNotFoundException thrown when no ActiveCaseRecord exists for caseId 7001234567 matching the active-status filter",
                   "summary": "**Żądanie** dla `CASE_ID=7001234567` dotarło do `ActiveCaseRecordController.getActiveCaseRecordForCaseId`.\\n\\n- **Potwierdzone:** wywołanie przeszło przez `ActiveCaseRecordQueryService` i zakończyło się w `ActiveCaseRecordDomainRepository`.\\n- **Granica widoczności:** brak bezpośredniego wglądu w DB i w faktyczną listę `statuses`.",
@@ -247,7 +248,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-999");
-        when(executionGateway.execute(same(preparedRequest), same(AnalysisAiToolEvidenceListener.NO_OP))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest), any())).thenReturn("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Timeout is visible in the downstream call path.",

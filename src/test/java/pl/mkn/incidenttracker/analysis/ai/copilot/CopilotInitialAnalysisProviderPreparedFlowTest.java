@@ -18,11 +18,14 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -50,7 +53,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         );
         var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
 
-        when(executionGateway.execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP)))
+        when(executionGateway.execute(same(preparedSession), any()))
                 .thenReturn("""
                         {
                           "detectedProblem": "PREPARED_RESPONSE",
@@ -72,7 +75,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         assertEquals("PREPARED_RESPONSE", response.detectedProblem());
         assertEquals("Prepared prompt body", response.prompt());
         verifyNoInteractions(preparationService);
-        verify(executionGateway).execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP));
+        verify(executionGateway).execute(same(preparedSession), any());
     }
 
     @Test
@@ -86,7 +89,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis);
         when(preparedSession.prompt()).thenReturn("Owned prompt body");
-        when(executionGateway.execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP)))
+        when(executionGateway.execute(same(preparedSession), any()))
                 .thenReturn(structuredResponse("OWNED_RESPONSE"));
 
         InitialAnalysisResponse response;
@@ -96,7 +99,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
 
         assertEquals("OWNED_RESPONSE", response.detectedProblem());
         assertEquals("Owned prompt body", response.prompt());
-        verify(executionGateway).execute(same(preparedSession), same(AnalysisAiToolEvidenceListener.NO_OP));
+        verify(executionGateway).execute(same(preparedSession), any());
         verify(preparedSession).close();
     }
 
@@ -112,15 +115,21 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
 
         when(preparedSession.prompt()).thenReturn("Caller-owned prompt body");
         when(preparedSession.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-caller-owned"));
-        when(executionGateway.execute(same(preparedSession), same(listener)))
-                .thenReturn(structuredResponse("CALLER_OWNED_RESPONSE"));
+        when(executionGateway.execute(same(preparedSession), any()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    var sink = (Consumer<AnalysisEvidenceSection>) invocation.getArgument(1);
+                    sink.accept(new AnalysisEvidenceSection("test", "tool-results", List.of()));
+                    return structuredResponse("CALLER_OWNED_RESPONSE");
+                });
 
         var response = provider.analyze(preparedAnalysis, listener);
 
         assertEquals("CALLER_OWNED_RESPONSE", response.detectedProblem());
         assertEquals("Caller-owned prompt body", response.prompt());
         verifyNoInteractions(preparationService);
-        verify(executionGateway).execute(same(preparedSession), same(listener));
+        verify(listener).onToolEvidenceUpdated(any(AnalysisEvidenceSection.class));
+        verify(executionGateway).execute(same(preparedSession), any());
         verify(preparedSession, never()).close();
     }
 

@@ -92,6 +92,8 @@ Nie obejmuje:
 - `CopilotToolEvidenceSessionStore` ma publikowac evidence przez neutralny
   session-bound sink, a nie bezposrednio zalezec od
   `AnalysisAiToolEvidenceListener`.
+- `CopilotSdkExecutionGateway` ma przyjmowac neutralny evidence sink; adapter
+  z `AnalysisAiToolEvidenceListener` trzymaj po stronie providera AI.
 - Nowe walidacje i limity runtime dodawaj jako `CopilotToolInvocationPolicy`,
   a side-effecty jako listenery eventow invocation.
 - Obecnie logike per capability, np. GitLab albo DB evidence capture, trzymaj

@@ -8,6 +8,9 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkFollowUpPreparationService;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
+
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +27,7 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
         try (var preparedSession = preparationService.prepare(request)) {
             var content = executionGateway.execute(
                     preparedSession,
-                    toolEvidenceListener != null ? toolEvidenceListener : AnalysisAiToolEvidenceListener.NO_OP
+                    toolEvidenceSink(toolEvidenceListener)
             );
 
             return new AnalysisAiChatResponse(
@@ -33,5 +36,10 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
                     preparedSession.prompt()
             );
         }
+    }
+
+    private Consumer<AnalysisEvidenceSection> toolEvidenceSink(AnalysisAiToolEvidenceListener listener) {
+        var effectiveListener = listener != null ? listener : AnalysisAiToolEvidenceListener.NO_OP;
+        return effectiveListener::onToolEvidenceUpdated;
     }
 }

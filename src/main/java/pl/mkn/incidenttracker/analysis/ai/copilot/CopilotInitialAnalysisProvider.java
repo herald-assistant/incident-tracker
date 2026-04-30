@@ -18,6 +18,9 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
+
+import java.util.function.Consumer;
 
 @Service
 @Slf4j
@@ -62,7 +65,7 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         try {
             var assistantContent = executionGateway.execute(
                     preparedSession,
-                    toolEvidenceListener != null ? toolEvidenceListener : AnalysisAiToolEvidenceListener.NO_OP
+                    toolEvidenceSink(toolEvidenceListener)
             );
             var parseResult = responseParser.parse(assistantContent);
             var qualityReport = qualityGate.evaluate(request, parseResult.response());
@@ -117,6 +120,11 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         }
 
         return preparedSession.sessionConfig().getSessionId();
+    }
+
+    private Consumer<AnalysisEvidenceSection> toolEvidenceSink(AnalysisAiToolEvidenceListener listener) {
+        var effectiveListener = listener != null ? listener : AnalysisAiToolEvidenceListener.NO_OP;
+        return effectiveListener::onToolEvidenceUpdated;
     }
 
     private InitialAnalysisResponse toAiResponse(

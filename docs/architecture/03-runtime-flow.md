@@ -348,8 +348,8 @@ subskrybowane z eventow tool invocation przez pakiety capability:
 Store nie zna JSON payloadow konkretnych tools. Udostepnia per-session
 `SessionToolEvidence`, pilnuje kolejnosci `toolCaptureOrder`, scala albo
 dopisuje itemy i publikuje zaktualizowana sekcje przez neutralny session-bound
-sink. Copilot provider mapuje ten sink na `AnalysisAiToolEvidenceListener` poza
-store'em tools.
+sink. Copilot provider mapuje `AnalysisAiToolEvidenceListener` na ten sink
+przed wejsciem do execution gatewaya.
 
 Kategorie:
 

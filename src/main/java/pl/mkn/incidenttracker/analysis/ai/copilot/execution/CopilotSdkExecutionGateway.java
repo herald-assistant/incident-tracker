@@ -8,7 +8,6 @@ import com.github.copilot.sdk.events.SessionUsageInfoEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
@@ -26,6 +25,9 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSessio
 @Service
 @Slf4j
 public class CopilotSdkExecutionGateway {
+
+    private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
+    };
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
@@ -46,12 +48,12 @@ public class CopilotSdkExecutionGateway {
     }
 
     public String execute(CopilotPreparedSession preparedSession) {
-        return execute(preparedSession, AnalysisAiToolEvidenceListener.NO_OP);
+        return execute(preparedSession, NO_OP_EVIDENCE_SINK);
     }
 
     public String execute(
             CopilotPreparedSession preparedSession,
-            AnalysisAiToolEvidenceListener toolEvidenceListener
+            Consumer<AnalysisEvidenceSection> toolEvidenceSink
     ) {
         var overallStart = System.nanoTime();
         var runReference = preparedSession.runReference();
@@ -80,7 +82,7 @@ public class CopilotSdkExecutionGateway {
 
                         toolEvidenceSessionStore.registerSession(
                                 session.getSessionId(),
-                                toolEvidenceSink(toolEvidenceListener)
+                                toolEvidenceSink != null ? toolEvidenceSink : NO_OP_EVIDENCE_SINK
                         );
                         toolBudgetRegistry.registerSession(session.getSessionId());
 
@@ -204,13 +206,6 @@ public class CopilotSdkExecutionGateway {
                     data.messagesLength()
             );
         }
-    }
-
-    private Consumer<AnalysisEvidenceSection> toolEvidenceSink(
-            AnalysisAiToolEvidenceListener listener
-    ) {
-        var effectiveListener = listener != null ? listener : AnalysisAiToolEvidenceListener.NO_OP;
-        return effectiveListener::onToolEvidenceUpdated;
     }
 
     private String buildFailureMessage(Throwable rootCause) {

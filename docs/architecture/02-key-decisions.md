@@ -280,7 +280,8 @@ Spring tools. Przyklady:
 
 `CopilotToolEvidenceSessionStore` publikuje tool evidence przez neutralny
 session-bound sink `Consumer<AnalysisEvidenceSection>`. Provider AI adaptuje
-ten sink do `AnalysisAiToolEvidenceListener` na granicy wykonania.
+`AnalysisAiToolEvidenceListener` do tego sinka przed wywolaniem execution
+gatewaya.
 
 Capture obejmuje:
 
