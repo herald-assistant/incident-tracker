@@ -202,6 +202,9 @@ Kroki:
 2. Utrzymywac `AGENTS.md` jako twarde zasady dla agentow.
 3. Dodac maly test architektoniczny dopiero po pierwszym wygaszeniu cykli albo
    dodac go w trybie "known exceptions".
+   Stan obecny: `PackageDependencyGuardTest` blokuje powrot zamknietych
+   krawedzi importow, m.in. `adapter -> evidence/mcp/ai`,
+   `mcp -> ai`, `evidence -> ai` oraz importy aplikacyjne w `shared`.
 4. Mierzyc import graph skryptem albo ArchUnit, ale nie blokowac refactoru
    przez caly zastany dlug naraz.
 

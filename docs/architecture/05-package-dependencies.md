@@ -240,6 +240,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
   w `shared.evidence`, a `analysis.ai.evidence` nie jest wlascicielem modelu
   evidence.
 
+Najwazniejsze zamkniete krawedzie sa pilnowane przez
+`PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.
+
 Przy dodawaniu kolejnych dedykowanych analiz nie traktowac
 `analysis.job/flow/evidence` incydentow jako generycznego core. Najpierw
 ustalic, ktora czesc jest reusable platform/capability, a ktora jest
