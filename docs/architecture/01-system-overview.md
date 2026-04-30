@@ -94,8 +94,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis`
   Wspolne DTO, wynik i wyjatki analizy.
 - `pl.mkn.incidenttracker.agenttools`
-  Neutralne kontrakty reusable tools/capability uzywane przez adaptery, MCP
-  wrappers i platforme AI, np. hidden tool context keys i DB tool contracts.
+  Neutralne kontrakty reusable tools/capability uzywane przez MCP wrappers i
+  platforme AI, np. hidden tool context keys. Adaptery nie powinny importowac
+  `agenttools`.
 - `pl.mkn.incidenttracker.common`
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.analysis.flow`
@@ -146,7 +147,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Query-based adapter curated operational context catalog i filtrowania go do
   reuse'u przez evidence i kolejne capability.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.preparation`
-  Budowanie konfiguracji, promptu, skilli i requestu do Copilot SDK.
+  Obecne budowanie konfiguracji, promptu, skilli i requestu do Copilot SDK.
+  To jest stan przejsciowy; docelowo incident prompt, skille, tool policy,
+  hidden context i parser odpowiedzi maja byc parametrami feature'a.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`

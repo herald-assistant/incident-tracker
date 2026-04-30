@@ -423,3 +423,33 @@ Kolejnosc prac:
 
 Dopiero po tych warstwach warto dodawac wieksze zmiany, np. soft repair,
 multi-stage flow, routing modeli albo alternatywne delivery mode artefaktow.
+
+## 22. Docelowo Copilot jest parametryzowana platforma runtime
+
+Docelowy `aiplatform.copilot` nie jest wlascicielem analizy incydentu. To
+warstwa, ktora zna Copilot SDK, lifecycle sesji, `SessionConfig`, allowliste
+tools, hidden context jako mechanizm, invocation handler, policies, telemetryke
+i techniczne eventy.
+
+Feature ma przekazac platformie gotowa konfiguracje uruchomienia, np.:
+
+- prompt albo gotowy input do modelu,
+- model i `reasoningEffort`,
+- skille albo katalogi skilli,
+- tool definitions/callbacks oraz allowliste `availableTools`,
+- hidden tool context jako mape danych sesji,
+- evidence sink/listeners dla wynikow tooli,
+- parser albo handler odpowiedzi feature'a.
+
+Platforma nie powinna sama wybierac incident promptu, incident skilli,
+GitLab/DB/Elastic tool policy ani JSON response contractu incydentu. Nie
+powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
+`gitLabBranch` albo `gitLabGroup`.
+
+Stan obecny jest przejsciowy: `analysis.ai.copilot.preparation` i czesc
+`analysis.ai.copilot.tools` nadal zawieraja incident-specific prompt, coverage,
+policy i capture evidence. Podczas ekstrakcji do `aiplatform.copilot` te klasy
+trzeba rozdzielic na:
+
+- generic runtime Copilota,
+- feature-owned incident preparation/policy/skills/evidence mapping.

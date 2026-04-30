@@ -3,6 +3,34 @@
 Ten onboarding opisuje aktualny runtime providera
 `CopilotInitialAnalysisProvider`.
 
+## Kierunek Docelowy
+
+Obecny kod nadal laczy runtime Copilot SDK z przygotowaniem analizy incydentu.
+Docelowo `aiplatform.copilot` ma byc parametryzowana platforma wykonania, a nie
+wlasnoscia incident feature'a.
+
+Platforma powinna znac:
+
+- Copilot SDK i lifecycle sesji,
+- `SessionConfig`, allowliste tools i hidden context jako mechanizmy,
+- tool invocation handler, policies, budget, telemetry i eventy,
+- techniczne ladowanie skilli i delivery promptu, jezeli nie jest
+  feature-specific.
+
+Feature powinien przekazac platformie:
+
+- prompt albo gotowy input do modelu,
+- model options,
+- skill resources,
+- tool definitions/callbacks oraz `availableTools`,
+- hidden tool context jako mape,
+- evidence sink/listeners,
+- response parser albo handler wyniku.
+
+Incident prompt, incident digest, coverage-aware tool policy, incident skill
+selection i mapowanie GitLab/DB tool evidence sa docelowo w
+`features.incidentanalysis`, nie w platform runtime.
+
 ## Najwazniejszy kontrakt
 
 Initial flow dostaje przygotowana analize przez generyczne

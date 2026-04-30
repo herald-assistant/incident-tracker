@@ -69,11 +69,13 @@ Zasady granic:
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.
 - Copilot SDK runtime jest platform adapterem AI: przygotowuje sesje,
-  allowliste tools, hidden context, execution, telemetry i capture. Nie jest
-  wlascicielem domenowej logiki analizy incydentu.
-- Dedykowane feature'y analityczne dostarczaja prompt, evidence, polityke
-  uzycia capability i kontrakt odpowiedzi. Feature moze zalezec od platformy,
-  tools i adapterow; platforma, tools i adaptery nie moga zalezec od feature'a.
+  allowliste tools, hidden context, execution, telemetry i capture jako
+  mechanike runtime. Docelowo ma dostawac te parametry od feature'a, a nie
+  sam wybierac incident prompt, skille albo tools.
+- Dedykowane feature'y analityczne dostarczaja prompt, evidence, skille,
+  hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
+  Feature moze zalezec od platformy, tools i adapterow; platforma, tools i
+  adaptery nie moga zalezec od feature'a.
 - `common` i neutralne kontrakty nie sa miejscem na wszystko. Wyciagaj tam
   tylko male, stabilne elementy, ktore faktycznie sa wspolne dla kilku
   capability albo feature'ow.
@@ -86,6 +88,10 @@ Zasady granic:
 - Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko
   `InitialAnalysisRequest` oraz `shared.evidence.AnalysisEvidenceSection`;
   nie wciskaj klas adapter-specific do prompt buildera ani kontraktu AI.
+- Docelowa platforma Copilot ma byc parametryzowana przez feature: prompt,
+  skille, available tools, hidden context, evidence sink i response parser maja
+  przychodzic w inpucie uruchomienia, a nie byc zakodowane jako stale zalozenia
+  platformy.
 - Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
   incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie,
   a `MessageOptions` dostaje tylko `setPrompt(prompt)`.
@@ -104,12 +110,15 @@ Zasady granic:
   powod wywolania. Nie przywracaj dodatkowych model-facing parametrow
   eksploracyjnych, pytan diagnostycznych ani technicznych pseudo-heurystyk do
   user-facing evidence.
-- `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
+- Obecnie `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
   `CopilotToolEvidenceSessionStore`. Pomocnicze klasy trzymaj w podpakietach
   `context`, `description`, `events`, `logging`, `policy`, a logike konkretnej
   capability w `tools.<capability>`. Generyczne helpery aplikacyjne, np.
   `JsonPayloadReader`, trzymaj poza Copilotem w `pl.mkn.incidenttracker.common`.
+  Docelowo podczas ekstrakcji do `aiplatform.copilot` zostaw tam tylko
+  mechanike runtime invocation, a incident-specific policy, skill selection i
+  evidence mapping przenies do feature'a.
 - `CopilotToolInvocationHandler` nie powinien zawierac logiki konkretnego
   toola. Walidacje i limity dodawaj jako `CopilotToolInvocationPolicy`, a
   logowanie, telemetryke i evidence capture jako listenery eventow invocation.

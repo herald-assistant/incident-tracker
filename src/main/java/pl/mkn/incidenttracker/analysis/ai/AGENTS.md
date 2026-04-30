@@ -23,13 +23,17 @@ Obejmuje:
   root aktualnego providera AI: `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
-  budowe promptu, konfiguracji klienta, tool definitions, follow-up promptu i
-  runtime skills,
+  obecna budowe promptu, konfiguracji klienta, tool definitions, follow-up
+  promptu i runtime skills. To jest stan przejsciowy: docelowo incident prompt,
+  skill selection i tool policy powinny byc parametrami feature'a przekazanymi
+  do platformy Copilot,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
-  root runtime tools z klasami wejsciowymi: `CopilotSdkToolFactory`,
+  obecny root runtime tools z klasami wejsciowymi: `CopilotSdkToolFactory`,
   `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`.
+  To jest stan przejsciowy przed rozdzieleniem platformowej mechaniki
+  invocation od incident-specific policy/capture.
   Szczegoly trzymamy w podpakietach:
   - `context/` hidden `ToolContext` i session-bound scope,
   - `description/` dekorowanie opisow tools,
@@ -66,6 +70,9 @@ Nie obejmuje:
   evidence powinny trafac do skilla albo jawnej konfiguracji preparation.
 - Skill pozostaje runtime resource aplikacji w
   `src/main/resources/copilot/skills`, a nie plikiem w `.github`.
+- Docelowo Copilot runtime nie powinien sam wybierac promptu, skilli,
+  available tools, hidden contextu ani parsera odpowiedzi dla incydentu. Te
+  elementy powinny przychodzic z feature'a w platformowym run request.
 - Tool factory ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
   ich implementacje.
 - `CopilotSdkToolFactory` ma tylko tworzyc `ToolDefinition`; wykonanie zostaje
@@ -75,8 +82,10 @@ Nie obejmuje:
   niego logiki konkretnego toola, metryk, logowania ani mapowania evidence.
 - Nowe walidacje i limity runtime dodawaj jako `CopilotToolInvocationPolicy`,
   a side-effecty jako listenery eventow invocation.
-- Logike per capability, np. GitLab albo DB evidence capture, trzymaj w
-  `copilot/tools/<capability>`.
+- Obecnie logike per capability, np. GitLab albo DB evidence capture, trzymaj
+  w `copilot/tools/<capability>`. Przy ekstrakcji do `aiplatform.copilot`
+  przenies incident-specific policy i mapping evidence do feature'a, a w
+  platformie zostaw generyczna mechanike invocation.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.

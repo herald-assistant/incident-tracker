@@ -52,21 +52,29 @@ ponizszych zasad:
   szczegolow providera Copilot SDK.
 - `analysis.ai.copilot` to aktualny adapter platformy AI runtime. Moze
   korzystac z reusable tools/MCP, budowac session config, allowliste,
-  hidden context, telemetryke i evidence capture, ale nie powinien stawac sie
-  wlascicielem domenowej logiki analizy incydentu.
+  hidden context, telemetryke i evidence capture, ale docelowo ma robic to na
+  podstawie parametrow przekazanych przez feature. Nie powinien stawac sie
+  wlascicielem domenowej logiki analizy incydentu, promptu, skilli ani polityki
+  doboru tools.
 - `analysis.job`, `analysis.flow` i incident-specific evidence/prompt sa
   feature'em analizy incydentow. Moga zalezec od platformy, tools i adapterow,
   ale platforma, tools i adaptery nie moga zalezec od tego feature'a.
 - Przyszle feature'y, np. analiza dokumentacji, chatboty albo generowanie
   scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
-  policy uzycia capability i kontrakt odpowiedzi, zamiast reuse'owac
-  incidentowy flow jako generyczny core.
+  skille, hidden context, policy uzycia capability i kontrakt odpowiedzi,
+  zamiast reuse'owac incidentowy flow jako generyczny core.
 - `common` i neutralne kontrakty maja pozostac male. Wyciagaj tam tylko te
   typy, ktore naprawde sa wspolne dla kilku capability albo feature'ow.
 
 Praktyczna konsekwencja: cykle importow usuwamy przez oddanie kontraktu do
 warstwy, ktora jest jego wlascicielem, a nie przez przepinanie zaleznosci na
 skroty. Brak cykli jest skutkiem zdrowych granic, nie celem samym w sobie.
+
+Docelowy runtime Copilota ma byc parametryzowany: feature przekazuje prompt,
+skille, allowliste tools, hidden context, evidence sink i response parser.
+Platforma zna Copilot SDK, session lifecycle, tool invocation, policies,
+telemetryke i techniczna obsluge wynikow, ale nie wybiera incidentowych tools
+ani nie zna `correlationId` jako stalego wymogu platformowego.
 
 ## Runtime Ownership Flow
 
@@ -171,7 +179,7 @@ flowchart LR
 | `analysis.evidence -> analysis.adapter` | 41 | oczekiwane | Providerzy evidence deleguja do adapterow systemow zewnetrznych. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
-| `analysis.ai -> analysis.mcp` | 26 | oczekiwane dla Copilota | Copilot policy, telemetry i capture znaja nazwy tools i DTO capability. |
+| `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
 | `analysis.ai -> agenttools` | 1 | oczekiwane przejsciowo | Copilot runtime buduje hidden `ToolContext` z neutralnych context keys. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |

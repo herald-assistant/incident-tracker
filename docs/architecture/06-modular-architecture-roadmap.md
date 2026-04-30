@@ -133,8 +133,8 @@ Warstwa platformy AI posiada:
 
 - runtime Copilot SDK,
 - model/options provider,
-- przygotowanie sesji,
-- `SessionConfig`, allowliste tools i hidden context,
+- przygotowanie technicznej sesji na podstawie parametrow feature'a,
+- `SessionConfig`, allowliste tools i hidden context jako mechanizmy runtime,
 - generic tool invocation handler,
 - policies, budget, telemetry, logging i lifecycle sesji,
 - generic artifact/prompt delivery mechanics tam, gdzie nie sa feature-specific.
@@ -144,12 +144,30 @@ Warstwa platformy AI nie posiada:
 - incident-specific response contract,
 - incident evidence pipeline,
 - incident digest jako domenowej tresci,
+- incident promptu ani incident skilli jako wlasnosci platformy,
+- decyzji, ktore tools sa wlaczone dla konkretnego feature'a,
+- semantyki GitLab/DB/Elastic jako stalego zestawu analizy incydentu,
 - `correlationId` jako zalozenia platformowego,
 - wiedzy, ze jedynym feature'em jest analiza incydentu.
 
-Platforma powinna dostawac od feature'a gotowe dane uruchomienia, np. prompt,
-available tools, hidden context i sink dla tool evidence. Feature decyduje,
-jakie evidence ma znaczenie i jaki jest kontrakt odpowiedzi.
+Platforma powinna byc parametryzowanym runtime. Feature dostarcza gotowe dane
+uruchomienia, a platforma tylko wykonuje je przez Copilot SDK.
+
+Docelowy input platformy, roboczo `CopilotRunRequest`, powinien niesc:
+
+- prompt albo gotowe message/input do modelu,
+- model options, np. model i reasoning effort,
+- skill resources albo skill directories wybrane przez feature,
+- tool definitions/callbacks oraz allowliste `availableTools`,
+- hidden tool context jako neutralna mapa, nie jako incidentowy record,
+- techniczne policies/budget hooks, jesli maja dotyczyc tej sesji,
+- evidence sink/listeners dla wyniku tool invocation,
+- response handler albo parser wyniku feature'a.
+
+Feature decyduje, jakie evidence ma znaczenie, jakie tools sa dostepne, jakie
+skille sa ladowane i jaki jest kontrakt odpowiedzi. Platforma nie powinna
+rekonstruowac tych decyzji na podstawie `correlationId`, nazw tooli albo
+incidentowych coverage heurystyk.
 
 ### `features.incidentanalysis`
 
@@ -161,6 +179,9 @@ Feature analizy incydentow posiada:
 - incident-specific typed evidence views,
 - resolved facts, np. `environment`, `gitLabBranch`, `gitLabGroup`,
 - incident prompt, digest i response contract,
+- incident skill resources i zasady ich doboru,
+- incident tool access policy oraz hidden tool context dla GitLab/DB/Elastic,
+- mapowanie tool evidence na operator-facing evidence konkretnej analizy,
 - mapowanie wyniku na UI/operator API.
 
 Feature moze korzystac z integrations, tools i platformy AI, ale zadna z tych
@@ -174,7 +195,7 @@ scenariuszy, powinny dostarczyc wlasne:
 - publiczne entrypointy albo command API,
 - source/evidence pipeline,
 - prompt i response contract,
-- polityke uzycia tools,
+- skille, polityke uzycia tools i hidden tool context,
 - mapping wyniku na swoj UI albo API.
 
 Nie powinny reuse'owac incidentowego `flow/job/evidence` jako generycznego
@@ -333,14 +354,21 @@ Kroki:
 1. Przeniesc generic execution/session/tool invocation/telemetry do
    `aiplatform.copilot`.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
-   options, available tools, hidden context i evidence sink, ale nie zaklada
-   `correlationId`.
+   options, skill resources, available tools, hidden context, evidence sink i
+   response handler/parser, ale nie zaklada `correlationId`.
 3. Przeniesc model options provider do platformy, a feature endpoint
    `/analysis/ai/options` zostawic jako fasade na platforme.
 4. Oddzielic generic artifact delivery mechanics od incident-specific digestu.
 5. Przeniesc incident prompt, incident digest i incident response JSON contract
    do `features.incidentanalysis`.
-6. Nie przenosic `InitialAnalysisRequest` do platformy w obecnym ksztalcie,
+6. Przeniesc incident tool access policy, incident coverage heurystyki,
+   incident skill selection i operator-facing tool evidence mapping do
+   `features.incidentanalysis`.
+7. Platformowy tool invocation handler moze znac mechanike callbackow,
+   allowlisty, policies, hidden context map i telemetryki, ale nie powinien
+   znac nazw capability jako reguly domenowej, np. "GitLab przed DB dla
+   incydentu".
+8. Nie przenosic `InitialAnalysisRequest` do platformy w obecnym ksztalcie,
    bo zawiera incident-specific scope: `correlationId`, `environment`,
    `gitLabBranch`, `gitLabGroup`.
 
@@ -348,8 +376,11 @@ Kryterium done:
 
 - `aiplatform.copilot` nie importuje `features.incidentanalysis`,
 - platforma umie uruchomic AI dla dowolnego feature'a, ktory dostarczy prompt,
-  tools policy i response handling,
-- incident-specific coverage/prompt/digest nie mieszkaja w platform runtime.
+  skille, tools, hidden context, evidence sink i response handling,
+- incident-specific coverage/prompt/digest/tool policy/tool evidence mapping
+  nie mieszkaja w platform runtime,
+- dodanie drugiego feature'a nie wymaga dodawania warunkow w
+  `aiplatform.copilot` po nazwach tools albo typach incident evidence.
 
 ## Faza 6: Ekstrakcja `features.incidentanalysis`
 
@@ -364,6 +395,8 @@ analysis.evidence -> features.incidentanalysis.evidence
 analysis.ai.initial/chat contracts specific to incident
                  -> features.incidentanalysis.ai
 incident prompt/digest/coverage
+                 -> features.incidentanalysis.ai
+incident skill selection/tool policy/hidden context
                  -> features.incidentanalysis.ai
 ```
 
@@ -380,6 +413,7 @@ Kryterium done:
 
 - feature incident analysis importuje platforme, tools i integrations,
 - zadna z tych warstw nie importuje feature'a,
+- feature sklada `CopilotRunRequest` albo rownowazny request platformowy,
 - wszystkie incident-specific heurystyki sa lokalne dla feature'a.
 
 ## Faza 7: Enforcement Architektoniczny
@@ -420,9 +454,11 @@ Minimalny dowod:
 
 1. feature ma wlasny request/response,
 2. feature uzywa `aiplatform.copilot`,
-3. feature wybiera tools z `agenttools`,
-4. feature nie importuje `features.incidentanalysis`,
-5. reusable warstwy nie importuja nowego feature'a.
+3. feature przekazuje do platformy wlasny prompt, skille, tools, hidden context
+   i parser odpowiedzi,
+4. feature wybiera tools z `agenttools`,
+5. feature nie importuje `features.incidentanalysis`,
+6. reusable warstwy nie importuja nowego feature'a.
 
 Kryterium done:
 
@@ -459,6 +495,8 @@ gdy dotykamy danego obszaru:
   czy w osobnym `api.integrations`?
 - Czy `analysis.ai.initial` zostaje feature-specific, czy rozbijamy go na
   feature contract plus platform run contract?
+- Jaki bedzie docelowy ksztalt `CopilotRunRequest`: nazwa, pola, ownership
+  `AutoCloseable` zasobow i kontrakt response parsera?
 - Czy wprowadzamy osobny Maven module dopiero po stabilizacji pakietow?
 
 Domyslna odpowiedz KISS: najpierw pakiety i compile-time imports, Maven modules
@@ -468,6 +506,8 @@ dopiero pozniej, jesli beda potrzebne.
 
 - Nie przenosic wszystkiego do `common` albo `shared`.
 - Nie robic platformy AI, ktora zna `correlationId` jako obowiazkowe pole.
+- Nie robic platformy AI, ktora sama wybiera incident prompt, incident skille,
+  GitLab/DB/Elastic tool policy albo parser wyniku incydentu.
 - Nie robic tools, ktore importuja Copilota.
 - Nie robic adapterow, ktore wiedza o evidence pipeline.
 - Nie robic drugiego feature'a przez kopiowanie incident `job/flow`.
