@@ -6,7 +6,6 @@ import com.github.copilot.sdk.json.ToolInvocation;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
@@ -98,12 +97,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 .findFirst()
                 .orElseThrow();
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
-        registry.registerSession(sessionContext.copilotSessionId(), new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSection.set(section);
-            }
-        });
+        registry.registerSession(sessionContext.copilotSessionId(), capturedSection::set);
 
         var invocation = new ToolInvocation()
                 .setSessionId(sessionContext.copilotSessionId())

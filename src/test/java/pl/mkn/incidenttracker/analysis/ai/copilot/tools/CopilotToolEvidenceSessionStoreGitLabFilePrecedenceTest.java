@@ -2,7 +2,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationFinishedEvent;
@@ -33,12 +32,9 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
         var toolEvidenceListener = gitLabToolEvidenceListener(registry);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
         var updateCount = new AtomicInteger();
-        registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSection.set(section);
-                updateCount.incrementAndGet();
-            }
+        registry.registerSession("session-1", section -> {
+            capturedSection.set(section);
+            updateCount.incrementAndGet();
         });
 
         capture(

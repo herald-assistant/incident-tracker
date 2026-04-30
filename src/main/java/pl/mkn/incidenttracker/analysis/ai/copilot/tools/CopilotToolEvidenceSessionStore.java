@@ -3,7 +3,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -12,20 +11,23 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiPredicate;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Optional;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 
 @Component
 @Slf4j
 public class CopilotToolEvidenceSessionStore {
 
     private static final String TOOL_CAPTURE_ORDER_ATTRIBUTE = "toolCaptureOrder";
+    private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
+    };
 
     private final Map<String, SessionToolEvidence> sessions = new ConcurrentHashMap<>();
 
-    public void registerSession(String sessionId, AnalysisAiToolEvidenceListener listener) {
+    public void registerSession(String sessionId, Consumer<AnalysisEvidenceSection> evidenceSink) {
         if (!StringUtils.hasText(sessionId)) {
             return;
         }
@@ -33,7 +35,7 @@ public class CopilotToolEvidenceSessionStore {
         sessions.put(
                 sessionId,
                 new SessionToolEvidence(
-                        listener != null ? listener : AnalysisAiToolEvidenceListener.NO_OP
+                        evidenceSink != null ? evidenceSink : NO_OP_EVIDENCE_SINK
                 )
         );
     }
@@ -67,7 +69,7 @@ public class CopilotToolEvidenceSessionStore {
         }
 
         try {
-            session.listener().onToolEvidenceUpdated(section);
+            session.evidenceSink().accept(section);
         } catch (RuntimeException exception) {
             log.warn(
                     "Failed to publish captured tool evidence sessionId={} toolName={} reason={}",
@@ -80,14 +82,14 @@ public class CopilotToolEvidenceSessionStore {
     }
 
     public static record SessionToolEvidence(
-            AnalysisAiToolEvidenceListener listener,
+            Consumer<AnalysisEvidenceSection> evidenceSink,
             LinkedHashMap<EvidenceSectionKey, LinkedHashMap<String, AnalysisEvidenceItem>> itemsBySection,
             LinkedHashMap<String, Integer> orderByItemKey,
             AtomicInteger nextOrder
     ) {
-        SessionToolEvidence(AnalysisAiToolEvidenceListener listener) {
+        SessionToolEvidence(Consumer<AnalysisEvidenceSection> evidenceSink) {
             this(
-                    listener,
+                    evidenceSink,
                     new LinkedHashMap<>(),
                     new LinkedHashMap<>(),
                     new AtomicInteger(1)

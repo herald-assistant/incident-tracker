@@ -207,7 +207,8 @@ nie liczy rejection jako wykonanego tool calla.
 
 Invocation handler publikuje terminalny event `Finished(COMPLETED)` po udanym
 callbacku. Dedykowane listenery tool capability publikuja tool evidence przez
-`CopilotToolEvidenceSessionStore`:
+`CopilotToolEvidenceSessionStore`. Store dostaje neutralny session-bound sink,
+a provider Copilota adaptuje go do `AnalysisAiToolEvidenceListener`:
 
 - `gitlab/tool-fetched-code`,
 - `gitlab/tool-discovery`,

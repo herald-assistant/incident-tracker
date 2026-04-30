@@ -276,8 +276,9 @@ Spring tools. Przyklady:
 
 ## 16. Tool evidence jest czescia audytu
 
-`CopilotToolEvidenceSessionStore` publikuje tool evidence przez
-`AnalysisAiToolEvidenceListener`.
+`CopilotToolEvidenceSessionStore` publikuje tool evidence przez neutralny
+session-bound sink `Consumer<AnalysisEvidenceSection>`. Provider AI adaptuje
+ten sink do `AnalysisAiToolEvidenceListener` na granicy wykonania.
 
 Capture obejmuje:
 

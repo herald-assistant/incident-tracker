@@ -147,7 +147,9 @@ bledu jako pustego wyniku.
 zaktualizowane `AnalysisEvidenceSection`. Dla poczatkowej analizy job flow
 publikuje je jako top-level `toolEvidenceSections`, a dla follow-up chatu
 zapisuje przy konkretnej odpowiedzi assistant w
-`chatMessages[].toolEvidenceSections`.
+`chatMessages[].toolEvidenceSections`. Store dostaje neutralny session-bound
+sink, a adapter do `AnalysisAiToolEvidenceListener` zostaje po stronie providera
+AI.
 
 Capture obejmuje:
 

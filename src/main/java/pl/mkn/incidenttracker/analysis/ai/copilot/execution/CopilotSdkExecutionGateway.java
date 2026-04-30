@@ -14,7 +14,9 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
+import java.util.function.Consumer;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -78,7 +80,7 @@ public class CopilotSdkExecutionGateway {
 
                         toolEvidenceSessionStore.registerSession(
                                 session.getSessionId(),
-                                toolEvidenceListener
+                                toolEvidenceSink(toolEvidenceListener)
                         );
                         toolBudgetRegistry.registerSession(session.getSessionId());
 
@@ -202,6 +204,13 @@ public class CopilotSdkExecutionGateway {
                     data.messagesLength()
             );
         }
+    }
+
+    private Consumer<AnalysisEvidenceSection> toolEvidenceSink(
+            AnalysisAiToolEvidenceListener listener
+    ) {
+        var effectiveListener = listener != null ? listener : AnalysisAiToolEvidenceListener.NO_OP;
+        return effectiveListener::onToolEvidenceUpdated;
     }
 
     private String buildFailureMessage(Throwable rootCause) {

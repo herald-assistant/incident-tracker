@@ -86,6 +86,9 @@ Nie obejmuje:
 - `CopilotToolInvocationHandler` ma pozostac czysta granica invocation:
   policies, hidden context, callback, eventy i parsing wyniku. Nie dopisuj do
   niego logiki konkretnego toola, metryk, logowania ani mapowania evidence.
+- `CopilotToolEvidenceSessionStore` ma publikowac evidence przez neutralny
+  session-bound sink, a nie bezposrednio zalezec od
+  `AnalysisAiToolEvidenceListener`.
 - Nowe walidacje i limity runtime dodawaj jako `CopilotToolInvocationPolicy`,
   a side-effecty jako listenery eventow invocation.
 - Obecnie logike per capability, np. GitLab albo DB evidence capture, trzymaj

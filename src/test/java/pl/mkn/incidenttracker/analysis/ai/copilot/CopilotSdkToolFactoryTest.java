@@ -10,7 +10,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
@@ -193,12 +192,7 @@ class CopilotSdkToolFactoryTest {
                 .findFirst()
                 .orElseThrow();
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
-        registry.registerSession(sessionContext.copilotSessionId(), new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSection.set(section);
-            }
-        });
+        registry.registerSession(sessionContext.copilotSessionId(), capturedSection::set);
 
         var invocation = new ToolInvocation()
                 .setSessionId(sessionContext.copilotSessionId())
@@ -246,12 +240,7 @@ class CopilotSdkToolFactoryTest {
                 .findFirst()
                 .orElseThrow();
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
-        registry.registerSession(sessionContext.copilotSessionId(), new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSection.set(section);
-            }
-        });
+        registry.registerSession(sessionContext.copilotSessionId(), capturedSection::set);
 
         var invocation = new ToolInvocation()
                 .setSessionId(sessionContext.copilotSessionId())

@@ -2,7 +2,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
@@ -32,12 +31,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
         var registry = toolEvidenceSessionStore(objectMapper);
         var databaseToolEvidenceListener = databaseToolEvidenceListener(registry);
         var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
-        registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSection.set(section);
-            }
-        });
+        registry.registerSession("session-1", capturedSection::set);
 
         capture(
                 databaseToolEvidenceListener,
@@ -82,12 +76,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
         var gitLabToolEvidenceListener = gitLabToolEvidenceListener(registry);
         var databaseToolEvidenceListener = databaseToolEvidenceListener(registry);
         var capturedSections = new ArrayList<AnalysisEvidenceSection>();
-        registry.registerSession("session-1", new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSections.add(section);
-            }
-        });
+        registry.registerSession("session-1", capturedSections::add);
 
         capture(
                 gitLabToolEvidenceListener,

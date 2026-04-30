@@ -2,7 +2,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
@@ -30,7 +29,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         var registry = toolEvidenceSessionStore(objectMapper);
         var toolEvidenceListener = gitLabToolEvidenceListener(registry);
         var capturedSections = new ArrayList<AnalysisEvidenceSection>();
-        registry.registerSession("session-1", listener(capturedSections));
+        registry.registerSession("session-1", capturedSections::add);
 
         capture(
                 toolEvidenceListener,
@@ -154,15 +153,6 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         assertEquals("gitlab_find_class_references", classAttributes.get("toolName"));
         assertEquals("OrderEntity", classAttributes.get("searchedClass"));
         assertEquals("4", classAttributes.get("toolCaptureOrder"));
-    }
-
-    private AnalysisAiToolEvidenceListener listener(ArrayList<AnalysisEvidenceSection> capturedSections) {
-        return new AnalysisAiToolEvidenceListener() {
-            @Override
-            public void onToolEvidenceUpdated(AnalysisEvidenceSection section) {
-                capturedSections.add(section);
-            }
-        };
     }
 
     private Map<String, String> attributes(AnalysisEvidenceItem item) {
