@@ -42,6 +42,44 @@ Przed wieksza zmiana zacznij od:
   - AI-guided fetching przez tools.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
 
+## Turbo wazne: docelowy model rozszerzalnosci
+
+Tego nie wolno zgubic przy refaktorach, nowych feature'ach ani pracy agentow:
+incident analysis jest pierwszym dedykowanym feature'em, ale repo ma pozostac
+otwarte na kolejne analizy i inne sposoby ekspozycji tych samych capability.
+
+Docelowy kierunek warstw:
+
+1. adaptery/integracje sa reusable capability do systemow zewnetrznych,
+2. tools/MCP sa reusable warstwa narzedzi nad adapterami,
+3. Copilot SDK jest aktualna platforma uruchamiania AI, ktora korzysta z tools,
+4. analiza incydentow jest dedykowanym feature'em skonfigurowanym na platformie,
+5. kolejne analizy, np. dokumentacji, chatboty albo generowanie scenariuszy,
+   maja korzystac z tej samej platformy i shared capability bez zaleznosci od
+   feature'u incydentowego.
+
+Zasady granic:
+
+- `analysis.adapter` nie moze zalezec od `analysis.evidence`,
+  `analysis.mcp`, `analysis.ai`, `analysis.flow` ani `analysis.job`. Adaptery
+  maja byc mozliwe do reuse'u przez evidence pipeline, tools/MCP i zwykle
+  endpointy REST.
+- Tools/MCP nie powinny zalezec od dedykowanej analizy incydentow ani od
+  szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
+  agenta albo inna platforme AI.
+- Copilot SDK runtime jest platform adapterem AI: przygotowuje sesje,
+  allowliste tools, hidden context, execution, telemetry i capture. Nie jest
+  wlascicielem domenowej logiki analizy incydentu.
+- Dedykowane feature'y analityczne dostarczaja prompt, evidence, polityke
+  uzycia capability i kontrakt odpowiedzi. Feature moze zalezec od platformy,
+  tools i adapterow; platforma, tools i adaptery nie moga zalezec od feature'a.
+- `common` i neutralne kontrakty nie sa miejscem na wszystko. Wyciagaj tam
+  tylko male, stabilne elementy, ktore faktycznie sa wspolne dla kilku
+  capability albo feature'ow.
+- Usuwajac cykle importow, preferuj przeniesienie kontraktu do warstwy, ktora
+  jest jego wlascicielem. Nie lam granic tylko po to, zeby szybciej zamknac
+  compile-time graph.
+
 ## Niezmienniki Copilot SDK i optymalizacji
 
 - Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko

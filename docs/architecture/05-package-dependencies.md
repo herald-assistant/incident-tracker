@@ -14,6 +14,57 @@ rzeczywiste importy Javy.
 Import graph ponizej powstal ze skanu `src/main/java` z uwzglednieniem
 zwyklych i static importow.
 
+## Turbo Wazne: Model Rozszerzalnosci
+
+Compile-time graph ma wspierac docelowy model produktu, a nie tylko wygladac
+ladnie w diagramie. Incident analysis jest pierwszym dedykowanym feature'em,
+ale adaptery, tools/MCP i runtime AI maja pozostac reusable dla kolejnych
+analiz oraz innych sposobow ekspozycji capability.
+
+Docelowa interpretacja warstw:
+
+```text
+dedykowane feature'y analityczne
+  -> platforma AI runtime
+  -> reusable tools/MCP
+  -> reusable adaptery/integracje
+  -> systemy zewnetrzne
+
+dedykowane feature'y analityczne
+  -> deterministic evidence / feature orchestration
+  -> reusable adaptery/integracje
+```
+
+W obecnym kodzie te warstwy nadal mieszkaja pod `analysis.*`, bo incident
+analysis byl pierwszym use case'em. Nie oznacza to, ze wszystkie pakiety pod
+`analysis` sa feature-specific. Przy kazdej wiekszej zmianie trzeba pilnowac
+ponizszych zasad:
+
+- `analysis.adapter` to reusable capability integracyjne. Nie moze zalezec od
+  evidence pipeline, MCP/tools, Copilota, flow ani job API. Ten sam adapter ma
+  byc uzywalny przez provider evidence, tool, helper endpoint REST albo
+  przyszly feature.
+- `analysis.mcp` i przyszla warstwa tools to reusable ekspozycja capability
+  nad adapterami. Nie powinny zalezec od dedykowanej analizy incydentow ani od
+  szczegolow providera Copilot SDK.
+- `analysis.ai.copilot` to aktualny adapter platformy AI runtime. Moze
+  korzystac z reusable tools/MCP, budowac session config, allowliste,
+  hidden context, telemetryke i evidence capture, ale nie powinien stawac sie
+  wlascicielem domenowej logiki analizy incydentu.
+- `analysis.job`, `analysis.flow` i incident-specific evidence/prompt sa
+  feature'em analizy incydentow. Moga zalezec od platformy, tools i adapterow,
+  ale platforma, tools i adaptery nie moga zalezec od tego feature'a.
+- Przyszle feature'y, np. analiza dokumentacji, chatboty albo generowanie
+  scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
+  policy uzycia capability i kontrakt odpowiedzi, zamiast reuse'owac
+  incidentowy flow jako generyczny core.
+- `common` i neutralne kontrakty maja pozostac male. Wyciagaj tam tylko te
+  typy, ktore naprawde sa wspolne dla kilku capability albo feature'ow.
+
+Praktyczna konsekwencja: cykle importow usuwamy przez oddanie kontraktu do
+warstwy, ktora jest jego wlascicielem, a nie przez przepinanie zaleznosci na
+skroty. Brak cykli jest skutkiem zdrowych granic, nie celem samym w sobie.
+
 ## Runtime Ownership Flow
 
 Strzalka oznacza tutaj, kto inicjuje kolejny krok runtime albo do kogo
@@ -127,24 +178,24 @@ flowchart LR
 
 ## Cykle Do Pilnowania
 
-Aktualny kod ma kilka cykli na poziomie top-level pakietow. Nie wszystkie sa
-od razu problemem, ale kazdy nowy import w tych miejscach powinien byc
-swiadomy.
+Aktualny kod ma kilka cykli na poziomie top-level pakietow. To jest stan
+operacyjny, a nie wzorzec dla nowych zmian. Kazdy nowy import w tych miejscach
+powinien przyblizac kod do modelu reusable adaptery -> reusable tools/MCP ->
+platforma AI -> dedykowane feature'y, a nie utrwalac cykl.
 
 1. `analysis.ai <-> analysis.mcp`
 
    Copilot zna nazwy tools i capability DTOs, a MCP DTOs znaja
-   `CopilotToolContextKeys`. Poniewaz Copilot jest core providerem, to jest
-   akceptowalny stan operacyjny, ale nie powinien rosnac poza tool policy,
-   telemetryke, context keys i capability contracts.
+   `CopilotToolContextKeys`. Docelowo context keys i tool contracts powinny byc
+   neutralne dla platformy AI, zeby tools/MCP mozna bylo podpiac pod inny loop
+   agenta niz Copilot SDK.
 
 2. `analysis.adapter.database <-> analysis.mcp.database`
 
    MCP deleguje do DB adaptera, ale DB adapter importuje DTO tools z MCP.
-   Jezeli ten obszar bedzie dalej porzadkowany, najbardziej naturalny ruch to
-   przeniesienie typed DB request/result/scope/operator contracts do neutralnego
-   pakietu capability, a w `analysis.mcp.database` zostawienie tylko ekspozycji
-   Spring AI tools.
+   Najbardziej naturalny ruch to przeniesienie typed DB
+   request/result/scope/operator contracts do neutralnego pakietu capability, a
+   w `analysis.mcp.database` zostawienie tylko ekspozycji Spring AI tools.
 
 3. `analysis.adapter.dynatrace <-> analysis.evidence`
 
@@ -157,12 +208,13 @@ swiadomy.
 
    To wynika z tego, ze generyczny model evidence (`AnalysisEvidenceSection`)
    mieszka w `analysis.ai.evidence`, a Copilot coverage/artifacts czytaja typed
-   evidence view helpers. Dopoki granica AI pozostaje generyczna dla flow i
-   providerow, nie dokladac provider-specific klas do publicznych requestow AI.
+   evidence view helpers. Docelowo generyczny model evidence powinien byc
+   neutralny wzgledem AI, a Copilot moze go konsumowac razem z typed evidence
+   view helpers bez wciskania provider-specific klas do publicznych requestow AI.
 
 ## Kierunek Dla Nowych Zmian
 
-Preferowany kierunek kompilacyjny dla nowych feature'ow:
+Preferowany kierunek kompilacyjny dla obecnych pakietow:
 
 ```text
 analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
@@ -182,6 +234,11 @@ Unikac nowych zaleznosci:
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
   facts do statusu UI.
+
+Przy dodawaniu kolejnych dedykowanych analiz nie traktowac
+`analysis.job/flow/evidence` incydentow jako generycznego core. Najpierw
+ustalic, ktora czesc jest reusable platform/capability, a ktora jest
+feature-specific dla danej analizy.
 
 Praktyczna zasada: jesli nowa klasa zaczyna potrzebowac importu "w gore" do
 pakietu bardziej orchestration/UI/provider-specific, najpierw sprawdzic, czy
