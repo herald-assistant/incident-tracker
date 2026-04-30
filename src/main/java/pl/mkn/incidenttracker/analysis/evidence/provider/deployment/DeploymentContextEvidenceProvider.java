@@ -3,7 +3,6 @@ package pl.mkn.incidenttracker.analysis.evidence.provider.deployment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentQuery;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
@@ -11,6 +10,7 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
+import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceIncidentQueryFactory;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.ArrayList;
@@ -109,7 +109,7 @@ public class DeploymentContextEvidenceProvider implements AnalysisEvidenceProvid
     }
 
     private AnalysisEvidenceItem toDynatraceLookupItem(String correlationId, ElasticLogEvidenceView logEvidence) {
-        var query = DynatraceIncidentQuery.from(correlationId, logEvidence);
+        var query = DynatraceIncidentQueryFactory.from(correlationId, logEvidence);
         if (query == null) {
             return null;
         }

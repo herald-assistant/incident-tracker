@@ -146,7 +146,6 @@ flowchart LR
     MCP -.-> AI
 
     ADAPTER -.-> MCP
-    ADAPTER -.-> EVIDENCE
 
     API["api"] --> ADAPTER
     API --> FLOW
@@ -174,7 +173,6 @@ flowchart LR
 | `analysis.mcp -> analysis.adapter` | 7 | oczekiwane | Spring AI tools deleguja do adapterow/capability services. |
 | `analysis.mcp -> analysis.ai` | 16 | do obserwacji | Tool DTOs importuja `CopilotToolContextKeys`. To tworzy sprzezenie MCP z aktualnym providerem Copilot. |
 | `analysis.adapter -> analysis.mcp` | 9 | do obserwacji | DB adapter uzywa `DatabaseToolDtos`, `DbToolScope` i operatorow z pakietu MCP. |
-| `analysis.adapter -> analysis.evidence` | 1 | do obserwacji | `DynatraceIncidentQuery.from(...)` zna `ElasticLogEvidenceView`. |
 | `api -> analysis.adapter` | 6 | oczekiwane | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
@@ -200,14 +198,7 @@ platforma AI -> dedykowane feature'y, a nie utrwalac cykl.
    request/result/scope/operator contracts do neutralnego pakietu capability, a
    w `analysis.mcp.database` zostawienie tylko ekspozycji Spring AI tools.
 
-3. `analysis.adapter.dynatrace <-> analysis.evidence`
-
-   Evidence provider uzywa adaptera Dynatrace, ale `DynatraceIncidentQuery`
-   buduje sie bezposrednio z `ElasticLogEvidenceView`. Czytelniejsza granica na
-   przyszlosc: factory z `ElasticLogEvidenceView` trzymac w evidence providerze,
-   a adapterowi przekazywac juz czysty `DynatraceIncidentQuery`.
-
-4. `analysis.ai <-> analysis.evidence`
+3. `analysis.ai <-> analysis.evidence`
 
    To wynika z tego, ze generyczny model evidence (`AnalysisEvidenceSection`)
    mieszka w `analysis.ai.evidence`, a Copilot coverage/artifacts czytaja typed
@@ -237,6 +228,12 @@ Unikac nowych zaleznosci:
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
   facts do statusu UI.
+
+Zamkniete krawedzie, ktorych nie przywracac:
+
+- `analysis.adapter -> analysis.evidence`: adapter Dynatrace nie buduje juz
+  query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
+  evidence providerow.
 
 Przy dodawaniu kolejnych dedykowanych analiz nie traktowac
 `analysis.job/flow/evidence` incydentow jako generycznego core. Najpierw

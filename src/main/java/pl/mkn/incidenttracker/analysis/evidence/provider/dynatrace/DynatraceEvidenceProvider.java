@@ -111,7 +111,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             );
         }
 
-        var query = DynatraceIncidentQuery.from(context.correlationId(), logEvidence);
+        var query = DynatraceIncidentQueryFactory.from(context.correlationId(), logEvidence);
         if (query == null) {
             return statusOnlySection(
                     buildCollectionStatusItem(
