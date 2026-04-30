@@ -9,6 +9,9 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisRunAssembler;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
@@ -42,12 +45,15 @@ class CopilotSdkPreparationServiceEvidenceReferencePromptTest {
         var factory = mock(CopilotSdkToolFactory.class);
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.<ToolDefinition>of());
         var service = new CopilotSdkPreparationService(
-                factory,
-                new CopilotSkillRuntimeLoader(properties),
-                artifactService(new ObjectMapper()),
-                new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
-                new CopilotPromptRenderer(),
-                new CopilotSessionConfigFactory(properties),
+                new CopilotInitialAnalysisRunAssembler(
+                        factory,
+                        new CopilotSkillRuntimeLoader(properties),
+                        artifactService(new ObjectMapper()),
+                        new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
+                        new CopilotPromptRenderer(),
+                        new CopilotIncidentHiddenToolContextFactory()
+                ),
+                new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties)),
                 new CopilotSessionMetricsRegistry(new CopilotMetricsProperties())
         );
 

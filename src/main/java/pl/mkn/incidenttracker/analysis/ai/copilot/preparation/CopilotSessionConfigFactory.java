@@ -7,12 +7,10 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.PreToolUseHookOutput;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.SessionHooks;
-import com.github.copilot.sdk.json.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -41,40 +39,25 @@ public class CopilotSessionConfigFactory {
         return clientOptions;
     }
 
-    public SessionConfig sessionConfig(
-            CopilotToolSessionContext context,
-            List<ToolDefinition> tools,
-            CopilotToolAccessPolicy policy,
-            List<String> skillDirectories
-    ) {
-        return sessionConfig(context, tools, policy, skillDirectories, AnalysisAiOptions.DEFAULT);
-    }
-
-    public SessionConfig sessionConfig(
-            CopilotToolSessionContext context,
-            List<ToolDefinition> tools,
-            CopilotToolAccessPolicy policy,
-            List<String> skillDirectories,
-            AnalysisAiOptions options
-    ) {
+    public SessionConfig sessionConfig(CopilotSessionConfigRequest request) {
         var sessionConfig = new SessionConfig()
-                .setSessionId(context.copilotSessionId())
+                .setSessionId(request.context().copilotSessionId())
                 .setClientName(properties.getClientName())
                 .setWorkingDirectory(properties.getWorkingDirectory())
                 .setStreaming(false)
-                .setTools(safeList(tools))
-                .setAvailableTools(policy.availableToolNames())
-                .setSkillDirectories(safeList(skillDirectories))
-                .setHooks(toolAccessHooks(policy))
+                .setTools(request.tools())
+                .setAvailableTools(request.availableToolNames())
+                .setSkillDirectories(request.skillDirectories())
+                .setHooks(toolAccessHooks(request.availableToolNames(), request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
 
-        var model = selectedModel(options);
+        var model = selectedModel(request.options());
         if (StringUtils.hasText(model)) {
             sessionConfig.setModel(model);
         }
 
-        var reasoningEffort = selectedReasoningEffort(options);
+        var reasoningEffort = selectedReasoningEffort(request.options());
         if (StringUtils.hasText(reasoningEffort)) {
             sessionConfig.setReasoningEffort(reasoningEffort);
         }
@@ -103,16 +86,15 @@ public class CopilotSessionConfigFactory {
         };
     }
 
-    private SessionHooks toolAccessHooks(CopilotToolAccessPolicy toolAccessPolicy) {
+    private SessionHooks toolAccessHooks(List<String> availableToolNames, String deniedToolUseMessage) {
+        var allowedToolNames = safeList(availableToolNames);
         return new SessionHooks().setOnPreToolUse((input, invocation) -> {
             var toolName = input != null ? input.getToolName() : null;
-            if (toolName != null && toolAccessPolicy.availableToolNames().contains(toolName)) {
+            if (toolName != null && allowedToolNames.contains(toolName)) {
                 return CompletableFuture.completedFuture(PreToolUseHookOutput.allow());
             }
 
-            return CompletableFuture.completedFuture(PreToolUseHookOutput.deny(
-                    "Use only the inline incident artifacts and the explicitly enabled incident-analysis tools for this session."
-            ));
+            return CompletableFuture.completedFuture(PreToolUseHookOutput.deny(deniedToolUseMessage));
         });
     }
 

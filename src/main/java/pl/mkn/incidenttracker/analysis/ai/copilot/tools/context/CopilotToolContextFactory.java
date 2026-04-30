@@ -16,12 +16,7 @@ public class CopilotToolContextFactory {
         var context = new LinkedHashMap<String, Object>();
 
         if (sessionContext != null) {
-            putIfNotBlank(context, AgentToolContextKeys.ANALYSIS_RUN_ID, sessionContext.analysisRunId());
-            putIfNotBlank(context, AgentToolContextKeys.COPILOT_SESSION_ID, sessionContext.copilotSessionId());
-            putIfNotBlank(context, AgentToolContextKeys.CORRELATION_ID, sessionContext.correlationId());
-            putIfNotBlank(context, AgentToolContextKeys.ENVIRONMENT, sessionContext.environment());
-            putIfNotBlank(context, AgentToolContextKeys.GITLAB_BRANCH, sessionContext.gitLabBranch());
-            putIfNotBlank(context, AgentToolContextKeys.GITLAB_GROUP, sessionContext.gitLabGroup());
+            sessionContext.hiddenContext().forEach((key, value) -> putIfNotBlank(context, key, value));
         }
 
         if (invocation != null) {
@@ -33,9 +28,17 @@ public class CopilotToolContextFactory {
         return new ToolContext(context);
     }
 
-    private void putIfNotBlank(Map<String, Object> context, String key, String value) {
-        if (StringUtils.hasText(value)) {
-            context.put(key, value);
+    private void putIfNotBlank(Map<String, Object> context, String key, Object value) {
+        if (!StringUtils.hasText(key) || value == null) {
+            return;
         }
+        if (value instanceof String stringValue) {
+            if (!StringUtils.hasText(stringValue)) {
+                return;
+            }
+            context.put(key, stringValue);
+            return;
+        }
+        context.put(key, value);
     }
 }

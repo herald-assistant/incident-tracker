@@ -7,7 +7,6 @@ import com.github.copilot.sdk.json.PreToolUseHookInput;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
@@ -31,23 +30,16 @@ class CopilotSessionConfigFactoryTest {
         properties.setDisabledSkills(List.of("incident-analysis-gitlab-tools"));
         var factory = new CopilotSessionConfigFactory(properties);
         var tools = tools("gitlab_find_flow_context", "gitlab_read_repository_file_chunk");
-        var policy = new CopilotToolAccessPolicy(
-                tools,
-                List.of("gitlab_find_flow_context"),
-                true,
-                false,
-                true,
-                false,
-                CopilotEvidenceCoverageReport.empty()
-        );
 
         var clientOptions = factory.clientOptions();
-        var sessionConfig = factory.sessionConfig(
+        var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
                 context(),
                 tools,
-                policy,
-                List.of("C:\\runtime\\copilot_skills")
-        );
+                List.of("gitlab_find_flow_context"),
+                List.of("C:\\runtime\\copilot_skills"),
+                AnalysisAiOptions.DEFAULT,
+                "Use only the enabled test tools."
+        ));
 
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
@@ -85,13 +77,14 @@ class CopilotSessionConfigFactoryTest {
         properties.setReasoningEffort("medium");
         var factory = new CopilotSessionConfigFactory(properties);
 
-        var sessionConfig = factory.sessionConfig(
+        var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
                 context(),
                 List.of(),
-                CopilotToolAccessPolicy.empty(),
                 List.of(),
-                new AnalysisAiOptions("gpt-5.3-codex", "high")
-        );
+                List.of(),
+                new AnalysisAiOptions("gpt-5.3-codex", "high"),
+                null
+        ));
 
         assertEquals("gpt-5.3-codex", sessionConfig.getModel());
         assertEquals("high", sessionConfig.getReasoningEffort());
@@ -117,12 +110,14 @@ class CopilotSessionConfigFactoryTest {
         properties.setPermissionMode(CopilotSdkProperties.PermissionMode.DENY_ALL);
         var factory = new CopilotSessionConfigFactory(properties);
 
-        var sessionConfig = factory.sessionConfig(
+        var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
                 context(),
                 List.of(),
-                CopilotToolAccessPolicy.empty(),
+                List.of(),
+                null,
+                AnalysisAiOptions.DEFAULT,
                 null
-        );
+        ));
 
         var decision = sessionConfig.getOnPermissionRequest()
                 .handle(new PermissionRequest(), null)

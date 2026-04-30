@@ -180,7 +180,7 @@ flowchart LR
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
-| `analysis.ai -> agenttools` | 1 | oczekiwane przejsciowo | Copilot runtime buduje hidden `ToolContext` z neutralnych context keys. |
+| `analysis.ai -> agenttools` | 4 | oczekiwane przejsciowo | Copilot runtime niesie hidden context jako neutralna mape oparta o context keys. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 24 | oczekiwane | Providerzy AI, Copilot preparation i evidence capture konsumuja neutralny model evidence. |

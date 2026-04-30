@@ -22,6 +22,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -95,6 +96,7 @@ class CopilotSdkToolFactoryTest {
         assertEquals("sample/runtime", payload.get("gitLabGroup"));
         assertEquals("release/2026.04", payload.get("gitLabBranch"));
         assertEquals("zt01", payload.get("environment"));
+        assertEquals("incident-analysis", payload.get("featureName"));
         assertEquals("analysis-run-1", payload.get("copilotSessionId"));
         assertEquals("analysis-run-1", payload.get("actualCopilotSessionId"));
         assertEquals("tool-call-ctx-1", payload.get("toolCallId"));
@@ -313,13 +315,17 @@ class CopilotSdkToolFactoryTest {
     }
 
     private CopilotToolSessionContext gitLabSessionContext() {
+        var hiddenContext = new LinkedHashMap<String, Object>();
+        hiddenContext.put(AgentToolContextKeys.CORRELATION_ID, "corr-123");
+        hiddenContext.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
+        hiddenContext.put(AgentToolContextKeys.GITLAB_BRANCH, "release/2026.04");
+        hiddenContext.put(AgentToolContextKeys.GITLAB_GROUP, "sample/runtime");
+        hiddenContext.put("featureName", "incident-analysis");
+
         return new CopilotToolSessionContext(
                 "run-1",
                 "analysis-run-1",
-                "corr-123",
-                "zt01",
-                "release/2026.04",
-                "sample/runtime"
+                hiddenContext
         );
     }
 
@@ -373,6 +379,7 @@ class CopilotSdkToolFactoryTest {
                     "gitLabGroup", context.get(AgentToolContextKeys.GITLAB_GROUP),
                     "gitLabBranch", context.get(AgentToolContextKeys.GITLAB_BRANCH),
                     "environment", context.get(AgentToolContextKeys.ENVIRONMENT),
+                    "featureName", context.get("featureName"),
                     "copilotSessionId", context.get(AgentToolContextKeys.COPILOT_SESSION_ID),
                     "actualCopilotSessionId", context.get(AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID),
                     "toolCallId", context.get(AgentToolContextKeys.TOOL_CALL_ID),

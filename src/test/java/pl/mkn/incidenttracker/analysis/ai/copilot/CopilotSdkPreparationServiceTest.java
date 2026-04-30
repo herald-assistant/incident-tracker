@@ -16,6 +16,9 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisRunAssembler;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkProperties;
@@ -253,12 +256,8 @@ class CopilotSdkPreparationServiceTest {
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
         var service = new CopilotSdkPreparationService(
-                factory,
-                new CopilotSkillRuntimeLoader(properties),
-                artifactService(objectMapper),
-                policyFactory(),
-                promptRenderer(),
-                sessionConfigFactory(properties),
+                runAssembler(properties, factory),
+                preparedSessionFactory(properties),
                 metricsRegistry()
         );
 
@@ -310,12 +309,8 @@ class CopilotSdkPreparationServiceTest {
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
         var service = new CopilotSdkPreparationService(
-                factory,
-                new CopilotSkillRuntimeLoader(properties),
-                artifactService(objectMapper),
-                policyFactory(),
-                promptRenderer(),
-                sessionConfigFactory(properties),
+                runAssembler(properties, factory),
+                preparedSessionFactory(properties),
                 metricsRegistry()
         );
 
@@ -355,12 +350,8 @@ class CopilotSdkPreparationServiceTest {
                 .thenReturn(List.of(elasticTool, gitLabTool, dbTool));
 
         var service = new CopilotSdkPreparationService(
-                factory,
-                new CopilotSkillRuntimeLoader(properties),
-                artifactService(objectMapper),
-                policyFactory(),
-                promptRenderer(),
-                sessionConfigFactory(properties),
+                runAssembler(properties, factory),
+                preparedSessionFactory(properties),
                 metricsRegistry()
         );
 
@@ -487,13 +478,23 @@ class CopilotSdkPreparationServiceTest {
 
     private CopilotSdkPreparationService createService(CopilotSdkProperties properties) {
         return new CopilotSdkPreparationService(
+                runAssembler(properties, toolFactory),
+                preparedSessionFactory(properties),
+                metricsRegistry()
+        );
+    }
+
+    private CopilotInitialAnalysisRunAssembler runAssembler(
+            CopilotSdkProperties properties,
+            CopilotSdkToolFactory toolFactory
+    ) {
+        return new CopilotInitialAnalysisRunAssembler(
                 toolFactory,
                 new CopilotSkillRuntimeLoader(properties),
                 artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
-                sessionConfigFactory(properties),
-                metricsRegistry()
+                new CopilotIncidentHiddenToolContextFactory()
         );
     }
 
@@ -505,8 +506,8 @@ class CopilotSdkPreparationServiceTest {
         return new CopilotPromptRenderer();
     }
 
-    private CopilotSessionConfigFactory sessionConfigFactory(CopilotSdkProperties properties) {
-        return new CopilotSessionConfigFactory(properties);
+    private CopilotPreparedSessionFactory preparedSessionFactory(CopilotSdkProperties properties) {
+        return new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties));
     }
 
     private CopilotSessionMetricsRegistry metricsRegistry() {
