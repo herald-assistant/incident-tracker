@@ -37,6 +37,7 @@ Te dokumenty sa nadal source of truth dla architektury:
 3. `../architecture/03-runtime-flow.md`
 4. `../architecture/04-codex-continuation-guide.md`
 5. `../architecture/05-package-dependencies.md`
+6. `../architecture/06-modular-architecture-roadmap.md`
 
 Przy pracy runtime warto miec obok jeszcze:
 

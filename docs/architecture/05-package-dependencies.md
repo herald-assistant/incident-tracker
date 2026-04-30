@@ -21,6 +21,9 @@ ladnie w diagramie. Incident analysis jest pierwszym dedykowanym feature'em,
 ale adaptery, tools/MCP i runtime AI maja pozostac reusable dla kolejnych
 analiz oraz innych sposobow ekspozycji capability.
 
+Szczegolowy plan dojscia do tego modelu jest w
+`06-modular-architecture-roadmap.md`.
+
 Docelowa interpretacja warstw:
 
 ```text
