@@ -58,7 +58,7 @@ zamykaja obiektu przekazanego przez caller.
 ## 3. Evidence pipeline
 
 Evidence collector pracuje na `AnalysisContext` i zwraca liste
-`AnalysisEvidenceSection`.
+`shared.evidence.AnalysisEvidenceSection`.
 
 Typowy przebieg:
 
@@ -71,8 +71,8 @@ Typowy przebieg:
 5. opcjonalne sekcje uzupelniajace.
 
 Provider evidence powinien izolowac adapter-specific modele. Na granicy AI
-zostaja tylko generyczne `AnalysisEvidenceSection`, `AnalysisEvidenceItem` i
-`AnalysisEvidenceAttribute`.
+zostaja tylko generyczne DTO z `shared.evidence`: `AnalysisEvidenceSection`,
+`AnalysisEvidenceItem` i `AnalysisEvidenceAttribute`.
 
 ## 4. Przygotowanie Copilota
 

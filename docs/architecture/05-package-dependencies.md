@@ -128,20 +128,23 @@ flowchart LR
     JOB --> AI["analysis.ai"]
     JOB --> EVIDENCE["analysis.evidence"]
     JOB --> OPTIONS["analysis.options"]
+    JOB --> SHARED["shared"]
 
     FLOW --> EVIDENCE
     FLOW --> AI
     FLOW --> OPTIONS
     FLOW --> ADAPTER["analysis.adapter"]
+    FLOW --> SHARED
 
     EVIDENCE --> ADAPTER
-    EVIDENCE --> AI
+    EVIDENCE --> SHARED
 
     AI --> MCP["analysis.mcp"]
     AI --> AGENTTOOLS["agenttools"]
     AI --> EVIDENCE
     AI --> OPTIONS
     AI --> COMMON["common"]
+    AI --> SHARED
 
     MCP --> ADAPTER
     MCP --> AGENTTOOLS
@@ -158,20 +161,23 @@ flowchart LR
 | Krawedz importow | Liczba | Status | Co oznacza |
 | --- | ---: | --- | --- |
 | `analysis.job -> analysis.flow` | 6 | oczekiwane | Job uruchamia orchestrator i mapuje wynik flow do snapshotu UI. |
-| `analysis.job -> analysis.ai` | 13 | oczekiwane | Job trzyma chat, usage, tool evidence i zapisany `InitialAnalysisRequest` dla follow-up. |
+| `analysis.job -> analysis.ai` | 9 | oczekiwane | Job trzyma chat, usage i zapisany `InitialAnalysisRequest` dla follow-up. |
 | `analysis.job -> analysis.evidence` | 7 | oczekiwane | Job pokazuje kroki pipeline i runtime facts wyprowadzone z evidence. |
 | `analysis.job -> analysis.options` | 2 | oczekiwane | Start joba niesie opcjonalne preferencje AI. |
+| `analysis.job -> shared` | 4 | oczekiwane | Job snapshoty i API response niosa neutralny model evidence. |
 | `analysis.flow -> analysis.evidence` | 5 | oczekiwane | Orchestrator uruchamia deterministic evidence collector. |
-| `analysis.flow -> analysis.ai` | 8 | oczekiwane | Orchestrator buduje request AI i wywoluje initial provider. |
+| `analysis.flow -> analysis.ai` | 6 | oczekiwane | Orchestrator buduje request AI i wywoluje initial provider. |
 | `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
 | `analysis.flow -> analysis.adapter` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
+| `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
 | `analysis.evidence -> analysis.adapter` | 41 | oczekiwane | Providerzy evidence deleguja do adapterow systemow zewnetrznych. |
-| `analysis.evidence -> analysis.ai` | 26 | oczekiwane, ale sprzegajace | Evidence publikuje generyczne `AnalysisEvidenceSection` z pakietu `analysis.ai.evidence`. |
+| `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane dla Copilota | Copilot policy, telemetry i capture znaja nazwy tools i DTO capability. |
 | `analysis.ai -> agenttools` | 1 | oczekiwane przejsciowo | Copilot runtime buduje hidden `ToolContext` z neutralnych context keys. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
+| `analysis.ai -> shared` | 24 | oczekiwane | Providerzy AI, Copilot preparation i evidence capture konsumuja neutralny model evidence. |
 | `analysis.mcp -> analysis.adapter` | 7 | oczekiwane | Spring AI tools deleguja do adapterow/capability services. |
 | `analysis.mcp -> agenttools` | 10 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych context keys i DB tool contracts. |
 | `analysis.adapter -> agenttools` | 9 | oczekiwane przejsciowo | DB adapter uzywa neutralnych DB request/result/scope/operator contracts. |
@@ -181,18 +187,17 @@ flowchart LR
 
 ## Cykle Do Pilnowania
 
-Aktualny kod ma kilka cykli na poziomie top-level pakietow. To jest stan
-operacyjny, a nie wzorzec dla nowych zmian. Kazdy nowy import w tych miejscach
-powinien przyblizac kod do modelu reusable adaptery -> reusable tools/MCP ->
-platforma AI -> dedykowane feature'y, a nie utrwalac cykl.
+Po wydzieleniu generycznego modelu evidence aktualny kod nie ma juz cyklu
+`analysis.ai <-> analysis.evidence` wynikajacego z `AnalysisEvidenceSection`.
+To jest zamknieta granica i nie nalezy jej przywracac.
 
-1. `analysis.ai <-> analysis.evidence`
+Do obserwacji zostala krawedz:
 
-   To wynika z tego, ze generyczny model evidence (`AnalysisEvidenceSection`)
-   mieszka w `analysis.ai.evidence`, a Copilot coverage/artifacts czytaja typed
-   evidence view helpers. Docelowo generyczny model evidence powinien byc
-   neutralny wzgledem AI, a Copilot moze go konsumowac razem z typed evidence
-   view helpers bez wciskania provider-specific klas do publicznych requestow AI.
+1. `analysis.ai -> analysis.evidence`
+
+   Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to
+   lokalnie w preparation/coverage, nie rozszerzac na publiczny kontrakt AI i
+   nie uzywac jako pretekstu do importow `analysis.evidence -> analysis.ai`.
 
 ## Kierunek Dla Nowych Zmian
 
@@ -200,10 +205,12 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 
 ```text
 analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
+analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
 analysis.ai.copilot -> analysis.mcp -> analysis.adapter
 analysis.ai.copilot/analysis.mcp/analysis.adapter -> agenttools
 analysis.job/flow/ai -> analysis.options
+analysis.job/flow/ai -> shared
 api -> feature exceptions
 any package -> common
 ```
@@ -229,6 +236,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.adapter -> analysis.mcp`: DB request/result/scope/operator
   contracts mieszkaja teraz w `agenttools.database`, a
   `analysis.mcp.database` zostaje ekspozycja Spring AI tools.
+- `analysis.evidence -> analysis.ai`: generyczne DTO evidence mieszkaja teraz
+  w `shared.evidence`, a `analysis.ai.evidence` nie jest wlascicielem modelu
+  evidence.
 
 Przy dodawaniu kolejnych dedykowanych analiz nie traktowac
 `analysis.job/flow/evidence` incydentow jako generycznego core. Najpierw

@@ -129,12 +129,17 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.ai.chat`
   Follow-up chat po zakonczonym jobie.
 - `pl.mkn.incidenttracker.analysis.ai.evidence`
-  Generyczne modele evidence przekazywane do AI oraz listener tool evidence.
+  Listener tool evidence po stronie AI. Generyczne DTO evidence mieszkaja w
+  `pl.mkn.incidenttracker.shared.evidence`.
 - `pl.mkn.incidenttracker.analysis.ai.usage`
   Generyczny kontrakt token/cost/usage dla UI.
 - `pl.mkn.incidenttracker.analysis.ai.copilot`
   Root aktualnej integracji AI. Wystawia `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`.
+- `pl.mkn.incidenttracker.shared.evidence`
+  Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
+  i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
+  `AnalysisEvidenceAttribute`.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.incidenttracker.analysis.adapter.operationalcontext`

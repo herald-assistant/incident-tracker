@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
 

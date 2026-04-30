@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 public interface AnalysisEvidenceCollectionListener {
 

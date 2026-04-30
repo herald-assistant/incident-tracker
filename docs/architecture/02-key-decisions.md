@@ -53,8 +53,8 @@ Kolejne kroki evidence providerow czytaja i aktualizuja `AnalysisContext`.
 Po resolved deployment context kroki Dynatrace i GitLab deterministic moga
 dzialac rownolegle z tego samego snapshotu contextu.
 
-Provider evidence zwraca `AnalysisEvidenceSection`. AI layer nie powinien
-czytac DTO adapterow bezposrednio.
+Provider evidence zwraca `shared.evidence.AnalysisEvidenceSection`. AI layer
+nie powinien czytac DTO adapterow bezposrednio.
 
 ## 4. GitLab ma trzy osobne capability
 
@@ -77,9 +77,9 @@ niesie prompt i artefakty przygotowane w runtime.
 
 ## 6. Granica AI pozostaje generyczna
 
-Kontrakt wejscia do AI to `InitialAnalysisRequest` i lista
-`AnalysisEvidenceSection`. Prompt builder i provider AI nie przyjmuja klas
-adapter-specific.
+Kontrakt wejscia do AI to `InitialAnalysisRequest` i lista neutralnych
+`shared.evidence.AnalysisEvidenceSection`. Prompt builder i provider AI nie
+przyjmuja klas adapter-specific.
 
 Jesli AI layer potrzebuje typowego widoku evidence, powinien uzyc helperow
 widoku nad generycznymi `AnalysisEvidenceSection`, np. widokow dla logow,

@@ -15,8 +15,8 @@ Obejmuje:
   kontrakt follow-up chatu: `AnalysisAiChatProvider`, request/response, turny
   i snapshot poczatkowej analizy,
 - `evidence/`
-  generyczne modele evidence przekazywane do AI oraz
-  `AnalysisAiToolEvidenceListener`,
+  AI-side `AnalysisAiToolEvidenceListener`; generyczne modele evidence
+  mieszkaja w `pl.mkn.incidenttracker.shared.evidence`,
 - `usage/`
   generyczny kontrakt zuzycia tokenow/cost/usage dla UI,
 - `copilot/`
@@ -58,8 +58,10 @@ Nie obejmuje:
   mieszaj jego tekstowej odpowiedzi z JSON-only kontraktem poczatkowej analizy.
   Kontrakty chatu trzymamy w `chat/`.
 - AI dostaje tylko `InitialAnalysisRequest` i generyczne
-  `AnalysisEvidenceSection`. Nie wciskaj tu klas adapter-specific. Evidence
-  models trzymamy w `evidence/`.
+  `shared.evidence.AnalysisEvidenceSection`. Nie wciskaj tu klas
+  adapter-specific. Generyczne evidence models trzymamy w
+  `pl.mkn.incidenttracker.shared.evidence`, a w `analysis.ai.evidence`
+  zostaje listener tool evidence.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
   evidence powinny trafac do skilla albo jawnej konfiguracji preparation.
 - Skill pozostaje runtime resource aplikacji w

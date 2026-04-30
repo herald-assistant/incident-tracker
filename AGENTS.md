@@ -84,8 +84,8 @@ Zasady granic:
 ## Niezmienniki Copilot SDK i optymalizacji
 
 - Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko
-  `InitialAnalysisRequest` oraz `AnalysisEvidenceSection`; nie wciskaj klas
-  adapter-specific do prompt buildera ani kontraktu AI.
+  `InitialAnalysisRequest` oraz `shared.evidence.AnalysisEvidenceSection`;
+  nie wciskaj klas adapter-specific do prompt buildera ani kontraktu AI.
 - Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
   incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie,
   a `MessageOptions` dostaje tylko `setPrompt(prompt)`.
@@ -145,6 +145,9 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
   Neutralne kontrakty tools/capability wspolne dla adapterow, MCP wrappers i
   platform AI, np. hidden tool context keys oraz DB tool DTO/scope/operator.
+- `src/main/java/pl/mkn/incidenttracker/shared/evidence`
+  Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
+  `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.
 - `src/main/java/pl/mkn/incidenttracker/common`
   Male helpery wspolne dla calej aplikacji.
 - `frontend`
@@ -162,7 +165,7 @@ Zasady granic:
 
 - Dodaj typowany adapter i modele w pakiecie adaptera.
 - Dodaj `AnalysisEvidenceProvider` w `analysis.evidence.provider`.
-- Provider powinien zwracac `AnalysisEvidenceSection`.
+- Provider powinien zwracac `shared.evidence.AnalysisEvidenceSection`.
 - Nie dopisuj centralnego mappera "provider == X".
 
 ### Gdy dodajesz nowe capability AI
@@ -207,8 +210,8 @@ Podstawowe komendy:
 
 ## Lokalne AGENTS
 
-W `analysis` utrzymujemy lokalne instrukcje na poziomie bezposrednich
-podkatalogow, zeby granice modulow byly czytelne i stabilne po refaktorach.
+Utrzymujemy lokalne instrukcje na poziomie bezposrednich podkatalogow, zeby
+granice modulow byly czytelne i stabilne po refaktorach.
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai/AGENTS.md`
@@ -217,3 +220,4 @@ podkatalogow, zeby granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`

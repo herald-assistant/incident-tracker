@@ -229,6 +229,8 @@ Najbardziej oplacalne ruchy:
    nad adapterem DB.
 3. Przeniesc generyczne evidence DTO z `analysis.ai.evidence` do neutralnego
    modelu, np. `shared.evidence` albo przejsciowo `analysis.evidence.model`.
+   Stan obecny: generic evidence DTO mieszkaja w `shared.evidence`, a
+   `analysis.ai.evidence` zostaje miejscem dla `AnalysisAiToolEvidenceListener`.
 4. Zostawic `AnalysisAiToolEvidenceListener` po stronie AI/platform/feature
    boundary, bo to nie jest zwykly model evidence.
 
@@ -237,7 +239,7 @@ Kryterium done:
 - MCP nie importuje Copilota tylko po to, zeby odczytac context keys,
 - adapter DB nie importuje MCP DTO,
 - evidence pipeline nie importuje AI tylko po to, zeby zwrocic
-  `AnalysisEvidenceSection`.
+  `AnalysisEvidenceSection`; neutralny model jest w `shared.evidence`.
 
 ## Faza 2: Wygaszenie Obecnych Cykli
 
@@ -254,6 +256,8 @@ Kroki:
    Tool context keys i scope parsers maja byc neutralne dla platformy AI.
 4. Usunac `analysis.evidence -> analysis.ai`.
    Generic evidence model ma byc poza `analysis.ai`.
+   Stan obecny: generic evidence model mieszka w `shared.evidence`, a
+   `analysis.evidence` nie importuje `analysis.ai`.
 
 Kryterium done:
 
@@ -441,7 +445,7 @@ Kryterium done:
 Nie trzeba rozstrzygac wszystkiego od razu. Te decyzje powinny zapasc wtedy,
 gdy dotykamy danego obszaru:
 
-- Czy tworzymy `shared.evidence`, czy przejsciowo `analysis.evidence.model`?
+- Rozstrzygniete: generic evidence model mieszka w `shared.evidence`.
 - Czy `agenttools` ma strukture `agenttools.<capability>.mcp`, czy
   `agenttools.mcp.<capability>`?
 - Czy helper endpointy adapterow mieszkaja przy `integrations.<capability>.api`,

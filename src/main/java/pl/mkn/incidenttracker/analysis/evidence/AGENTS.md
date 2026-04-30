@@ -30,7 +30,7 @@ Nie obejmuje:
 - Jesli kroki sa uruchamiane rownolegle, collector nadal ma publikowac ich
   lifecycle i wynik w deterministycznej kolejnosci, zgodnej z pipeline.
 - Kazdy provider powinien byc samodzielna jednostka jednego kroku pipeline i
-  zwracac jedno `AnalysisEvidenceSection`.
+  zwracac jedno `shared.evidence.AnalysisEvidenceSection`.
 - Kazdy provider musi miec jawne `stepCode`, `stepLabel`, `stepPhase`,
   `consumedEvidence` i `producedEvidence`.
 - Downstream providery powinny czytac dane przez typowane widoki lub helpery
@@ -38,8 +38,9 @@ Nie obejmuje:
 - Nie mieszaj tu logiki MCP, kontrolerow HTTP ani prompt buildera AI.
 - Przy dodaniu nowego providera dopisz go explicite w collectorze i zaktualizuj
   testy kolejnosci oraz descriptorow.
-- Evidence pozostaje generyczne na granicy z AI i UI, nawet jesli wewnetrznie
-  czytanie odbywa sie przez silniej typowane read modele.
+- Evidence pozostaje generyczne na granicy z AI i UI przez
+  `shared.evidence`, nawet jesli wewnetrznie czytanie odbywa sie przez silniej
+  typowane read modele.
 
 ## Testy
 

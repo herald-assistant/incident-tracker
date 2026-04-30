@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Locale;

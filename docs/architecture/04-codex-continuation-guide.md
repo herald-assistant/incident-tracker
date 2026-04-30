@@ -27,6 +27,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.initial.InitialAnalysisProvider`
 - `analysis.ai.chat.AnalysisAiChatProvider`
 - `analysis.options.AnalysisAiModelOptionsProvider`
+- `shared.evidence`
 - `analysis.ai.evidence`
 - `analysis.ai.initial`
 - `analysis.ai.usage`

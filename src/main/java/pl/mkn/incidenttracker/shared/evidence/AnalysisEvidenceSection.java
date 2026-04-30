@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.evidence;
+package pl.mkn.incidenttracker.shared.evidence;
 
 import java.util.List;
 

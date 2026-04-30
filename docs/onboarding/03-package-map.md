@@ -73,8 +73,8 @@ pogrupowane wedlug funkcji:
   `InitialAnalysisRequest`, `InitialAnalysisPreparation`,
   `InitialAnalysisResponse`,
 - `chat` - follow-up chat po zakonczonym jobie,
-- `evidence` - generyczne `AnalysisEvidenceSection`, items, attributes i tool
-  evidence listener,
+- `evidence` - AI-side tool evidence listener; generyczne DTO
+  `AnalysisEvidenceSection`, item i attribute mieszkaja w `shared.evidence`,
 - `usage` - generyczny usage/token/cost contract dla job UI.
 
 Najwazniejsze podpakiety Copilota:

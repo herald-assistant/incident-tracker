@@ -245,10 +245,10 @@ class DynatraceEvidenceProviderTest {
         assertTrue(runtimeView.componentStatuses().isEmpty());
     }
 
-    private static String attributeValue(pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem item, String name) {
+    private static String attributeValue(pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem item, String name) {
         return item.attributes().stream()
                 .filter(attribute -> attribute.name().equals(name))
-                .map(pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute::value)
+                .map(pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute::value)
                 .findFirst()
                 .orElse(null);
     }

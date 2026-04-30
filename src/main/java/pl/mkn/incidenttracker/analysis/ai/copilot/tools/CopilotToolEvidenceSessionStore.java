@@ -4,9 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

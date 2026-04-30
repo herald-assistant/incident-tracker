@@ -2,9 +2,9 @@ package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceAttribute;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceItem;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.GlossaryTerm;
 import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.HandoffRule;

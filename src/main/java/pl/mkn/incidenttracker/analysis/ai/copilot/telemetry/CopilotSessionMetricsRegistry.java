@@ -172,7 +172,7 @@ public class CopilotSessionMetricsRegistry {
     ) {
         var evidenceSections = request != null
                 ? request.evidenceSections()
-                : List.<pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection>of();
+                : List.<pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection>of();
         var safeArtifacts = artifacts != null ? artifacts : List.<CopilotArtifactService.Artifact>of();
 
         return new CopilotArtifactMetrics(
