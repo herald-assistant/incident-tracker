@@ -40,7 +40,7 @@ public class CopilotSessionConfigFactory {
 
     public SessionConfig sessionConfig(CopilotSessionConfigRequest request) {
         var sessionConfig = new SessionConfig()
-                .setSessionId(request.context().copilotSessionId())
+                .setSessionId(request.sessionId())
                 .setClientName(properties.getClientName())
                 .setWorkingDirectory(properties.getWorkingDirectory())
                 .setStreaming(false)

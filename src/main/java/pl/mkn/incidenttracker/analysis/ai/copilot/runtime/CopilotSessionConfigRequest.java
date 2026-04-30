@@ -1,12 +1,11 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
 
 import com.github.copilot.sdk.json.ToolDefinition;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 
 public record CopilotSessionConfigRequest(
-        CopilotToolSessionContext context,
+        String sessionId,
         List<ToolDefinition> tools,
         List<String> availableToolNames,
         List<String> skillDirectories,
@@ -18,6 +17,9 @@ public record CopilotSessionConfigRequest(
             "Use only the explicitly enabled tools for this session.";
 
     public CopilotSessionConfigRequest {
+        if (!hasText(sessionId)) {
+            throw new IllegalArgumentException("sessionId must not be blank");
+        }
         tools = tools != null ? List.copyOf(tools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
         skillDirectories = skillDirectories != null ? List.copyOf(skillDirectories) : List.of();

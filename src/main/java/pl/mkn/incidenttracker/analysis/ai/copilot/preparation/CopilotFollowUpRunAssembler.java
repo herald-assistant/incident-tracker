@@ -40,7 +40,7 @@ public class CopilotFollowUpRunAssembler {
         var renderedArtifacts = artifactService.renderArtifacts(artifactRequest(request), toolAccessPolicy);
         var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
         var sessionConfigRequest = new CopilotSessionConfigRequest(
-                toolSessionContext,
+                toolSessionContext.copilotSessionId(),
                 toolAccessPolicy.enabledTools(),
                 toolAccessPolicy.availableToolNames(),
                 skillRuntimeLoader.resolveSkillDirectories(),

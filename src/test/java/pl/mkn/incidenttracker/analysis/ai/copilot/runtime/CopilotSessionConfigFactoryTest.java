@@ -6,7 +6,6 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.PreToolUseHookInput;
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,7 @@ class CopilotSessionConfigFactoryTest {
 
         var clientOptions = factory.clientOptions();
         var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
-                context(),
+                sessionId(),
                 tools,
                 List.of("gitlab_find_flow_context"),
                 List.of("C:\\runtime\\copilot_skills"),
@@ -77,7 +76,7 @@ class CopilotSessionConfigFactoryTest {
         var factory = new CopilotSessionConfigFactory(properties);
 
         var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
-                context(),
+                sessionId(),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -110,7 +109,7 @@ class CopilotSessionConfigFactoryTest {
         var factory = new CopilotSessionConfigFactory(properties);
 
         var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
-                context(),
+                sessionId(),
                 List.of(),
                 List.of(),
                 null,
@@ -127,15 +126,8 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(List.of(), sessionConfig.getDisabledSkills());
     }
 
-    private CopilotToolSessionContext context() {
-        return new CopilotToolSessionContext(
-                "run-123",
-                "analysis-123",
-                "corr-123",
-                "dev3",
-                "main",
-                "sample/runtime"
-        );
+    private String sessionId() {
+        return "analysis-123";
     }
 
     private List<ToolDefinition> tools(String... names) {
