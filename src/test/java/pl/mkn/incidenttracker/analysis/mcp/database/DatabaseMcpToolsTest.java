@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.mcp.database;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys;
+import pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -267,12 +267,12 @@ class DatabaseMcpToolsTest {
 
     private ToolContext toolContext() {
         var context = new LinkedHashMap<String, Object>();
-        context.put(CopilotToolContextKeys.CORRELATION_ID, "corr-123");
-        context.put(CopilotToolContextKeys.ENVIRONMENT, "zt01");
-        context.put(CopilotToolContextKeys.ANALYSIS_RUN_ID, "run-1");
-        context.put(CopilotToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
-        context.put(CopilotToolContextKeys.TOOL_CALL_ID, "tool-call-1");
-        context.put(CopilotToolContextKeys.TOOL_NAME, "db_test_tool");
+        context.put(AgentToolContextKeys.CORRELATION_ID, "corr-123");
+        context.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
+        context.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "run-1");
+        context.put(AgentToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
+        context.put(AgentToolContextKeys.TOOL_CALL_ID, "tool-call-1");
+        context.put(AgentToolContextKeys.TOOL_NAME, "db_test_tool");
         return new ToolContext(context);
     }
 

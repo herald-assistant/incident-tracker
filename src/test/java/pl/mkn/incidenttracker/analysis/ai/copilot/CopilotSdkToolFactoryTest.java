@@ -13,7 +13,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys;
+import pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
@@ -369,14 +369,14 @@ class CopilotSdkToolFactoryTest {
             var context = toolContext.getContext();
             return Map.of(
                     "projectName", projectName,
-                    "correlationId", context.get(CopilotToolContextKeys.CORRELATION_ID),
-                    "gitLabGroup", context.get(CopilotToolContextKeys.GITLAB_GROUP),
-                    "gitLabBranch", context.get(CopilotToolContextKeys.GITLAB_BRANCH),
-                    "environment", context.get(CopilotToolContextKeys.ENVIRONMENT),
-                    "copilotSessionId", context.get(CopilotToolContextKeys.COPILOT_SESSION_ID),
-                    "actualCopilotSessionId", context.get(CopilotToolContextKeys.ACTUAL_COPILOT_SESSION_ID),
-                    "toolCallId", context.get(CopilotToolContextKeys.TOOL_CALL_ID),
-                    "toolName", context.get(CopilotToolContextKeys.TOOL_NAME)
+                    "correlationId", context.get(AgentToolContextKeys.CORRELATION_ID),
+                    "gitLabGroup", context.get(AgentToolContextKeys.GITLAB_GROUP),
+                    "gitLabBranch", context.get(AgentToolContextKeys.GITLAB_BRANCH),
+                    "environment", context.get(AgentToolContextKeys.ENVIRONMENT),
+                    "copilotSessionId", context.get(AgentToolContextKeys.COPILOT_SESSION_ID),
+                    "actualCopilotSessionId", context.get(AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID),
+                    "toolCallId", context.get(AgentToolContextKeys.TOOL_CALL_ID),
+                    "toolName", context.get(AgentToolContextKeys.TOOL_NAME)
             );
         }
     }

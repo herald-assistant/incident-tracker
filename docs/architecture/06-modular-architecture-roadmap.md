@@ -219,6 +219,9 @@ Najbardziej oplacalne ruchy:
 
 1. Przeniesc keys ukrytego tool contextu z Copilota do neutralnej warstwy
    tools, np. `agenttools.context.AgentToolContextKeys`.
+   Stan przejsciowy: keys mieszkaja w
+   `analysis.mcp.context.AgentToolContextKeys`, zeby MCP nie importowalo
+   Copilota przed pelna ekstrakcja `agenttools`.
 2. Przeniesc typed DB request/result/scope/operator contracts z
    `analysis.mcp.database` do neutralnego capability, np.
    `agenttools.database`.

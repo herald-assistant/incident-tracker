@@ -143,7 +143,6 @@ flowchart LR
     AI --> COMMON["common"]
 
     MCP --> ADAPTER
-    MCP -.-> AI
 
     ADAPTER -.-> MCP
 
@@ -171,7 +170,6 @@ flowchart LR
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.mcp -> analysis.adapter` | 7 | oczekiwane | Spring AI tools deleguja do adapterow/capability services. |
-| `analysis.mcp -> analysis.ai` | 16 | do obserwacji | Tool DTOs importuja `CopilotToolContextKeys`. To tworzy sprzezenie MCP z aktualnym providerem Copilot. |
 | `analysis.adapter -> analysis.mcp` | 9 | do obserwacji | DB adapter uzywa `DatabaseToolDtos`, `DbToolScope` i operatorow z pakietu MCP. |
 | `api -> analysis.adapter` | 6 | oczekiwane | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
@@ -184,21 +182,14 @@ operacyjny, a nie wzorzec dla nowych zmian. Kazdy nowy import w tych miejscach
 powinien przyblizac kod do modelu reusable adaptery -> reusable tools/MCP ->
 platforma AI -> dedykowane feature'y, a nie utrwalac cykl.
 
-1. `analysis.ai <-> analysis.mcp`
-
-   Copilot zna nazwy tools i capability DTOs, a MCP DTOs znaja
-   `CopilotToolContextKeys`. Docelowo context keys i tool contracts powinny byc
-   neutralne dla platformy AI, zeby tools/MCP mozna bylo podpiac pod inny loop
-   agenta niz Copilot SDK.
-
-2. `analysis.adapter.database <-> analysis.mcp.database`
+1. `analysis.adapter.database <-> analysis.mcp.database`
 
    MCP deleguje do DB adaptera, ale DB adapter importuje DTO tools z MCP.
    Najbardziej naturalny ruch to przeniesienie typed DB
    request/result/scope/operator contracts do neutralnego pakietu capability, a
    w `analysis.mcp.database` zostawienie tylko ekspozycji Spring AI tools.
 
-3. `analysis.ai <-> analysis.evidence`
+2. `analysis.ai <-> analysis.evidence`
 
    To wynika z tego, ze generyczny model evidence (`AnalysisEvidenceSection`)
    mieszka w `analysis.ai.evidence`, a Copilot coverage/artifacts czytaja typed
@@ -224,7 +215,7 @@ Unikac nowych zaleznosci:
 - `analysis.adapter -> analysis.evidence`,
 - `analysis.adapter -> analysis.mcp`,
 - `analysis.adapter -> analysis.ai`,
-- `analysis.mcp -> analysis.ai.copilot` poza obecnymi context keys,
+- `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
   facts do statusu UI.
@@ -234,6 +225,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.adapter -> analysis.evidence`: adapter Dynatrace nie buduje juz
   query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
   evidence providerow.
+- `analysis.mcp -> analysis.ai.copilot`: hidden tool context keys mieszkaja
+  teraz w neutralnym `analysis.mcp.context.AgentToolContextKeys`, a Copilot
+  runtime jest ich konsumentem.
 
 Przy dodawaniu kolejnych dedykowanych analiz nie traktowac
 `analysis.job/flow/evidence` incydentow jako generycznego core. Najpierw

@@ -1,6 +1,6 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.context;
+package pl.mkn.incidenttracker.analysis.mcp.context;
 
-public final class CopilotToolContextKeys {
+public final class AgentToolContextKeys {
 
     public static final String ANALYSIS_RUN_ID = "analysisRunId";
     public static final String COPILOT_SESSION_ID = "copilotSessionId";
@@ -12,6 +12,6 @@ public final class CopilotToolContextKeys {
     public static final String GITLAB_BRANCH = "gitLabBranch";
     public static final String GITLAB_GROUP = "gitLabGroup";
 
-    private CopilotToolContextKeys() {
+    private AgentToolContextKeys() {
     }
 }

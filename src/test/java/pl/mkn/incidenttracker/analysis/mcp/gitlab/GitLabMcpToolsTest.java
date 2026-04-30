@@ -7,7 +7,7 @@ import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys;
+import pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFlowContextGroup;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabToolScope;
@@ -585,7 +585,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldThrowReadableErrorWhenGitLabGroupIsMissing() {
         var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
-                CopilotToolContextKeys.GITLAB_GROUP
+                AgentToolContextKeys.GITLAB_GROUP
         )));
 
         assertEquals(
@@ -597,7 +597,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldThrowReadableErrorWhenGitLabBranchIsMissing() {
         var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
-                CopilotToolContextKeys.GITLAB_BRANCH
+                AgentToolContextKeys.GITLAB_BRANCH
         )));
 
         assertEquals(
@@ -609,7 +609,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldThrowReadableErrorWhenCorrelationIdIsMissing() {
         var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
-                CopilotToolContextKeys.CORRELATION_ID
+                AgentToolContextKeys.CORRELATION_ID
         )));
 
         assertEquals(
@@ -624,14 +624,14 @@ class GitLabMcpToolsTest {
 
     private ToolContext gitLabToolContext(String group, String branch, String correlationId) {
         var context = new LinkedHashMap<String, Object>();
-        context.put(CopilotToolContextKeys.CORRELATION_ID, correlationId);
-        context.put(CopilotToolContextKeys.GITLAB_GROUP, group);
-        context.put(CopilotToolContextKeys.GITLAB_BRANCH, branch);
-        context.put(CopilotToolContextKeys.ENVIRONMENT, "zt01");
-        context.put(CopilotToolContextKeys.ANALYSIS_RUN_ID, "run-1");
-        context.put(CopilotToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
-        context.put(CopilotToolContextKeys.TOOL_CALL_ID, "tool-call-1");
-        context.put(CopilotToolContextKeys.TOOL_NAME, "gitlab_test_tool");
+        context.put(AgentToolContextKeys.CORRELATION_ID, correlationId);
+        context.put(AgentToolContextKeys.GITLAB_GROUP, group);
+        context.put(AgentToolContextKeys.GITLAB_BRANCH, branch);
+        context.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
+        context.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "run-1");
+        context.put(AgentToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
+        context.put(AgentToolContextKeys.TOOL_CALL_ID, "tool-call-1");
+        context.put(AgentToolContextKeys.TOOL_NAME, "gitlab_test_tool");
         return new ToolContext(context);
     }
 

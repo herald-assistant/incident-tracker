@@ -5,13 +5,13 @@ import org.springframework.ai.chat.model.ToolContext;
 import java.util.List;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.ACTUAL_COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.ANALYSIS_RUN_ID;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.CORRELATION_ID;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.ENVIRONMENT;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.TOOL_CALL_ID;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolContextKeys.TOOL_NAME;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.ANALYSIS_RUN_ID;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.COPILOT_SESSION_ID;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.CORRELATION_ID;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.ENVIRONMENT;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.TOOL_CALL_ID;
+import static pl.mkn.incidenttracker.analysis.mcp.context.AgentToolContextKeys.TOOL_NAME;
 
 public final class DatabaseToolDtos {
 
