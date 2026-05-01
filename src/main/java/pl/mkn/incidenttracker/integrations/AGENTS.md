@@ -7,6 +7,17 @@ Pakiety pod `integrations.*` sa czystymi capability adapterami, ktore moga byc
 uzywane przez evidence providers, tools/MCP, helper endpointy REST albo przyszle
 feature'y.
 
+Obecnie obejmuje m.in.:
+
+- `dynatrace/`
+- `elasticsearch/`
+- `gitlab/`
+- `operationalcontext/`
+
+Operational context jest tutaj query-based capability katalogu operacyjnego.
+Incident-specific matching i mapowanie na evidence pozostaja w
+`analysis.evidence.provider.operationalcontext`.
+
 ## Zasady
 
 - Nie importuj tutaj `analysis.*`, `agenttools.*`, `features.*` ani

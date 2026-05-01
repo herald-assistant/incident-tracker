@@ -143,7 +143,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `AnalysisEvidenceAttribute`.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
-- `pl.mkn.incidenttracker.analysis.adapter.operationalcontext`
+- `pl.mkn.incidenttracker.integrations.operationalcontext`
   Query-based adapter curated operational context catalog i filtrowania go do
   reuse'u przez evidence i kolejne capability.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.preparation`

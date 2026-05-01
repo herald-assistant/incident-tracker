@@ -397,6 +397,8 @@ Kolejnosc sugerowana:
    Stan obecny: zrobione, pakiet mieszka w `integrations.gitlab`, razem z
    `integrations.gitlab.source`.
 4. Operational context adapter.
+   Stan obecny: zrobione, pakiet mieszka w
+   `integrations.operationalcontext`.
 5. Database, po przeniesieniu neutralnych DB contracts.
 
 Target:
@@ -406,7 +408,7 @@ analysis.adapter.elasticsearch -> integrations.elasticsearch [done]
 analysis.adapter.dynatrace     -> integrations.dynatrace [done]
 analysis.adapter.gitlab        -> integrations.gitlab [done]
 analysis.adapter.database      -> integrations.database
-analysis.adapter.operationalcontext -> integrations.operationalcontext
+analysis.adapter.operationalcontext -> integrations.operationalcontext [done]
 ```
 
 Kryterium done:
@@ -572,11 +574,13 @@ Kryterium done:
    `integrations.elasticsearch` [done].
 9. PR: przeniesc GitLab adapter i source resolve do `integrations.gitlab`
    [done].
-10. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
-11. PR: przeniesc reszte adapterow capability po jednym obszarze.
-12. PR: wydzielic generic Copilot runtime od incident prompt/digest.
-13. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
-14. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+10. PR: przeniesc operational context adapter do
+    `integrations.operationalcontext` [done].
+11. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
+12. PR: przeniesc Database capability do `integrations.database`.
+13. PR: wydzielic generic Copilot runtime od incident prompt/digest.
+14. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
+15. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

@@ -75,9 +75,9 @@ filtrach query-based.
 
 Czytaj:
 
-- `analysis.adapter.operationalcontext.OperationalContextPort`
-- `analysis.adapter.operationalcontext.OperationalContextAdapter`
-- `analysis.adapter.operationalcontext.OperationalContextQuery`
+- `integrations.operationalcontext.OperationalContextPort`
+- `integrations.operationalcontext.OperationalContextAdapter`
+- `integrations.operationalcontext.OperationalContextQuery`
 
 ## Wazne zasady
 

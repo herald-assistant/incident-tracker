@@ -54,12 +54,13 @@ Konkretne kroki pipeline:
 
 Przejsciowy dom integracji zewnetrznych, ktore nie zostaly jeszcze przeniesione
 do `integrations`.
-Sa tu dzisiaj adaptery Database capability i operational context.
+Sa tu dzisiaj adaptery Database capability.
 
 ### `integrations`
 
 Docelowa reusable warstwa capability adapters. Przeniesione pakiety to
-`integrations/dynatrace`, `integrations/elasticsearch` i `integrations/gitlab`.
+`integrations/dynatrace`, `integrations/elasticsearch`, `integrations/gitlab`
+i `integrations/operationalcontext`.
 
 ### `analysis/mcp`
 
@@ -142,6 +143,7 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
+- `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 - `src/main/java/pl/mkn/incidenttracker/api`

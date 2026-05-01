@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.operationalcontext;
+package pl.mkn.incidenttracker.integrations.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,17 +7,17 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.mapList;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 
 @Component
 @Slf4j

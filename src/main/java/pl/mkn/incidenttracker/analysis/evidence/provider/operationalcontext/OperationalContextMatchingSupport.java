@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 
 final class OperationalContextMatchingSupport {
 

@@ -1,8 +1,8 @@
-package pl.mkn.incidenttracker.analysis.adapter.operationalcontext;
+package pl.mkn.incidenttracker.integrations.operationalcontext;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

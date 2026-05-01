@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextAdapter;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextProperties;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;

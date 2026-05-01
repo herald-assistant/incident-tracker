@@ -16,7 +16,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveMatc
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveSession;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextRepositoryProjectPathResolver;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;

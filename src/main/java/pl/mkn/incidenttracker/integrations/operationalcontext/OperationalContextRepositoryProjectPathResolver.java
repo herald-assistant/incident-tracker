@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.operationalcontext;
+package pl.mkn.incidenttracker.integrations.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,8 +11,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 
 @Component
 @RequiredArgsConstructor

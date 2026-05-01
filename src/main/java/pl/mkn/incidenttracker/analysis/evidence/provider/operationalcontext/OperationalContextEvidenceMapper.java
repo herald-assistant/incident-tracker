@@ -5,19 +5,19 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.mapList;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextMaps.textList;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textAny;
 import static pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textListAny;
 

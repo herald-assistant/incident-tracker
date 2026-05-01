@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis;
 
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextRepositoryProjectPathResolver;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 
 import java.util.List;
 

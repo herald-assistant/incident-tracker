@@ -11,8 +11,8 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryProjectCandida
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveMatch;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextCatalog;
-import pl.mkn.incidenttracker.analysis.adapter.operationalcontext.OperationalContextRepositoryProjectPathResolver;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;

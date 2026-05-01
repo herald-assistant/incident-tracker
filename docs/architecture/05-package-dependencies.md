@@ -92,15 +92,14 @@ flowchart LR
     JOB --> FLOW["analysis.flow"]
 
     FLOW --> EVIDENCE["analysis.evidence"]
-    EVIDENCE --> ADAPTER["analysis.adapter"]
     EVIDENCE --> INTEGRATIONS["integrations"]
-    ADAPTER --> EXT["External systems"]
+    ADAPTER["analysis.adapter"] --> EXT["External systems"]
     INTEGRATIONS --> EXT
 
     FLOW --> INITIAL["analysis.ai.initial"]
     INITIAL --> TOOLS["analysis.ai.copilot.tools"]
     TOOLS --> MCP["analysis.mcp"]
-    MCP --> ADAPTER
+    MCP --> ADAPTER["analysis.adapter"]
     MCP --> INTEGRATIONS
 
     JOB --> CHAT
@@ -119,8 +118,7 @@ Wyniki wracaja do callera jako return values albo listener callbacks:
 Najwazniejsze lancuchy ownership/dependency:
 
 - deterministic initial analysis:
-  `analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter`
-  albo `analysis.job -> analysis.flow -> analysis.evidence -> integrations`,
+  `analysis.job -> analysis.flow -> analysis.evidence -> integrations`,
 - initial AI:
   `analysis.flow -> analysis.ai.initial`,
 - AI-guided tools podczas initial analysis:
@@ -152,7 +150,6 @@ flowchart LR
     FLOW --> INTEGRATIONS["integrations"]
     FLOW --> SHARED
 
-    EVIDENCE --> ADAPTER
     EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
 
@@ -167,8 +164,7 @@ flowchart LR
     MCP --> INTEGRATIONS
     MCP --> AGENTTOOLS
 
-    API["api"] --> ADAPTER
-    API --> INTEGRATIONS
+    API["api"] --> INTEGRATIONS
     API --> FLOW
     API --> JOB
 ```
@@ -187,8 +183,7 @@ flowchart LR
 | `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
 | `analysis.flow -> integrations` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
 | `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
-| `analysis.evidence -> analysis.adapter` | 25 | oczekiwane przejsciowo | Providerzy evidence deleguja do adapterow systemow zewnetrznych, ktore jeszcze mieszkaja pod `analysis.adapter`. |
-| `analysis.evidence -> integrations` | 16 | oczekiwane | Providerzy Elasticsearch, Dynatrace i GitLab deterministic deleguja juz do docelowych reusable integracji. |
+| `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
@@ -223,7 +218,6 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 
 ```text
 analysis.job -> analysis.flow -> analysis.evidence -> integrations
-analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
 analysis.ai.copilot -> analysis.mcp -> integrations
@@ -256,8 +250,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
   query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
   evidence providerow.
 - `integrations -> analysis`: przeniesione adaptery `integrations.dynatrace`,
-  `integrations.elasticsearch` i `integrations.gitlab` pozostaja czystymi
-  integracjami bez importow warstw aplikacyjnych.
+  `integrations.elasticsearch`, `integrations.gitlab` i
+  `integrations.operationalcontext` pozostaja czystymi integracjami bez
+  importow warstw aplikacyjnych.
 - `analysis.mcp -> analysis.ai.copilot`: hidden tool context keys mieszkaja
   teraz w neutralnym `agenttools.context.AgentToolContextKeys`, a Copilot
   runtime jest ich konsumentem.

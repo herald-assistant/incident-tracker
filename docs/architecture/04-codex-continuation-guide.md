@@ -76,7 +76,7 @@ Przy nowej sesji najlepiej zaczac od:
 
 ### Za operational context odpowiadaja glownie
 
-- `analysis.adapter.operationalcontext`
+- `integrations.operationalcontext`
 - `analysis.evidence.provider.operationalcontext`
 
 ## Jak rozwijac projekt bez psucia kierunku

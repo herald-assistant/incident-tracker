@@ -12,9 +12,6 @@ Obejmuje:
 - `database/`
   properties, routing polaczen, metadata Oracle, readonly query execution,
   SQL guard, masking i limiting wynikow DB capability.
-- `operationalcontext/`
-  query-based adapter curated operational context catalog, ladowanie zasobow
-  i generyczne filtrowanie katalogu do reuse'u poza jednym providerem evidence.
 
 Nie obejmuje:
 
@@ -35,8 +32,6 @@ Nie obejmuje:
   logiki.
 - Nie przenos do adapterow heurystyk incidentowych typu logs -> deployment,
   logs -> repo albo evidence -> prompt. To nalezy do `evidence` albo `flow`.
-- Dla `operationalcontext/` trzymaj tutaj capability katalogu i query/filter
-  API, ale incident-specific matching pozostaw po stronie providera evidence.
 - Kontrakty portow maja pozostac generyczne i reuse'owalne z evidence, MCP i
   helper endpointow.
 - Dla GitLaba trzymaj `group` w konfiguracji aplikacji. Nie dedukuj go z
@@ -58,6 +53,9 @@ Nie obejmuje:
 - GitLab i source resolve zostaly juz przeniesione do
   `pl.mkn.incidenttracker.integrations.gitlab`; nie przywracaj ich do
   `analysis.adapter`.
+- Operational context zostal juz przeniesiony do
+  `pl.mkn.incidenttracker.integrations.operationalcontext`; nie przywracaj go
+  do `analysis.adapter`.
 
 ## Testy
 
