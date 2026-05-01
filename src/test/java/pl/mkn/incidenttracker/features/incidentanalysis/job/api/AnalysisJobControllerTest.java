@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job.api;
+package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,8 +8,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
-import pl.mkn.incidenttracker.analysis.job.AnalysisJobService;
-import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.AnalysisJobService;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
 
 import java.time.Instant;
 import java.util.List;

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job.state;
+package pl.mkn.incidenttracker.features.incidentanalysis.job.state;
 
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;

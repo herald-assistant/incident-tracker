@@ -21,7 +21,7 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za architekture odpowiadaja glownie
 
 - `features.incidentanalysis.flow`
-- `analysis.job`
+- `features.incidentanalysis.job`
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
 - `features.incidentanalysis.ai.initial.InitialAnalysisProvider`

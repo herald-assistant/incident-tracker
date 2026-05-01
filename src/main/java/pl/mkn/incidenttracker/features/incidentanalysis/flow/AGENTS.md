@@ -13,7 +13,7 @@ Obejmuje:
 
 Nie obejmuje:
 
-- kontrolerow HTTP z `analysis.job`,
+- kontrolerow HTTP z `features.incidentanalysis.job`,
 - integracji z systemami zewnetrznymi z `integrations`,
 - implementacji providerow evidence i AI.
 
@@ -39,7 +39,7 @@ Nie obejmuje:
 - Zmiany w orkiestracji powinny miec testy jednostkowe albo integracyjne,
   ktore potwierdzaja kolejnosc flow i mapowanie wyniku.
 - Gdy zmienia sie kontrakt response albo job payload, sprawdz downstream w
-  `analysis.job` i `src/main/java/pl/mkn/incidenttracker/api`.
+  `features.incidentanalysis.job` i `src/main/java/pl/mkn/incidenttracker/api`.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie
 

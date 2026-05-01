@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job.api;
+package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

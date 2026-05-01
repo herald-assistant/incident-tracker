@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job.state;
+package pl.mkn.incidenttracker.features.incidentanalysis.job.state;
 
 public enum AnalysisJobStepStatus {
     PENDING,

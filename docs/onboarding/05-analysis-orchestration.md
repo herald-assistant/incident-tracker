@@ -40,8 +40,8 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisOrchestrator.java`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisExecution.java`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisExecutionListener.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobService.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/job/state/AnalysisJobStateListener.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/AnalysisJobService.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/state/AnalysisJobStateListener.java`
 
 ## Na co zwrocic uwage
 

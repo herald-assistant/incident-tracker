@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job;
+package pl.mkn.incidenttracker.features.incidentanalysis.job;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
@@ -33,8 +33,8 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.Oper
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageRequest;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStartRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.incidenttracker.analysis.TestInitialAnalysisProvider;
 
 import java.util.ArrayDeque;

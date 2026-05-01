@@ -62,9 +62,10 @@ Docelowy kierunek warstw:
 Zasady granic:
 
 - `integrations.*` nie moze zalezec od `analysis.evidence`, `analysis.mcp`,
-  `analysis.ai`, `analysis.flow` ani `analysis.job`. Adaptery maja byc mozliwe
-  do reuse'u przez evidence pipeline, tools/MCP i zwykle endpointy REST. Nie
-  przywracaj nowych adapterow do historycznego `analysis.adapter`.
+  `analysis.ai`, `analysis.flow`, `analysis.job` ani `features.*`. Adaptery
+  maja byc mozliwe do reuse'u przez evidence pipeline, tools/MCP i zwykle
+  endpointy REST. Nie przywracaj nowych adapterow do historycznego
+  `analysis.adapter`.
 - Tools/MCP nie powinny zalezec od dedykowanej analizy incydentow ani od
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.
@@ -138,7 +139,7 @@ Zasady granic:
 
 ## Gdzie czego szukac
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/job`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
   Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
   follow-up chat.
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
@@ -170,7 +171,8 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/features`
   Dedykowane feature'y analityczne. `features.incidentanalysis.ai.initial` i
   `chat` zawieraja kontrakty AI incident flow,
-  `features.incidentanalysis.flow` zawiera orkiestracje runtime analizy, a
+  `features.incidentanalysis.flow` zawiera orkiestracje runtime analizy,
+  `features.incidentanalysis.job` zawiera job API/state/follow-up chat, a
   `features.incidentanalysis.ai.copilot` zawiera incident prompt/artifacts/tool
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
@@ -248,7 +250,7 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`

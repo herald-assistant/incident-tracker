@@ -39,7 +39,9 @@ Obecnie pierwszy feature to `incidentanalysis`.
   GitLab/DB tool evidence capture nad generycznymi eventami invocation.
 - `features.incidentanalysis.flow` zawiera glowna orkiestracje runtime
   analizy incydentu.
-- Job i evidence nadal mieszkaja w `analysis.*`.
+- `features.incidentanalysis.job` zawiera job API, state i follow-up chat dla
+  analizy incydentu.
+- Evidence nadal mieszka w `analysis.*`.
   Przenos kolejne fragmenty inkrementalnie, bez zmian zachowania runtime.
 
 ## Weryfikacja

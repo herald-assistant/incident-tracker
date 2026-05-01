@@ -101,16 +101,16 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.features.incidentanalysis.flow`
   Orkiestracja runtime analizy incydentu, response i listenery postepu flow.
-- `pl.mkn.incidenttracker.analysis.job`
+- `pl.mkn.incidenttracker.features.incidentanalysis.job`
   Asynchroniczny feature `POST /analysis/jobs`,
   `GET /analysis/jobs/{analysisId}` i
   `POST /analysis/jobs/{analysisId}/chat/messages`.
-- `pl.mkn.incidenttracker.analysis.job.api`
+- `pl.mkn.incidenttracker.features.incidentanalysis.job.api`
   Kontroler job API oraz request/response DTO dla UI.
-- `pl.mkn.incidenttracker.analysis.job.state`
+- `pl.mkn.incidenttracker.features.incidentanalysis.job.state`
   In-memory projekcja joba: statusy, kroki, chat messages, snapshot i listener
   mapujacy zdarzenia orkiestratora na stan joba.
-- `pl.mkn.incidenttracker.analysis.job.error`
+- `pl.mkn.incidenttracker.features.incidentanalysis.job.error`
   Wyjatki job API mapowane przez globalny handler bledow.
 - `pl.mkn.incidenttracker.analysis.options`
   Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.

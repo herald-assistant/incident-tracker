@@ -56,21 +56,27 @@ class PackageDependencyGuardTest {
                 Rule.closed("incident flow must not depend on historical analysis AI contracts",
                         "pl.mkn.incidenttracker.features.incidentanalysis.flow",
                         "pl.mkn.incidenttracker.analysis.ai"),
-                Rule.closed("analysis.job must not depend on historical analysis AI contracts",
-                        "pl.mkn.incidenttracker.analysis.job",
+                Rule.closed("incident job must not depend on historical analysis AI contracts",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.job",
                         "pl.mkn.incidenttracker.analysis.ai"),
-                Rule.closed("analysis.job must not depend on historical analysis flow",
-                        "pl.mkn.incidenttracker.analysis.job",
+                Rule.closed("incident job must not depend on historical analysis flow",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.job",
                         "pl.mkn.incidenttracker.analysis.flow"),
                 Rule.closed("api must not depend on historical analysis flow",
                         "pl.mkn.incidenttracker.api",
                         "pl.mkn.incidenttracker.analysis.flow"),
+                Rule.closed("api must not depend on historical analysis job",
+                        "pl.mkn.incidenttracker.api",
+                        "pl.mkn.incidenttracker.analysis.job"),
                 Rule.closed("features must not depend on historical analysis AI contracts",
                         "pl.mkn.incidenttracker.features",
                         "pl.mkn.incidenttracker.analysis.ai"),
                 Rule.closed("features must not depend on historical analysis flow",
                         "pl.mkn.incidenttracker.features",
                         "pl.mkn.incidenttracker.analysis.flow"),
+                Rule.closed("features must not depend on historical analysis job",
+                        "pl.mkn.incidenttracker.features",
+                        "pl.mkn.incidenttracker.analysis.job"),
                 Rule.closed("analysis.evidence must publish shared evidence DTOs without importing AI",
                         "pl.mkn.incidenttracker.analysis.evidence",
                         "pl.mkn.incidenttracker.analysis.ai"),
@@ -131,7 +137,8 @@ class PackageDependencyGuardTest {
     void shouldNotRecreateClosedProductionPackages() throws IOException {
         var closedPackages = List.of(
                 "pl.mkn.incidenttracker.analysis.ai",
-                "pl.mkn.incidenttracker.analysis.flow"
+                "pl.mkn.incidenttracker.analysis.flow",
+                "pl.mkn.incidenttracker.analysis.job"
         );
 
         var violations = new ArrayList<String>();

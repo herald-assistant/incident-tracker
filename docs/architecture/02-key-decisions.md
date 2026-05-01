@@ -395,7 +395,8 @@ i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
 analizy, a nie do rozliczen finansowych.
 
 Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
-fasadach `analysis.job/options` nie powinny wymagac wiedzy o typach SDK w UI:
+fasadach `features.incidentanalysis.job` / `analysis.options` nie powinny
+wymagac wiedzy o typach SDK w UI:
 `POST /analysis/jobs` moze przyjac tylko `correlationId` oraz generyczne
 preferencje AI (`model`, `reasoningEffort`). Response pozostaje mapowany do pol
 aplikacji, a artefakty Copilota nadal sa embedded inline w promptcie.

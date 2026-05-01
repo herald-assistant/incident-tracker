@@ -23,7 +23,7 @@ architektonicznych.
 
 ### Job
 
-- `src/test/java/pl/mkn/incidenttracker/analysis/job`
+- `src/test/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
 
 ### MCP i AI
 

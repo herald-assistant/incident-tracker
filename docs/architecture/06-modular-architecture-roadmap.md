@@ -555,7 +555,7 @@ Cel: przeniesc obecny flow analizy incydentow do dedykowanego feature'a.
 Target:
 
 ```text
-analysis.job      -> features.incidentanalysis.job
+analysis.job      -> features.incidentanalysis.job [done]
 analysis.flow     -> features.incidentanalysis.flow [done]
 analysis.evidence -> features.incidentanalysis.evidence
 analysis.ai.initial/chat contracts specific to incident
@@ -576,9 +576,9 @@ Uwagi:
   platform contract, albo jako feature facade nad platform options.
   Stan obecny: endpoint zostal jako fasada aplikacyjna nad platformowym
   katalogiem modeli Copilota.
-- `analysis.job` moze przejsciowo importowac
-  `features.incidentanalysis.flow` oraz `features.incidentanalysis.ai.chat`,
-  dopoki sam nie zostanie przeniesiony do feature'a.
+- `analysis.job` jest juz zamknietym historycznym pakietem produkcyjnym.
+  Incident job API, state i errors mieszkaja w
+  `features.incidentanalysis.job`.
 
 Kryterium done:
 
@@ -672,7 +672,7 @@ Kryterium done:
     `features.incidentanalysis.ai` [done].
 17. PR: przeniesc incident flow do `features.incidentanalysis.flow` [done].
 18. PR: przeniesc incident job do `features.incidentanalysis.job`, zachowujac
-    publiczne URL-e `/analysis/jobs`.
+    publiczne URL-e `/analysis/jobs` [done].
 19. PR: przeniesc incident evidence do `features.incidentanalysis.evidence`.
 20. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

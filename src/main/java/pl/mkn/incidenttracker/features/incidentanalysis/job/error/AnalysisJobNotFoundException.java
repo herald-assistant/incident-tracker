@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job.error;
+package pl.mkn.incidenttracker.features.incidentanalysis.job.error;
 
 public class AnalysisJobNotFoundException extends RuntimeException {
 

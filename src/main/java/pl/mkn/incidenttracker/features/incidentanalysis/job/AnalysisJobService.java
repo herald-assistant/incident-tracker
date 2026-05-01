@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job;
+package pl.mkn.incidenttracker.features.incidentanalysis.job;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,12 +10,12 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatPr
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageRequest;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobResponse;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStartRequest;
-import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobNotFoundException;
-import pl.mkn.incidenttracker.analysis.job.state.AnalysisJobState;
-import pl.mkn.incidenttracker.analysis.job.state.AnalysisJobStateListener;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobState;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobStateListener;
 
 import java.util.Map;
 import java.util.UUID;

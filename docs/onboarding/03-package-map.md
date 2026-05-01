@@ -9,7 +9,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 
 ## Po tym kroku rozumiesz
 
-- za co odpowiada kazdy glowny podkatalog `analysis/*`,
+- za co odpowiada kazdy glowny podkatalog `analysis/*` i
+  `features/incidentanalysis/*`,
 - gdzie szukac zmian przy konkretnym typie feature'a,
 - jak rozpoznac, ze klasa wyladowala za wysoko albo za nisko.
 
@@ -19,7 +20,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 
 Orkiestracja runtime analizy incydentu, request/response i listenery progresu.
 
-### `analysis/job`
+### `features/incidentanalysis/job`
 
 Asynchroniczny flow z jobami, follow-up chatem po zakonczonej analizie i
 projekcja stanu dla UI. Root trzyma glowny `AnalysisJobService`, a szczegoly
@@ -175,7 +176,7 @@ operational context enrichment.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/job`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow`

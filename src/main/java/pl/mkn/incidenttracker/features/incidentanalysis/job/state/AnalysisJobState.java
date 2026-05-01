@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.job.state;
+package pl.mkn.incidenttracker.features.incidentanalysis.job.state;
 
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
@@ -14,10 +14,10 @@ import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisExecution;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageResponse;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobResponse;
-import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStepResponse;
-import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobChatUnavailableException;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStepResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
 
 import java.time.Instant;
 import java.util.ArrayList;
