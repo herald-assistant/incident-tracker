@@ -35,7 +35,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProper
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabMcpTools;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
 
 import java.nio.file.Path;
 import java.util.List;

@@ -198,8 +198,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Konfiguracja, porty, adapter REST oraz pomocnicze endpointy testowe GitLaba.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
-- `pl.mkn.incidenttracker.analysis.mcp.gitlab`
-  MCP tools GitLaba.
+- `pl.mkn.incidenttracker.agenttools.gitlab.mcp`
+  MCP tools GitLaba delegujace do `integrations.gitlab`.
 - `pl.mkn.incidenttracker.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.incidenttracker.api`
@@ -223,7 +223,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   snapshotu `AnalysisContext`, ale ich wyniki sa nadal dolaczane do evidence w
   stalej kolejnosci pipeline.
 - GitLab deterministic provider i GitLab MCP tools sa wydzielone do osobnych
-  pakietow, ale reuse'uja ten sam adapter GitLaba.
+  pakietow; MCP tools mieszkaja w `agenttools.gitlab.mcp` i reuse'uja ten sam
+  adapter GitLaba.
 - GitLab MCP tools potrafia nie tylko szukac kandydatow repo i flow contextu,
   ale tez znajdowac referencje/importy dla ugruntowanej klasy, zeby lepiej
   naprowadzac DB diagnostics.

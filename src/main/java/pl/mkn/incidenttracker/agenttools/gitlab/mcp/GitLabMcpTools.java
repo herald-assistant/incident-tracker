@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.gitlab;
+package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,18 +10,18 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkRequest;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkResult;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFindFlowContextToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFlowContextCandidate;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFlowContextGroup;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabToolScope;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkResult;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextCandidate;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolScope;
 
 import java.util.ArrayList;
 import java.util.Comparator;

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.gitlab;
+package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;

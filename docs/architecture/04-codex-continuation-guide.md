@@ -34,6 +34,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `agenttools.context`
 - `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
 - `agenttools.elasticsearch.mcp`
+- `agenttools.gitlab.mcp`
 - `integrations.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
@@ -69,7 +70,8 @@ Przy nowej sesji najlepiej zaczac od:
 - `integrations.gitlab`
 - `integrations.gitlab.source`
 - `analysis.evidence.provider.gitlabdeterministic`
-- `analysis.mcp.gitlab`
+- `agenttools.gitlab`
+- `agenttools.gitlab.mcp`
 
 ### Za Elastica odpowiadaja glownie
 

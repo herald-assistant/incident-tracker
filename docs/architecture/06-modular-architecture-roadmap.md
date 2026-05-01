@@ -427,13 +427,13 @@ Kroki:
 
 1. Przeniesc tool contracts i names do `agenttools.<capability>`.
    Stan obecny: tool names/prefixy dla Elasticsearch, GitLab i Database
-   mieszkaja w `agenttools.<capability>`. Elasticsearch wrapper `@Tool`
-   mieszka juz w `agenttools.elasticsearch.mcp`, a GitLab i Database nadal sa
-   w `analysis.mcp.*`.
+   mieszkaja w `agenttools.<capability>`. Elasticsearch i GitLab wrappery
+   `@Tool` mieszkaja juz w `agenttools.<capability>.mcp`, a Database nadal
+   jest w `analysis.mcp.database`.
 2. Przeniesc Spring AI/MCP wrappers do `agenttools.mcp.<capability>` albo
    `agenttools.<capability>.mcp`.
    Stan obecny: wybrany kierunek to `agenttools.<capability>.mcp`; pierwszy
-   przeniesiony slice to Elasticsearch.
+   przeniesiony slice to Elasticsearch, drugi to GitLab.
 3. Zostawic w tools tylko delegacje do integrations/use case'ow.
 4. Utrzymac hidden scope jako neutralny `AgentToolContext`, a nie
    `CopilotToolContext`.
@@ -588,7 +588,8 @@ Kryterium done:
 13. PR: przeniesc neutralne tool names/prefixy do `agenttools.<capability>`
     [done].
 14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
-    tools; Elasticsearch [done], GitLab i Database pozostaja do przeniesienia.
+    tools; Elasticsearch [done], GitLab [done], Database pozostaje do
+    przeniesienia.
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest.
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse

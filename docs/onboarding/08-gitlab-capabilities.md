@@ -40,7 +40,7 @@ Tutaj wolno miec heurystyki incidentowe, bo to jest krok pipeline.
 
 ## Capability 3: MCP tools
 
-Pakiet: `analysis.mcp.gitlab`
+Pakiet: `agenttools.gitlab.mcp`
 
 Odpowiada za:
 

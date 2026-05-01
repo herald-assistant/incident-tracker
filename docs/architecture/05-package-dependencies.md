@@ -149,14 +149,13 @@ flowchart LR
     EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
 
-    AI --> MCP["analysis.mcp"]
     AI --> AGENTTOOLS["agenttools"]
     AI --> EVIDENCE
     AI --> OPTIONS
     AI --> COMMON["common"]
     AI --> SHARED
 
-    MCP --> INTEGRATIONS
+    MCP["analysis.mcp"] --> INTEGRATIONS
     MCP --> AGENTTOOLS
     AGENTTOOLS --> INTEGRATIONS
 
@@ -182,14 +181,13 @@ flowchart LR
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
-| `analysis.ai -> analysis.mcp` | 8 | oczekiwane przejsciowo | Copilot runtime nadal reuse'uje Spring AI/MCP wrappers i DTO wynikow tam, gdzie nie zostaly jeszcze wydzielone. |
-| `analysis.ai -> agenttools` | 21 | oczekiwane przejsciowo | Copilot runtime uzywa neutralnych hidden context keys oraz nazw tools/prefixow capability. |
+| `analysis.ai -> agenttools` | 29 | oczekiwane przejsciowo | Copilot runtime uzywa neutralnych hidden context keys, nazw tools/prefixow capability oraz GitLab tool response DTO dla capture evidence. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
-| `analysis.mcp -> integrations` | 7 | oczekiwane przejsciowo | GitLab i Database MCP tools korzystaja z docelowych reusable integracji, dopoki nie zostana przeniesione do `agenttools`. |
-| `analysis.mcp -> agenttools` | 24 | oczekiwane przejsciowo | Pozostale MCP wrappers uzywaja neutralnych hidden context keys oraz nazw tools. |
-| `agenttools -> integrations` | 2 | oczekiwane | Pierwszy przeniesiony wrapper Elasticsearch MCP deleguje do `integrations.elasticsearch`. |
+| `analysis.mcp -> integrations` | 3 | oczekiwane przejsciowo | Database MCP tools korzystaja z docelowej reusable integracji, dopoki nie zostana przeniesione do `agenttools`. |
+| `analysis.mcp -> agenttools` | 8 | oczekiwane przejsciowo | Pozostaly Database MCP wrapper uzywa neutralnych hidden context keys oraz nazw tools. |
+| `agenttools -> integrations` | 6 | oczekiwane | Przeniesione wrappery Elasticsearch i GitLab MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
@@ -216,8 +214,9 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
-analysis.ai.copilot -> analysis.mcp/agenttools.*.mcp -> integrations
-analysis.ai.copilot/analysis.mcp -> agenttools
+analysis.ai.copilot -> agenttools
+analysis.mcp/agenttools.*.mcp -> integrations
+analysis.mcp -> agenttools
 analysis.job/flow/ai -> analysis.options
 analysis.job/flow/ai -> shared
 api -> feature exceptions
@@ -235,6 +234,7 @@ Unikac nowych zaleznosci:
 - `integrations -> features`,
 - `integrations -> aiplatform`,
 - `analysis.mcp -> analysis.ai.copilot`,
+- `analysis.ai -> analysis.mcp`,
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
   facts do statusu UI.
@@ -259,6 +259,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.evidence -> analysis.ai`: generyczne DTO evidence mieszkaja teraz
   w `shared.evidence`, a `analysis.ai.evidence` nie jest wlascicielem modelu
   evidence.
+- `analysis.ai -> analysis.mcp`: GitLab tool response DTO uzywane przez
+  capture evidence mieszkaja teraz w `agenttools.gitlab.mcp`, a Copilot
+  runtime nie importuje historycznej warstwy MCP.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.
