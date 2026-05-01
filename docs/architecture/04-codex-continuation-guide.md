@@ -58,6 +58,8 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.copilot.tools.database`
 - `analysis.ai.copilot.telemetry`
 - `CopilotArtifactService`
+- `CopilotRenderedArtifact`
+- `CopilotArtifactContentMapper`
 - `CopilotIncidentFollowUpPreparationService`
 
 ### Za GitLaba odpowiadaja glownie

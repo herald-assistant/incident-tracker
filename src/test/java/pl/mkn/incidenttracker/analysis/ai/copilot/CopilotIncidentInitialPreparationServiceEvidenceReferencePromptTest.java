@@ -14,6 +14,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHid
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
@@ -56,7 +57,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                         artifactService(new ObjectMapper()),
                         new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
                         new CopilotIncidentPromptRenderer(),
-                        new CopilotIncidentRunRequestFactory(artifactService(new ObjectMapper()))
+                        new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper())
                 ),
                 new CopilotRunPreparationService(
                         new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))

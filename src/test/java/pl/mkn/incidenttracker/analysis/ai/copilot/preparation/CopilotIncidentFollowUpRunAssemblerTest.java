@@ -2,6 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
@@ -30,7 +32,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         var artifactRequestFactory = mock(CopilotFollowUpArtifactRequestFactory.class);
         var artifactService = mock(CopilotArtifactService.class);
         var promptRenderer = mock(CopilotIncidentFollowUpPromptRenderer.class);
-        var runRequestFactory = new CopilotIncidentRunRequestFactory(artifactService);
+        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
         var assembler = new CopilotIncidentFollowUpRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,
@@ -87,8 +89,6 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         when(promptRenderer.render(request, toolAccessPolicy, artifacts)).thenReturn("Follow-up prompt");
         when(sessionConfigRequestFactory.create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options))
                 .thenReturn(sessionConfigRequest);
-        when(artifactService.toArtifactContentMap(artifacts))
-                .thenReturn(Map.of("01-incident-digest.md", "# Digest"));
 
         var runRequest = assembler.assemble(request);
 
@@ -100,8 +100,8 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         verify(promptRenderer).render(request, toolAccessPolicy, artifacts);
     }
 
-    private CopilotArtifactService.Artifact artifact(String displayName, String content) {
-        return new CopilotArtifactService.Artifact(
+    private CopilotRenderedArtifact artifact(String displayName, String content) {
+        return new CopilotRenderedArtifact(
                 displayName,
                 "test",
                 "copilot",

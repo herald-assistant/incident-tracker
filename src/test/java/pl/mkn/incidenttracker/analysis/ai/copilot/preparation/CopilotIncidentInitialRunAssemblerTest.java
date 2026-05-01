@@ -1,6 +1,8 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
@@ -28,7 +30,7 @@ class CopilotIncidentInitialRunAssemblerTest {
         var artifactService = mock(CopilotArtifactService.class);
         var toolAccessPolicyFactory = mock(CopilotToolAccessPolicyFactory.class);
         var promptRenderer = mock(CopilotIncidentPromptRenderer.class);
-        var runRequestFactory = new CopilotIncidentRunRequestFactory(artifactService);
+        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
         var assembler = new CopilotIncidentInitialRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,
@@ -71,8 +73,6 @@ class CopilotIncidentInitialRunAssemblerTest {
         when(promptRenderer.render(request, toolAccessPolicy, artifacts)).thenReturn("Initial prompt");
         when(sessionConfigRequestFactory.create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options))
                 .thenReturn(sessionConfigRequest);
-        when(artifactService.toArtifactContentMap(artifacts))
-                .thenReturn(Map.of("01-incident-digest.md", "# Digest"));
 
         var assembly = assembler.assemble(request);
         var runRequest = assembly.runRequest();
@@ -88,8 +88,8 @@ class CopilotIncidentInitialRunAssemblerTest {
         verify(promptRenderer).render(request, toolAccessPolicy, artifacts);
     }
 
-    private CopilotArtifactService.Artifact artifact(String displayName, String content) {
-        return new CopilotArtifactService.Artifact(
+    private CopilotRenderedArtifact artifact(String displayName, String content) {
+        return new CopilotRenderedArtifact(
                 displayName,
                 "test",
                 "copilot",

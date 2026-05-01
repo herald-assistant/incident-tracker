@@ -47,7 +47,8 @@ Obejmuje:
   neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
   `CopilotModelSelection`, `CopilotRunRequest`, `CopilotRunPreparationService`,
   `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-  `CopilotSkillRuntimeLoader` oraz factory budujace `SessionConfig` i
+  `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
+  `CopilotArtifactContentMapper` oraz factory budujace `SessionConfig` i
   `MessageOptions` bez znajomosci incident policy ani pelnego tool/session
   contextu feature'a,
 - `copilot/execution/`
@@ -102,11 +103,14 @@ platformowe. Przy zmianach trzymaj ponizsza mape ownership:
   `CopilotArtifactItemIdGenerator`.
   Maja czesc mechaniki artifact delivery, ale dzis renderuja incident manifest,
   digest i evidence artifacts, wiec nie przenos ich do runtime bez rozdzielenia
-  tresci incidentowej od generycznej mechaniki.
+  tresci incidentowej od generycznej mechaniki. Neutralny typ
+  `CopilotRenderedArtifact` i mapowanie na runtime `artifactContents` sa juz
+  platform-owned w `copilot/runtime`.
 Platform-owned runtime siedzi w `copilot/runtime`, przede wszystkim
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-`CopilotSkillRuntimeLoader`, `CopilotPreparedSessionFactory` i
+`CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
+`CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory` i
 `CopilotSessionConfigFactory`. Skill loader jest platformowa mechanika
 materializacji skonfigurowanych skill directories/resources; wybor, czy dana
 sesja ma ich uzyc, nadal pozostaje po stronie feature preparation przez

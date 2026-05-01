@@ -1,21 +1,20 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotIncidentRunRequestFactoryTest {
 
     private final CopilotIncidentRunRequestFactory factory =
-            new CopilotIncidentRunRequestFactory(artifactService(new ObjectMapper()));
+            new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
 
     @Test
     void shouldCreateCopilotRunRequestFromIncidentRuntimeInputs() {
@@ -49,8 +48,8 @@ class CopilotIncidentRunRequestFactoryTest {
         assertEquals("# Digest", runRequest.artifactContents().get("01-incident-digest.md"));
     }
 
-    private CopilotArtifactService.Artifact artifact(String displayName, String content) {
-        return new CopilotArtifactService.Artifact(
+    private CopilotRenderedArtifact artifact(String displayName, String content) {
+        return new CopilotRenderedArtifact(
                 displayName,
                 "test",
                 "copilot",

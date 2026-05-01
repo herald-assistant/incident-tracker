@@ -1,8 +1,9 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ class CopilotIncidentPromptRendererTest {
                 CopilotEvidenceCoverageReport.empty()
         );
         var artifacts = List.of(
-                new CopilotArtifactService.Artifact(
+                new CopilotRenderedArtifact(
                         "00-incident-manifest.json",
                         "Artifact index and analysis context",
                         null,
@@ -44,7 +45,7 @@ class CopilotIncidentPromptRendererTest {
                         "application/json",
                         "{\"readFirst\":\"00-incident-manifest.json\"}"
                 ),
-                new CopilotArtifactService.Artifact(
+                new CopilotRenderedArtifact(
                         "01-incident-digest.md",
                         "Compressed incident digest for fast grounding",
                         "copilot",

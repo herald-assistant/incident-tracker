@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
@@ -11,7 +12,7 @@ public class CopilotIncidentPromptRenderer {
     public String render(
             InitialAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy,
-            List<CopilotArtifactService.Artifact> renderedArtifacts
+            List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return """
                 You are helping with an enterprise software incident analysis.
@@ -155,7 +156,7 @@ public class CopilotIncidentPromptRenderer {
     }
 
     private String formatArtifacts(
-            List<CopilotArtifactService.Artifact> renderedArtifacts
+            List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         var rendered = new StringBuilder();
 
@@ -182,7 +183,7 @@ public class CopilotIncidentPromptRenderer {
     }
 
     private String formatEmbeddedArtifacts(
-            List<CopilotArtifactService.Artifact> renderedArtifacts
+            List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         if (renderedArtifacts.isEmpty()) {
             return "<none>";

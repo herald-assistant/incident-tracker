@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -16,7 +17,6 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.Git
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -43,13 +43,13 @@ public class CopilotArtifactService {
         this.itemIdGenerator = itemIdGenerator;
     }
 
-    public List<Artifact> renderArtifacts(
+    public List<CopilotRenderedArtifact> renderArtifacts(
             InitialAnalysisRequest request,
             CopilotToolAccessPolicy toolAccessPolicy
     ) {
         var descriptors = buildArtifactIndex(request);
-        var artifacts = new ArrayList<Artifact>();
-        artifacts.add(new Artifact(
+        var artifacts = new ArrayList<CopilotRenderedArtifact>();
+        artifacts.add(new CopilotRenderedArtifact(
                 MANIFEST_ARTIFACT_ID,
                 "Artifact index and analysis context",
                 null,
@@ -58,7 +58,7 @@ public class CopilotArtifactService {
                 "application/json",
                 renderManifestArtifact(request, descriptors, toolAccessPolicy)
         ));
-        artifacts.add(new Artifact(
+        artifacts.add(new CopilotRenderedArtifact(
                 DIGEST_ARTIFACT_ID,
                 "Compressed incident digest for fast grounding",
                 "copilot",
@@ -77,7 +77,7 @@ public class CopilotArtifactService {
         for (int index = 0; index < sections.size(); index++) {
             var section = sections.get(index);
             var displayName = buildSectionFileName(index + 2, section);
-            artifacts.add(new Artifact(
+            artifacts.add(new CopilotRenderedArtifact(
                     displayName,
                     "Evidence section from provider `%s` in category `%s`".formatted(
                             normalizeDescriptorValue(section.provider()),
@@ -92,22 +92,6 @@ public class CopilotArtifactService {
         }
 
         return List.copyOf(artifacts);
-    }
-
-    public Map<String, String> toArtifactContentMap(
-            InitialAnalysisRequest request,
-            CopilotToolAccessPolicy toolAccessPolicy
-    ) {
-        return toArtifactContentMap(renderArtifacts(request, toolAccessPolicy));
-    }
-
-    public Map<String, String> toArtifactContentMap(List<Artifact> artifacts) {
-        var artifactContents = new LinkedHashMap<String, String>();
-        for (var artifact : artifacts) {
-            artifactContents.put(artifact.displayName(), artifact.content());
-        }
-
-        return Collections.unmodifiableMap(artifactContents);
     }
 
     private String renderManifestArtifact(
@@ -401,17 +385,4 @@ public class CopilotArtifactService {
         }
     }
 
-    public record Artifact(
-            String displayName,
-            String role,
-            String provider,
-            String category,
-            Integer itemCount,
-            String mimeType,
-            String content
-    ) {
-        public ArtifactDescriptor descriptor() {
-            return new ArtifactDescriptor(displayName, role, provider, category, itemCount, List.of());
-        }
-    }
 }

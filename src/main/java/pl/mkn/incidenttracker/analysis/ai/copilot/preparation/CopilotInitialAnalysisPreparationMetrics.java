@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
@@ -7,7 +8,7 @@ import java.util.Objects;
 
 public record CopilotInitialAnalysisPreparationMetrics(
         CopilotToolSessionContext toolSessionContext,
-        List<CopilotArtifactService.Artifact> renderedArtifacts
+        List<CopilotRenderedArtifact> renderedArtifacts
 ) {
 
     public CopilotInitialAnalysisPreparationMetrics {

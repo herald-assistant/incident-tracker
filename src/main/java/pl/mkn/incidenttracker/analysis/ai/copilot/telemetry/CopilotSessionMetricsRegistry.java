@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
@@ -23,7 +23,7 @@ public class CopilotSessionMetricsRegistry {
     public void recordPreparation(
             CopilotToolSessionContext context,
             InitialAnalysisRequest request,
-            List<CopilotArtifactService.Artifact> artifacts,
+            List<CopilotRenderedArtifact> artifacts,
             String prompt,
             long preparationDurationMs
     ) {
@@ -166,14 +166,14 @@ public class CopilotSessionMetricsRegistry {
     private CopilotArtifactMetrics toArtifactMetrics(
             CopilotToolSessionContext context,
             InitialAnalysisRequest request,
-            List<CopilotArtifactService.Artifact> artifacts,
+            List<CopilotRenderedArtifact> artifacts,
             String prompt,
             long preparationDurationMs
     ) {
         var evidenceSections = request != null
                 ? request.evidenceSections()
                 : List.<pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection>of();
-        var safeArtifacts = artifacts != null ? artifacts : List.<CopilotArtifactService.Artifact>of();
+        var safeArtifacts = artifacts != null ? artifacts : List.<CopilotRenderedArtifact>of();
 
         return new CopilotArtifactMetrics(
                 context.analysisRunId(),

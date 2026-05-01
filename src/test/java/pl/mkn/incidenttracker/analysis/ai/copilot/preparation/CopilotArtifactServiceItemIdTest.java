@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -17,6 +18,7 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.art
 class CopilotArtifactServiceItemIdTest {
 
     private final CopilotArtifactService artifactService = artifactService(new ObjectMapper());
+    private final CopilotArtifactContentMapper artifactContentMapper = new CopilotArtifactContentMapper();
     private final CopilotToolAccessPolicyFactory policyFactory =
             new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 
@@ -30,10 +32,10 @@ class CopilotArtifactServiceItemIdTest {
                         item("log 2", attr("message", "second timeout"))
                 )
         )));
-        var artifacts = artifactService.toArtifactContentMap(request, policy(request));
+        var artifacts = renderArtifactContentMap(request);
 
         var firstRender = artifacts.get("02-elasticsearch-logs.md");
-        var secondRender = artifactService.toArtifactContentMap(request, policy(request)).get("02-elasticsearch-logs.md");
+        var secondRender = renderArtifactContentMap(request).get("02-elasticsearch-logs.md");
 
         assertEquals(firstRender, secondRender);
         assertTrue(firstRender.contains("## itemId: elastic-logs-001"));
@@ -51,7 +53,7 @@ class CopilotArtifactServiceItemIdTest {
                         item("event 2", attr("message", "second"))
                 )
         )));
-        var artifacts = artifactService.toArtifactContentMap(request, policy(request));
+        var artifacts = renderArtifactContentMap(request);
 
         var content = artifacts.get("02-custom-provider-diagnostic-events.json");
 
@@ -62,6 +64,10 @@ class CopilotArtifactServiceItemIdTest {
 
     private CopilotToolAccessPolicy policy(InitialAnalysisRequest request) {
         return policyFactory.create(request, List.of());
+    }
+
+    private java.util.Map<String, String> renderArtifactContentMap(InitialAnalysisRequest request) {
+        return artifactContentMapper.toArtifactContentMap(artifactService.renderArtifacts(request, policy(request)));
     }
 
     private InitialAnalysisRequest request(List<AnalysisEvidenceSection> sections) {

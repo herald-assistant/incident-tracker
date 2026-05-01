@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
     public String render(
             AnalysisAiChatRequest request,
             CopilotToolAccessPolicy toolAccessPolicy,
-            List<CopilotArtifactService.Artifact> renderedArtifacts
+            List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return """
                 You are continuing an already completed enterprise software incident analysis.
@@ -145,7 +146,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 : "- none; answer only from existing analysis evidence and chat history.";
     }
 
-    private String formatArtifacts(List<CopilotArtifactService.Artifact> renderedArtifacts) {
+    private String formatArtifacts(List<CopilotRenderedArtifact> renderedArtifacts) {
         var rendered = new StringBuilder();
 
         for (var artifact : renderedArtifacts) {
@@ -166,7 +167,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
         return rendered.length() == 0 ? "- none" : rendered.toString();
     }
 
-    private String formatEmbeddedArtifacts(List<CopilotArtifactService.Artifact> renderedArtifacts) {
+    private String formatEmbeddedArtifacts(List<CopilotRenderedArtifact> renderedArtifacts) {
         if (renderedArtifacts.isEmpty()) {
             return "<none>";
         }

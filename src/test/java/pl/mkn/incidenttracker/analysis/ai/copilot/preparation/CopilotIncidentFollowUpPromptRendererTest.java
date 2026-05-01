@@ -5,6 +5,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 
 import java.util.List;
 
@@ -50,7 +51,7 @@ class CopilotIncidentFollowUpPromptRendererTest {
                 true,
                 CopilotEvidenceCoverageReport.empty()
         );
-        var artifacts = List.of(new CopilotArtifactService.Artifact(
+        var artifacts = List.of(new CopilotRenderedArtifact(
                 "01-incident-digest.md",
                 "Compressed incident digest for fast grounding",
                 "copilot",

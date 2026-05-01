@@ -2,6 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 
@@ -11,19 +13,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CopilotIncidentRunRequestFactory {
 
-    private final CopilotArtifactService artifactService;
+    private final CopilotArtifactContentMapper artifactContentMapper;
 
     public CopilotRunRequest create(
             String runReference,
             String prompt,
             CopilotSessionConfigRequest sessionConfigRequest,
-            List<CopilotArtifactService.Artifact> renderedArtifacts
+            List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return new CopilotRunRequest(
                 runReference,
                 prompt,
                 sessionConfigRequest,
-                artifactService.toArtifactContentMap(renderedArtifacts),
+                artifactContentMapper.toArtifactContentMap(renderedArtifacts),
                 null
         );
     }

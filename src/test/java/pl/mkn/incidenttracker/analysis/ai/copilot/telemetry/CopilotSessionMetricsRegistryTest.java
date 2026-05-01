@@ -1,11 +1,11 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
@@ -191,8 +191,8 @@ class CopilotSessionMetricsRegistryTest {
         );
     }
 
-    private CopilotArtifactService.Artifact artifact(String name, String content) {
-        return new CopilotArtifactService.Artifact(
+    private CopilotRenderedArtifact artifact(String name, String content) {
+        return new CopilotRenderedArtifact(
                 name,
                 "role",
                 null,

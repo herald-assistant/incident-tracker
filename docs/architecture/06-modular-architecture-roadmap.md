@@ -184,6 +184,10 @@ wykonania przed wejsciem do platformowego runtime.
 `CopilotRunPreparationService` jest neutralnym wejsciem runtime
 `CopilotRunRequest -> CopilotPreparedSession`; incident preparation sklada run
 request, a runtime service przygotowuje techniczna sesje SDK.
+Rendered artifacts przechodza przez neutralny runtime type
+`CopilotRenderedArtifact`, a mapowanie do `CopilotRunRequest.artifactContents`
+robi platformowy `CopilotArtifactContentMapper`. Incident preparation nadal
+renderuje sama tresc manifestu, digestu i evidence artifacts.
 
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,
@@ -232,14 +236,17 @@ Do obserwacji przed przeniesieniem:
 - `CopilotArtifactItemIdGenerator`
 
 Te klasy maja fragmenty generycznej mechaniki artifact delivery, ale obecnie
-nadal renderuja incident manifest, digest i evidence artifacts. Przed
-przeniesieniem do platformy trzeba oddzielic neutralna mechanike od
-incident-specific tresci.
+nadal renderuja incident manifest, digest i evidence artifacts. Neutralny
+runtime artifact model (`CopilotRenderedArtifact`) i content mapowanie
+(`CopilotArtifactContentMapper`) sa juz poza nimi w `copilot/runtime`. Przed
+przeniesieniem reszty do platformy trzeba dalej oddzielac neutralna mechanike
+od incident-specific tresci.
 
 Platform-owned runtime jest juz poza `preparation`, w `copilot/runtime`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-`CopilotSkillRuntimeLoader`, `CopilotPreparedSessionFactory` i
+`CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
+`CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory` i
 `CopilotSessionConfigFactory`. Skill loader odpowiada tylko za materializacje
 skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
