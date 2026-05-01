@@ -56,10 +56,9 @@ ponizszych zasad:
   session lifecycle, allowliste, hidden context, eventy invocation i techniczna
   obsluge wynikow, ale dostaje prompt, skille, dostepne tools, evidence sink i
   response handling od feature'a.
-- `analysis.ai.copilot` jest jeszcze przejsciowym adapterem/mostem dla
-  nieprzeniesionych elementow Copilota. Nie powinien stawac sie wlascicielem
-  domenowej logiki analizy incydentu, promptu, skilli ani polityki doboru
-  tools.
+- `analysis.ai` jest jeszcze przejsciowym kontraktem initial/chat obecnego
+  flow. Nie powinien stawac sie wlascicielem runtime Copilota, domenowej
+  logiki analizy incydentu, promptu, skilli ani polityki doboru tools.
 - `analysis.job`, `analysis.flow` i incident-specific evidence/prompt sa
   feature'em analizy incydentow. Moga zalezec od platformy, tools i adapterow,
   ale platforma, tools i adaptery nie moga zalezec od tego feature'a.
@@ -110,6 +109,7 @@ flowchart LR
     FLOW --> OPTIONS
     INITIAL --> OPTIONS
     CHAT --> OPTIONS
+    OPTIONS --> PLATFORMOPTIONS["aiplatform.copilot.runtime.options"]
 ```
 
 Wyniki wracaja do callera jako return values albo listener callbacks:
@@ -128,7 +128,8 @@ Najwazniejsze lancuchy ownership/dependency:
   `analysis.job -> analysis.ai.chat -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools -> agenttools.*.mcp -> integrations`,
 - model/options:
   `analysis.job`, `analysis.flow` i `analysis.ai` korzystaja z bocznego
-  kontraktu `analysis.options`.
+  kontraktu `analysis.options`, a fasada opcji deleguje do platformowego
+  katalogu modeli Copilota w `aiplatform.copilot.runtime.options`.
 
 ## Compile-Time Import Graph
 
@@ -161,9 +162,10 @@ flowchart LR
     FEATURES --> COMMON["common"]
     FEATURES --> SHARED
 
-    AI --> AIPLATFORM["aiplatform"]
     AI --> OPTIONS
     AI --> SHARED
+
+    OPTIONS --> AIPLATFORM["aiplatform"]
 
     AIPLATFORM --> AGENTTOOLS
     AIPLATFORM --> SHARED
@@ -198,9 +200,9 @@ flowchart LR
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> shared` | 22 | oczekiwane | Incident artifacts, preparation metrics, coverage, quality gate, usage mapping i tool evidence capture czytaja neutralne DTO shared. |
-| `analysis.ai -> aiplatform` | 2 | oczekiwane przejsciowo | Zostal praktycznie tylko `CopilotSdkModelOptionsProvider`, ktory korzysta z platformowego model listera/properties. |
-| `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
+| `analysis.ai -> analysis.options` | 2 | oczekiwane | Kontrakty initial/chat niosa opcjonalne preferencje modelu/reasoning. |
 | `analysis.ai -> shared` | 5 | oczekiwane | Kontrakty initial/chat konsumuja neutralny model evidence, tool evidence listener i usage DTO. |
+| `analysis.options -> aiplatform` | 3 | oczekiwane przejsciowo | Fasada endpointu `GET /analysis/ai/options` mapuje platformowy katalog modeli Copilota na obecny kontrakt aplikacji. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
@@ -253,7 +255,7 @@ features.incidentanalysis.ai.copilot.quality -> aiplatform.copilot.runtime.quali
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
 features.incidentanalysis.ai.copilot -> agenttools
-analysis.ai.copilot -> aiplatform.copilot.runtime
+analysis.options -> aiplatform.copilot.runtime.options
 aiplatform.copilot.runtime.telemetry.session -> aiplatform.copilot.runtime.quality/telemetry/tools
 aiplatform.copilot.runtime.execution -> aiplatform.copilot.runtime/tools
 aiplatform.copilot.tools -> agenttools
@@ -340,6 +342,10 @@ Zamkniete krawedzie, ktorych nie przywracac:
   sesji Copilota mieszkaja teraz w
   `aiplatform.copilot.runtime.telemetry.session` i nie importuja `analysis.*`,
   `features.*` ani `integrations.*`.
+- Dawne `analysis.ai.copilot.CopilotSdkModelOptionsProvider`: provider
+  katalogu modeli Copilota mieszka teraz w
+  `aiplatform.copilot.runtime.options`. `analysis.options` zostaje tylko
+  fasada endpointu i mapperem na kontrakt aplikacji.
 - Dawna konkretna zaleznosc telemetry w incident feature: preparation/provider
   uzywaja teraz platformowego `CopilotSessionTelemetry`, a
   `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger` sa implementacja

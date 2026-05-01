@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.options;
 
 import com.github.copilot.sdk.json.ModelInfo;
 import lombok.RequiredArgsConstructor;
@@ -7,9 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiModelOption;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiModelOptionsProvider;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiModelOptionsResponse;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -20,7 +17,7 @@ import java.util.Objects;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsProvider {
+public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvider {
 
     private final CopilotSdkModelLister modelLister;
     private final CopilotSdkProperties properties;
@@ -28,7 +25,7 @@ public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsPro
     private volatile CacheEntry cache;
 
     @Override
-    public AnalysisAiModelOptionsResponse modelOptions() {
+    public CopilotModelOptionsResponse modelOptions() {
         var cached = cache;
         if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
             return cached.response();
@@ -48,16 +45,16 @@ public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsPro
         }
     }
 
-    private AnalysisAiModelOptionsResponse responseFrom(List<ModelInfo> modelInfos) {
+    private CopilotModelOptionsResponse responseFrom(List<ModelInfo> modelInfos) {
         var models = modelInfos == null
-                ? List.<AnalysisAiModelOption>of()
+                ? List.<CopilotModelOption>of()
                 : modelInfos.stream()
                 .filter(Objects::nonNull)
                 .map(this::toModelOption)
                 .filter(option -> StringUtils.hasText(option.id()))
                 .toList();
 
-        return new AnalysisAiModelOptionsResponse(
+        return new CopilotModelOptionsResponse(
                 normalized(properties.getModel()),
                 normalized(properties.getReasoningEffort()),
                 defaultReasoningEfforts(models),
@@ -65,10 +62,10 @@ public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsPro
         );
     }
 
-    private AnalysisAiModelOption toModelOption(ModelInfo modelInfo) {
+    private CopilotModelOption toModelOption(ModelInfo modelInfo) {
         var efforts = reasoningEfforts(modelInfo);
         var supportsReasoningEffort = supportsReasoningEffort(modelInfo);
-        return new AnalysisAiModelOption(
+        return new CopilotModelOption(
                 normalized(modelInfo.getId()),
                 modelName(modelInfo),
                 supportsReasoningEffort,
@@ -115,7 +112,7 @@ public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsPro
         return List.copyOf(values);
     }
 
-    private List<String> defaultReasoningEfforts(List<AnalysisAiModelOption> models) {
+    private List<String> defaultReasoningEfforts(List<CopilotModelOption> models) {
         var defaultModel = normalized(properties.getModel());
         if (!StringUtils.hasText(defaultModel)) {
             return List.of();
@@ -124,12 +121,12 @@ public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsPro
         return models.stream()
                 .filter(model -> defaultModel.equals(model.id()))
                 .findFirst()
-                .map(AnalysisAiModelOption::reasoningEfforts)
+                .map(CopilotModelOption::reasoningEfforts)
                 .orElse(List.of());
     }
 
-    private AnalysisAiModelOptionsResponse fallbackResponse() {
-        return new AnalysisAiModelOptionsResponse(
+    private CopilotModelOptionsResponse fallbackResponse() {
+        return new CopilotModelOptionsResponse(
                 normalized(properties.getModel()),
                 normalized(properties.getReasoningEffort()),
                 List.of(),
@@ -148,7 +145,7 @@ public class CopilotSdkModelOptionsProvider implements AnalysisAiModelOptionsPro
     }
 
     private record CacheEntry(
-            AnalysisAiModelOptionsResponse response,
+            CopilotModelOptionsResponse response,
             Instant expiresAt
     ) {
     }

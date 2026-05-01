@@ -115,7 +115,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.options`
   Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
   Pakiet jest wspolnym kontraktem dla flow, jobow, chatu i UI, a nie
-  wewnetrzna czescia providera AI.
+  wewnetrzna czescia providera AI. Implementacja endpointu mapuje platformowy
+  katalog modeli Copilota na obecne DTO aplikacji.
 - `pl.mkn.incidenttracker.analysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -129,10 +130,6 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   diagnozy.
 - `pl.mkn.incidenttracker.analysis.ai.chat`
   Follow-up chat po zakonczonym jobie.
-- `pl.mkn.incidenttracker.analysis.ai.copilot`
-  Techniczna integracja Copilot SDK dla model options i telemetry. Incident
-  initial/chat providery, response parser i quality gate mieszkaja w
-  `features.incidentanalysis.ai.copilot`, a execution gateway w platformie.
 - `pl.mkn.incidenttracker.shared.ai`
   Neutralny kontrakt token/cost/usage dla flow, job UI, telemetry i feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`
@@ -154,6 +151,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
   promptu ani incident policy.
+- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.options`
+  Platformowy provider katalogu modeli Copilota i neutralne DTO opcji modeli.
+  `analysis.options` jest tylko fasada mapujaca ten katalog na endpoint
+  `GET /analysis/ai/options`.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz neutralny port
   metryk execution bez zaleznosci od konkretnego feature'a.
@@ -271,9 +272,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   requestem analizy. Kazda wiadomosc uruchamia osobna sesje AI, osadza
   evidence i finalny wynik w promptcie oraz wystawia session-bound tools tylko
   w zakresie rozwiazanym przez pierwotna analize.
-- Lista modeli i dostepnych `reasoningEffort` dla UI pochodzi z Copilot SDK
-  przez backendowy endpoint opcji AI. Frontend nie jest source of truth dla
-  mozliwosci modeli.
+- Lista modeli i dostepnych `reasoningEffort` dla UI pochodzi z platformowego
+  provider'a opcji Copilota przez backendowy endpoint opcji AI. Frontend nie
+  jest source of truth dla mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
 - Zuzycie tokenow jest zbierane z eventow sesji Copilota i wystawiane do UI
   jako generyczne `shared.ai.AnalysisAiUsage`, bez typow SDK w kontrakcie

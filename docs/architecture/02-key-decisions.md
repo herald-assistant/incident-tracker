@@ -394,11 +394,11 @@ mechaniki event streamu. Estymacja kosztu jest liczona w frontendzie z tokenow
 i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
 analizy, a nie do rozliczen finansowych.
 
-Refaktory w `analysis.ai` i `analysis.ai.copilot` nie powinny wymagac wiedzy o
-typach SDK w UI: `POST /analysis/jobs` moze przyjac tylko `correlationId` oraz
-generyczne preferencje AI (`model`, `reasoningEffort`). Response pozostaje
-mapowany do pol aplikacji, a artefakty Copilota nadal sa embedded inline w
-promptcie.
+Refaktory w `analysis.ai`, `aiplatform.copilot` i
+`features.incidentanalysis.ai.copilot` nie powinny wymagac wiedzy o typach SDK
+w UI: `POST /analysis/jobs` moze przyjac tylko `correlationId` oraz generyczne
+preferencje AI (`model`, `reasoningEffort`). Response pozostaje mapowany do pol
+aplikacji, a artefakty Copilota nadal sa embedded inline w promptcie.
 
 Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac
 model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez

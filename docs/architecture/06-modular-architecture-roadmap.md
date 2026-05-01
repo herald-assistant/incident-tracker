@@ -284,6 +284,9 @@ nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 `ToolDefinition` bez wiedzy o incident-specific guidance. Budget telemetry jest
 odpieta przez platformowe `CopilotToolBudgetTelemetry`, a neutralne
 `CopilotToolMetrics` mieszkaja w `aiplatform.copilot.tools.telemetry`.
+Platformowy katalog modeli Copilota mieszka w
+`aiplatform.copilot.runtime.options`; `analysis.options` zostaje fasada
+endpointu `GET /analysis/ai/options` i mapperem na DTO aplikacji.
 
 ### `features.incidentanalysis`
 
@@ -503,6 +506,9 @@ Kroki:
    response handler/parser, ale nie zaklada `correlationId`.
 3. Przeniesc model options provider do platformy, a feature endpoint
    `/analysis/ai/options` zostawic jako fasade na platforme.
+   Stan obecny: zrobione. `CopilotSdkModelOptionsProvider` i neutralne DTO
+   katalogu modeli mieszkaja w `aiplatform.copilot.runtime.options`, a
+   `analysis.options` mapuje je na kontrakt endpointu aplikacji.
 4. Oddzielic generic artifact delivery mechanics od incident-specific digestu.
 5. Przeniesc incident prompt, incident digest i incident response JSON contract
    do `features.incidentanalysis`.
@@ -567,6 +573,8 @@ Uwagi:
   feature'a.
 - `analysis.options` powinno zostac rozstrzygniete podczas Fazy 5: albo jako
   platform contract, albo jako feature facade nad platform options.
+  Stan obecny: endpoint zostal jako fasada aplikacyjna nad platformowym
+  katalogiem modeli Copilota.
 
 Kryterium done:
 
@@ -653,8 +661,9 @@ Kryterium done:
     factory/handler/context/events/policy/logging/description/budget
     telemetry/evidence store przeniesione do
     `aiplatform.copilot.tools`, a session telemetry port przeniesiony do
-    `aiplatform.copilot.runtime.telemetry`, a concrete session telemetry do
-    `aiplatform.copilot.runtime.telemetry.session`].
+    `aiplatform.copilot.runtime.telemetry`, concrete session telemetry do
+    `aiplatform.copilot.runtime.telemetry.session`, a model options provider do
+    `aiplatform.copilot.runtime.options`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

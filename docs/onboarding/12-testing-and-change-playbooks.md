@@ -29,6 +29,10 @@ architektonicznych.
 
 - `src/test/java/pl/mkn/incidenttracker/agenttools`
 - `src/test/java/pl/mkn/incidenttracker/analysis/ai/copilot`
+  przejsciowo zawiera starsze testy Copilota, dopoki nazwy test packages nie
+  zostana domkniete do obecnych pakietow produkcyjnych,
+- `src/test/java/pl/mkn/incidenttracker/aiplatform/copilot`
+- `src/test/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/copilot`
 
 ### UI i frontend
 

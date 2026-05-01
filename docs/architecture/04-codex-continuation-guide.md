@@ -27,6 +27,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.initial.InitialAnalysisProvider`
 - `analysis.ai.chat.AnalysisAiChatProvider`
 - `analysis.options.AnalysisAiModelOptionsProvider`
+- `aiplatform.copilot.runtime.options`
 - `shared.ai`
 - `shared.evidence`
 - `analysis.ai.initial`
@@ -49,8 +50,8 @@ Przy nowej sesji najlepiej zaczac od:
 
 ### Za GitHub Copilot SDK odpowiadaja glownie
 
-- `analysis.ai.copilot`
 - `aiplatform.copilot.runtime`
+- `aiplatform.copilot.runtime.options`
 - `aiplatform.copilot.tools`
 - `aiplatform.copilot.tools.context`
 - `aiplatform.copilot.tools.events`
@@ -147,8 +148,9 @@ trafiaja do `AnalysisAiOptions` i `SessionConfig`, nie do
 deployment/GitLab/DB scope'u.
 
 Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
-Frontend pobiera ja z `GET /analysis/ai/options`, a backend mapuje metadane
-Copilot SDK przez `AnalysisAiModelOptionsProvider`.
+Frontend pobiera ja z `GET /analysis/ai/options`, a fasada
+`AnalysisAiModelOptionsProvider` mapuje platformowy katalog modeli Copilota na
+kontrakt aplikacji.
 
 ### `gitLabGroup`
 

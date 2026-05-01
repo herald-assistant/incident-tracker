@@ -108,10 +108,11 @@ zaleznosci:
 - Metryki preparation ida przez platformowy
   `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`, dzieki czemu
   feature nie importuje konkretnego registry/loggera telemetry.
-- `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
-  obok providerow analizy i chatu. Udostepnia osobny katalog modeli dla UI
-  przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do promptu
-  albo job state.
+- `CopilotSdkModelOptionsProvider` mieszka w
+  `aiplatform.copilot.runtime.options`. Udostepnia osobny katalog modeli dla
+  UI przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do
+  promptu albo job state. `analysis.options` zostaje fasada endpointu
+  `GET /analysis/ai/options`.
 
 Follow-up chat po zakonczonym jobie nie reuse'uje `InitialAnalysisProvider`.
 Ma osobny kontrakt `AnalysisAiChatProvider` i przygotowanie

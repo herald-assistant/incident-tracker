@@ -34,7 +34,8 @@ sa rozbite na:
 
 Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
 Ten pakiet jest wspolnym kontraktem dla `flow`, `job`, `chat` i UI, a nie
-wewnetrzna czescia providera AI.
+wewnetrzna czescia providera AI. Implementacja provider'a w tym pakiecie jest
+fasada nad platformowym katalogiem modeli Copilota.
 
 ### `analysis/evidence`
 
@@ -75,7 +76,7 @@ i `agenttools.database.mcp`.
 
 ### `analysis/ai`
 
-Generyczne kontrakty AI i implementacja oparta o Copilot SDK.
+Generyczne kontrakty AI initial/chat dla obecnego flow.
 
 Root `analysis/ai` nie powinien trzymac klas kontraktu bezposrednio. Klasy sa
 pogrupowane wedlug funkcji:
@@ -91,11 +92,9 @@ Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza `analysis.ai`:
   `AnalysisAiToolEvidenceListener`,
 - `shared.ai` - generyczny usage/token/cost contract dla job UI i telemetryki.
 
-Najwazniejsze podpakiety Copilota:
-
-- `copilot` - root aktualnej integracji Copilot SDK, m.in.
-  `CopilotSdkModelOptionsProvider`; incident initial/chat providery oraz
-  telemetry runtime sa juz poza `analysis.ai`,
+Nie dodawaj nowych elementow runtime Copilota do `analysis.ai`; platformowe
+mechanizmy SDK mieszkaja w `aiplatform.copilot`, a incidentowe providery w
+`features.incidentanalysis.ai.copilot`.
 
 ### `aiplatform`
 
@@ -105,6 +104,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   loader, `CopilotRunRequest`, `CopilotPreparedSession`,
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory konfiguracji
   sesji SDK,
+- `aiplatform.copilot.runtime.options` - platformowy katalog modeli Copilota
+  oraz neutralne DTO opcji modeli mapowane przez fasade `analysis/options`,
 - `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
   execution gateway i neutralny port metryk execution,
 - `aiplatform.copilot.runtime.telemetry` - neutralny port telemetry sesji:

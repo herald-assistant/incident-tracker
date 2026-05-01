@@ -2,8 +2,7 @@
 
 ## Zakres
 
-Ten katalog odpowiada za generyczny kontrakt AI i aktualna implementacje oparta
-o GitHub Copilot Java SDK.
+Ten katalog odpowiada za generyczne kontrakty AI initial/chat obecnego flow.
 
 Obejmuje:
 
@@ -13,11 +12,11 @@ Obejmuje:
   `InitialAnalysisResponse`,
 - `chat/`
   kontrakt follow-up chatu: `AnalysisAiChatProvider`, request/response, turny
-  i snapshot poczatkowej analizy,
-- `copilot/`
-  pozostaly tu tylko przejsciowe elementy integracji Copilot SDK, obecnie
-  `CopilotSdkModelOptionsProvider`; incident initial/chat providery i runtime
-  telemetry mieszkaja juz poza tym katalogiem.
+  i snapshot poczatkowej analizy.
+
+Nowe elementy runtime Copilota nie powinny trafic do `analysis.ai`. Platformowe
+mechanizmy SDK, w tym katalog modeli, mieszkaja w `aiplatform.copilot`, a
+incidentowe providery w `features.incidentanalysis.ai.copilot`.
 
 Neutralne `AnalysisAiToolEvidenceListener` i `AnalysisAiUsage` mieszkaja teraz
 w `shared.evidence` oraz `shared.ai`, bo sa uzywane przez flow, job, telemetry
@@ -134,8 +133,8 @@ trafia do `aiplatform`.
 - Zmiany w `aiplatform.copilot.runtime` lub `aiplatform.copilot.tools`
   powinny miec testy konfiguracji sesji, hidden contextu, eventow, properties
   i model listing, jesli dotykaja tych mechanizmow.
-- Zmiany w `copilot/tools` powinny miec testy mapowania Spring tools na tool
-  definitions.
+- Zmiany w `aiplatform.copilot.runtime.options` powinny miec testy mapowania
+  katalogu modeli SDK i fallbacku na configured defaults.
 - Zmiany w `aiplatform.copilot.runtime.execution` powinny zachowac kontrakty i
   obserwowalnosc lifecycle klienta i sesji.
 - Zmiany w `features.incidentanalysis.ai.copilot.response/quality` powinny

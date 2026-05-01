@@ -29,8 +29,10 @@ Nie obejmuje:
   danych integracyjnych.
 - Endpoint opcji moze pozostac pod `/analysis/ai/options`, bo opisuje wybor AI
   dla analizy, ale Java package nie jest czescia wewnetrznego modulu `ai`.
-- Konkretne pobieranie katalogu modeli trzymaj przy providerze, np.
-  `analysis.ai.copilot.CopilotSdkModelOptionsProvider`.
+- Konkretne pobieranie katalogu modeli Copilota trzymaj w platformie:
+  `aiplatform.copilot.runtime.options.CopilotSdkModelOptionsProvider`.
+  W tym pakiecie zostaje tylko fasada mapujaca platformowe DTO na kontrakt
+  endpointu aplikacji.
 
 ## Testy
 

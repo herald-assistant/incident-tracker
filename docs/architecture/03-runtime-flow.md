@@ -25,9 +25,10 @@ jest evidence, nie zmienia `environment`, `gitLabBranch`, `gitLabGroup` ani
 hidden `ToolContext`.
 
 `GET /analysis/ai/options` jest osobnym kontraktem UI do pobrania katalogu
-modeli. Backend mapuje `CopilotClient.listModels()` na generyczne DTO aplikacji
-i cache'uje wynik; jesli SDK jest chwilowo niedostepne, zwraca tylko
-skonfigurowane domysly.
+modeli. Fasada w `analysis.options` mapuje platformowy katalog modeli z
+`aiplatform.copilot.runtime.options` na generyczne DTO aplikacji. Platformowy
+provider uzywa `CopilotClient.listModels()` i cache'uje wynik; jesli SDK jest
+chwilowo niedostepne, zwraca tylko skonfigurowane domysly.
 
 `POST /analysis/jobs/{analysisId}/chat/messages` jest dostepny dopiero po
 `COMPLETED`. Request niesie tylko tresc wiadomosci operatora. Scope follow-up
@@ -123,10 +124,11 @@ renderingu i konfiguracji SDK:
   `CopilotSessionConfigFactory` buduje client options, session config,
   permission handler, hooks i disabled skills.
 
-`CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
-obok providera poczatkowej analizy i follow-up chatu. Uzywa zaleznosci runtime
-do pobrania katalogu modeli przez SDK, ale nie miesza tej metadanej
-z evidence ani promptem incydentu.
+`CopilotSdkModelOptionsProvider` mieszka w
+`aiplatform.copilot.runtime.options`. Uzywa zaleznosci runtime do pobrania
+katalogu modeli przez SDK, ale nie miesza tej metadanej z evidence ani
+promptem incydentu. Endpoint `GET /analysis/ai/options` zostaje w
+`analysis.options` jako fasada mapujaca platformowe DTO na kontrakt UI.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.
