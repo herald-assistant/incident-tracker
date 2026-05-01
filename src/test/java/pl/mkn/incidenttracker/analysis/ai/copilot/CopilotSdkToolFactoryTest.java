@@ -9,7 +9,7 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;

@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.mcp.gitlab;
 
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 
 import java.util.List;
 import java.util.Map;

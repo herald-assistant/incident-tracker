@@ -101,6 +101,7 @@ flowchart LR
     INITIAL --> TOOLS["analysis.ai.copilot.tools"]
     TOOLS --> MCP["analysis.mcp"]
     MCP --> ADAPTER
+    MCP --> INTEGRATIONS
 
     JOB --> CHAT
     CHAT["analysis.ai.chat"] --> TOOLS
@@ -123,7 +124,8 @@ Najwazniejsze lancuchy ownership/dependency:
 - initial AI:
   `analysis.flow -> analysis.ai.initial`,
 - AI-guided tools podczas initial analysis:
-  `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp -> analysis.adapter`,
+  `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp -> analysis.adapter`
+  albo `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp -> integrations`,
 - follow-up chat:
   `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> analysis.mcp -> analysis.adapter`,
 - model/options:
@@ -147,7 +149,7 @@ flowchart LR
     FLOW --> EVIDENCE
     FLOW --> AI
     FLOW --> OPTIONS
-    FLOW --> ADAPTER["analysis.adapter"]
+    FLOW --> INTEGRATIONS["integrations"]
     FLOW --> SHARED
 
     EVIDENCE --> ADAPTER
@@ -183,10 +185,10 @@ flowchart LR
 | `analysis.flow -> analysis.evidence` | 5 | oczekiwane | Orchestrator uruchamia deterministic evidence collector. |
 | `analysis.flow -> analysis.ai` | 6 | oczekiwane | Orchestrator buduje request AI i wywoluje initial provider. |
 | `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
-| `analysis.flow -> analysis.adapter` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
+| `analysis.flow -> integrations` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
 | `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
-| `analysis.evidence -> analysis.adapter` | 34 | oczekiwane przejsciowo | Providerzy evidence deleguja do adapterow systemow zewnetrznych, ktore jeszcze mieszkaja pod `analysis.adapter`. |
-| `analysis.evidence -> integrations` | 7 | oczekiwane | Providerzy Elasticsearch i Dynatrace deleguja juz do docelowych reusable integracji. |
+| `analysis.evidence -> analysis.adapter` | 25 | oczekiwane przejsciowo | Providerzy evidence deleguja do adapterow systemow zewnetrznych, ktore jeszcze mieszkaja pod `analysis.adapter`. |
+| `analysis.evidence -> integrations` | 16 | oczekiwane | Providerzy Elasticsearch, Dynatrace i GitLab deterministic deleguja juz do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
@@ -194,11 +196,10 @@ flowchart LR
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
-| `analysis.mcp -> analysis.adapter` | 7 | oczekiwane przejsciowo | Spring AI tools deleguja do adapterow/capability services, ktore jeszcze mieszkaja pod `analysis.adapter`. |
-| `analysis.mcp -> integrations` | 2 | oczekiwane | Elasticsearch MCP tool korzysta juz z docelowej reusable integracji. |
+| `analysis.mcp -> analysis.adapter` | 3 | oczekiwane przejsciowo | Spring AI tools deleguja do adapterow/capability services, ktore jeszcze mieszkaja pod `analysis.adapter`. |
+| `analysis.mcp -> integrations` | 6 | oczekiwane | Elasticsearch i GitLab MCP tools korzystaja juz z docelowych reusable integracji. |
 | `analysis.mcp -> agenttools` | 16 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych hidden context keys. |
-| `api -> analysis.adapter` | 4 | oczekiwane przejsciowo | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow, ktore jeszcze mieszkaja pod `analysis.adapter`. |
-| `api -> integrations` | 2 | oczekiwane | Globalny handler HTTP mapuje wynik/wyjatek helper endpointu Elasticsearch z `integrations`. |
+| `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
 
@@ -225,6 +226,7 @@ analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
+analysis.ai.copilot -> analysis.mcp -> integrations
 analysis.ai.copilot -> analysis.mcp -> analysis.adapter
 analysis.ai.copilot/analysis.mcp -> agenttools
 analysis.job/flow/ai -> analysis.options
@@ -253,9 +255,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.adapter -> analysis.evidence`: adapter Dynatrace nie buduje juz
   query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
   evidence providerow.
-- `integrations -> analysis`: pierwszy przeniesiony adapter
-  `integrations.dynatrace` pozostaje czysta integracja bez importow warstw
-  aplikacyjnych.
+- `integrations -> analysis`: przeniesione adaptery `integrations.dynatrace`,
+  `integrations.elasticsearch` i `integrations.gitlab` pozostaja czystymi
+  integracjami bez importow warstw aplikacyjnych.
 - `analysis.mcp -> analysis.ai.copilot`: hidden tool context keys mieszkaja
   teraz w neutralnym `agenttools.context.AgentToolContextKeys`, a Copilot
   runtime jest ich konsumentem.

@@ -14,7 +14,7 @@ jako trzy rozne capability.
 
 ## Capability 1: generyczny adapter
 
-Pakiet: `analysis.adapter.gitlab`
+Pakiet: `integrations.gitlab`
 
 Odpowiada za:
 
@@ -79,7 +79,7 @@ rekomendowane dalsze odczyty.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/gitlab`
+- `src/main/java/pl/mkn/incidenttracker/integrations/gitlab`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab`
 

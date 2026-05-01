@@ -64,8 +64,8 @@ Przy nowej sesji najlepiej zaczac od:
 
 ### Za GitLaba odpowiadaja glownie
 
-- `analysis.adapter.gitlab`
-- `analysis.adapter.gitlab.source`
+- `integrations.gitlab`
+- `integrations.gitlab.source`
 - `analysis.evidence.provider.gitlabdeterministic`
 - `analysis.mcp.gitlab`
 

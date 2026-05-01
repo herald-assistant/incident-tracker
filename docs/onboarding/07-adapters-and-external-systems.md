@@ -47,9 +47,9 @@ Ma najwiecej capability:
 
 Czytaj:
 
-- `analysis.adapter.gitlab.GitLabRepositoryPort`
-- `analysis.adapter.gitlab.GitLabRestRepositoryAdapter`
-- `analysis.adapter.gitlab.source.GitLabSourceResolveService`
+- `integrations.gitlab.GitLabRepositoryPort`
+- `integrations.gitlab.GitLabRestRepositoryAdapter`
+- `integrations.gitlab.source.GitLabSourceResolveService`
 
 ## Database
 

@@ -194,13 +194,13 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   (`entities`, `problems`, `metrics`).
 - `pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace`
   Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
-- `pl.mkn.incidenttracker.analysis.adapter.gitlab`
+- `pl.mkn.incidenttracker.integrations.gitlab`
   Konfiguracja, porty, adapter REST oraz pomocnicze endpointy testowe GitLaba.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.analysis.mcp.gitlab`
   MCP tools GitLaba.
-- `pl.mkn.incidenttracker.analysis.adapter.gitlab.source`
+- `pl.mkn.incidenttracker.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.incidenttracker.api`
   Obsluga bledow API i wspolny kontrakt walidacji.

@@ -54,12 +54,12 @@ Konkretne kroki pipeline:
 
 Przejsciowy dom integracji zewnetrznych, ktore nie zostaly jeszcze przeniesione
 do `integrations`.
-Sa tu dzisiaj adaptery GitLaba, Database capability i operational context.
+Sa tu dzisiaj adaptery Database capability i operational context.
 
 ### `integrations`
 
 Docelowa reusable warstwa capability adapters. Przeniesione pakiety to
-`integrations/dynatrace` i `integrations/elasticsearch`.
+`integrations/dynatrace`, `integrations/elasticsearch` i `integrations/gitlab`.
 
 ### `analysis/mcp`
 

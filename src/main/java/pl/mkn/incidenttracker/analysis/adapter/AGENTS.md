@@ -9,9 +9,6 @@ integracji to `pl.mkn.incidenttracker.integrations`.
 
 Obejmuje:
 
-- `gitlab/`
-  properties, porty, adapter REST, repository search, source resolve i helper
-  endpointy GitLaba,
 - `database/`
   properties, routing polaczen, metadata Oracle, readonly query execution,
   SQL guard, masking i limiting wynikow DB capability.
@@ -57,6 +54,9 @@ Nie obejmuje:
   `analysis.adapter`.
 - Elasticsearch zostal juz przeniesiony do
   `pl.mkn.incidenttracker.integrations.elasticsearch`; nie przywracaj go do
+  `analysis.adapter`.
+- GitLab i source resolve zostaly juz przeniesione do
+  `pl.mkn.incidenttracker.integrations.gitlab`; nie przywracaj ich do
   `analysis.adapter`.
 
 ## Testy

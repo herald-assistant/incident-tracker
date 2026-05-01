@@ -7,9 +7,9 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkResult;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
@@ -643,7 +643,7 @@ public class GitLabMcpTools {
         );
     }
 
-    List<GitLabFlowContextCandidate> toFlowContextCandidates(List<pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandidate> candidates) {
+    List<GitLabFlowContextCandidate> toFlowContextCandidates(List<pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate> candidates) {
         return defaultList(candidates).stream()
                 .map(candidate -> {
                     var inferredRole = inferRole(candidate.filePath(), candidate.matchReason());

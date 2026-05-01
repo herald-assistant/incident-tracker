@@ -2,11 +2,11 @@ package pl.mkn.incidenttracker.analysis.mcp.gitlab;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandidate;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileChunk;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolDtos.GitLabFlowContextGroup;
