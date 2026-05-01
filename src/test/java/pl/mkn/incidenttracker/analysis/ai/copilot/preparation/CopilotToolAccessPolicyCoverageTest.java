@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
@@ -226,6 +227,38 @@ class CopilotToolAccessPolicyCoverageTest {
         assertEquals(List.of(), policy.availableToolNames());
     }
 
+    @Test
+    void shouldCreateFollowUpPolicyFromResolvedChatScope() {
+        var policy = policyFactory.createForFollowUp(
+                chatRequest("dev3", "sample/runtime", "release/2026.04"),
+                tools(
+                        "elastic_search_logs_by_correlation_id",
+                        "gitlab_find_flow_context",
+                        "db_find_tables",
+                        "db_execute_readonly_sql"
+                )
+        );
+
+        assertTrue(policy.availableToolNames().contains("elastic_search_logs_by_correlation_id"));
+        assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("db_find_tables"));
+        assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
+    }
+
+    @Test
+    void shouldDisableFollowUpGitLabAndDatabaseToolsWhenScopeIsMissing() {
+        var policy = policyFactory.createForFollowUp(
+                chatRequest(null, null, null),
+                tools(
+                        "elastic_search_logs_by_correlation_id",
+                        "gitlab_find_flow_context",
+                        "db_find_tables"
+                )
+        );
+
+        assertEquals(List.of("elastic_search_logs_by_correlation_id"), policy.availableToolNames());
+    }
+
     private CopilotToolAccessPolicy policy(
             InitialAnalysisRequest request,
             List<ToolDefinition> tools
@@ -240,6 +273,21 @@ class CopilotToolAccessPolicyCoverageTest {
                 "release/2026.04",
                 "sample/runtime",
                 sections
+        );
+    }
+
+    private AnalysisAiChatRequest chatRequest(String environment, String gitLabGroup, String gitLabBranch) {
+        return new AnalysisAiChatRequest(
+                "corr-123",
+                environment,
+                gitLabBranch,
+                gitLabGroup,
+                List.of(),
+                List.of(),
+                null,
+                List.of(),
+                "What next?",
+                null
         );
     }
 

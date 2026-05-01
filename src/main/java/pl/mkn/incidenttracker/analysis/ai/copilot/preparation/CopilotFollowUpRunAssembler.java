@@ -2,7 +2,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
@@ -18,17 +17,14 @@ public class CopilotFollowUpRunAssembler {
     private final CopilotSdkToolFactory toolFactory;
     private final CopilotIncidentToolSessionContextFactory toolSessionContextFactory;
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
+    private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
     private final CopilotArtifactService artifactService;
     private final CopilotFollowUpPromptRenderer promptRenderer;
 
     public CopilotFollowUpRunAssembly assemble(AnalysisAiChatRequest request) {
         var toolSessionContext = toolSessionContextFactory.fromChatRequest(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
-        var toolAccessPolicy = CopilotToolAccessPolicy.fromFollowUpSession(
-                registeredTools,
-                StringUtils.hasText(request.environment()),
-                StringUtils.hasText(request.gitLabGroup()) && StringUtils.hasText(request.gitLabBranch())
-        );
+        var toolAccessPolicy = toolAccessPolicyFactory.createForFollowUp(request, registeredTools);
         var renderedArtifacts = artifactService.renderArtifacts(artifactRequest(request), toolAccessPolicy);
         var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
         var sessionConfigRequest = sessionConfigRequestFactory.create(

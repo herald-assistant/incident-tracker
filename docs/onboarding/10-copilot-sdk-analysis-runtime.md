@@ -74,8 +74,8 @@ Nie ma produkcyjnego shortcutu `analyze(request)` ani oddzielnego
 
 Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 
-- `CopilotToolAccessPolicyFactory` buduje policy z coverage reportu i listy
-  registered tools,
+- `CopilotToolAccessPolicyFactory` buduje initial policy z coverage reportu i
+  follow-up policy ze scope'u zakonczonej analizy,
 - `CopilotPromptRenderer` zawiera tekst promptu, JSON response contract,
   rendering capability groups i embedded artifact contents,
 - `CopilotIncidentToolSessionContextFactory` sklada incidentowy

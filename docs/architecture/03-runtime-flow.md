@@ -96,8 +96,8 @@ Preparation obejmuje:
 Serwis preparation sklada zaleznosci, ale nie zawiera juz calej logiki
 renderingu i konfiguracji SDK:
 
-- `CopilotToolAccessPolicyFactory` laczy evaluator coverage z registered
-  tools i zwraca coverage-aware policy,
+- `CopilotToolAccessPolicyFactory` buduje initial coverage-aware policy oraz
+  follow-up policy ze scope'u zakonczonej analizy,
 - `CopilotPromptRenderer` renderuje prompt, JSON-only response contract,
   available capability groups i embedded artifacts,
 - `CopilotIncidentToolSessionContextFactory` tworzy incidentowy

@@ -25,7 +25,8 @@ Obejmuje:
 - `copilot/preparation/`
   obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
   skill runtime loading. `CopilotIncidentToolSessionContextFactory` sklada
-  incidentowy run/session id oraz hidden tool context, a
+  incidentowy run/session id oraz hidden tool context,
+  `CopilotToolAccessPolicyFactory` buduje initial/follow-up tool policy, a
   `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy
   `CopilotSessionConfigRequest` z policy, skill directories, model options i
   komunikatu odmowy tooli. To jest stan przejsciowy: docelowo incident prompt,

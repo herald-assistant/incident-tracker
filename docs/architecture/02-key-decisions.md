@@ -259,6 +259,8 @@ tools, skill directories, model options i incidentowy komunikat odmowy toola.
 Incident preparation sklada tez `CopilotToolSessionContext`: tworzy
 `analysis-*`/`analysis-chat-*` session id i hidden tool context ze scope'u
 incydentu.
+Initial i follow-up tool policy powstaja przez `CopilotToolAccessPolicyFactory`,
+zeby decyzje o dostepnych capability byly lokalne dla incident preparation.
 `CopilotSessionConfigFactory` jest juz tylko runtime factory, ktora zamienia
 ten request na konfiguracje klienta SDK, `SessionConfig`, hooks, permission
 handler i disabled skills.
