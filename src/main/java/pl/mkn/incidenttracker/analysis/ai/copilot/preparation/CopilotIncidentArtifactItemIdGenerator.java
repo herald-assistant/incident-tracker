@@ -8,7 +8,7 @@ import java.util.Locale;
 import java.util.stream.IntStream;
 
 @Component
-public class CopilotArtifactItemIdGenerator {
+public class CopilotIncidentArtifactItemIdGenerator {
 
     public List<String> itemIds(AnalysisEvidenceSection section) {
         var itemCount = section != null ? section.items().size() : 0;

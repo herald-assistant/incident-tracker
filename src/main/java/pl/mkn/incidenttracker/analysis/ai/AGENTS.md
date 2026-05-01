@@ -97,15 +97,13 @@ platformowe. Przy zmianach trzymaj ponizsza mape ownership:
   `CopilotIncidentSessionConfigRequestFactory`,
   `CopilotFollowUpArtifactRequestFactory`,
   `CopilotIncidentRunRequestFactory`,
-  `CopilotIncidentArtifactService`.
-- do obserwacji przed przeniesieniem:
-  `CopilotArtifactFormatVersion`,
-  `CopilotArtifactItemIdGenerator`.
-  Maja jeszcze zwiazek z incident artifact rendering, wiec nie przenos ich do
-  runtime bez rozdzielenia tresci incidentowej od generycznej mechaniki.
-  Neutralny typ
-  `CopilotRenderedArtifact` i mapowanie na runtime `artifactContents` sa juz
-  platform-owned w `copilot/runtime`.
+  `CopilotIncidentArtifactService`,
+  `CopilotIncidentArtifactFormatVersion`,
+  `CopilotIncidentArtifactItemIdGenerator`.
+  Incident artifact rendering, format version i item-id policy zostaja po
+  stronie feature preparation. Neutralny typ `CopilotRenderedArtifact` i
+  mapowanie na runtime `artifactContents` sa juz platform-owned w
+  `copilot/runtime`.
 Platform-owned runtime siedzi w `copilot/runtime`, przede wszystkim
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,

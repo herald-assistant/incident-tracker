@@ -3,8 +3,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotArtifactItemIdGenerator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentArtifactService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentDigestService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
@@ -41,7 +41,7 @@ public final class CopilotTestFixtures {
         return new CopilotIncidentArtifactService(
                 objectMapper,
                 new CopilotIncidentDigestService(),
-                new CopilotArtifactItemIdGenerator()
+                new CopilotIncidentArtifactItemIdGenerator()
         );
     }
 

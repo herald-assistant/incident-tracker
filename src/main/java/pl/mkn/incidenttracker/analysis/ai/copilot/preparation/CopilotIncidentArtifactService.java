@@ -30,13 +30,13 @@ public class CopilotIncidentArtifactService {
 
     private final ObjectMapper objectMapper;
     private final CopilotIncidentDigestService incidentDigestService;
-    private final CopilotArtifactItemIdGenerator itemIdGenerator;
+    private final CopilotIncidentArtifactItemIdGenerator itemIdGenerator;
 
     @Autowired
     public CopilotIncidentArtifactService(
             ObjectMapper objectMapper,
             CopilotIncidentDigestService incidentDigestService,
-            CopilotArtifactItemIdGenerator itemIdGenerator
+            CopilotIncidentArtifactItemIdGenerator itemIdGenerator
     ) {
         this.objectMapper = objectMapper;
         this.incidentDigestService = incidentDigestService;
@@ -182,7 +182,7 @@ public class CopilotIncidentArtifactService {
         payload.put("gitLabBranch", blankToNull(request.gitLabBranch()));
         payload.put("gitLabGroup", blankToNull(request.gitLabGroup()));
         payload.put("generatedAt", Instant.now().toString());
-        payload.put("artifactFormatVersion", CopilotArtifactFormatVersion.V2.value());
+        payload.put("artifactFormatVersion", CopilotIncidentArtifactFormatVersion.V2.value());
         payload.put("readFirst", MANIFEST_ARTIFACT_ID);
         payload.put("readNext", DIGEST_ARTIFACT_ID);
         payload.put("readOrder", List.of(MANIFEST_ARTIFACT_ID, DIGEST_ARTIFACT_ID));
