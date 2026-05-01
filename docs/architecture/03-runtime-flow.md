@@ -24,11 +24,14 @@ Wybor modelu i `reasoningEffort` trafia tylko do konfiguracji sesji AI. Nie
 jest evidence, nie zmienia `environment`, `gitLabBranch`, `gitLabGroup` ani
 hidden `ToolContext`.
 
-`GET /analysis/ai/options` jest osobnym kontraktem UI do pobrania katalogu
-modeli. Fasada w `analysis.options` mapuje platformowy katalog modeli z
+`GET /analysis/ai/options` jest osobnym shared/operator API do pobrania
+katalogu modeli dla UI. Nie jest krokiem incident job flow. Fasada w
+`analysis.options` mapuje platformowy katalog modeli z
 `aiplatform.copilot.runtime.options` na generyczne DTO aplikacji. Platformowy
 provider uzywa `CopilotClient.listModels()` i cache'uje wynik; jesli SDK jest
-chwilowo niedostepne, zwraca tylko skonfigurowane domysly.
+chwilowo niedostepne, zwraca tylko skonfigurowane domysly. Docelowo HTTP fasada
+powinna mieszkac w `api.aioptions`, a neutralne preferencje requestu w
+`shared.ai`.
 
 `POST /analysis/jobs/{analysisId}/chat/messages` jest dostepny dopiero po
 `COMPLETED`. Request niesie tylko tresc wiadomosci operatora. Scope follow-up
@@ -127,8 +130,9 @@ renderingu i konfiguracji SDK:
 `CopilotSdkModelOptionsProvider` mieszka w
 `aiplatform.copilot.runtime.options`. Uzywa zaleznosci runtime do pobrania
 katalogu modeli przez SDK, ale nie miesza tej metadanej z evidence ani
-promptem incydentu. Endpoint `GET /analysis/ai/options` zostaje w
-`analysis.options` jako fasada mapujaca platformowe DTO na kontrakt UI.
+promptem incydentu. Endpoint `GET /analysis/ai/options` jest shared/operator
+API; przejsciowo zostaje w `analysis.options` jako fasada mapujaca platformowe
+DTO na kontrakt UI.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.

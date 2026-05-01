@@ -38,9 +38,9 @@ Na dzisiaj projekt ma:
 - follow-up chat dla zakonczonego joba przez
   `POST /analysis/jobs/{analysisId}/chat/messages`, ktory uruchamia nowa
   sesje AI z kontekstem tej samej analizy,
-- endpoint `GET /analysis/ai/options`, ktory zwraca katalog modeli i
-  dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby frontend nie trzymal
-  lokalnej listy modeli,
+- endpoint shared/operator API `GET /analysis/ai/options`, ktory zwraca
+  katalog modeli i dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby
+  frontend nie trzymal lokalnej listy modeli,
 - AI-first flow oparty o `AnalysisEvidenceProvider`, `InitialAnalysisProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
@@ -72,9 +72,9 @@ Na dzisiaj projekt ma:
   reuse'uje evidence, wynik, historie rozmowy, model/reasoning oraz hidden
   scope tools z oryginalnego joba.
 - `GET /analysis/ai/options`
-  Katalog modeli AI dla UI. Backend pobiera go z Copilot SDK i zwraca
-  `reasoningEffort` tylko dla modeli, ktore SDK opisuje jako wspierajace te
-  ustawienia.
+  Shared/operator API z katalogiem modeli AI dla UI. Backend pobiera go z
+  Copilot SDK i zwraca `reasoningEffort` tylko dla modeli, ktore SDK opisuje
+  jako wspierajace te ustawienia. Endpoint nie jest krokiem incident job flow.
 - `POST /api/gitlab/source/resolve`
   Narzedzie pomocnicze do znalezienia pliku po symbolu.
 - `POST /api/gitlab/source/resolve/preview`
@@ -114,9 +114,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Wyjatki job API mapowane przez globalny handler bledow.
 - `pl.mkn.incidenttracker.analysis.options`
   Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
-  Pakiet jest wspolnym kontraktem dla flow, jobow, chatu i UI, a nie
-  wewnetrzna czescia providera AI. Implementacja endpointu mapuje platformowy
-  katalog modeli Copilota na obecne DTO aplikacji.
+  To przejsciowa fasada shared/operator API, a nie czesc incident feature'a ani
+  wewnetrzna czesc providera AI. Implementacja endpointu mapuje platformowy
+  katalog modeli Copilota na obecne DTO aplikacji. Docelowy split:
+  neutralne preferencje wykonania AI w `shared.ai`, a HTTP controller/DTO
+  katalogu modeli w `api.aioptions` albo rownowaznym pakiecie `api.*`.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -227,7 +229,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.incidenttracker.api`
-  Obsluga bledow API i wspolny kontrakt walidacji.
+  Obsluga bledow API i wspolny kontrakt walidacji. Docelowo takze miejsce na
+  shared/operator API dla endpointow FE niezaleznych od jednego feature'a, np.
+  fasady nad platforma albo integracjami. Endpointy konkretnego use case'u
+  zostaja przy `features.<feature>.api`.
 - `frontend/`
   Workspace Angular z komponentami, serwisami i konfiguracja buildu UI.
 - `src/main/resources/static`
@@ -270,8 +275,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   evidence i finalny wynik w promptcie oraz wystawia session-bound tools tylko
   w zakresie rozwiazanym przez pierwotna analize.
 - Lista modeli i dostepnych `reasoningEffort` dla UI pochodzi z platformowego
-  provider'a opcji Copilota przez backendowy endpoint opcji AI. Frontend nie
-  jest source of truth dla mozliwosci modeli.
+  provider'a opcji Copilota przez backendowy shared/operator endpoint opcji AI.
+  Frontend nie jest source of truth dla mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
 - Zuzycie tokenow jest zbierane z eventow sesji Copilota i wystawiane do UI
   jako generyczne `shared.ai.AnalysisAiUsage`, bez typow SDK w kontrakcie

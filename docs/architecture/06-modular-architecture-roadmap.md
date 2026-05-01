@@ -18,6 +18,7 @@ Docelowa odpowiedzialnosc warstw:
 integrations/adapters        <- czyste capability do systemow zewnetrznych
 agent-tools / mcp            <- reusable tools nad adapterami
 ai-platform/copilot          <- platforma uruchamiania modelu + tools
+api/shared-operator          <- cross-screen API dla FE/operatora nad platforma i integracjami
 features/incident-analysis   <- konkretna analiza incydentow
 features/...                 <- przyszle dedykowane analizy
 common/shared                <- male neutralne helpery i kontrakty
@@ -29,6 +30,11 @@ Docelowy kierunek zaleznosci:
 features.* -> ai-platform
 features.* -> agent-tools
 features.* -> integrations
+features.* -> common/shared
+
+api/shared-operator -> ai-platform
+api/shared-operator -> integrations
+api/shared-operator -> common/shared
 
 ai-platform -> agent-tools
 ai-platform -> common/shared
@@ -45,16 +51,22 @@ Zakazane kierunki:
 integrations -> agent-tools
 integrations -> ai-platform
 integrations -> features.*
+integrations -> api/shared-operator
 
 agent-tools -> ai-platform
 agent-tools -> features.*
+agent-tools -> api/shared-operator
 
 ai-platform -> features.*
+ai-platform -> api/shared-operator
+
+features.* -> api/shared-operator
 
 common/shared -> integrations
 common/shared -> agent-tools
 common/shared -> ai-platform
 common/shared -> features.*
+common/shared -> api/shared-operator
 ```
 
 ## Docelowe Pakiety Java
@@ -65,6 +77,7 @@ Nazwy pakietow nie moga miec myslnikow, wiec praktyczny target w Javie:
 pl.mkn.incidenttracker.integrations.*
 pl.mkn.incidenttracker.agenttools.*
 pl.mkn.incidenttracker.aiplatform.copilot.*
+pl.mkn.incidenttracker.api.*
 pl.mkn.incidenttracker.features.incidentanalysis.*
 pl.mkn.incidenttracker.features.<futurefeature>.*
 pl.mkn.incidenttracker.common.*
@@ -286,8 +299,45 @@ nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 odpieta przez platformowe `CopilotToolBudgetTelemetry`, a neutralne
 `CopilotToolMetrics` mieszkaja w `aiplatform.copilot.tools.telemetry`.
 Platformowy katalog modeli Copilota mieszka w
-`aiplatform.copilot.runtime.options`; `analysis.options` zostaje fasada
-endpointu `GET /analysis/ai/options` i mapperem na DTO aplikacji.
+`aiplatform.copilot.runtime.options`; `analysis.options` jest przejsciowa
+fasada endpointu `GET /analysis/ai/options` i mapperem na DTO aplikacji.
+Docelowo neutralne preferencje wykonania AI powinny mieszkac w `shared.ai`,
+a HTTP fasada katalogu modeli w `api.aioptions` albo rownowaznym pakiecie
+shared/operator API.
+
+### `api` / shared operator API
+
+Warstwa `api` posiada cross-screen endpointy dla frontendu i operatora, ktore
+nie sa wlasnoscia jednego dedykowanego feature'a. To osobna kategoria obok
+`features.*.api`.
+
+Przyklady:
+
+- `GET /analysis/ai/options`, bo jest wspolnym katalogiem preferencji/modeli
+  AI dla UI, a nie krokiem incident job flow,
+- ogolne helper endpointy nad adapterami, np. Elasticsearch log search albo
+  GitLab repository/source search, gdy staja sie wspolna powierzchnia FE.
+
+Warstwa `api` moze posiadac:
+
+- HTTP controller, request/response DTO i walidacje dla cross-screen use case,
+- cienka fasade nad `aiplatform` albo `integrations`,
+- globalny kontrakt bledow HTTP i walidacji.
+
+Warstwa `api` nie posiada:
+
+- orchestration konkretnego feature'a,
+- evidence pipeline,
+- promptow, skilli ani response contractow analizy,
+- job state,
+- adapter-specific klientow REST jako logiki integracyjnej.
+
+Feature-specific endpointy zostaja przy feature, np.
+`features.incidentanalysis.job.api`. Shared/operator API deleguje w dol do
+platformy albo integracji i nie powinno byc importowane przez feature'y.
+Cienkie diagnostyczne helper endpointy moga przejsciowo zostac przy
+`integrations.<capability>`, jesli sa tylko manualnym testem adaptera. Gdy
+staja sie stabilnym API dla wielu ekranow, docelowym miejscem jest `api.*`.
 
 ### `features.incidentanalysis`
 
@@ -505,8 +555,8 @@ Kroki:
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
    options, skill resources, available tools, hidden context, evidence sink i
    response handler/parser, ale nie zaklada `correlationId`.
-3. Przeniesc model options provider do platformy, a feature endpoint
-   `/analysis/ai/options` zostawic jako fasade na platforme.
+3. Przeniesc model options provider do platformy, a endpoint
+   `/analysis/ai/options` zostawic jako shared/operator API fasade na platforme.
    Stan obecny: zrobione. `CopilotSdkModelOptionsProvider` i neutralne DTO
    katalogu modeli mieszkaja w `aiplatform.copilot.runtime.options`, a
    `analysis.options` mapuje je na kontrakt endpointu aplikacji.
@@ -572,10 +622,11 @@ Uwagi:
 - Nazwa endpointu nie musi odzwierciedlac nazwy pakietu.
 - UI moze nadal mowic "analysis", bo to jest product-facing jezyk aktualnego
   feature'a.
-- `analysis.options` powinno zostac rozstrzygniete podczas Fazy 5: albo jako
-  platform contract, albo jako feature facade nad platform options.
-  Stan obecny: endpoint zostal jako fasada aplikacyjna nad platformowym
-  katalogiem modeli Copilota.
+- `analysis.options` nie jest incident feature'em. Stan obecny: endpoint jest
+  fasada aplikacyjna nad platformowym katalogiem modeli Copilota. Docelowy
+  split to neutralne `AnalysisAiOptions` w `shared.ai` oraz controller/DTO
+  endpointu `GET /analysis/ai/options` w `api.aioptions` albo rownowaznym
+  pakiecie shared/operator API.
 - `analysis.job` jest juz zamknietym historycznym pakietem produkcyjnym.
   Incident job API, state i errors mieszkaja w
   `features.incidentanalysis.job`.
@@ -678,7 +729,10 @@ Kryterium done:
     publiczne URL-e `/analysis/jobs` [done].
 19. PR: przeniesc incident evidence do
     `features.incidentanalysis.evidence` [done].
-20. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+20. PR: wydzielic shared/operator API opcji AI: przeniesc neutralne preferencje
+    wykonania do `shared.ai`, a controller/DTO `GET /analysis/ai/options` do
+    `api.aioptions`, bez zmiany URL-a.
+21. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie
@@ -690,8 +744,10 @@ gdy dotykamy danego obszaru:
 - Rozstrzygniete: `agenttools` uzywa struktury
   `agenttools.<capability>.mcp`, zeby kontrakt capability i jego ekspozycja MCP
   byly blisko siebie.
-- Czy helper endpointy adapterow mieszkaja przy `integrations.<capability>.api`,
-  czy w osobnym `api.integrations`?
+- Rozstrzygniete kierunkowo: cross-screen FE/operator API mieszka docelowo w
+  `api.*`, a feature-specific API przy `features.<feature>.api`. Cienkie
+  diagnostyczne helper endpointy moga przejsciowo zostac przy
+  `integrations.<capability>`, jesli sa tylko recznym testem adaptera.
 - Rozstrzygniete: `analysis.ai.initial/chat` byly feature-specific i mieszkaja
   teraz w `features.incidentanalysis.ai.initial/chat`. Platform run contract
   pozostaje osobno jako `aiplatform.copilot.runtime.CopilotRunRequest`.

@@ -111,8 +111,9 @@ zaleznosci:
 - `CopilotSdkModelOptionsProvider` mieszka w
   `aiplatform.copilot.runtime.options`. Udostepnia osobny katalog modeli dla
   UI przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do
-  promptu albo job state. `analysis.options` zostaje fasada endpointu
-  `GET /analysis/ai/options`.
+  promptu albo job state. `analysis.options` jest przejsciowa shared/operator
+  fasada endpointu `GET /analysis/ai/options`; docelowo HTTP fasada trafia do
+  `api.aioptions`, a neutralne preferencje requestu do `shared.ai`.
 
 Follow-up chat po zakonczonym jobie nie reuse'uje `InitialAnalysisProvider`.
 Ma osobny kontrakt `AnalysisAiChatProvider` i przygotowanie

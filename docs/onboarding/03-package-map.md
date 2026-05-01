@@ -34,9 +34,17 @@ sa rozbite na:
 ### `analysis/options`
 
 Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
-Ten pakiet jest wspolnym kontraktem dla `flow`, `job`, `chat` i UI, a nie
-wewnetrzna czescia providera AI. Implementacja provider'a w tym pakiecie jest
-fasada nad platformowym katalogiem modeli Copilota.
+Ten pakiet jest przejsciowa fasada shared/operator API oraz neutralnych
+preferencji runtime, a nie czescia incident feature'a ani wewnetrzna czescia
+providera AI. Implementacja provider'a w tym pakiecie jest fasada nad
+platformowym katalogiem modeli Copilota.
+
+Docelowy split:
+
+- `AnalysisAiOptions` i podobne neutralne preferencje wykonania trafia do
+  `shared.ai`,
+- controller/DTO endpointu `GET /analysis/ai/options` trafia do
+  `api.aioptions` albo rownowaznego pakietu shared/operator API.
 
 ### `features/incidentanalysis/evidence`
 
@@ -154,7 +162,13 @@ do Copilot tools.
 
 ### `api`
 
-Wspolny kontrakt bledow HTTP i walidacji dla endpointow backendu.
+Wspolny kontrakt bledow HTTP i walidacji dla endpointow backendu. To rowniez
+docelowe miejsce na shared/operator API dla frontendu, czyli endpointy
+niezwiazane z jednym konkretnym feature'em, np. katalog opcji AI albo stabilne
+fasady nad platforma/integracjami uzywane przez wiele ekranow.
+
+Endpointy konkretnego use case'u zostaja przy feature, np.
+`features/incidentanalysis/job/api`.
 
 ### `ui`
 
@@ -194,5 +208,7 @@ operational context enrichment.
 
 - Gdzie powinien trafic nowy krok evidence?
 - Gdzie powinien trafic nowy helper endpoint do recznego testowania integracji?
+- Kiedy endpoint jest shared/operator API w `api.*`, a kiedy czescia
+  `features/<feature>/api`?
 - Gdzie powinien trafic nowy tool dla modelu?
 - Gdzie zmienisz stale zasady pracy modelu i gdzie runtime katalog routingu?

@@ -32,6 +32,9 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   danej capability.
 - Cienkie helper endpointy REST do manualnego testowania capability sa
   dopuszczalne, jesli deleguja do integracji i nie importuja `analysis.*`.
+- Jesli helper endpoint staje sie stabilna powierzchnia FE dla wielu ekranow,
+  traktuj go jako shared/operator API i przenies docelowo do `api.*`, zostawiajac
+  tutaj adapter i modele capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
 - Nie dodawaj tu `AnalysisEvidenceProvider`, klas `@Tool`, promptow, skilli ani
   heurystyk incidentowych.

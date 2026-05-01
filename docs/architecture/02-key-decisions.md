@@ -9,10 +9,10 @@ utrzymaniu flow analizy incydentu i integracji AI.
 `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
 `reasoningEffort`.
 
-Lista dostepnych modeli dla UI pochodzi z `GET /analysis/ai/options`.
-Endpoint mapuje metadane Copilot SDK na generyczny kontrakt aplikacji i zwraca
-`reasoningEffort` tylko tam, gdzie SDK wystawia support albo domyslna wartosc
-dla danego modelu.
+Lista dostepnych modeli dla UI pochodzi z shared/operator endpointu
+`GET /analysis/ai/options`. Endpoint mapuje metadane Copilot SDK na generyczny
+kontrakt aplikacji i zwraca `reasoningEffort` tylko tam, gdzie SDK wystawia
+support albo domyslna wartosc dla danego modelu.
 
 Runtime nie przywraca `branch`, `environment`, `gitLabGroup` ani innych pol
 sterujacych evidence scope'em do publicznego requestu.
@@ -482,3 +482,26 @@ invocation. Podczas dalszej ekstrakcji trzeba rozdzielic pozostale klasy na:
 
 - generic runtime Copilota,
 - feature-owned incident preparation/policy/skills/evidence mapping.
+
+## 23. Shared/operator API jest osobna kategoria
+
+Nie kazdy endpoint backendu dla frontendu jest czescia dedykowanego feature'a.
+Endpointy wspolne dla wielu ekranow albo bedace cienka fasada nad platforma
+lub integracjami traktujemy jako shared/operator API.
+
+Zasady:
+
+- `features.<feature>.api` posiada endpointy konkretnego use case'u, np.
+  incident job API,
+- `api.*` jest docelowym miejscem dla cross-screen endpointow FE/operatora,
+  np. katalogu opcji AI albo stabilnych fasad nad adapterami,
+- `integrations.<capability>` moze przejsciowo trzymac cienkie diagnostyczne
+  helper endpointy, jesli tylko testuja adapter,
+- gdy helper endpoint staje sie stabilna powierzchnia dla wielu ekranow, jego
+  controller/DTO powinny trafic do `api.*`, a adapter zostaje w
+  `integrations.*`.
+
+Konsekwencja dla obecnego kodu: `analysis.options` nie jest incident feature'em.
+Docelowo neutralne `AnalysisAiOptions` trafia do `shared.ai`, HTTP fasada
+`GET /analysis/ai/options` do `api.aioptions`, a katalog modeli Copilota
+zostaje w `aiplatform.copilot.runtime.options`.

@@ -26,9 +26,11 @@ Przy nowej sesji najlepiej zaczac od:
 - `AnalysisEvidenceProvider`
 - `features.incidentanalysis.ai.initial.InitialAnalysisProvider`
 - `features.incidentanalysis.ai.chat.AnalysisAiChatProvider`
-- `analysis.options.AnalysisAiModelOptionsProvider`
+- `analysis.options.AnalysisAiModelOptionsProvider` jako przejsciowa
+  shared/operator fasada opcji AI
 - `aiplatform.copilot.runtime.options`
 - `shared.ai`
+- `api` jako docelowe miejsce cross-screen FE/operator API
 - `shared.evidence`
 - `features.incidentanalysis.ai.initial`
 - `features.incidentanalysis.ai.chat`
@@ -151,7 +153,9 @@ deployment/GitLab/DB scope'u.
 Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
 Frontend pobiera ja z `GET /analysis/ai/options`, a fasada
 `AnalysisAiModelOptionsProvider` mapuje platformowy katalog modeli Copilota na
-kontrakt aplikacji.
+kontrakt aplikacji. To jest shared/operator API dla UI, nie czesc incident job
+flow. Docelowo controller/DTO powinny mieszkac w `api.aioptions`, a neutralne
+preferencje wykonania AI w `shared.ai`.
 
 ### `gitLabGroup`
 
@@ -194,7 +198,9 @@ Follow-up chat dziala tylko dla live joba w pamieci backendu; importowany
 zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
 a route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
-GitLaba.
+GitLaba. Takie endpointy traktuj jako shared/operator API nad adapterami:
+cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
+a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
 
 ### Follow-up chat
 

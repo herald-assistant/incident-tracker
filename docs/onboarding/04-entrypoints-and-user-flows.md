@@ -38,9 +38,10 @@ model/reasoning oraz scope tools z zakonczonego joba.
 
 ### `GET /analysis/ai/options`
 
-Katalog modeli i dostepnych `reasoningEffort` dla UI. Endpoint mapuje
-metadane Copilot SDK na generyczny kontrakt aplikacji, zeby frontend nie
-przechowywal lokalnej listy modeli.
+Shared/operator API z katalogiem modeli i dostepnych `reasoningEffort` dla UI.
+Endpoint mapuje metadane Copilot SDK na generyczny kontrakt aplikacji, zeby
+frontend nie przechowywal lokalnej listy modeli. To nie jest krok incident job
+flow.
 
 ## Wejscia pomocnicze
 
@@ -57,7 +58,10 @@ To route Angulara forwardowana przez Spring Boot do `index.html`.
 - `POST /api/gitlab/source/resolve/preview`
 
 To nie jest glowny flow analizy. To narzedzia dla developera i operatora.
-Nie ma osobnego helper endpointu Database capability.
+Architektonicznie sa shared/operator API nad adapterami: cienkie, diagnostyczne
+warianty moga mieszkac przy `integrations.<capability>`, a stabilne endpointy
+dla wielu ekranow powinny docelowo trafic do `api.*`. Nie ma osobnego helper
+endpointu Database capability.
 
 ## Przeczytaj w kodzie
 

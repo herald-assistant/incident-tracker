@@ -36,6 +36,13 @@ Pakiet dla adapterow to `integrations.<system>`. Historyczny
 Jawne narzedzie wystawione przez Spring AI i reuse'owane przez sesje Copilota.
 Tool ma maly kontrakt i robi jeden konkretny krok eksploracji.
 
+### Shared/operator API
+
+Endpoint backendu dla frontendu albo operatora, ktory nie nalezy do jednego
+dedykowanego feature'a. Moze byc fasada nad platforma AI albo integracja, np.
+`GET /analysis/ai/options`. Docelowy pakiet to `api.*`; endpointy konkretnego
+use case'u zostaja przy `features.<feature>.api`.
+
 ### MCP
 
 W tym projekcie to warstwa ekspozycji tools po stronie Spring AI. Nazwa

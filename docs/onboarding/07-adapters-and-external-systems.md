@@ -87,7 +87,9 @@ Czytaj:
 - nietypowe HTTP, np. ignorowanie SSL, jest lokalne dla konkretnej integracji,
 - nietypowe JDBC, routing po environment, allowlisty schematow i SQL guard
   musza pozostac lokalne dla Database capability,
-- helper endpoint testuje capability adaptera, nie glowny flow produktu.
+- helper endpoint testuje capability adaptera, nie glowny flow produktu,
+- gdy helper endpoint staje sie stabilna powierzchnia FE dla wielu ekranow,
+  traktuj go jako shared/operator API i przenies docelowo do `api.*`.
 
 ## Checkpoint
 

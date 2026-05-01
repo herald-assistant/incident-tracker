@@ -81,6 +81,10 @@ Zasady granic:
   hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
   Feature moze zalezec od platformy, tools i adapterow; platforma, tools i
   adaptery nie moga zalezec od feature'a.
+- Nie kazde HTTP API jest feature'em. Cross-screen endpointy dla frontendu i
+  operatora, np. katalog opcji AI albo stabilne fasady nad adapterami, powinny
+  byc traktowane jako shared/operator API pod `api.*`. Endpointy konkretnego
+  use case'u zostaja przy `features.<feature>.api`.
 - `common` i neutralne kontrakty nie sa miejscem na wszystko. Wyciagaj tam
   tylko male, stabilne elementy, ktore faktycznie sa wspolne dla kilku
   capability albo feature'ow.
@@ -143,7 +147,9 @@ Zasady granic:
   Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
   follow-up chat.
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
-  Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
+  Przejsciowa fasada shared/operator API dla opcji wykonania AI, katalogu
+  modeli i endpointu `GET /analysis/ai/options`. Docelowo neutralne
+  preferencje trafiaja do `shared.ai`, a HTTP fasada do `api.aioptions`.
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
   Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
   krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -182,6 +188,10 @@ Zasady granic:
   oraz listener aktualizacji tool evidence.
 - `src/main/java/pl/mkn/incidenttracker/shared/ai`
   Neutralne DTO usage/token/cost dla flow, job UI, telemetryki i feature'ow.
+- `src/main/java/pl/mkn/incidenttracker/api`
+  Globalny kontrakt bledow HTTP i docelowe miejsce na shared/operator API
+  niezalezne od jednego feature'a. Nie przenos tu orchestration feature'a,
+  promptow, evidence pipeline ani job state.
 - `src/main/java/pl/mkn/incidenttracker/common`
   Male helpery wspolne dla calej aplikacji.
 - `frontend`
@@ -255,6 +265,7 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/api/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AGENTS.md`
