@@ -15,7 +15,7 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceCollector;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;

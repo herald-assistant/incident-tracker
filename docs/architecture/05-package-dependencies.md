@@ -180,27 +180,27 @@ flowchart LR
 | Krawedz importow | Liczba | Status | Co oznacza |
 | --- | ---: | --- | --- |
 | `analysis.job -> analysis.flow` | 6 | oczekiwane | Job uruchamia orchestrator i mapuje wynik flow do snapshotu UI. |
-| `analysis.job -> analysis.ai` | 9 | oczekiwane | Job trzyma chat, usage i zapisany `InitialAnalysisRequest` dla follow-up. |
+| `analysis.job -> analysis.ai` | 7 | oczekiwane | Job trzyma chat i zapisany `InitialAnalysisRequest` dla follow-up; usage jest juz w `shared.ai`. |
 | `analysis.job -> analysis.evidence` | 7 | oczekiwane | Job pokazuje kroki pipeline i runtime facts wyprowadzone z evidence. |
 | `analysis.job -> analysis.options` | 2 | oczekiwane | Start joba niesie opcjonalne preferencje AI. |
-| `analysis.job -> shared` | 4 | oczekiwane | Job snapshoty i API response niosa neutralny model evidence. |
+| `analysis.job -> shared` | 6 | oczekiwane | Job snapshoty i API response niosa neutralny model evidence oraz usage DTO. |
 | `analysis.flow -> analysis.evidence` | 5 | oczekiwane | Orchestrator uruchamia deterministic evidence collector. |
-| `analysis.flow -> analysis.ai` | 6 | oczekiwane | Orchestrator buduje request AI i wywoluje initial provider. |
+| `analysis.flow -> analysis.ai` | 5 | oczekiwane | Orchestrator buduje request AI i wywoluje initial provider. |
 | `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
 | `analysis.flow -> integrations` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
-| `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
+| `analysis.flow -> shared` | 3 | oczekiwane | Flow przenosi neutralne evidence DTO i usage DTO miedzy collectorem, AI i response. |
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `features -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
 | `features -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
-| `features -> analysis.ai` | 32 | oczekiwane przejsciowo | Incident provider/preparation implementuja aktualne kontrakty AI i korzystaja jeszcze z requestow initial/chat oraz usage DTO dla publicznej odpowiedzi. Konkretny registry/logger telemetryki nie sa juz importowane przez feature. |
+| `features -> analysis.ai` | 29 | oczekiwane przejsciowo | Incident provider/preparation implementuja aktualne kontrakty AI i korzystaja jeszcze z requestow initial/chat. Usage DTO i listener tool evidence sa juz neutralne w `shared`. Konkretny registry/logger telemetryki nie sa importowane przez feature. |
 | `features -> analysis.evidence` | 11 | przejsciowe | Incident coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
-| `features -> shared` | 19 | oczekiwane | Incident artifacts, preparation metrics, coverage, quality gate i tool evidence capture czytaja neutralne DTO evidence. |
+| `features -> shared` | 22 | oczekiwane | Incident artifacts, preparation metrics, coverage, quality gate, usage mapping i tool evidence capture czytaja neutralne DTO shared. |
 | `analysis.ai -> aiplatform` | 27 | oczekiwane przejsciowo | Model options i telemetry adaptery korzystaja z wydzielonego platformowego runtime, tools/context/events/policy/budget/telemetry/evidence, portu metryk execution, portu telemetry sesji oraz neutralnego quality report payload. |
 | `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
-| `analysis.ai -> shared` | 4 | oczekiwane | Telemetry i kontrakty AI konsumuja neutralny model evidence. |
+| `analysis.ai -> shared` | 9 | oczekiwane | Telemetry i kontrakty AI konsumuja neutralny model evidence, tool evidence listener i usage DTO. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 5 | oczekiwane | Platformowy run request, prepared session i tool evidence store niosa neutralny model evidence jako sink output tooli. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
@@ -218,9 +218,10 @@ Do obserwacji zostaly krawedzie:
 
 1. `features -> analysis.ai`
 
-   Incident feature korzysta jeszcze z kontraktow AI initial/chat i usage DTO
-   mieszkajacych pod `analysis.ai`. Concrete telemetry registry/logger sa juz
-   ukryte za platformowym portem `aiplatform.copilot.runtime.telemetry`.
+   Incident feature korzysta jeszcze z kontraktow AI initial/chat
+   mieszkajacych pod `analysis.ai`. Usage DTO i listener tool evidence sa juz
+   w `shared`, a concrete telemetry registry/logger sa ukryte za platformowym
+   portem `aiplatform.copilot.runtime.telemetry`.
    Response parser i quality gate sa juz w
    `features.incidentanalysis.ai.copilot.response/quality`. Execution gateway jest juz w
    `aiplatform.copilot.runtime.execution`, a handler invocation, hidden
@@ -244,6 +245,7 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
+analysis.flow/job -> shared.ai/shared.evidence
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.execution
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.telemetry
@@ -306,8 +308,10 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.adapter -> agenttools`: adapter DB ma wlasne capability DTO i scope
   w `integrations.database`; MCP mapuje hidden `ToolContext` na ten scope.
 - `analysis.evidence -> analysis.ai`: generyczne DTO evidence mieszkaja teraz
-  w `shared.evidence`, a `analysis.ai.evidence` nie jest wlascicielem modelu
-  evidence.
+  w `shared.evidence`, a `analysis.ai` nie jest wlascicielem modelu evidence.
+- Dawne `analysis.ai.evidence/usage`: listener tool evidence mieszka teraz w
+  `shared.evidence`, a neutralny token/cost usage DTO w `shared.ai`. Feature
+  nie importuje tych typow z `analysis.ai`.
 - `analysis.ai -> analysis.mcp`: GitLab tool response DTO uzywane przez
   capture evidence mieszkaja teraz w `agenttools.gitlab.mcp`, a Copilot
   runtime nie importuje historycznej warstwy MCP.

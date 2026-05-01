@@ -14,15 +14,14 @@ Obejmuje:
 - `chat/`
   kontrakt follow-up chatu: `AnalysisAiChatProvider`, request/response, turny
   i snapshot poczatkowej analizy,
-- `evidence/`
-  AI-side `AnalysisAiToolEvidenceListener`; generyczne modele evidence
-  mieszkaja w `pl.mkn.incidenttracker.shared.evidence`,
-- `usage/`
-  generyczny kontrakt zuzycia tokenow/cost/usage dla UI,
 - `copilot/`
   root aktualnej integracji Copilot SDK, m.in.
   `CopilotSdkModelOptionsProvider`; incident initial/chat providery mieszkaja
   juz w `features.incidentanalysis.ai.copilot`.
+
+Neutralne `AnalysisAiToolEvidenceListener` i `AnalysisAiUsage` mieszkaja teraz
+w `shared.evidence` oraz `shared.ai`, bo sa uzywane przez flow, job, telemetry
+i feature'y.
 
 Platformowe runtime tools, czyli factory, invocation handler, context, eventy,
 neutralne policy contracts, session validation, logging, description
@@ -65,9 +64,9 @@ trafia do `aiplatform`.
   Kontrakty chatu trzymamy w `chat/`.
 - AI dostaje tylko `InitialAnalysisRequest` i generyczne
   `shared.evidence.AnalysisEvidenceSection`. Nie wciskaj tu klas
-  adapter-specific. Generyczne evidence models trzymamy w
-  `pl.mkn.incidenttracker.shared.evidence`, a w `analysis.ai.evidence`
-  zostaje listener tool evidence.
+  adapter-specific. Generyczne evidence models i listener tool evidence
+  trzymamy w `pl.mkn.incidenttracker.shared.evidence`, a usage DTO w
+  `pl.mkn.incidenttracker.shared.ai`.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
   evidence powinny trafac do skilla albo jawnej konfiguracji preparation.
 - Skill pozostaje runtime resource aplikacji w
@@ -88,12 +87,12 @@ trafia do `aiplatform`.
   policies, hidden context, callback, eventy i parsing wyniku. Nie dopisuj do
   niego logiki konkretnego toola, metryk, logowania ani mapowania evidence.
 - `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` ma
-  publikowac evidence przez neutralny session-bound sink, a nie bezposrednio
-  zalezec od `AnalysisAiToolEvidenceListener`.
+  publikowac evidence przez neutralny session-bound sink.
 - `aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway` ma
   wykonywac neutralna `CopilotPreparedSession`. Evidence sink powinien
   przychodzic z platformowego run requestu albo przygotowanej sesji; adapter z
-  `AnalysisAiToolEvidenceListener` trzymaj po stronie providera AI.
+  `shared.evidence.AnalysisAiToolEvidenceListener` trzymaj po stronie
+  providera AI.
 - Konkretna session telemetry (`CopilotSessionMetricsRegistry`,
   `CopilotMetricsLogger`) jest adapterem do platformowego
   `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`. Feature'y nie

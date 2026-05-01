@@ -83,10 +83,13 @@ pogrupowane wedlug funkcji:
 - `initial` - poczatkowa analiza joba: `InitialAnalysisProvider`,
   `InitialAnalysisRequest`, `InitialAnalysisPreparation`,
   `InitialAnalysisResponse`,
-- `chat` - follow-up chat po zakonczonym jobie,
-- `evidence` - AI-side tool evidence listener; generyczne DTO
-  `AnalysisEvidenceSection`, item i attribute mieszkaja w `shared.evidence`,
-- `usage` - generyczny usage/token/cost contract dla job UI.
+- `chat` - follow-up chat po zakonczonym jobie.
+
+Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza `analysis.ai`:
+
+- `shared.evidence` - `AnalysisEvidenceSection`, item/attribute oraz
+  `AnalysisAiToolEvidenceListener`,
+- `shared.ai` - generyczny usage/token/cost contract dla job UI i telemetryki.
 
 Najwazniejsze podpakiety Copilota:
 

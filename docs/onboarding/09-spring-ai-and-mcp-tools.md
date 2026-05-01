@@ -163,7 +163,8 @@ poczatkowej analizy job flow publikuje je jako top-level
 `toolEvidenceSections`, a dla follow-up chatu zapisuje przy konkretnej
 odpowiedzi assistant w `chatMessages[].toolEvidenceSections`. Store dostaje
 neutralny session-bound sink, a provider AI adaptuje
-`AnalysisAiToolEvidenceListener` przed wywolaniem execution gatewaya.
+`shared.evidence.AnalysisAiToolEvidenceListener` przed wywolaniem execution
+gatewaya.
 
 Capture obejmuje:
 

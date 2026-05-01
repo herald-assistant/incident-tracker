@@ -177,7 +177,10 @@ Zasady granic:
   tool evidence capture dla Copilota.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
-  `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.
+  `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`
+  oraz listener aktualizacji tool evidence.
+- `src/main/java/pl/mkn/incidenttracker/shared/ai`
+  Neutralne DTO usage/token/cost dla flow, job UI, telemetryki i feature'ow.
 - `src/main/java/pl/mkn/incidenttracker/common`
   Male helpery wspolne dla calej aplikacji.
 - `frontend`

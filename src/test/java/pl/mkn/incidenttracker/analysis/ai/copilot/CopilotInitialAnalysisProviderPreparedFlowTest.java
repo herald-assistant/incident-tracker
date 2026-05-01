@@ -7,7 +7,7 @@ import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;

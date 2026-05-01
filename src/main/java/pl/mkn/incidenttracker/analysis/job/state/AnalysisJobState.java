@@ -6,7 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
-import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;

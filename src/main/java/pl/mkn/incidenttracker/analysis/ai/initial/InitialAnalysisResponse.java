@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.initial;
 
-import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 
 public record InitialAnalysisResponse(
         String providerName,

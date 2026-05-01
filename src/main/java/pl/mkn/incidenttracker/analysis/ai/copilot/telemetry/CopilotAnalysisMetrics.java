@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
-import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityMode;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
 

@@ -372,8 +372,8 @@ capability:
 Store nie zna JSON payloadow konkretnych tools. Udostepnia per-session
 `SessionToolEvidence`, pilnuje kolejnosci `toolCaptureOrder`, scala albo
 dopisuje itemy i publikuje zaktualizowana sekcje przez neutralny session-bound
-sink. Copilot provider mapuje `AnalysisAiToolEvidenceListener` na ten sink
-przed wejsciem do execution gatewaya.
+sink. Copilot provider mapuje `shared.evidence.AnalysisAiToolEvidenceListener`
+na ten sink przed wejsciem do execution gatewaya.
 
 Kategorie:
 
@@ -469,7 +469,7 @@ jest dostepny nawet wtedy, gdy execution failuje.
 podczas sesji AI przez listener. UI nie zalezy od typow Copilot SDK.
 
 Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
-`AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
+`shared.ai.AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
 szczegolami zebranymi z eventow Copilota.
 
 Job request UI zawiera `correlationId` oraz opcjonalne preferencje AI

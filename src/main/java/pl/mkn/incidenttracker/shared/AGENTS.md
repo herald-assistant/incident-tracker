@@ -7,10 +7,14 @@ aplikacji.
 
 Obecnie obejmuje:
 
+- `ai/`
+  generyczny kontrakt token/cost/usage dla flow, job UI, telemetryki i
+  feature'ow: `AnalysisAiUsage`.
 - `evidence/`
   generyczny model evidence wspolny dla evidence pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
-  `AnalysisEvidenceAttribute`.
+  `AnalysisEvidenceAttribute`; zawiera tez neutralny
+  `AnalysisAiToolEvidenceListener` dla aktualizacji tool evidence.
 
 ## Zasady modyfikacji
 

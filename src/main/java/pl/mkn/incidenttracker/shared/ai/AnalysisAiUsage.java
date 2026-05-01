@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.usage;
+package pl.mkn.incidenttracker.shared.ai;
 
 public record AnalysisAiUsage(
         long inputTokens,
@@ -15,4 +15,3 @@ public record AnalysisAiUsage(
         Long contextMessages
 ) {
 }
-

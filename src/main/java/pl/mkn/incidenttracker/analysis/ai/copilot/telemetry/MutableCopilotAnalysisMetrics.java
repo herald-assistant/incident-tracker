@@ -5,7 +5,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponse
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
-import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

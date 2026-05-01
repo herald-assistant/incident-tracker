@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.chat;
 
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
 
 public interface AnalysisAiChatProvider {
 

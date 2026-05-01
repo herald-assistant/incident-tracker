@@ -27,10 +27,9 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.initial.InitialAnalysisProvider`
 - `analysis.ai.chat.AnalysisAiChatProvider`
 - `analysis.options.AnalysisAiModelOptionsProvider`
+- `shared.ai`
 - `shared.evidence`
-- `analysis.ai.evidence`
 - `analysis.ai.initial`
-- `analysis.ai.usage`
 - `agenttools.context`
 - `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
 - `agenttools.elasticsearch.mcp`

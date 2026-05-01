@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;

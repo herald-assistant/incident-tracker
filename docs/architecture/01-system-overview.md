@@ -129,19 +129,17 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   diagnozy.
 - `pl.mkn.incidenttracker.analysis.ai.chat`
   Follow-up chat po zakonczonym jobie.
-- `pl.mkn.incidenttracker.analysis.ai.evidence`
-  Listener tool evidence po stronie AI. Generyczne DTO evidence mieszkaja w
-  `pl.mkn.incidenttracker.shared.evidence`.
-- `pl.mkn.incidenttracker.analysis.ai.usage`
-  Generyczny kontrakt token/cost/usage dla UI.
 - `pl.mkn.incidenttracker.analysis.ai.copilot`
   Techniczna integracja Copilot SDK dla model options i telemetry. Incident
   initial/chat providery, response parser i quality gate mieszkaja w
   `features.incidentanalysis.ai.copilot`, a execution gateway w platformie.
+- `pl.mkn.incidenttracker.shared.ai`
+  Neutralny kontrakt token/cost/usage dla flow, job UI, telemetry i feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
-  `AnalysisEvidenceAttribute`.
+  `AnalysisEvidenceAttribute`; zawiera tez neutralny listener aktualizacji tool
+  evidence przekazywany miedzy providerem AI, jobem i feature'em.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.incidenttracker.integrations.operationalcontext`
@@ -277,7 +275,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
 - Zuzycie tokenow jest zbierane z eventow sesji Copilota i wystawiane do UI
-  jako generyczne `AnalysisAiUsage`, bez typow SDK w kontrakcie frontendu.
+  jako generyczne `shared.ai.AnalysisAiUsage`, bez typow SDK w kontrakcie
+  frontendu.
   Frontend liczy orientacyjne GitHub AI Credits/USD z tokenow i modelu jako
   product-facing estymacje oplacalnosci, nie jako fakture.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do

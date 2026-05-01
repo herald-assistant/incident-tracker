@@ -247,8 +247,8 @@ Invocation handler publikuje terminalny event `Finished(COMPLETED)` po udanym
 callbacku. Dedykowane listenery tool capability publikuja tool evidence przez
 `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore`. Store
 dostaje neutralny session-bound sink, a provider Copilota adaptuje
-`AnalysisAiToolEvidenceListener` do tego sinka przed uruchomieniem execution
-gatewaya:
+`shared.evidence.AnalysisAiToolEvidenceListener` do tego sinka przed
+uruchomieniem execution gatewaya:
 
 - `gitlab/tool-fetched-code`,
 - `gitlab/tool-discovery`,
@@ -328,11 +328,11 @@ Metryki obejmuja:
 
 Mutable stan licznikow jest oddzielony od registry, ale pola
 `CopilotAnalysisMetrics` i JSON summary log pozostaja generyczne dla aplikacji.
-Provider mapuje token usage na `AnalysisAiUsage`, dzieki czemu job UI pokazuje
-sume tokenow w ostatnim kroku bez zaleznosci od typow SDK. Frontend dodatkowo
-liczy product-facing estymacje GitHub AI Credits i USD na podstawie tokenow,
-modelu i prostego cennika. To ma pokazywac rzad wielkosci kosztu analizy, nie
-zastepowac rozliczen GitHuba.
+Provider mapuje token usage na `shared.ai.AnalysisAiUsage`, dzieki czemu job
+UI pokazuje sume tokenow w ostatnim kroku bez zaleznosci od typow SDK.
+Frontend dodatkowo liczy product-facing estymacje GitHub AI Credits i USD na
+podstawie tokenow, modelu i prostego cennika. To ma pokazywac rzad wielkosci
+kosztu analizy, nie zastepowac rozliczen GitHuba.
 
 ## Publiczny kontrakt produktu
 

@@ -301,8 +301,8 @@ guidance do opisow drogich lub ryzykownych tools. Przyklady:
 `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` publikuje
 tool evidence przez neutralny session-bound sink
 `Consumer<AnalysisEvidenceSection>`. Provider AI adaptuje
-`AnalysisAiToolEvidenceListener` do tego sinka przed wywolaniem execution
-gatewaya.
+`shared.evidence.AnalysisAiToolEvidenceListener` do tego sinka przed
+wywolaniem execution gatewaya.
 
 Capture obejmuje:
 
@@ -386,8 +386,9 @@ Job state moze przechowywac prepared prompt i `toolEvidenceSections`, ale UI
 nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
 analizy aplikacji.
 
-Zuzycie tokenow jest wystawiane jako generyczne `AnalysisAiUsage`, a nie jako
-event albo typ Copilot SDK. Dzieki temu UI moze pokazac sumaryczne tokeny,
+Zuzycie tokenow jest wystawiane jako generyczne
+`shared.ai.AnalysisAiUsage`, a nie jako event albo typ Copilot SDK. Dzieki
+temu UI moze pokazac sumaryczne tokeny,
 uproszczone GitHub AI Credits/USD oraz szczegoly sesji AI bez znajomosci
 mechaniki event streamu. Estymacja kosztu jest liczona w frontendzie z tokenow
 i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci

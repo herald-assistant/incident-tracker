@@ -368,10 +368,11 @@ Najbardziej oplacalne ruchy:
    AI nad adapterem DB i mapuje hidden `ToolContext` na adapterowy scope.
 3. Przeniesc generyczne evidence DTO z `analysis.ai.evidence` do neutralnego
    modelu, np. `shared.evidence` albo przejsciowo `analysis.evidence.model`.
-   Stan obecny: generic evidence DTO mieszkaja w `shared.evidence`, a
-   `analysis.ai.evidence` zostaje miejscem dla `AnalysisAiToolEvidenceListener`.
-4. Zostawic `AnalysisAiToolEvidenceListener` po stronie AI/platform/feature
-   boundary, bo to nie jest zwykly model evidence.
+   Stan obecny: generic evidence DTO mieszkaja w `shared.evidence`; neutralny
+   `AnalysisAiToolEvidenceListener` takze mieszka w `shared.evidence`, bo
+   laczy provider AI, job i feature bez zaleznosci od `analysis.ai`.
+4. Trzymac token/cost usage DTO w neutralnym `shared.ai`, bo jest konsumowany
+   przez telemetryke, flow, job UI i feature.
 
 Kryterium done:
 
