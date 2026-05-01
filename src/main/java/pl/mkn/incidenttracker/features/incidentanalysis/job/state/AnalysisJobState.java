@@ -8,10 +8,10 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTu
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProviderDescriptor;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisStepPhase;
-import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceProviderDescriptor;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisStepPhase;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisExecution;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageResponse;

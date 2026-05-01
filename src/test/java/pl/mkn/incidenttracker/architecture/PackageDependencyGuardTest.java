@@ -23,6 +23,9 @@ class PackageDependencyGuardTest {
                 Rule.closed("analysis.adapter must stay reusable and independent from evidence pipeline",
                         "pl.mkn.incidenttracker.analysis.adapter",
                         "pl.mkn.incidenttracker.analysis.evidence"),
+                Rule.closed("analysis.adapter must stay reusable and independent from incident evidence",
+                        "pl.mkn.incidenttracker.analysis.adapter",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.evidence"),
                 Rule.closed("analysis.adapter must stay independent from MCP/tools exposure",
                         "pl.mkn.incidenttracker.analysis.adapter",
                         "pl.mkn.incidenttracker.analysis.mcp"),
@@ -77,9 +80,24 @@ class PackageDependencyGuardTest {
                 Rule.closed("features must not depend on historical analysis job",
                         "pl.mkn.incidenttracker.features",
                         "pl.mkn.incidenttracker.analysis.job"),
-                Rule.closed("analysis.evidence must publish shared evidence DTOs without importing AI",
-                        "pl.mkn.incidenttracker.analysis.evidence",
+                Rule.closed("features must not depend on historical analysis evidence",
+                        "pl.mkn.incidenttracker.features",
+                        "pl.mkn.incidenttracker.analysis.evidence"),
+                Rule.closed("api must not depend on historical analysis evidence",
+                        "pl.mkn.incidenttracker.api",
+                        "pl.mkn.incidenttracker.analysis.evidence"),
+                Rule.closed("incident evidence must publish shared evidence DTOs without importing historical AI",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.evidence",
                         "pl.mkn.incidenttracker.analysis.ai"),
+                Rule.closed("incident evidence must stay independent from incident AI",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.evidence",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.ai"),
+                Rule.closed("incident evidence must stay independent from incident flow",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.evidence",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.flow"),
+                Rule.closed("incident evidence must stay independent from incident job",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.evidence",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.job"),
                 Rule.closed("agenttools must stay reusable outside incident analysis",
                         "pl.mkn.incidenttracker.agenttools",
                         "pl.mkn.incidenttracker.analysis"),
@@ -138,7 +156,8 @@ class PackageDependencyGuardTest {
         var closedPackages = List.of(
                 "pl.mkn.incidenttracker.analysis.ai",
                 "pl.mkn.incidenttracker.analysis.flow",
-                "pl.mkn.incidenttracker.analysis.job"
+                "pl.mkn.incidenttracker.analysis.job",
+                "pl.mkn.incidenttracker.analysis.evidence"
         );
 
         var violations = new ArrayList<String>();

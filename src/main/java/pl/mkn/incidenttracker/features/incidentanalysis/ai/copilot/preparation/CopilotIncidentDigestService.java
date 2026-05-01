@@ -5,11 +5,11 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
-import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextEvidenceView;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

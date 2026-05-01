@@ -117,10 +117,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Pakiet jest wspolnym kontraktem dla flow, jobow, chatu i UI, a nie
   wewnetrzna czescia providera AI. Implementacja endpointu mapuje platformowy
   katalog modeli Copilota na obecne DTO aplikacji.
-- `pl.mkn.incidenttracker.analysis.evidence`
+- `pl.mkn.incidenttracker.features.incidentanalysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
-- `pl.mkn.incidenttracker.analysis.evidence.provider.deployment`
+- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.initial`
   Poczatkowa analiza incydentu: provider, request, preparation i response
@@ -134,7 +134,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
   `AnalysisEvidenceAttribute`; zawiera tez neutralny listener aktualizacji tool
   evidence przekazywany miedzy providerem AI, jobem i feature'em.
-- `pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext`
+- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.incidenttracker.integrations.operationalcontext`
   Query-based adapter curated operational context catalog i filtrowania go do
@@ -216,11 +216,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.integrations.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).
-- `pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace`
+- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace`
   Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
 - `pl.mkn.incidenttracker.integrations.gitlab`
   Konfiguracja, porty, adapter REST oraz pomocnicze endpointy testowe GitLaba.
-- `pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic`
+- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.agenttools.gitlab.mcp`
   MCP tools GitLaba delegujace do `integrations.gitlab`.

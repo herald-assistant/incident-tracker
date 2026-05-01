@@ -39,9 +39,9 @@ Przy nowej sesji najlepiej zaczac od:
 - `agenttools.database.mcp`
 - `aiplatform.copilot.runtime`
 - `integrations.database`
-- `analysis.evidence.provider.deployment`
-- `analysis.evidence.provider.elasticsearch`
-- `analysis.evidence.provider.operationalcontext`
+- `features.incidentanalysis.evidence.provider.deployment`
+- `features.incidentanalysis.evidence.provider.elasticsearch`
+- `features.incidentanalysis.evidence.provider.operationalcontext`
 - `agenttools.database.mcp`
 - `frontend/`
 - `frontend/src/app`
@@ -79,7 +79,7 @@ Przy nowej sesji najlepiej zaczac od:
 
 - `integrations.gitlab`
 - `integrations.gitlab.source`
-- `analysis.evidence.provider.gitlabdeterministic`
+- `features.incidentanalysis.evidence.provider.gitlabdeterministic`
 - `agenttools.gitlab`
 - `agenttools.gitlab.mcp`
 
@@ -92,7 +92,7 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za operational context odpowiadaja glownie
 
 - `integrations.operationalcontext`
-- `analysis.evidence.provider.operationalcontext`
+- `features.incidentanalysis.evidence.provider.operationalcontext`
 
 ## Jak rozwijac projekt bez psucia kierunku
 

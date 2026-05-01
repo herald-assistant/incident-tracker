@@ -61,8 +61,8 @@ Docelowy kierunek warstw:
 
 Zasady granic:
 
-- `integrations.*` nie moze zalezec od `analysis.evidence`, `analysis.mcp`,
-  `analysis.ai`, `analysis.flow`, `analysis.job` ani `features.*`. Adaptery
+- `integrations.*` nie moze zalezec od `analysis.*`, `agenttools.*`,
+  `aiplatform.*` ani `features.*`. Adaptery
   maja byc mozliwe do reuse'u przez evidence pipeline, tools/MCP i zwykle
   endpointy REST. Nie przywracaj nowych adapterow do historycznego
   `analysis.adapter`.
@@ -144,10 +144,10 @@ Zasady granic:
   follow-up chat.
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
   Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
   Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
   krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/provider`
   Konkretne kroki pipeline evidence oparte o adaptery i wczesniej zebrany
   `AnalysisContext`.
 - `src/main/java/pl/mkn/incidenttracker/integrations`
@@ -198,7 +198,7 @@ Zasady granic:
 ### Gdy dodajesz nowe zrodlo evidence
 
 - Dodaj typowany adapter i modele w `integrations.<system>`.
-- Dodaj `AnalysisEvidenceProvider` w `analysis.evidence.provider`.
+- Dodaj `AnalysisEvidenceProvider` w `features.incidentanalysis.evidence.provider`.
 - Provider powinien zwracac `shared.evidence.AnalysisEvidenceSection`.
 - Nie dopisuj centralnego mappera "provider == X".
 
@@ -249,7 +249,7 @@ granice modulow byly czytelne i stabilne po refaktorach.
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`

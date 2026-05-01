@@ -38,11 +38,11 @@ Ten pakiet jest wspolnym kontraktem dla `flow`, `job`, `chat` i UI, a nie
 wewnetrzna czescia providera AI. Implementacja provider'a w tym pakiecie jest
 fasada nad platformowym katalogiem modeli Copilota.
 
-### `analysis/evidence`
+### `features/incidentanalysis/evidence`
 
 `AnalysisContext`, collector, kontrakt providera i jawne metadata krokow.
 
-### `analysis/evidence/provider`
+### `features/incidentanalysis/evidence/provider`
 
 Konkretne kroki pipeline:
 
@@ -178,7 +178,7 @@ operational context enrichment.
 
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/agenttools`

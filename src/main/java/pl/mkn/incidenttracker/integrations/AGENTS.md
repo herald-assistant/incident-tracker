@@ -17,7 +17,7 @@ Obecnie obejmuje m.in.:
 
 Operational context jest tutaj query-based capability katalogu operacyjnego.
 Incident-specific matching i mapowanie na evidence pozostaja w
-`analysis.evidence.provider.operationalcontext`.
+`features.incidentanalysis.evidence.provider.operationalcontext`.
 
 Database jest tutaj readonly capability diagnostyki danych: routing DataSource
 per environment, metadata, SQL guard, masking/limiting wynikow oraz typed

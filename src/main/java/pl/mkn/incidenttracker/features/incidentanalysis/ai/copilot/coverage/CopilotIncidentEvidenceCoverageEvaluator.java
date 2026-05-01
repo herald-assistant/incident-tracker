@@ -6,9 +6,9 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
 
 import java.text.Normalizer;
 import java.util.ArrayList;

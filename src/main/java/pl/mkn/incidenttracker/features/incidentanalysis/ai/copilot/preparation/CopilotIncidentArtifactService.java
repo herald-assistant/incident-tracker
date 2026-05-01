@@ -10,9 +10,9 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.IncidentEvidenceGap;
-import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
-import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
 
 import java.io.IOException;
 import java.time.Instant;

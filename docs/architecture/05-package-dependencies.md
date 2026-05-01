@@ -61,11 +61,11 @@ ponizszych zasad:
   poniewaz zawieraja incident scope: `correlationId`, `environment`,
   `gitLabBranch` i `gitLabGroup`.
 - Incident job, incident flow i incident-specific evidence/prompt sa
-  feature'em analizy incydentow. Job i flow mieszkaja juz w
-  `features.incidentanalysis.job` oraz `features.incidentanalysis.flow`;
-  evidence zostaje przejsciowo w historycznym `analysis.evidence`. Feature moze
-  zalezec od platformy, tools i adapterow, ale platforma, tools i adaptery nie
-  moga zalezec od tego feature'a.
+  feature'em analizy incydentow. Job, flow i evidence mieszkaja juz w
+  `features.incidentanalysis.job`, `features.incidentanalysis.flow` oraz
+  `features.incidentanalysis.evidence`. Feature moze zalezec od platformy,
+  tools i adapterow, ale platforma, tools i adaptery nie moga zalezec od tego
+  feature'a.
 - Przyszle feature'y, np. analiza dokumentacji, chatboty albo generowanie
   scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
   skille, hidden context, policy uzycia capability i kontrakt odpowiedzi,
@@ -95,7 +95,7 @@ flowchart LR
     JOBAPI --> JOB["features.incidentanalysis.job"]
     JOB --> FLOW["features.incidentanalysis.flow"]
 
-    FLOW --> EVIDENCE["analysis.evidence"]
+    FLOW --> EVIDENCE["features.incidentanalysis.evidence"]
     EVIDENCE --> INTEGRATIONS["integrations"]
     INTEGRATIONS --> EXT
 
@@ -123,7 +123,7 @@ Wyniki wracaja do callera jako return values albo listener callbacks:
 Najwazniejsze lancuchy ownership/dependency:
 
 - deterministic initial analysis:
-  `features.incidentanalysis.job -> features.incidentanalysis.flow -> analysis.evidence -> integrations`,
+  `features.incidentanalysis.job -> features.incidentanalysis.flow -> features.incidentanalysis.evidence -> integrations`,
 - initial AI:
   `features.incidentanalysis.flow -> features.incidentanalysis.ai.initial -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime`,
 - AI-guided tools podczas initial analysis:
@@ -169,11 +169,11 @@ flowchart LR
 
 | Krawedz importow | Liczba | Status | Co oznacza |
 | --- | ---: | --- | --- |
-| `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
-| `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
+| `features.incidentanalysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
+| `features.incidentanalysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `features -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
 | `features -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
-| `features -> analysis.evidence` | 23 | przejsciowe | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
+| `features -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
 | `features -> analysis.options` | 6 | oczekiwane przejsciowo | Incident job/flow, initial/chat request oraz session config niosa operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`. |
@@ -191,22 +191,22 @@ Po wydzieleniu generycznego modelu evidence i przeniesieniu incident AI
 contracts aktualny kod nie ma juz pakietu produkcyjnego `analysis.ai`. To jest
 zamknieta granica i nie nalezy jej przywracac.
 
-Do obserwacji zostaly krawedzie:
+Do obserwacji zostaly krawedzie wewnatrz feature'a:
 
-1. `features -> analysis.evidence`
+1. `features -> features.incidentanalysis.evidence`
 
    Incident job/flow uruchamiaja collector i pokazuja kroki pipeline, a
-   coverage/artifacts czytaja typed evidence view helpers. To jest przejsciowe
-   do czasu przeniesienia evidence do `features.incidentanalysis`; nie uzywac
-   tego jako pretekstu do importow `analysis.evidence -> features`.
+   coverage/artifacts czytaja typed evidence view helpers. To jest oczekiwane,
+   ale kierunek ma zostac jednokierunkowy: evidence nie powinno importowac
+   incident AI, flow ani joba.
 
 ## Kierunek Dla Nowych Zmian
 
 Preferowany kierunek kompilacyjny dla obecnych pakietow:
 
 ```text
-features.incidentanalysis.job -> features.incidentanalysis.flow -> analysis.evidence -> integrations
-analysis.evidence -> shared
+features.incidentanalysis.job -> features.incidentanalysis.flow -> features.incidentanalysis.evidence -> integrations
+features.incidentanalysis.evidence -> shared
 features.incidentanalysis.flow -> features.incidentanalysis.ai.initial
 features.incidentanalysis.job -> features.incidentanalysis.ai.chat
 features -> shared.ai/shared.evidence
@@ -235,6 +235,7 @@ any package -> common
 Unikac nowych zaleznosci:
 
 - `analysis.adapter -> analysis.evidence`,
+- `analysis.adapter -> features.incidentanalysis.evidence`,
 - `analysis.adapter -> analysis.mcp`,
 - `analysis.adapter -> analysis.ai`,
 - `analysis.adapter -> agenttools`,
@@ -249,19 +250,22 @@ Unikac nowych zaleznosci:
 - `features -> analysis.ai`,
 - `any production package -> analysis.flow`,
 - `any production package -> analysis.job`,
-- `analysis.evidence -> features`,
+- `any production package -> analysis.evidence`,
+- `features.incidentanalysis.evidence -> features.incidentanalysis.ai`,
+- `features.incidentanalysis.evidence -> features.incidentanalysis.flow`,
+- `features.incidentanalysis.evidence -> features.incidentanalysis.job`,
 - `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.ai -> analysis.mcp`,
 - `features.incidentanalysis.flow -> konkretne adaptery` poza waskim
   scope/config resolverem,
-- `features.incidentanalysis.job -> analysis.evidence.provider.*` poza
+- `features.incidentanalysis.job -> features.incidentanalysis.evidence.provider.*` poza
   prostym odczytem runtime facts do statusu UI.
 
 Zamkniete krawedzie, ktorych nie przywracac:
 
-- `analysis.adapter -> analysis.evidence`: adapter Dynatrace nie buduje juz
-  query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
-  evidence providerow.
+- `analysis.adapter -> analysis.evidence/features.incidentanalysis.evidence`:
+  adapter Dynatrace nie buduje juz query z `ElasticLogEvidenceView`; factory
+  tego mapowania mieszka po stronie evidence providerow.
 - `integrations -> analysis`: przeniesione adaptery `integrations.dynatrace`,
   `integrations.elasticsearch`, `integrations.gitlab` i
   `integrations.operationalcontext` oraz `integrations.database` pozostaja
@@ -274,8 +278,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
   tools mieszkaja w `agenttools.database.mcp`.
 - `analysis.adapter -> agenttools`: adapter DB ma wlasne capability DTO i scope
   w `integrations.database`; MCP mapuje hidden `ToolContext` na ten scope.
-- `analysis.evidence -> analysis.ai`: generyczne DTO evidence mieszkaja teraz
-  w `shared.evidence`, a `analysis.ai` nie jest wlascicielem modelu evidence.
+- `features.incidentanalysis.evidence -> analysis.ai`: incident evidence
+  publikuje generyczne DTO z `shared.evidence`, a historyczne `analysis.ai`
+  nie jest wlascicielem modelu evidence.
 - Dawne `analysis.ai.evidence/usage`: listener tool evidence mieszka teraz w
   `shared.evidence`, a neutralny token/cost usage DTO w `shared.ai`. Feature
   nie importuje tych typow z `analysis.ai`.
@@ -294,6 +299,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.job`: incident job, API DTO, state i job errors mieszkaja teraz w
   `features.incidentanalysis.job`; historycznego pakietu produkcyjnego
   `analysis.job` nie przywracac.
+- `analysis.evidence`: incident evidence collector, providery i typed evidence
+  views mieszkaja teraz w `features.incidentanalysis.evidence`; historycznego
+  pakietu produkcyjnego `analysis.evidence` nie przywracac.
 - `runtime tools -> capability evidence capture`: GitLab/DB user-facing tool
   evidence mapping mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools`; platformowe runtime tools

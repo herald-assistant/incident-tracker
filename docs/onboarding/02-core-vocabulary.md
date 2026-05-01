@@ -55,8 +55,8 @@ ladowane do sesji przez provider AI.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisContext.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AnalysisContext.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AnalysisEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/ai`

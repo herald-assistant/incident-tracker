@@ -19,7 +19,7 @@ architektonicznych.
 
 ### Evidence pipeline
 
-- `src/test/java/pl/mkn/incidenttracker/analysis/evidence`
+- `src/test/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
 
 ### Job
 
@@ -59,7 +59,7 @@ architektonicznych.
 
 ## Playbook 2: nowy provider evidence
 
-1. dodaj provider do `analysis.evidence.provider.<capability>`,
+1. dodaj provider do `features.incidentanalysis.evidence.provider.<capability>`,
 2. zdefiniuj `stepCode`, `stepLabel`, `stepPhase`, `consumedEvidence`,
    `producedEvidence`,
 3. dopisz go jawnie w `AnalysisEvidenceCollector`,

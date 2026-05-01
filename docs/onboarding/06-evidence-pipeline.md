@@ -52,10 +52,10 @@ To jest kompromis:
 
 ## Najwazniejsze klasy
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisContext.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceCollector.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceProvider.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AnalysisContext.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AnalysisEvidenceCollector.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AnalysisEvidenceProvider.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/provider`
 
 ## Przeczytaj po kolei
 

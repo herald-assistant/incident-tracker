@@ -28,7 +28,7 @@ Nie powinien znac logiki `logs -> repo`.
 
 ## Capability 2: deterministic evidence provider
 
-Pakiet: `analysis.evidence.provider.gitlabdeterministic`
+Pakiet: `features.incidentanalysis.evidence.provider.gitlabdeterministic`
 
 Odpowiada za:
 
@@ -80,7 +80,7 @@ rekomendowane dalsze odczyty.
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/integrations/gitlab`
-- `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/provider/gitlabdeterministic`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/gitlab/mcp`
 
 ## Checkpoint

@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
-import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
 
 import java.time.Instant;
 import java.util.List;

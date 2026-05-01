@@ -557,7 +557,7 @@ Target:
 ```text
 analysis.job      -> features.incidentanalysis.job [done]
 analysis.flow     -> features.incidentanalysis.flow [done]
-analysis.evidence -> features.incidentanalysis.evidence
+analysis.evidence -> features.incidentanalysis.evidence [done]
 analysis.ai.initial/chat contracts specific to incident
                  -> features.incidentanalysis.ai [done]
 incident prompt/digest/coverage
@@ -579,6 +579,9 @@ Uwagi:
 - `analysis.job` jest juz zamknietym historycznym pakietem produkcyjnym.
   Incident job API, state i errors mieszkaja w
   `features.incidentanalysis.job`.
+- `analysis.evidence` jest juz zamknietym historycznym pakietem produkcyjnym.
+  Incident evidence collector, providery i typed evidence views mieszkaja w
+  `features.incidentanalysis.evidence`.
 
 Kryterium done:
 
@@ -673,7 +676,8 @@ Kryterium done:
 17. PR: przeniesc incident flow do `features.incidentanalysis.flow` [done].
 18. PR: przeniesc incident job do `features.incidentanalysis.job`, zachowujac
     publiczne URL-e `/analysis/jobs` [done].
-19. PR: przeniesc incident evidence do `features.incidentanalysis.evidence`.
+19. PR: przeniesc incident evidence do
+    `features.incidentanalysis.evidence` [done].
 20. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
