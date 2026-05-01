@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
 
 import static pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID;
 

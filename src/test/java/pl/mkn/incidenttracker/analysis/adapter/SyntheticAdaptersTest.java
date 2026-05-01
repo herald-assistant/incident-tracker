@@ -5,7 +5,7 @@ import pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentQuery;
 import pl.mkn.incidenttracker.integrations.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort;
 
 import java.time.Instant;
 import java.util.List;

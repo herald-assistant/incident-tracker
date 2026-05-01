@@ -9,9 +9,6 @@ integracji to `pl.mkn.incidenttracker.integrations`.
 
 Obejmuje:
 
-- `elasticsearch/`
-  properties, porty, adapter REST, modele logow i helper endpoint do recznego
-  log search po `correlationId`,
 - `gitlab/`
   properties, porty, adapter REST, repository search, source resolve i helper
   endpointy GitLaba,
@@ -57,6 +54,9 @@ Nie obejmuje:
   ale nie powinien importowac `analysis.mcp.database` ani `agenttools`.
 - Dynatrace zostal juz przeniesiony do
   `pl.mkn.incidenttracker.integrations.dynatrace`; nie przywracaj go do
+  `analysis.adapter`.
+- Elasticsearch zostal juz przeniesiony do
+  `pl.mkn.incidenttracker.integrations.elasticsearch`; nie przywracaj go do
   `analysis.adapter`.
 
 ## Testy

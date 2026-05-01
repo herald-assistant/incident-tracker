@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

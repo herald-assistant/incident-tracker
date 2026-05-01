@@ -71,7 +71,7 @@ Przy nowej sesji najlepiej zaczac od:
 
 ### Za Elastica odpowiadaja glownie
 
-- `analysis.adapter.elasticsearch`
+- `integrations.elasticsearch`
 - `analysis.mcp.elasticsearch`
 
 ### Za operational context odpowiadaja glownie

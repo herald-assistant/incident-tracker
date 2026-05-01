@@ -1,9 +1,9 @@
 package pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
@@ -504,11 +504,11 @@ class GitLabDeterministicEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult(
+                return new pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),
@@ -551,11 +551,11 @@ class GitLabDeterministicEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult(
+                return new pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),
@@ -598,11 +598,11 @@ class GitLabDeterministicEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult(
+                return new pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),

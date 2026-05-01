@@ -3,8 +3,8 @@ package pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentEvidence;
 import pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
@@ -29,7 +29,7 @@ class DynatraceEvidenceProviderTest {
     void shouldSkipDynatraceLookupForDevEnvironment() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
         var provider = new DynatraceEvidenceProvider(dynatracePort, deploymentContextResolver);
-        var context = contextFrom(new pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort(), "timeout-123");
+        var context = contextFrom(new pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort(), "timeout-123");
 
         var section = provider.collect(context);
 
@@ -284,11 +284,11 @@ class DynatraceEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult(
+                return new pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),

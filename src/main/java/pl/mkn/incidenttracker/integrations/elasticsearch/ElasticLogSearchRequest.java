@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.elasticsearch;
+package pl.mkn.incidenttracker.integrations.elasticsearch;
 
 import jakarta.validation.constraints.NotBlank;
 

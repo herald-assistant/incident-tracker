@@ -145,13 +145,14 @@ Zasady granic:
   Konkretne kroki pipeline evidence oparte o adaptery i wczesniej zebrany
   `AnalysisContext`.
 - `src/main/java/pl/mkn/incidenttracker/integrations`
-  Docelowa reusable warstwa capability adapters. Dynatrace mieszka juz w
-  `integrations.dynatrace`; kolejne adaptery beda przenoszone tam etapami.
+  Docelowa reusable warstwa capability adapters. Dynatrace i Elasticsearch
+  mieszkaja juz w `integrations`; kolejne adaptery beda przenoszone tam
+  etapami.
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
   Generyczny kontrakt AI i aktualna integracja Copilot SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
   Przejsciowy dom integracji, ktore nie zostaly jeszcze przeniesione do
-  `integrations`: Elasticsearch, GitLab, Database oraz operational context.
+  `integrations`: GitLab, Database oraz operational context.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
   MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
   case'ow.

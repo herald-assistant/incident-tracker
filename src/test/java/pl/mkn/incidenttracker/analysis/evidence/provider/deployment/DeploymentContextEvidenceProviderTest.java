@@ -1,9 +1,9 @@
 package pl.mkn.incidenttracker.analysis.evidence.provider.deployment;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
@@ -112,11 +112,11 @@ class DeploymentContextEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult(
+                return new pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),

@@ -13,6 +13,8 @@ feature'y.
   `aiplatform.*`.
 - Trzymaj lokalnie properties, porty, modele request/result i adaptery REST dla
   danej capability.
+- Cienkie helper endpointy REST do manualnego testowania capability sa
+  dopuszczalne, jesli deleguja do integracji i nie importuja `analysis.*`.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
 - Nie dodawaj tu `AnalysisEvidenceProvider`, klas `@Tool`, promptow, skilli ani
   heurystyk incidentowych.

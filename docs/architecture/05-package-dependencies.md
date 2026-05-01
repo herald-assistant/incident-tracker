@@ -162,9 +162,11 @@ flowchart LR
     AI --> SHARED
 
     MCP --> ADAPTER
+    MCP --> INTEGRATIONS
     MCP --> AGENTTOOLS
 
     API["api"] --> ADAPTER
+    API --> INTEGRATIONS
     API --> FLOW
     API --> JOB
 ```
@@ -183,8 +185,8 @@ flowchart LR
 | `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
 | `analysis.flow -> analysis.adapter` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
 | `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
-| `analysis.evidence -> analysis.adapter` | 36 | oczekiwane przejsciowo | Providerzy evidence deleguja do adapterow systemow zewnetrznych, ktore jeszcze mieszkaja pod `analysis.adapter`. |
-| `analysis.evidence -> integrations` | 5 | oczekiwane | Provider Dynatrace deleguje juz do docelowej reusable integracji. |
+| `analysis.evidence -> analysis.adapter` | 34 | oczekiwane przejsciowo | Providerzy evidence deleguja do adapterow systemow zewnetrznych, ktore jeszcze mieszkaja pod `analysis.adapter`. |
+| `analysis.evidence -> integrations` | 7 | oczekiwane | Providerzy Elasticsearch i Dynatrace deleguja juz do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
@@ -192,9 +194,11 @@ flowchart LR
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
-| `analysis.mcp -> analysis.adapter` | 9 | oczekiwane | Spring AI tools deleguja do adapterow/capability services i uzywaja capability DTO adaptera DB. |
+| `analysis.mcp -> analysis.adapter` | 7 | oczekiwane przejsciowo | Spring AI tools deleguja do adapterow/capability services, ktore jeszcze mieszkaja pod `analysis.adapter`. |
+| `analysis.mcp -> integrations` | 2 | oczekiwane | Elasticsearch MCP tool korzysta juz z docelowej reusable integracji. |
 | `analysis.mcp -> agenttools` | 16 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych hidden context keys. |
-| `api -> analysis.adapter` | 6 | oczekiwane | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow. |
+| `api -> analysis.adapter` | 4 | oczekiwane przejsciowo | Globalny handler HTTP mapuje wyjatki helper endpointow adapterow, ktore jeszcze mieszkaja pod `analysis.adapter`. |
+| `api -> integrations` | 2 | oczekiwane | Globalny handler HTTP mapuje wynik/wyjatek helper endpointu Elasticsearch z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
 

@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.job;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
 import pl.mkn.incidenttracker.integrations.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.source.GitLabSourceResolveService;

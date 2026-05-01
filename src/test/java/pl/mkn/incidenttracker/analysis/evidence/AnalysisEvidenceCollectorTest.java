@@ -1,9 +1,9 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
 import pl.mkn.incidenttracker.integrations.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
-import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
+import pl.mkn.incidenttracker.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositoryFileContent;
@@ -307,7 +307,7 @@ class AnalysisEvidenceCollectorTest {
         }
 
         @Override
-        public pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+        public pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
                 String correlationId
         ) {
             throw new UnsupportedOperationException("Not needed in this collector test.");

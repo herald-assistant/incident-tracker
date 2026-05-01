@@ -178,7 +178,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Subskrypcja eventow Database tools i mapowanie wynikow do user-facing evidence.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.telemetry`
   Metryki sesji Copilota, usage events SDK, tool metrics i summary log.
-- `pl.mkn.incidenttracker.analysis.adapter.elasticsearch`
+- `pl.mkn.incidenttracker.integrations.elasticsearch`
   Properties, porty, adapter REST, modele logow oraz endpoint testowy dla
   Elasticsearch/Kibana.
 - `pl.mkn.incidenttracker.analysis.mcp.elasticsearch`

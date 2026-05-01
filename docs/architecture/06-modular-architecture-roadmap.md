@@ -391,6 +391,8 @@ Kolejnosc sugerowana:
    Stan obecny: zrobione, pakiet mieszka w `integrations.dynatrace`.
 2. Elasticsearch, lacznie z helper endpointem log search jako fasada nad
    integracja.
+   Stan obecny: zrobione, pakiet mieszka w `integrations.elasticsearch`, a URL
+   helper endpointu pozostaje bez zmian.
 3. GitLab adapter i source resolve.
 4. Operational context adapter.
 5. Database, po przeniesieniu neutralnych DB contracts.
@@ -398,7 +400,7 @@ Kolejnosc sugerowana:
 Target:
 
 ```text
-analysis.adapter.elasticsearch -> integrations.elasticsearch
+analysis.adapter.elasticsearch -> integrations.elasticsearch [done]
 analysis.adapter.dynatrace     -> integrations.dynatrace [done]
 analysis.adapter.gitlab        -> integrations.gitlab
 analysis.adapter.database      -> integrations.database
@@ -564,11 +566,13 @@ Kryterium done:
 5. PR: przeniesc generic evidence DTO poza `analysis.ai`.
 6. PR: dodac reguly zakazujace nowych importow `adapter -> evidence/mcp/ai`.
 7. PR: przeniesc Dynatrace adapter do `integrations.dynatrace` [done].
-8. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
-9. PR: przeniesc reszte adapterow capability po jednym obszarze.
-10. PR: wydzielic generic Copilot runtime od incident prompt/digest.
-11. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
-12. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+8. PR: przeniesc Elasticsearch adapter i helper endpoint do
+   `integrations.elasticsearch` [done].
+9. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
+10. PR: przeniesc reszte adapterow capability po jednym obszarze.
+11. PR: wydzielic generic Copilot runtime od incident prompt/digest.
+12. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
+13. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

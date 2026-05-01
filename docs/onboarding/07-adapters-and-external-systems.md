@@ -21,9 +21,9 @@ Jest tez reuse'owany przez provider evidence i MCP tool.
 
 Czytaj:
 
-- `analysis.adapter.elasticsearch.ElasticLogPort`
-- `analysis.adapter.elasticsearch.ElasticRestLogAdapter`
-- `analysis.adapter.elasticsearch.ElasticLogSearchService`
+- `integrations.elasticsearch.ElasticLogPort`
+- `integrations.elasticsearch.ElasticRestLogAdapter`
+- `integrations.elasticsearch.ElasticLogSearchService`
 
 ## Dynatrace
 
