@@ -256,6 +256,9 @@ SessionConfig ma jawna allowliste tools, a `SessionHooks.onPreToolUse`
 blokuje lokalny workspace/filesystem/shell/terminal w glownym flow analizy.
 Incident preparation sklada `CopilotSessionConfigRequest`: wybiera allowed
 tools, skill directories, model options i incidentowy komunikat odmowy toola.
+Incident preparation sklada tez `CopilotToolSessionContext`: tworzy
+`analysis-*`/`analysis-chat-*` session id i hidden tool context ze scope'u
+incydentu.
 `CopilotSessionConfigFactory` jest juz tylko runtime factory, ktora zamienia
 ten request na konfiguracje klienta SDK, `SessionConfig`, hooks, permission
 handler i disabled skills.

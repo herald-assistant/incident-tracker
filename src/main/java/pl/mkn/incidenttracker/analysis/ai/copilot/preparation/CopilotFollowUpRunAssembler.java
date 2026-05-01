@@ -6,25 +6,23 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class CopilotFollowUpRunAssembler {
 
     private final CopilotSdkToolFactory toolFactory;
+    private final CopilotIncidentToolSessionContextFactory toolSessionContextFactory;
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotArtifactService artifactService;
     private final CopilotFollowUpPromptRenderer promptRenderer;
-    private final CopilotIncidentHiddenToolContextFactory hiddenToolContextFactory;
 
     public CopilotFollowUpRunAssembly assemble(AnalysisAiChatRequest request) {
-        var toolSessionContext = buildToolSessionContext(request);
+        var toolSessionContext = toolSessionContextFactory.fromChatRequest(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = CopilotToolAccessPolicy.fromFollowUpSession(
                 registeredTools,
@@ -50,17 +48,6 @@ public class CopilotFollowUpRunAssembler {
                         artifactService.toArtifactContentMap(renderedArtifacts),
                         null
                 )
-        );
-    }
-
-    private CopilotToolSessionContext buildToolSessionContext(AnalysisAiChatRequest request) {
-        var analysisRunId = UUID.randomUUID().toString();
-        var copilotSessionId = "analysis-chat-" + analysisRunId;
-
-        return new CopilotToolSessionContext(
-                analysisRunId,
-                copilotSessionId,
-                hiddenToolContextFactory.fromChatRequest(request)
         );
     }
 

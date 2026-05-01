@@ -163,6 +163,9 @@ Kolejny inkrement jest rowniez w kodzie: incident preparation sklada
 Dzieki temu wybor skilli, model options i incidentowy komunikat odmowy tooli
 sa lokalne dla feature preparation, a runtime factory tylko buduje techniczna
 konfiguracje SDK.
+Incident preparation sklada tez `CopilotToolSessionContext` przez
+`CopilotIncidentToolSessionContextFactory`, wiec generowanie run/session id i
+hidden scope initial/follow-up jest lokalne dla feature preparation.
 
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,

@@ -19,6 +19,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCovera
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisRunAssembler;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
@@ -491,11 +492,11 @@ class CopilotSdkPreparationServiceTest {
     ) {
         return new CopilotInitialAnalysisRunAssembler(
                 toolFactory,
+                new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
                 new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
                 artifactService(objectMapper),
                 policyFactory(),
-                promptRenderer(),
-                new CopilotIncidentHiddenToolContextFactory()
+                promptRenderer()
         );
     }
 
