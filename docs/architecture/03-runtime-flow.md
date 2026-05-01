@@ -111,8 +111,9 @@ renderingu i konfiguracji SDK:
   artefaktow: deterministic evidence plus tool evidence z poprzednich sesji,
 - `CopilotIncidentRunRequestFactory` tworzy neutralny `CopilotRunRequest` z
   run reference, promptu, session config request i artifact contents,
-- initial run assembler zachowuje metryki preparation, a follow-up run
-  assembler zwraca juz bezposrednio neutralny `CopilotRunRequest`,
+- initial run assembly niesie neutralny `CopilotRunRequest` oraz osobny
+  snapshot metryk preparation; follow-up run assembler zwraca juz bezposrednio
+  neutralny `CopilotRunRequest`,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na
   `CopilotPreparedSession`, a `CopilotSessionConfigFactory` buduje client
   options, session config, permission handler, hooks i disabled skills.

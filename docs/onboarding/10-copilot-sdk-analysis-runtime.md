@@ -88,8 +88,9 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   deterministic evidence oraz tool evidence z poprzednich sesji,
 - `CopilotIncidentRunRequestFactory` tworzy platformowy `CopilotRunRequest` z
   promptu, session config request i artifact contents,
-- initial run assembler zachowuje metryki preparation, a follow-up run
-  assembler zwraca juz bezposrednio platformowy `CopilotRunRequest`,
+- initial run assembly niesie platformowy `CopilotRunRequest` oraz osobny
+  snapshot metryk preparation; follow-up run assembler zwraca juz bezposrednio
+  platformowy `CopilotRunRequest`,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na techniczna
   `CopilotPreparedSession`,
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,

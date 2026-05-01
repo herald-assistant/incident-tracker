@@ -1,18 +1,15 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
-
-import java.util.List;
+import java.util.Objects;
 
 public record CopilotInitialAnalysisRunAssembly(
-        CopilotToolSessionContext toolSessionContext,
-        List<CopilotArtifactService.Artifact> renderedArtifacts,
-        String prompt,
-        CopilotRunRequest runRequest
+        CopilotRunRequest runRequest,
+        CopilotInitialAnalysisPreparationMetrics metrics
 ) {
 
     public CopilotInitialAnalysisRunAssembly {
-        renderedArtifacts = renderedArtifacts != null ? List.copyOf(renderedArtifacts) : List.of();
+        Objects.requireNonNull(runRequest, "runRequest must not be null");
+        Objects.requireNonNull(metrics, "metrics must not be null");
     }
 }

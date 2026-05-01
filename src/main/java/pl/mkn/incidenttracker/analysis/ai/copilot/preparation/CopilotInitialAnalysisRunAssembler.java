@@ -30,15 +30,13 @@ public class CopilotInitialAnalysisRunAssembler {
         );
 
         return new CopilotInitialAnalysisRunAssembly(
-                toolSessionContext,
-                renderedArtifacts,
-                prompt,
                 runRequestFactory.create(
                         request.correlationId(),
                         prompt,
                         sessionConfigRequest,
                         renderedArtifacts
-                )
+                ),
+                new CopilotInitialAnalysisPreparationMetrics(toolSessionContext, renderedArtifacts)
         );
     }
 }

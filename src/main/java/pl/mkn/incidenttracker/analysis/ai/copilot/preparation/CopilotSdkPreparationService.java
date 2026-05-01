@@ -17,11 +17,12 @@ public class CopilotSdkPreparationService {
     public CopilotInitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
         var preparationStart = System.nanoTime();
         var assembly = runAssembler.assemble(request);
+        var metrics = assembly.metrics();
         metricsRegistry.recordPreparation(
-                assembly.toolSessionContext(),
+                metrics.toolSessionContext(),
                 request,
-                assembly.renderedArtifacts(),
-                assembly.prompt(),
+                metrics.renderedArtifacts(),
+                assembly.runRequest().prompt(),
                 (System.nanoTime() - preparationStart) / 1_000_000
         );
 
