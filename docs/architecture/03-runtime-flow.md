@@ -108,8 +108,10 @@ renderingu i konfiguracji SDK:
   selection i komunikat odmowy tooli,
 - `CopilotFollowUpArtifactRequestFactory` mapuje follow-up snapshot na request
   artefaktow: deterministic evidence plus tool evidence z poprzednich sesji,
-- run assembler buduje neutralny `CopilotRunRequest` z promptem, artifactami,
-  `CopilotSessionConfigRequest`, `runReference` i evidence sink,
+- `CopilotIncidentRunRequestFactory` tworzy neutralny `CopilotRunRequest` z
+  run reference, promptu, session config request i artifact contents,
+- run assembler koordynuje przygotowanie initial/follow-up i bierze gotowy
+  `CopilotRunRequest` z factory,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na
   `CopilotPreparedSession`, a `CopilotSessionConfigFactory` buduje client
   options, session config, permission handler, hooks i disabled skills.

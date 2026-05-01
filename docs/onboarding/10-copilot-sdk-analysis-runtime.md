@@ -85,8 +85,10 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   directories, model selection i komunikat odmowy tooli,
 - `CopilotFollowUpArtifactRequestFactory` sklada artifact request follow-up z
   deterministic evidence oraz tool evidence z poprzednich sesji,
-- initial/follow-up run assembler buduje `CopilotRunRequest` z gotowym
-  `CopilotSessionConfigRequest`,
+- `CopilotIncidentRunRequestFactory` tworzy platformowy `CopilotRunRequest` z
+  promptu, session config request i artifact contents,
+- initial/follow-up run assembler koordynuje preparation i bierze gotowy
+  `CopilotRunRequest` z factory,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na techniczna
   `CopilotPreparedSession`,
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,

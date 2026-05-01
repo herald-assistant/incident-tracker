@@ -3,7 +3,6 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 
 @Component
@@ -17,6 +16,7 @@ public class CopilotFollowUpRunAssembler {
     private final CopilotFollowUpArtifactRequestFactory artifactRequestFactory;
     private final CopilotArtifactService artifactService;
     private final CopilotFollowUpPromptRenderer promptRenderer;
+    private final CopilotIncidentRunRequestFactory runRequestFactory;
 
     public CopilotFollowUpRunAssembly assemble(AnalysisAiChatRequest request) {
         var toolSessionContext = toolSessionContextFactory.fromChatRequest(request);
@@ -34,12 +34,11 @@ public class CopilotFollowUpRunAssembler {
                 toolSessionContext,
                 renderedArtifacts,
                 prompt,
-                new CopilotRunRequest(
+                runRequestFactory.create(
                         request.correlationId(),
                         prompt,
                         sessionConfigRequest,
-                        artifactService.toArtifactContentMap(renderedArtifacts),
-                        null
+                        renderedArtifacts
                 )
         );
     }

@@ -264,6 +264,8 @@ zeby decyzje o dostepnych capability byly lokalne dla incident preparation.
 Follow-up artifact request powstaje przez `CopilotFollowUpArtifactRequestFactory`,
 zeby laczenie deterministic evidence i tool evidence nie bylo odpowiedzialnoscia
 assemblera runtime requestu.
+`CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`, zeby
+mapowanie artifact contents na platformowy input runtime bylo w jednym miejscu.
 `CopilotSessionConfigFactory` jest juz tylko runtime factory, ktora zamienia
 ten request na konfiguracje klienta SDK, `SessionConfig`, hooks, permission
 handler i disabled skills.

@@ -11,6 +11,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisRunAssembler;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
@@ -57,7 +58,8 @@ class CopilotSdkPreparationServiceMetricsTest {
                         new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
                         artifactService(objectMapper),
                         new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
-                        new CopilotPromptRenderer()
+                        new CopilotPromptRenderer(),
+                        new CopilotIncidentRunRequestFactory(artifactService(objectMapper))
                 ),
                 new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties)),
                 metricsRegistry

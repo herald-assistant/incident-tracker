@@ -172,6 +172,8 @@ assemblerach runtime requestu.
 Follow-up artifact request przechodzi przez `CopilotFollowUpArtifactRequestFactory`,
 wiec adaptacja chatu na incident artifacts nie siedzi w assemblerze runtime
 requestu.
+`CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`, wiec
+mapowanie rendered artifacts na platformowy input runtime jest w jednym miejscu.
 
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,
