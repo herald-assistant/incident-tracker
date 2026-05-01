@@ -26,8 +26,8 @@ Przy nowej sesji najlepiej zaczac od:
 - `AnalysisEvidenceProvider`
 - `features.incidentanalysis.ai.initial.InitialAnalysisProvider`
 - `features.incidentanalysis.ai.chat.AnalysisAiChatProvider`
-- `analysis.options.AnalysisAiModelOptionsProvider` jako przejsciowa
-  shared/operator fasada opcji AI
+- `api.aioptions.AnalysisAiModelOptionsProvider` jako shared/operator fasada
+  opcji AI
 - `aiplatform.copilot.runtime.options`
 - `shared.ai`
 - `api` jako docelowe miejsce cross-screen FE/operator API
@@ -154,8 +154,8 @@ Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
 Frontend pobiera ja z `GET /analysis/ai/options`, a fasada
 `AnalysisAiModelOptionsProvider` mapuje platformowy katalog modeli Copilota na
 kontrakt aplikacji. To jest shared/operator API dla UI, nie czesc incident job
-flow. Docelowo controller/DTO powinny mieszkac w `api.aioptions`, a neutralne
-preferencje wykonania AI w `shared.ai`.
+flow. Controller/DTO mieszkaja w `api.aioptions`, a neutralne preferencje
+wykonania AI w `shared.ai`.
 
 ### `gitLabGroup`
 

@@ -146,10 +146,10 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
   Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
   follow-up chat.
-- `src/main/java/pl/mkn/incidenttracker/analysis/options`
-  Przejsciowa fasada shared/operator API dla opcji wykonania AI, katalogu
-  modeli i endpointu `GET /analysis/ai/options`. Docelowo neutralne
-  preferencje trafiaja do `shared.ai`, a HTTP fasada do `api.aioptions`.
+- `src/main/java/pl/mkn/incidenttracker/api/aioptions`
+  Shared/operator API dla katalogu modeli i endpointu
+  `GET /analysis/ai/options`, mapujace platformowy katalog Copilota na kontrakt
+  HTTP dla UI.
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
   Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
   krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -187,7 +187,8 @@ Zasady granic:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`
   oraz listener aktualizacji tool evidence.
 - `src/main/java/pl/mkn/incidenttracker/shared/ai`
-  Neutralne DTO usage/token/cost dla flow, job UI, telemetryki i feature'ow.
+  Neutralne DTO preferencji wykonania AI oraz usage/token/cost dla flow, job
+  UI, telemetryki i feature'ow.
 - `src/main/java/pl/mkn/incidenttracker/api`
   Globalny kontrakt bledow HTTP i docelowe miejsce na shared/operator API
   niezalezne od jednego feature'a. Nie przenos tu orchestration feature'a,
@@ -261,7 +262,6 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
@@ -270,3 +270,4 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/shared/ai/AGENTS.md`

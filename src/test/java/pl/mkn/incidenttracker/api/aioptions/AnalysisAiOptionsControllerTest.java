@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.options;
+package pl.mkn.incidenttracker.api.aioptions;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

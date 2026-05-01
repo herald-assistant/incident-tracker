@@ -395,7 +395,7 @@ i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
 analizy, a nie do rozliczen finansowych.
 
 Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
-fasadach `features.incidentanalysis.job` / `analysis.options` nie powinny
+fasadach `features.incidentanalysis.job` / `api.aioptions` nie powinny
 wymagac wiedzy o typach SDK w UI:
 `POST /analysis/jobs` moze przyjac tylko `correlationId` oraz generyczne
 preferencje AI (`model`, `reasoningEffort`). Response pozostaje mapowany do pol
@@ -403,7 +403,7 @@ aplikacji, a artefakty Copilota nadal sa embedded inline w promptcie.
 
 Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac
 model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
-`AnalysisAiModelOptionsProvider`, nie z kodu Angulara.
+`api.aioptions.AnalysisAiModelOptionsProvider`, nie z kodu Angulara.
 
 ## 20. Follow-up chat jest kontynuacja joba
 
@@ -501,7 +501,7 @@ Zasady:
   controller/DTO powinny trafic do `api.*`, a adapter zostaje w
   `integrations.*`.
 
-Konsekwencja dla obecnego kodu: `analysis.options` nie jest incident feature'em.
-Docelowo neutralne `AnalysisAiOptions` trafia do `shared.ai`, HTTP fasada
-`GET /analysis/ai/options` do `api.aioptions`, a katalog modeli Copilota
-zostaje w `aiplatform.copilot.runtime.options`.
+Konsekwencja dla obecnego kodu: historyczne `analysis.options` jest zamkniete.
+Neutralne `AnalysisAiOptions` mieszka w `shared.ai`, HTTP fasada
+`GET /analysis/ai/options` w `api.aioptions`, a katalog modeli Copilota zostaje
+w `aiplatform.copilot.runtime.options`.

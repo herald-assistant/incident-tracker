@@ -6,7 +6,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.C
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicy;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 import java.util.List;
 import java.util.Map;

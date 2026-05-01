@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.options;
+package pl.mkn.incidenttracker.api.aioptions;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

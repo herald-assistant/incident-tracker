@@ -112,13 +112,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   mapujacy zdarzenia orkiestratora na stan joba.
 - `pl.mkn.incidenttracker.features.incidentanalysis.job.error`
   Wyjatki job API mapowane przez globalny handler bledow.
-- `pl.mkn.incidenttracker.analysis.options`
-  Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
-  To przejsciowa fasada shared/operator API, a nie czesc incident feature'a ani
-  wewnetrzna czesc providera AI. Implementacja endpointu mapuje platformowy
-  katalog modeli Copilota na obecne DTO aplikacji. Docelowy split:
-  neutralne preferencje wykonania AI w `shared.ai`, a HTTP controller/DTO
-  katalogu modeli w `api.aioptions` albo rownowaznym pakiecie `api.*`.
+- `pl.mkn.incidenttracker.api.aioptions`
+  Shared/operator API dla katalogu modeli i endpointu
+  `GET /analysis/ai/options`. Implementacja endpointu mapuje platformowy
+  katalog modeli Copilota na obecne DTO aplikacji.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -130,7 +127,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.chat`
   Follow-up chat po zakonczonej analizie incydentu.
 - `pl.mkn.incidenttracker.shared.ai`
-  Neutralny kontrakt token/cost/usage dla flow, job UI, telemetry i feature'ow.
+  Neutralne preferencje wykonania AI oraz kontrakt token/cost/usage dla flow,
+  job UI, telemetry i feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -152,7 +150,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   promptu ani incident policy.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.options`
   Platformowy provider katalogu modeli Copilota i neutralne DTO opcji modeli.
-  `analysis.options` jest tylko fasada mapujaca ten katalog na endpoint
+  `api.aioptions` jest fasada mapujaca ten katalog na endpoint
   `GET /analysis/ai/options`.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz neutralny port
@@ -229,10 +227,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.incidenttracker.api`
-  Obsluga bledow API i wspolny kontrakt walidacji. Docelowo takze miejsce na
-  shared/operator API dla endpointow FE niezaleznych od jednego feature'a, np.
-  fasady nad platforma albo integracjami. Endpointy konkretnego use case'u
-  zostaja przy `features.<feature>.api`.
+  Obsluga bledow API, wspolny kontrakt walidacji i shared/operator API dla
+  endpointow FE niezaleznych od jednego feature'a, np. fasady nad platforma
+  albo integracjami. Endpointy konkretnego use case'u zostaja przy
+  `features.<feature>.api`.
 - `frontend/`
   Workspace Angular z komponentami, serwisami i konfiguracja buildu UI.
 - `src/main/resources/static`

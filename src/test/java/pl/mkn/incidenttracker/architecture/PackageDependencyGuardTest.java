@@ -83,9 +83,15 @@ class PackageDependencyGuardTest {
                 Rule.closed("features must not depend on historical analysis evidence",
                         "pl.mkn.incidenttracker.features",
                         "pl.mkn.incidenttracker.analysis.evidence"),
+                Rule.closed("features must not depend on historical analysis options",
+                        "pl.mkn.incidenttracker.features",
+                        "pl.mkn.incidenttracker.analysis.options"),
                 Rule.closed("api must not depend on historical analysis evidence",
                         "pl.mkn.incidenttracker.api",
                         "pl.mkn.incidenttracker.analysis.evidence"),
+                Rule.closed("api must not depend on historical analysis options",
+                        "pl.mkn.incidenttracker.api",
+                        "pl.mkn.incidenttracker.analysis.options"),
                 Rule.closed("incident evidence must publish shared evidence DTOs without importing historical AI",
                         "pl.mkn.incidenttracker.features.incidentanalysis.evidence",
                         "pl.mkn.incidenttracker.analysis.ai"),
@@ -157,7 +163,8 @@ class PackageDependencyGuardTest {
                 "pl.mkn.incidenttracker.analysis.ai",
                 "pl.mkn.incidenttracker.analysis.flow",
                 "pl.mkn.incidenttracker.analysis.job",
-                "pl.mkn.incidenttracker.analysis.evidence"
+                "pl.mkn.incidenttracker.analysis.evidence",
+                "pl.mkn.incidenttracker.analysis.options"
         );
 
         var violations = new ArrayList<String>();

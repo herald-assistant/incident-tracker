@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 public record AnalysisJobStartRequest(
         @NotBlank(message = "correlationId must not be blank") String correlationId,

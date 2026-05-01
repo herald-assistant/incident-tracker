@@ -68,12 +68,11 @@ ponizszych zasad:
   feature'a.
 - Oprocz dedykowanych feature'ow istnieje kategoria shared/operator API dla
   frontendu: endpointy wspolne dla wielu ekranow albo bezposrednie fasady nad
-  platforma/integracjami. Docelowo mieszkaja w `api.*`; feature-specific API
-  zostaje przy `features.<feature>.api`.
-- `analysis.options` jest obecnie przejsciowa fasada shared/operator API.
-  Neutralne preferencje wykonania AI powinny finalnie trafic do `shared.ai`,
-  a endpoint `GET /analysis/ai/options` do `api.aioptions` albo rownowaznego
-  pakietu pod `api.*`.
+  platforma/integracjami. Mieszkaja w `api.*`; feature-specific API zostaje
+  przy `features.<feature>.api`.
+- Historyczne `analysis.options` jest zamkniete. Neutralne preferencje
+  wykonania AI mieszkaja w `shared.ai`, a endpoint
+  `GET /analysis/ai/options` w `api.aioptions`.
 - Przyszle feature'y, np. analiza dokumentacji, chatboty albo generowanie
   scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
   skille, hidden context, policy uzycia capability i kontrakt odpowiedzi,
@@ -100,7 +99,7 @@ strzalka wyglada jak odwrotna zaleznosc pakietowa.
 ```mermaid
 flowchart LR
     OP["Operator UI"] --> JOBAPI["features.incidentanalysis.job.api"]
-    OP --> SHAREDAPI["shared/operator API\n(current: analysis.options + helper endpoints)"]
+    OP --> SHAREDAPI["shared/operator API\n(api.aioptions + helper endpoints)"]
     JOBAPI --> JOB["features.incidentanalysis.job"]
     JOB --> FLOW["features.incidentanalysis.flow"]
 
@@ -138,8 +137,9 @@ Najwazniejsze lancuchy ownership/dependency:
     `features.incidentanalysis.job -> features.incidentanalysis.ai.chat -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools -> agenttools.*.mcp -> integrations`,
 - model/options:
   `Operator UI -> shared/operator API -> aiplatform.copilot.runtime.options`;
-  obecnie ta fasada mieszka w `analysis.options`, ale nie jest czescia incident
-  job flow. Feature requesty tylko niosa neutralne preferencje wykonania AI.
+  fasada mieszka w `api.aioptions` i nie jest czescia incident job flow.
+  Feature requesty tylko niosa neutralne preferencje wykonania AI z
+  `shared.ai`.
 
 ## Compile-Time Import Graph
 
@@ -155,12 +155,9 @@ flowchart LR
     FEATURES --> AIPLATFORM["aiplatform"]
     FEATURES --> AGENTTOOLS["agenttools"]
     FEATURES --> EVIDENCE
-    FEATURES --> OPTIONS["analysis.options\n(transitional shared API/options)"]
     FEATURES --> COMMON["common"]
     FEATURES --> INTEGRATIONS
     FEATURES --> SHARED
-
-    OPTIONS --> AIPLATFORM["aiplatform"]
 
     AIPLATFORM --> AGENTTOOLS
     AIPLATFORM --> SHARED
@@ -168,6 +165,7 @@ flowchart LR
     AGENTTOOLS --> INTEGRATIONS
 
     API["api\nglobal HTTP"] --> INTEGRATIONS
+    API --> AIPLATFORM
     API --> FEATURES
 ```
 
@@ -180,14 +178,13 @@ flowchart LR
 | `features -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
 | `features -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
 | `features -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
-| `features -> analysis.options` | 6 | oczekiwane przejsciowo | Incident job/flow, initial/chat request oraz session config niosa operator-facing preferencje modelu. Target: neutralny `AnalysisAiOptions` trafia do `shared.ai`, zeby feature nie importowal pakietu API. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`. |
-| `features -> shared` | 36 | oczekiwane | Incident job/flow, initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping i tool evidence capture czytaja neutralne DTO shared. |
-| `analysis.options -> aiplatform` | 3 | oczekiwane przejsciowo | Fasada shared/operator endpointu `GET /analysis/ai/options` mapuje platformowy katalog modeli Copilota na obecny kontrakt aplikacji. Target: controller/DTO endpointu w `api.aioptions`. |
+| `features -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
+| `api -> aiplatform` | 3 | oczekiwane | `api.aioptions` mapuje platformowy katalog modeli Copilota na kontrakt endpointu `GET /analysis/ai/options`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`; docelowo shared/operator endpointy nad adapterami tez moga mieszkac w `api.*`. |
 | `api -> features` | 3 | oczekiwane technicznie | Globalny handler HTTP mapuje wyjatki incident job API i `AnalysisDataNotFoundException` z incident flow. Nie traktowac tego jako wzorca dla shared/operator API, ktore nie powinno orkiestrowac feature'ow. |
 
@@ -223,8 +220,7 @@ features.incidentanalysis.ai.copilot.quality -> aiplatform.copilot.runtime.quali
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
 features.incidentanalysis.ai.copilot -> agenttools
-analysis.options -> aiplatform.copilot.runtime.options [transitional shared/operator API]
-api.aioptions -> aiplatform.copilot.runtime.options [target]
+api.aioptions -> aiplatform.copilot.runtime.options
 api.<sharedoperator> -> integrations/aiplatform/shared [target]
 aiplatform.copilot.runtime.telemetry.session -> aiplatform.copilot.runtime.quality/telemetry/tools
 aiplatform.copilot.runtime.execution -> aiplatform.copilot.runtime/tools
@@ -234,7 +230,6 @@ aiplatform.copilot.tools.policy.budget -> agenttools
 aiplatform.copilot.tools.evidence -> shared
 aiplatform.copilot.runtime -> shared
 agenttools.*.mcp -> integrations
-features -> analysis.options
 features -> shared
 api -> feature exceptions [global error handling only]
 any package -> common
@@ -315,6 +310,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.evidence`: incident evidence collector, providery i typed evidence
   views mieszkaja teraz w `features.incidentanalysis.evidence`; historycznego
   pakietu produkcyjnego `analysis.evidence` nie przywracac.
+- `analysis.options`: neutralne preferencje AI mieszkaja w `shared.ai`, a
+  endpoint `GET /analysis/ai/options` w `api.aioptions`; historycznego pakietu
+  produkcyjnego `analysis.options` nie przywracac.
 - `runtime tools -> capability evidence capture`: GitLab/DB user-facing tool
   evidence mapping mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools`; platformowe runtime tools
@@ -340,10 +338,8 @@ Zamkniete krawedzie, ktorych nie przywracac:
   `features.*` ani `integrations.*`.
 - Dawne `analysis.ai.copilot.CopilotSdkModelOptionsProvider`: provider
   katalogu modeli Copilota mieszka teraz w
-  `aiplatform.copilot.runtime.options`. `analysis.options` zostaje tylko
-  przejsciowa fasada endpointu i mapperem na kontrakt aplikacji. Docelowo
-  preferencje requestu trafia do `shared.ai`, a HTTP fasada
-  `GET /analysis/ai/options` do `api.aioptions`.
+  `aiplatform.copilot.runtime.options`. Preferencje requestu mieszkaja w
+  `shared.ai`, a HTTP fasada `GET /analysis/ai/options` w `api.aioptions`.
 - Dawna konkretna zaleznosc telemetry w incident feature: preparation/provider
   uzywaja teraz platformowego `CopilotSessionTelemetry`, a
   `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger` sa implementacja

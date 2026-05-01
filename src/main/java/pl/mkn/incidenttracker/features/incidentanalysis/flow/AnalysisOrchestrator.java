@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.*;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 import java.util.List;
 

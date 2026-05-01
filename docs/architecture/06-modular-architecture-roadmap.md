@@ -299,11 +299,8 @@ nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 odpieta przez platformowe `CopilotToolBudgetTelemetry`, a neutralne
 `CopilotToolMetrics` mieszkaja w `aiplatform.copilot.tools.telemetry`.
 Platformowy katalog modeli Copilota mieszka w
-`aiplatform.copilot.runtime.options`; `analysis.options` jest przejsciowa
-fasada endpointu `GET /analysis/ai/options` i mapperem na DTO aplikacji.
-Docelowo neutralne preferencje wykonania AI powinny mieszkac w `shared.ai`,
-a HTTP fasada katalogu modeli w `api.aioptions` albo rownowaznym pakiecie
-shared/operator API.
+`aiplatform.copilot.runtime.options`; neutralne preferencje wykonania AI
+mieszkaja w `shared.ai`, a HTTP fasada katalogu modeli w `api.aioptions`.
 
 ### `api` / shared operator API
 
@@ -558,8 +555,9 @@ Kroki:
 3. Przeniesc model options provider do platformy, a endpoint
    `/analysis/ai/options` zostawic jako shared/operator API fasade na platforme.
    Stan obecny: zrobione. `CopilotSdkModelOptionsProvider` i neutralne DTO
-   katalogu modeli mieszkaja w `aiplatform.copilot.runtime.options`, a
-   `analysis.options` mapuje je na kontrakt endpointu aplikacji.
+   katalogu modeli mieszkaja w `aiplatform.copilot.runtime.options`,
+   `shared.ai.AnalysisAiOptions` niesie preferencje wykonania, a
+   `api.aioptions` mapuje katalog na kontrakt endpointu aplikacji.
 4. Oddzielic generic artifact delivery mechanics od incident-specific digestu.
 5. Przeniesc incident prompt, incident digest i incident response JSON contract
    do `features.incidentanalysis`.
@@ -622,11 +620,9 @@ Uwagi:
 - Nazwa endpointu nie musi odzwierciedlac nazwy pakietu.
 - UI moze nadal mowic "analysis", bo to jest product-facing jezyk aktualnego
   feature'a.
-- `analysis.options` nie jest incident feature'em. Stan obecny: endpoint jest
-  fasada aplikacyjna nad platformowym katalogiem modeli Copilota. Docelowy
-  split to neutralne `AnalysisAiOptions` w `shared.ai` oraz controller/DTO
-  endpointu `GET /analysis/ai/options` w `api.aioptions` albo rownowaznym
-  pakiecie shared/operator API.
+- `analysis.options` jest zamknietym historycznym pakietem produkcyjnym.
+  Neutralne `AnalysisAiOptions` mieszkaja w `shared.ai`, a controller/DTO
+  endpointu `GET /analysis/ai/options` w `api.aioptions`.
 - `analysis.job` jest juz zamknietym historycznym pakietem produkcyjnym.
   Incident job API, state i errors mieszkaja w
   `features.incidentanalysis.job`.
@@ -731,7 +727,7 @@ Kryterium done:
     `features.incidentanalysis.evidence` [done].
 20. PR: wydzielic shared/operator API opcji AI: przeniesc neutralne preferencje
     wykonania do `shared.ai`, a controller/DTO `GET /analysis/ai/options` do
-    `api.aioptions`, bez zmiany URL-a.
+    `api.aioptions`, bez zmiany URL-a [done].
 21. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 

@@ -15,7 +15,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatResponse;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;

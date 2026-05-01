@@ -34,9 +34,9 @@ jednego dedykowanego feature'a, np.:
 
 ## Aktualny refactor opcji AI
 
-`analysis.options` jest przejsciowa fasada shared/operator API. Docelowy split:
+Historyczne `analysis.options` jest zamkniete. Aktualny split:
 
-- neutralne `AnalysisAiOptions` trafia do `shared.ai`,
-- controller i DTO endpointu `GET /analysis/ai/options` trafia do
-  `api.aioptions` albo rownowaznego podpakietu tutaj,
+- neutralne `AnalysisAiOptions` mieszka w `shared.ai`,
+- controller i DTO endpointu `GET /analysis/ai/options` mieszkaja w
+  `api.aioptions`,
 - platformowy katalog modeli zostaje w `aiplatform.copilot.runtime.options`.

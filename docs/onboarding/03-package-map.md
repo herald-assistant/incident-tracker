@@ -31,20 +31,11 @@ sa rozbite na:
   chat message state,
 - `error` - wyjatki job API.
 
-### `analysis/options`
+### `api/aioptions`
 
-Opcje wykonania AI, katalog modeli i endpoint `GET /analysis/ai/options`.
-Ten pakiet jest przejsciowa fasada shared/operator API oraz neutralnych
-preferencji runtime, a nie czescia incident feature'a ani wewnetrzna czescia
-providera AI. Implementacja provider'a w tym pakiecie jest fasada nad
-platformowym katalogiem modeli Copilota.
-
-Docelowy split:
-
-- `AnalysisAiOptions` i podobne neutralne preferencje wykonania trafia do
-  `shared.ai`,
-- controller/DTO endpointu `GET /analysis/ai/options` trafia do
-  `api.aioptions` albo rownowaznego pakietu shared/operator API.
+Shared/operator API dla katalogu modeli i endpointu `GET /analysis/ai/options`.
+Implementacja provider'a w tym pakiecie jest fasada nad platformowym katalogiem
+modeli Copilota.
 
 ### `features/incidentanalysis/evidence`
 
@@ -98,7 +89,8 @@ Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza feature'em:
 
 - `shared.evidence` - `AnalysisEvidenceSection`, item/attribute oraz
   `AnalysisAiToolEvidenceListener`,
-- `shared.ai` - generyczny usage/token/cost contract dla job UI i telemetryki.
+- `shared.ai` - neutralne `AnalysisAiOptions` oraz generyczny
+  usage/token/cost contract dla job UI i telemetryki.
 
 Nie dodawaj nowych elementow runtime Copilota do feature'a; platformowe
 mechanizmy SDK mieszkaja w `aiplatform.copilot`.
@@ -112,7 +104,7 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory konfiguracji
   sesji SDK,
 - `aiplatform.copilot.runtime.options` - platformowy katalog modeli Copilota
-  oraz neutralne DTO opcji modeli mapowane przez fasade `analysis/options`,
+  oraz neutralne DTO opcji modeli mapowane przez fasade `api/aioptions`,
 - `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
   execution gateway i neutralny port metryk execution,
 - `aiplatform.copilot.runtime.telemetry` - neutralny port telemetry sesji:
@@ -163,9 +155,9 @@ do Copilot tools.
 ### `api`
 
 Wspolny kontrakt bledow HTTP i walidacji dla endpointow backendu. To rowniez
-docelowe miejsce na shared/operator API dla frontendu, czyli endpointy
-niezwiazane z jednym konkretnym feature'em, np. katalog opcji AI albo stabilne
-fasady nad platforma/integracjami uzywane przez wiele ekranow.
+miejsce na shared/operator API dla frontendu, czyli endpointy niezwiazane z
+jednym konkretnym feature'em, np. katalog opcji AI albo stabilne fasady nad
+platforma/integracjami uzywane przez wiele ekranow.
 
 Endpointy konkretnego use case'u zostaja przy feature, np.
 `features/incidentanalysis/job/api`.
@@ -191,7 +183,7 @@ operational context enrichment.
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
-- `src/main/java/pl/mkn/incidenttracker/analysis/options`
+- `src/main/java/pl/mkn/incidenttracker/api/aioptions`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow`
 - `src/main/java/pl/mkn/incidenttracker/integrations`

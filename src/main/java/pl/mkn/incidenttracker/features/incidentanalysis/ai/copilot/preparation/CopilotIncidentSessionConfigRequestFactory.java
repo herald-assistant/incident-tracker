@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotModelSelection;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 @Component
 @RequiredArgsConstructor

@@ -12,7 +12,7 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;

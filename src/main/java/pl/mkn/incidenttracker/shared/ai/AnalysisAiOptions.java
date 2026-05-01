@@ -1,6 +1,4 @@
-package pl.mkn.incidenttracker.analysis.options;
-
-import org.springframework.util.StringUtils;
+package pl.mkn.incidenttracker.shared.ai;
 
 public record AnalysisAiOptions(
         String model,
@@ -15,6 +13,11 @@ public record AnalysisAiOptions(
     }
 
     private static String normalize(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
+        if (value == null) {
+            return null;
+        }
+
+        var trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
