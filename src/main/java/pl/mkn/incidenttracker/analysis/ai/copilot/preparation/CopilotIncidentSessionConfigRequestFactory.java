@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotModelSelection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 @Component

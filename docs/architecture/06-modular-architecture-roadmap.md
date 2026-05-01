@@ -236,18 +236,14 @@ nadal renderuja incident manifest, digest i evidence artifacts. Przed
 przeniesieniem do platformy trzeba oddzielic neutralna mechanike od
 incident-specific tresci.
 
-Kandydat na platformowa mechanike po parametryzacji:
-
-- `CopilotSkillRuntimeLoader`
-
-Skill loader moze byc platformowy dopiero wtedy, gdy feature przekazuje wybrane
-skill resources/directories jako parametr runa. Dzis wybor skilli jest czescia
-incident session config preparation.
-
 Platform-owned runtime jest juz poza `preparation`, w `copilot/runtime`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-`CopilotPreparedSessionFactory` i `CopilotSessionConfigFactory`.
+`CopilotSkillRuntimeLoader`, `CopilotPreparedSessionFactory` i
+`CopilotSessionConfigFactory`. Skill loader odpowiada tylko za materializacje
+skonfigurowanych skill resources/directories do katalogow runtime. Feature
+nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
+`CopilotSessionConfigRequest`.
 
 ### `features.incidentanalysis`
 
