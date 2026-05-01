@@ -2,8 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
 
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetDtos.Decision;
-import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 
 import java.util.ArrayList;
 import java.util.List;

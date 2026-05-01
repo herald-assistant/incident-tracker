@@ -181,13 +181,13 @@ flowchart LR
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
-| `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
-| `analysis.ai -> agenttools` | 3 | oczekiwane przejsciowo | Copilot runtime niesie hidden context jako neutralna mape oparta o context keys. |
+| `analysis.ai -> analysis.mcp` | 8 | oczekiwane przejsciowo | Copilot runtime nadal reuse'uje Spring AI/MCP wrappers i DTO wynikow tam, gdzie nie zostaly jeszcze wydzielone. |
+| `analysis.ai -> agenttools` | 21 | oczekiwane przejsciowo | Copilot runtime uzywa neutralnych hidden context keys oraz nazw tools/prefixow capability. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
 | `analysis.mcp -> integrations` | 9 | oczekiwane | Elasticsearch, GitLab i Database MCP tools korzystaja z docelowych reusable integracji. |
-| `analysis.mcp -> agenttools` | 16 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych hidden context keys. |
+| `analysis.mcp -> agenttools` | 25 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych hidden context keys oraz nazw tools. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |

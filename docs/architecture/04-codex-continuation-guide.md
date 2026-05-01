@@ -32,6 +32,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.initial`
 - `analysis.ai.usage`
 - `agenttools.context`
+- `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
 - `integrations.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`

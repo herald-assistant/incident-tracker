@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
-import static pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
 
 @Component
 @Slf4j

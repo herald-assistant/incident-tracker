@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvoca
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyResult;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationRejectedException;
-import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 
 @Slf4j
 @Component

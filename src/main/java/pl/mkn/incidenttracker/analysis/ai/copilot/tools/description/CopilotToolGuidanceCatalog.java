@@ -2,8 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools.description;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 
 import java.util.ArrayList;
 import java.util.List;

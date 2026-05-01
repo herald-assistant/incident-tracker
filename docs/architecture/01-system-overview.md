@@ -95,8 +95,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Wspolne DTO, wynik i wyjatki analizy.
 - `pl.mkn.incidenttracker.agenttools`
   Neutralne kontrakty reusable tools/capability uzywane przez MCP wrappers i
-  platforme AI, np. hidden tool context keys. Adaptery nie powinny importowac
-  `agenttools`.
+  platforme AI, np. hidden tool context keys i nazwy tools. Adaptery nie
+  powinny importowac `agenttools`.
 - `pl.mkn.incidenttracker.common`
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.analysis.flow`

@@ -26,10 +26,11 @@ Nie obejmuje:
   orchestratora. Nie sklejaj calego flow bezposrednio w metodzie `@Tool`.
 - Kontrakty tooli maja pozostac jawne i male: tylko dane potrzebne do
   wykonania jednego konkretnego kroku eksploracji.
-- Neutralne kontrakty wielokrotnego uzycia, np. hidden tool context keys,
-  trzymaj w `pl.mkn.incidenttracker.agenttools`. DB request/result/scope/operator
-  DTO sa capability contract adaptera DB w `integrations.database`, a MCP
-  mapuje hidden `ToolContext` na adapterowy scope.
+- Neutralne kontrakty wielokrotnego uzycia, np. hidden tool context keys i
+  nazwy tools, trzymaj w `pl.mkn.incidenttracker.agenttools`. DB
+  request/result/scope/operator DTO sa capability contract adaptera DB w
+  `integrations.database`, a MCP mapuje hidden `ToolContext` na adapterowy
+  scope.
 - Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
   `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden
   `ToolContext`, a nie przez model-facing parametry.

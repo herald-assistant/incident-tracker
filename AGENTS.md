@@ -157,7 +157,8 @@ Zasady granic:
   case'ow.
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
   Neutralne kontrakty tools/capability wspolne dla MCP wrappers i platform AI,
-  np. hidden tool context keys. Adaptery nie powinny importowac `agenttools`.
+  np. hidden tool context keys oraz nazwy tools. Adaptery nie powinny
+  importowac `agenttools`.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.
@@ -234,4 +235,5 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`

@@ -66,6 +66,11 @@ Docelowa reusable warstwa capability adapters. Przeniesione pakiety to
 Warstwa tools wystawianych przez Spring AI.
 Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
 
+### `agenttools`
+
+Neutralne kontrakty tools/capability uzywane przez MCP wrappers i Copilot
+runtime: hidden tool context keys oraz nazwy tools/prefixy capability.
+
 ### `analysis/ai`
 
 Generyczne kontrakty AI i implementacja oparta o Copilot SDK.
@@ -142,6 +147,7 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
+- `src/main/java/pl/mkn/incidenttracker/agenttools`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 - `src/main/java/pl/mkn/incidenttracker/api`

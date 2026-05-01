@@ -7,6 +7,9 @@ i jak backend pilnuje scope, budgetu oraz audytu.
 
 Tools sa implementowane w pakiecie `analysis.mcp` i deleguja do adapterow albo
 use case'ow aplikacji. Copilot nie wywoluje adapterow bezposrednio.
+Neutralne nazwy tools i prefixy capability mieszkaja w `agenttools`, zeby MCP
+wrappers, policy Copilota, telemetryka i dekoratory opisow nie importowaly ich
+z warstwy implementacji `analysis.mcp`.
 
 Najwazniejsze grupy:
 

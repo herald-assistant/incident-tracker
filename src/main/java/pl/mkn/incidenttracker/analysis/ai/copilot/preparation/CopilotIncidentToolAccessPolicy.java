@@ -3,9 +3,9 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import com.github.copilot.sdk.json.ToolDefinition;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.IncidentGitLabEvidenceCoverage;
-import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
-import pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
+import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

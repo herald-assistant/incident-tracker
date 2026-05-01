@@ -426,6 +426,9 @@ Cel: oddzielic reusable tools od incident analysis i Copilot SDK.
 Kroki:
 
 1. Przeniesc tool contracts i names do `agenttools.<capability>`.
+   Stan obecny: tool names/prefixy dla Elasticsearch, GitLab i Database
+   mieszkaja w `agenttools.<capability>`, a wrappery `@Tool` nadal sa w
+   `analysis.mcp.*`.
 2. Przeniesc Spring AI/MCP wrappers do `agenttools.mcp.<capability>` albo
    `agenttools.<capability>.mcp`.
 3. Zostawic w tools tylko delegacje do integrations/use case'ow.
@@ -579,9 +582,13 @@ Kryterium done:
     `integrations.operationalcontext` [done].
 11. PR: przepiac DB tools na contracts z `integrations.database` [done].
 12. PR: przeniesc Database capability do `integrations.database` [done].
-13. PR: wydzielic generic Copilot runtime od incident prompt/digest.
-14. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
-15. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+13. PR: przeniesc neutralne tool names/prefixy do `agenttools.<capability>`
+    [done].
+14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
+    tools.
+15. PR: wydzielic generic Copilot runtime od incident prompt/digest.
+16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
+17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

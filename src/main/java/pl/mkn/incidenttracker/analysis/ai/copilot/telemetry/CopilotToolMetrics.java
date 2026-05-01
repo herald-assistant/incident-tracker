@@ -1,9 +1,9 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
-import pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames;
-import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
+import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 
 public record CopilotToolMetrics(
         String analysisRunId,

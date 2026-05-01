@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.integrations.database.DatabaseToolService;
 
-import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames.*;
+import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames.*;
 import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.*;
 
 @Component

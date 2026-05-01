@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
 
-import static pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID;
+import static pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID;
 
 @Component
 @Slf4j

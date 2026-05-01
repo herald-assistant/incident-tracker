@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.elasticsearch;
+package pl.mkn.incidenttracker.agenttools.elasticsearch;
 
 public final class ElasticToolNames {
 

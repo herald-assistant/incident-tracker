@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.gitlab;
+package pl.mkn.incidenttracker.agenttools.gitlab;
 
 public final class GitLabToolNames {
 
