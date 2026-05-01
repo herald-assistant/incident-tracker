@@ -12,20 +12,27 @@ Obecnie obejmuje:
   loading, `CopilotRunRequest`, `CopilotPreparedSession`,
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory budujace
   `SessionConfig` i `MessageOptions`.
+- `copilot/tools/context/`
+  platformowa mechanika budowania hidden `ToolContext` oraz neutralny
+  `CopilotToolSessionContext` przekazywany przez feature.
+- `copilot/tools/events/`
+  platformowe eventy invocation `Started`/`Finished`, outcome oraz publisher
+  chroniacy runtime przed wyjatkami listenerow.
 
 Nie obejmuje:
 
 - incident promptu, digestu, coverage heurystyk ani response contract,
 - job flow, follow-up API ani UI,
 - evidence pipeline konkretnego feature'a,
-- implementacji tools ani adapterow integracyjnych.
+- implementacji capability tools ani adapterow integracyjnych.
 
 ## Zasady
 
 - `aiplatform.*` nie moze importowac `analysis.*`, `features.*` ani
   `integrations.*`.
 - Platforma moze zalezec od malych neutralnych kontraktow `shared.*`,
-  `common.*` oraz bibliotek SDK/technicznych.
+  `common.*`, neutralnych keys/nazw z `agenttools.*` oraz bibliotek
+  SDK/technicznych.
 - Feature ma dostarczac prompt, skill resources, available tools, hidden
   context, evidence sink i response handling jako parametry uruchomienia.
 - Platforma nie moze zakladac `correlationId`, GitLaba, Database ani

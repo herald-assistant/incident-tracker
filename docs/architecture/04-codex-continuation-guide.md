@@ -52,12 +52,12 @@ Przy nowej sesji najlepiej zaczac od:
 
 - `analysis.ai.copilot`
 - `aiplatform.copilot.runtime`
+- `aiplatform.copilot.tools.context`
+- `aiplatform.copilot.tools.events`
 - `features.incidentanalysis.ai.copilot`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
-- `analysis.ai.copilot.tools.context`
 - `analysis.ai.copilot.tools.description`
-- `analysis.ai.copilot.tools.events`
 - `analysis.ai.copilot.tools.policy`
 - `analysis.ai.copilot.tools.logging`
 - `features.incidentanalysis.ai.copilot.tools`
@@ -222,11 +222,12 @@ Root `analysis.ai.copilot.tools` ma byc czytelna bramka do runtime tools:
   policies i eventy invocation,
 - `CopilotToolEvidenceSessionStore` trzyma lifecycle tool evidence dla sesji.
 
-Logika pomocnicza jest w podpakietach. Context, description, events, logging i
-policy sa generyczne. GitLab i Database maja wlasne listenery oraz mappery
-evidence capture. Przy kolejnych toolach unikaj dopisywania specjalnych
-przypadkow do handlera; dodaj policy albo listener eventu w odpowiednim
-pakiecie.
+Logika pomocnicza jest rozdzielona wedlug ownership: platformowy context i
+eventy mieszkaja w `aiplatform.copilot.tools`, a przejsciowe description,
+logging i policy zostaja w `analysis.ai.copilot.tools`. GitLab i Database maja
+wlasne listenery oraz mappery evidence capture w feature. Przy kolejnych
+toolach unikaj dopisywania specjalnych przypadkow do handlera; dodaj policy
+albo listener eventu w odpowiednim pakiecie.
 
 Generyczne helpery JSON nie naleza do root `tools`. Wspolny reader payloadow to
 `pl.mkn.incidenttracker.common.JsonPayloadReader`.

@@ -196,9 +196,11 @@ callbacks, sortuje je, dekoruje description, parsuje input schema i tworzy
 `ToolDefinition`. `CopilotToolInvocationHandler` odpowiada za wykonanie:
 uruchamia generyczne `CopilotToolInvocationPolicy` before/after, buduje hidden
 context, wywoluje callback, publikuje wewnetrzne eventy tool invocation i
-parsuje wynik dla SDK. Hidden context jest w `tools.context`, walidacja
-session id jest policy w `tools.policy.session`, budzet jest policy w
-`tools.policy.budget`, a logowanie w `tools.logging`. Telemetryka i capture
+parsuje wynik dla SDK. Hidden context jest w
+`aiplatform.copilot.tools.context`, eventy sa w
+`aiplatform.copilot.tools.events`, walidacja session id jest policy w
+`tools.policy.session`, budzet jest policy w `tools.policy.budget`, a logowanie
+w `tools.logging`. Telemetryka i capture
 GitLab/DB sa listenerami tych eventow, dzieki czemu handler pozostaje granica
 wykonania, a semantyka poszczegolnych tool capability siedzi w dedykowanych
 pakietach.

@@ -100,21 +100,26 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/tools` - root z klasami wejsciowymi runtime tools:
   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
   `CopilotToolEvidenceSessionStore`,
-- `copilot/tools/context` - hidden `ToolContext` i session-bound scope,
 - `copilot/tools/description` - Copilot-facing guidance doklejane do opisow
   Spring tools,
-- `copilot/tools/events` - eventy `Started`/`Finished` dla invocation,
 - `copilot/tools/policy` - generyczne policies invocation, session validation
   i budget,
 - `copilot/tools/logging` - listener logujacy invocation,
 
 ### `aiplatform`
 
-Neutralna platforma uruchamiania AI. Pierwszy wydzielony slice to
-`aiplatform.copilot.runtime`: properties, model listing, skill runtime loader,
-`CopilotRunRequest`, `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-rendered artifacts oraz factory konfiguracji sesji SDK. Ten pakiet nie zna
-incident promptu, coverage ani flow jobow.
+Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
+
+- `aiplatform.copilot.runtime` - properties, model listing, skill runtime
+  loader, `CopilotRunRequest`, `CopilotPreparedSession`,
+  `CopilotSessionConfigRequest`, rendered artifacts oraz factory konfiguracji
+  sesji SDK,
+- `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
+  scope jako neutralna mechanika platformy,
+- `aiplatform.copilot.tools/events` - eventy `Started`/`Finished` dla
+  invocation.
+
+Ten pakiet nie zna incident promptu, coverage ani flow jobow.
 
 ### `features/incidentanalysis`
 

@@ -316,12 +316,12 @@ Side-effecty tool invocation sa subskrybowane przez Spring event listeners:
 - `tools.database.DatabaseToolEvidenceCaptureListener` mapuje wyniki DB do
   tool evidence.
 
-`tools.context.CopilotToolContextFactory` buduje hidden `ToolContext` na
-podstawie `CopilotToolSessionContext` i invocation.
+`aiplatform.copilot.tools.context.CopilotToolContextFactory` buduje hidden
+`ToolContext` na podstawie `CopilotToolSessionContext` i invocation.
 
-`tools.events.CopilotToolInvocationEventPublisher` lapie wyjatki listenerow i
-loguje ostrzezenie. Eventy sa wiec warstwa obserwowalnosci/audytu, a nie druga
-sciezka wykonania toola.
+`aiplatform.copilot.tools.events.CopilotToolInvocationEventPublisher` lapie
+wyjatki listenerow i loguje ostrzezenie. Eventy sa wiec warstwa
+obserwowalnosci/audytu, a nie druga sciezka wykonania toola.
 
 Decorated descriptions sa guidance dla modelu, nie zmieniaja implementacji
 adapterow.

@@ -155,19 +155,20 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
   promptu ani incident policy.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
+  Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
+  neutralna mechanika platformy.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools.events`
+  Wewnetrzne eventy tool invocation: `Started` oraz terminalny `Finished` z
+  outcome `COMPLETED`, `REJECTED` albo `FAILED`.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
   Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory`,
   `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`. Root
   trzyma tylko klasy, przez ktore wchodzi sie do warstwy tools.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.context`
-  Budowanie hidden `ToolContext` i session-bound scope dla Spring tools.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`
   Dekorowanie opisow Spring tools guidance'em dla Copilota.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.events`
-  Wewnetrzne eventy tool invocation: `Started` oraz terminalny `Finished` z
-  outcome `COMPLETED`, `REJECTED` albo `FAILED`.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy`
   Generyczne polityki invocation, w tym session validation i budget.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.logging`

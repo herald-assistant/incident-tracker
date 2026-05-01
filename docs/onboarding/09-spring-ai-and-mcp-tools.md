@@ -125,7 +125,8 @@ konczy sie na definicji toola i podpietym handlerze wykonania.
 Wykonanie toola jest w `CopilotToolInvocationHandler`. Handler:
 
 - wywoluje generyczne `CopilotToolInvocationPolicy` przed i po callbacku,
-- buduje hidden `ToolContext` przez `tools.context.CopilotToolContextFactory`,
+- buduje hidden `ToolContext` przez
+  `aiplatform.copilot.tools.context.CopilotToolContextFactory`,
 - wywoluje Spring `ToolCallback`,
 - publikuje `Started` oraz terminalny `Finished` z outcome
   `COMPLETED`, `REJECTED` albo `FAILED`,

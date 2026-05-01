@@ -12,7 +12,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 import java.util.Map;

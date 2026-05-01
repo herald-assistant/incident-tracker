@@ -68,7 +68,8 @@ architektonicznych.
 3. dopisz rejestracje przez `ToolCallbackProvider`,
 4. sprawdz `CopilotSdkToolFactory`, policyke dostepu do tooli i testy MCP
    context,
-5. jesli tool ma ukryty scope, dodaj go przez `tools.context`,
+5. jesli tool ma ukryty scope, dodaj go przez
+   `aiplatform.copilot.tools.context`,
 6. jesli tool jest drogi lub ryzykowny, dodaj guidance w `tools.description`,
 7. jesli tool ma limit albo walidacje runtime, dodaj
    `CopilotToolInvocationPolicy` w `tools.policy`,
@@ -111,7 +112,8 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 ## Playbook 7: zmiana runtime Copilot tools
 
 1. rejestracje definicji zmieniaj w `CopilotSdkToolFactory`,
-2. hidden scope i `ToolContext` zmieniaj w `tools.context`,
+2. hidden scope i `ToolContext` zmieniaj w
+   `aiplatform.copilot.tools.context`,
 3. session validation, budget albo inne blokady zmieniaj jako
    `CopilotToolInvocationPolicy`,
 4. logowanie/metryki/audyt dopinaj jako listenery eventow invocation,

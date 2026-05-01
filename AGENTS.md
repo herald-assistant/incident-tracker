@@ -113,13 +113,15 @@ Zasady granic:
   user-facing evidence.
 - Obecnie `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
-  `CopilotToolEvidenceSessionStore`. Pomocnicze klasy trzymaj w podpakietach
-  `context`, `description`, `events`, `logging`, `policy`. Generyczne helpery
-  aplikacyjne, np. `JsonPayloadReader`, trzymaj poza Copilotem w
-  `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB evidence mapping
-  mieszka w `features.incidentanalysis.ai.copilot.tools`; podczas dalszej
-  ekstrakcji do `aiplatform.copilot` zostawiaj w runtime tylko mechanike
-  invocation.
+  `CopilotToolEvidenceSessionStore`. Platformowa mechanika hidden
+  `ToolContext` i eventow invocation mieszka juz w
+  `aiplatform.copilot.tools.context` oraz `aiplatform.copilot.tools.events`.
+  W `analysis.ai.copilot.tools` zostaja przejsciowo `description`, `logging`
+  i `policy`. Generyczne helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj
+  poza Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB
+  evidence mapping mieszka w `features.incidentanalysis.ai.copilot.tools`;
+  podczas dalszej ekstrakcji do `aiplatform.copilot` zostawiaj w runtime tylko
+  mechanike invocation.
 - `CopilotToolInvocationHandler` nie powinien zawierac logiki konkretnego
   toola. Walidacje i limity dodawaj jako `CopilotToolInvocationPolicy`, a
   logowanie, telemetryke i evidence capture jako listenery eventow invocation.
@@ -160,8 +162,9 @@ Zasady granic:
   tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
   integracjami. Adaptery nie powinny importowac `agenttools`.
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`
-  Neutralna platforma uruchamiania AI. Pierwszy wydzielony slice to
-  `aiplatform.copilot.runtime`; nie moze importowac incident analysis.
+  Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y to
+  `aiplatform.copilot.runtime` oraz `aiplatform.copilot.tools.context/events`;
+  nie moze importowac incident analysis.
 - `src/main/java/pl/mkn/incidenttracker/features`
   Dedykowane feature'y analityczne. Pierwszy slice to
   `features.incidentanalysis.ai.copilot.preparation` i `coverage`, czyli

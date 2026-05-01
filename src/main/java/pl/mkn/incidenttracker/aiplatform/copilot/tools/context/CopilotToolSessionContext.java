@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.context;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.context;
 
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 

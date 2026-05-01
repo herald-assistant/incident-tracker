@@ -6,7 +6,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 import java.util.Map;

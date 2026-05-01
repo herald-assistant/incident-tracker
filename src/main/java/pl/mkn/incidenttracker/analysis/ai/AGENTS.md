@@ -30,10 +30,9 @@ Obejmuje:
   `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`.
   To jest stan przejsciowy przed rozdzieleniem platformowej mechaniki
   invocation od incident-specific policy/capture.
-  Szczegoly trzymamy w podpakietach:
-  - `context/` hidden `ToolContext` i session-bound scope,
+  Platformowe `context/` i `events/` sa juz w `aiplatform.copilot.tools`.
+  Szczegoly trzymane tutaj to:
   - `description/` dekorowanie opisow tools,
-  - `events/` eventy invocation,
   - `policy/` session validation, budget i przyszle policies,
   - `logging/` operacyjne logowanie invocation.
 
@@ -102,8 +101,9 @@ trafia do `aiplatform`.
   a side-effecty jako listenery eventow invocation.
 - Incident-specific GitLab/DB evidence capture mieszka w
   `features.incidentanalysis.ai.copilot.tools`. W `analysis.ai.copilot.tools`
-  zostawiaj tylko mechanike invocation, session evidence store, eventy,
-  policies, opisy i logging.
+  zostawiaj tylko przejsciowa bramke invocation, session evidence store,
+  policies, opisy i logging. Hidden context i eventy invocation sa platformowe
+  w `aiplatform.copilot.tools`.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.
@@ -123,8 +123,9 @@ trafia do `aiplatform`.
 
 - Zmiany w `features.incidentanalysis.ai.copilot.preparation` powinny miec
   testy promptu, incident run assembly i ladowania skilli.
-- Zmiany w `aiplatform.copilot.runtime` powinny miec testy konfiguracji sesji,
-  properties i model listing, jesli dotykaja tych mechanizmow.
+- Zmiany w `aiplatform.copilot.runtime` lub `aiplatform.copilot.tools`
+  powinny miec testy konfiguracji sesji, hidden contextu, eventow, properties
+  i model listing, jesli dotykaja tych mechanizmow.
 - Zmiany w `copilot/tools` powinny miec testy mapowania Spring tools na tool
   definitions.
 - Zmiany w `copilot/execution` powinny zachowac kontrakty i obserwowalnosc

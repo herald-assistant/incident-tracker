@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.events;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.events;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

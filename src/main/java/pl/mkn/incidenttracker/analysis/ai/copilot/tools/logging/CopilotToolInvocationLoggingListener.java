@@ -6,9 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationFinishedEvent;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationOutcome;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationStartedEvent;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationFinishedEvent;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationOutcome;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationStartedEvent;
 
 import java.util.Map;
 

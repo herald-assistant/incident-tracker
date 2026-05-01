@@ -26,7 +26,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.C
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.nio.file.Path;
 import java.util.List;

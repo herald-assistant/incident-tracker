@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.context;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.context;
 
 import com.github.copilot.sdk.json.ToolInvocation;
 import org.springframework.ai.chat.model.ToolContext;

@@ -1,6 +1,6 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.events;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.events;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 public record CopilotToolInvocationFinishedEvent(
         CopilotToolSessionContext sessionContext,

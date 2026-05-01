@@ -10,7 +10,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Fin
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualitySeverity;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
 
