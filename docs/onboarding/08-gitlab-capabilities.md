@@ -81,7 +81,7 @@ rekomendowane dalsze odczyty.
 
 - `src/main/java/pl/mkn/incidenttracker/integrations/gitlab`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider/gitlabdeterministic`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/gitlab`
+- `src/main/java/pl/mkn/incidenttracker/agenttools/gitlab/mcp`
 
 ## Checkpoint
 

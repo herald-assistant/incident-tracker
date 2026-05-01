@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.database;
+package pl.mkn.incidenttracker.agenttools.database.mcp;
 
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;

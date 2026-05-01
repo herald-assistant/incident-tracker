@@ -27,7 +27,7 @@ architektonicznych.
 
 ### MCP i AI
 
-- `src/test/java/pl/mkn/incidenttracker/analysis/mcp`
+- `src/test/java/pl/mkn/incidenttracker/agenttools`
 - `src/test/java/pl/mkn/incidenttracker/analysis/ai/copilot`
 
 ### UI i frontend
@@ -63,8 +63,7 @@ architektonicznych.
 
 ## Playbook 3: nowy tool
 
-1. dodaj go do `agenttools.<capability>.mcp` albo, jesli capability nie zostalo
-   jeszcze przeniesione, do historycznego `analysis.mcp.<capability>`,
+1. dodaj go do `agenttools.<capability>.mcp`,
 2. deleguj do adaptera albo use case'u,
 3. dopisz rejestracje przez `ToolCallbackProvider`,
 4. sprawdz `CopilotSdkToolFactory`, policyke dostepu do tooli i testy MCP
@@ -135,7 +134,7 @@ Celowane testy po takiej zmianie:
 - Gdy chcesz dodac nowe dane do promptu, czy powinny wpasc najpierw jako
   evidence, czy bezposrednio do providera AI?
 - Jak rozpoznasz, ze logika incidentowa trafila przypadkiem do adaptera?
-- Jakie testy odpalic po zmianie w `analysis.mcp`?
+- Jakie testy odpalic po zmianie w `agenttools.<capability>.mcp`?
 - Jakie testy odpalic po zmianie job snapshotu albo komponentu Angular?
 - Jak odroznisz zmiane finalnej analizy JSON-only od zmiany follow-up chatu,
   ktory odpowiada operatorskim tekstem?

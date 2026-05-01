@@ -63,16 +63,15 @@ Docelowa reusable warstwa capability adapters. Przeniesione pakiety to
 
 ### `analysis/mcp`
 
-Historyczna warstwa tools wystawianych przez Spring AI.
-Zostala tu dzisiaj warunkowa Database; Elasticsearch i GitLab MCP zostaly
-przeniesione do `agenttools.<capability>.mcp`.
+Historyczny katalog po ekstrakcji tools wystawianych przez Spring AI.
+Nie ma tu juz aktywnych wrapperow MCP.
 
 ### `agenttools`
 
 Reusable tools/capability uzywane przez MCP wrappers i Copilot runtime: hidden
-tool context keys, nazwy tools/prefixy capability oraz przenoszone wrappery
-MCP. Przeniesione wrappery to `agenttools.elasticsearch.mcp` i
-`agenttools.gitlab.mcp`.
+tool context keys, nazwy tools/prefixy capability oraz wrappery MCP.
+Wrappery mieszkaja w `agenttools.elasticsearch.mcp`, `agenttools.gitlab.mcp`
+i `agenttools.database.mcp`.
 
 ### `analysis/ai`
 
@@ -151,7 +150,6 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 - `src/main/java/pl/mkn/incidenttracker/api`
 - `src/main/java/pl/mkn/incidenttracker/ui`

@@ -2,23 +2,23 @@
 
 ## Zakres
 
-Ten katalog odpowiada za MCP tools i ich rejestracje po stronie Spring AI.
+Ten katalog jest historycznym miejscem po ekstrakcji MCP tools do
+`agenttools.<capability>.mcp`.
 
 Obejmuje:
 
-- `database/`
-  warunkowo wlaczane, session-bound tools do readonly diagnostyki danych,
-- przyszle wysokopoziomowe tools analityczne, jesli beda potrzebne.
+- lokalne guardrails dla agentow, dopoki katalog historyczny istnieje.
 
 Nie obejmuje:
 
+- nowych implementacji MCP tools,
 - implementacji adapterow REST z `../adapter`,
 - providerow evidence z `../evidence`,
 - budowy promptu i skilli z `../ai`.
 
-Elasticsearch i GitLab MCP sa juz przeniesione do
-`pl.mkn.incidenttracker.agenttools.<capability>.mcp`; ten katalog jest
-historycznym miejscem dla Database wrapperow przed ich migracja.
+Elasticsearch, GitLab i Database MCP sa juz przeniesione do
+`pl.mkn.incidenttracker.agenttools.<capability>.mcp`. Nie przywracaj wrapperow
+do `analysis.mcp`.
 
 ## Zasady modyfikacji
 
@@ -38,10 +38,9 @@ historycznym miejscem dla Database wrapperow przed ich migracja.
   ma jawny parametr `correlationId`. Nie powielaj tego wzorca; przy zmianach
   kontraktu Elastic MCP migruj go do hidden `ToolContext` i zaktualizuj testy
   schema/factory.
-- Dla przeniesionych GitLab tools i pozostalych Database tools jedyny
-  operator-facing powod wywolania to opcjonalny `reason`. Nie dodawaj
-  model-facing parametrow eksploracyjnych, pytan diagnostycznych ani innych
-  pol, ktore probuja zastapic prosty powod.
+- Dla GitLab i Database tools jedyny operator-facing powod wywolania to
+  opcjonalny `reason`. Nie dodawaj model-facing parametrow eksploracyjnych,
+  pytan diagnostycznych ani innych pol, ktore probuja zastapic prosty powod.
 - Nie przenos tu heurystyk incidentowych typu logs -> deployment albo
   logs -> project hints. To nalezy do evidence pipeline.
 - Nie odpalaj bezposrednio `RestClient` z warstwy MCP. Reuse'uj adaptery albo
@@ -51,7 +50,8 @@ historycznym miejscem dla Database wrapperow przed ich migracja.
 - Jesli dodasz wysokopoziomowy tool, np. cala analize po `correlationId`,
   odseparuj go tak, aby nie wprowadzic rekurencyjnego self-invocation podczas
   sesji AI uruchamianej przez `AnalysisOrchestrator`.
-- Rejestracja tooli powinna pozostac jawna i testowalna w kontekscie Spring AI.
+- Rejestracja tooli w `agenttools.<capability>.mcp` powinna pozostac jawna i
+  testowalna w kontekscie Spring AI.
 
 ## Testy
 

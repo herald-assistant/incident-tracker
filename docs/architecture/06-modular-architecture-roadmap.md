@@ -333,7 +333,7 @@ Najbardziej oplacalne ruchy:
 2. Przeniesc typed DB request/result/scope/operator contracts z
    `analysis.mcp.database` do capability adaptera, np. `integrations.database`.
    Stan obecny: DB request/result/scope/operator contracts mieszkaja w
-   `integrations.database`, a `analysis.mcp.database` jest wrapperem Spring
+   `integrations.database`, a `agenttools.database.mcp` jest wrapperem Spring
    AI nad adapterem DB i mapuje hidden `ToolContext` na adapterowy scope.
 3. Przeniesc generyczne evidence DTO z `analysis.ai.evidence` do neutralnego
    modelu, np. `shared.evidence` albo przejsciowo `analysis.evidence.model`.
@@ -427,13 +427,12 @@ Kroki:
 
 1. Przeniesc tool contracts i names do `agenttools.<capability>`.
    Stan obecny: tool names/prefixy dla Elasticsearch, GitLab i Database
-   mieszkaja w `agenttools.<capability>`. Elasticsearch i GitLab wrappery
-   `@Tool` mieszkaja juz w `agenttools.<capability>.mcp`, a Database nadal
-   jest w `analysis.mcp.database`.
+   mieszkaja w `agenttools.<capability>`. Elasticsearch, GitLab i Database
+   wrappery `@Tool` mieszkaja juz w `agenttools.<capability>.mcp`.
 2. Przeniesc Spring AI/MCP wrappers do `agenttools.mcp.<capability>` albo
    `agenttools.<capability>.mcp`.
    Stan obecny: wybrany kierunek to `agenttools.<capability>.mcp`; pierwszy
-   przeniesiony slice to Elasticsearch, drugi to GitLab.
+   przeniesiony slice to Elasticsearch, drugi to GitLab, trzeci to Database.
 3. Zostawic w tools tylko delegacje do integrations/use case'ow.
 4. Utrzymac hidden scope jako neutralny `AgentToolContext`, a nie
    `CopilotToolContext`.
@@ -588,8 +587,7 @@ Kryterium done:
 13. PR: przeniesc neutralne tool names/prefixy do `agenttools.<capability>`
     [done].
 14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
-    tools; Elasticsearch [done], GitLab [done], Database pozostaje do
-    przeniesienia.
+    tools; Elasticsearch [done], GitLab [done], Database [done].
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest.
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse

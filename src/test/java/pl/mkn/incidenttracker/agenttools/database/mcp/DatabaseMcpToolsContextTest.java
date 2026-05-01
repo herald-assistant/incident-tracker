@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.database;
+package pl.mkn.incidenttracker.agenttools.database.mcp;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;

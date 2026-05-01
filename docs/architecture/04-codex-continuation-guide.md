@@ -35,11 +35,12 @@ Przy nowej sesji najlepiej zaczac od:
 - `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
 - `agenttools.elasticsearch.mcp`
 - `agenttools.gitlab.mcp`
+- `agenttools.database.mcp`
 - `integrations.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
 - `analysis.evidence.provider.operationalcontext`
-- `analysis.mcp.database`
+- `agenttools.database.mcp`
 - `frontend/`
 - `frontend/src/app`
 - `src/main/resources/copilot/skills`

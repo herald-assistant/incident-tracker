@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.mcp.database;
+package pl.mkn.incidenttracker.agenttools.database.mcp;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

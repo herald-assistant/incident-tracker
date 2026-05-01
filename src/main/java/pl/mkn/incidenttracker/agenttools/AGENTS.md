@@ -32,9 +32,8 @@ Nie obejmuje:
   `features.*`.
 - Nazwy tools sa kontraktem capability. Zmiana nazwy toola to zmiana runtime
   contractu i wymaga testow MCP, tool factory/policy oraz dokumentacji.
-- Implementacje tooli przenosimy capability po capability z historycznego
-  `analysis.mcp.*`. Nie mieszaj w jednym kroku wielu capability, jesli nie jest
-  to potrzebne do kompilacji.
+- Implementacje tooli sa w `agenttools.<capability>.mcp`. Nie przywracaj ich do
+  historycznego `analysis.mcp.*`.
 
 ## Weryfikacja
 

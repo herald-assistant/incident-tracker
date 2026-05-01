@@ -5,12 +5,12 @@ i jak backend pilnuje scope, budgetu oraz audytu.
 
 ## Warstwy
 
-Tools sa implementowane w reusable warstwie `agenttools` albo w historycznym
-pakiecie `analysis.mcp` podczas migracji. Deleguja do adapterow albo use
-case'ow aplikacji. Copilot nie wywoluje adapterow bezposrednio.
+Tools sa implementowane w reusable warstwie `agenttools.<capability>.mcp`.
+Deleguja do adapterow albo use case'ow aplikacji. Copilot nie wywoluje
+adapterow bezposrednio.
 Neutralne nazwy tools i prefixy capability mieszkaja w `agenttools`, zeby MCP
-wrappers, policy Copilota, telemetryka i dekoratory opisow nie importowaly ich
-z historycznej warstwy implementacji.
+wrappers, policy Copilota, telemetryka i dekoratory opisow uzywaly tego samego
+kontraktu capability.
 
 Najwazniejsze grupy:
 

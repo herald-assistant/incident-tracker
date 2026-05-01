@@ -153,8 +153,8 @@ Zasady granic:
   Historyczny katalog po ekstrakcji adapterow. Nie dodawaj tu nowego kodu;
   nowe integracje trafiaja do `integrations`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
-  Historyczne miejsce MCP tools i ich konfiguracji rejestracji przed migracja
-  do `agenttools`.
+  Historyczny katalog po ekstrakcji MCP tools. Nie dodawaj tu nowego kodu;
+  nowe tools trafiaja do `agenttools.<capability>.mcp`.
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
   Reusable tools/capability wspolne dla MCP wrappers i platform AI, np. hidden
   tool context keys, nazwy tools oraz przenoszone wrappery MCP nad

@@ -39,9 +39,9 @@ Tool ma maly kontrakt i robi jeden konkretny krok eksploracji.
 ### MCP
 
 W tym projekcie to warstwa ekspozycji tools po stronie Spring AI. Nazwa
-`analysis.mcp` historycznie grupowala narzedzia; docelowe reusable wrappery
-trafiaja do `agenttools.<capability>.mcp`. Ich logika deleguje dalej do
-adapterow albo use case'ow.
+`analysis.mcp` historycznie grupowala narzedzia; reusable wrappery mieszkaja
+teraz w `agenttools.<capability>.mcp`. Ich logika deleguje dalej do adapterow
+albo use case'ow.
 
 ### Prompt
 
@@ -58,7 +58,7 @@ ladowane do sesji przez provider AI.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisContext.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceProvider.java`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
+- `src/main/java/pl/mkn/incidenttracker/agenttools`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 
 ## Checkpoint

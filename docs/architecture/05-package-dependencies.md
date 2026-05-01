@@ -49,9 +49,9 @@ ponizszych zasad:
   endpoint REST albo przyszly feature.
 - `analysis.adapter` jest historycznym katalogiem po ekstrakcji adapterow.
   Nowe i przenoszone capability maja trafiac do `integrations.*`.
-- `agenttools` i pozostale przejsciowo `analysis.mcp` to reusable ekspozycja
-  capability nad adapterami. Nie powinny zalezec od dedykowanej analizy
-  incydentow ani od szczegolow providera Copilot SDK.
+- `agenttools` to reusable ekspozycja capability nad adapterami. Nie powinno
+  zalezec od dedykowanej analizy incydentow ani od szczegolow providera
+  Copilot SDK.
 - `analysis.ai.copilot` to aktualny adapter platformy AI runtime. Moze
   korzystac z reusable tools/MCP, budowac session config, allowliste,
   hidden context, telemetryke i evidence capture, ale docelowo ma robic to na
@@ -96,7 +96,7 @@ flowchart LR
 
     FLOW --> INITIAL["analysis.ai.initial"]
     INITIAL --> TOOLS["analysis.ai.copilot.tools"]
-    TOOLS --> MCP["analysis.mcp / agenttools.*.mcp"]
+    TOOLS --> MCP["agenttools.*.mcp"]
     MCP --> INTEGRATIONS
 
     JOB --> CHAT
@@ -119,9 +119,9 @@ Najwazniejsze lancuchy ownership/dependency:
 - initial AI:
   `analysis.flow -> analysis.ai.initial`,
 - AI-guided tools podczas initial analysis:
-  `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp/agenttools.*.mcp -> integrations`,
+  `analysis.ai.initial -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
 - follow-up chat:
-  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> analysis.mcp/agenttools.*.mcp -> integrations`,
+  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
 - model/options:
   `analysis.job`, `analysis.flow` i `analysis.ai` korzystaja z bocznego
   kontraktu `analysis.options`.
@@ -155,8 +155,6 @@ flowchart LR
     AI --> COMMON["common"]
     AI --> SHARED
 
-    MCP["analysis.mcp"] --> INTEGRATIONS
-    MCP --> AGENTTOOLS
     AGENTTOOLS --> INTEGRATIONS
 
     API["api"] --> INTEGRATIONS
@@ -185,9 +183,7 @@ flowchart LR
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
-| `analysis.mcp -> integrations` | 3 | oczekiwane przejsciowo | Database MCP tools korzystaja z docelowej reusable integracji, dopoki nie zostana przeniesione do `agenttools`. |
-| `analysis.mcp -> agenttools` | 8 | oczekiwane przejsciowo | Pozostaly Database MCP wrapper uzywa neutralnych hidden context keys oraz nazw tools. |
-| `agenttools -> integrations` | 6 | oczekiwane | Przeniesione wrappery Elasticsearch i GitLab MCP deleguja do `integrations`. |
+| `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
@@ -215,8 +211,7 @@ analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
 analysis.ai.copilot -> agenttools
-analysis.mcp/agenttools.*.mcp -> integrations
-analysis.mcp -> agenttools
+agenttools.*.mcp -> integrations
 analysis.job/flow/ai -> analysis.options
 analysis.job/flow/ai -> shared
 api -> feature exceptions
@@ -248,12 +243,12 @@ Zamkniete krawedzie, ktorych nie przywracac:
   `integrations.elasticsearch`, `integrations.gitlab` i
   `integrations.operationalcontext` oraz `integrations.database` pozostaja
   czystymi integracjami bez importow warstw aplikacyjnych.
-- `analysis.mcp -> analysis.ai.copilot`: hidden tool context keys mieszkaja
-  teraz w neutralnym `agenttools.context.AgentToolContextKeys`, a Copilot
-  runtime jest ich konsumentem.
+- `analysis.mcp -> analysis.ai.copilot`: MCP wrappery mieszkaja teraz w
+  `agenttools.<capability>.mcp`, a hidden tool context keys mieszkaja w
+  neutralnym `agenttools.context.AgentToolContextKeys`.
 - `analysis.adapter -> analysis.mcp`: DB request/result/scope/operator
-  contracts mieszkaja teraz w `integrations.database`, a
-  `analysis.mcp.database` zostaje ekspozycja Spring AI tools.
+  contracts mieszkaja teraz w `integrations.database`, a Database Spring AI
+  tools mieszkaja w `agenttools.database.mcp`.
 - `analysis.adapter -> agenttools`: adapter DB ma wlasne capability DTO i scope
   w `integrations.database`; MCP mapuje hidden `ToolContext` na ten scope.
 - `analysis.evidence -> analysis.ai`: generyczne DTO evidence mieszkaja teraz
