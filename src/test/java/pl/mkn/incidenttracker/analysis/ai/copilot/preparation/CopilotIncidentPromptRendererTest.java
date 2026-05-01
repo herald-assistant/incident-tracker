@@ -22,7 +22,7 @@ class CopilotIncidentPromptRendererTest {
                 "sample/runtime",
                 List.of()
         );
-        var policy = new CopilotToolAccessPolicy(
+        var policy = new CopilotIncidentToolAccessPolicy(
                 List.of(),
                 List.of(
                         "elastic_search_logs_by_correlation_id",
@@ -86,7 +86,7 @@ class CopilotIncidentPromptRendererTest {
                 List.of()
         );
 
-        var prompt = renderer.render(request, CopilotToolAccessPolicy.empty(), List.of());
+        var prompt = renderer.render(request, CopilotIncidentToolAccessPolicy.empty(), List.of());
 
         assertTrue(prompt.contains("- environment: <not-resolved-from-logs>"));
         assertTrue(prompt.contains("- gitLabBranch: <not-resolved-from-logs>"));

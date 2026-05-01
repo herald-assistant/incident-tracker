@@ -37,14 +37,14 @@ powinna wymagac `correlationId`.
 
 ## Coverage-aware allowlista
 
-`CopilotToolAccessPolicy` nie wlacza tools tylko dlatego, ze sa
+`CopilotIncidentToolAccessPolicy` nie wlacza tools tylko dlatego, ze sa
 zarejestrowane. Najpierw `CopilotEvidenceCoverageEvaluator` ocenia generyczne
 evidence i tworzy `CopilotEvidenceCoverageReport`.
 
-W runtime policy jest tworzona przez `CopilotToolAccessPolicyFactory`.
+W runtime policy jest tworzona przez `CopilotIncidentToolAccessPolicyFactory`.
 Fabryka dostaje `InitialAnalysisRequest` oraz zarejestrowane
 `ToolDefinition`, uruchamia evaluator coverage i przekazuje gotowy report do
-`CopilotToolAccessPolicy.fromCoverage(...)`.
+`CopilotIncidentToolAccessPolicy.fromCoverage(...)`.
 
 Reguly:
 
@@ -65,7 +65,7 @@ Reguly:
 Coverage i evidence gaps sa widoczne w `00-incident-manifest.json`.
 
 Follow-up chat po zakonczonym jobie nie uzywa coverage jako glownego powodu
-wlaczenia tools. `CopilotToolAccessPolicyFactory.createForFollowUp(...)` wystawia
+wlaczenia tools. `CopilotIncidentToolAccessPolicyFactory.createForFollowUp(...)` wystawia
 targeted tools na podstawie resolved scope'u z zakonczonej analizy:
 
 - Elasticsearch dla aktualnego `correlationId`,

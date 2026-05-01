@@ -84,7 +84,7 @@ zostaja tylko generyczne DTO z `shared.evidence`: `AnalysisEvidenceSection`,
 Preparation obejmuje:
 
 - wyliczenie `CopilotEvidenceCoverageReport`,
-- zbudowanie `CopilotToolAccessPolicy`,
+- zbudowanie `CopilotIncidentToolAccessPolicy`,
 - dekorowanie opisow tools,
 - wyrenderowanie manifestu, digestu i evidence artifacts,
 - osadzenie artifact contents inline w promptcie,
@@ -97,7 +97,7 @@ Preparation obejmuje:
 Serwis preparation sklada zaleznosci, ale nie zawiera juz calej logiki
 renderingu i konfiguracji SDK:
 
-- `CopilotToolAccessPolicyFactory` buduje initial coverage-aware policy oraz
+- `CopilotIncidentToolAccessPolicyFactory` buduje initial coverage-aware policy oraz
   follow-up policy ze scope'u zakonczonej analizy,
 - `CopilotIncidentPromptRenderer` i `CopilotIncidentFollowUpPromptRenderer`
   renderuja incident prompt initial/follow-up, JSON-only response contract dla
@@ -216,8 +216,8 @@ wystarczajacy material i ktore tools mozna uzasadnic.
 
 ## 7. Coverage-aware tool policy
 
-`CopilotToolAccessPolicy` filtruje tools na podstawie coverage.
-Produkcyjna sciezka tworzy ja przez `CopilotToolAccessPolicyFactory`, ktora
+`CopilotIncidentToolAccessPolicy` filtruje tools na podstawie coverage.
+Produkcyjna sciezka tworzy ja przez `CopilotIncidentToolAccessPolicyFactory`, ktora
 uzywa `CopilotEvidenceCoverageEvaluator` i przekazuje do policy gotowy
 `CopilotEvidenceCoverageReport`.
 

@@ -30,7 +30,7 @@ Obejmuje:
   `CopilotIncidentFollowUpPromptRenderer` sa incident-specific, nie
   platformowe. `CopilotIncidentToolSessionContextFactory` sklada
   incidentowy run/session id oraz hidden tool context,
-  `CopilotToolAccessPolicyFactory` buduje initial/follow-up tool policy, a
+  `CopilotIncidentToolAccessPolicyFactory` buduje initial/follow-up tool policy, a
   `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy
   `CopilotSessionConfigRequest` z policy, skill directories, model options i
   komunikatu odmowy tooli. `CopilotFollowUpArtifactRequestFactory` mapuje
@@ -90,8 +90,8 @@ platformowe. Przy zmianach trzymaj ponizsza mape ownership:
   `CopilotIncidentPromptRenderer`,
   `CopilotIncidentFollowUpPromptRenderer`,
   `CopilotIncidentDigestService`,
-  `CopilotToolAccessPolicy`,
-  `CopilotToolAccessPolicyFactory`,
+  `CopilotIncidentToolAccessPolicy`,
+  `CopilotIncidentToolAccessPolicyFactory`,
   `CopilotIncidentHiddenToolContextFactory`,
   `CopilotIncidentToolSessionContextFactory`,
   `CopilotIncidentSessionConfigRequestFactory`,

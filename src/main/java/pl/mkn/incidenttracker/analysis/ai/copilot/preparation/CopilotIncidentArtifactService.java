@@ -45,7 +45,7 @@ public class CopilotIncidentArtifactService {
 
     public List<CopilotRenderedArtifact> renderArtifacts(
             InitialAnalysisRequest request,
-            CopilotToolAccessPolicy toolAccessPolicy
+            CopilotIncidentToolAccessPolicy toolAccessPolicy
     ) {
         var descriptors = buildArtifactIndex(request);
         var artifacts = new ArrayList<CopilotRenderedArtifact>();
@@ -97,7 +97,7 @@ public class CopilotIncidentArtifactService {
     private String renderManifestArtifact(
             InitialAnalysisRequest request,
             List<ArtifactDescriptor> descriptors,
-            CopilotToolAccessPolicy toolAccessPolicy
+            CopilotIncidentToolAccessPolicy toolAccessPolicy
     ) {
         try {
             return renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy));
@@ -174,7 +174,7 @@ public class CopilotIncidentArtifactService {
     private Map<String, Object> buildManifestPayload(
             InitialAnalysisRequest request,
             List<ArtifactDescriptor> descriptors,
-            CopilotToolAccessPolicy toolAccessPolicy
+            CopilotIncidentToolAccessPolicy toolAccessPolicy
     ) {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("correlationId", request.correlationId());
@@ -197,10 +197,10 @@ public class CopilotIncidentArtifactService {
         return payload;
     }
 
-    private Map<String, Object> buildToolPolicyPayload(CopilotToolAccessPolicy toolAccessPolicy) {
+    private Map<String, Object> buildToolPolicyPayload(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
         var policy = toolAccessPolicy != null
                 ? toolAccessPolicy
-                : CopilotToolAccessPolicy.empty();
+                : CopilotIncidentToolAccessPolicy.empty();
         var payload = new LinkedHashMap<String, Object>();
         payload.put("localWorkspaceAccessBlocked", policy.localWorkspaceAccessBlocked());
         payload.put("enabledToolNames", policy.availableToolNames());
@@ -209,7 +209,7 @@ public class CopilotIncidentArtifactService {
         return payload;
     }
 
-    private Map<String, Object> buildEvidenceCoveragePayload(CopilotToolAccessPolicy toolAccessPolicy) {
+    private Map<String, Object> buildEvidenceCoveragePayload(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
         var coverage = toolAccessPolicy != null
                 ? toolAccessPolicy.evidenceCoverage()
                 : CopilotEvidenceCoverageReport.empty();

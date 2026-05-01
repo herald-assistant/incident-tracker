@@ -28,7 +28,7 @@ class CopilotIncidentInitialRunAssemblerTest {
         var toolSessionContextFactory = mock(CopilotIncidentToolSessionContextFactory.class);
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
         var artifactService = mock(CopilotIncidentArtifactService.class);
-        var toolAccessPolicyFactory = mock(CopilotToolAccessPolicyFactory.class);
+        var toolAccessPolicyFactory = mock(CopilotIncidentToolAccessPolicyFactory.class);
         var promptRenderer = mock(CopilotIncidentPromptRenderer.class);
         var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
         var assembler = new CopilotIncidentInitialRunAssembler(
@@ -55,7 +55,7 @@ class CopilotIncidentInitialRunAssemblerTest {
                 "analysis-run-123",
                 Map.of()
         );
-        var toolAccessPolicy = CopilotToolAccessPolicy.empty();
+        var toolAccessPolicy = CopilotIncidentToolAccessPolicy.empty();
         var artifacts = List.of(artifact("01-incident-digest.md", "# Digest"));
         var sessionConfigRequest = new CopilotSessionConfigRequest(
                 "analysis-run-123",

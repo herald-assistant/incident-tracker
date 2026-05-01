@@ -19,8 +19,8 @@ class CopilotIncidentArtifactServiceItemIdTest {
 
     private final CopilotIncidentArtifactService artifactService = artifactService(new ObjectMapper());
     private final CopilotArtifactContentMapper artifactContentMapper = new CopilotArtifactContentMapper();
-    private final CopilotToolAccessPolicyFactory policyFactory =
-            new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+    private final CopilotIncidentToolAccessPolicyFactory policyFactory =
+            new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 
     @Test
     void shouldRenderStableItemIdsInMarkdownArtifacts() {
@@ -62,7 +62,7 @@ class CopilotIncidentArtifactServiceItemIdTest {
         assertTrue(content.contains("\"title\" : \"event 1\""));
     }
 
-    private CopilotToolAccessPolicy policy(InitialAnalysisRequest request) {
+    private CopilotIncidentToolAccessPolicy policy(InitialAnalysisRequest request) {
         return policyFactory.create(request, List.of());
     }
 

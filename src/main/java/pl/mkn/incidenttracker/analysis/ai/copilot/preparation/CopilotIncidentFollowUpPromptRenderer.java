@@ -13,7 +13,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
 
     public String render(
             AnalysisAiChatRequest request,
-            CopilotToolAccessPolicy toolAccessPolicy,
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
             List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return """
@@ -126,7 +126,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
         return rendered.length() > 0 ? rendered.toString() : "- brak wczesniejszych wiadomosci";
     }
 
-    private String formatAvailableToolGroups(CopilotToolAccessPolicy toolAccessPolicy) {
+    private String formatAvailableToolGroups(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
         var rendered = new StringBuilder();
 
         if (toolAccessPolicy.elasticToolsEnabled()) {

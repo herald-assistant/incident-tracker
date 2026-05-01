@@ -28,7 +28,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var toolSessionContextFactory = mock(CopilotIncidentToolSessionContextFactory.class);
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
-        var toolAccessPolicyFactory = mock(CopilotToolAccessPolicyFactory.class);
+        var toolAccessPolicyFactory = mock(CopilotIncidentToolAccessPolicyFactory.class);
         var artifactRequestFactory = mock(CopilotFollowUpArtifactRequestFactory.class);
         var artifactService = mock(CopilotIncidentArtifactService.class);
         var promptRenderer = mock(CopilotIncidentFollowUpPromptRenderer.class);
@@ -62,7 +62,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
                 "analysis-chat-run-123",
                 Map.of()
         );
-        var toolAccessPolicy = CopilotToolAccessPolicy.empty();
+        var toolAccessPolicy = CopilotIncidentToolAccessPolicy.empty();
         var artifactRequest = new InitialAnalysisRequest(
                 "corr-123",
                 "dev",

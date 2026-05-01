@@ -17,8 +17,8 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.art
 class CopilotIncidentArtifactServiceDigestOrderTest {
 
     private final CopilotIncidentArtifactService artifactService = artifactService(new ObjectMapper());
-    private final CopilotToolAccessPolicyFactory policyFactory =
-            new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+    private final CopilotIncidentToolAccessPolicyFactory policyFactory =
+            new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 
     @Test
     void shouldRenderManifestThenDigestThenEvidenceArtifacts() {

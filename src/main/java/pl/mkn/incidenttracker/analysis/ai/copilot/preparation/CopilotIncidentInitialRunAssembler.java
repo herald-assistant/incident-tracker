@@ -13,7 +13,7 @@ public class CopilotIncidentInitialRunAssembler {
     private final CopilotIncidentToolSessionContextFactory toolSessionContextFactory;
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotIncidentArtifactService artifactService;
-    private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
+    private final CopilotIncidentToolAccessPolicyFactory toolAccessPolicyFactory;
     private final CopilotIncidentPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
 

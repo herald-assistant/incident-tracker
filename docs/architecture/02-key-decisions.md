@@ -194,9 +194,9 @@ Nie uzywamy juz zasady "sekcja GitLab/Elasticsearch istnieje, wiec wylacz
 tools". `CopilotEvidenceCoverageEvaluator` ocenia coverage generycznych
 evidence i tworzy `CopilotEvidenceCoverageReport`.
 
-`CopilotToolAccessPolicyFactory` jest jedynym produkcyjnym miejscem, ktore
+`CopilotIncidentToolAccessPolicyFactory` jest jedynym produkcyjnym miejscem, ktore
 laczy request, evaluator coverage i zarejestrowane tool definitions. Sama
-`CopilotToolAccessPolicy` jest budowana z gotowego coverage reportu i nie
+`CopilotIncidentToolAccessPolicy` jest budowana z gotowego coverage reportu i nie
 tworzy recznie nowego evaluatora.
 
 Polityka:
@@ -259,7 +259,7 @@ tools, skill directories, model options i incidentowy komunikat odmowy toola.
 Incident preparation sklada tez `CopilotToolSessionContext`: tworzy
 `analysis-*`/`analysis-chat-*` session id i hidden tool context ze scope'u
 incydentu.
-Initial i follow-up tool policy powstaja przez `CopilotToolAccessPolicyFactory`,
+Initial i follow-up tool policy powstaja przez `CopilotIncidentToolAccessPolicyFactory`,
 zeby decyzje o dostepnych capability byly lokalne dla incident preparation.
 Follow-up artifact request powstaje przez `CopilotFollowUpArtifactRequestFactory`,
 zeby laczenie deterministic evidence i tool evidence nie bylo odpowiedzialnoscia

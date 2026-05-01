@@ -13,7 +13,7 @@ public class CopilotIncidentFollowUpRunAssembler {
     private final CopilotSdkToolFactory toolFactory;
     private final CopilotIncidentToolSessionContextFactory toolSessionContextFactory;
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
-    private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
+    private final CopilotIncidentToolAccessPolicyFactory toolAccessPolicyFactory;
     private final CopilotFollowUpArtifactRequestFactory artifactRequestFactory;
     private final CopilotIncidentArtifactService artifactService;
     private final CopilotIncidentFollowUpPromptRenderer promptRenderer;

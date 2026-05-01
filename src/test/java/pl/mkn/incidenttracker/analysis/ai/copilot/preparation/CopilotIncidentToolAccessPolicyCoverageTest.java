@@ -18,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CopilotToolAccessPolicyCoverageTest {
+class CopilotIncidentToolAccessPolicyCoverageTest {
 
-    private final CopilotToolAccessPolicyFactory policyFactory =
-            new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+    private final CopilotIncidentToolAccessPolicyFactory policyFactory =
+            new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 
     @Test
     void shouldEnableGitLabToolsWhenNoDeterministicGitLabEvidenceIsAttached() {
@@ -259,7 +259,7 @@ class CopilotToolAccessPolicyCoverageTest {
         assertEquals(List.of("elastic_search_logs_by_correlation_id"), policy.availableToolNames());
     }
 
-    private CopilotToolAccessPolicy policy(
+    private CopilotIncidentToolAccessPolicy policy(
             InitialAnalysisRequest request,
             List<ToolDefinition> tools
     ) {

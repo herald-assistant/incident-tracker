@@ -12,25 +12,25 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class CopilotToolAccessPolicyFactory {
+public class CopilotIncidentToolAccessPolicyFactory {
 
     private final CopilotEvidenceCoverageEvaluator coverageEvaluator;
 
-    public CopilotToolAccessPolicy create(
+    public CopilotIncidentToolAccessPolicy create(
             InitialAnalysisRequest request,
             List<ToolDefinition> registeredTools
     ) {
-        return CopilotToolAccessPolicy.fromCoverage(
+        return CopilotIncidentToolAccessPolicy.fromCoverage(
                 registeredTools,
                 coverageEvaluator.evaluate(request)
         );
     }
 
-    public CopilotToolAccessPolicy createForFollowUp(
+    public CopilotIncidentToolAccessPolicy createForFollowUp(
             AnalysisAiChatRequest request,
             List<ToolDefinition> registeredTools
     ) {
-        return CopilotToolAccessPolicy.fromFollowUpSession(
+        return CopilotIncidentToolAccessPolicy.fromFollowUpSession(
                 registeredTools,
                 StringUtils.hasText(request.environment()),
                 StringUtils.hasText(request.gitLabGroup()) && StringUtils.hasText(request.gitLabBranch())

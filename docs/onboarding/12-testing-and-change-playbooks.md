@@ -102,7 +102,7 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
    GitLab group ani DB scope'u,
 3. jesli zmieniasz prompt lub policy chatu, sprawdz
    `CopilotIncidentFollowUpPreparationService`, `CopilotIncidentFollowUpPromptRenderer` i
-   `CopilotToolAccessPolicyFactory.createForFollowUp(...)`,
+   `CopilotIncidentToolAccessPolicyFactory.createForFollowUp(...)`,
 4. jesli zmieniasz payload, zaktualizuj `AnalysisChatMessageResponse`, modele
    TS i import/eksport analizy,
 5. odpal testy job controller/service oraz celowane testy Copilot preparation

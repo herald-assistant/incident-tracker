@@ -75,7 +75,7 @@ Nie ma produkcyjnego shortcutu `analyze(request)` ani oddzielnego
 Po refaktorze `CopilotIncidentInitialPreparationService` jest kompozytorem
 zaleznosci:
 
-- `CopilotToolAccessPolicyFactory` buduje initial policy z coverage reportu i
+- `CopilotIncidentToolAccessPolicyFactory` buduje initial policy z coverage reportu i
   follow-up policy ze scope'u zakonczonej analizy,
 - `CopilotIncidentPromptRenderer` i `CopilotIncidentFollowUpPromptRenderer`
   zawieraja tekst incident promptu initial/follow-up, JSON response contract
@@ -150,7 +150,7 @@ dostaja naglowki `## itemId: ...`, a JSON artifacts pole `itemId`.
 
 ## Tools
 
-Runtime rejestruje tylko tools dozwolone przez `CopilotToolAccessPolicy`.
+Runtime rejestruje tylko tools dozwolone przez `CopilotIncidentToolAccessPolicy`.
 Policy uzywa `CopilotEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
 sekcja evidence istnieje.
 
@@ -170,7 +170,7 @@ zostawia focused GitLab tools, zeby model mogl sprobowac znalezc mapowanie
 entity/table/relations przed DB discovery; jesli to sie nie uda albo GitLab
 tools nie ma w sesji, DB discovery jest jawnym fallbackiem.
 
-Policy powstaje przez `CopilotToolAccessPolicyFactory`, aby ukryta zaleznosc
+Policy powstaje przez `CopilotIncidentToolAccessPolicyFactory`, aby ukryta zaleznosc
 od coverage evaluatora nie byla zaszyta w samym recordzie policy.
 
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal.

@@ -166,7 +166,7 @@ konfiguracje SDK.
 Incident preparation sklada tez `CopilotToolSessionContext` przez
 `CopilotIncidentToolSessionContextFactory`, wiec generowanie run/session id i
 hidden scope initial/follow-up jest lokalne dla feature preparation.
-Initial i follow-up tool policy przechodza przez `CopilotToolAccessPolicyFactory`,
+Initial i follow-up tool policy przechodza przez `CopilotIncidentToolAccessPolicyFactory`,
 wiec decyzje o wlaczeniu capability pozostaja w incident preparation zamiast w
 assemblerach runtime requestu.
 Follow-up artifact request przechodzi przez `CopilotFollowUpArtifactRequestFactory`,
@@ -221,8 +221,8 @@ Feature-owned incident preparation:
 - `CopilotIncidentPromptRenderer`
 - `CopilotIncidentFollowUpPromptRenderer`
 - `CopilotIncidentDigestService`
-- `CopilotToolAccessPolicy`
-- `CopilotToolAccessPolicyFactory`
+- `CopilotIncidentToolAccessPolicy`
+- `CopilotIncidentToolAccessPolicyFactory`
 - `CopilotIncidentHiddenToolContextFactory`
 - `CopilotIncidentToolSessionContextFactory`
 - `CopilotIncidentSessionConfigRequestFactory`

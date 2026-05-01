@@ -18,7 +18,7 @@ public class CopilotIncidentSessionConfigRequestFactory {
 
     public CopilotSessionConfigRequest create(
             String copilotSessionId,
-            CopilotToolAccessPolicy toolAccessPolicy,
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
             AnalysisAiOptions options
     ) {
         return new CopilotSessionConfigRequest(

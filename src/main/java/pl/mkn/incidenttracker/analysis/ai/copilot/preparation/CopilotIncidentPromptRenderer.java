@@ -11,7 +11,7 @@ public class CopilotIncidentPromptRenderer {
 
     public String render(
             InitialAnalysisRequest request,
-            CopilotToolAccessPolicy toolAccessPolicy,
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
             List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return """
@@ -123,7 +123,7 @@ public class CopilotIncidentPromptRenderer {
                 """.trim();
     }
 
-    private String formatAvailableToolGroups(CopilotToolAccessPolicy toolAccessPolicy) {
+    private String formatAvailableToolGroups(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
         var rendered = new StringBuilder();
 
         if (toolAccessPolicy.elasticToolsEnabled()) {

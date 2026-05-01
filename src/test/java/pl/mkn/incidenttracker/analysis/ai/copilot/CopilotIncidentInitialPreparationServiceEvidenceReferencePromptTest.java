@@ -22,7 +22,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationS
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSkillRuntimeLoader;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessPolicyFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
@@ -55,7 +55,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
                         new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
                         artifactService(new ObjectMapper()),
-                        new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
+                        new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
                         new CopilotIncidentPromptRenderer(),
                         new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper())
                 ),

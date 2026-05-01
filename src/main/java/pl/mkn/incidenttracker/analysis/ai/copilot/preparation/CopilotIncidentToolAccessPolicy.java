@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public record CopilotToolAccessPolicy(
+public record CopilotIncidentToolAccessPolicy(
         List<ToolDefinition> enabledTools,
         List<String> availableToolNames,
         boolean localWorkspaceAccessBlocked,
@@ -39,14 +39,14 @@ public record CopilotToolAccessPolicy(
             DatabaseToolNames.FIND_RELATIONSHIPS
     );
 
-    public CopilotToolAccessPolicy {
+    public CopilotIncidentToolAccessPolicy {
         enabledTools = enabledTools != null ? List.copyOf(enabledTools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
         evidenceCoverage = evidenceCoverage != null ? evidenceCoverage : CopilotEvidenceCoverageReport.empty();
     }
 
-    public static CopilotToolAccessPolicy empty() {
-        return new CopilotToolAccessPolicy(
+    public static CopilotIncidentToolAccessPolicy empty() {
+        return new CopilotIncidentToolAccessPolicy(
                 List.of(),
                 List.of(),
                 true,
@@ -57,7 +57,7 @@ public record CopilotToolAccessPolicy(
         );
     }
 
-    public static CopilotToolAccessPolicy fromCoverage(
+    public static CopilotIncidentToolAccessPolicy fromCoverage(
             List<ToolDefinition> registeredTools,
             CopilotEvidenceCoverageReport evidenceCoverage
     ) {
@@ -73,7 +73,7 @@ public record CopilotToolAccessPolicy(
                 .map(ToolDefinition::name)
                 .toList();
 
-        return new CopilotToolAccessPolicy(
+        return new CopilotIncidentToolAccessPolicy(
                 enabledTools,
                 availableToolNames,
                 true,
@@ -84,7 +84,7 @@ public record CopilotToolAccessPolicy(
         );
     }
 
-    public static CopilotToolAccessPolicy fromFollowUpSession(
+    public static CopilotIncidentToolAccessPolicy fromFollowUpSession(
             List<ToolDefinition> registeredTools,
             boolean environmentResolved,
             boolean gitLabScopeResolved
@@ -100,7 +100,7 @@ public record CopilotToolAccessPolicy(
                 .map(ToolDefinition::name)
                 .toList();
 
-        return new CopilotToolAccessPolicy(
+        return new CopilotIncidentToolAccessPolicy(
                 enabledTools,
                 availableToolNames,
                 true,
