@@ -65,7 +65,7 @@ Reguly:
 Coverage i evidence gaps sa widoczne w `00-incident-manifest.json`.
 
 Follow-up chat po zakonczonym jobie nie uzywa coverage jako glownego powodu
-wlaczenia tools. `CopilotToolAccessPolicy.fromFollowUpSession(...)` wystawia
+wlaczenia tools. `CopilotToolAccessPolicyFactory.createForFollowUp(...)` wystawia
 targeted tools na podstawie resolved scope'u z zakonczonej analizy:
 
 - Elasticsearch dla aktualnego `correlationId`,

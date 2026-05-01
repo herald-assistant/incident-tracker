@@ -76,8 +76,9 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 
 - `CopilotToolAccessPolicyFactory` buduje initial policy z coverage reportu i
   follow-up policy ze scope'u zakonczonej analizy,
-- `CopilotIncidentPromptRenderer` zawiera tekst incident promptu, JSON response contract,
-  rendering capability groups i embedded artifact contents,
+- `CopilotIncidentPromptRenderer` i `CopilotIncidentFollowUpPromptRenderer`
+  zawieraja tekst incident promptu initial/follow-up, JSON response contract
+  dla initial, rendering capability groups i embedded artifact contents,
 - `CopilotIncidentToolSessionContextFactory` sklada incidentowy
   `CopilotToolSessionContext` z run id, session id i hidden tool context,
 - `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy

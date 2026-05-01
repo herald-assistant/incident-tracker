@@ -24,7 +24,9 @@ Obejmuje:
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
   obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
-  skill runtime loading. `CopilotIncidentToolSessionContextFactory` sklada
+  skill runtime loading. `CopilotIncidentPromptRenderer` i
+  `CopilotIncidentFollowUpPromptRenderer` sa incident-specific, nie
+  platformowe. `CopilotIncidentToolSessionContextFactory` sklada
   incidentowy run/session id oraz hidden tool context,
   `CopilotToolAccessPolicyFactory` buduje initial/follow-up tool policy, a
   `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy

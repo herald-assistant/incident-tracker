@@ -15,7 +15,7 @@ public class CopilotFollowUpRunAssembler {
     private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
     private final CopilotFollowUpArtifactRequestFactory artifactRequestFactory;
     private final CopilotArtifactService artifactService;
-    private final CopilotFollowUpPromptRenderer promptRenderer;
+    private final CopilotIncidentFollowUpPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
 
     public CopilotFollowUpRunAssembly assemble(AnalysisAiChatRequest request) {

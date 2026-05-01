@@ -8,7 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
 import java.util.List;
 
 @Component
-public class CopilotFollowUpPromptRenderer {
+public class CopilotIncidentFollowUpPromptRenderer {
 
     public String render(
             AnalysisAiChatRequest request,
