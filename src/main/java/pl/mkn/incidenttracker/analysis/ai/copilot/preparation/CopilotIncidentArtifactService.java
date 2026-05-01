@@ -23,7 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
-public class CopilotArtifactService {
+public class CopilotIncidentArtifactService {
 
     private static final String MANIFEST_ARTIFACT_ID = "00-incident-manifest.json";
     private static final String DIGEST_ARTIFACT_ID = "01-incident-digest.md";
@@ -33,7 +33,7 @@ public class CopilotArtifactService {
     private final CopilotArtifactItemIdGenerator itemIdGenerator;
 
     @Autowired
-    public CopilotArtifactService(
+    public CopilotIncidentArtifactService(
             ObjectMapper objectMapper,
             CopilotIncidentDigestService incidentDigestService,
             CopilotArtifactItemIdGenerator itemIdGenerator

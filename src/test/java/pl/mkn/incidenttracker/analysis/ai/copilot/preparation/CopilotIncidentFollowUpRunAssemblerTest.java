@@ -30,7 +30,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
         var toolAccessPolicyFactory = mock(CopilotToolAccessPolicyFactory.class);
         var artifactRequestFactory = mock(CopilotFollowUpArtifactRequestFactory.class);
-        var artifactService = mock(CopilotArtifactService.class);
+        var artifactService = mock(CopilotIncidentArtifactService.class);
         var promptRenderer = mock(CopilotIncidentFollowUpPromptRenderer.class);
         var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
         var assembler = new CopilotIncidentFollowUpRunAssembler(

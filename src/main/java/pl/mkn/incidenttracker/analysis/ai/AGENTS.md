@@ -96,14 +96,14 @@ platformowe. Przy zmianach trzymaj ponizsza mape ownership:
   `CopilotIncidentToolSessionContextFactory`,
   `CopilotIncidentSessionConfigRequestFactory`,
   `CopilotFollowUpArtifactRequestFactory`,
-  `CopilotIncidentRunRequestFactory`.
+  `CopilotIncidentRunRequestFactory`,
+  `CopilotIncidentArtifactService`.
 - do obserwacji przed przeniesieniem:
-  `CopilotArtifactService`,
   `CopilotArtifactFormatVersion`,
   `CopilotArtifactItemIdGenerator`.
-  Maja czesc mechaniki artifact delivery, ale dzis renderuja incident manifest,
-  digest i evidence artifacts, wiec nie przenos ich do runtime bez rozdzielenia
-  tresci incidentowej od generycznej mechaniki. Neutralny typ
+  Maja jeszcze zwiazek z incident artifact rendering, wiec nie przenos ich do
+  runtime bez rozdzielenia tresci incidentowej od generycznej mechaniki.
+  Neutralny typ
   `CopilotRenderedArtifact` i mapowanie na runtime `artifactContents` sa juz
   platform-owned w `copilot/runtime`.
 Platform-owned runtime siedzi w `copilot/runtime`, przede wszystkim

@@ -15,7 +15,7 @@ public class CopilotIncidentFollowUpRunAssembler {
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
     private final CopilotFollowUpArtifactRequestFactory artifactRequestFactory;
-    private final CopilotArtifactService artifactService;
+    private final CopilotIncidentArtifactService artifactService;
     private final CopilotIncidentFollowUpPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
 

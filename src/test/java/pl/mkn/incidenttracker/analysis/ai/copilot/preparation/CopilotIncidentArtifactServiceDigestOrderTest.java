@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
 
-class CopilotArtifactServiceDigestOrderTest {
+class CopilotIncidentArtifactServiceDigestOrderTest {
 
-    private final CopilotArtifactService artifactService = artifactService(new ObjectMapper());
+    private final CopilotIncidentArtifactService artifactService = artifactService(new ObjectMapper());
     private final CopilotToolAccessPolicyFactory policyFactory =
             new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
 

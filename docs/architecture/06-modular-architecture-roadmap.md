@@ -228,19 +228,20 @@ Feature-owned incident preparation:
 - `CopilotIncidentSessionConfigRequestFactory`
 - `CopilotFollowUpArtifactRequestFactory`
 - `CopilotIncidentRunRequestFactory`
+- `CopilotIncidentArtifactService`
 
 Do obserwacji przed przeniesieniem:
 
-- `CopilotArtifactService`
 - `CopilotArtifactFormatVersion`
 - `CopilotArtifactItemIdGenerator`
 
-Te klasy maja fragmenty generycznej mechaniki artifact delivery, ale obecnie
-nadal renderuja incident manifest, digest i evidence artifacts. Neutralny
-runtime artifact model (`CopilotRenderedArtifact`) i content mapowanie
-(`CopilotArtifactContentMapper`) sa juz poza nimi w `copilot/runtime`. Przed
-przeniesieniem reszty do platformy trzeba dalej oddzielac neutralna mechanike
-od incident-specific tresci.
+`CopilotIncidentArtifactService` jest jawnie feature-owned, bo renderuje
+incident manifest, digest i evidence artifacts. Pozostale klasy maja jeszcze
+zwiazek z artifact format/item-id policy, wiec przed przeniesieniem reszty do
+platformy trzeba dalej oddzielac neutralna mechanike od incident-specific
+tresci. Neutralny runtime artifact model (`CopilotRenderedArtifact`) i content
+mapowanie (`CopilotArtifactContentMapper`) sa juz poza nimi w
+`copilot/runtime`.
 
 Platform-owned runtime jest juz poza `preparation`, w `copilot/runtime`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,

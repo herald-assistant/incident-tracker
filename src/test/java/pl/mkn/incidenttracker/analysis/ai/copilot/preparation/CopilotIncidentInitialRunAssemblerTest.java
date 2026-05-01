@@ -27,7 +27,7 @@ class CopilotIncidentInitialRunAssemblerTest {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var toolSessionContextFactory = mock(CopilotIncidentToolSessionContextFactory.class);
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
-        var artifactService = mock(CopilotArtifactService.class);
+        var artifactService = mock(CopilotIncidentArtifactService.class);
         var toolAccessPolicyFactory = mock(CopilotToolAccessPolicyFactory.class);
         var promptRenderer = mock(CopilotIncidentPromptRenderer.class);
         var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
