@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.github.copilot.sdk.json.ToolDefinition;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.GitLabEvidenceCoverage;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.IncidentGitLabEvidenceCoverage;
 import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.analysis.mcp.gitlab.GitLabToolNames;
@@ -211,7 +211,7 @@ public record CopilotIncidentToolAccessPolicy(
         if (!evidenceCoverage.gitLabNeedsTooling()) {
             return false;
         }
-        if (evidenceCoverage.gitLab() == GitLabEvidenceCoverage.NONE) {
+        if (evidenceCoverage.gitLab() == IncidentGitLabEvidenceCoverage.NONE) {
             return true;
         }
         return FOCUSED_GITLAB_TOOLS.contains(toolName);

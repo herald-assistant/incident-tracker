@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
-public enum ElasticEvidenceCoverage {
+public enum IncidentElasticEvidenceCoverage {
     NONE,
     LOGS_PRESENT_NO_EXCEPTION,
     EXCEPTION_PRESENT,

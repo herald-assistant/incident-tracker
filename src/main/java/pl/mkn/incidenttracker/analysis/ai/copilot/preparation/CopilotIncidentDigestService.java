@@ -42,7 +42,7 @@ public class CopilotIncidentDigestService {
         addOperationalCodeSearchScope(lines, operationalContext);
         addRuntimeSignals(lines, dynatrace);
         addCodeEvidence(lines, gitLab, effectiveCoverage);
-        addEvidenceGaps(lines, effectiveCoverage);
+        addIncidentEvidenceGaps(lines, effectiveCoverage);
 
         return String.join(System.lineSeparator(), lines) + System.lineSeparator();
     }
@@ -195,7 +195,7 @@ public class CopilotIncidentDigestService {
         lines.add("");
     }
 
-    private void addEvidenceGaps(List<String> lines, CopilotIncidentEvidenceCoverageReport coverage) {
+    private void addIncidentEvidenceGaps(List<String> lines, CopilotIncidentEvidenceCoverageReport coverage) {
         lines.add("## Known evidence gaps");
         if (coverage.gaps().isEmpty()) {
             lines.add("- none");

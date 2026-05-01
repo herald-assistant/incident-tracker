@@ -19,7 +19,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
     void shouldReportMissingGitLabEvidenceWhenNoResolvedCodeIsAttached() {
         var report = evaluator.evaluate(request("dev3", List.of()));
 
-        assertEquals(GitLabEvidenceCoverage.NONE, report.gitLab());
+        assertEquals(IncidentGitLabEvidenceCoverage.NONE, report.gitLab());
         assertTrue(report.hasGap("MISSING_CODE_CONTEXT"));
         assertTrue(report.hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED"));
     }
@@ -41,7 +41,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                         """
         ))));
 
-        assertEquals(GitLabEvidenceCoverage.FAILING_METHOD_ONLY, report.gitLab());
+        assertEquals(IncidentGitLabEvidenceCoverage.FAILING_METHOD_ONLY, report.gitLab());
         assertTrue(report.hasGap("MISSING_FLOW_CONTEXT"));
     }
 
@@ -60,7 +60,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                         """
         ))));
 
-        assertEquals(GitLabEvidenceCoverage.FLOW_CONTEXT_ATTACHED, report.gitLab());
+        assertEquals(IncidentGitLabEvidenceCoverage.FLOW_CONTEXT_ATTACHED, report.gitLab());
         assertTrue(report.hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED"));
     }
 
@@ -81,7 +81,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 ))
         ))));
 
-        assertEquals(ElasticEvidenceCoverage.SUFFICIENT, report.elastic());
+        assertEquals(IncidentElasticEvidenceCoverage.SUFFICIENT, report.elastic());
     }
 
     @Test
@@ -96,7 +96,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 ))
         ))));
 
-        assertEquals(DataDiagnosticNeed.REQUIRED, report.dataDiagnosticNeed());
+        assertEquals(IncidentDataDiagnosticNeed.REQUIRED, report.dataDiagnosticNeed());
         assertTrue(report.hasGap("DB_ENVIRONMENT_UNRESOLVED"));
     }
 

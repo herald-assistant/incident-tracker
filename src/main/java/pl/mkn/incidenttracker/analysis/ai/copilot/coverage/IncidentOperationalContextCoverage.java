@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
-public enum OperationalContextCoverage {
+public enum IncidentOperationalContextCoverage {
     NONE,
     PARTIAL,
     MATCHED

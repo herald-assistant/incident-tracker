@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.EvidenceGap;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.IncidentEvidenceGap;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
@@ -220,11 +220,11 @@ public class CopilotIncidentArtifactService {
         payload.put("dataDiagnosticNeed", coverage.dataDiagnosticNeed().name());
         payload.put("operationalContext", coverage.operationalContext().name());
         payload.put("environmentResolved", coverage.environmentResolved());
-        payload.put("gaps", coverage.gaps().stream().map(this::toEvidenceGapPayload).toList());
+        payload.put("gaps", coverage.gaps().stream().map(this::toIncidentEvidenceGapPayload).toList());
         return payload;
     }
 
-    private Map<String, String> toEvidenceGapPayload(EvidenceGap gap) {
+    private Map<String, String> toIncidentEvidenceGapPayload(IncidentEvidenceGap gap) {
         var payload = new LinkedHashMap<String, String>();
         payload.put("code", gap.code());
         payload.put("description", gap.description());

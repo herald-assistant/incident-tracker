@@ -191,13 +191,13 @@ kontraktu `AnalysisEvidenceItem`.
 `CopilotIncidentEvidenceCoverageEvaluator` czyta generyczne evidence przez helpery
 widoku i zwraca:
 
-- `ElasticEvidenceCoverage`,
-- `GitLabEvidenceCoverage`,
-- `RuntimeEvidenceCoverage`,
-- `OperationalContextCoverage`,
-- `DataDiagnosticNeed`,
+- `IncidentElasticEvidenceCoverage`,
+- `IncidentGitLabEvidenceCoverage`,
+- `IncidentRuntimeEvidenceCoverage`,
+- `IncidentOperationalContextCoverage`,
+- `IncidentDataDiagnosticNeed`,
 - `environmentResolved`,
-- liste `EvidenceGap`.
+- liste `IncidentEvidenceGap`.
 
 Przyklady luk:
 
@@ -250,7 +250,7 @@ GitLab tools:
 
 DB tools:
 
-- wlaczone przy resolved environment i `DataDiagnosticNeed=LIKELY/REQUIRED`,
+- wlaczone przy resolved environment i `IncidentDataDiagnosticNeed=LIKELY/REQUIRED`,
 - discovery-only przy `POSSIBLE`,
 - wylaczone przy braku resolved environment,
 - `db_execute_readonly_sql` pozostaje domyslnie disabled.

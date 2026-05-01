@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
-public enum GitLabEvidenceCoverage {
+public enum IncidentGitLabEvidenceCoverage {
     NONE,
     SYMBOL_ONLY,
     STACK_FRAME_ONLY,

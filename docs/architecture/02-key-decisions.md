@@ -215,7 +215,7 @@ Polityka:
   proby ugruntowania encji, repozytorium, tabel i relacji przed DB discovery,
   nawet jesli ogolny flow context z GitLaba wyglada na wystarczajacy.
 - DB tools sa wlaczane tylko przy resolved environment i
-  `DataDiagnosticNeed=LIKELY/REQUIRED`.
+  `IncidentDataDiagnosticNeed=LIKELY/REQUIRED`.
 - Dla `POSSIBLE` dostepne sa tylko discovery tools.
 - `db_execute_readonly_sql` pozostaje domyslnie zablokowany przez tool policy.
 

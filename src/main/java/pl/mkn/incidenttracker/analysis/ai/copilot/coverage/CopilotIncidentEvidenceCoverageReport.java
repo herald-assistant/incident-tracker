@@ -3,31 +3,31 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 import java.util.List;
 
 public record CopilotIncidentEvidenceCoverageReport(
-        ElasticEvidenceCoverage elastic,
-        GitLabEvidenceCoverage gitLab,
-        RuntimeEvidenceCoverage runtime,
-        OperationalContextCoverage operationalContext,
-        DataDiagnosticNeed dataDiagnosticNeed,
+        IncidentElasticEvidenceCoverage elastic,
+        IncidentGitLabEvidenceCoverage gitLab,
+        IncidentRuntimeEvidenceCoverage runtime,
+        IncidentOperationalContextCoverage operationalContext,
+        IncidentDataDiagnosticNeed dataDiagnosticNeed,
         boolean environmentResolved,
-        List<EvidenceGap> gaps
+        List<IncidentEvidenceGap> gaps
 ) {
 
     public CopilotIncidentEvidenceCoverageReport {
-        elastic = elastic != null ? elastic : ElasticEvidenceCoverage.NONE;
-        gitLab = gitLab != null ? gitLab : GitLabEvidenceCoverage.NONE;
-        runtime = runtime != null ? runtime : RuntimeEvidenceCoverage.NONE;
-        operationalContext = operationalContext != null ? operationalContext : OperationalContextCoverage.NONE;
-        dataDiagnosticNeed = dataDiagnosticNeed != null ? dataDiagnosticNeed : DataDiagnosticNeed.NONE;
+        elastic = elastic != null ? elastic : IncidentElasticEvidenceCoverage.NONE;
+        gitLab = gitLab != null ? gitLab : IncidentGitLabEvidenceCoverage.NONE;
+        runtime = runtime != null ? runtime : IncidentRuntimeEvidenceCoverage.NONE;
+        operationalContext = operationalContext != null ? operationalContext : IncidentOperationalContextCoverage.NONE;
+        dataDiagnosticNeed = dataDiagnosticNeed != null ? dataDiagnosticNeed : IncidentDataDiagnosticNeed.NONE;
         gaps = gaps != null ? List.copyOf(gaps) : List.of();
     }
 
     public static CopilotIncidentEvidenceCoverageReport empty() {
         return new CopilotIncidentEvidenceCoverageReport(
-                ElasticEvidenceCoverage.NONE,
-                GitLabEvidenceCoverage.NONE,
-                RuntimeEvidenceCoverage.NONE,
-                OperationalContextCoverage.NONE,
-                DataDiagnosticNeed.NONE,
+                IncidentElasticEvidenceCoverage.NONE,
+                IncidentGitLabEvidenceCoverage.NONE,
+                IncidentRuntimeEvidenceCoverage.NONE,
+                IncidentOperationalContextCoverage.NONE,
+                IncidentDataDiagnosticNeed.NONE,
                 false,
                 List.of()
         );
@@ -38,20 +38,20 @@ public record CopilotIncidentEvidenceCoverageReport(
     }
 
     public boolean elasticNeedsTooling() {
-        return elastic == ElasticEvidenceCoverage.NONE
-                || elastic == ElasticEvidenceCoverage.TRUNCATED
-                || elastic == ElasticEvidenceCoverage.EXCEPTION_PRESENT
+        return elastic == IncidentElasticEvidenceCoverage.NONE
+                || elastic == IncidentElasticEvidenceCoverage.TRUNCATED
+                || elastic == IncidentElasticEvidenceCoverage.EXCEPTION_PRESENT
                 || hasGap("MISSING_LOGS")
                 || hasGap("MISSING_STACKTRACE")
                 || hasGap("TRUNCATED_LOGS");
     }
 
     public boolean gitLabNeedsTooling() {
-        return gitLab == GitLabEvidenceCoverage.NONE
-                || gitLab == GitLabEvidenceCoverage.SYMBOL_ONLY
-                || gitLab == GitLabEvidenceCoverage.STACK_FRAME_ONLY
-                || gitLab == GitLabEvidenceCoverage.FAILING_METHOD_ONLY
-                || gitLab == GitLabEvidenceCoverage.DIRECT_COLLABORATOR_ATTACHED
+        return gitLab == IncidentGitLabEvidenceCoverage.NONE
+                || gitLab == IncidentGitLabEvidenceCoverage.SYMBOL_ONLY
+                || gitLab == IncidentGitLabEvidenceCoverage.STACK_FRAME_ONLY
+                || gitLab == IncidentGitLabEvidenceCoverage.FAILING_METHOD_ONLY
+                || gitLab == IncidentGitLabEvidenceCoverage.DIRECT_COLLABORATOR_ATTACHED
                 || hasGap("MISSING_CODE_CONTEXT")
                 || hasGap("MISSING_FLOW_CONTEXT")
                 || affectedFunctionGitLabRecommended();
@@ -59,12 +59,12 @@ public record CopilotIncidentEvidenceCoverageReport(
 
     public boolean databaseNeedsTooling() {
         return environmentResolved
-                && (dataDiagnosticNeed == DataDiagnosticNeed.LIKELY
-                || dataDiagnosticNeed == DataDiagnosticNeed.REQUIRED);
+                && (dataDiagnosticNeed == IncidentDataDiagnosticNeed.LIKELY
+                || dataDiagnosticNeed == IncidentDataDiagnosticNeed.REQUIRED);
     }
 
     public boolean databaseDiscoveryOnly() {
-        return environmentResolved && dataDiagnosticNeed == DataDiagnosticNeed.POSSIBLE;
+        return environmentResolved && dataDiagnosticNeed == IncidentDataDiagnosticNeed.POSSIBLE;
     }
 
     public boolean databaseCodeGroundingNeedsTooling() {

@@ -26,7 +26,7 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         var sections = request != null
                 ? request.evidenceSections()
                 : List.<AnalysisEvidenceSection>of();
-        var gaps = new ArrayList<EvidenceGap>();
+        var gaps = new ArrayList<IncidentEvidenceGap>();
         var elasticCoverage = elasticCoverage(sections, gaps);
         var gitLabCoverage = gitLabCoverage(sections, gaps);
         var operationalContextCoverage = operationalContextCoverage(sections);
@@ -35,7 +35,7 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         var environmentResolved = request != null && StringUtils.hasText(request.environment());
         var databaseCodeGrounded = databaseCodeGrounded(sections);
 
-        if ((dataDiagnosticNeed == DataDiagnosticNeed.LIKELY || dataDiagnosticNeed == DataDiagnosticNeed.REQUIRED)
+        if ((dataDiagnosticNeed == IncidentDataDiagnosticNeed.LIKELY || dataDiagnosticNeed == IncidentDataDiagnosticNeed.REQUIRED)
                 && !environmentResolved) {
             gaps.add(gap(
                     "DB_ENVIRONMENT_UNRESOLVED",
@@ -43,14 +43,14 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
             ));
         }
 
-        if (dataDiagnosticNeed == DataDiagnosticNeed.LIKELY || dataDiagnosticNeed == DataDiagnosticNeed.REQUIRED) {
+        if (dataDiagnosticNeed == IncidentDataDiagnosticNeed.LIKELY || dataDiagnosticNeed == IncidentDataDiagnosticNeed.REQUIRED) {
             gaps.add(gap(
                     "DB_DIAGNOSTIC_NEEDED",
                     "Evidence suggests a data-dependent symptom that may require read-only DB verification."
             ));
         }
 
-        if (dataDiagnosticNeed != DataDiagnosticNeed.NONE && !databaseCodeGrounded) {
+        if (dataDiagnosticNeed != IncidentDataDiagnosticNeed.NONE && !databaseCodeGrounded) {
             gaps.add(gap(
                     "DB_CODE_GROUNDING_NEEDED",
                     "Before DB table or column discovery, ground the entity/repository/table mapping from deterministic GitLab evidence or enabled GitLab tools when possible."
@@ -75,14 +75,14 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         );
     }
 
-    private ElasticEvidenceCoverage elasticCoverage(
+    private IncidentElasticEvidenceCoverage elasticCoverage(
             List<AnalysisEvidenceSection> sections,
-            List<EvidenceGap> gaps
+            List<IncidentEvidenceGap> gaps
     ) {
         var elastic = ElasticLogEvidenceView.from(sections);
         if (elastic.isEmpty()) {
             gaps.add(gap("MISSING_LOGS", "No Elasticsearch log evidence is attached for this incident."));
-            return ElasticEvidenceCoverage.NONE;
+            return IncidentElasticEvidenceCoverage.NONE;
         }
 
         var anyTruncated = false;
@@ -103,33 +103,33 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
 
         if (anyTruncated) {
             gaps.add(gap("TRUNCATED_LOGS", "At least one Elasticsearch message or exception was truncated."));
-            return ElasticEvidenceCoverage.TRUNCATED;
+            return IncidentElasticEvidenceCoverage.TRUNCATED;
         }
         if (anyException && !anyStackTrace) {
             gaps.add(gap("MISSING_STACKTRACE", "Logs include an exception signal, but no stacktrace frame was attached."));
-            return ElasticEvidenceCoverage.EXCEPTION_PRESENT;
+            return IncidentElasticEvidenceCoverage.EXCEPTION_PRESENT;
         }
         if (anyStackTrace && anyClass && anyMessage && anyService) {
-            return ElasticEvidenceCoverage.SUFFICIENT;
+            return IncidentElasticEvidenceCoverage.SUFFICIENT;
         }
         if (anyStackTrace) {
-            return ElasticEvidenceCoverage.STACKTRACE_PRESENT;
+            return IncidentElasticEvidenceCoverage.STACKTRACE_PRESENT;
         }
         if (anyException) {
-            return ElasticEvidenceCoverage.EXCEPTION_PRESENT;
+            return IncidentElasticEvidenceCoverage.EXCEPTION_PRESENT;
         }
 
-        return ElasticEvidenceCoverage.LOGS_PRESENT_NO_EXCEPTION;
+        return IncidentElasticEvidenceCoverage.LOGS_PRESENT_NO_EXCEPTION;
     }
 
-    private GitLabEvidenceCoverage gitLabCoverage(
+    private IncidentGitLabEvidenceCoverage gitLabCoverage(
             List<AnalysisEvidenceSection> sections,
-            List<EvidenceGap> gaps
+            List<IncidentEvidenceGap> gaps
     ) {
         var gitLab = GitLabResolvedCodeEvidenceView.from(sections);
         if (!gitLab.hasItems()) {
             gaps.add(gap("MISSING_CODE_CONTEXT", "No deterministic GitLab code evidence is attached."));
-            return GitLabEvidenceCoverage.NONE;
+            return IncidentGitLabEvidenceCoverage.NONE;
         }
 
         var itemCount = gitLab.items().size();
@@ -175,63 +175,63 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         }
 
         if (roles.size() >= 3 || (hasMethodContent && hasFlowContextMarker && filePaths.size() >= 2)) {
-            return GitLabEvidenceCoverage.SUFFICIENT;
+            return IncidentGitLabEvidenceCoverage.SUFFICIENT;
         }
         if (hasMethodContent && (hasFlowContextMarker || roles.size() >= 2)) {
-            return GitLabEvidenceCoverage.FLOW_CONTEXT_ATTACHED;
+            return IncidentGitLabEvidenceCoverage.FLOW_CONTEXT_ATTACHED;
         }
         if (itemCount > 1 || hasDirectCollaborator) {
             gaps.add(gap("MISSING_FLOW_CONTEXT", "Code evidence has direct collaborators but not enough broader flow context."));
-            return GitLabEvidenceCoverage.DIRECT_COLLABORATOR_ATTACHED;
+            return IncidentGitLabEvidenceCoverage.DIRECT_COLLABORATOR_ATTACHED;
         }
         if (hasContent && hasMethodContent) {
             gaps.add(gap("MISSING_FLOW_CONTEXT", "Code evidence shows the failing method but not the surrounding functional flow."));
-            return GitLabEvidenceCoverage.FAILING_METHOD_ONLY;
+            return IncidentGitLabEvidenceCoverage.FAILING_METHOD_ONLY;
         }
         if (hasLine && hasShortContent) {
             gaps.add(gap("MISSING_FLOW_CONTEXT", "Code evidence has only a stack-frame-sized code window."));
-            return GitLabEvidenceCoverage.STACK_FRAME_ONLY;
+            return IncidentGitLabEvidenceCoverage.STACK_FRAME_ONLY;
         }
         if (hasSymbolOrFile) {
             gaps.add(gap("MISSING_FLOW_CONTEXT", "Code evidence identifies a symbol or file but does not include enough code context."));
-            return GitLabEvidenceCoverage.SYMBOL_ONLY;
+            return IncidentGitLabEvidenceCoverage.SYMBOL_ONLY;
         }
 
         gaps.add(gap("MISSING_CODE_CONTEXT", "GitLab section exists but does not identify a usable symbol, file, line, or code window."));
-        return GitLabEvidenceCoverage.NONE;
+        return IncidentGitLabEvidenceCoverage.NONE;
     }
 
-    private RuntimeEvidenceCoverage runtimeCoverage(
+    private IncidentRuntimeEvidenceCoverage runtimeCoverage(
             List<AnalysisEvidenceSection> sections,
-            ElasticEvidenceCoverage elasticCoverage
+            IncidentElasticEvidenceCoverage elasticCoverage
     ) {
         var dynatrace = DynatraceRuntimeEvidenceView.from(sections);
-        if (dynatrace.hasStructuredStatusSummary() && elasticCoverage == ElasticEvidenceCoverage.SUFFICIENT) {
-            return RuntimeEvidenceCoverage.SUFFICIENT;
+        if (dynatrace.hasStructuredStatusSummary() && elasticCoverage == IncidentElasticEvidenceCoverage.SUFFICIENT) {
+            return IncidentRuntimeEvidenceCoverage.SUFFICIENT;
         }
         if (dynatrace.hasStructuredStatusSummary()) {
-            return RuntimeEvidenceCoverage.RUNTIME_SIGNALS_PRESENT;
+            return IncidentRuntimeEvidenceCoverage.RUNTIME_SIGNALS_PRESENT;
         }
-        if (elasticCoverage != ElasticEvidenceCoverage.NONE) {
-            return RuntimeEvidenceCoverage.LOGS_ONLY;
+        if (elasticCoverage != IncidentElasticEvidenceCoverage.NONE) {
+            return IncidentRuntimeEvidenceCoverage.LOGS_ONLY;
         }
-        return RuntimeEvidenceCoverage.NONE;
+        return IncidentRuntimeEvidenceCoverage.NONE;
     }
 
-    private OperationalContextCoverage operationalContextCoverage(List<AnalysisEvidenceSection> sections) {
+    private IncidentOperationalContextCoverage operationalContextCoverage(List<AnalysisEvidenceSection> sections) {
         for (var section : sections) {
             var provider = normalize(section.provider());
             var category = normalize(section.category());
             if (provider.contains("operational-context") || category.contains("operational-context")) {
                 return section.hasItems()
-                        ? OperationalContextCoverage.MATCHED
-                        : OperationalContextCoverage.PARTIAL;
+                        ? IncidentOperationalContextCoverage.MATCHED
+                        : IncidentOperationalContextCoverage.PARTIAL;
             }
         }
-        return OperationalContextCoverage.NONE;
+        return IncidentOperationalContextCoverage.NONE;
     }
 
-    private DataDiagnosticNeed dataDiagnosticNeed(List<AnalysisEvidenceSection> sections) {
+    private IncidentDataDiagnosticNeed dataDiagnosticNeed(List<AnalysisEvidenceSection> sections) {
         var text = normalize(allEvidenceText(sections));
 
         if (containsAny(
@@ -243,7 +243,7 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
                 "dataintegrityviolationexception",
                 "constraintviolationexception"
         )) {
-            return DataDiagnosticNeed.REQUIRED;
+            return IncidentDataDiagnosticNeed.REQUIRED;
         }
 
         var repositorySymptom = containsAny(
@@ -270,16 +270,16 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         var stuckProcess = containsAny(text, "outbox", "event", "process stuck", "stuck", "utknal", "utknął");
 
         if (repositorySymptom && dataClue) {
-            return DataDiagnosticNeed.LIKELY;
+            return IncidentDataDiagnosticNeed.LIKELY;
         }
         if (repositorySymptom || stuckProcess) {
-            return DataDiagnosticNeed.POSSIBLE;
+            return IncidentDataDiagnosticNeed.POSSIBLE;
         }
         if (dataClue && containsAny(text, "jpa", "repository", "sql", "db", "database", "baza")) {
-            return DataDiagnosticNeed.POSSIBLE;
+            return IncidentDataDiagnosticNeed.POSSIBLE;
         }
 
-        return DataDiagnosticNeed.NONE;
+        return IncidentDataDiagnosticNeed.NONE;
     }
 
     private boolean databaseCodeGrounded(List<AnalysisEvidenceSection> sections) {
@@ -402,9 +402,9 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         return "other";
     }
 
-    private List<EvidenceGap> deduplicate(List<EvidenceGap> gaps) {
+    private List<IncidentEvidenceGap> deduplicate(List<IncidentEvidenceGap> gaps) {
         var seen = new LinkedHashSet<String>();
-        var deduplicated = new ArrayList<EvidenceGap>();
+        var deduplicated = new ArrayList<IncidentEvidenceGap>();
         for (var gap : gaps) {
             if (gap != null && seen.add(gap.code())) {
                 deduplicated.add(gap);
@@ -413,8 +413,8 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
         return List.copyOf(deduplicated);
     }
 
-    private EvidenceGap gap(String code, String description) {
-        return new EvidenceGap(code, description);
+    private IncidentEvidenceGap gap(String code, String description) {
+        return new IncidentEvidenceGap(code, description);
     }
 
     private boolean containsAny(String value, String... needles) {

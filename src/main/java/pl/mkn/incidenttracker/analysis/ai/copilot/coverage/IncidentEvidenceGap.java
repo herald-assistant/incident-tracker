@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
-public record EvidenceGap(
+public record IncidentEvidenceGap(
         String code,
         String description
 ) {

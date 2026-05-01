@@ -218,7 +218,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
-    void shouldDisableDatabaseToolsWhenThereIsNoDataDiagnosticNeed() {
+    void shouldDisableDatabaseToolsWhenThereIsNoIncidentDataDiagnosticNeed() {
         var policy = policy(
                 request("dev3", List.of(sufficientElasticSection())),
                 tools("db_get_scope", "db_find_tables")
