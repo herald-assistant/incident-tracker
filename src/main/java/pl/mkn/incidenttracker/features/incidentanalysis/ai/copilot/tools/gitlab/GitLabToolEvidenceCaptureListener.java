@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.gitlab;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;

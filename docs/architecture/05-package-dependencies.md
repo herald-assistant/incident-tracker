@@ -156,12 +156,12 @@ flowchart LR
     FEATURES --> AGENTTOOLS["agenttools"]
     FEATURES --> EVIDENCE
     FEATURES --> OPTIONS
+    FEATURES --> COMMON["common"]
     FEATURES --> SHARED
 
     AI --> AIPLATFORM["aiplatform"]
     AI --> AGENTTOOLS["agenttools"]
     AI --> OPTIONS
-    AI --> COMMON["common"]
     AI --> SHARED
 
     AIPLATFORM --> SHARED
@@ -190,16 +190,16 @@ flowchart LR
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `features -> aiplatform` | 19 | oczekiwane przejsciowo | Incident Copilot preparation sklada platformowy `CopilotRunRequest` i uzywa runtime types. |
-| `features -> agenttools` | 4 | oczekiwane przejsciowo | Incident tool policy wybiera capability po neutralnych nazwach/prefixach tools. |
-| `features -> analysis.ai` | 43 | oczekiwane przejsciowo | Incident provider/preparation implementuje aktualne kontrakty AI oraz korzysta z jeszcze nieprzeniesionej mechaniki tools, response, quality i telemetry. |
+| `features -> agenttools` | 19 | oczekiwane przejsciowo | Incident tool policy i GitLab/DB evidence capture uzywaja neutralnych nazw tools oraz DTO capability. |
+| `features -> analysis.ai` | 51 | oczekiwane przejsciowo | Incident provider/preparation oraz tool evidence capture implementuja aktualne kontrakty AI i korzystaja z jeszcze nieprzeniesionej mechaniki tools, response, quality i telemetry. |
 | `features -> analysis.evidence` | 11 | przejsciowe | Incident coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
-| `features -> shared` | 9 | oczekiwane | Incident artifacts i coverage czytaja neutralne DTO evidence. |
+| `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
+| `features -> shared` | 15 | oczekiwane | Incident artifacts, coverage i tool evidence capture czytaja neutralne DTO evidence. |
 | `analysis.ai -> aiplatform` | 5 | oczekiwane przejsciowo | Techniczne wykonanie/model options Copilota korzystaja z pierwszego wydzielonego platformowego runtime. |
-| `analysis.ai -> agenttools` | 25 | oczekiwane przejsciowo | Runtime tools uzywaja neutralnych hidden context keys, nazw tools/prefixow capability oraz GitLab tool response DTO dla capture evidence. |
+| `analysis.ai -> agenttools` | 10 | oczekiwane przejsciowo | Runtime tools uzywaja neutralnych hidden context keys i nazw capability w opisach/policies. |
 | `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
-| `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
-| `analysis.ai -> shared` | 15 | oczekiwane | Runtime tools, response/quality i telemetry konsumuja neutralny model evidence. |
+| `analysis.ai -> shared` | 9 | oczekiwane | Runtime tools, response/quality i telemetry konsumuja neutralny model evidence. |
 | `aiplatform -> shared` | 2 | oczekiwane | Platformowy run request i prepared session niosa neutralny model evidence jako sink output tooli. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
@@ -217,9 +217,9 @@ Do obserwacji zostaly krawedzie:
 1. `features -> analysis.ai`
 
    Incident feature korzysta jeszcze z kontraktow AI, execution gateway,
-   response/quality, telemetry i runtime tools mieszkajacych pod
-   `analysis.ai`. Nie dodawac krawedzi odwrotnej `analysis.ai -> features`;
-   providery i preparation nalezy przenosic do feature'a, a reusable runtime do
+   response/quality, telemetry, runtime tools i session evidence store
+   mieszkajacych pod `analysis.ai`. Nie dodawac krawedzi odwrotnej
+   `analysis.ai -> features`; kolejne reusable mechanizmy nalezy przenosic do
    `aiplatform`.
 
 2. `features -> analysis.evidence`
@@ -296,6 +296,10 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.ai -> features`: incidentowe providery, preparation i coverage
   mieszkaja teraz w `features.incidentanalysis.ai.copilot`, a `analysis.ai`
   nie powinien importowac dedykowanego feature'a.
+- `analysis.ai.copilot.tools -> capability evidence capture`: GitLab/DB
+  user-facing tool evidence mapping mieszka teraz w
+  `features.incidentanalysis.ai.copilot.tools`; runtime tools publikuja tylko
+  neutralne eventy i session-bound evidence store.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.

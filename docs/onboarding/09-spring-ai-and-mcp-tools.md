@@ -135,8 +135,9 @@ Walidacje session id robi `CopilotToolSessionValidationPolicy` w
 `tools.policy.session`, przed publikacja eventu `Started`.
 
 Logowanie, telemetryka i capture evidence sa listenerami tych eventow.
-Dzieki temu definicja i invocation toola zostaja czyste, a GitLab/DB maja
-wlasne pakiety odpowiedzialne za interpretacje wynikow.
+Dzieki temu definicja i invocation toola zostaja czyste, a incident analysis ma
+wlasny pakiet `features.incidentanalysis.ai.copilot.tools` odpowiedzialny za
+interpretacje wynikow GitLab/DB dla operator-facing evidence.
 
 `CopilotToolInvocationEventPublisher` izoluje bledy listenerow. Awaria
 logowania, metryk albo capture evidence nie powinna zamieniac poprawnego

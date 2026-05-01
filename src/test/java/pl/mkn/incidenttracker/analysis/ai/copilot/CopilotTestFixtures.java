@@ -17,13 +17,13 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolD
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolGuidanceCatalog;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolInvocationHandler;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.database.DatabaseToolEvidenceMapper;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database.DatabaseToolEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationEventPublisher;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationFinishedEvent;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.events.CopilotToolInvocationOutcome;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceCaptureListener;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab.GitLabToolEvidenceMapper;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.gitlab.GitLabToolEvidenceCaptureListener;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.gitlab.GitLabToolEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;

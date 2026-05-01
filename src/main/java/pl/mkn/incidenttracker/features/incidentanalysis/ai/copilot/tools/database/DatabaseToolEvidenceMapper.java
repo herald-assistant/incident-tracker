@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.database;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

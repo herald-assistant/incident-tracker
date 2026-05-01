@@ -73,7 +73,7 @@ architektonicznych.
 7. jesli tool ma limit albo walidacje runtime, dodaj
    `CopilotToolInvocationPolicy` w `tools.policy`,
 8. jesli wynik ma trafic do user-facing evidence, dodaj listener i mapper w
-   `analysis.ai.copilot.tools.<capability>`.
+   feature'u, np. `features.incidentanalysis.ai.copilot.tools.<capability>`.
 
 Nie dopisuj logiki konkretnego toola do `CopilotToolInvocationHandler`.
 Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.

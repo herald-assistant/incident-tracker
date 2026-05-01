@@ -250,6 +250,10 @@ aktualnych providerow Copilota: `CopilotInitialAnalysisProvider` i
 `CopilotSdkAnalysisChatProvider`. Dzieki temu `analysis.ai` nie importuje
 `features.*`; pozostaje kontraktem/fasada techniczna dla obecnego flow.
 
+`features.incidentanalysis.ai.copilot.tools` zawiera incident-specific GitLab i
+Database tool evidence capture: listenery eventow invocation oraz mappery
+wynikow tools na operator-facing `AnalysisEvidenceSection`.
+
 Platform-owned runtime jest juz poza `preparation`, w
 `aiplatform.copilot.runtime`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,
@@ -481,7 +485,8 @@ Kroki:
    Stan obecny: tool access policy, hidden context, skill/session request
    assembly i coverage heurystyki mieszkaja juz w
    `features.incidentanalysis.ai.copilot`. Operator-facing GitLab/DB tool
-   evidence mapping jest jeszcze w `analysis.ai.copilot.tools`.
+   evidence mapping mieszka juz w
+   `features.incidentanalysis.ai.copilot.tools`.
 7. Platformowy tool invocation handler moze znac mechanike callbackow,
    allowlisty, policies, hidden context map i telemetryki, ale nie powinien
    znac nazw capability jako reguly domenowej, np. "GitLab przed DB dla
@@ -607,7 +612,8 @@ Kryterium done:
 14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
     tools; Elasticsearch [done], GitLab [done], Database [done].
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
-    progress: runtime, incident preparation i coverage przeniesione].
+    progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
+    capture przeniesione].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

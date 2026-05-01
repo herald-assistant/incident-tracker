@@ -468,9 +468,9 @@ powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
 `gitLabBranch` albo `gitLabGroup`.
 
 Stan obecny jest przejsciowy: `features.incidentanalysis.ai.copilot` zawiera
-incident-specific prompt, coverage i policy, a czesc
-`analysis.ai.copilot.tools` nadal zawiera capture evidence. Podczas dalszej
-ekstrakcji trzeba rozdzielic pozostale klasy na:
+incident-specific prompt, coverage, policy i GitLab/DB capture evidence, a
+`analysis.ai.copilot.tools` nadal zawiera neutralna mechanike invocation.
+Podczas dalszej ekstrakcji trzeba rozdzielic pozostale klasy na:
 
 - generic runtime Copilota,
 - feature-owned incident preparation/policy/skills/evidence mapping.

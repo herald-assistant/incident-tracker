@@ -35,8 +35,7 @@ Obejmuje:
   - `description/` dekorowanie opisow tools,
   - `events/` eventy invocation,
   - `policy/` session validation, budget i przyszle policies,
-  - `logging/` operacyjne logowanie invocation,
-  - `gitlab/` i `database/` capture evidence konkretnych capability.
+  - `logging/` operacyjne logowanie invocation.
 
 Nie obejmuje:
 
@@ -101,10 +100,10 @@ trafia do `aiplatform`.
   stronie providera AI.
 - Nowe walidacje i limity runtime dodawaj jako `CopilotToolInvocationPolicy`,
   a side-effecty jako listenery eventow invocation.
-- Obecnie logike per capability, np. GitLab albo DB evidence capture, trzymaj
-  w `copilot/tools/<capability>`. Przy ekstrakcji do `aiplatform.copilot`
-  przenies incident-specific policy i mapping evidence do feature'a, a w
-  platformie zostaw generyczna mechanike invocation.
+- Incident-specific GitLab/DB evidence capture mieszka w
+  `features.incidentanalysis.ai.copilot.tools`. W `analysis.ai.copilot.tools`
+  zostawiaj tylko mechanike invocation, session evidence store, eventy,
+  policies, opisy i logging.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.

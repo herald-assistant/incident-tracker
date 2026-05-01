@@ -172,10 +172,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Generyczne polityki invocation, w tym session validation i budget.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.logging`
   Subskrypcja eventow invocation do operacyjnego logowania request/result.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.gitlab`
-  Subskrypcja eventow GitLab tools i mapowanie wynikow do user-facing evidence.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.database`
-  Subskrypcja eventow Database tools i mapowanie wynikow do user-facing evidence.
+- `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools`
+  Incident-specific subskrypcje eventow GitLab/Database tools i mapowanie
+  wynikow do user-facing evidence.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.telemetry`
   Metryki sesji Copilota, usage events SDK, tool metrics i summary log.
 - `pl.mkn.incidenttracker.integrations.elasticsearch`

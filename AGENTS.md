@@ -114,12 +114,12 @@ Zasady granic:
 - Obecnie `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
   `CopilotToolEvidenceSessionStore`. Pomocnicze klasy trzymaj w podpakietach
-  `context`, `description`, `events`, `logging`, `policy`, a logike konkretnej
-  capability w `tools.<capability>`. Generyczne helpery aplikacyjne, np.
-  `JsonPayloadReader`, trzymaj poza Copilotem w `pl.mkn.incidenttracker.common`.
-  Docelowo podczas ekstrakcji do `aiplatform.copilot` zostaw tam tylko
-  mechanike runtime invocation, a incident-specific policy, skill selection i
-  evidence mapping przenies do feature'a.
+  `context`, `description`, `events`, `logging`, `policy`. Generyczne helpery
+  aplikacyjne, np. `JsonPayloadReader`, trzymaj poza Copilotem w
+  `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB evidence mapping
+  mieszka w `features.incidentanalysis.ai.copilot.tools`; podczas dalszej
+  ekstrakcji do `aiplatform.copilot` zostawiaj w runtime tylko mechanike
+  invocation.
 - `CopilotToolInvocationHandler` nie powinien zawierac logiki konkretnego
   toola. Walidacje i limity dodawaj jako `CopilotToolInvocationPolicy`, a
   logowanie, telemetryke i evidence capture jako listenery eventow invocation.
@@ -165,7 +165,8 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/features`
   Dedykowane feature'y analityczne. Pierwszy slice to
   `features.incidentanalysis.ai.copilot.preparation` i `coverage`, czyli
-  incident prompt/artifacts/tool policy oraz coverage heurystyki dla Copilota.
+  incident prompt/artifacts/tool policy, coverage heurystyki oraz GitLab/DB
+  tool evidence capture dla Copilota.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.

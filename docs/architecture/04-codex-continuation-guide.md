@@ -60,8 +60,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.copilot.tools.events`
 - `analysis.ai.copilot.tools.policy`
 - `analysis.ai.copilot.tools.logging`
-- `analysis.ai.copilot.tools.gitlab`
-- `analysis.ai.copilot.tools.database`
+- `features.incidentanalysis.ai.copilot.tools`
 - `analysis.ai.copilot.telemetry`
 - `CopilotIncidentArtifactService`
 - `CopilotRenderedArtifact`

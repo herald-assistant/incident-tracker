@@ -107,8 +107,6 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/tools/policy` - generyczne policies invocation, session validation
   i budget,
 - `copilot/tools/logging` - listener logujacy invocation,
-- `copilot/tools/gitlab` i `copilot/tools/database` - listener + mapper
-  user-facing tool evidence dla konkretnych capability.
 
 ### `aiplatform`
 
@@ -124,7 +122,8 @@ Dedykowany feature analizy incydentow. Pierwszy przeniesiony slice to
 `features.incidentanalysis.ai.copilot`: incident initial/chat providery,
 `preparation` dla promptu, artefaktow, tool policy, hidden contextu i
 initial/follow-up run assembly oraz `coverage` dla incident-specific coverage
-report i evidence gaps.
+report i evidence gaps. Podpakiet `tools` zawiera GitLab/DB listener + mapper
+user-facing tool evidence dla analizy incydentow.
 
 ### `common`
 
