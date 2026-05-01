@@ -325,11 +325,11 @@ GitLab/DB sa oddzielone od lifecycle sesji.
 `ToolCallback`, sortuje je, dekoruje opisy, parsuje input schema i tworzy
 `ToolDefinition`. Nie wykonuje tooli i nie interpretuje wynikow.
 
-`CopilotToolInvocationHandler` pozostaje runtime boundary: serializuje
-argumenty, uruchamia generyczne invocation policies, buduje hidden
-`ToolContext`, wywoluje callback, publikuje wewnetrzne eventy tool invocation i
-parsuje wynik dla SDK. Handler nie zna logiki GitLaba, DB, metryk ani budget
-payloadu poza generycznym kontrolowanym rejection.
+`aiplatform.copilot.tools.CopilotToolInvocationHandler` pozostaje runtime
+boundary: serializuje argumenty, uruchamia generyczne invocation policies,
+buduje hidden `ToolContext`, wywoluje callback, publikuje wewnetrzne eventy
+tool invocation i parsuje wynik dla SDK. Handler nie zna logiki GitLaba, DB,
+metryk ani budget payloadu poza generycznym kontrolowanym rejection.
 
 Event lifecycle:
 
@@ -470,8 +470,8 @@ powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
 
 Stan obecny jest przejsciowy: `features.incidentanalysis.ai.copilot` zawiera
 incident-specific prompt, coverage, policy i GitLab/DB capture evidence, a
-`analysis.ai.copilot.tools` nadal zawiera neutralna mechanike invocation.
-Podczas dalszej ekstrakcji trzeba rozdzielic pozostale klasy na:
+`aiplatform.copilot.tools` zawiera coraz wieksza czesc neutralnej mechaniki
+invocation. Podczas dalszej ekstrakcji trzeba rozdzielic pozostale klasy na:
 
 - generic runtime Copilota,
 - feature-owned incident preparation/policy/skills/evidence mapping.

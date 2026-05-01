@@ -12,11 +12,11 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProper
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolInvocationTelemetryListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotToolInvocationHandler;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolDescriptionDecorator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolGuidanceCatalog;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotToolInvocationHandler;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database.DatabaseToolEvidenceMapper;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationEventPublisher;

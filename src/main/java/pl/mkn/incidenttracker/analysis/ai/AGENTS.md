@@ -26,12 +26,12 @@ Obejmuje:
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
-  obecny root runtime tools z klasami wejsciowymi: `CopilotSdkToolFactory`,
-  `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`.
+  obecny root runtime tools z klasami wejsciowymi: `CopilotSdkToolFactory`
+  oraz `CopilotToolEvidenceSessionStore`.
   To jest stan przejsciowy przed rozdzieleniem platformowej mechaniki
   invocation od incident-specific policy/capture.
-  Platformowe `context/`, `events/`, `policy/session` i `logging/` sa juz w
-  `aiplatform.copilot.tools`.
+  Platformowy `CopilotToolInvocationHandler`, `context/`, `events/`,
+  `policy/session` i `logging/` sa juz w `aiplatform.copilot.tools`.
   Szczegoly trzymane tutaj to:
   - `description/` dekorowanie opisow tools,
   - `policy/budget/` przejsciowy budget runtime powiazany z telemetryka
@@ -87,8 +87,9 @@ trafia do `aiplatform`.
 - Tool factory ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
   ich implementacje.
 - `CopilotSdkToolFactory` ma tylko tworzyc `ToolDefinition`; wykonanie zostaje
-  w `CopilotToolInvocationHandler`.
-- `CopilotToolInvocationHandler` ma pozostac czysta granica invocation:
+  w `aiplatform.copilot.tools.CopilotToolInvocationHandler`.
+- `aiplatform.copilot.tools.CopilotToolInvocationHandler` ma pozostac czysta
+  granica invocation:
   policies, hidden context, callback, eventy i parsing wyniku. Nie dopisuj do
   niego logiki konkretnego toola, metryk, logowania ani mapowania evidence.
 - `CopilotToolEvidenceSessionStore` ma publikowac evidence przez neutralny
@@ -105,8 +106,8 @@ trafia do `aiplatform`.
 - Incident-specific GitLab/DB evidence capture mieszka w
   `features.incidentanalysis.ai.copilot.tools`. W `analysis.ai.copilot.tools`
   zostawiaj tylko przejsciowa bramke invocation, session evidence store,
-  opisy i budget. Hidden context, eventy invocation, policy contracts, session
-  validation i logging sa platformowe w `aiplatform.copilot.tools`.
+  opisy i budget. Handler, hidden context, eventy invocation, policy contracts,
+  session validation i logging sa platformowe w `aiplatform.copilot.tools`.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.

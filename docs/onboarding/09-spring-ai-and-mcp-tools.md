@@ -122,7 +122,8 @@ parsuje input schema i tworzy `ToolDefinition`.
 Factory nie jest miejscem na side-effecty invocation. Jej odpowiedzialnosc
 konczy sie na definicji toola i podpietym handlerze wykonania.
 
-Wykonanie toola jest w `CopilotToolInvocationHandler`. Handler:
+Wykonanie toola jest w
+`aiplatform.copilot.tools.CopilotToolInvocationHandler`. Handler:
 
 - wywoluje generyczne `CopilotToolInvocationPolicy` przed i po callbacku,
 - buduje hidden `ToolContext` przez

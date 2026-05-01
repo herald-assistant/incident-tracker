@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +30,7 @@ public class CopilotToolInvocationHandler {
     private final List<CopilotToolInvocationPolicy> invocationPolicies;
     private final CopilotToolInvocationEventPublisher eventPublisher;
 
-    CompletableFuture<Object> invokeSpringToolCallback(
+    public CompletableFuture<Object> invokeSpringToolCallback(
             ToolCallback callback,
             ToolInvocation invocation,
             CopilotToolSessionContext sessionContext

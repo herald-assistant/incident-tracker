@@ -193,7 +193,8 @@ guidance do opisow drogich albo ryzykownych tools.
 
 `CopilotSdkToolFactory` odpowiada za rejestracje definicji tools: zbiera Spring
 callbacks, sortuje je, dekoruje description, parsuje input schema i tworzy
-`ToolDefinition`. `CopilotToolInvocationHandler` odpowiada za wykonanie:
+`ToolDefinition`. `aiplatform.copilot.tools.CopilotToolInvocationHandler`
+odpowiada za wykonanie:
 uruchamia generyczne `CopilotToolInvocationPolicy` before/after, buduje hidden
 context, wywoluje callback, publikuje wewnetrzne eventy tool invocation i
 parsuje wynik dla SDK. Hidden context jest w

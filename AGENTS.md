@@ -112,20 +112,20 @@ Zasady granic:
   eksploracyjnych, pytan diagnostycznych ani technicznych pseudo-heurystyk do
   user-facing evidence.
 - Obecnie `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime tools:
-  `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`,
-  `CopilotToolEvidenceSessionStore`. Platformowa mechanika hidden
-  `ToolContext`, eventow invocation, policy contracts, session validation i
-  loggingu invocation mieszka juz w `aiplatform.copilot.tools`. W
-  `analysis.ai.copilot.tools` zostaja przejsciowo `description` oraz
-  `policy.budget`, dopoki budzet jest spiety z telemetryka analizy. Generyczne
-  helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj poza Copilotem w
-  `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB evidence mapping
-  mieszka w `features.incidentanalysis.ai.copilot.tools`; podczas dalszej
-  ekstrakcji do `aiplatform.copilot` zostawiaj w runtime tylko mechanike
-  invocation.
-- `CopilotToolInvocationHandler` nie powinien zawierac logiki konkretnego
-  toola. Walidacje i limity dodawaj jako `CopilotToolInvocationPolicy`, a
-  logowanie, telemetryke i evidence capture jako listenery eventow invocation.
+  `CopilotSdkToolFactory` oraz `CopilotToolEvidenceSessionStore`. Platformowa
+  mechanika invocation, hidden `ToolContext`, eventow invocation, policy
+  contracts, session validation i loggingu invocation mieszka juz w
+  `aiplatform.copilot.tools`. W `analysis.ai.copilot.tools` zostaja
+  przejsciowo `description` oraz `policy.budget`, dopoki budzet jest spiety z
+  telemetryka analizy. Generyczne helpery aplikacyjne, np. `JsonPayloadReader`,
+  trzymaj poza Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific
+  GitLab/DB evidence mapping mieszka w `features.incidentanalysis.ai.copilot.tools`;
+  podczas dalszej ekstrakcji do `aiplatform.copilot` zostawiaj w runtime tylko
+  mechanike invocation.
+- `aiplatform.copilot.tools.CopilotToolInvocationHandler` nie powinien
+  zawierac logiki konkretnego toola. Walidacje i limity dodawaj jako
+  `CopilotToolInvocationPolicy`, a logowanie, telemetryke i evidence capture
+  jako listenery eventow invocation.
 - GitLab i Elasticsearch tools sa fallback-only, gdy odpowiadajace evidence nie
   jest juz osadzone w artefaktach. Database tools sa opcjonalna capability
   AI-guided, nie providerem evidence.
@@ -165,7 +165,7 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`
   Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y to
   `aiplatform.copilot.runtime` oraz `aiplatform.copilot.tools` z
-  context/events/policy/logging; nie moze importowac incident analysis.
+  handler/context/events/policy/logging; nie moze importowac incident analysis.
 - `src/main/java/pl/mkn/incidenttracker/features`
   Dedykowane feature'y analityczne. Pierwszy slice to
   `features.incidentanalysis.ai.copilot.preparation` i `coverage`, czyli

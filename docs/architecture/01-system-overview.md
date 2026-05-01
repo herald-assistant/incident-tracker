@@ -158,6 +158,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
   neutralna mechanika platformy.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools`
+  `CopilotToolInvocationHandler`, czyli neutralna granica wykonania Spring
+  `ToolCallback`: policies, hidden context, eventy invocation, kontrolowany
+  rejection i parsing wyniku dla SDK.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.events`
   Wewnetrzne eventy tool invocation: `Started` oraz terminalny `Finished` z
   outcome `COMPLETED`, `REJECTED` albo `FAILED`.
@@ -169,9 +173,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
-  Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory`,
-  `CopilotToolInvocationHandler` i `CopilotToolEvidenceSessionStore`. Root
-  trzyma tylko klasy, przez ktore wchodzi sie do warstwy tools.
+  Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory` oraz
+  `CopilotToolEvidenceSessionStore`. Root trzyma tylko przejsciowe klasy, przez
+  ktore wchodzi sie do warstwy tools i evidence session store.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`
   Dekorowanie opisow Spring tools guidance'em dla Copilota.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget`

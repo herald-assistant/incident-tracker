@@ -467,7 +467,8 @@ Kroki:
    Stan obecny: pierwszy neutralny slice jest przeniesiony:
    `aiplatform.copilot.runtime` zawiera run request, prepared session,
    session config, properties, model listing, skill loader i artifact mapping.
-   Platformowe `aiplatform.copilot.tools` zawiera juz hidden `ToolContext`,
+   Platformowe `aiplatform.copilot.tools` zawiera juz
+   `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
    session validation i logging invocation.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
@@ -616,8 +617,8 @@ Kryterium done:
     tools; Elasticsearch [done], GitLab [done], Database [done].
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
-    capture przeniesione; platformowe tool context/events/policy/logging przeniesione do
-    `aiplatform.copilot.tools`].
+    capture przeniesione; platformowe tool handler/context/events/policy/logging
+    przeniesione do `aiplatform.copilot.tools`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

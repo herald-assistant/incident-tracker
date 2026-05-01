@@ -76,7 +76,8 @@ architektonicznych.
 8. jesli wynik ma trafic do user-facing evidence, dodaj listener i mapper w
    feature'u, np. `features.incidentanalysis.ai.copilot.tools.<capability>`.
 
-Nie dopisuj logiki konkretnego toola do `CopilotToolInvocationHandler`.
+Nie dopisuj logiki konkretnego toola do
+`aiplatform.copilot.tools.CopilotToolInvocationHandler`.
 Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 
 ## Playbook 4: zmiana AI

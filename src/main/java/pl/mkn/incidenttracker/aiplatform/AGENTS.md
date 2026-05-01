@@ -15,6 +15,9 @@ Obecnie obejmuje:
 - `copilot/tools/context/`
   platformowa mechanika budowania hidden `ToolContext` oraz neutralny
   `CopilotToolSessionContext` przekazywany przez feature.
+- `copilot/tools/CopilotToolInvocationHandler`
+  neutralna granica wykonania Spring `ToolCallback`: policies, hidden context,
+  eventy invocation, kontrolowany rejection i parsing wyniku dla SDK.
 - `copilot/tools/events/`
   platformowe eventy invocation `Started`/`Finished`, outcome oraz publisher
   chroniacy runtime przed wyjatkami listenerow.

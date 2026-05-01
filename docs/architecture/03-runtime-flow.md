@@ -293,7 +293,8 @@ wejsciowa pakietu `tools` dla preparation:
 - parsowanie input schema,
 - utworzenie `ToolDefinition` z handlerem wykonania.
 
-`CopilotToolInvocationHandler` obsluguje runtime invocation:
+`aiplatform.copilot.tools.CopilotToolInvocationHandler` obsluguje runtime
+invocation:
 
 - generyczne `CopilotToolInvocationPolicy` przed i po callbacku,
 - budowe hidden `ToolContext`,
