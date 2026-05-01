@@ -169,7 +169,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne kontrakty policy invocation, kontrolowany rejection oraz session
   validation.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget`
-  Neutralny kontrakt decyzji i telemetry listenera budget policy.
+  Platformowa budget policy, state, registry, properties oraz neutralny
+  kontrakt decyzji i telemetry listenera.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.logging`
   Subskrypcja eventow invocation do operacyjnego logowania request/result.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry`
@@ -185,9 +186,6 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   tool invocation przez sink przekazany przez feature.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget`
-  Przejsciowy budget policy invocation; zapis metryk analizy jest odpiety przez
-  `CopilotToolBudgetTelemetry`.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools`
   Incident-specific subskrypcje eventow GitLab/Database tools i mapowanie
   wynikow do user-facing evidence.

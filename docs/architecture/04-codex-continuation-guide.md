@@ -56,12 +56,12 @@ Przy nowej sesji najlepiej zaczac od:
 - `aiplatform.copilot.tools.context`
 - `aiplatform.copilot.tools.events`
 - `aiplatform.copilot.tools.policy`
+- `aiplatform.copilot.tools.policy.budget`
 - `aiplatform.copilot.tools.logging`
 - `aiplatform.copilot.tools.description`
 - `aiplatform.copilot.tools.evidence`
 - `features.incidentanalysis.ai.copilot`
 - `analysis.ai.copilot.execution`
-- `analysis.ai.copilot.tools.policy.budget`
 - `features.incidentanalysis.ai.copilot.tools`
 - `features.incidentanalysis.ai.copilot.tools.description`
 - `analysis.ai.copilot.telemetry`
@@ -224,11 +224,10 @@ Root `aiplatform.copilot.tools` jest platformowa bramka do runtime tools:
 
 Logika pomocnicza jest rozdzielona wedlug ownership: platformowy context,
 handler invocation, eventy, policy contracts, session validation, logging i
-description customization mieszkaja w `aiplatform.copilot.tools`, a session
-evidence store w `aiplatform.copilot.tools.evidence`. Przejsciowy budget
-zostaje w `analysis.ai.copilot.tools.policy.budget`. GitLab i Database maja
-wlasne listenery oraz
-mappery evidence capture w feature. Przy kolejnych toolach unikaj dopisywania
+description customization mieszkaja w `aiplatform.copilot.tools`, budget w
+`aiplatform.copilot.tools.policy.budget`, a session evidence store w
+`aiplatform.copilot.tools.evidence`. GitLab i Database maja wlasne listenery
+oraz mappery evidence capture w feature. Przy kolejnych toolach unikaj dopisywania
 specjalnych przypadkow do handlera; dodaj policy albo listener eventu w
 odpowiednim pakiecie.
 

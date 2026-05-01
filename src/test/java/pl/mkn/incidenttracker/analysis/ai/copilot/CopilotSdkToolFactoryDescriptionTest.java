@@ -33,9 +33,9 @@ class CopilotSdkToolFactoryDescriptionTest {
                 toolEvidenceSessionStore(objectMapper),
                 metricsRegistry,
                 new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper),
-                new pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetPolicy(
-                        new pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry(
-                                new pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties()
+                new pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy(
+                        new pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry(
+                                new pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties()
                         ),
                         List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
                 )

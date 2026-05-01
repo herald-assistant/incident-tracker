@@ -308,7 +308,7 @@ invocation:
 
 Walidacje session id robi `CopilotToolSessionValidationPolicy` w
 `aiplatform.copilot.tools.policy.session`; budzet robi
-`CopilotToolBudgetPolicy` w `analysis.ai.copilot.tools.policy.budget`.
+`CopilotToolBudgetPolicy` w `aiplatform.copilot.tools.policy.budget`.
 
 Side-effecty tool invocation sa subskrybowane przez Spring event listeners:
 

@@ -203,7 +203,7 @@ parsuje wynik dla SDK. Hidden context jest w
 `aiplatform.copilot.tools.context`, eventy sa w
 `aiplatform.copilot.tools.events`, walidacja session id jest policy w
 `aiplatform.copilot.tools.policy.session`, budzet jest policy w
-`analysis.ai.copilot.tools.policy.budget`, a logowanie w
+`aiplatform.copilot.tools.policy.budget`, a logowanie w
 `aiplatform.copilot.tools.logging`. Budget decisions i tool metrics maja
 neutralne kontrakty w `aiplatform.copilot.tools`, a telemetryka analizy tylko
 subskrybuje te dane przez adaptery. Telemetryka i capture GitLab/DB sa

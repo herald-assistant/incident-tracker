@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;

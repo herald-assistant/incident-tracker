@@ -479,8 +479,8 @@ Kroki:
    `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
    session validation, logging invocation, description customization contract,
-   budget decision/telemetry contracts, neutralne tool metrics i session-bound
-   tool evidence store.
+   budget policy/state/registry, neutralne tool metrics i session-bound tool
+   evidence store.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
    options, skill resources, available tools, hidden context, evidence sink i
    response handler/parser, ale nie zaklada `correlationId`.
@@ -630,7 +630,7 @@ Kryterium done:
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
     capture przeniesione; platformowe tool
     factory/handler/context/events/policy/logging/description/budget
-    contracts/telemetry/evidence store przeniesione do
+    telemetry/evidence store przeniesione do
     `aiplatform.copilot.tools`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse

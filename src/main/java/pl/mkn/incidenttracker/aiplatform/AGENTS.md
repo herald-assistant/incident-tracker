@@ -27,7 +27,8 @@ Obecnie obejmuje:
   neutralne kontrakty policy invocation, kontrolowany rejection oraz session
   validation.
 - `copilot/tools/policy/budget/`
-  neutralny budget decision i kontrakt telemetry listenera dla budget policy.
+  platformowa budget policy, state, registry, properties oraz neutralny
+  kontrakt decyzji i telemetry listenera.
 - `copilot/tools/telemetry/`
   neutralna klasyfikacja/metryki pojedynczego tool invocation uzywane przez
   telemetryke i budzety.

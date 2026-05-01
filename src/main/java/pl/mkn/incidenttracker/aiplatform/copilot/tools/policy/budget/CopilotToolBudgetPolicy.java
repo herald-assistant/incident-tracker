@@ -1,10 +1,8 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetDecision;
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetTelemetry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;

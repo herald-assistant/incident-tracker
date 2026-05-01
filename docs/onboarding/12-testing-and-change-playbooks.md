@@ -119,7 +119,7 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
    `aiplatform.copilot.tools.context`,
 3. session validation albo inne neutralne blokady zmieniaj jako
    `CopilotToolInvocationPolicy` w `aiplatform.copilot.tools.policy`; budget
-   jest przejsciowo w `analysis.ai.copilot.tools.policy.budget`,
+   jest w `aiplatform.copilot.tools.policy.budget`,
 4. logowanie/metryki/audyt dopinaj jako listenery eventow invocation albo, dla
    decyzji budzetu, przez `aiplatform.copilot.tools.policy.budget`,
 5. GitLab/DB albo przyszla capability evidence mapuj w swoim

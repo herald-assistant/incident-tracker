@@ -97,8 +97,6 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
 - `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
-- `copilot/tools/policy/budget` - przejsciowy budget policy invocation
-  odpiety od telemetryki analizy przez platformowy listener contract,
 
 ### `aiplatform`
 

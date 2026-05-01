@@ -100,7 +100,7 @@ Przyklady guidance:
 
 ## Budget policy
 
-`CopilotToolBudgetPolicy` w `analysis.ai.copilot.tools.policy.budget` pilnuje
+`CopilotToolBudgetPolicy` w `aiplatform.copilot.tools.policy.budget` pilnuje
 limitow na sesje jako platformowy `CopilotToolInvocationPolicy`. Domyslnie
 dziala w trybie `soft`, czyli ostrzega i metrykuje, ale nie blokuje. Tryb
 `hard` rzuca kontrolowany `CopilotToolInvocationRejectedException`; handler

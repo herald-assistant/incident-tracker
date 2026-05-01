@@ -13,10 +13,10 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolBudgetMetricsListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.BudgetMode;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.BudgetMode;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 
 import java.util.List;
 import java.util.Map;

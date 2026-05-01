@@ -1,6 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
-
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetDecision;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

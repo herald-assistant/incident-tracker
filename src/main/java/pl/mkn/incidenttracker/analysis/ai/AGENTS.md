@@ -25,13 +25,11 @@ Obejmuje:
   juz w `features.incidentanalysis.ai.copilot`,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
-- `copilot/tools/`
-  przejsciowy `policy/budget/` runtime. Metryki budzetu sa juz odpiete przez
-  platformowy `CopilotToolBudgetTelemetry` i adapter telemetryczny w
-  `copilot/telemetry`.
-  Factory tools, invocation handler, context, eventy, neutralne policy
-  contracts, session validation, logging, description customization contract i
-  session evidence store sa juz w `aiplatform.copilot.tools`.
+
+Platformowe runtime tools, czyli factory, invocation handler, context, eventy,
+neutralne policy contracts, session validation, logging, description
+customization contract, budget policy i session evidence store, sa juz w
+`aiplatform.copilot.tools`.
 
 Nie obejmuje:
 
@@ -98,14 +96,13 @@ trafia do `aiplatform`.
   stronie providera AI.
 - Nowe neutralne walidacje runtime dodawaj jako
   `aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy`, a side-effecty
-  jako listenery eventow invocation. Budget zostaje przejsciowo w
-  `analysis.ai.copilot.tools.policy.budget`, ale nie powinien juz zalezec od
-  `CopilotSessionMetricsRegistry`; metryki zapisuje
-  `copilot.telemetry.CopilotToolBudgetMetricsListener`.
+  jako listenery eventow invocation. Budget policy mieszka w
+  `aiplatform.copilot.tools.policy.budget`, a metryki zapisuje
+  `copilot.telemetry.CopilotToolBudgetMetricsListener` przez platformowy
+  `CopilotToolBudgetTelemetry`.
 - Incident-specific GitLab/DB evidence capture mieszka w
-  `features.incidentanalysis.ai.copilot.tools`. W `analysis.ai.copilot.tools`
-  zostawiaj tylko przejsciowy budget. Incident-specific guidance opisow tools
-  mieszka w
+  `features.incidentanalysis.ai.copilot.tools`. Incident-specific guidance
+  opisow tools mieszka w
   `features.incidentanalysis.ai.copilot.tools.description`. Handler,
   factory, hidden context, eventy invocation, policy contracts, session
   validation, logging, description customization contract i session evidence

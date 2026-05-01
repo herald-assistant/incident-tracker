@@ -1,6 +1,5 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget;
 
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetDecision;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;

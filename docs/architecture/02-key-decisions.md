@@ -235,10 +235,10 @@ sesje wyjatkiem. Technicznie `CopilotToolBudgetPolicy` rzuca kontrolowany
 `CopilotToolInvocationRejectedException`, a handler zamienia go na wynik dla
 SDK i event terminalny `REJECTED`.
 
-Budget policy mieszka przejsciowo w `analysis.ai.copilot.tools.policy.budget`,
-ale metryki sa juz odpiete przez platformowy
-`CopilotToolBudgetTelemetry` i adapter `CopilotToolBudgetMetricsListener`.
-Walidacja session id jest takim samym mechanizmem policy w
+Budget policy mieszka w `aiplatform.copilot.tools.policy.budget`, a metryki sa
+odpiete przez platformowy `CopilotToolBudgetTelemetry` i adapter
+`CopilotToolBudgetMetricsListener`. Walidacja session id jest takim samym
+mechanizmem policy w
 `aiplatform.copilot.tools.policy.session`, dzieki czemu handler nie ma
 osobnych warunkow dla konkretnych regul runtime.
 
