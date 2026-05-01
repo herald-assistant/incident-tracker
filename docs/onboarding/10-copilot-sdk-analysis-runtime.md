@@ -105,6 +105,9 @@ zaleznosci:
 - `AnalysisAiOptions` z requestu jobowego moze nadpisac skonfigurowany
   `model` i `reasoningEffort` dla pojedynczej sesji; brak wyboru oznacza
   fallback do properties albo domyslow SDK.
+- Metryki preparation ida przez platformowy
+  `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`, dzieki czemu
+  feature nie importuje konkretnego registry/loggera telemetry.
 - `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
   obok providerow analizy i chatu. Udostepnia osobny katalog modeli dla UI
   przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do promptu
@@ -305,8 +308,10 @@ Findings sa widoczne w telemetryce/logach, ale nie zmieniaja runtime result.
 
 ## Telemetry
 
-`CopilotSessionMetricsRegistry` agreguje metryki sesji, a
-`CopilotMetricsLogger` emituje structured summary log.
+Feature initial analysis uzywa neutralnego
+`aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`.
+`analysis.ai.copilot.telemetry.CopilotSessionTelemetryAdapter` mapuje ten port
+na obecne `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger`.
 
 Metryki obejmuja:
 

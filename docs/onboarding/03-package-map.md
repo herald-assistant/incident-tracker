@@ -105,6 +105,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   sesji SDK,
 - `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
   execution gateway i neutralny port metryk execution,
+- `aiplatform.copilot.runtime.telemetry` - neutralny port telemetry sesji:
+  preparation metrics, response state, quality report i usage snapshot,
 - `aiplatform.copilot.runtime.quality` - neutralny payload raportu jakosci
   odpowiedzi uzywany przez telemetryke,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound

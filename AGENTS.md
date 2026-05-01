@@ -72,6 +72,10 @@ Zasady granic:
   allowliste tools, hidden context, execution, telemetry i capture jako
   mechanike runtime. Docelowo ma dostawac te parametry od feature'a, a nie
   sam wybierac incident prompt, skille albo tools.
+- Telemetry sesji Copilota ma przechodzic przez neutralny port
+  `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`; konkretne
+  registry/loggery moga zostac w adapterze `analysis.ai`, ale feature'y nie
+  powinny ich importowac.
 - Dedykowane feature'y analityczne dostarczaja prompt, evidence, skille,
   hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
   Feature moze zalezec od platformy, tools i adapterow; platforma, tools i

@@ -52,6 +52,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.sessionTelemetry;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
@@ -263,7 +264,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
                 runPreparationService(properties),
-                metricsRegistry()
+                sessionTelemetry(metricsRegistry(), metricsLogger())
         );
 
         try (var prepared = service.prepare(request)) {
@@ -316,7 +317,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
                 runPreparationService(properties),
-                metricsRegistry()
+                sessionTelemetry(metricsRegistry(), metricsLogger())
         );
 
         try (var prepared = service.prepare(request)) {
@@ -357,7 +358,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
                 runPreparationService(properties),
-                metricsRegistry()
+                sessionTelemetry(metricsRegistry(), metricsLogger())
         );
 
         try (var prepared = service.prepare(request)) {
@@ -485,7 +486,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         return new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, toolFactory),
                 runPreparationService(properties),
-                metricsRegistry()
+                sessionTelemetry(metricsRegistry(), metricsLogger())
         );
     }
 

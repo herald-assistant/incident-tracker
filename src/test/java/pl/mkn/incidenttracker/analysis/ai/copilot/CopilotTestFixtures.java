@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactService;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentDigestService;
@@ -10,6 +11,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionTelemetryAdapter;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolBudgetMetricsListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolInvocationTelemetryListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
@@ -148,5 +150,12 @@ public final class CopilotTestFixtures {
 
     public static CopilotSessionMetricsRegistry metricsRegistry() {
         return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
+    }
+
+    public static CopilotSessionTelemetry sessionTelemetry(
+            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotMetricsLogger metricsLogger
+    ) {
+        return new CopilotSessionTelemetryAdapter(metricsRegistry, metricsLogger);
     }
 }

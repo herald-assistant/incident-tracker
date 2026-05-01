@@ -37,6 +37,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.metricsLogger;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotIncidentInitialPreparationServiceMetricsTest {
 
@@ -66,7 +68,7 @@ class CopilotIncidentInitialPreparationServiceMetricsTest {
                 new CopilotRunPreparationService(
                         new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
                 ),
-                metricsRegistry
+                sessionTelemetry(metricsRegistry, metricsLogger(objectMapper))
         );
 
         try (var prepared = service.prepare(requestWithEvidence())) {

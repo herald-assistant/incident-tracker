@@ -62,6 +62,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `aiplatform.copilot.tools.evidence`
 - `features.incidentanalysis.ai.copilot`
 - `aiplatform.copilot.runtime.execution`
+- `aiplatform.copilot.runtime.telemetry`
 - `aiplatform.copilot.runtime.quality`
 - `features.incidentanalysis.ai.copilot.response`
 - `features.incidentanalysis.ai.copilot.quality`

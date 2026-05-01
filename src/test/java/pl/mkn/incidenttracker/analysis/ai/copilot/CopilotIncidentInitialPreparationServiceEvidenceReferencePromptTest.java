@@ -36,6 +36,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.metricsLogger;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
 
@@ -62,7 +64,10 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                 new CopilotRunPreparationService(
                         new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
                 ),
-                new CopilotSessionMetricsRegistry(new CopilotMetricsProperties())
+                sessionTelemetry(
+                        new CopilotSessionMetricsRegistry(new CopilotMetricsProperties()),
+                        metricsLogger(new ObjectMapper())
+                )
         );
 
         String prompt;

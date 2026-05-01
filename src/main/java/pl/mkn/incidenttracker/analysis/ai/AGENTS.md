@@ -94,6 +94,10 @@ trafia do `aiplatform`.
   wykonywac neutralna `CopilotPreparedSession`. Evidence sink powinien
   przychodzic z platformowego run requestu albo przygotowanej sesji; adapter z
   `AnalysisAiToolEvidenceListener` trzymaj po stronie providera AI.
+- Konkretna session telemetry (`CopilotSessionMetricsRegistry`,
+  `CopilotMetricsLogger`) jest adapterem do platformowego
+  `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`. Feature'y nie
+  powinny importowac tych konkretnych klas telemetry.
 - Nowe neutralne walidacje runtime dodawaj jako
   `aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy`, a side-effecty
   jako listenery eventow invocation. Budget policy mieszka w

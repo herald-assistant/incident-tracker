@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotInitialAnalysisProviderJsonResponseTest {
 
@@ -80,8 +81,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
                 new CopilotResponseQualityGate(new CopilotResponseQualityProperties()),
-                registry,
-                new CopilotMetricsLogger(metricsProperties, objectMapper)
+                sessionTelemetry(registry, new CopilotMetricsLogger(metricsProperties, objectMapper))
         );
     }
 

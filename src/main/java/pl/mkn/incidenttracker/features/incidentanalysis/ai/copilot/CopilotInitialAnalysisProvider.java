@@ -10,14 +10,14 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotUsage;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 
 @Service
 @Slf4j
@@ -28,8 +28,7 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotResponseParser responseParser;
     private final CopilotResponseQualityGate qualityGate;
-    private final CopilotSessionMetricsRegistry metricsRegistry;
-    private final CopilotMetricsLogger metricsLogger;
+    private final CopilotSessionTelemetry telemetry;
 
     @Override
     public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
@@ -66,21 +65,19 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
             var parseResult = responseParser.parse(assistantContent);
             var qualityReport = qualityGate.evaluate(request, parseResult.response());
             var response = toAiResponse(parseResult.response(), preparedSession.prompt(), null);
-            metricsRegistry.recordResponse(
+            telemetry.recordResponse(
                     copilotSessionId,
                     parseResult.structuredResponse(),
                     parseResult.fallbackResponseUsed(),
                     response.detectedProblem(),
                     parseResult.response().confidence()
             );
-            metricsRegistry.recordQualityReport(copilotSessionId, qualityReport);
-            metricsLogger.logQualityReport(request.correlationId(), qualityReport);
-            var metrics = metricsRegistry.remove(copilotSessionId);
-            metrics.ifPresent(metricsLogger::logSummary);
+            telemetry.recordQualityReport(request.correlationId(), copilotSessionId, qualityReport);
+            var metrics = telemetry.completeSession(copilotSessionId);
             response = toAiResponse(
                     parseResult.response(),
                     preparedSession.prompt(),
-                    metrics.map(pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotAnalysisMetrics::usage)
+                    metrics.map(snapshot -> toAnalysisAiUsage(snapshot.usage()))
                             .orElse(null)
             );
 
@@ -105,7 +102,7 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
             return response;
         }
         catch (RuntimeException exception) {
-            metricsRegistry.remove(copilotSessionId).ifPresent(metricsLogger::logSummary);
+            telemetry.discardSession(copilotSessionId);
             throw exception;
         }
     }
@@ -149,4 +146,24 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         );
     }
 
+    private AnalysisAiUsage toAnalysisAiUsage(CopilotUsage usage) {
+        if (usage == null) {
+            return null;
+        }
+
+        return new AnalysisAiUsage(
+                usage.inputTokens(),
+                usage.outputTokens(),
+                usage.cacheReadTokens(),
+                usage.cacheWriteTokens(),
+                usage.totalTokens(),
+                usage.cost(),
+                usage.apiDurationMs(),
+                usage.apiCallCount(),
+                usage.model(),
+                usage.contextTokenLimit(),
+                usage.contextCurrentTokens(),
+                usage.contextMessages()
+        );
+    }
 }

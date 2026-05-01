@@ -7,8 +7,10 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSessionExecutionMetricsRecorder;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Map;
@@ -29,19 +31,25 @@ public class CopilotSessionMetricsRegistry implements CopilotSessionExecutionMet
             String prompt,
             long preparationDurationMs
     ) {
-        if (!enabled() || context == null || !StringUtils.hasText(context.copilotSessionId())) {
+        recordPreparation(toPreparationMetrics(context, request, artifacts, prompt, preparationDurationMs));
+    }
+
+    public void recordPreparation(CopilotSessionPreparationMetrics preparationMetrics) {
+        if (!enabled()
+                || preparationMetrics == null
+                || !StringUtils.hasText(preparationMetrics.copilotSessionId())) {
             return;
         }
 
         var metrics = metricsBySessionId.computeIfAbsent(
-                context.copilotSessionId(),
+                preparationMetrics.copilotSessionId(),
                 sessionId -> new MutableCopilotAnalysisMetrics(
-                        context.analysisRunId(),
-                        context.copilotSessionId(),
-                        context.correlationId()
+                        preparationMetrics.analysisRunId(),
+                        preparationMetrics.copilotSessionId(),
+                        preparationMetrics.runReference()
                 )
         );
-        metrics.recordPreparation(toArtifactMetrics(context, request, artifacts, prompt, preparationDurationMs));
+        metrics.recordPreparation(toArtifactMetrics(preparationMetrics));
     }
 
     @Override
@@ -168,28 +176,52 @@ public class CopilotSessionMetricsRegistry implements CopilotSessionExecutionMet
         return Optional.ofNullable(metricsBySessionId.get(copilotSessionId));
     }
 
-    private CopilotArtifactMetrics toArtifactMetrics(
+    private CopilotSessionPreparationMetrics toPreparationMetrics(
             CopilotToolSessionContext context,
             InitialAnalysisRequest request,
             List<CopilotRenderedArtifact> artifacts,
             String prompt,
             long preparationDurationMs
     ) {
-        var evidenceSections = request != null
-                ? request.evidenceSections()
-                : List.<pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection>of();
+        if (context == null) {
+            return null;
+        }
+
+        var evidenceSections = evidenceSections(request);
         var safeArtifacts = artifacts != null ? artifacts : List.<CopilotRenderedArtifact>of();
 
-        return new CopilotArtifactMetrics(
+        return new CopilotSessionPreparationMetrics(
                 context.analysisRunId(),
                 context.copilotSessionId(),
                 context.correlationId(),
                 evidenceSections.size(),
                 evidenceSections.stream().mapToInt(section -> section.items().size()).sum(),
                 safeArtifacts.size(),
-                safeArtifacts.stream().mapToLong(artifact -> artifact.content() != null ? artifact.content().length() : 0L).sum(),
+                safeArtifacts.stream()
+                        .mapToLong(artifact -> artifact.content() != null ? artifact.content().length() : 0L)
+                        .sum(),
                 prompt != null ? prompt.length() : 0L,
                 preparationDurationMs
+        );
+    }
+
+    private List<AnalysisEvidenceSection> evidenceSections(InitialAnalysisRequest request) {
+        return request != null && request.evidenceSections() != null
+                ? request.evidenceSections()
+                : List.of();
+    }
+
+    private CopilotArtifactMetrics toArtifactMetrics(CopilotSessionPreparationMetrics metrics) {
+        return new CopilotArtifactMetrics(
+                metrics.analysisRunId(),
+                metrics.copilotSessionId(),
+                metrics.runReference(),
+                metrics.evidenceSectionCount(),
+                metrics.evidenceItemCount(),
+                metrics.artifactCount(),
+                metrics.artifactTotalCharacters(),
+                metrics.promptCharacters(),
+                metrics.preparationDurationMs()
         );
     }
 

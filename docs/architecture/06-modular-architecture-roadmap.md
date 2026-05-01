@@ -487,7 +487,8 @@ Kroki:
    Stan obecny: pierwszy neutralny slice jest przeniesiony:
    `aiplatform.copilot.runtime` zawiera run request, prepared session,
    session config, properties, model listing, skill loader, artifact mapping,
-   execution gateway i neutralny port metryk execution.
+   execution gateway, neutralny port metryk execution oraz neutralny port
+   telemetry sesji (`aiplatform.copilot.runtime.telemetry`).
    Platformowe `aiplatform.copilot.tools` zawiera juz
    `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
@@ -506,7 +507,9 @@ Kroki:
    Copilota mieszkaja juz w `features.incidentanalysis.ai.copilot`. Response
    parser i quality gate mieszkaja juz w
    `features.incidentanalysis.ai.copilot.response/quality`, a telemetryka
-   dostaje neutralny quality report z `aiplatform.copilot.runtime.quality`.
+   dostaje neutralny quality report z `aiplatform.copilot.runtime.quality`
+   przez platformowy `CopilotSessionTelemetry`; konkretny registry/logger
+   zostaje adapterem po stronie `analysis.ai.copilot.telemetry`.
 6. Przeniesc incident tool access policy, incident coverage heurystyki,
    incident skill selection i operator-facing tool evidence mapping do
    `features.incidentanalysis`.
@@ -645,7 +648,8 @@ Kryterium done:
     capture przeniesione; platformowe tool
     factory/handler/context/events/policy/logging/description/budget
     telemetry/evidence store przeniesione do
-    `aiplatform.copilot.tools`].
+    `aiplatform.copilot.tools`, a session telemetry port przeniesiony do
+    `aiplatform.copilot.runtime.telemetry`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotInitialAnalysisProviderTest {
 
@@ -284,8 +285,7 @@ class CopilotInitialAnalysisProviderTest {
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
                 new CopilotResponseQualityGate(new CopilotResponseQualityProperties()),
-                registry,
-                logger
+                sessionTelemetry(registry, logger)
         );
     }
 

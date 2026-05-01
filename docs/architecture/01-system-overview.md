@@ -159,6 +159,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz neutralny port
   metryk execution bez zaleznosci od konkretnego feature'a.
+- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry`
+  Neutralny port telemetry sesji Copilota: preparation metrics, response state,
+  quality report i usage snapshot bez zaleznosci od incident feature'a ani
+  obecnego kontraktu UI usage.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality`
   Neutralny payload raportu jakosci odpowiedzi uzywany przez telemetryke; same
   reguly quality gate pozostaja po stronie feature'a.
@@ -198,7 +202,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Incident-specific guidance doklejane do opisow GitLab/Database tools dla
   Copilota.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.telemetry`
-  Metryki sesji Copilota, usage events SDK, tool metrics i summary log.
+  Adapter obecnej implementacji metryk sesji Copilota do platformowego portu
+  telemetry, usage events SDK, tool metrics i summary log.
 - `pl.mkn.incidenttracker.integrations.elasticsearch`
   Properties, porty, adapter REST, modele logow oraz endpoint testowy dla
   Elasticsearch/Kibana.
