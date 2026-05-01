@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.integrations.gitlab.source;
+package pl.mkn.incidenttracker.api.gitlab.source;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -6,6 +6,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveService;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -30,7 +35,7 @@ class GitLabSourceResolveControllerTest {
                 .thenReturn(new GitLabSourceResolveResponse(
                         "src/main/java/c/e/synthetic/response/ResponsePathSelector.java",
                         130,
-                        java.util.List.of(
+                        List.of(
                                 "src/main/java/c/e/synthetic/response/ResponsePathSelector.java",
                                 "src/test/java/c/e/synthetic/response/ResponsePathSelectorTest.java"
                         ),
@@ -84,7 +89,4 @@ class GitLabSourceResolveControllerTest {
 
         verifyNoInteractions(gitLabSourceResolveService);
     }
-
 }
-
-

@@ -58,18 +58,16 @@ To route Angulara forwardowana przez Spring Boot do `index.html`.
 - `POST /api/gitlab/source/resolve/preview`
 
 To nie jest glowny flow analizy. To narzedzia dla developera i operatora.
-Architektonicznie sa shared/operator API nad adapterami: cienkie, diagnostyczne
-warianty moga mieszkac przy `integrations.<capability>`, a stabilne endpointy
-dla wielu ekranow powinny docelowo trafic do `api.*`. Nie ma osobnego helper
-endpointu Database capability.
+Architektonicznie sa shared/operator API nad adapterami i mieszkaja w `api.*`.
+Nie ma osobnego helper endpointu Database capability.
 
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/api/AnalysisJobController.java`
 - `src/main/java/pl/mkn/incidenttracker/api/aioptions/AnalysisAiOptionsController.java`
-- `src/main/java/pl/mkn/incidenttracker/integrations/elasticsearch/ElasticLogSearchController.java`
-- `src/main/java/pl/mkn/incidenttracker/integrations/gitlab/GitLabRepositorySearchController.java`
-- `src/main/java/pl/mkn/incidenttracker/integrations/gitlab/source/GitLabSourceResolveController.java`
+- `src/main/java/pl/mkn/incidenttracker/api/elasticsearch/ElasticLogSearchController.java`
+- `src/main/java/pl/mkn/incidenttracker/api/gitlab/GitLabRepositorySearchController.java`
+- `src/main/java/pl/mkn/incidenttracker/api/gitlab/source/GitLabSourceResolveController.java`
 
 ## Sprawdz lokalnie
 

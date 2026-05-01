@@ -202,8 +202,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Incident-specific guidance doklejane do opisow GitLab/Database tools dla
   Copilota.
 - `pl.mkn.incidenttracker.integrations.elasticsearch`
-  Properties, porty, adapter REST, modele logow oraz endpoint testowy dla
+  Properties, porty, adapter REST, modele logow oraz service search dla
   Elasticsearch/Kibana.
+- `pl.mkn.incidenttracker.api.elasticsearch`
+  Shared/operator endpoint testowy `POST /api/elasticsearch/logs/search`
+  delegujacy do integracji Elasticsearch.
 - `pl.mkn.incidenttracker.agenttools.elasticsearch.mcp`
   MCP tools Elastica delegujace do `integrations.elasticsearch`.
 - `pl.mkn.incidenttracker.integrations.database`
@@ -219,7 +222,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace`
   Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
 - `pl.mkn.incidenttracker.integrations.gitlab`
-  Konfiguracja, porty, adapter REST oraz pomocnicze endpointy testowe GitLaba.
+  Konfiguracja, porty, adapter REST oraz modele/search service GitLaba.
+- `pl.mkn.incidenttracker.api.gitlab`
+  Shared/operator endpointy testowe GitLaba delegujace do integracji:
+  repository search i source resolve.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.agenttools.gitlab.mcp`

@@ -100,7 +100,8 @@ Warstwa integracji posiada:
 - porty i adaptery REST,
 - request/result DTO zewnetrznych capability,
 - techniczne wyjatki danej integracji,
-- opcjonalne helper endpointy REST do recznego testowania capability.
+- services capability, ktore moga byc wywolane przez provider, tool albo
+  shared/operator API.
 
 Warstwa integracji nie posiada:
 
@@ -472,10 +473,9 @@ Kolejnosc sugerowana:
 
 1. Dynatrace, bo po Fazie 2 powinien miec mala powierzchnie.
    Stan obecny: zrobione, pakiet mieszka w `integrations.dynatrace`.
-2. Elasticsearch, lacznie z helper endpointem log search jako fasada nad
-   integracja.
-   Stan obecny: zrobione, pakiet mieszka w `integrations.elasticsearch`, a URL
-   helper endpointu pozostaje bez zmian.
+2. Elasticsearch adapter i search service.
+   Stan obecny: zrobione, pakiet mieszka w `integrations.elasticsearch`, a
+   stabilny helper endpoint mieszka w `api.elasticsearch` pod tym samym URL-em.
 3. GitLab adapter i source resolve.
    Stan obecny: zrobione, pakiet mieszka w `integrations.gitlab`, razem z
    `integrations.gitlab.source`.
@@ -497,7 +497,8 @@ analysis.adapter.operationalcontext -> integrations.operationalcontext [done]
 
 Kryterium done:
 
-- feature incident analysis, tools i helper endpointy importuja `integrations`,
+- feature incident analysis, tools i shared/operator endpointy importuja
+  `integrations`,
 - `integrations` importuje tylko `common/shared` i biblioteki techniczne,
 - endpointy HTTP nadal dzialaja pod obecnymi URL-ami albo maja jawnie
   udokumentowany redirect/zmiane.
@@ -697,8 +698,7 @@ Kryterium done:
 5. PR: przeniesc generic evidence DTO poza `analysis.ai`.
 6. PR: dodac reguly zakazujace nowych importow `adapter -> evidence/mcp/ai`.
 7. PR: przeniesc Dynatrace adapter do `integrations.dynatrace` [done].
-8. PR: przeniesc Elasticsearch adapter i helper endpoint do
-   `integrations.elasticsearch` [done].
+8. PR: przeniesc Elasticsearch adapter do `integrations.elasticsearch` [done].
 9. PR: przeniesc GitLab adapter i source resolve do `integrations.gitlab`
    [done].
 10. PR: przeniesc operational context adapter do
@@ -728,7 +728,10 @@ Kryterium done:
 20. PR: wydzielic shared/operator API opcji AI: przeniesc neutralne preferencje
     wykonania do `shared.ai`, a controller/DTO `GET /analysis/ai/options` do
     `api.aioptions`, bez zmiany URL-a [done].
-21. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+21. PR: przeniesc stabilne helper endpointy Elasticsearch/GitLab do shared/operator
+    API `api.*`, zostawiajac adaptery, serwisy i modele w `integrations.*`
+    [done].
+22. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

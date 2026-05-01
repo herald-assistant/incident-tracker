@@ -16,8 +16,8 @@ REST, JDBC albo query/filter API po calej aplikacji.
 
 ## Elasticsearch
 
-Daje logi po `correlationId` i helper endpoint do recznego searchu.
-Jest tez reuse'owany przez provider evidence i MCP tool.
+Daje logi po `correlationId`. Jest reuse'owany przez provider evidence, MCP
+tool i shared/operator endpoint `api.elasticsearch.ElasticLogSearchController`.
 
 Czytaj:
 
@@ -41,7 +41,7 @@ Czytaj:
 Ma najwiecej capability:
 
 - adapter repozytorium i source resolve,
-- helper endpointy do testowania,
+- shared/operator endpointy do testowania,
 - reuse przez provider deterministic,
 - reuse przez MCP tools.
 
@@ -50,6 +50,8 @@ Czytaj:
 - `integrations.gitlab.GitLabRepositoryPort`
 - `integrations.gitlab.GitLabRestRepositoryAdapter`
 - `integrations.gitlab.source.GitLabSourceResolveService`
+- `api.gitlab.GitLabRepositorySearchController`
+- `api.gitlab.source.GitLabSourceResolveController`
 
 ## Database
 
@@ -88,8 +90,8 @@ Czytaj:
 - nietypowe JDBC, routing po environment, allowlisty schematow i SQL guard
   musza pozostac lokalne dla Database capability,
 - helper endpoint testuje capability adaptera, nie glowny flow produktu,
-- gdy helper endpoint staje sie stabilna powierzchnia FE dla wielu ekranow,
-  traktuj go jako shared/operator API i przenies docelowo do `api.*`.
+- stabilne endpointy FE/operatora trzymaj w `api.*`, a adapter, porty i modele
+  request/result w `integrations.*`.
 
 ## Checkpoint
 

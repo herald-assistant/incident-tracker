@@ -21,8 +21,10 @@ Odpowiada za:
 - konfiguracje,
 - porty i adapter REST,
 - repository search,
-- source resolve,
-- helper endpointy do recznego testowania.
+- source resolve.
+
+Shared/operator endpointy do recznego testowania mieszkaja w `api.gitlab` i
+`api.gitlab.source`, ale deleguja do tych samych services integracji.
 
 Nie powinien znac logiki `logs -> repo`.
 
@@ -80,6 +82,7 @@ rekomendowane dalsze odczyty.
 ## Przeczytaj w kodzie
 
 - `src/main/java/pl/mkn/incidenttracker/integrations/gitlab`
+- `src/main/java/pl/mkn/incidenttracker/api/gitlab`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/provider/gitlabdeterministic`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/gitlab/mcp`
 

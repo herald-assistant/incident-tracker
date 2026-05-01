@@ -493,13 +493,10 @@ Zasady:
 
 - `features.<feature>.api` posiada endpointy konkretnego use case'u, np.
   incident job API,
-- `api.*` jest docelowym miejscem dla cross-screen endpointow FE/operatora,
+- `api.*` jest miejscem dla cross-screen endpointow FE/operatora,
   np. katalogu opcji AI albo stabilnych fasad nad adapterami,
-- `integrations.<capability>` moze przejsciowo trzymac cienkie diagnostyczne
-  helper endpointy, jesli tylko testuja adapter,
-- gdy helper endpoint staje sie stabilna powierzchnia dla wielu ekranow, jego
-  controller/DTO powinny trafic do `api.*`, a adapter zostaje w
-  `integrations.*`.
+- stabilne helper endpointy Elasticsearch/GitLab mieszkaja w `api.*`,
+- adapter, porty, service i modele request/result zostaja w `integrations.*`.
 
 Konsekwencja dla obecnego kodu: historyczne `analysis.options` jest zamkniete.
 Neutralne `AnalysisAiOptions` mieszka w `shared.ai`, HTTP fasada

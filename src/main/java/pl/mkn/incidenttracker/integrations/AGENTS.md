@@ -4,8 +4,8 @@
 
 Ten katalog jest docelowa warstwa reusable integracji z systemami zewnetrznymi.
 Pakiety pod `integrations.*` sa czystymi capability adapterami, ktore moga byc
-uzywane przez evidence providers, tools/MCP, helper endpointy REST albo przyszle
-feature'y.
+uzywane przez evidence providers, tools/MCP, shared/operator endpointy REST
+albo przyszle feature'y.
 
 Obecnie obejmuje m.in.:
 
@@ -26,15 +26,12 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 
 ## Zasady
 
-- Nie importuj tutaj `analysis.*`, `agenttools.*`, `features.*` ani
+- Nie importuj tutaj `analysis.*`, `agenttools.*`, `features.*`, `api.*` ani
   `aiplatform.*`.
 - Trzymaj lokalnie properties, porty, modele request/result i adaptery REST dla
   danej capability.
-- Cienkie helper endpointy REST do manualnego testowania capability sa
-  dopuszczalne, jesli deleguja do integracji i nie importuja `analysis.*`.
-- Jesli helper endpoint staje sie stabilna powierzchnia FE dla wielu ekranow,
-  traktuj go jako shared/operator API i przenies docelowo do `api.*`, zostawiajac
-  tutaj adapter i modele capability.
+- Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
+  porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
 - Nie dodawaj tu `AnalysisEvidenceProvider`, klas `@Tool`, promptow, skilli ani
   heurystyk incidentowych.

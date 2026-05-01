@@ -54,7 +54,8 @@ architektonicznych.
 
 1. dodaj port i modele do `integrations.<system>`,
 2. dodaj adapter REST i properties,
-3. dodaj helper endpoint tylko jesli przydaje sie recznie testowac capability,
+3. dodaj helper endpoint w `api.*` tylko jesli przydaje sie recznie testowac
+   capability,
 4. dopiero potem reuse'uj adapter z providera albo toola.
 
 ## Playbook 2: nowy provider evidence

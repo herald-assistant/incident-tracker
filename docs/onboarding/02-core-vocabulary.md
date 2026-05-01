@@ -27,7 +27,8 @@ Jeden krok pipeline, ktory czyta `AnalysisContext` i publikuje jedno
 
 Warstwa capability blisko integracji albo zrodla danych, np. Elasticsearch,
 Dynatrace, GitLab, Database albo curated operational context. Ma porty,
-modele, properties i ewentualnie helper endpointy do recznego testowania.
+modele, properties i services. Stabilne helper endpointy FE/operatora sa
+shared/operator API w `api.*`, ale deleguja do adapterow.
 Pakiet dla adapterow to `integrations.<system>`. Historyczny
 `analysis.adapter` nie jest juz miejscem na nowe capability.
 
@@ -40,8 +41,9 @@ Tool ma maly kontrakt i robi jeden konkretny krok eksploracji.
 
 Endpoint backendu dla frontendu albo operatora, ktory nie nalezy do jednego
 dedykowanego feature'a. Moze byc fasada nad platforma AI albo integracja, np.
-`GET /analysis/ai/options`. Docelowy pakiet to `api.*`; endpointy konkretnego
-use case'u zostaja przy `features.<feature>.api`.
+`GET /analysis/ai/options` albo `POST /api/elasticsearch/logs/search`. Pakiet
+to `api.*`; endpointy konkretnego use case'u zostaja przy
+`features.<feature>.api`.
 
 ### MCP
 

@@ -185,7 +185,7 @@ flowchart LR
 | `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> aiplatform` | 3 | oczekiwane | `api.aioptions` mapuje platformowy katalog modeli Copilota na kontrakt endpointu `GET /analysis/ai/options`. |
-| `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`; docelowo shared/operator endpointy nad adapterami tez moga mieszkac w `api.*`. |
+| `api -> integrations` | 15 | oczekiwane | Shared/operator endpointy Elasticsearch/GitLab deleguja do `integrations`, a globalny handler HTTP mapuje wyniki/wyjatki helper endpointow. |
 | `api -> features` | 3 | oczekiwane technicznie | Globalny handler HTTP mapuje wyjatki incident job API i `AnalysisDataNotFoundException` z incident flow. Nie traktowac tego jako wzorca dla shared/operator API, ktore nie powinno orkiestrowac feature'ow. |
 
 ## Cykle Do Pilnowania
@@ -246,6 +246,7 @@ Unikac nowych zaleznosci:
 - `integrations -> agenttools`,
 - `integrations -> features`,
 - `integrations -> aiplatform`,
+- `integrations -> api`,
 - `aiplatform -> analysis`,
 - `aiplatform -> features`,
 - `aiplatform -> integrations`,

@@ -9,13 +9,10 @@ Obecnie obejmuje:
 
 - wspolny kontrakt bledow HTTP,
 - globalny `ApiExceptionHandler`,
-- wspolny kontrakt walidacji.
-
-Docelowo moze obejmowac tez endpointy FE/operatora, ktore nie sa wlasnoscia
-jednego dedykowanego feature'a, np.:
-
+- wspolny kontrakt walidacji,
 - katalog opcji AI nad `aiplatform.copilot.runtime.options`,
-- stabilne fasady nad integracjami uzywane przez wiele ekranow.
+- stabilne fasady nad integracjami uzywane przez wiele ekranow, np.
+  Elasticsearch log search i GitLab repository/source search.
 
 ## Zasady
 
@@ -27,10 +24,8 @@ jednego dedykowanego feature'a, np.:
   promptow, skilli, job state ani adapterow REST.
 - Nie importuj `api.*` z feature'ow jako kontraktu runtime. Jesli feature
   potrzebuje wspolnego typu, przenies go do `shared` albo blizej wlasciciela.
-- Cienkie diagnostyczne helper endpointy moga przejsciowo mieszkac przy
-  `integrations.<capability>`, jesli sa tylko manualnym testem adaptera. Gdy
-  staja sie stabilna powierzchnia dla wielu ekranow, docelowym miejscem jest
-  ten katalog.
+- Stabilne endpointy FE/operatora trzymaj tutaj; adapter, porty, modele
+  request/result i service capability zostaja w `integrations.*`.
 
 ## Aktualny refactor opcji AI
 

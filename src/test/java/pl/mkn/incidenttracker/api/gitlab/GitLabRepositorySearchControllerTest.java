@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.integrations.gitlab;
+package pl.mkn.incidenttracker.api.gitlab;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryProjectCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchException;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchService;
 
 import java.util.List;
 
@@ -118,6 +124,4 @@ class GitLabRepositorySearchControllerTest {
 
         verifyNoInteractions(gitLabRepositorySearchService);
     }
-
 }
-
