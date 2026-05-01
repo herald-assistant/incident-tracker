@@ -8,7 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifac
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.EvidenceGap;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
@@ -69,7 +69,7 @@ public class CopilotIncidentArtifactService {
                         request,
                         toolAccessPolicy != null
                                 ? toolAccessPolicy.evidenceCoverage()
-                                : CopilotEvidenceCoverageReport.empty()
+                                : CopilotIncidentEvidenceCoverageReport.empty()
                 )
         ));
 
@@ -212,7 +212,7 @@ public class CopilotIncidentArtifactService {
     private Map<String, Object> buildEvidenceCoveragePayload(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
         var coverage = toolAccessPolicy != null
                 ? toolAccessPolicy.evidenceCoverage()
-                : CopilotEvidenceCoverageReport.empty();
+                : CopilotIncidentEvidenceCoverageReport.empty();
         var payload = new LinkedHashMap<String, Object>();
         payload.put("elastic", coverage.elastic().name());
         payload.put("gitLab", coverage.gitLab().name());

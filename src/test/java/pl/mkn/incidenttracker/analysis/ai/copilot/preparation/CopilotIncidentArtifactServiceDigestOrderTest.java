@@ -6,7 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 
 import java.util.List;
 
@@ -18,7 +18,7 @@ class CopilotIncidentArtifactServiceDigestOrderTest {
 
     private final CopilotIncidentArtifactService artifactService = artifactService(new ObjectMapper());
     private final CopilotIncidentToolAccessPolicyFactory policyFactory =
-            new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+            new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator());
 
     @Test
     void shouldRenderManifestThenDigestThenEvidenceArtifacts() {

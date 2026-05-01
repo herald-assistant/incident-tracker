@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.coverage;
 
 import java.util.List;
 
-public record CopilotEvidenceCoverageReport(
+public record CopilotIncidentEvidenceCoverageReport(
         ElasticEvidenceCoverage elastic,
         GitLabEvidenceCoverage gitLab,
         RuntimeEvidenceCoverage runtime,
@@ -12,7 +12,7 @@ public record CopilotEvidenceCoverageReport(
         List<EvidenceGap> gaps
 ) {
 
-    public CopilotEvidenceCoverageReport {
+    public CopilotIncidentEvidenceCoverageReport {
         elastic = elastic != null ? elastic : ElasticEvidenceCoverage.NONE;
         gitLab = gitLab != null ? gitLab : GitLabEvidenceCoverage.NONE;
         runtime = runtime != null ? runtime : RuntimeEvidenceCoverage.NONE;
@@ -21,8 +21,8 @@ public record CopilotEvidenceCoverageReport(
         gaps = gaps != null ? List.copyOf(gaps) : List.of();
     }
 
-    public static CopilotEvidenceCoverageReport empty() {
-        return new CopilotEvidenceCoverageReport(
+    public static CopilotIncidentEvidenceCoverageReport empty() {
+        return new CopilotIncidentEvidenceCoverageReport(
                 ElasticEvidenceCoverage.NONE,
                 GitLabEvidenceCoverage.NONE,
                 RuntimeEvidenceCoverage.NONE,

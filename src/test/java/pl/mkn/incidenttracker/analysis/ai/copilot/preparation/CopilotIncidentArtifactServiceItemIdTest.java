@@ -7,7 +7,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContent
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 
 import java.util.List;
 
@@ -20,7 +20,7 @@ class CopilotIncidentArtifactServiceItemIdTest {
     private final CopilotIncidentArtifactService artifactService = artifactService(new ObjectMapper());
     private final CopilotArtifactContentMapper artifactContentMapper = new CopilotArtifactContentMapper();
     private final CopilotIncidentToolAccessPolicyFactory policyFactory =
-            new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+            new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator());
 
     @Test
     void shouldRenderStableItemIdsInMarkdownArtifacts() {

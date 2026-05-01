@@ -191,8 +191,8 @@ zmieniaja runtime result.
 ## 12. Tool policy jest coverage-aware
 
 Nie uzywamy juz zasady "sekcja GitLab/Elasticsearch istnieje, wiec wylacz
-tools". `CopilotEvidenceCoverageEvaluator` ocenia coverage generycznych
-evidence i tworzy `CopilotEvidenceCoverageReport`.
+tools". `CopilotIncidentEvidenceCoverageEvaluator` ocenia coverage generycznych
+evidence i tworzy `CopilotIncidentEvidenceCoverageReport`.
 
 `CopilotIncidentToolAccessPolicyFactory` jest jedynym produkcyjnym miejscem, ktore
 laczy request, evaluator coverage i zarejestrowane tool definitions. Sama

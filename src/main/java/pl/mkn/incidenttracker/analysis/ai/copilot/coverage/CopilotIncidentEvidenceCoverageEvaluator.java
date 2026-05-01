@@ -18,11 +18,11 @@ import java.util.Locale;
 import java.util.Set;
 
 @Component
-public class CopilotEvidenceCoverageEvaluator {
+public class CopilotIncidentEvidenceCoverageEvaluator {
 
     private static final int SHORT_CODE_CONTEXT_CHARACTERS = 300;
 
-    public CopilotEvidenceCoverageReport evaluate(InitialAnalysisRequest request) {
+    public CopilotIncidentEvidenceCoverageReport evaluate(InitialAnalysisRequest request) {
         var sections = request != null
                 ? request.evidenceSections()
                 : List.<AnalysisEvidenceSection>of();
@@ -64,7 +64,7 @@ public class CopilotEvidenceCoverageEvaluator {
             ));
         }
 
-        return new CopilotEvidenceCoverageReport(
+        return new CopilotIncidentEvidenceCoverageReport(
                 elasticCoverage,
                 gitLabCoverage,
                 runtimeCoverage,

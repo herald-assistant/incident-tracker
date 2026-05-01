@@ -11,9 +11,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CopilotEvidenceCoverageEvaluatorTest {
+class CopilotIncidentEvidenceCoverageEvaluatorTest {
 
-    private final CopilotEvidenceCoverageEvaluator evaluator = new CopilotEvidenceCoverageEvaluator();
+    private final CopilotIncidentEvidenceCoverageEvaluator evaluator = new CopilotIncidentEvidenceCoverageEvaluator();
 
     @Test
     void shouldReportMissingGitLabEvidenceWhenNoResolvedCodeIsAttached() {

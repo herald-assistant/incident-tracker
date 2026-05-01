@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
@@ -33,7 +33,7 @@ class CopilotIncidentPromptRendererTest {
                 true,
                 true,
                 true,
-                CopilotEvidenceCoverageReport.empty()
+                CopilotIncidentEvidenceCoverageReport.empty()
         );
         var artifacts = List.of(
                 new CopilotRenderedArtifact(

@@ -8,7 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialRunAssembler;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
@@ -55,7 +55,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
                         new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
                         artifactService(new ObjectMapper()),
-                        new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
+                        new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator()),
                         new CopilotIncidentPromptRenderer(),
                         new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper())
                 ),

@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
 import pl.mkn.incidenttracker.analysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
@@ -20,12 +20,12 @@ public class CopilotIncidentDigestService {
 
     public String renderDigest(
             InitialAnalysisRequest request,
-            CopilotEvidenceCoverageReport coverage
+            CopilotIncidentEvidenceCoverageReport coverage
     ) {
         var evidenceSections = request != null
                 ? request.evidenceSections()
                 : List.<AnalysisEvidenceSection>of();
-        var effectiveCoverage = coverage != null ? coverage : CopilotEvidenceCoverageReport.empty();
+        var effectiveCoverage = coverage != null ? coverage : CopilotIncidentEvidenceCoverageReport.empty();
         var elastic = ElasticLogEvidenceView.from(evidenceSections);
         var deployments = DeploymentContextEvidenceView.from(evidenceSections);
         var dynatrace = DynatraceRuntimeEvidenceView.from(evidenceSections);
@@ -56,7 +56,7 @@ public class CopilotIncidentDigestService {
         lines.add("");
     }
 
-    private void addCoverage(List<String> lines, CopilotEvidenceCoverageReport coverage) {
+    private void addCoverage(List<String> lines, CopilotIncidentEvidenceCoverageReport coverage) {
         lines.add("## Evidence coverage");
         lines.add("- Elasticsearch: `" + coverage.elastic().name() + "`");
         lines.add("- GitLab: `" + coverage.gitLab().name() + "`");
@@ -176,7 +176,7 @@ public class CopilotIncidentDigestService {
     private void addCodeEvidence(
             List<String> lines,
             GitLabResolvedCodeEvidenceView gitLab,
-            CopilotEvidenceCoverageReport coverage
+            CopilotIncidentEvidenceCoverageReport coverage
     ) {
         lines.add("## Code evidence");
         var codeItem = gitLab.items().stream().findFirst();
@@ -195,7 +195,7 @@ public class CopilotIncidentDigestService {
         lines.add("");
     }
 
-    private void addEvidenceGaps(List<String> lines, CopilotEvidenceCoverageReport coverage) {
+    private void addEvidenceGaps(List<String> lines, CopilotIncidentEvidenceCoverageReport coverage) {
         lines.add("## Known evidence gaps");
         if (coverage.gaps().isEmpty()) {
             lines.add("- none");

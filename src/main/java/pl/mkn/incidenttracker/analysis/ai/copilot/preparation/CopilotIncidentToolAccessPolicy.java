@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import com.github.copilot.sdk.json.ToolDefinition;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageReport;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.GitLabEvidenceCoverage;
 import pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.analysis.mcp.elasticsearch.ElasticToolNames;
@@ -20,7 +20,7 @@ public record CopilotIncidentToolAccessPolicy(
         boolean elasticToolsRegistered,
         boolean gitLabToolsRegistered,
         boolean databaseToolsRegistered,
-        CopilotEvidenceCoverageReport evidenceCoverage
+        CopilotIncidentEvidenceCoverageReport evidenceCoverage
 ) {
 
     private static final Set<String> FOCUSED_GITLAB_TOOLS = Set.of(
@@ -42,7 +42,7 @@ public record CopilotIncidentToolAccessPolicy(
     public CopilotIncidentToolAccessPolicy {
         enabledTools = enabledTools != null ? List.copyOf(enabledTools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
-        evidenceCoverage = evidenceCoverage != null ? evidenceCoverage : CopilotEvidenceCoverageReport.empty();
+        evidenceCoverage = evidenceCoverage != null ? evidenceCoverage : CopilotIncidentEvidenceCoverageReport.empty();
     }
 
     public static CopilotIncidentToolAccessPolicy empty() {
@@ -53,16 +53,16 @@ public record CopilotIncidentToolAccessPolicy(
                 false,
                 false,
                 false,
-                CopilotEvidenceCoverageReport.empty()
+                CopilotIncidentEvidenceCoverageReport.empty()
         );
     }
 
     public static CopilotIncidentToolAccessPolicy fromCoverage(
             List<ToolDefinition> registeredTools,
-            CopilotEvidenceCoverageReport evidenceCoverage
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage
     ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
-        var coverage = evidenceCoverage != null ? evidenceCoverage : CopilotEvidenceCoverageReport.empty();
+        var coverage = evidenceCoverage != null ? evidenceCoverage : CopilotIncidentEvidenceCoverageReport.empty();
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
         var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
         var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
@@ -107,7 +107,7 @@ public record CopilotIncidentToolAccessPolicy(
                 elasticToolsRegistered,
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
-                CopilotEvidenceCoverageReport.empty()
+                CopilotIncidentEvidenceCoverageReport.empty()
         );
     }
 
@@ -188,7 +188,7 @@ public record CopilotIncidentToolAccessPolicy(
                 .formatted(evidenceCoverage.gitLab());
     }
 
-    private static boolean isEnabled(String toolName, CopilotEvidenceCoverageReport evidenceCoverage) {
+    private static boolean isEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
         if (toolName == null || toolName.isBlank()) {
             return false;
         }
@@ -204,7 +204,7 @@ public record CopilotIncidentToolAccessPolicy(
         return true;
     }
 
-    private static boolean gitLabToolEnabled(String toolName, CopilotEvidenceCoverageReport evidenceCoverage) {
+    private static boolean gitLabToolEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
         if (evidenceCoverage.databaseCodeGroundingNeedsTooling() && FOCUSED_GITLAB_TOOLS.contains(toolName)) {
             return true;
         }
@@ -217,7 +217,7 @@ public record CopilotIncidentToolAccessPolicy(
         return FOCUSED_GITLAB_TOOLS.contains(toolName);
     }
 
-    private static boolean databaseToolEnabled(String toolName, CopilotEvidenceCoverageReport evidenceCoverage) {
+    private static boolean databaseToolEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
         if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
             return false;
         }

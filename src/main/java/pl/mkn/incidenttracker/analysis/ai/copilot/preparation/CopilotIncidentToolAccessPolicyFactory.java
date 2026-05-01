@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CopilotIncidentToolAccessPolicyFactory {
 
-    private final CopilotEvidenceCoverageEvaluator coverageEvaluator;
+    private final CopilotIncidentEvidenceCoverageEvaluator coverageEvaluator;
 
     public CopilotIncidentToolAccessPolicy create(
             InitialAnalysisRequest request,

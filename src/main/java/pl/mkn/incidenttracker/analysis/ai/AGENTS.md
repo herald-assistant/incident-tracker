@@ -22,6 +22,11 @@ Obejmuje:
 - `copilot/`
   root aktualnego providera AI: `CopilotInitialAnalysisProvider`,
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
+- `copilot/coverage/`
+  incident-specific heurystyki coverage/gap evaluation:
+  `CopilotIncidentEvidenceCoverageEvaluator`,
+  `CopilotIncidentEvidenceCoverageReport` i lokalne enumy coverage. To nie
+  jest platformowa metryka kompletności dowolnego feature'a,
 - `copilot/preparation/`
   obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
   skill runtime loading. `CopilotIncidentInitialPreparationService` sklada
@@ -104,6 +109,10 @@ platformowe. Przy zmianach trzymaj ponizsza mape ownership:
   stronie feature preparation. Neutralny typ `CopilotRenderedArtifact` i
   mapowanie na runtime `artifactContents` sa juz platform-owned w
   `copilot/runtime`.
+Coverage/gap evaluation w `copilot/coverage` jest rowniez feature-owned:
+`CopilotIncidentEvidenceCoverageEvaluator`,
+`CopilotIncidentEvidenceCoverageReport` i lokalne enumy coverage opisuja
+widocznosc evidence dla analizy incydentu oraz steruja incident tool policy.
 Platform-owned runtime siedzi w `copilot/runtime`, przede wszystkim
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,

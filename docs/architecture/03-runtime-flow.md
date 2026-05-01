@@ -83,7 +83,7 @@ zostaja tylko generyczne DTO z `shared.evidence`: `AnalysisEvidenceSection`,
 
 Preparation obejmuje:
 
-- wyliczenie `CopilotEvidenceCoverageReport`,
+- wyliczenie `CopilotIncidentEvidenceCoverageReport`,
 - zbudowanie `CopilotIncidentToolAccessPolicy`,
 - dekorowanie opisow tools,
 - wyrenderowanie manifestu, digestu i evidence artifacts,
@@ -188,7 +188,7 @@ kontraktu `AnalysisEvidenceItem`.
 
 ## 6. Coverage evaluator
 
-`CopilotEvidenceCoverageEvaluator` czyta generyczne evidence przez helpery
+`CopilotIncidentEvidenceCoverageEvaluator` czyta generyczne evidence przez helpery
 widoku i zwraca:
 
 - `ElasticEvidenceCoverage`,
@@ -218,8 +218,8 @@ wystarczajacy material i ktore tools mozna uzasadnic.
 
 `CopilotIncidentToolAccessPolicy` filtruje tools na podstawie coverage.
 Produkcyjna sciezka tworzy ja przez `CopilotIncidentToolAccessPolicyFactory`, ktora
-uzywa `CopilotEvidenceCoverageEvaluator` i przekazuje do policy gotowy
-`CopilotEvidenceCoverageReport`.
+uzywa `CopilotIncidentEvidenceCoverageEvaluator` i przekazuje do policy gotowy
+`CopilotIncidentEvidenceCoverageReport`.
 
 Elasticsearch tools:
 

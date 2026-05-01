@@ -151,7 +151,7 @@ dostaja naglowki `## itemId: ...`, a JSON artifacts pole `itemId`.
 ## Tools
 
 Runtime rejestruje tylko tools dozwolone przez `CopilotIncidentToolAccessPolicy`.
-Policy uzywa `CopilotEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
+Policy uzywa `CopilotIncidentEvidenceCoverageReport`, a nie prostego sprawdzenia, czy
 sekcja evidence istnieje.
 
 Gdy GitLab scope jest resolved, manifest dostaje

@@ -231,12 +231,18 @@ Feature-owned incident preparation:
 - `CopilotIncidentArtifactService`
 - `CopilotIncidentArtifactFormatVersion`
 - `CopilotIncidentArtifactItemIdGenerator`
+- `CopilotIncidentEvidenceCoverageEvaluator`
+- `CopilotIncidentEvidenceCoverageReport`
 
 Incident artifact rendering, artifact format version i item-id policy sa
 jawnie feature-owned, bo dotycza incident manifestu, digestu i evidence
 artifacts. Neutralny runtime artifact model (`CopilotRenderedArtifact`) i
 content mapowanie (`CopilotArtifactContentMapper`) sa juz poza nimi w
 `copilot/runtime`.
+Coverage/gap evaluation tez jest feature-owned: lokalne coverage enumy i
+`CopilotIncidentEvidenceCoverageReport` opisuja widocznosc Elasticsearch,
+GitLaba, runtime, operational context i data diagnostic need dla analizy
+incydentu, a nie generyczna metryke dowolnego feature'a.
 
 Platform-owned runtime jest juz poza `preparation`, w `copilot/runtime`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,

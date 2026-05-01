@@ -38,8 +38,8 @@ powinna wymagac `correlationId`.
 ## Coverage-aware allowlista
 
 `CopilotIncidentToolAccessPolicy` nie wlacza tools tylko dlatego, ze sa
-zarejestrowane. Najpierw `CopilotEvidenceCoverageEvaluator` ocenia generyczne
-evidence i tworzy `CopilotEvidenceCoverageReport`.
+zarejestrowane. Najpierw `CopilotIncidentEvidenceCoverageEvaluator` ocenia generyczne
+evidence i tworzy `CopilotIncidentEvidenceCoverageReport`.
 
 W runtime policy jest tworzona przez `CopilotIncidentToolAccessPolicyFactory`.
 Fabryka dostaje `InitialAnalysisRequest` oraz zarejestrowane

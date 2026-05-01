@@ -7,7 +7,7 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
+import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 
 import java.util.List;
 import java.util.Map;
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CopilotIncidentToolAccessPolicyCoverageTest {
 
     private final CopilotIncidentToolAccessPolicyFactory policyFactory =
-            new CopilotIncidentToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
+            new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator());
 
     @Test
     void shouldEnableGitLabToolsWhenNoDeterministicGitLabEvidenceIsAttached() {
