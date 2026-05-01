@@ -7,10 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
@@ -50,11 +50,17 @@ class CopilotSdkToolFactoryMetricsTest {
         );
         var context = sessionContext();
         metricsRegistry.recordPreparation(
-                context,
-                new InitialAnalysisRequest("corr-123", "zt01", "main", "sample/runtime", List.of()),
-                List.of(),
-                "prompt",
-                1L
+                new CopilotSessionPreparationMetrics(
+                        context.analysisRunId(),
+                        context.copilotSessionId(),
+                        context.correlationId(),
+                        0,
+                        0,
+                        0,
+                        0L,
+                        "prompt".length(),
+                        1L
+                )
         );
         var toolsByName = factory.createToolDefinitions(context).stream()
                 .collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));

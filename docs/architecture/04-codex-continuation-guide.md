@@ -62,12 +62,12 @@ Przy nowej sesji najlepiej zaczac od:
 - `features.incidentanalysis.ai.copilot`
 - `aiplatform.copilot.runtime.execution`
 - `aiplatform.copilot.runtime.telemetry`
+- `aiplatform.copilot.runtime.telemetry.session`
 - `aiplatform.copilot.runtime.quality`
 - `features.incidentanalysis.ai.copilot.response`
 - `features.incidentanalysis.ai.copilot.quality`
 - `features.incidentanalysis.ai.copilot.tools`
 - `features.incidentanalysis.ai.copilot.tools.description`
-- `analysis.ai.copilot.telemetry`
 - `CopilotIncidentArtifactService`
 - `CopilotRenderedArtifact`
 - `CopilotArtifactContentMapper`

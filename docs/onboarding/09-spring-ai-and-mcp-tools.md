@@ -108,8 +108,8 @@ zamienia go na wynik `denied_by_tool_budget` dla SDK.
 
 Sama policy nie zapisuje juz metryk przez `CopilotSessionMetricsRegistry`.
 Publikuje neutralne decyzje przez `CopilotToolBudgetTelemetry`, a adapter
-`CopilotToolBudgetMetricsListener` w `analysis.ai.copilot.telemetry` mapuje je
-na metryki analizy.
+`CopilotToolBudgetMetricsListener` w
+`aiplatform.copilot.runtime.telemetry.session` mapuje je na metryki analizy.
 
 Limity obejmuja:
 

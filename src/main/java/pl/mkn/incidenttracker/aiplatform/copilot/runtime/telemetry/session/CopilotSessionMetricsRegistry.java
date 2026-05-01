@@ -1,16 +1,12 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSessionExecutionMetricsRecorder;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Map;
@@ -23,16 +19,6 @@ public class CopilotSessionMetricsRegistry implements CopilotSessionExecutionMet
 
     private final CopilotMetricsProperties properties;
     private final Map<String, MutableCopilotAnalysisMetrics> metricsBySessionId = new ConcurrentHashMap<>();
-
-    public void recordPreparation(
-            CopilotToolSessionContext context,
-            InitialAnalysisRequest request,
-            List<CopilotRenderedArtifact> artifacts,
-            String prompt,
-            long preparationDurationMs
-    ) {
-        recordPreparation(toPreparationMetrics(context, request, artifacts, prompt, preparationDurationMs));
-    }
 
     public void recordPreparation(CopilotSessionPreparationMetrics preparationMetrics) {
         if (!enabled()
@@ -174,41 +160,6 @@ public class CopilotSessionMetricsRegistry implements CopilotSessionExecutionMet
         }
 
         return Optional.ofNullable(metricsBySessionId.get(copilotSessionId));
-    }
-
-    private CopilotSessionPreparationMetrics toPreparationMetrics(
-            CopilotToolSessionContext context,
-            InitialAnalysisRequest request,
-            List<CopilotRenderedArtifact> artifacts,
-            String prompt,
-            long preparationDurationMs
-    ) {
-        if (context == null) {
-            return null;
-        }
-
-        var evidenceSections = evidenceSections(request);
-        var safeArtifacts = artifacts != null ? artifacts : List.<CopilotRenderedArtifact>of();
-
-        return new CopilotSessionPreparationMetrics(
-                context.analysisRunId(),
-                context.copilotSessionId(),
-                context.correlationId(),
-                evidenceSections.size(),
-                evidenceSections.stream().mapToInt(section -> section.items().size()).sum(),
-                safeArtifacts.size(),
-                safeArtifacts.stream()
-                        .mapToLong(artifact -> artifact.content() != null ? artifact.content().length() : 0L)
-                        .sum(),
-                prompt != null ? prompt.length() : 0L,
-                preparationDurationMs
-        );
-    }
-
-    private List<AnalysisEvidenceSection> evidenceSections(InitialAnalysisRequest request) {
-        return request != null && request.evidenceSections() != null
-                ? request.evidenceSections()
-                : List.of();
     }
 
     private CopilotArtifactMetrics toArtifactMetrics(CopilotSessionPreparationMetrics metrics) {

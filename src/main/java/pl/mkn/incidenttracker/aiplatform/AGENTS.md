@@ -18,8 +18,10 @@ Obecnie obejmuje:
   execution.
 - `copilot/runtime/telemetry/`
   neutralny port telemetry sesji Copilota: preparation metrics, response state,
-  quality report i usage snapshot. Konkretne registry/loggery implementuj poza
-  platforma jako adapter.
+  quality report i usage snapshot.
+- `copilot/runtime/telemetry/session/`
+  platformowa implementacja telemetry sesji: registry, summary/tool logging,
+  usage aggregation, budget metrics listener i adapter `CopilotSessionTelemetry`.
 - `copilot/runtime/quality/`
   neutralny payload raportu jakosci odpowiedzi dla telemetryki. Reguly oceny
   odpowiedzi konkretnego feature'a nie mieszkaja w platformie.
@@ -69,8 +71,8 @@ Nie obejmuje:
 - Feature ma dostarczac prompt, skill resources, available tools, hidden
   context, evidence sink i response handling jako parametry uruchomienia.
 - Feature moze uzywac `copilot/runtime/telemetry/CopilotSessionTelemetry`,
-  ale platformowy port nie moze importowac DTO odpowiedzi UI ani klas
-  telemetry konkretnego feature'a.
+  ale platformowy port i jego implementacja nie moga importowac DTO odpowiedzi
+  UI ani klas telemetry konkretnego feature'a.
 - Platforma nie moze zakladac `correlationId`, GitLaba, Database ani
   semantyki incident analysis jako stalego wymogu runtime.
 - Jesli przenosisz kolejne klasy z `analysis.ai.copilot`, najpierw upewnij sie,

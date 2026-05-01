@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

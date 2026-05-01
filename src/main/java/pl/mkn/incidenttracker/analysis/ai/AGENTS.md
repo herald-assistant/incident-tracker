@@ -15,9 +15,9 @@ Obejmuje:
   kontrakt follow-up chatu: `AnalysisAiChatProvider`, request/response, turny
   i snapshot poczatkowej analizy,
 - `copilot/`
-  root aktualnej integracji Copilot SDK, m.in.
-  `CopilotSdkModelOptionsProvider`; incident initial/chat providery mieszkaja
-  juz w `features.incidentanalysis.ai.copilot`.
+  pozostaly tu tylko przejsciowe elementy integracji Copilot SDK, obecnie
+  `CopilotSdkModelOptionsProvider`; incident initial/chat providery i runtime
+  telemetry mieszkaja juz poza tym katalogiem.
 
 Neutralne `AnalysisAiToolEvidenceListener` i `AnalysisAiUsage` mieszkaja teraz
 w `shared.evidence` oraz `shared.ai`, bo sa uzywane przez flow, job, telemetry
@@ -27,6 +27,8 @@ Platformowe runtime tools, czyli factory, invocation handler, context, eventy,
 neutralne policy contracts, session validation, logging, description
 customization contract, budget policy i session evidence store, sa juz w
 `aiplatform.copilot.tools`.
+Concrete session telemetry jest w
+`aiplatform.copilot.runtime.telemetry.session`.
 
 Nie obejmuje:
 
@@ -94,15 +96,15 @@ trafia do `aiplatform`.
   `shared.evidence.AnalysisAiToolEvidenceListener` trzymaj po stronie
   providera AI.
 - Konkretna session telemetry (`CopilotSessionMetricsRegistry`,
-  `CopilotMetricsLogger`) jest adapterem do platformowego
-  `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`. Feature'y nie
-  powinny importowac tych konkretnych klas telemetry.
+  `CopilotMetricsLogger`) mieszka w
+  `aiplatform.copilot.runtime.telemetry.session`. Feature'y nie powinny
+  importowac tych konkretnych klas telemetry.
 - Nowe neutralne walidacje runtime dodawaj jako
   `aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy`, a side-effecty
   jako listenery eventow invocation. Budget policy mieszka w
   `aiplatform.copilot.tools.policy.budget`, a metryki zapisuje
-  `copilot.telemetry.CopilotToolBudgetMetricsListener` przez platformowy
-  `CopilotToolBudgetTelemetry`.
+  `aiplatform.copilot.runtime.telemetry.session.CopilotToolBudgetMetricsListener`
+  przez platformowy `CopilotToolBudgetTelemetry`.
 - Incident-specific GitLab/DB evidence capture mieszka w
   `features.incidentanalysis.ai.copilot.tools`. Incident-specific guidance
   opisow tools mieszka w

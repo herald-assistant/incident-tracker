@@ -13,9 +13,9 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.C
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.CopilotInitialAnalysisProvider;
 
 import java.util.List;

@@ -1,16 +1,12 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityMode;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualitySeverity;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
@@ -26,11 +22,15 @@ class CopilotSessionMetricsRegistryTest {
         var context = sessionContext();
 
         registry.recordPreparation(
-                context,
-                requestWithEvidence(),
-                List.of(artifact("00-incident-manifest.json", "manifest"), artifact("01-logs.md", "log-content")),
-                "prepared prompt",
-                12L
+                preparationMetrics(
+                        context,
+                        2,
+                        3,
+                        2,
+                        "manifest".length() + "log-content".length(),
+                        "prepared prompt",
+                        12L
+                )
         );
         registry.recordExecutionDurations(context.copilotSessionId(), 1L, 2L, 3L, 4L);
         registry.recordAssistantUsage(
@@ -140,7 +140,7 @@ class CopilotSessionMetricsRegistryTest {
         var registry = new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
         var context = sessionContext();
 
-        registry.recordPreparation(context, requestWithEvidence(), List.of(), "prompt", 1L);
+        registry.recordPreparation(preparationMetrics(context, 0, 0, 0, 0L, "prompt", 1L));
 
         assertEquals(1, registry.sessionCount());
         assertTrue(registry.remove(context.copilotSessionId()).isPresent());
@@ -159,48 +159,25 @@ class CopilotSessionMetricsRegistryTest {
         );
     }
 
-    private InitialAnalysisRequest requestWithEvidence() {
-        return new InitialAnalysisRequest(
-                "corr-123",
-                "zt01",
-                "release/2026.04",
-                "sample/runtime",
-                List.of(
-                        new AnalysisEvidenceSection(
-                                "elasticsearch",
-                                "logs",
-                                List.of(
-                                        new AnalysisEvidenceItem(
-                                                "log 1",
-                                                List.of(new AnalysisEvidenceAttribute("message", "timeout"))
-                                        ),
-                                        new AnalysisEvidenceItem(
-                                                "log 2",
-                                                List.of(new AnalysisEvidenceAttribute("message", "retry"))
-                                        )
-                                )
-                        ),
-                        new AnalysisEvidenceSection(
-                                "gitlab",
-                                "resolved-code",
-                                List.of(new AnalysisEvidenceItem(
-                                        "code",
-                                        List.of(new AnalysisEvidenceAttribute("filePath", "src/App.java"))
-                                ))
-                        )
-                )
-        );
-    }
-
-    private CopilotRenderedArtifact artifact(String name, String content) {
-        return new CopilotRenderedArtifact(
-                name,
-                "role",
-                null,
-                null,
-                null,
-                "text/plain",
-                content
+    private CopilotSessionPreparationMetrics preparationMetrics(
+            CopilotToolSessionContext context,
+            int evidenceSectionCount,
+            int evidenceItemCount,
+            int artifactCount,
+            long artifactTotalCharacters,
+            String prompt,
+            long preparationDurationMs
+    ) {
+        return new CopilotSessionPreparationMetrics(
+                context.analysisRunId(),
+                context.copilotSessionId(),
+                context.correlationId(),
+                evidenceSectionCount,
+                evidenceItemCount,
+                artifactCount,
+                artifactTotalCharacters,
+                prompt != null ? prompt.length() : 0L,
+                preparationDurationMs
         );
     }
 }

@@ -310,8 +310,9 @@ Findings sa widoczne w telemetryce/logach, ale nie zmieniaja runtime result.
 
 Feature initial analysis uzywa neutralnego
 `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`.
-`analysis.ai.copilot.telemetry.CopilotSessionTelemetryAdapter` mapuje ten port
-na obecne `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger`.
+`aiplatform.copilot.runtime.telemetry.session.CopilotSessionTelemetryAdapter`
+mapuje ten port na platformowe `CopilotSessionMetricsRegistry` i
+`CopilotMetricsLogger`.
 
 Metryki obejmuja:
 

@@ -198,11 +198,11 @@ flowchart LR
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> shared` | 22 | oczekiwane | Incident artifacts, preparation metrics, coverage, quality gate, usage mapping i tool evidence capture czytaja neutralne DTO shared. |
-| `analysis.ai -> aiplatform` | 27 | oczekiwane przejsciowo | Model options i telemetry adaptery korzystaja z wydzielonego platformowego runtime, tools/context/events/policy/budget/telemetry/evidence, portu metryk execution, portu telemetry sesji oraz neutralnego quality report payload. |
+| `analysis.ai -> aiplatform` | 2 | oczekiwane przejsciowo | Zostal praktycznie tylko `CopilotSdkModelOptionsProvider`, ktory korzysta z platformowego model listera/properties. |
 | `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
-| `analysis.ai -> shared` | 9 | oczekiwane | Telemetry i kontrakty AI konsumuja neutralny model evidence, tool evidence listener i usage DTO. |
+| `analysis.ai -> shared` | 5 | oczekiwane | Kontrakty initial/chat konsumuja neutralny model evidence, tool evidence listener i usage DTO. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
-| `aiplatform -> shared` | 5 | oczekiwane | Platformowy run request, prepared session i tool evidence store niosa neutralny model evidence jako sink output tooli. |
+| `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
@@ -253,9 +253,8 @@ features.incidentanalysis.ai.copilot.quality -> aiplatform.copilot.runtime.quali
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
 features.incidentanalysis.ai.copilot -> agenttools
-analysis.ai.copilot -> aiplatform.copilot.runtime/tools
-analysis.ai.copilot.telemetry -> aiplatform.copilot.runtime.quality
-analysis.ai.copilot.telemetry -> aiplatform.copilot.runtime.telemetry
+analysis.ai.copilot -> aiplatform.copilot.runtime
+aiplatform.copilot.runtime.telemetry.session -> aiplatform.copilot.runtime.quality/telemetry/tools
 aiplatform.copilot.runtime.execution -> aiplatform.copilot.runtime/tools
 aiplatform.copilot.tools -> agenttools
 aiplatform.copilot.tools.telemetry -> agenttools
@@ -335,12 +334,16 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - Dawne `analysis.ai.copilot.execution`: `CopilotSdkExecutionGateway`, lifecycle
   logger, event logger i invocation exception mieszkaja teraz w
   `aiplatform.copilot.runtime.execution`. Gateway uzywa neutralnego portu
-  `CopilotSessionExecutionMetricsRecorder`, ktory pozwala obecnej telemetryce
-  zostac adapterem po stronie `analysis.ai`.
+  `CopilotSessionExecutionMetricsRecorder`, ktory pozwala platformowej
+  telemetryce zostac wymienna implementacja.
+- Dawne `analysis.ai.copilot.telemetry`: registry/loggery/listenery telemetry
+  sesji Copilota mieszkaja teraz w
+  `aiplatform.copilot.runtime.telemetry.session` i nie importuja `analysis.*`,
+  `features.*` ani `integrations.*`.
 - Dawna konkretna zaleznosc telemetry w incident feature: preparation/provider
   uzywaja teraz platformowego `CopilotSessionTelemetry`, a
-  `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger` sa ukryte za
-  `analysis.ai.copilot.telemetry.CopilotSessionTelemetryAdapter`.
+  `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger` sa implementacja
+  platformowa w `aiplatform.copilot.runtime.telemetry.session`.
 - Dawne `analysis.ai.copilot.response/quality`: JSON-only parser odpowiedzi
   incidentu i incident-specific quality gate mieszkaja teraz w
   `features.incidentanalysis.ai.copilot.response/quality`. Telemetryka nie

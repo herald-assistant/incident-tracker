@@ -94,9 +94,8 @@ Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza `analysis.ai`:
 Najwazniejsze podpakiety Copilota:
 
 - `copilot` - root aktualnej integracji Copilot SDK, m.in.
-  `CopilotSdkModelOptionsProvider`; incident initial/chat providery sa juz w
-  `features.incidentanalysis.ai.copilot`,
-- `copilot/telemetry` - metryki preparation/execution/tools i summary log,
+  `CopilotSdkModelOptionsProvider`; incident initial/chat providery oraz
+  telemetry runtime sa juz poza `analysis.ai`,
 
 ### `aiplatform`
 
@@ -110,6 +109,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   execution gateway i neutralny port metryk execution,
 - `aiplatform.copilot.runtime.telemetry` - neutralny port telemetry sesji:
   preparation metrics, response state, quality report i usage snapshot,
+- `aiplatform.copilot.runtime.telemetry/session` - platformowa implementacja
+  metryk preparation/execution/tools, summary log i budget telemetry,
 - `aiplatform.copilot.runtime.quality` - neutralny payload raportu jakosci
   odpowiedzi uzywany przez telemetryke,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound

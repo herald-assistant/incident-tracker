@@ -12,11 +12,11 @@ import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.time.Duration;
@@ -161,19 +161,26 @@ class CopilotSdkExecutionGatewayTest {
                 metricsRegistry
         );
         var sessionId = "analysis-usage";
+        var sessionContext = new CopilotToolSessionContext(
+                "run-usage",
+                sessionId,
+                "corr-usage",
+                "dev3",
+                "main",
+                "sample/runtime"
+        );
         metricsRegistry.recordPreparation(
-                new CopilotToolSessionContext(
-                        "run-usage",
-                        sessionId,
-                        "corr-usage",
-                        "dev3",
-                        "main",
-                        "sample/runtime"
-                ),
-                new InitialAnalysisRequest("corr-usage", "dev3", "main", "sample/runtime", List.of()),
-                List.of(),
-                "Diagnose incident",
-                1L
+                new CopilotSessionPreparationMetrics(
+                        sessionContext.analysisRunId(),
+                        sessionContext.copilotSessionId(),
+                        sessionContext.correlationId(),
+                        0,
+                        0,
+                        0,
+                        0L,
+                        "Diagnose incident".length(),
+                        1L
+                )
         );
         var preparedRequest = new CopilotPreparedSession(
                 "corr-usage",

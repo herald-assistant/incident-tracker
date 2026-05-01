@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session;
 
 public record CopilotArtifactMetrics(
         String analysisRunId,
