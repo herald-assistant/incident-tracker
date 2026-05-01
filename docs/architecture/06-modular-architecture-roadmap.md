@@ -238,13 +238,14 @@ Incident artifact rendering, artifact format version i item-id policy sa
 jawnie feature-owned, bo dotycza incident manifestu, digestu i evidence
 artifacts. Neutralny runtime artifact model (`CopilotRenderedArtifact`) i
 content mapowanie (`CopilotArtifactContentMapper`) sa juz poza nimi w
-`copilot/runtime`.
+`aiplatform.copilot.runtime`.
 Coverage/gap evaluation tez jest feature-owned: lokalne coverage enumy i
 `CopilotIncidentEvidenceCoverageReport` opisuja widocznosc Elasticsearch,
 GitLaba, runtime, operational context i data diagnostic need dla analizy
 incydentu, a nie generyczna metryke dowolnego feature'a.
 
-Platform-owned runtime jest juz poza `preparation`, w `copilot/runtime`:
+Platform-owned runtime jest juz poza `preparation`, w
+`aiplatform.copilot.runtime`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
@@ -453,6 +454,9 @@ Kroki:
 
 1. Przeniesc generic execution/session/tool invocation/telemetry do
    `aiplatform.copilot`.
+   Stan obecny: pierwszy neutralny slice jest przeniesiony:
+   `aiplatform.copilot.runtime` zawiera run request, prepared session,
+   session config, properties, model listing, skill loader i artifact mapping.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
    options, skill resources, available tools, hidden context, evidence sink i
    response handler/parser, ale nie zaklada `correlationId`.

@@ -2,10 +2,10 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotArtifactContentMapper;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 
 import java.util.List;
 

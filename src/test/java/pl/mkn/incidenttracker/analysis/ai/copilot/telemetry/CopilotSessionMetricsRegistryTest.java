@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

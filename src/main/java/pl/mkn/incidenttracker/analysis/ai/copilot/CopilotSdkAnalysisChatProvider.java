@@ -8,7 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatResponse;
 import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentFollowUpPreparationService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 
 @Service
 @RequiredArgsConstructor

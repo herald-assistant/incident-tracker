@@ -2,8 +2,8 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSkillRuntimeLoader;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

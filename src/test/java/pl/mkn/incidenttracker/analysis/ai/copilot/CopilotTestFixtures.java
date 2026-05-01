@@ -6,7 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionG
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentArtifactService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentDigestService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;

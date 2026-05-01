@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 

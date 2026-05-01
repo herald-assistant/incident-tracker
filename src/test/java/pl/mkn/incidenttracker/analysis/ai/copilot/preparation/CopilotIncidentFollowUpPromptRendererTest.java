@@ -5,7 +5,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 
 import java.util.List;
 

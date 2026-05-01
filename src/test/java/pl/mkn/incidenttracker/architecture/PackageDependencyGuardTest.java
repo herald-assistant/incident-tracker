@@ -62,6 +62,15 @@ class PackageDependencyGuardTest {
                 Rule.closed("agenttools must stay independent from AI platform runtime",
                         "pl.mkn.incidenttracker.agenttools",
                         "pl.mkn.incidenttracker.aiplatform"),
+                Rule.closed("aiplatform must stay independent from analysis application layers",
+                        "pl.mkn.incidenttracker.aiplatform",
+                        "pl.mkn.incidenttracker.analysis"),
+                Rule.closed("aiplatform must stay independent from future feature packages",
+                        "pl.mkn.incidenttracker.aiplatform",
+                        "pl.mkn.incidenttracker.features"),
+                Rule.closed("aiplatform must not import integrations directly",
+                        "pl.mkn.incidenttracker.aiplatform",
+                        "pl.mkn.incidenttracker.integrations"),
                 Rule.closed("shared must stay below application layers",
                         "pl.mkn.incidenttracker.shared",
                         "pl.mkn.incidenttracker.analysis"),
@@ -71,12 +80,18 @@ class PackageDependencyGuardTest {
                 Rule.closed("shared must stay below integrations",
                         "pl.mkn.incidenttracker.shared",
                         "pl.mkn.incidenttracker.integrations"),
+                Rule.closed("shared must stay below AI platform",
+                        "pl.mkn.incidenttracker.shared",
+                        "pl.mkn.incidenttracker.aiplatform"),
                 Rule.closed("common must stay below application layers",
                         "pl.mkn.incidenttracker.common",
                         "pl.mkn.incidenttracker.analysis"),
                 Rule.closed("common must stay below integrations",
                         "pl.mkn.incidenttracker.common",
-                        "pl.mkn.incidenttracker.integrations")
+                        "pl.mkn.incidenttracker.integrations"),
+                Rule.closed("common must stay below AI platform",
+                        "pl.mkn.incidenttracker.common",
+                        "pl.mkn.incidenttracker.aiplatform")
         );
 
         var violations = findViolations(rules);

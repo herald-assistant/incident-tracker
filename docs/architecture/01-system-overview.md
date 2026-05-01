@@ -151,7 +151,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   policy i initial/follow-up run assembly.
   To jest stan przejsciowy; docelowo incident prompt, skille, tool policy,
   hidden context i parser odpowiedzi maja byc parametrami feature'a.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.runtime`
+- `pl.mkn.incidenttracker.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
   promptu ani incident policy.

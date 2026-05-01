@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.runtime;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
 import com.github.copilot.sdk.json.CopilotClientOptions;
 import com.github.copilot.sdk.json.MessageOptions;

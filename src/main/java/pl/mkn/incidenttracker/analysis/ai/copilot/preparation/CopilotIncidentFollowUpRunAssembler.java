@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 
 @Component

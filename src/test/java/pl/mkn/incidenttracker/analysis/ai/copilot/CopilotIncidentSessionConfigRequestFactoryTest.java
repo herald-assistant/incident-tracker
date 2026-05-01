@@ -4,8 +4,8 @@ import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicy;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSkillRuntimeLoader;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import java.util.List;

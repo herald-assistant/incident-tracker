@@ -94,8 +94,6 @@ Najwazniejsze podpakiety Copilota:
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation` - przygotowanie promptu, artefaktow, policy tools,
   skilli i initial/follow-up run assembly,
-- `copilot/runtime` - techniczna konfiguracja SDK: properties, model listing,
-  `CopilotClientOptions`, `SessionConfig`, `MessageOptions` i prepared session,
 - `copilot/execution` - lifecycle klienta/sesji SDK i usage events SDK,
 - `copilot/coverage` - coverage report i evidence gaps sterujace tool policy,
 - `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
@@ -113,6 +111,14 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/tools/logging` - listener logujacy invocation,
 - `copilot/tools/gitlab` i `copilot/tools/database` - listener + mapper
   user-facing tool evidence dla konkretnych capability.
+
+### `aiplatform`
+
+Neutralna platforma uruchamiania AI. Pierwszy wydzielony slice to
+`aiplatform.copilot.runtime`: properties, model listing, skill runtime loader,
+`CopilotRunRequest`, `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
+rendered artifacts oraz factory konfiguracji sesji SDK. Ten pakiet nie zna
+incident promptu, coverage ani flow jobow.
 
 ### `common`
 
@@ -150,6 +156,7 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
+- `src/main/java/pl/mkn/incidenttracker/aiplatform`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 - `src/main/java/pl/mkn/incidenttracker/api`
 - `src/main/java/pl/mkn/incidenttracker/ui`

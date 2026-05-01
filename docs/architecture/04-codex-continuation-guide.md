@@ -36,6 +36,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `agenttools.elasticsearch.mcp`
 - `agenttools.gitlab.mcp`
 - `agenttools.database.mcp`
+- `aiplatform.copilot.runtime`
 - `integrations.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
@@ -50,6 +51,7 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za GitHub Copilot SDK odpowiadaja glownie
 
 - `analysis.ai.copilot`
+- `aiplatform.copilot.runtime`
 - `analysis.ai.copilot.preparation`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`

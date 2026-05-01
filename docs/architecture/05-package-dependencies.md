@@ -149,11 +149,14 @@ flowchart LR
     EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
 
+    AI --> AIPLATFORM["aiplatform"]
     AI --> AGENTTOOLS["agenttools"]
     AI --> EVIDENCE
     AI --> OPTIONS
     AI --> COMMON["common"]
     AI --> SHARED
+
+    AIPLATFORM --> SHARED
 
     AGENTTOOLS --> INTEGRATIONS
 
@@ -179,10 +182,12 @@ flowchart LR
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
+| `analysis.ai -> aiplatform` | 24 | oczekiwane przejsciowo | Incident Copilot preparation/execution korzysta z pierwszego wydzielonego platformowego runtime `aiplatform.copilot.runtime`. |
 | `analysis.ai -> agenttools` | 29 | oczekiwane przejsciowo | Copilot runtime uzywa neutralnych hidden context keys, nazw tools/prefixow capability oraz GitLab tool response DTO dla capture evidence. |
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
-| `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
+| `analysis.ai -> shared` | 24 | oczekiwane | Providerzy AI, Copilot preparation i evidence capture konsumuja neutralny model evidence. |
+| `aiplatform -> shared` | 2 | oczekiwane | Platformowy run request i prepared session niosa neutralny model evidence jako sink output tooli. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
@@ -210,7 +215,9 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
+analysis.ai.copilot -> aiplatform.copilot.runtime
 analysis.ai.copilot -> agenttools
+aiplatform.copilot.runtime -> shared
 agenttools.*.mcp -> integrations
 analysis.job/flow/ai -> analysis.options
 analysis.job/flow/ai -> shared
@@ -228,6 +235,9 @@ Unikac nowych zaleznosci:
 - `integrations -> agenttools`,
 - `integrations -> features`,
 - `integrations -> aiplatform`,
+- `aiplatform -> analysis`,
+- `aiplatform -> features`,
+- `aiplatform -> integrations`,
 - `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.ai -> analysis.mcp`,
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,

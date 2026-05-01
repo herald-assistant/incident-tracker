@@ -48,14 +48,6 @@ Obejmuje:
   request platformowy. To jest stan przejsciowy: docelowo
   incident prompt, skill selection i tool policy powinny byc parametrami
   feature'a przekazanymi do platformy Copilot,
-- `copilot/runtime/`
-  neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
-  `CopilotModelSelection`, `CopilotRunRequest`, `CopilotRunPreparationService`,
-  `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-  `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
-  `CopilotArtifactContentMapper` oraz factory budujace `SessionConfig` i
-  `MessageOptions` bez znajomosci incident policy ani pelnego tool/session
-  contextu feature'a,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
@@ -108,12 +100,12 @@ platformowe. Przy zmianach trzymaj ponizsza mape ownership:
   Incident artifact rendering, format version i item-id policy zostaja po
   stronie feature preparation. Neutralny typ `CopilotRenderedArtifact` i
   mapowanie na runtime `artifactContents` sa juz platform-owned w
-  `copilot/runtime`.
+  `aiplatform.copilot.runtime`.
 Coverage/gap evaluation w `copilot/coverage` jest rowniez feature-owned:
 `CopilotIncidentEvidenceCoverageEvaluator`,
 `CopilotIncidentEvidenceCoverageReport` i lokalne enumy coverage opisuja
 widocznosc evidence dla analizy incydentu oraz steruja incident tool policy.
-Platform-owned runtime siedzi w `copilot/runtime`, przede wszystkim
+Platform-owned runtime siedzi w `aiplatform.copilot.runtime`, przede wszystkim
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
@@ -188,8 +180,8 @@ sesja ma ich uzyc, nadal pozostaje po stronie feature preparation przez
 
 - Zmiany w `copilot/preparation` powinny miec testy promptu, incident run
   assembly i ladowania skilli.
-- Zmiany w `copilot/runtime` powinny miec testy konfiguracji sesji, properties
-  i model listing, jesli dotykaja tych mechanizmow.
+- Zmiany w `aiplatform.copilot.runtime` powinny miec testy konfiguracji sesji,
+  properties i model listing, jesli dotykaja tych mechanizmow.
 - Zmiany w `copilot/tools` powinny miec testy mapowania Spring tools na tool
   definitions.
 - Zmiany w `copilot/execution` powinny zachowac kontrakty i obserwowalnosc

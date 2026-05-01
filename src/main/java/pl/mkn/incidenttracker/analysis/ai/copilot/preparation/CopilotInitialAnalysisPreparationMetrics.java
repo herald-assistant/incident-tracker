@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;

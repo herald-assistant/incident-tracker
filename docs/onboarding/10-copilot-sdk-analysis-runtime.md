@@ -34,12 +34,13 @@ selection i mapowanie GitLab/DB tool evidence sa docelowo w
 ## Najwazniejszy kontrakt
 
 Initial flow dostaje przygotowana analize przez generyczne
-`InitialAnalysisPreparation`. Copilot runtime wykonuje neutralna techniczna
-sesje `CopilotPreparedSession`, zbudowana z platformowego
-`CopilotRunRequest`. Run request jest miejscem, w ktorym feature przekazuje
-runtime prompt, parametry sesji, logical artifacts, evidence sink i neutralny
-`runReference`; incident analysis mapuje tam `correlationId` tylko jako
-wartosc identyfikujaca konkretne uruchomienie.
+`InitialAnalysisPreparation`. Neutralny runtime w
+`aiplatform.copilot.runtime` wykonuje techniczna sesje
+`CopilotPreparedSession`, zbudowana z platformowego `CopilotRunRequest`. Run
+request jest miejscem, w ktorym feature przekazuje runtime prompt, parametry
+sesji, logical artifacts, evidence sink i neutralny `runReference`; incident
+analysis mapuje tam `correlationId` tylko jako wartosc identyfikujaca konkretne
+uruchomienie.
 
 Flow:
 

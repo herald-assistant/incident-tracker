@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
 import java.util.Objects;
 
 public record CopilotIncidentInitialRunAssembly(
