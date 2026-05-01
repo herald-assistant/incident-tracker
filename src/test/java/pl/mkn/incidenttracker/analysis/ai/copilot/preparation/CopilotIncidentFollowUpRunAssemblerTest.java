@@ -19,7 +19,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class CopilotFollowUpRunAssemblerTest {
+class CopilotIncidentFollowUpRunAssemblerTest {
 
     @Test
     void shouldAssembleNeutralRunRequestForFollowUpChat() {
@@ -31,7 +31,7 @@ class CopilotFollowUpRunAssemblerTest {
         var artifactService = mock(CopilotArtifactService.class);
         var promptRenderer = mock(CopilotIncidentFollowUpPromptRenderer.class);
         var runRequestFactory = new CopilotIncidentRunRequestFactory(artifactService);
-        var assembler = new CopilotFollowUpRunAssembler(
+        var assembler = new CopilotIncidentFollowUpRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,
                 sessionConfigRequestFactory,

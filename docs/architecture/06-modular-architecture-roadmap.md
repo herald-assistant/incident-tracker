@@ -174,12 +174,12 @@ wiec adaptacja chatu na incident artifacts nie siedzi w assemblerze runtime
 requestu.
 `CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`, wiec
 mapowanie rendered artifacts na platformowy input runtime jest w jednym miejscu.
-Initial assembly trzyma juz `CopilotRunRequest` oddzielnie od
-`CopilotInitialAnalysisPreparationMetrics`, zeby metryki preparation nie
-wchodzily do neutralnego requestu runtime.
-Follow-up assembler zwraca juz bezposrednio neutralny `CopilotRunRequest`,
-wiec chat nie ma osobnego follow-up-only kontraktu wykonania przed wejsciem do
-platformowego runtime.
+`CopilotIncidentInitialRunAssembler` trzyma juz `CopilotRunRequest`
+oddzielnie od `CopilotInitialAnalysisPreparationMetrics`, zeby metryki
+preparation nie wchodzily do neutralnego requestu runtime.
+`CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio neutralny
+`CopilotRunRequest`, wiec chat nie ma osobnego follow-up-only kontraktu
+wykonania przed wejsciem do platformowego runtime.
 `CopilotRunPreparationService` jest neutralnym wejsciem runtime
 `CopilotRunRequest -> CopilotPreparedSession`; incident preparation sklada run
 request, a runtime service przygotowuje techniczna sesje SDK.

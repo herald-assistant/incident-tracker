@@ -18,7 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class CopilotInitialAnalysisRunAssemblerTest {
+class CopilotIncidentInitialRunAssemblerTest {
 
     @Test
     void shouldAssembleRunRequestAndMetricsSnapshotForInitialAnalysis() {
@@ -29,7 +29,7 @@ class CopilotInitialAnalysisRunAssemblerTest {
         var toolAccessPolicyFactory = mock(CopilotToolAccessPolicyFactory.class);
         var promptRenderer = mock(CopilotIncidentPromptRenderer.class);
         var runRequestFactory = new CopilotIncidentRunRequestFactory(artifactService);
-        var assembler = new CopilotInitialAnalysisRunAssembler(
+        var assembler = new CopilotIncidentInitialRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,
                 sessionConfigRequestFactory,

@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.coverage.CopilotEvidenceCoverageEvaluator;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisRunAssembler;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialRunAssembler;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
@@ -58,7 +58,7 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
                 tool("gitlab_read_repository_file_chunk")
         ));
         var service = new CopilotIncidentInitialPreparationService(
-                new CopilotInitialAnalysisRunAssembler(
+                new CopilotIncidentInitialRunAssembler(
                         factory,
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
                         new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),

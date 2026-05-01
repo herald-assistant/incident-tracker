@@ -10,7 +10,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 @RequiredArgsConstructor
 public class CopilotIncidentFollowUpPreparationService {
 
-    private final CopilotFollowUpRunAssembler runAssembler;
+    private final CopilotIncidentFollowUpRunAssembler runAssembler;
     private final CopilotRunPreparationService runPreparationService;
 
     public CopilotPreparedSession prepare(AnalysisAiChatRequest request) {

@@ -2,26 +2,28 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
 @Component
 @RequiredArgsConstructor
-public class CopilotInitialAnalysisRunAssembler {
+public class CopilotIncidentFollowUpRunAssembler {
 
     private final CopilotSdkToolFactory toolFactory;
     private final CopilotIncidentToolSessionContextFactory toolSessionContextFactory;
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
-    private final CopilotArtifactService artifactService;
     private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
-    private final CopilotIncidentPromptRenderer promptRenderer;
+    private final CopilotFollowUpArtifactRequestFactory artifactRequestFactory;
+    private final CopilotArtifactService artifactService;
+    private final CopilotIncidentFollowUpPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
 
-    public CopilotInitialAnalysisRunAssembly assemble(InitialAnalysisRequest request) {
-        var toolSessionContext = toolSessionContextFactory.fromInitialRequest(request);
+    public CopilotRunRequest assemble(AnalysisAiChatRequest request) {
+        var toolSessionContext = toolSessionContextFactory.fromChatRequest(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
-        var toolAccessPolicy = toolAccessPolicyFactory.create(request, registeredTools);
-        var renderedArtifacts = artifactService.renderArtifacts(request, toolAccessPolicy);
+        var toolAccessPolicy = toolAccessPolicyFactory.createForFollowUp(request, registeredTools);
+        var renderedArtifacts = artifactService.renderArtifacts(artifactRequestFactory.create(request), toolAccessPolicy);
         var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
         var sessionConfigRequest = sessionConfigRequestFactory.create(
                 toolSessionContext.copilotSessionId(),
@@ -29,14 +31,11 @@ public class CopilotInitialAnalysisRunAssembler {
                 request.options()
         );
 
-        return new CopilotInitialAnalysisRunAssembly(
-                runRequestFactory.create(
-                        request.correlationId(),
-                        prompt,
-                        sessionConfigRequest,
-                        renderedArtifacts
-                ),
-                new CopilotInitialAnalysisPreparationMetrics(toolSessionContext, renderedArtifacts)
+        return runRequestFactory.create(
+                request.correlationId(),
+                prompt,
+                sessionConfigRequest,
+                renderedArtifacts
         );
     }
 }

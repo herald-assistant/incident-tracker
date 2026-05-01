@@ -36,9 +36,10 @@ Obejmuje:
   komunikatu odmowy tooli. `CopilotFollowUpArtifactRequestFactory` mapuje
   follow-up snapshot na incident artifact request, a
   `CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`.
-  Initial assembly trzyma `CopilotInitialAnalysisPreparationMetrics` obok
-  neutralnego run requestu, a follow-up run assembler zwraca juz bezposrednio
-  ten neutralny request platformowy. To jest stan przejsciowy: docelowo
+  `CopilotIncidentInitialRunAssembler` trzyma
+  `CopilotInitialAnalysisPreparationMetrics` obok neutralnego run requestu, a
+  `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio ten neutralny
+  request platformowy. To jest stan przejsciowy: docelowo
   incident prompt, skill selection i tool policy powinny byc parametrami
   feature'a przekazanymi do platformy Copilot,
 - `copilot/runtime/`

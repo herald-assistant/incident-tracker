@@ -10,7 +10,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 @RequiredArgsConstructor
 public class CopilotIncidentInitialPreparationService {
 
-    private final CopilotInitialAnalysisRunAssembler runAssembler;
+    private final CopilotIncidentInitialRunAssembler runAssembler;
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSessionMetricsRegistry metricsRegistry;
 
