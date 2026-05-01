@@ -63,7 +63,7 @@ Nie ma produkcyjnego shortcutu `analyze(request)` ani oddzielnego
 
 ## Preparation
 
-`CopilotSdkPreparationService`:
+`CopilotIncidentInitialPreparationService`:
 
 - ocenia evidence coverage,
 - buduje coverage-aware tool policy,
@@ -72,7 +72,8 @@ Nie ma produkcyjnego shortcutu `analyze(request)` ani oddzielnego
 - generuje prompt JSON-only,
 - rejestruje metryki preparation.
 
-Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
+Po refaktorze `CopilotIncidentInitialPreparationService` jest kompozytorem
+zaleznosci:
 
 - `CopilotToolAccessPolicyFactory` buduje initial policy z coverage reportu i
   follow-up policy ze scope'u zakonczonej analizy,

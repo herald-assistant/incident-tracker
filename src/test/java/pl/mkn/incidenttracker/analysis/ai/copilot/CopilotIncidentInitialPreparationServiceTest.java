@@ -23,7 +23,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSes
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
@@ -54,7 +54,7 @@ import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.art
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
-class CopilotSdkPreparationServiceTest {
+class CopilotIncidentInitialPreparationServiceTest {
 
     @TempDir
     Path tempDirectory;
@@ -259,7 +259,7 @@ class CopilotSdkPreparationServiceTest {
         ));
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
-        var service = new CopilotSdkPreparationService(
+        var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
                 runPreparationService(properties),
                 metricsRegistry()
@@ -312,7 +312,7 @@ class CopilotSdkPreparationServiceTest {
         );
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
 
-        var service = new CopilotSdkPreparationService(
+        var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
                 runPreparationService(properties),
                 metricsRegistry()
@@ -353,7 +353,7 @@ class CopilotSdkPreparationServiceTest {
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class)))
                 .thenReturn(List.of(elasticTool, gitLabTool, dbTool));
 
-        var service = new CopilotSdkPreparationService(
+        var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
                 runPreparationService(properties),
                 metricsRegistry()
@@ -480,8 +480,8 @@ class CopilotSdkPreparationServiceTest {
         }
     }
 
-    private CopilotSdkPreparationService createService(CopilotSdkProperties properties) {
-        return new CopilotSdkPreparationService(
+    private CopilotIncidentInitialPreparationService createService(CopilotSdkProperties properties) {
+        return new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, toolFactory),
                 runPreparationService(properties),
                 metricsRegistry()

@@ -16,7 +16,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSes
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
 
-class CopilotSdkPreparationServiceCoveragePromptTest {
+class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
 
     @TempDir
     Path tempDirectory;
@@ -57,7 +57,7 @@ class CopilotSdkPreparationServiceCoveragePromptTest {
                 tool("gitlab_find_flow_context"),
                 tool("gitlab_read_repository_file_chunk")
         ));
-        var service = new CopilotSdkPreparationService(
+        var service = new CopilotIncidentInitialPreparationService(
                 new CopilotInitialAnalysisRunAssembler(
                         factory,
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),

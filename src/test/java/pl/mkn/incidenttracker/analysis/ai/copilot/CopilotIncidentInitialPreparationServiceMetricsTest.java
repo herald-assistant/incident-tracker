@@ -16,7 +16,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSes
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
@@ -30,68 +30,87 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessi
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
 
-class CopilotSdkPreparationServiceEvidenceReferencePromptTest {
+class CopilotIncidentInitialPreparationServiceMetricsTest {
 
     @TempDir
     Path tempDirectory;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Test
-    void shouldPromptForDigestVerificationAndEvidenceReferences() {
+    void shouldRecordPromptAndArtifactSizesDeterministically() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
+        var metricsRegistry = new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
         var factory = mock(CopilotSdkToolFactory.class);
         when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.<ToolDefinition>of());
-        var service = new CopilotSdkPreparationService(
+        var service = new CopilotIncidentInitialPreparationService(
                 new CopilotInitialAnalysisRunAssembler(
                         factory,
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
                         new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
-                        artifactService(new ObjectMapper()),
+                        artifactService(objectMapper),
                         new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator()),
                         new CopilotIncidentPromptRenderer(),
-                        new CopilotIncidentRunRequestFactory(artifactService(new ObjectMapper()))
+                        new CopilotIncidentRunRequestFactory(artifactService(objectMapper))
                 ),
                 new CopilotRunPreparationService(
                         new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
                 ),
-                new CopilotSessionMetricsRegistry(new CopilotMetricsProperties())
+                metricsRegistry
         );
 
-        String prompt;
-        try (var prepared = service.prepare(request())) {
-            prompt = prepared.prompt();
-        }
+        try (var prepared = service.prepare(requestWithEvidence())) {
+            var metrics = metricsRegistry.snapshot(prepared.session().sessionConfig().getSessionId()).orElseThrow();
 
-        assertTrue(prompt.contains("Read `00-incident-manifest.json` first and use it as the artifact index, then read `01-incident-digest.md`."));
-        assertTrue(prompt.contains("Use raw evidence artifacts to verify the digest before making a claim."));
-        assertTrue(prompt.contains("When possible, include evidenceReferences with artifactId and itemId for important claims."));
-        assertTrue(prompt.contains("Prefer `evidenceReferences` for important claims and use the artifact display name as `artifactId`."));
-        assertTrue(prompt.contains("Use stable `itemId` values from the evidence artifacts whenever a claim is grounded in a specific evidence item."));
-        assertTrue(prompt.contains("01-incident-digest.md"));
-        assertTrue(prompt.contains("## itemId: elastic-logs-001"));
+            assertEquals(2, metrics.evidenceSectionCount());
+            assertEquals(3, metrics.evidenceItemCount());
+            assertEquals(4, metrics.artifactCount());
+            assertEquals(
+                    prepared.session().artifactContents().values().stream().mapToLong(String::length).sum(),
+                    metrics.artifactTotalCharacters()
+            );
+            assertEquals(prepared.prompt().length(), metrics.promptCharacters());
+            assertTrue(metrics.preparationDurationMs() >= 0L);
+        }
     }
 
-    private InitialAnalysisRequest request() {
+    private InitialAnalysisRequest requestWithEvidence() {
         return new InitialAnalysisRequest(
                 "corr-123",
-                "dev3",
-                "main",
+                "zt01",
+                "release/2026.04",
                 "sample/runtime",
-                List.of(new AnalysisEvidenceSection(
-                        "elasticsearch",
-                        "logs",
-                        List.of(new AnalysisEvidenceItem(
-                                "error log",
-                                List.of(new AnalysisEvidenceAttribute("message", "timeout"))
-                        ))
-                ))
+                List.of(
+                        new AnalysisEvidenceSection(
+                                "elasticsearch",
+                                "logs",
+                                List.of(
+                                        item("log 1", "message", "timeout"),
+                                        item("log 2", "message", "retry")
+                                )
+                        ),
+                        new AnalysisEvidenceSection(
+                                "operational-context",
+                                "matched-context",
+                                List.of(item("context", "team", "Core"))
+                        )
+                )
+        );
+    }
+
+    private AnalysisEvidenceItem item(String title, String name, String value) {
+        return new AnalysisEvidenceItem(
+                title,
+                List.of(new AnalysisEvidenceAttribute(name, value))
         );
     }
 }

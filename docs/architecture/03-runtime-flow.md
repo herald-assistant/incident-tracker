@@ -76,9 +76,10 @@ zostaja tylko generyczne DTO z `shared.evidence`: `AnalysisEvidenceSection`,
 
 ## 4. Przygotowanie Copilota
 
-`CopilotSdkPreparationService` buduje `CopilotInitialAnalysisPreparation`.
-Ten adapter implementuje `InitialAnalysisPreparation` i zawiera neutralna
-techniczna sesje `CopilotPreparedSession`.
+`CopilotIncidentInitialPreparationService` buduje
+`CopilotInitialAnalysisPreparation`. Ten adapter implementuje
+`InitialAnalysisPreparation` i zawiera neutralna techniczna sesje
+`CopilotPreparedSession`.
 
 Preparation obejmuje:
 

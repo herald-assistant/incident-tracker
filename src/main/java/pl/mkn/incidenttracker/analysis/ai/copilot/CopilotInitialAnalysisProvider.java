@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
@@ -24,7 +24,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 @RequiredArgsConstructor
 public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
 
-    private final CopilotSdkPreparationService preparationService;
+    private final CopilotIncidentInitialPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotResponseParser responseParser;
     private final CopilotResponseQualityGate qualityGate;

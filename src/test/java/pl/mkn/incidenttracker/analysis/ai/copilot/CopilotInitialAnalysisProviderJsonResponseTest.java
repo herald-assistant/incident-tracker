@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.analysis.ai.evidence.AnalysisAiToolEvidenceListene
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
@@ -30,7 +30,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
 
     @Test
     void shouldMapJsonResponseToCurrentPublicAiResponse() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
+        var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
         var request = new InitialAnalysisRequest("corr-json", "zt01", "main", "sample/runtime", List.of());
@@ -69,7 +69,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
     }
 
     private CopilotInitialAnalysisProvider provider(
-            CopilotSdkPreparationService preparationService,
+            CopilotIncidentInitialPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
         var metricsProperties = new CopilotMetricsProperties();

@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
@@ -33,7 +33,7 @@ class CopilotInitialAnalysisProviderTest {
 
     @Test
     void shouldMapCopilotSdkOutputToDomainResponse() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
+        var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
@@ -132,7 +132,7 @@ class CopilotInitialAnalysisProviderTest {
 
     @Test
     void shouldFallbackWhenCopilotResponseIsNotStructured() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
+        var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
@@ -166,7 +166,7 @@ class CopilotInitialAnalysisProviderTest {
 
     @Test
     void shouldParseMarkdownFormattedStructuredResponse() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
+        var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
@@ -238,7 +238,7 @@ class CopilotInitialAnalysisProviderTest {
 
     @Test
     void shouldFallbackWhenStructuredResponseMissesAffectedFunction() {
-        var preparationService = mock(CopilotSdkPreparationService.class);
+        var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
@@ -272,7 +272,7 @@ class CopilotInitialAnalysisProviderTest {
     }
 
     private CopilotInitialAnalysisProvider provider(
-            CopilotSdkPreparationService preparationService,
+            CopilotIncidentInitialPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
         var properties = new CopilotMetricsProperties();
