@@ -17,6 +17,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToo
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
@@ -61,7 +62,9 @@ class CopilotSdkPreparationServiceMetricsTest {
                         new CopilotIncidentPromptRenderer(),
                         new CopilotIncidentRunRequestFactory(artifactService(objectMapper))
                 ),
-                new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties)),
+                new CopilotRunPreparationService(
+                        new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
+                ),
                 metricsRegistry
         );
 

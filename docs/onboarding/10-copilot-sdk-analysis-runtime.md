@@ -91,8 +91,9 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 - initial run assembly niesie platformowy `CopilotRunRequest` oraz osobny
   snapshot metryk preparation; follow-up run assembler zwraca juz bezposrednio
   platformowy `CopilotRunRequest`,
-- `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na techniczna
-  `CopilotPreparedSession`,
+- `CopilotRunPreparationService` jest neutralnym wejsciem runtime:
+  `CopilotRunRequest -> CopilotPreparedSession`,
+- `CopilotPreparedSessionFactory` mapuje request na techniczna sesje,
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,
   `SessionConfig`, permission handler, hooks, safe lists, skill directories i
   disabled skills.

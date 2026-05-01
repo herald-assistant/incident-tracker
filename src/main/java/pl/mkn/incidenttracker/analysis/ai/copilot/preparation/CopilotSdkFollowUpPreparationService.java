@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 
 @Service
@@ -11,9 +11,9 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 public class CopilotSdkFollowUpPreparationService {
 
     private final CopilotFollowUpRunAssembler runAssembler;
-    private final CopilotPreparedSessionFactory preparedSessionFactory;
+    private final CopilotRunPreparationService runPreparationService;
 
     public CopilotPreparedSession prepare(AnalysisAiChatRequest request) {
-        return preparedSessionFactory.prepare(runAssembler.assemble(request));
+        return runPreparationService.prepare(runAssembler.assemble(request));
     }
 }

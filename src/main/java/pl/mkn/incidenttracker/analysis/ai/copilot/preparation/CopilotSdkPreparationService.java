@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 
@@ -11,7 +11,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetric
 public class CopilotSdkPreparationService {
 
     private final CopilotInitialAnalysisRunAssembler runAssembler;
-    private final CopilotPreparedSessionFactory preparedSessionFactory;
+    private final CopilotRunPreparationService runPreparationService;
     private final CopilotSessionMetricsRegistry metricsRegistry;
 
     public CopilotInitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
@@ -28,7 +28,7 @@ public class CopilotSdkPreparationService {
 
         return new CopilotInitialAnalysisPreparation(
                 request,
-                preparedSessionFactory.prepare(assembly.runRequest())
+                runPreparationService.prepare(assembly.runRequest())
         );
     }
 

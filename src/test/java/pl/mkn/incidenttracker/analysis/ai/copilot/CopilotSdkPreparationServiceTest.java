@@ -25,6 +25,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSession
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotToolAccessPolicyFactory;
@@ -260,7 +261,7 @@ class CopilotSdkPreparationServiceTest {
 
         var service = new CopilotSdkPreparationService(
                 runAssembler(properties, factory),
-                preparedSessionFactory(properties),
+                runPreparationService(properties),
                 metricsRegistry()
         );
 
@@ -313,7 +314,7 @@ class CopilotSdkPreparationServiceTest {
 
         var service = new CopilotSdkPreparationService(
                 runAssembler(properties, factory),
-                preparedSessionFactory(properties),
+                runPreparationService(properties),
                 metricsRegistry()
         );
 
@@ -354,7 +355,7 @@ class CopilotSdkPreparationServiceTest {
 
         var service = new CopilotSdkPreparationService(
                 runAssembler(properties, factory),
-                preparedSessionFactory(properties),
+                runPreparationService(properties),
                 metricsRegistry()
         );
 
@@ -482,7 +483,7 @@ class CopilotSdkPreparationServiceTest {
     private CopilotSdkPreparationService createService(CopilotSdkProperties properties) {
         return new CopilotSdkPreparationService(
                 runAssembler(properties, toolFactory),
-                preparedSessionFactory(properties),
+                runPreparationService(properties),
                 metricsRegistry()
         );
     }
@@ -510,8 +511,10 @@ class CopilotSdkPreparationServiceTest {
         return new CopilotIncidentPromptRenderer();
     }
 
-    private CopilotPreparedSessionFactory preparedSessionFactory(CopilotSdkProperties properties) {
-        return new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties));
+    private CopilotRunPreparationService runPreparationService(CopilotSdkProperties properties) {
+        return new CopilotRunPreparationService(
+                new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
+        );
     }
 
     private CopilotSessionMetricsRegistry metricsRegistry() {

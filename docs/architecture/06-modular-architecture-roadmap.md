@@ -180,6 +180,9 @@ wchodzily do neutralnego requestu runtime.
 Follow-up assembler zwraca juz bezposrednio neutralny `CopilotRunRequest`,
 wiec chat nie ma osobnego follow-up-only kontraktu wykonania przed wejsciem do
 platformowego runtime.
+`CopilotRunPreparationService` jest neutralnym wejsciem runtime
+`CopilotRunRequest -> CopilotPreparedSession`; incident preparation sklada run
+request, a runtime service przygotowuje techniczna sesje SDK.
 
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,

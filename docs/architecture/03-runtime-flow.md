@@ -114,9 +114,11 @@ renderingu i konfiguracji SDK:
 - initial run assembly niesie neutralny `CopilotRunRequest` oraz osobny
   snapshot metryk preparation; follow-up run assembler zwraca juz bezposrednio
   neutralny `CopilotRunRequest`,
-- `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na
-  `CopilotPreparedSession`, a `CopilotSessionConfigFactory` buduje client
-  options, session config, permission handler, hooks i disabled skills.
+- `CopilotRunPreparationService` jest neutralnym wejsciem runtime:
+  `CopilotRunRequest -> CopilotPreparedSession`,
+- `CopilotPreparedSessionFactory` mapuje request na techniczna sesje, a
+  `CopilotSessionConfigFactory` buduje client options, session config,
+  permission handler, hooks i disabled skills.
 
 `CopilotSdkModelOptionsProvider` jest wystawiony w root `analysis.ai.copilot`
 obok providera poczatkowej analizy i follow-up chatu. Uzywa zaleznosci runtime
