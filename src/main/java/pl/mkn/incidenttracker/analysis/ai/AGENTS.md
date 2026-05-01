@@ -29,9 +29,10 @@ Obejmuje:
   `CopilotToolAccessPolicyFactory` buduje initial/follow-up tool policy, a
   `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy
   `CopilotSessionConfigRequest` z policy, skill directories, model options i
-  komunikatu odmowy tooli. To jest stan przejsciowy: docelowo incident prompt,
-  skill selection i tool policy powinny byc parametrami feature'a przekazanymi
-  do platformy Copilot,
+  komunikatu odmowy tooli. `CopilotFollowUpArtifactRequestFactory` mapuje
+  follow-up snapshot na incident artifact request. To jest stan przejsciowy:
+  docelowo incident prompt, skill selection i tool policy powinny byc
+  parametrami feature'a przekazanymi do platformy Copilot,
 - `copilot/runtime/`
   neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
   `CopilotModelSelection`, `CopilotRunRequest`, `CopilotPreparedSession`,

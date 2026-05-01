@@ -83,6 +83,8 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
 - `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy
   `CopilotSessionConfigRequest`: tools, available tool names, skill
   directories, model selection i komunikat odmowy tooli,
+- `CopilotFollowUpArtifactRequestFactory` sklada artifact request follow-up z
+  deterministic evidence oraz tool evidence z poprzednich sesji,
 - initial/follow-up run assembler buduje `CopilotRunRequest` z gotowym
   `CopilotSessionConfigRequest`,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na techniczna

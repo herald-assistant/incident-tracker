@@ -169,6 +169,9 @@ hidden scope initial/follow-up jest lokalne dla feature preparation.
 Initial i follow-up tool policy przechodza przez `CopilotToolAccessPolicyFactory`,
 wiec decyzje o wlaczeniu capability pozostaja w incident preparation zamiast w
 assemblerach runtime requestu.
+Follow-up artifact request przechodzi przez `CopilotFollowUpArtifactRequestFactory`,
+wiec adaptacja chatu na incident artifacts nie siedzi w assemblerze runtime
+requestu.
 
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,

@@ -106,6 +106,8 @@ renderingu i konfiguracji SDK:
 - `CopilotIncidentSessionConfigRequestFactory` sklada incidentowe parametry
   sesji: enabled tools, available tool names, skill directories, model
   selection i komunikat odmowy tooli,
+- `CopilotFollowUpArtifactRequestFactory` mapuje follow-up snapshot na request
+  artefaktow: deterministic evidence plus tool evidence z poprzednich sesji,
 - run assembler buduje neutralny `CopilotRunRequest` z promptem, artifactami,
   `CopilotSessionConfigRequest`, `runReference` i evidence sink,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na
