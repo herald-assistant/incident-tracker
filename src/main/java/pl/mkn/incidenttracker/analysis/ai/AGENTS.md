@@ -72,6 +72,47 @@ Nie obejmuje:
   `../options`,
 - kontrolerow HTTP i job flow z `../job`.
 
+## Ownership `copilot/preparation`
+
+Ten pakiet jest przejsciowy. Nazwa katalogu nie oznacza, ze wszystko w nim jest
+platformowe. Przy zmianach trzymaj ponizsza mape ownership:
+
+- feature-owned incident preparation:
+  `CopilotIncidentInitialPreparationService`,
+  `CopilotIncidentFollowUpPreparationService`,
+  `CopilotIncidentInitialRunAssembler`,
+  `CopilotIncidentFollowUpRunAssembler`,
+  `CopilotIncidentInitialRunAssembly`,
+  `CopilotInitialAnalysisPreparation`,
+  `CopilotInitialAnalysisPreparationMetrics`,
+  `CopilotIncidentPromptRenderer`,
+  `CopilotIncidentFollowUpPromptRenderer`,
+  `CopilotIncidentDigestService`,
+  `CopilotToolAccessPolicy`,
+  `CopilotToolAccessPolicyFactory`,
+  `CopilotIncidentHiddenToolContextFactory`,
+  `CopilotIncidentToolSessionContextFactory`,
+  `CopilotIncidentSessionConfigRequestFactory`,
+  `CopilotFollowUpArtifactRequestFactory`,
+  `CopilotIncidentRunRequestFactory`.
+- do obserwacji przed przeniesieniem:
+  `CopilotArtifactService`,
+  `CopilotArtifactFormatVersion`,
+  `CopilotArtifactItemIdGenerator`.
+  Maja czesc mechaniki artifact delivery, ale dzis renderuja incident manifest,
+  digest i evidence artifacts, wiec nie przenos ich do runtime bez rozdzielenia
+  tresci incidentowej od generycznej mechaniki.
+- kandydat na platformowa mechanike po parametryzacji:
+  `CopilotSkillRuntimeLoader`.
+  Moze stac sie platformowy dopiero wtedy, gdy feature bedzie przekazywal
+  wybrane skill resources/directories jako parametr runa. Dzis jest uzywany
+  przez incident session config preparation.
+
+Platform-owned runtime siedzi w `copilot/runtime`, przede wszystkim
+`CopilotRunRequest`, `CopilotRunPreparationService`,
+`CopilotPreparedSession`, `CopilotSessionConfigRequest`,
+`CopilotPreparedSessionFactory` i `CopilotSessionConfigFactory`.
+
 ## Zasady modyfikacji
 
 - `InitialAnalysisProvider` ma pozostac stabilna granica miedzy flow a konkretnym

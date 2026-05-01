@@ -199,6 +199,56 @@ skille sa ladowane i jaki jest kontrakt odpowiedzi. Platforma nie powinna
 rekonstruowac tych decyzji na podstawie `correlationId`, nazw tooli albo
 incidentowych coverage heurystyk.
 
+### Aktualna Mapa Ownership `copilot/preparation`
+
+To jest mapa przejsciowa przed fizycznymi przeniesieniami pakietow. Ma pomagac
+agentom wybierac kierunek kolejnych malych refaktorow, a nie zachecac do
+big-bang move.
+
+Feature-owned incident preparation:
+
+- `CopilotIncidentInitialPreparationService`
+- `CopilotIncidentFollowUpPreparationService`
+- `CopilotIncidentInitialRunAssembler`
+- `CopilotIncidentFollowUpRunAssembler`
+- `CopilotIncidentInitialRunAssembly`
+- `CopilotInitialAnalysisPreparation`
+- `CopilotInitialAnalysisPreparationMetrics`
+- `CopilotIncidentPromptRenderer`
+- `CopilotIncidentFollowUpPromptRenderer`
+- `CopilotIncidentDigestService`
+- `CopilotToolAccessPolicy`
+- `CopilotToolAccessPolicyFactory`
+- `CopilotIncidentHiddenToolContextFactory`
+- `CopilotIncidentToolSessionContextFactory`
+- `CopilotIncidentSessionConfigRequestFactory`
+- `CopilotFollowUpArtifactRequestFactory`
+- `CopilotIncidentRunRequestFactory`
+
+Do obserwacji przed przeniesieniem:
+
+- `CopilotArtifactService`
+- `CopilotArtifactFormatVersion`
+- `CopilotArtifactItemIdGenerator`
+
+Te klasy maja fragmenty generycznej mechaniki artifact delivery, ale obecnie
+nadal renderuja incident manifest, digest i evidence artifacts. Przed
+przeniesieniem do platformy trzeba oddzielic neutralna mechanike od
+incident-specific tresci.
+
+Kandydat na platformowa mechanike po parametryzacji:
+
+- `CopilotSkillRuntimeLoader`
+
+Skill loader moze byc platformowy dopiero wtedy, gdy feature przekazuje wybrane
+skill resources/directories jako parametr runa. Dzis wybor skilli jest czescia
+incident session config preparation.
+
+Platform-owned runtime jest juz poza `preparation`, w `copilot/runtime`:
+`CopilotRunRequest`, `CopilotRunPreparationService`,
+`CopilotPreparedSession`, `CopilotSessionConfigRequest`,
+`CopilotPreparedSessionFactory` i `CopilotSessionConfigFactory`.
+
 ### `features.incidentanalysis`
 
 Feature analizy incydentow posiada:
