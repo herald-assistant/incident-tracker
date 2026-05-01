@@ -14,7 +14,7 @@ public class CopilotInitialAnalysisRunAssembler {
     private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotArtifactService artifactService;
     private final CopilotToolAccessPolicyFactory toolAccessPolicyFactory;
-    private final CopilotPromptRenderer promptRenderer;
+    private final CopilotIncidentPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
 
     public CopilotInitialAnalysisRunAssembly assemble(InitialAnalysisRequest request) {

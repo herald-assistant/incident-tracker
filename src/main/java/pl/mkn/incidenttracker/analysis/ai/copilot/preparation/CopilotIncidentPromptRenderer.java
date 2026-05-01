@@ -6,7 +6,7 @@ import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import java.util.List;
 
 @Component
-public class CopilotPromptRenderer {
+public class CopilotIncidentPromptRenderer {
 
     public String render(
             InitialAnalysisRequest request,

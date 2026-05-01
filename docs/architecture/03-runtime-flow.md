@@ -98,7 +98,7 @@ renderingu i konfiguracji SDK:
 
 - `CopilotToolAccessPolicyFactory` buduje initial coverage-aware policy oraz
   follow-up policy ze scope'u zakonczonej analizy,
-- `CopilotPromptRenderer` renderuje prompt, JSON-only response contract,
+- `CopilotIncidentPromptRenderer` renderuje incident prompt, JSON-only response contract,
   available capability groups i embedded artifacts,
 - `CopilotIncidentToolSessionContextFactory` tworzy incidentowy
   `CopilotToolSessionContext`: run id, session id i hidden tool context dla

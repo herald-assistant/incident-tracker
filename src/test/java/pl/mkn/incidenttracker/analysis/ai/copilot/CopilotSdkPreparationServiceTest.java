@@ -22,7 +22,7 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRun
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotPreparedSessionFactory;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotPromptRenderer;
+import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentPromptRenderer;
 import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotSdkPreparationService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigFactory;
@@ -506,8 +506,8 @@ class CopilotSdkPreparationServiceTest {
         return new CopilotToolAccessPolicyFactory(new CopilotEvidenceCoverageEvaluator());
     }
 
-    private CopilotPromptRenderer promptRenderer() {
-        return new CopilotPromptRenderer();
+    private CopilotIncidentPromptRenderer promptRenderer() {
+        return new CopilotIncidentPromptRenderer();
     }
 
     private CopilotPreparedSessionFactory preparedSessionFactory(CopilotSdkProperties properties) {

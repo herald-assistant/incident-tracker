@@ -8,9 +8,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CopilotPromptRendererTest {
+class CopilotIncidentPromptRendererTest {
 
-    private final CopilotPromptRenderer renderer = new CopilotPromptRenderer();
+    private final CopilotIncidentPromptRenderer renderer = new CopilotIncidentPromptRenderer();
 
     @Test
     void shouldRenderIncidentPromptWithArtifactsAndEnabledCapabilityGroups() {
