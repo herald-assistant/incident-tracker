@@ -61,10 +61,10 @@ Docelowy kierunek warstw:
 
 Zasady granic:
 
-- `analysis.adapter` nie moze zalezec od `analysis.evidence`,
-  `analysis.mcp`, `analysis.ai`, `analysis.flow` ani `analysis.job`. Adaptery
-  maja byc mozliwe do reuse'u przez evidence pipeline, tools/MCP i zwykle
-  endpointy REST.
+- `integrations.*` oraz przejsciowe `analysis.adapter.*` nie moga zalezec od
+  `analysis.evidence`, `analysis.mcp`, `analysis.ai`, `analysis.flow` ani
+  `analysis.job`. Adaptery maja byc mozliwe do reuse'u przez evidence pipeline,
+  tools/MCP i zwykle endpointy REST.
 - Tools/MCP nie powinny zalezec od dedykowanej analizy incydentow ani od
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.
@@ -144,11 +144,14 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/provider`
   Konkretne kroki pipeline evidence oparte o adaptery i wczesniej zebrany
   `AnalysisContext`.
+- `src/main/java/pl/mkn/incidenttracker/integrations`
+  Docelowa reusable warstwa capability adapters. Dynatrace mieszka juz w
+  `integrations.dynatrace`; kolejne adaptery beda przenoszone tam etapami.
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
   Generyczny kontrakt AI i aktualna integracja Copilot SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
-  Integracje zewnetrzne, reuse'owalne capability adapters i helper endpointy:
-  Elasticsearch, Dynatrace, GitLab, Database oraz operational context.
+  Przejsciowy dom integracji, ktore nie zostaly jeszcze przeniesione do
+  `integrations`: Elasticsearch, GitLab, Database oraz operational context.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
   MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
   case'ow.
@@ -173,7 +176,7 @@ Zasady granic:
 
 ### Gdy dodajesz nowe zrodlo evidence
 
-- Dodaj typowany adapter i modele w pakiecie adaptera.
+- Dodaj typowany adapter i modele w `integrations.<system>`.
 - Dodaj `AnalysisEvidenceProvider` w `analysis.evidence.provider`.
 - Provider powinien zwracac `shared.evidence.AnalysisEvidenceSection`.
 - Nie dopisuj centralnego mappera "provider == X".
@@ -224,6 +227,7 @@ Utrzymujemy lokalne instrukcje na poziomie bezposrednich podkatalogow, zeby
 granice modulow byly czytelne i stabilne po refaktorach.
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AGENTS.md`

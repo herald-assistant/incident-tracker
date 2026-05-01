@@ -360,6 +360,8 @@ Kroki:
 1. Usunac `analysis.adapter.dynatrace -> analysis.evidence`.
    Factory z `ElasticLogEvidenceView` trzymac w evidence providerze, a
    adapterowi przekazywac czysty `DynatraceIncidentQuery`.
+   Stan obecny: ta krawedz jest zamknieta, a Dynatrace zostal przeniesiony do
+   `integrations.dynatrace`.
 2. Usunac `analysis.adapter.database -> analysis.mcp.database`.
    DB adapter ma pracowac na neutralnych DB contracts.
 3. Usunac `analysis.adapter -> agenttools`.
@@ -386,6 +388,7 @@ Cel: fizycznie przeniesc adaptery do reusable warstwy integracji.
 Kolejnosc sugerowana:
 
 1. Dynatrace, bo po Fazie 2 powinien miec mala powierzchnie.
+   Stan obecny: zrobione, pakiet mieszka w `integrations.dynatrace`.
 2. Elasticsearch, lacznie z helper endpointem log search jako fasada nad
    integracja.
 3. GitLab adapter i source resolve.
@@ -396,7 +399,7 @@ Target:
 
 ```text
 analysis.adapter.elasticsearch -> integrations.elasticsearch
-analysis.adapter.dynatrace     -> integrations.dynatrace
+analysis.adapter.dynatrace     -> integrations.dynatrace [done]
 analysis.adapter.gitlab        -> integrations.gitlab
 analysis.adapter.database      -> integrations.database
 analysis.adapter.operationalcontext -> integrations.operationalcontext
@@ -560,7 +563,7 @@ Kryterium done:
 4. PR: przeniesc DB tool contracts poza MCP i usunac `adapter.database -> mcp`.
 5. PR: przeniesc generic evidence DTO poza `analysis.ai`.
 6. PR: dodac reguly zakazujace nowych importow `adapter -> evidence/mcp/ai`.
-7. PR: przeniesc Dynatrace adapter do `integrations.dynatrace`.
+7. PR: przeniesc Dynatrace adapter do `integrations.dynatrace` [done].
 8. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
 9. PR: przeniesc reszte adapterow capability po jednym obszarze.
 10. PR: wydzielic generic Copilot runtime od incident prompt/digest.

@@ -52,10 +52,15 @@ Konkretne kroki pipeline:
 
 ### `analysis/adapter`
 
-Integracje zewnetrzne, reuse'owalne capability adapters i helper endpointy
-testowe.
-Sa tu dzisiaj adaptery Elasticsearch, Dynatrace, GitLaba, Database capability
-i operational context.
+Przejsciowy dom integracji zewnetrznych, ktore nie zostaly jeszcze przeniesione
+do `integrations`.
+Sa tu dzisiaj adaptery Elasticsearch, GitLaba, Database capability i
+operational context.
+
+### `integrations`
+
+Docelowa reusable warstwa capability adapters. Pierwszy przeniesiony pakiet to
+`integrations/dynatrace`.
 
 ### `analysis/mcp`
 

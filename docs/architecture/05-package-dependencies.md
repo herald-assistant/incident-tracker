@@ -43,10 +43,13 @@ analysis byl pierwszym use case'em. Nie oznacza to, ze wszystkie pakiety pod
 `analysis` sa feature-specific. Przy kazdej wiekszej zmianie trzeba pilnowac
 ponizszych zasad:
 
-- `analysis.adapter` to reusable capability integracyjne. Nie moze zalezec od
-  evidence pipeline, MCP/tools, Copilota, flow ani job API. Ten sam adapter ma
-  byc uzywalny przez provider evidence, tool, helper endpoint REST albo
-  przyszly feature.
+- `integrations.*` to docelowa reusable warstwa capability integracyjnych.
+  Nie moze zalezec od evidence pipeline, MCP/tools, Copilota, flow ani job API.
+  Ten sam adapter ma byc uzywalny przez provider evidence, tool, helper
+  endpoint REST albo przyszly feature.
+- `analysis.adapter` to przejsciowy dom dla integracji, ktore nie zostaly
+  jeszcze fizycznie przeniesione do `integrations.*`. Obowiazuja go te same
+  ograniczenia co `integrations.*`.
 - `analysis.mcp` i przyszla warstwa tools to reusable ekspozycja capability
   nad adapterami. Nie powinny zalezec od dedykowanej analizy incydentow ani od
   szczegolow providera Copilot SDK.
@@ -90,7 +93,9 @@ flowchart LR
 
     FLOW --> EVIDENCE["analysis.evidence"]
     EVIDENCE --> ADAPTER["analysis.adapter"]
+    EVIDENCE --> INTEGRATIONS["integrations"]
     ADAPTER --> EXT["External systems"]
+    INTEGRATIONS --> EXT
 
     FLOW --> INITIAL["analysis.ai.initial"]
     INITIAL --> TOOLS["analysis.ai.copilot.tools"]
@@ -113,7 +118,8 @@ Wyniki wracaja do callera jako return values albo listener callbacks:
 Najwazniejsze lancuchy ownership/dependency:
 
 - deterministic initial analysis:
-  `analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter`,
+  `analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter`
+  albo `analysis.job -> analysis.flow -> analysis.evidence -> integrations`,
 - initial AI:
   `analysis.flow -> analysis.ai.initial`,
 - AI-guided tools podczas initial analysis:
@@ -145,6 +151,7 @@ flowchart LR
     FLOW --> SHARED
 
     EVIDENCE --> ADAPTER
+    EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
 
     AI --> MCP["analysis.mcp"]
@@ -176,7 +183,8 @@ flowchart LR
 | `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
 | `analysis.flow -> analysis.adapter` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
 | `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
-| `analysis.evidence -> analysis.adapter` | 41 | oczekiwane | Providerzy evidence deleguja do adapterow systemow zewnetrznych. |
+| `analysis.evidence -> analysis.adapter` | 36 | oczekiwane przejsciowo | Providerzy evidence deleguja do adapterow systemow zewnetrznych, ktore jeszcze mieszkaja pod `analysis.adapter`. |
+| `analysis.evidence -> integrations` | 5 | oczekiwane | Provider Dynatrace deleguje juz do docelowej reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
 | `analysis.ai -> analysis.mcp` | 26 | oczekiwane przejsciowo | Copilot runtime reuse'uje aktualne Spring AI/MCP tools. Docelowo platforma dostaje tool definitions/callbacks od feature'a i nie wybiera incidentowych capability sama. |
@@ -209,6 +217,7 @@ Do obserwacji zostala krawedz:
 Preferowany kierunek kompilacyjny dla obecnych pakietow:
 
 ```text
+analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.job -> analysis.flow -> analysis.evidence -> analysis.adapter
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
@@ -226,6 +235,10 @@ Unikac nowych zaleznosci:
 - `analysis.adapter -> analysis.mcp`,
 - `analysis.adapter -> analysis.ai`,
 - `analysis.adapter -> agenttools`,
+- `integrations -> analysis`,
+- `integrations -> agenttools`,
+- `integrations -> features`,
+- `integrations -> aiplatform`,
 - `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
@@ -236,6 +249,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.adapter -> analysis.evidence`: adapter Dynatrace nie buduje juz
   query z `ElasticLogEvidenceView`; factory tego mapowania mieszka po stronie
   evidence providerow.
+- `integrations -> analysis`: pierwszy przeniesiony adapter
+  `integrations.dynatrace` pozostaje czysta integracja bez importow warstw
+  aplikacyjnych.
 - `analysis.mcp -> analysis.ai.copilot`: hidden tool context keys mieszkaja
   teraz w neutralnym `agenttools.context.AgentToolContextKeys`, a Copilot
   runtime jest ich konsumentem.

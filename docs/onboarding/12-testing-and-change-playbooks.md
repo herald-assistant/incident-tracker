@@ -48,7 +48,7 @@ architektonicznych.
 
 ## Playbook 1: nowy adapter
 
-1. dodaj port i modele do `analysis.adapter.<system>`,
+1. dodaj port i modele do `integrations.<system>`,
 2. dodaj adapter REST i properties,
 3. dodaj helper endpoint tylko jesli przydaje sie recznie testowac capability,
 4. dopiero potem reuse'uj adapter z providera albo toola.

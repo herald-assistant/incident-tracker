@@ -32,9 +32,9 @@ Sluzy do runtime enrichment na podstawie logow i deployment context.
 
 Czytaj:
 
-- `analysis.adapter.dynatrace.DynatraceIncidentPort`
-- `analysis.adapter.dynatrace.DynatraceIncidentQuery`
-- `analysis.adapter.dynatrace.DynatraceRestIncidentAdapter`
+- `integrations.dynatrace.DynatraceIncidentPort`
+- `integrations.dynatrace.DynatraceIncidentQuery`
+- `integrations.dynatrace.DynatraceRestIncidentAdapter`
 
 ## GitLab
 

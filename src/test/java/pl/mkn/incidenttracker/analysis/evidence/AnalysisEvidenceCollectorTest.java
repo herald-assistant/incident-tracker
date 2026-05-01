@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.evidence;
 
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
+import pl.mkn.incidenttracker.integrations.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogEntry;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
@@ -320,8 +320,8 @@ class AnalysisEvidenceCollectorTest {
         private final CountDownLatch release = new CountDownLatch(1);
 
         @Override
-        public pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentEvidence loadIncidentEvidence(
-                pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentQuery query
+        public pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentEvidence loadIncidentEvidence(
+                pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentQuery query
         ) {
             started.countDown();
             awaitRelease();

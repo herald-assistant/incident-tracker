@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.dynatrace;
+package pl.mkn.incidenttracker.integrations.dynatrace;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

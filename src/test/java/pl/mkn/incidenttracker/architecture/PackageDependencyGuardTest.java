@@ -32,6 +32,18 @@ class PackageDependencyGuardTest {
                 Rule.closed("analysis.adapter must stay below reusable agent tools",
                         "pl.mkn.incidenttracker.analysis.adapter",
                         "pl.mkn.incidenttracker.agenttools"),
+                Rule.closed("integrations must stay independent from analysis application layers",
+                        "pl.mkn.incidenttracker.integrations",
+                        "pl.mkn.incidenttracker.analysis"),
+                Rule.closed("integrations must stay independent from reusable agent tools",
+                        "pl.mkn.incidenttracker.integrations",
+                        "pl.mkn.incidenttracker.agenttools"),
+                Rule.closed("integrations must stay independent from future feature packages",
+                        "pl.mkn.incidenttracker.integrations",
+                        "pl.mkn.incidenttracker.features"),
+                Rule.closed("integrations must stay independent from future AI platform packages",
+                        "pl.mkn.incidenttracker.integrations",
+                        "pl.mkn.incidenttracker.aiplatform"),
                 Rule.closed("analysis.mcp must not depend on AI/Copilot runtime",
                         "pl.mkn.incidenttracker.analysis.mcp",
                         "pl.mkn.incidenttracker.analysis.ai"),
@@ -47,9 +59,15 @@ class PackageDependencyGuardTest {
                 Rule.closed("shared must stay below agent tools",
                         "pl.mkn.incidenttracker.shared",
                         "pl.mkn.incidenttracker.agenttools"),
+                Rule.closed("shared must stay below integrations",
+                        "pl.mkn.incidenttracker.shared",
+                        "pl.mkn.incidenttracker.integrations"),
                 Rule.closed("common must stay below application layers",
                         "pl.mkn.incidenttracker.common",
-                        "pl.mkn.incidenttracker.analysis")
+                        "pl.mkn.incidenttracker.analysis"),
+                Rule.closed("common must stay below integrations",
+                        "pl.mkn.incidenttracker.common",
+                        "pl.mkn.incidenttracker.integrations")
         );
 
         var violations = findViolations(rules);

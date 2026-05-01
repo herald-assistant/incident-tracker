@@ -2,17 +2,16 @@
 
 ## Zakres
 
-Ten katalog odpowiada za integracje z systemami zewnetrznymi, reuse'owalne
-capability adapters oraz pomocnicze endpointy testowe tam, gdzie rzeczywiscie
-maja sens.
+Ten katalog jest przejsciowym domem integracji z systemami zewnetrznymi,
+reuse'owalnych capability adapters oraz pomocniczych endpointow testowych tam,
+gdzie rzeczywiscie maja sens. Docelowy root dla przenoszonych i nowych
+integracji to `pl.mkn.incidenttracker.integrations`.
 
 Obejmuje:
 
 - `elasticsearch/`
   properties, porty, adapter REST, modele logow i helper endpoint do recznego
   log search po `correlationId`,
-- `dynatrace/`
-  query model, properties i adapter REST do runtime signals,
 - `gitlab/`
   properties, porty, adapter REST, repository search, source resolve i helper
   endpointy GitLaba,
@@ -56,6 +55,9 @@ Nie obejmuje:
 - Dla Database capability typed request/result/scope/operator contracts sa w
   `pl.mkn.incidenttracker.analysis.adapter.database`. Adapter moze ich uzywac,
   ale nie powinien importowac `analysis.mcp.database` ani `agenttools`.
+- Dynatrace zostal juz przeniesiony do
+  `pl.mkn.incidenttracker.integrations.dynatrace`; nie przywracaj go do
+  `analysis.adapter`.
 
 ## Testy
 

@@ -28,6 +28,8 @@ Jeden krok pipeline, ktory czyta `AnalysisContext` i publikuje jedno
 Warstwa capability blisko integracji albo zrodla danych, np. Elasticsearch,
 Dynatrace, GitLab, Database albo curated operational context. Ma porty,
 modele, properties i ewentualnie helper endpointy do recznego testowania.
+Docelowy pakiet dla nowych adapterow to `integrations.<system>`; czesc
+starszych adapterow mieszka jeszcze przejsciowo pod `analysis.adapter`.
 
 ### Tool
 

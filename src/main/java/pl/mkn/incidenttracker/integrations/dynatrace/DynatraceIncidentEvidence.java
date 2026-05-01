@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.dynatrace;
+package pl.mkn.incidenttracker.integrations.dynatrace;
 
 import java.time.Instant;
 import java.util.List;

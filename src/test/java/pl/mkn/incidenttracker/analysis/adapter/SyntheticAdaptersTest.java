@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.analysis.adapter;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.DynatraceIncidentQuery;
-import pl.mkn.incidenttracker.analysis.adapter.dynatrace.TestDynatraceIncidentPort;
+import pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentQuery;
+import pl.mkn.incidenttracker.integrations.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.incidenttracker.analysis.adapter.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.adapter.elasticsearch.TestElasticLogPort;
