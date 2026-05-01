@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotFollowUpArtifactRequestFactory;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotFollowUpArtifactRequestFactory;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;

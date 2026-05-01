@@ -50,6 +50,9 @@ class PackageDependencyGuardTest {
                 Rule.closed("analysis.ai must not depend on historical MCP packages",
                         "pl.mkn.incidenttracker.analysis.ai",
                         "pl.mkn.incidenttracker.analysis.mcp"),
+                Rule.closed("analysis.ai contracts/runtime must not depend on feature packages",
+                        "pl.mkn.incidenttracker.analysis.ai",
+                        "pl.mkn.incidenttracker.features"),
                 Rule.closed("analysis.evidence must publish shared evidence DTOs without importing AI",
                         "pl.mkn.incidenttracker.analysis.evidence",
                         "pl.mkn.incidenttracker.analysis.ai"),
@@ -83,6 +86,9 @@ class PackageDependencyGuardTest {
                 Rule.closed("shared must stay below AI platform",
                         "pl.mkn.incidenttracker.shared",
                         "pl.mkn.incidenttracker.aiplatform"),
+                Rule.closed("shared must stay below feature packages",
+                        "pl.mkn.incidenttracker.shared",
+                        "pl.mkn.incidenttracker.features"),
                 Rule.closed("common must stay below application layers",
                         "pl.mkn.incidenttracker.common",
                         "pl.mkn.incidenttracker.analysis"),
@@ -91,7 +97,10 @@ class PackageDependencyGuardTest {
                         "pl.mkn.incidenttracker.integrations"),
                 Rule.closed("common must stay below AI platform",
                         "pl.mkn.incidenttracker.common",
-                        "pl.mkn.incidenttracker.aiplatform")
+                        "pl.mkn.incidenttracker.aiplatform"),
+                Rule.closed("common must stay below feature packages",
+                        "pl.mkn.incidenttracker.common",
+                        "pl.mkn.incidenttracker.features")
         );
 
         var violations = findViolations(rules);

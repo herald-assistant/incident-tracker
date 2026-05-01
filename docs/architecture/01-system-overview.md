@@ -135,8 +135,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.ai.usage`
   Generyczny kontrakt token/cost/usage dla UI.
 - `pl.mkn.incidenttracker.analysis.ai.copilot`
-  Root aktualnej integracji AI. Wystawia `CopilotInitialAnalysisProvider`,
-  `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`.
+  Techniczna integracja Copilot SDK dla model options, execution, response,
+  quality, telemetry i runtime tools. Incident initial/chat providery mieszkaja
+  w `features.incidentanalysis.ai.copilot`.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -146,11 +147,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.integrations.operationalcontext`
   Query-based adapter curated operational context catalog i filtrowania go do
   reuse'u przez evidence i kolejne capability.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.preparation`
-  Obecne budowanie incident promptu, artifact digestu, skill loadingu, tool
-  policy i initial/follow-up run assembly.
-  To jest stan przejsciowy; docelowo incident prompt, skille, tool policy,
-  hidden context i parser odpowiedzi maja byc parametrami feature'a.
+- `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot`
+  Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
+  skill selection, tool policy i initial/follow-up run assembly.
+  Ten pakiet sklada parametry dla platformowego runtime Copilota.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident

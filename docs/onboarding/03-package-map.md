@@ -90,12 +90,10 @@ pogrupowane wedlug funkcji:
 
 Najwazniejsze podpakiety Copilota:
 
-- `copilot` - root aktualnego providera: `CopilotInitialAnalysisProvider`,
-  `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
-- `copilot/preparation` - przygotowanie promptu, artefaktow, policy tools,
-  skilli i initial/follow-up run assembly,
+- `copilot` - root aktualnej integracji Copilot SDK, m.in.
+  `CopilotSdkModelOptionsProvider`; incident initial/chat providery sa juz w
+  `features.incidentanalysis.ai.copilot`,
 - `copilot/execution` - lifecycle klienta/sesji SDK i usage events SDK,
-- `copilot/coverage` - coverage report i evidence gaps sterujace tool policy,
 - `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
 - `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
@@ -119,6 +117,14 @@ Neutralna platforma uruchamiania AI. Pierwszy wydzielony slice to
 `CopilotRunRequest`, `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 rendered artifacts oraz factory konfiguracji sesji SDK. Ten pakiet nie zna
 incident promptu, coverage ani flow jobow.
+
+### `features/incidentanalysis`
+
+Dedykowany feature analizy incydentow. Pierwszy przeniesiony slice to
+`features.incidentanalysis.ai.copilot`: incident initial/chat providery,
+`preparation` dla promptu, artefaktow, tool policy, hidden contextu i
+initial/follow-up run assembly oraz `coverage` dla incident-specific coverage
+report i evidence gaps.
 
 ### `common`
 
@@ -157,6 +163,7 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`
+- `src/main/java/pl/mkn/incidenttracker/features`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 - `src/main/java/pl/mkn/incidenttracker/api`
 - `src/main/java/pl/mkn/incidenttracker/ui`

@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;

@@ -28,8 +28,9 @@ Feature powinien przekazac platformie:
 - response parser albo handler wyniku.
 
 Incident prompt, incident digest, coverage-aware tool policy, incident skill
-selection i mapowanie GitLab/DB tool evidence sa docelowo w
-`features.incidentanalysis`, nie w platform runtime.
+selection sa w `features.incidentanalysis.ai.copilot`, nie w platform runtime.
+Mapowanie GitLab/DB tool evidence pozostaje jeszcze w `analysis.ai.copilot.tools`
+jako przejsciowy element do dalszej ekstrakcji.
 
 ## Najwazniejszy kontrakt
 

@@ -467,10 +467,10 @@ GitLab/DB/Elastic tool policy ani JSON response contractu incydentu. Nie
 powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
 `gitLabBranch` albo `gitLabGroup`.
 
-Stan obecny jest przejsciowy: `analysis.ai.copilot.preparation` i czesc
-`analysis.ai.copilot.tools` nadal zawieraja incident-specific prompt, coverage,
-policy i capture evidence. Podczas ekstrakcji do `aiplatform.copilot` te klasy
-trzeba rozdzielic na:
+Stan obecny jest przejsciowy: `features.incidentanalysis.ai.copilot` zawiera
+incident-specific prompt, coverage i policy, a czesc
+`analysis.ai.copilot.tools` nadal zawiera capture evidence. Podczas dalszej
+ekstrakcji trzeba rozdzielic pozostale klasy na:
 
 - generic runtime Copilota,
 - feature-owned incident preparation/policy/skills/evidence mapping.

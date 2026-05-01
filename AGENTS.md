@@ -162,6 +162,10 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`
   Neutralna platforma uruchamiania AI. Pierwszy wydzielony slice to
   `aiplatform.copilot.runtime`; nie moze importowac incident analysis.
+- `src/main/java/pl/mkn/incidenttracker/features`
+  Dedykowane feature'y analityczne. Pierwszy slice to
+  `features.incidentanalysis.ai.copilot.preparation` i `coverage`, czyli
+  incident prompt/artifacts/tool policy oraz coverage heurystyki dla Copilota.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.
@@ -240,4 +244,5 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/features/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`

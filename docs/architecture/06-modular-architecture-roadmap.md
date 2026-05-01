@@ -203,13 +203,13 @@ skille sa ladowane i jaki jest kontrakt odpowiedzi. Platforma nie powinna
 rekonstruowac tych decyzji na podstawie `correlationId`, nazw tooli albo
 incidentowych coverage heurystyk.
 
-### Aktualna Mapa Ownership `copilot/preparation`
+### Aktualna Mapa Ownership Incident Copilot
 
-To jest mapa przejsciowa przed fizycznymi przeniesieniami pakietow. Ma pomagac
-agentom wybierac kierunek kolejnych malych refaktorow, a nie zachecac do
-big-bang move.
+Pierwszy incident-specific slice jest juz fizycznie przeniesiony do
+`features.incidentanalysis.ai.copilot`. Ma to utrzymac Copilot runtime jako
+platforme parametryzowana przez feature, a nie wlasciciela incident promptu.
 
-Feature-owned incident preparation:
+`features.incidentanalysis.ai.copilot.preparation` zawiera:
 
 - `CopilotIncidentInitialPreparationService`
 - `CopilotIncidentFollowUpPreparationService`
@@ -231,18 +231,24 @@ Feature-owned incident preparation:
 - `CopilotIncidentArtifactService`
 - `CopilotIncidentArtifactFormatVersion`
 - `CopilotIncidentArtifactItemIdGenerator`
-- `CopilotIncidentEvidenceCoverageEvaluator`
-- `CopilotIncidentEvidenceCoverageReport`
 
 Incident artifact rendering, artifact format version i item-id policy sa
 jawnie feature-owned, bo dotycza incident manifestu, digestu i evidence
 artifacts. Neutralny runtime artifact model (`CopilotRenderedArtifact`) i
 content mapowanie (`CopilotArtifactContentMapper`) sa juz poza nimi w
 `aiplatform.copilot.runtime`.
-Coverage/gap evaluation tez jest feature-owned: lokalne coverage enumy i
-`CopilotIncidentEvidenceCoverageReport` opisuja widocznosc Elasticsearch,
-GitLaba, runtime, operational context i data diagnostic need dla analizy
-incydentu, a nie generyczna metryke dowolnego feature'a.
+
+`features.incidentanalysis.ai.copilot.coverage` zawiera
+`CopilotIncidentEvidenceCoverageEvaluator`,
+`CopilotIncidentEvidenceCoverageReport` i lokalne enumy coverage. Opisuja one
+widocznosc Elasticsearch, GitLaba, runtime, operational context i data
+diagnostic need dla analizy incydentu, a nie generyczna metryke dowolnego
+feature'a.
+
+`features.incidentanalysis.ai.copilot` zawiera tez incidentowe implementacje
+aktualnych providerow Copilota: `CopilotInitialAnalysisProvider` i
+`CopilotSdkAnalysisChatProvider`. Dzieki temu `analysis.ai` nie importuje
+`features.*`; pozostaje kontraktem/fasada techniczna dla obecnego flow.
 
 Platform-owned runtime jest juz poza `preparation`, w
 `aiplatform.copilot.runtime`:
@@ -465,9 +471,17 @@ Kroki:
 4. Oddzielic generic artifact delivery mechanics od incident-specific digestu.
 5. Przeniesc incident prompt, incident digest i incident response JSON contract
    do `features.incidentanalysis`.
+   Stan obecny: incident prompt i digest oraz initial/follow-up providery
+   Copilota mieszkaja juz w `features.incidentanalysis.ai.copilot`. Response
+   parser/quality sa jeszcze w `analysis.ai.copilot` jako przejsciowa mechanika
+   obecnego providera.
 6. Przeniesc incident tool access policy, incident coverage heurystyki,
    incident skill selection i operator-facing tool evidence mapping do
    `features.incidentanalysis`.
+   Stan obecny: tool access policy, hidden context, skill/session request
+   assembly i coverage heurystyki mieszkaja juz w
+   `features.incidentanalysis.ai.copilot`. Operator-facing GitLab/DB tool
+   evidence mapping jest jeszcze w `analysis.ai.copilot.tools`.
 7. Platformowy tool invocation handler moze znac mechanike callbackow,
    allowlisty, policies, hidden context map i telemetryki, ale nie powinien
    znac nazw capability jako reguly domenowej, np. "GitLab przed DB dla
@@ -592,7 +606,8 @@ Kryterium done:
     [done].
 14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
     tools; Elasticsearch [done], GitLab [done], Database [done].
-15. PR: wydzielic generic Copilot runtime od incident prompt/digest.
+15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
+    progress: runtime, incident preparation i coverage przeniesione].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

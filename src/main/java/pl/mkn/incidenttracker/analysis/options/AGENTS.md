@@ -16,7 +16,8 @@ Obejmuje:
 Nie obejmuje:
 
 - implementacji konkretnego providera AI z `../ai`,
-- przygotowania sesji Copilota z `../ai/copilot/preparation`,
+- incident-specific przygotowania sesji Copilota z
+  `../../features/incidentanalysis/ai/copilot/preparation`,
 - stanu jobow ani orchestration flow.
 
 ## Zasady modyfikacji

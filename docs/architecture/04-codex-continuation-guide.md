@@ -52,7 +52,7 @@ Przy nowej sesji najlepiej zaczac od:
 
 - `analysis.ai.copilot`
 - `aiplatform.copilot.runtime`
-- `analysis.ai.copilot.preparation`
+- `features.incidentanalysis.ai.copilot`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
 - `analysis.ai.copilot.tools.context`

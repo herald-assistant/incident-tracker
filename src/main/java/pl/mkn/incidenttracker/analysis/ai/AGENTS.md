@@ -20,34 +20,9 @@ Obejmuje:
 - `usage/`
   generyczny kontrakt zuzycia tokenow/cost/usage dla UI,
 - `copilot/`
-  root aktualnego providera AI: `CopilotInitialAnalysisProvider`,
-  `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
-- `copilot/coverage/`
-  incident-specific heurystyki coverage/gap evaluation:
-  `CopilotIncidentEvidenceCoverageEvaluator`,
-  `CopilotIncidentEvidenceCoverageReport` i lokalne enumy coverage. To nie
-  jest platformowa metryka kompletności dowolnego feature'a,
-- `copilot/preparation/`
-  obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
-  skill runtime loading. `CopilotIncidentInitialPreparationService` sklada
-  initial incident preparation, a `CopilotIncidentFollowUpPreparationService`
-  sklada follow-up incident preparation. `CopilotIncidentPromptRenderer` i
-  `CopilotIncidentFollowUpPromptRenderer` sa incident-specific, nie
-  platformowe. `CopilotIncidentToolSessionContextFactory` sklada
-  incidentowy run/session id oraz hidden tool context,
-  `CopilotIncidentToolAccessPolicyFactory` buduje initial/follow-up tool policy, a
-  `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy
-  `CopilotSessionConfigRequest` z policy, skill directories, model options i
-  komunikatu odmowy tooli. `CopilotFollowUpArtifactRequestFactory` mapuje
-  follow-up snapshot na incident artifact request, a
-  `CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`.
-  `CopilotIncidentInitialRunAssembler` sklada
-  `CopilotIncidentInitialRunAssembly`, ktory trzyma
-  `CopilotInitialAnalysisPreparationMetrics` obok neutralnego run requestu, a
-  `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio ten neutralny
-  request platformowy. To jest stan przejsciowy: docelowo
-  incident prompt, skill selection i tool policy powinny byc parametrami
-  feature'a przekazanymi do platformy Copilot,
+  root aktualnej integracji Copilot SDK, m.in.
+  `CopilotSdkModelOptionsProvider`; incident initial/chat providery mieszkaja
+  juz w `features.incidentanalysis.ai.copilot`,
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
@@ -67,53 +42,22 @@ Nie obejmuje:
 
 - klas adapterow integracyjnych z `../adapter`,
 - sekwencyjnego pipeline evidence z `../evidence`,
+- incident promptu, digestu, coverage i tool policy; te klasy mieszkaja w
+  `features.incidentanalysis.ai.copilot`,
 - opcji AI, katalogu modeli i endpointu `GET /analysis/ai/options` z
   `../options`,
 - kontrolerow HTTP i job flow z `../job`.
 
-## Ownership `copilot/preparation`
+## Incident Preparation
 
-Ten pakiet jest przejsciowy. Nazwa katalogu nie oznacza, ze wszystko w nim jest
-platformowe. Przy zmianach trzymaj ponizsza mape ownership:
+Incident-specific preparation i coverage sa juz poza tym katalogiem:
 
-- feature-owned incident preparation:
-  `CopilotIncidentInitialPreparationService`,
-  `CopilotIncidentFollowUpPreparationService`,
-  `CopilotIncidentInitialRunAssembler`,
-  `CopilotIncidentFollowUpRunAssembler`,
-  `CopilotIncidentInitialRunAssembly`,
-  `CopilotInitialAnalysisPreparation`,
-  `CopilotInitialAnalysisPreparationMetrics`,
-  `CopilotIncidentPromptRenderer`,
-  `CopilotIncidentFollowUpPromptRenderer`,
-  `CopilotIncidentDigestService`,
-  `CopilotIncidentToolAccessPolicy`,
-  `CopilotIncidentToolAccessPolicyFactory`,
-  `CopilotIncidentHiddenToolContextFactory`,
-  `CopilotIncidentToolSessionContextFactory`,
-  `CopilotIncidentSessionConfigRequestFactory`,
-  `CopilotFollowUpArtifactRequestFactory`,
-  `CopilotIncidentRunRequestFactory`,
-  `CopilotIncidentArtifactService`,
-  `CopilotIncidentArtifactFormatVersion`,
-  `CopilotIncidentArtifactItemIdGenerator`.
-  Incident artifact rendering, format version i item-id policy zostaja po
-  stronie feature preparation. Neutralny typ `CopilotRenderedArtifact` i
-  mapowanie na runtime `artifactContents` sa juz platform-owned w
-  `aiplatform.copilot.runtime`.
-Coverage/gap evaluation w `copilot/coverage` jest rowniez feature-owned:
-`CopilotIncidentEvidenceCoverageEvaluator`,
-`CopilotIncidentEvidenceCoverageReport` i lokalne enumy coverage opisuja
-widocznosc evidence dla analizy incydentu oraz steruja incident tool policy.
-Platform-owned runtime siedzi w `aiplatform.copilot.runtime`, przede wszystkim
-`CopilotRunRequest`, `CopilotRunPreparationService`,
-`CopilotPreparedSession`, `CopilotSessionConfigRequest`,
-`CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
-`CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory` i
-`CopilotSessionConfigFactory`. Skill loader jest platformowa mechanika
-materializacji skonfigurowanych skill directories/resources; wybor, czy dana
-sesja ma ich uzyc, nadal pozostaje po stronie feature preparation przez
-`CopilotSessionConfigRequest`.
+- `features.incidentanalysis.ai.copilot.preparation`
+- `features.incidentanalysis.ai.copilot.coverage`
+
+Nie importuj `features.*` z `analysis.ai`. Obecny kierunek zaleznosci to
+feature -> kontrakty/mechanika `analysis.ai`, dopoki kolejne elementy nie
+trafia do `aiplatform`.
 
 ## Zasady modyfikacji
 
@@ -178,8 +122,8 @@ sesja ma ich uzyc, nadal pozostaje po stronie feature preparation przez
 
 ## Testy
 
-- Zmiany w `copilot/preparation` powinny miec testy promptu, incident run
-  assembly i ladowania skilli.
+- Zmiany w `features.incidentanalysis.ai.copilot.preparation` powinny miec
+  testy promptu, incident run assembly i ladowania skilli.
 - Zmiany w `aiplatform.copilot.runtime` powinny miec testy konfiguracji sesji,
   properties i model listing, jesli dotykaja tych mechanizmow.
 - Zmiany w `copilot/tools` powinny miec testy mapowania Spring tools na tool

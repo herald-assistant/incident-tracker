@@ -95,12 +95,14 @@ flowchart LR
     INTEGRATIONS --> EXT
 
     FLOW --> INITIAL["analysis.ai.initial"]
-    INITIAL --> TOOLS["analysis.ai.copilot.tools"]
+    INITIAL --> INCIDENTCOPILOT["features.incidentanalysis.ai.copilot"]
+    INCIDENTCOPILOT --> AIPLATFORM["aiplatform.copilot.runtime"]
+    INCIDENTCOPILOT --> TOOLS["analysis.ai.copilot.tools"]
     TOOLS --> MCP["agenttools.*.mcp"]
     MCP --> INTEGRATIONS
 
     JOB --> CHAT
-    CHAT["analysis.ai.chat"] --> TOOLS
+    CHAT["analysis.ai.chat"] --> INCIDENTCOPILOT
 
     JOB --> OPTIONS["analysis.options"]
     FLOW --> OPTIONS
@@ -117,11 +119,11 @@ Najwazniejsze lancuchy ownership/dependency:
 - deterministic initial analysis:
   `analysis.job -> analysis.flow -> analysis.evidence -> integrations`,
 - initial AI:
-  `analysis.flow -> analysis.ai.initial`,
+  `analysis.flow -> analysis.ai.initial -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime`,
 - AI-guided tools podczas initial analysis:
-  `analysis.ai.initial -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
+  `features.incidentanalysis.ai.copilot -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
 - follow-up chat:
-  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
+  `analysis.job -> analysis.ai.chat -> features.incidentanalysis.ai.copilot -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
 - model/options:
   `analysis.job`, `analysis.flow` i `analysis.ai` korzystaja z bocznego
   kontraktu `analysis.options`.
@@ -149,9 +151,15 @@ flowchart LR
     EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
 
+    FEATURES["features"] --> AI
+    FEATURES --> AIPLATFORM["aiplatform"]
+    FEATURES --> AGENTTOOLS["agenttools"]
+    FEATURES --> EVIDENCE
+    FEATURES --> OPTIONS
+    FEATURES --> SHARED
+
     AI --> AIPLATFORM["aiplatform"]
     AI --> AGENTTOOLS["agenttools"]
-    AI --> EVIDENCE
     AI --> OPTIONS
     AI --> COMMON["common"]
     AI --> SHARED
@@ -181,12 +189,17 @@ flowchart LR
 | `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
-| `analysis.ai -> analysis.evidence` | 11 | sprzegajace | Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to lokalnie w preparation/coverage, nie rozszerzac na kontrakt AI. |
-| `analysis.ai -> aiplatform` | 24 | oczekiwane przejsciowo | Incident Copilot preparation/execution korzysta z pierwszego wydzielonego platformowego runtime `aiplatform.copilot.runtime`. |
-| `analysis.ai -> agenttools` | 29 | oczekiwane przejsciowo | Copilot runtime uzywa neutralnych hidden context keys, nazw tools/prefixow capability oraz GitLab tool response DTO dla capture evidence. |
-| `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
+| `features -> aiplatform` | 19 | oczekiwane przejsciowo | Incident Copilot preparation sklada platformowy `CopilotRunRequest` i uzywa runtime types. |
+| `features -> agenttools` | 4 | oczekiwane przejsciowo | Incident tool policy wybiera capability po neutralnych nazwach/prefixach tools. |
+| `features -> analysis.ai` | 43 | oczekiwane przejsciowo | Incident provider/preparation implementuje aktualne kontrakty AI oraz korzysta z jeszcze nieprzeniesionej mechaniki tools, response, quality i telemetry. |
+| `features -> analysis.evidence` | 11 | przejsciowe | Incident coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
+| `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
+| `features -> shared` | 9 | oczekiwane | Incident artifacts i coverage czytaja neutralne DTO evidence. |
+| `analysis.ai -> aiplatform` | 5 | oczekiwane przejsciowo | Techniczne wykonanie/model options Copilota korzystaja z pierwszego wydzielonego platformowego runtime. |
+| `analysis.ai -> agenttools` | 25 | oczekiwane przejsciowo | Runtime tools uzywaja neutralnych hidden context keys, nazw tools/prefixow capability oraz GitLab tool response DTO dla capture evidence. |
+| `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
-| `analysis.ai -> shared` | 24 | oczekiwane | Providerzy AI, Copilot preparation i evidence capture konsumuja neutralny model evidence. |
+| `analysis.ai -> shared` | 15 | oczekiwane | Runtime tools, response/quality i telemetry konsumuja neutralny model evidence. |
 | `aiplatform -> shared` | 2 | oczekiwane | Platformowy run request i prepared session niosa neutralny model evidence jako sink output tooli. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
@@ -199,13 +212,21 @@ Po wydzieleniu generycznego modelu evidence aktualny kod nie ma juz cyklu
 `analysis.ai <-> analysis.evidence` wynikajacego z `AnalysisEvidenceSection`.
 To jest zamknieta granica i nie nalezy jej przywracac.
 
-Do obserwacji zostala krawedz:
+Do obserwacji zostaly krawedzie:
 
-1. `analysis.ai -> analysis.evidence`
+1. `features -> analysis.ai`
 
-   Copilot coverage/artifacts czytaja typed evidence view helpers. Trzymac to
-   lokalnie w preparation/coverage, nie rozszerzac na publiczny kontrakt AI i
-   nie uzywac jako pretekstu do importow `analysis.evidence -> analysis.ai`.
+   Incident feature korzysta jeszcze z kontraktow AI, execution gateway,
+   response/quality, telemetry i runtime tools mieszkajacych pod
+   `analysis.ai`. Nie dodawac krawedzi odwrotnej `analysis.ai -> features`;
+   providery i preparation nalezy przenosic do feature'a, a reusable runtime do
+   `aiplatform`.
+
+2. `features -> analysis.evidence`
+
+   Incident coverage/artifacts czytaja typed evidence view helpers. To jest
+   przejsciowe do czasu przeniesienia evidence do `features.incidentanalysis`;
+   nie uzywac tego jako pretekstu do importow `analysis.evidence -> features`.
 
 ## Kierunek Dla Nowych Zmian
 
@@ -215,12 +236,15 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
+features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime
+features.incidentanalysis.ai.copilot -> analysis.ai.copilot.tools
+features.incidentanalysis.ai.copilot -> agenttools
 analysis.ai.copilot -> aiplatform.copilot.runtime
 analysis.ai.copilot -> agenttools
 aiplatform.copilot.runtime -> shared
 agenttools.*.mcp -> integrations
 analysis.job/flow/ai -> analysis.options
-analysis.job/flow/ai -> shared
+analysis.job/flow/ai/features -> shared
 api -> feature exceptions
 any package -> common
 ```
@@ -238,6 +262,8 @@ Unikac nowych zaleznosci:
 - `aiplatform -> analysis`,
 - `aiplatform -> features`,
 - `aiplatform -> integrations`,
+- `analysis.ai -> features`,
+- `analysis.evidence -> features`,
 - `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.ai -> analysis.mcp`,
 - `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
@@ -267,6 +293,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.ai -> analysis.mcp`: GitLab tool response DTO uzywane przez
   capture evidence mieszkaja teraz w `agenttools.gitlab.mcp`, a Copilot
   runtime nie importuje historycznej warstwy MCP.
+- `analysis.ai -> features`: incidentowe providery, preparation i coverage
+  mieszkaja teraz w `features.incidentanalysis.ai.copilot`, a `analysis.ai`
+  nie powinien importowac dedykowanego feature'a.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.
