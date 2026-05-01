@@ -101,7 +101,7 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 2. utrzymaj request chatu jako `message`, bez recznego `environment`, branch,
    GitLab group ani DB scope'u,
 3. jesli zmieniasz prompt lub policy chatu, sprawdz
-   `CopilotSdkFollowUpPreparationService`, `CopilotIncidentFollowUpPromptRenderer` i
+   `CopilotIncidentFollowUpPreparationService`, `CopilotIncidentFollowUpPromptRenderer` i
    `CopilotToolAccessPolicyFactory.createForFollowUp(...)`,
 4. jesli zmieniasz payload, zaktualizuj `AnalysisChatMessageResponse`, modele
    TS i import/eksport analizy,

@@ -8,7 +8,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 
 @Service
 @RequiredArgsConstructor
-public class CopilotSdkFollowUpPreparationService {
+public class CopilotIncidentFollowUpPreparationService {
 
     private final CopilotFollowUpRunAssembler runAssembler;
     private final CopilotRunPreparationService runPreparationService;
