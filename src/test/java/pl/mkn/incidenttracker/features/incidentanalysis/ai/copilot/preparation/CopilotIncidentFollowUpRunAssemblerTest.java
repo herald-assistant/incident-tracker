@@ -5,7 +5,7 @@ import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;

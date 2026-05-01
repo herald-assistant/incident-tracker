@@ -111,13 +111,12 @@ Zasady granic:
   powod wywolania. Nie przywracaj dodatkowych model-facing parametrow
   eksploracyjnych, pytan diagnostycznych ani technicznych pseudo-heurystyk do
   user-facing evidence.
-- Obecnie `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime
-  tools dla `CopilotSdkToolFactory`. Platformowa mechanika invocation, hidden
-  `ToolContext`, eventow invocation, policy contracts, session validation,
-  loggingu invocation, description customization contract i session-bound
-  tool evidence store mieszka juz w
-  `aiplatform.copilot.tools`. W `analysis.ai.copilot.tools` zostaja
-  przejsciowo `policy.budget`, dopoki budzet jest spiety z telemetryka analizy.
+- `aiplatform.copilot.tools` jest platformowym rootem runtime tools:
+  `CopilotSdkToolFactory`, invocation handler, hidden `ToolContext`, eventy
+  invocation, policy contracts, session validation, logging invocation,
+  description customization contract i session-bound tool evidence store
+  mieszkaja w platformie. W `analysis.ai.copilot.tools` zostaje przejsciowo
+  tylko `policy.budget`, dopoki budzet jest spiety z telemetryka analizy.
   Generyczne helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj poza
   Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB
   evidence mapping i Copilot-facing guidance opisow tools mieszkaja w

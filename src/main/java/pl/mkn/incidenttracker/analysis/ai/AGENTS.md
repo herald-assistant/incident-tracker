@@ -26,16 +26,10 @@ Obejmuje:
 - `copilot/execution/`
   wykonanie sesji, lifecycle klienta i logowanie eventow,
 - `copilot/tools/`
-  obecny root runtime tools z klasa wejsciowa `CopilotSdkToolFactory`.
-  To jest stan przejsciowy przed rozdzieleniem platformowej mechaniki
-  invocation od incident-specific policy/capture.
-  Platformowy `CopilotToolInvocationHandler`, `context/`, `events/`,
-  `policy/session`, `logging/`, description customization contract i session
-  evidence store sa juz w
-  `aiplatform.copilot.tools`.
-  Szczegoly trzymane tutaj to:
-  - `policy/budget/` przejsciowy budget runtime powiazany z telemetryka
-    analizy.
+  przejsciowy `policy/budget/` runtime powiazany z telemetryka analizy.
+  Factory tools, invocation handler, context, eventy, neutralne policy
+  contracts, session validation, logging, description customization contract i
+  session evidence store sa juz w `aiplatform.copilot.tools`.
 
 Nie obejmuje:
 
@@ -84,10 +78,11 @@ trafia do `aiplatform`.
 - Copilot runtime uzywa neutralnego `runReference` do logow i execution
   identity. Incident feature moze przekazac tam `correlationId`, ale runtime
   nie powinien miec pola ani kontraktu `correlationId`.
-- Tool factory ma reuse'owac istniejace Spring tools z `../mcp`, a nie dublowac
-  ich implementacje.
-- `CopilotSdkToolFactory` ma tylko tworzyc `ToolDefinition`; wykonanie zostaje
-  w `aiplatform.copilot.tools.CopilotToolInvocationHandler`.
+- `aiplatform.copilot.tools.CopilotSdkToolFactory` ma reuse'owac istniejace
+  Spring tools z `agenttools.*.mcp`, a nie dublowac ich implementacje.
+- `aiplatform.copilot.tools.CopilotSdkToolFactory` ma tylko tworzyc
+  `ToolDefinition`; wykonanie zostaje w
+  `aiplatform.copilot.tools.CopilotToolInvocationHandler`.
 - `aiplatform.copilot.tools.CopilotToolInvocationHandler` ma pozostac czysta
   granica invocation:
   policies, hidden context, callback, eventy i parsing wyniku. Nie dopisuj do
@@ -105,12 +100,12 @@ trafia do `aiplatform`.
   `analysis.ai.copilot.tools.policy.budget`, bo korzysta z telemetryki analizy.
 - Incident-specific GitLab/DB evidence capture mieszka w
   `features.incidentanalysis.ai.copilot.tools`. W `analysis.ai.copilot.tools`
-  zostawiaj tylko przejsciowa bramke invocation i budget. Incident-specific
-  guidance opisow tools mieszka w
+  zostawiaj tylko przejsciowy budget. Incident-specific guidance opisow tools
+  mieszka w
   `features.incidentanalysis.ai.copilot.tools.description`. Handler,
-  hidden context, eventy invocation, policy contracts, session validation,
-  logging, description customization contract i session evidence store sa
-  platformowe w `aiplatform.copilot.tools`.
+  factory, hidden context, eventy invocation, policy contracts, session
+  validation, logging, description customization contract i session evidence
+  store sa platformowe w `aiplatform.copilot.tools`.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.

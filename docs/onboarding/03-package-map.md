@@ -97,8 +97,6 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
 - `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
-- `copilot/tools` - root z przejsciowa klasa wejsciowa runtime tools:
-  `CopilotSdkToolFactory`,
 - `copilot/tools/policy/budget` - przejsciowy budget policy invocation
   powiazany z telemetryka analizy,
 
@@ -112,6 +110,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   sesji SDK,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
   scope jako neutralna mechanika platformy,
+- `aiplatform.copilot.tools/CopilotSdkToolFactory` - rejestracja Spring tools
+  jako Copilot `ToolDefinition`,
 - `aiplatform.copilot.tools/CopilotToolInvocationHandler` - neutralna granica
   wykonania callbacka toola,
 - `aiplatform.copilot.tools/events` - eventy `Started`/`Finished` dla

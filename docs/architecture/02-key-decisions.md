@@ -323,9 +323,10 @@ dodatkowych streszczen wyniku w user-facing evidence.
 Session store zarzadza sesja i routingiem capture, a szczegoly mapowania wynikow
 GitLab/DB sa oddzielone od lifecycle sesji.
 
-`CopilotSdkToolFactory` pozostaje warstwa rejestracji tools: zbiera Spring
-`ToolCallback`, sortuje je, dekoruje opisy, parsuje input schema i tworzy
-`ToolDefinition`. Nie wykonuje tooli i nie interpretuje wynikow.
+`aiplatform.copilot.tools.CopilotSdkToolFactory` pozostaje warstwa rejestracji
+tools: zbiera Spring `ToolCallback`, sortuje je, customizuje opisy, parsuje
+input schema i tworzy `ToolDefinition`. Nie wykonuje tooli i nie interpretuje
+wynikow.
 
 `aiplatform.copilot.tools.CopilotToolInvocationHandler` pozostaje runtime
 boundary: serializuje argumenty, uruchamia generyczne invocation policies,

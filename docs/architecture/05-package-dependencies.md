@@ -99,7 +99,7 @@ flowchart LR
     FLOW --> INITIAL["analysis.ai.initial"]
     INITIAL --> INCIDENTCOPILOT["features.incidentanalysis.ai.copilot"]
     INCIDENTCOPILOT --> AIPLATFORM["aiplatform.copilot.runtime"]
-    INCIDENTCOPILOT --> TOOLS["analysis.ai.copilot.tools"]
+    INCIDENTCOPILOT --> TOOLS["aiplatform.copilot.tools"]
     TOOLS --> MCP["agenttools.*.mcp"]
     MCP --> INTEGRATIONS
 
@@ -123,9 +123,9 @@ Najwazniejsze lancuchy ownership/dependency:
 - initial AI:
   `analysis.flow -> analysis.ai.initial -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime`,
 - AI-guided tools podczas initial analysis:
-  `features.incidentanalysis.ai.copilot -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
+  `features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools -> agenttools.*.mcp -> integrations`,
 - follow-up chat:
-  `analysis.job -> analysis.ai.chat -> features.incidentanalysis.ai.copilot -> analysis.ai.copilot.tools -> agenttools.*.mcp -> integrations`,
+  `analysis.job -> analysis.ai.chat -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools -> agenttools.*.mcp -> integrations`,
 - model/options:
   `analysis.job`, `analysis.flow` i `analysis.ai` korzystaja z bocznego
   kontraktu `analysis.options`.
@@ -192,14 +192,14 @@ flowchart LR
 | `analysis.flow -> shared` | 2 | oczekiwane | Flow przenosi neutralne evidence DTO miedzy collectorem, AI i response. |
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
-| `features -> aiplatform` | 30 | oczekiwane przejsciowo | Incident Copilot preparation sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, description customizer contract i uzywa platformowego session-bound evidence store. |
+| `features -> aiplatform` | 32 | oczekiwane przejsciowo | Incident Copilot preparation sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, factory tools, description customizer contract i uzywa platformowego session-bound evidence store. |
 | `features -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
-| `features -> analysis.ai` | 41 | oczekiwane przejsciowo | Incident provider/preparation implementuja aktualne kontrakty AI i korzystaja z jeszcze nieprzeniesionej mechaniki response, quality i telemetry. |
+| `features -> analysis.ai` | 39 | oczekiwane przejsciowo | Incident provider/preparation implementuja aktualne kontrakty AI i korzystaja z jeszcze nieprzeniesionej mechaniki response, quality i telemetry. |
 | `features -> analysis.evidence` | 11 | przejsciowe | Incident coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> shared` | 15 | oczekiwane | Incident artifacts, coverage i tool evidence capture czytaja neutralne DTO evidence. |
-| `analysis.ai -> aiplatform` | 17 | oczekiwane przejsciowo | Techniczne wykonanie/model options, factory tools i przejsciowa bramka tools korzystaja z wydzielonego platformowego runtime oraz handler/context/events/policy/logging/description/evidence. |
+| `analysis.ai -> aiplatform` | 14 | oczekiwane przejsciowo | Techniczne wykonanie/model options i przejsciowy budget korzystaja z wydzielonego platformowego runtime oraz handler/context/events/policy/logging/evidence. |
 | `analysis.ai -> agenttools` | 6 | oczekiwane przejsciowo | Przejsciowe policy/budget runtime uzywa neutralnych nazw capability. |
 | `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> shared` | 6 | oczekiwane | Response/quality i telemetry konsumuja neutralny model evidence. |
@@ -243,8 +243,8 @@ analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime
+features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
-features.incidentanalysis.ai.copilot -> analysis.ai.copilot.tools
 features.incidentanalysis.ai.copilot -> agenttools
 analysis.ai.copilot -> aiplatform.copilot.runtime/tools
 analysis.ai.copilot -> agenttools
@@ -305,20 +305,21 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.ai -> features`: incidentowe providery, preparation i coverage
   mieszkaja teraz w `features.incidentanalysis.ai.copilot`, a `analysis.ai`
   nie powinien importowac dedykowanego feature'a.
-- `analysis.ai.copilot.tools -> capability evidence capture`: GitLab/DB
-  user-facing tool evidence mapping mieszka teraz w
-  `features.incidentanalysis.ai.copilot.tools`; runtime tools publikuja tylko
-  neutralne eventy i platformowy session-bound evidence store.
-- `analysis.ai.copilot.tools.description -> incident guidance`: Copilot-facing
-  guidance opisow GitLab/DB tools mieszka teraz w
+- `runtime tools -> capability evidence capture`: GitLab/DB user-facing tool
+  evidence mapping mieszka teraz w
+  `features.incidentanalysis.ai.copilot.tools`; platformowe runtime tools
+  publikuja tylko neutralne eventy i session-bound evidence store.
+- `runtime tools description -> incident guidance`: Copilot-facing guidance
+  opisow GitLab/DB tools mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools.description`, a runtime factory
   widzi tylko platformowy kontrakt `CopilotToolDescriptionCustomizer`.
-- Dawne `handler/context/events/policy/session/logging/evidence store` spod
-  `analysis.ai.copilot.tools`: handler invocation, hidden `ToolContext`, eventy
-  invocation, neutralne policy contracts, session validation, logging,
-  description customization contract i session-bound evidence store mieszkaja
-  teraz w `aiplatform.copilot.tools`;
-  `analysis.ai.copilot.tools` korzysta z nich jako przejsciowa bramka runtime.
+- Dawne `factory/handler/context/events/policy/session/logging/evidence store`
+  spod `analysis.ai.copilot.tools`: `CopilotSdkToolFactory`, handler
+  invocation, hidden `ToolContext`, eventy invocation, neutralne policy
+  contracts, session validation, logging, description customization contract i
+  session-bound evidence store mieszkaja teraz w `aiplatform.copilot.tools`.
+  W `analysis.ai.copilot.tools` zostaje tylko przejsciowy budget spiety z
+  telemetryka analizy.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.

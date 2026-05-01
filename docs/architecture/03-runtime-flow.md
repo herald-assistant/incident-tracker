@@ -284,10 +284,11 @@ migracji, a nie wzorzec dla nowych tools.
 
 ## 9. Tool factory
 
-`CopilotSdkToolFactory` konwertuje Spring tools na definicje Copilota.
+`aiplatform.copilot.tools.CopilotSdkToolFactory` konwertuje Spring tools na
+definicje Copilota.
 
 Po refaktorze factory robi tylko rejestracje definicji i jest glowna klasa
-wejsciowa pakietu `tools` dla preparation:
+wejsciowa platformowego pakietu `aiplatform.copilot.tools` dla preparation:
 
 - customizacja opisow przez platformowy
   `aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer`,

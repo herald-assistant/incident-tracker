@@ -79,7 +79,7 @@ targeted tools na podstawie resolved scope'u z zakonczonej analizy:
 
 ## Opisy tools dla Copilota
 
-`CopilotSdkToolFactory` wywoluje platformowy kontrakt
+`aiplatform.copilot.tools.CopilotSdkToolFactory` wywoluje platformowy kontrakt
 `CopilotToolDescriptionCustomizer`, dzieki czemu feature moze uzupelnic Spring
 tool descriptions bez zmiany implementacji tools. Incident feature dostarcza
 `CopilotIncidentToolDescriptionCustomizer` z guidance dla GitLab/DB.
@@ -117,9 +117,9 @@ Limity obejmuja:
 
 ## Tool factory i invocation handler
 
-`CopilotSdkToolFactory` jest waska warstwa adaptera Spring tools -> Copilot
-SDK. Zbiera `ToolCallback`, deduplikuje po nazwie, sortuje, dekoruje opis,
-parsuje input schema i tworzy `ToolDefinition`.
+`aiplatform.copilot.tools.CopilotSdkToolFactory` jest waska warstwa adaptera
+Spring tools -> Copilot SDK. Zbiera `ToolCallback`, deduplikuje po nazwie,
+sortuje, customizuje opis, parsuje input schema i tworzy `ToolDefinition`.
 
 Factory nie jest miejscem na side-effecty invocation. Jej odpowiedzialnosc
 konczy sie na definicji toola i podpietym handlerze wykonania.

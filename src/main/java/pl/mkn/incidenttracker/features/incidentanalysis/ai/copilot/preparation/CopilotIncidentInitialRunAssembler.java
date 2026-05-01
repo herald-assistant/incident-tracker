@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 
 @Component

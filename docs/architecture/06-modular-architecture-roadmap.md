@@ -259,7 +259,7 @@ incident-specific guidance doklejane do opisow GitLab/DB tools przez
 platformowy `CopilotToolDescriptionCustomizer`.
 
 Platform-owned runtime jest juz poza `preparation`, w
-`aiplatform.copilot.runtime`:
+`aiplatform.copilot.runtime` i `aiplatform.copilot.tools`:
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
@@ -267,7 +267,9 @@ Platform-owned runtime jest juz poza `preparation`, w
 `CopilotSessionConfigFactory`. Skill loader odpowiada tylko za materializacje
 skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
-`CopilotSessionConfigRequest`.
+`CopilotSessionConfigRequest`. Platformowe tools zawieraja tez
+`CopilotSdkToolFactory`, ktory rejestruje Spring tools jako Copilot
+`ToolDefinition` bez wiedzy o incident-specific guidance.
 
 ### `features.incidentanalysis`
 
@@ -472,7 +474,7 @@ Kroki:
    `aiplatform.copilot.runtime` zawiera run request, prepared session,
    session config, properties, model listing, skill loader i artifact mapping.
    Platformowe `aiplatform.copilot.tools` zawiera juz
-   `CopilotToolInvocationHandler`, hidden `ToolContext`,
+   `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
    session validation, logging invocation, description customization contract i
    session-bound tool evidence store.
@@ -624,7 +626,7 @@ Kryterium done:
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
     capture przeniesione; platformowe tool
-    handler/context/events/policy/logging/description/evidence store
+    factory/handler/context/events/policy/logging/description/evidence store
     przeniesione do `aiplatform.copilot.tools`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
