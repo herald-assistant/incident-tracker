@@ -24,9 +24,11 @@ Obejmuje:
   `CopilotSdkAnalysisChatProvider` i `CopilotSdkModelOptionsProvider`,
 - `copilot/preparation/`
   obecna budowe incident promptu, tool policy, initial/follow-up run assembly i
-  skill runtime loading. To jest stan przejsciowy: docelowo incident prompt, skill
-  selection i tool policy powinny byc parametrami feature'a przekazanymi do
-  platformy Copilot,
+  skill runtime loading. `CopilotIncidentSessionConfigRequestFactory` sklada
+  incidentowy `CopilotSessionConfigRequest` z policy, skill directories, model
+  options i komunikatu odmowy tooli. To jest stan przejsciowy: docelowo
+  incident prompt, skill selection i tool policy powinny byc parametrami
+  feature'a przekazanymi do platformy Copilot,
 - `copilot/runtime/`
   neutralne elementy runtime SDK: `CopilotSdkProperties`, model listing,
   `CopilotModelSelection`, `CopilotRunRequest`, `CopilotPreparedSession`,

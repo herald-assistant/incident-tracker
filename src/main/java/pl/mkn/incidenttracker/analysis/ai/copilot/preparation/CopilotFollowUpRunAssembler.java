@@ -4,13 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotModelSelection;
 import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotRunRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.ArrayList;
@@ -20,11 +17,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CopilotFollowUpRunAssembler {
 
-    private static final String INCIDENT_TOOL_DENIED_MESSAGE =
-            "Use only the inline incident artifacts and the explicitly enabled incident-analysis tools for this session.";
-
     private final CopilotSdkToolFactory toolFactory;
-    private final CopilotSkillRuntimeLoader skillRuntimeLoader;
+    private final CopilotIncidentSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotArtifactService artifactService;
     private final CopilotFollowUpPromptRenderer promptRenderer;
     private final CopilotIncidentHiddenToolContextFactory hiddenToolContextFactory;
@@ -39,13 +33,10 @@ public class CopilotFollowUpRunAssembler {
         );
         var renderedArtifacts = artifactService.renderArtifacts(artifactRequest(request), toolAccessPolicy);
         var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
-        var sessionConfigRequest = new CopilotSessionConfigRequest(
+        var sessionConfigRequest = sessionConfigRequestFactory.create(
                 toolSessionContext.copilotSessionId(),
-                toolAccessPolicy.enabledTools(),
-                toolAccessPolicy.availableToolNames(),
-                skillRuntimeLoader.resolveSkillDirectories(),
-                modelSelection(request.options()),
-                INCIDENT_TOOL_DENIED_MESSAGE
+                toolAccessPolicy,
+                request.options()
         );
 
         return new CopilotFollowUpRunAssembly(
@@ -86,11 +77,5 @@ public class CopilotFollowUpRunAssembler {
                 sections,
                 request.options()
         );
-    }
-
-    private CopilotModelSelection modelSelection(AnalysisAiOptions options) {
-        return options != null
-                ? new CopilotModelSelection(options.model(), options.reasoningEffort())
-                : CopilotModelSelection.DEFAULT;
     }
 }

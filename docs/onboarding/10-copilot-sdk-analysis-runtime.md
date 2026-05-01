@@ -78,7 +78,11 @@ Po refaktorze `CopilotSdkPreparationService` jest kompozytorem zaleznosci:
   registered tools,
 - `CopilotPromptRenderer` zawiera tekst promptu, JSON response contract,
   rendering capability groups i embedded artifact contents,
-- initial/follow-up run assembler buduje `CopilotRunRequest`,
+- `CopilotIncidentSessionConfigRequestFactory` sklada incidentowy
+  `CopilotSessionConfigRequest`: tools, available tool names, skill
+  directories, model selection i komunikat odmowy tooli,
+- initial/follow-up run assembler buduje `CopilotRunRequest` z gotowym
+  `CopilotSessionConfigRequest`,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na techniczna
   `CopilotPreparedSession`,
 - `CopilotSessionConfigFactory` buduje `CopilotClientOptions`,

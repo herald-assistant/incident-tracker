@@ -100,8 +100,11 @@ renderingu i konfiguracji SDK:
   tools i zwraca coverage-aware policy,
 - `CopilotPromptRenderer` renderuje prompt, JSON-only response contract,
   available capability groups i embedded artifacts,
+- `CopilotIncidentSessionConfigRequestFactory` sklada incidentowe parametry
+  sesji: enabled tools, available tool names, skill directories, model
+  selection i komunikat odmowy tooli,
 - run assembler buduje neutralny `CopilotRunRequest` z promptem, artifactami,
-  parametrami sesji, `runReference` i evidence sink,
+  `CopilotSessionConfigRequest`, `runReference` i evidence sink,
 - `CopilotPreparedSessionFactory` zamienia `CopilotRunRequest` na
   `CopilotPreparedSession`, a `CopilotSessionConfigFactory` buduje client
   options, session config, permission handler, hooks i disabled skills.

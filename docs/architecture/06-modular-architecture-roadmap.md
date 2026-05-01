@@ -158,6 +158,12 @@ Docelowy input platformy istnieje jako pierwszy inkrement
 evidence sink i `runReference`; docelowo powinien zostac rozszerzony tak, aby
 mogl niesc:
 
+Kolejny inkrement jest rowniez w kodzie: incident preparation sklada
+`CopilotSessionConfigRequest` przez `CopilotIncidentSessionConfigRequestFactory`.
+Dzieki temu wybor skilli, model options i incidentowy komunikat odmowy tooli
+sa lokalne dla feature preparation, a runtime factory tylko buduje techniczna
+konfiguracje SDK.
+
 - prompt albo gotowe message/input do modelu,
 - model options, np. model i reasoning effort,
 - skill resources albo skill directories wybrane przez feature,

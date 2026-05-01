@@ -254,8 +254,11 @@ nie nowy kontrakt do rozszerzania.
 
 SessionConfig ma jawna allowliste tools, a `SessionHooks.onPreToolUse`
 blokuje lokalny workspace/filesystem/shell/terminal w glownym flow analizy.
-Konfiguracje klienta SDK, `SessionConfig`, hooks, permission handler,
-skill directories i disabled skills buduje `CopilotSessionConfigFactory`.
+Incident preparation sklada `CopilotSessionConfigRequest`: wybiera allowed
+tools, skill directories, model options i incidentowy komunikat odmowy toola.
+`CopilotSessionConfigFactory` jest juz tylko runtime factory, ktora zamienia
+ten request na konfiguracje klienta SDK, `SessionConfig`, hooks, permission
+handler i disabled skills.
 
 ## 15. Tool descriptions moga byc dekorowane dla Copilota
 
