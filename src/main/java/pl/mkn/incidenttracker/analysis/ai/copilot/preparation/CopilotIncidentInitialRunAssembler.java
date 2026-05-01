@@ -17,7 +17,7 @@ public class CopilotIncidentInitialRunAssembler {
     private final CopilotIncidentPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
 
-    public CopilotInitialAnalysisRunAssembly assemble(InitialAnalysisRequest request) {
+    public CopilotIncidentInitialRunAssembly assemble(InitialAnalysisRequest request) {
         var toolSessionContext = toolSessionContextFactory.fromInitialRequest(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = toolAccessPolicyFactory.create(request, registeredTools);
@@ -29,7 +29,7 @@ public class CopilotIncidentInitialRunAssembler {
                 request.options()
         );
 
-        return new CopilotInitialAnalysisRunAssembly(
+        return new CopilotIncidentInitialRunAssembly(
                 runRequestFactory.create(
                         request.correlationId(),
                         prompt,

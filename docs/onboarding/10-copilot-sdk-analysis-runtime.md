@@ -89,8 +89,9 @@ zaleznosci:
   deterministic evidence oraz tool evidence z poprzednich sesji,
 - `CopilotIncidentRunRequestFactory` tworzy platformowy `CopilotRunRequest` z
   promptu, session config request i artifact contents,
-- `CopilotIncidentInitialRunAssembler` niesie platformowy `CopilotRunRequest`
-  oraz osobny snapshot metryk preparation,
+- `CopilotIncidentInitialRunAssembler` sklada
+  `CopilotIncidentInitialRunAssembly`, ktory niesie platformowy
+  `CopilotRunRequest` oraz osobny snapshot metryk preparation,
 - `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio platformowy
   `CopilotRunRequest`,
 - `CopilotRunPreparationService` jest neutralnym wejsciem runtime:

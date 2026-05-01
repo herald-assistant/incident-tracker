@@ -174,7 +174,8 @@ wiec adaptacja chatu na incident artifacts nie siedzi w assemblerze runtime
 requestu.
 `CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`, wiec
 mapowanie rendered artifacts na platformowy input runtime jest w jednym miejscu.
-`CopilotIncidentInitialRunAssembler` trzyma juz `CopilotRunRequest`
+`CopilotIncidentInitialRunAssembler` sklada juz
+`CopilotIncidentInitialRunAssembly`, ktory trzyma `CopilotRunRequest`
 oddzielnie od `CopilotInitialAnalysisPreparationMetrics`, zeby metryki
 preparation nie wchodzily do neutralnego requestu runtime.
 `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio neutralny
