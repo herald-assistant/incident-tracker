@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

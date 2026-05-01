@@ -2,10 +2,10 @@ package pl.mkn.incidenttracker.analysis.mcp.database;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.incidenttracker.analysis.adapter.database.DbOperator;
-import pl.mkn.incidenttracker.analysis.adapter.database.JoinType;
-import pl.mkn.incidenttracker.analysis.adapter.database.SortDirection;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
+import pl.mkn.incidenttracker.integrations.database.DbOperator;
+import pl.mkn.incidenttracker.integrations.database.JoinType;
+import pl.mkn.incidenttracker.integrations.database.SortDirection;
+import pl.mkn.incidenttracker.integrations.database.DatabaseToolService;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 
 import java.util.LinkedHashMap;
@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.*;
 
 class DatabaseMcpToolsTest {
 

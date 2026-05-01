@@ -13,10 +13,16 @@ Obecnie obejmuje m.in.:
 - `elasticsearch/`
 - `gitlab/`
 - `operationalcontext/`
+- `database/`
 
 Operational context jest tutaj query-based capability katalogu operacyjnego.
 Incident-specific matching i mapowanie na evidence pozostaja w
 `analysis.evidence.provider.operationalcontext`.
+
+Database jest tutaj readonly capability diagnostyki danych: routing DataSource
+per environment, metadata, SQL guard, masking/limiting wynikow oraz typed
+request/result/scope/operator contracts. MCP mapuje hidden `ToolContext` na ten
+scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 
 ## Zasady
 
@@ -29,6 +35,9 @@ Incident-specific matching i mapowanie na evidence pozostaja w
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
 - Nie dodawaj tu `AnalysisEvidenceProvider`, klas `@Tool`, promptow, skilli ani
   heurystyk incidentowych.
+- Dla Database capability nie wprowadzaj globalnego `spring.datasource`, nie
+  zgaduj schematow domenowo w kodzie i trzymaj mapping application-to-schema w
+  konfiguracji.
 - Jesli capability potrzebuje neutralnego kontraktu wspolnego z innym
   feature'em, preferuj maly typ w `shared` albo `common`, ale dopiero gdy realnie
   usuwa zaleznosc.

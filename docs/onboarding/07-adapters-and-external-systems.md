@@ -58,13 +58,13 @@ To opcjonalna capability readonly dla AI-guided data diagnostics.
 
 Czytaj:
 
-- `analysis.adapter.database.DatabaseToolProperties`
-- `analysis.adapter.database.DatabaseConnectionRouter`
-- `analysis.adapter.database.DatabaseApplicationScopeResolver`
-- `analysis.adapter.database.DatabaseMetadataClient`
-- `analysis.adapter.database.DatabaseReadOnlyQueryClient`
-- `analysis.adapter.database.DatabaseSqlGuard`
-- `analysis.adapter.database.DatabaseToolService`
+- `integrations.database.DatabaseToolProperties`
+- `integrations.database.DatabaseConnectionRouter`
+- `integrations.database.DatabaseApplicationScopeResolver`
+- `integrations.database.DatabaseMetadataClient`
+- `integrations.database.DatabaseReadOnlyQueryClient`
+- `integrations.database.DatabaseSqlGuard`
+- `integrations.database.DatabaseToolService`
 
 ## Operational Context
 

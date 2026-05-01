@@ -183,12 +183,12 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Elasticsearch/Kibana.
 - `pl.mkn.incidenttracker.analysis.mcp.elasticsearch`
   MCP tools Elastica.
-- `pl.mkn.incidenttracker.analysis.adapter.database`
+- `pl.mkn.incidenttracker.integrations.database`
   Routing polaczen, metadata Oracle, readonly query execution i SQL guard DB
   capability.
 - `pl.mkn.incidenttracker.analysis.mcp.database`
   Session-bound MCP tools diagnostyki danych. Kontrakty request/result/scope i
-  operatory DB mieszkaja w `pl.mkn.incidenttracker.analysis.adapter.database`.
+  operatory DB mieszkaja w `pl.mkn.incidenttracker.integrations.database`.
 - `pl.mkn.incidenttracker.integrations.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).

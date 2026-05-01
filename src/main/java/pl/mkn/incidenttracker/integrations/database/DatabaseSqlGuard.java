@@ -1,11 +1,11 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbTableRef;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbTableRef;
+import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.LinkedHashSet;
 import java.util.List;

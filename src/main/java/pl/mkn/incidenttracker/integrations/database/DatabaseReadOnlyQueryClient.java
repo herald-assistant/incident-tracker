@@ -1,10 +1,10 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.List;
 import java.util.Map;

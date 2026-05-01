@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

@@ -28,7 +28,7 @@ Nie obejmuje:
   wykonania jednego konkretnego kroku eksploracji.
 - Neutralne kontrakty wielokrotnego uzycia, np. hidden tool context keys,
   trzymaj w `pl.mkn.incidenttracker.agenttools`. DB request/result/scope/operator
-  DTO sa capability contract adaptera DB w `analysis.adapter.database`, a MCP
+  DTO sa capability contract adaptera DB w `integrations.database`, a MCP
   mapuje hidden `ToolContext` na adapterowy scope.
 - Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
   `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden

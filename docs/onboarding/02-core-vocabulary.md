@@ -28,8 +28,8 @@ Jeden krok pipeline, ktory czyta `AnalysisContext` i publikuje jedno
 Warstwa capability blisko integracji albo zrodla danych, np. Elasticsearch,
 Dynatrace, GitLab, Database albo curated operational context. Ma porty,
 modele, properties i ewentualnie helper endpointy do recznego testowania.
-Docelowy pakiet dla nowych adapterow to `integrations.<system>`; czesc
-starszych adapterow mieszka jeszcze przejsciowo pod `analysis.adapter`.
+Pakiet dla adapterow to `integrations.<system>`. Historyczny
+`analysis.adapter` nie jest juz miejscem na nowe capability.
 
 ### Tool
 
@@ -56,7 +56,7 @@ ladowane do sesji przez provider AI.
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisContext.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AnalysisEvidenceProvider.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
+- `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 

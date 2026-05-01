@@ -1,11 +1,11 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbApplicationScopeInfo;
+import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbApplicationScopeInfo;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

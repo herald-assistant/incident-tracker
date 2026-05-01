@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.mcp.database;
 
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.Map;
 

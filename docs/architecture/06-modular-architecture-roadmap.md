@@ -331,9 +331,9 @@ Najbardziej oplacalne ruchy:
    Stan obecny: keys mieszkaja w `agenttools.context.AgentToolContextKeys`,
    zeby MCP i Copilot runtime importowaly neutralny kontrakt.
 2. Przeniesc typed DB request/result/scope/operator contracts z
-   `analysis.mcp.database` do capability adaptera, np. `analysis.adapter.database`.
+   `analysis.mcp.database` do capability adaptera, np. `integrations.database`.
    Stan obecny: DB request/result/scope/operator contracts mieszkaja w
-   `analysis.adapter.database`, a `analysis.mcp.database` jest wrapperem Spring
+   `integrations.database`, a `analysis.mcp.database` jest wrapperem Spring
    AI nad adapterem DB i mapuje hidden `ToolContext` na adapterowy scope.
 3. Przeniesc generyczne evidence DTO z `analysis.ai.evidence` do neutralnego
    modelu, np. `shared.evidence` albo przejsciowo `analysis.evidence.model`.
@@ -362,7 +362,7 @@ Kroki:
    adapterowi przekazywac czysty `DynatraceIncidentQuery`.
    Stan obecny: ta krawedz jest zamknieta, a Dynatrace zostal przeniesiony do
    `integrations.dynatrace`.
-2. Usunac `analysis.adapter.database -> analysis.mcp.database`.
+2. Usunac historyczna krawedz `analysis.adapter.database -> analysis.mcp.database`.
    DB adapter ma pracowac na neutralnych DB contracts.
 3. Usunac `analysis.adapter -> agenttools`.
    DB capability DTO i scope maja byc przy adapterze, a hidden `ToolContext`
@@ -400,6 +400,7 @@ Kolejnosc sugerowana:
    Stan obecny: zrobione, pakiet mieszka w
    `integrations.operationalcontext`.
 5. Database, po przeniesieniu neutralnych DB contracts.
+   Stan obecny: zrobione, pakiet mieszka w `integrations.database`.
 
 Target:
 
@@ -407,7 +408,7 @@ Target:
 analysis.adapter.elasticsearch -> integrations.elasticsearch [done]
 analysis.adapter.dynatrace     -> integrations.dynatrace [done]
 analysis.adapter.gitlab        -> integrations.gitlab [done]
-analysis.adapter.database      -> integrations.database
+analysis.adapter.database      -> integrations.database [done]
 analysis.adapter.operationalcontext -> integrations.operationalcontext [done]
 ```
 
@@ -576,8 +577,8 @@ Kryterium done:
    [done].
 10. PR: przeniesc operational context adapter do
     `integrations.operationalcontext` [done].
-11. PR: przepiac DB tools na contracts z `analysis.adapter.database`.
-12. PR: przeniesc Database capability do `integrations.database`.
+11. PR: przepiac DB tools na contracts z `integrations.database` [done].
+12. PR: przeniesc Database capability do `integrations.database` [done].
 13. PR: wydzielic generic Copilot runtime od incident prompt/digest.
 14. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 15. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse

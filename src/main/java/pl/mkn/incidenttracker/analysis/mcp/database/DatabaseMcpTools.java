@@ -7,10 +7,10 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
+import pl.mkn.incidenttracker.integrations.database.DatabaseToolService;
 
 import static pl.mkn.incidenttracker.analysis.mcp.database.DatabaseToolNames.*;
-import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.*;
 
 @Component
 @Slf4j

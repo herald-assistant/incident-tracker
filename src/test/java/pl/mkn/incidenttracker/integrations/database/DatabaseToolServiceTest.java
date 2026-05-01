@@ -1,9 +1,9 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import pl.mkn.incidenttracker.analysis.adapter.database.DbOperator;
-import pl.mkn.incidenttracker.analysis.adapter.database.JoinType;
+import pl.mkn.incidenttracker.integrations.database.DbOperator;
+import pl.mkn.incidenttracker.integrations.database.JoinType;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.*;
 
 class DatabaseToolServiceTest {
 

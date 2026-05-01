@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.adapter.database.DatabaseToolService;
+import pl.mkn.incidenttracker.integrations.database.DatabaseToolService;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
@@ -29,8 +29,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
-import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbCountResult;
-import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.DbTableRef;
+import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbCountResult;
+import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbTableRef;
 
 class CopilotSdkDatabaseToolFactoryTest {
 

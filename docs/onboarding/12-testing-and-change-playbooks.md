@@ -15,7 +15,6 @@ architektonicznych.
 
 ### Adaptery
 
-- `src/test/java/pl/mkn/incidenttracker/analysis/adapter`
 - `src/test/java/pl/mkn/incidenttracker/integrations`
 
 ### Evidence pipeline

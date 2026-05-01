@@ -61,10 +61,10 @@ Docelowy kierunek warstw:
 
 Zasady granic:
 
-- `integrations.*` oraz przejsciowe `analysis.adapter.*` nie moga zalezec od
-  `analysis.evidence`, `analysis.mcp`, `analysis.ai`, `analysis.flow` ani
-  `analysis.job`. Adaptery maja byc mozliwe do reuse'u przez evidence pipeline,
-  tools/MCP i zwykle endpointy REST.
+- `integrations.*` nie moze zalezec od `analysis.evidence`, `analysis.mcp`,
+  `analysis.ai`, `analysis.flow` ani `analysis.job`. Adaptery maja byc mozliwe
+  do reuse'u przez evidence pipeline, tools/MCP i zwykle endpointy REST. Nie
+  przywracaj nowych adapterow do historycznego `analysis.adapter`.
 - Tools/MCP nie powinny zalezec od dedykowanej analizy incydentow ani od
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.
@@ -146,13 +146,12 @@ Zasady granic:
   `AnalysisContext`.
 - `src/main/java/pl/mkn/incidenttracker/integrations`
   Docelowa reusable warstwa capability adapters. Dynatrace, Elasticsearch,
-  GitLab i operational context mieszkaja juz w `integrations`; kolejne
-  adaptery beda przenoszone tam etapami.
+  GitLab, operational context i Database mieszkaja juz w `integrations`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/ai`
   Generyczny kontrakt AI i aktualna integracja Copilot SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
-  Przejsciowy dom integracji, ktore nie zostaly jeszcze przeniesione do
-  `integrations`: Database.
+  Historyczny katalog po ekstrakcji adapterow. Nie dodawaj tu nowego kodu;
+  nowe integracje trafiaja do `integrations`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
   MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
   case'ow.

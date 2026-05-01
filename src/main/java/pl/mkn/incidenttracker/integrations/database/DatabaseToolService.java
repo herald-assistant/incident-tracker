@@ -1,12 +1,12 @@
-package pl.mkn.incidenttracker.analysis.adapter.database;
+package pl.mkn.incidenttracker.integrations.database;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.adapter.database.DbOperator;
-import pl.mkn.incidenttracker.analysis.adapter.database.JoinType;
-import pl.mkn.incidenttracker.analysis.adapter.database.SortDirection;
+import pl.mkn.incidenttracker.integrations.database.DbOperator;
+import pl.mkn.incidenttracker.integrations.database.JoinType;
+import pl.mkn.incidenttracker.integrations.database.SortDirection;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static pl.mkn.incidenttracker.analysis.adapter.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.*;
 
 @Service
 @RequiredArgsConstructor
