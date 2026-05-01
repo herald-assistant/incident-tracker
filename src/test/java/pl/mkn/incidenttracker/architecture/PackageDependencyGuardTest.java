@@ -53,15 +53,24 @@ class PackageDependencyGuardTest {
                 Rule.closed("analysis.ai contracts/runtime must not depend on feature packages",
                         "pl.mkn.incidenttracker.analysis.ai",
                         "pl.mkn.incidenttracker.features"),
-                Rule.closed("analysis.flow must not depend on historical analysis AI contracts",
-                        "pl.mkn.incidenttracker.analysis.flow",
+                Rule.closed("incident flow must not depend on historical analysis AI contracts",
+                        "pl.mkn.incidenttracker.features.incidentanalysis.flow",
                         "pl.mkn.incidenttracker.analysis.ai"),
                 Rule.closed("analysis.job must not depend on historical analysis AI contracts",
                         "pl.mkn.incidenttracker.analysis.job",
                         "pl.mkn.incidenttracker.analysis.ai"),
+                Rule.closed("analysis.job must not depend on historical analysis flow",
+                        "pl.mkn.incidenttracker.analysis.job",
+                        "pl.mkn.incidenttracker.analysis.flow"),
+                Rule.closed("api must not depend on historical analysis flow",
+                        "pl.mkn.incidenttracker.api",
+                        "pl.mkn.incidenttracker.analysis.flow"),
                 Rule.closed("features must not depend on historical analysis AI contracts",
                         "pl.mkn.incidenttracker.features",
                         "pl.mkn.incidenttracker.analysis.ai"),
+                Rule.closed("features must not depend on historical analysis flow",
+                        "pl.mkn.incidenttracker.features",
+                        "pl.mkn.incidenttracker.analysis.flow"),
                 Rule.closed("analysis.evidence must publish shared evidence DTOs without importing AI",
                         "pl.mkn.incidenttracker.analysis.evidence",
                         "pl.mkn.incidenttracker.analysis.ai"),
@@ -115,6 +124,39 @@ class PackageDependencyGuardTest {
         var violations = findViolations(rules);
 
         assertTrue(violations.isEmpty(), () -> "Closed package dependency edge(s) were reintroduced:\n"
+                + String.join("\n", violations));
+    }
+
+    @Test
+    void shouldNotRecreateClosedProductionPackages() throws IOException {
+        var closedPackages = List.of(
+                "pl.mkn.incidenttracker.analysis.ai",
+                "pl.mkn.incidenttracker.analysis.flow"
+        );
+
+        var violations = new ArrayList<String>();
+        try (var files = Files.walk(MAIN_JAVA)) {
+            for (var file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
+                var lines = Files.readAllLines(file);
+                for (var i = 0; i < lines.size(); i++) {
+                    var packageMatcher = PACKAGE_PATTERN.matcher(lines.get(i));
+                    if (!packageMatcher.matches()) {
+                        continue;
+                    }
+
+                    var sourcePackage = packageMatcher.group(1);
+                    for (var closedPackage : closedPackages) {
+                        if (Rule.startsWithPackage(sourcePackage, closedPackage)) {
+                            violations.add("- " + MAIN_JAVA.relativize(file).toString().replace('\\', '/')
+                                    + ":" + (i + 1)
+                                    + " declares closed package " + sourcePackage);
+                        }
+                    }
+                }
+            }
+        }
+
+        assertTrue(violations.isEmpty(), () -> "Closed production package(s) were recreated:\n"
                 + String.join("\n", violations));
     }
 
@@ -181,7 +223,7 @@ class PackageDependencyGuardTest {
                     && startsWithPackage(importedType, forbiddenPackage);
         }
 
-        private static boolean startsWithPackage(String value, String packageName) {
+        static boolean startsWithPackage(String value, String packageName) {
             return value.equals(packageName) || value.startsWith(packageName + ".");
         }
     }

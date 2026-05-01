@@ -60,9 +60,11 @@ ponizszych zasad:
   specyficznych dla analizy incydentow. Nie przenosic ich do platformy,
   poniewaz zawieraja incident scope: `correlationId`, `environment`,
   `gitLabBranch` i `gitLabGroup`.
-- `analysis.job`, `analysis.flow` i incident-specific evidence/prompt sa
-  feature'em analizy incydentow. Moga zalezec od platformy, tools i adapterow,
-  ale platforma, tools i adaptery nie moga zalezec od tego feature'a.
+- `analysis.job`, incident flow i incident-specific evidence/prompt sa
+  feature'em analizy incydentow. Flow mieszka juz w
+  `features.incidentanalysis.flow`; job zostaje przejsciowo w historycznym
+  `analysis.job`. Moga zalezec od platformy, tools i adapterow, ale platforma,
+  tools i adaptery nie moga zalezec od tego feature'a.
 - Przyszle feature'y, np. analiza dokumentacji, chatboty albo generowanie
   scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
   skille, hidden context, policy uzycia capability i kontrakt odpowiedzi,
@@ -90,7 +92,7 @@ strzalka wyglada jak odwrotna zaleznosc pakietowa.
 flowchart LR
     OP["Operator UI"] --> JOBAPI["analysis.job.api"]
     JOBAPI --> JOB["analysis.job"]
-    JOB --> FLOW["analysis.flow"]
+    JOB --> FLOW["features.incidentanalysis.flow"]
 
     FLOW --> EVIDENCE["analysis.evidence"]
     EVIDENCE --> INTEGRATIONS["integrations"]
@@ -120,15 +122,15 @@ Wyniki wracaja do callera jako return values albo listener callbacks:
 Najwazniejsze lancuchy ownership/dependency:
 
 - deterministic initial analysis:
-  `analysis.job -> analysis.flow -> analysis.evidence -> integrations`,
+  `analysis.job -> features.incidentanalysis.flow -> analysis.evidence -> integrations`,
 - initial AI:
-    `analysis.flow -> features.incidentanalysis.ai.initial -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime`,
+  `features.incidentanalysis.flow -> features.incidentanalysis.ai.initial -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime`,
 - AI-guided tools podczas initial analysis:
   `features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools -> agenttools.*.mcp -> integrations`,
 - follow-up chat:
     `analysis.job -> features.incidentanalysis.ai.chat -> features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools -> agenttools.*.mcp -> integrations`,
 - model/options:
-  `analysis.job`, `analysis.flow` i incident AI korzystaja z bocznego
+  `analysis.job`, incident flow i incident AI korzystaja z bocznego
   kontraktu `analysis.options`, a fasada opcji deleguje do platformowego
   katalogu modeli Copilota w `aiplatform.copilot.runtime.options`.
 
@@ -140,17 +142,10 @@ warto pilnowac przy kolejnych refaktorach.
 
 ```mermaid
 flowchart LR
-    JOB["analysis.job"] --> FLOW["analysis.flow"]
     JOB --> FEATURES["features"]
     JOB --> EVIDENCE["analysis.evidence"]
     JOB --> OPTIONS["analysis.options"]
     JOB --> SHARED["shared"]
-
-    FLOW --> EVIDENCE
-    FLOW --> FEATURES
-    FLOW --> OPTIONS
-    FLOW --> INTEGRATIONS["integrations"]
-    FLOW --> SHARED
 
     EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
@@ -178,31 +173,26 @@ flowchart LR
 
 | Krawedz importow | Liczba | Status | Co oznacza |
 | --- | ---: | --- | --- |
-| `analysis.job -> analysis.flow` | 6 | oczekiwane | Job uruchamia orchestrator i mapuje wynik flow do snapshotu UI. |
 | `analysis.job -> analysis.evidence` | 7 | oczekiwane | Job pokazuje kroki pipeline i runtime facts wyprowadzone z evidence. |
 | `analysis.job -> analysis.options` | 2 | oczekiwane | Start joba niesie opcjonalne preferencje AI. |
-| `analysis.job -> features` | 7 | oczekiwane przejsciowo | Job trzyma incident chat i zapisany `InitialAnalysisRequest` dla follow-up. Zniknie po przeniesieniu joba do feature'a. |
+| `analysis.job -> features` | 13 | oczekiwane przejsciowo | Job uruchamia incident flow, trzyma incident chat i zapisany `InitialAnalysisRequest` dla follow-up. Zniknie po przeniesieniu joba do feature'a. |
 | `analysis.job -> shared` | 6 | oczekiwane | Job snapshoty i API response niosa neutralny model evidence oraz usage DTO. |
-| `analysis.flow -> analysis.evidence` | 5 | oczekiwane | Orchestrator uruchamia deterministic evidence collector. |
-| `analysis.flow -> analysis.options` | 1 | oczekiwane | Flow przenosi preferencje AI do initial requestu. |
-| `analysis.flow -> features` | 5 | oczekiwane przejsciowo | Orchestrator buduje incident `InitialAnalysisRequest` i wywoluje incident initial provider. Zniknie po przeniesieniu flow do feature'a. |
-| `analysis.flow -> integrations` | 1 | do obserwacji | `AnalysisOrchestrator` czyta `GitLabProperties` dla `gitLabGroup`. Jezeli to urosnie, warto wydzielic neutralny resolver scope'u. |
-| `analysis.flow -> shared` | 3 | oczekiwane | Flow przenosi neutralne evidence DTO i usage DTO miedzy collectorem, AI i response. |
 | `analysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `analysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
 | `features -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
 | `features -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
-| `features -> analysis.evidence` | 11 | przejsciowe | Incident coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
-| `features -> analysis.options` | 3 | oczekiwane przejsciowo | Incident initial/chat request oraz session config niosa operator-facing preferencje modelu. |
+| `features -> analysis.evidence` | 16 | przejsciowe | Incident flow uruchamia collector, a coverage/artifacts czytaja typed evidence view helpers do czasu przeniesienia evidence do feature'a. |
+| `features -> analysis.options` | 4 | oczekiwane przejsciowo | Incident flow, initial/chat request oraz session config niosa operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
-| `features -> shared` | 27 | oczekiwane | Incident initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping i tool evidence capture czytaja neutralne DTO shared. |
+| `features -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`. |
+| `features -> shared` | 30 | oczekiwane | Incident flow, initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping i tool evidence capture czytaja neutralne DTO shared. |
 | `analysis.options -> aiplatform` | 3 | oczekiwane przejsciowo | Fasada endpointu `GET /analysis/ai/options` mapuje platformowy katalog modeli Copilota na obecny kontrakt aplikacji. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
-| `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
+| `api -> features` | 1 | oczekiwane przejsciowo | Globalny handler HTTP mapuje `AnalysisDataNotFoundException` z incident flow. |
 
 ## Cykle Do Pilnowania
 
@@ -212,12 +202,11 @@ zamknieta granica i nie nalezy jej przywracac.
 
 Do obserwacji zostaly krawedzie:
 
-1. `analysis.flow/job -> features`
+1. `analysis.job -> features`
 
-   Flow i job sa nadal w historycznym `analysis.*`, ale uzywaja juz
-   incidentowych kontraktow AI z `features.incidentanalysis.ai.initial/chat`.
-   To jest przejsciowe do czasu przeniesienia flow i joba do
-   `features.incidentanalysis`.
+   Job jest nadal w historycznym `analysis.*`, ale uruchamia juz incident flow
+   i chat z `features.incidentanalysis`. To jest przejsciowe do czasu
+   przeniesienia joba do `features.incidentanalysis`.
 
 2. `features -> analysis.evidence`
 
@@ -230,11 +219,11 @@ Do obserwacji zostaly krawedzie:
 Preferowany kierunek kompilacyjny dla obecnych pakietow:
 
 ```text
-analysis.job -> analysis.flow -> analysis.evidence -> integrations
+analysis.job -> features.incidentanalysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
-analysis.flow -> features.incidentanalysis.ai.initial
+features.incidentanalysis.flow -> features.incidentanalysis.ai.initial
 analysis.job -> features.incidentanalysis.ai.chat
-analysis.flow/job -> shared.ai/shared.evidence
+analysis.job/features -> shared.ai/shared.evidence
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.execution
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.telemetry
@@ -251,8 +240,8 @@ aiplatform.copilot.tools.policy.budget -> agenttools
 aiplatform.copilot.tools.evidence -> shared
 aiplatform.copilot.runtime -> shared
 agenttools.*.mcp -> integrations
-analysis.job/flow/features -> analysis.options
-analysis.job/flow/features -> shared
+analysis.job/features -> analysis.options
+analysis.job/features -> shared
 api -> feature exceptions
 any package -> common
 ```
@@ -272,10 +261,12 @@ Unikac nowych zaleznosci:
 - `aiplatform -> integrations`,
 - `analysis.ai -> features`,
 - `features -> analysis.ai`,
+- `any production package -> analysis.flow`,
 - `analysis.evidence -> features`,
 - `analysis.mcp -> analysis.ai.copilot`,
 - `analysis.ai -> analysis.mcp`,
-- `analysis.flow -> konkretne adaptery` poza waskim scope/config resolverem,
+- `features.incidentanalysis.flow -> konkretne adaptery` poza waskim
+  scope/config resolverem,
 - `analysis.job -> analysis.evidence.provider.*` poza prostym odczytem runtime
   facts do statusu UI.
 
@@ -310,6 +301,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `features -> analysis.ai`: incident initial/chat contracts mieszkaja teraz w
   `features.incidentanalysis.ai.initial/chat`; feature nie importuje juz
   historycznego `analysis.ai`.
+- `analysis.flow`: incident flow mieszka teraz w
+  `features.incidentanalysis.flow`; historycznego pakietu produkcyjnego
+  `analysis.flow` nie przywracac.
 - `runtime tools -> capability evidence capture`: GitLab/DB user-facing tool
   evidence mapping mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools`; platformowe runtime tools

@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.job.api;
 
-import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;

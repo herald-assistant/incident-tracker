@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.flow;
+package pl.mkn.incidenttracker.features.incidentanalysis.flow;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

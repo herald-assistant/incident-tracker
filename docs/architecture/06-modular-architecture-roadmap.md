@@ -556,7 +556,7 @@ Target:
 
 ```text
 analysis.job      -> features.incidentanalysis.job
-analysis.flow     -> features.incidentanalysis.flow
+analysis.flow     -> features.incidentanalysis.flow [done]
 analysis.evidence -> features.incidentanalysis.evidence
 analysis.ai.initial/chat contracts specific to incident
                  -> features.incidentanalysis.ai [done]
@@ -576,9 +576,9 @@ Uwagi:
   platform contract, albo jako feature facade nad platform options.
   Stan obecny: endpoint zostal jako fasada aplikacyjna nad platformowym
   katalogiem modeli Copilota.
-- `analysis.flow` i `analysis.job` moga przejsciowo importowac
-  `features.incidentanalysis.ai.initial/chat`, dopoki same nie zostana
-  przeniesione do feature'a.
+- `analysis.job` moze przejsciowo importowac
+  `features.incidentanalysis.flow` oraz `features.incidentanalysis.ai.chat`,
+  dopoki sam nie zostanie przeniesiony do feature'a.
 
 Kryterium done:
 
@@ -670,8 +670,11 @@ Kryterium done:
     `aiplatform.copilot.runtime.options`].
 16. PR: przeniesc incident AI initial/chat contracts do
     `features.incidentanalysis.ai` [done].
-17. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
-18. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+17. PR: przeniesc incident flow do `features.incidentanalysis.flow` [done].
+18. PR: przeniesc incident job do `features.incidentanalysis.job`, zachowujac
+    publiczne URL-e `/analysis/jobs`.
+19. PR: przeniesc incident evidence do `features.incidentanalysis.evidence`.
+20. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

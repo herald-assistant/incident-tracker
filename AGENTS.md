@@ -138,8 +138,6 @@ Zasady granic:
 
 ## Gdzie czego szukac
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow`
-  Glowna orkiestracja runtime analizy, response i listenery flow.
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
   Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
   follow-up chat.
@@ -171,7 +169,8 @@ Zasady granic:
   analysis.
 - `src/main/java/pl/mkn/incidenttracker/features`
   Dedykowane feature'y analityczne. `features.incidentanalysis.ai.initial` i
-  `chat` zawieraja kontrakty AI incident flow, a
+  `chat` zawieraja kontrakty AI incident flow,
+  `features.incidentanalysis.flow` zawiera orkiestracje runtime analizy, a
   `features.incidentanalysis.ai.copilot` zawiera incident prompt/artifacts/tool
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
@@ -249,7 +248,6 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
@@ -257,4 +255,5 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`

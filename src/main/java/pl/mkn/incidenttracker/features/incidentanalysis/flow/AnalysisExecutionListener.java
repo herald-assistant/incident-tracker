@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.flow;
+package pl.mkn.incidenttracker.features.incidentanalysis.flow;
 
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;

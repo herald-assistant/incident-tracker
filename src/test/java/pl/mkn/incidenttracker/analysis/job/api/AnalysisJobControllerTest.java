@@ -7,7 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceReference;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisResultResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.analysis.job.AnalysisJobService;
 import pl.mkn.incidenttracker.analysis.job.error.AnalysisJobNotFoundException;
 

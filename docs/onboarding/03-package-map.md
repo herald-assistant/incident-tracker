@@ -15,9 +15,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 
 ## Glowna mapa
 
-### `analysis/flow`
+### `features/incidentanalysis/flow`
 
-Orkiestracja runtime analizy, request/response i listenery progresu.
+Orkiestracja runtime analizy incydentu, request/response i listenery progresu.
 
 ### `analysis/job`
 
@@ -175,10 +175,10 @@ operational context enrichment.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job`
 - `src/main/java/pl/mkn/incidenttracker/analysis/options`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow`
 - `src/main/java/pl/mkn/incidenttracker/integrations`
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`

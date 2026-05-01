@@ -4,7 +4,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisExecutionListener;
+import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisExecutionListener;
 
 public final class AnalysisJobStateListener implements AnalysisExecutionListener {
 

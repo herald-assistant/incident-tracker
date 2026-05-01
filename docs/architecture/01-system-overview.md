@@ -99,8 +99,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   integracjami. Adaptery nie powinny importowac `agenttools`.
 - `pl.mkn.incidenttracker.common`
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
-- `pl.mkn.incidenttracker.analysis.flow`
-  Orkiestracja runtime analizy i listenery postepu flow.
+- `pl.mkn.incidenttracker.features.incidentanalysis.flow`
+  Orkiestracja runtime analizy incydentu, response i listenery postepu flow.
 - `pl.mkn.incidenttracker.analysis.job`
   Asynchroniczny feature `POST /analysis/jobs`,
   `GET /analysis/jobs/{analysisId}` i

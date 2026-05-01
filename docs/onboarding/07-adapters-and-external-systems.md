@@ -93,4 +93,4 @@ Czytaj:
 
 - Gdzie powinien trafic nowy model DTO odpowiedzi z GitLaba?
 - Czy adapter Dynatrace powinien wystawiac `@Tool`?
-- Dlaczego `GitLabSourceResolveService` nie jest w `analysis.flow`?
+- Dlaczego `GitLabSourceResolveService` nie jest w `features.incidentanalysis.flow`?

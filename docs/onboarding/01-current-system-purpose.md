@@ -34,7 +34,7 @@ scope'em tools wyprowadzonym przez backend.
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisResultResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisResultResponse.java`
 - `docs/architecture/01-system-overview.md`
 - `docs/architecture/02-key-decisions.md`
 

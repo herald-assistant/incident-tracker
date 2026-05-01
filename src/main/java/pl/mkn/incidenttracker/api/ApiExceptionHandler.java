@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.api;
 
-import pl.mkn.incidenttracker.analysis.flow.AnalysisDataNotFoundException;
+import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchException;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchException;

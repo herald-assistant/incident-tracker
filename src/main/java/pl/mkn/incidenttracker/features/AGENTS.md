@@ -37,7 +37,9 @@ Obecnie pierwszy feature to `incidentanalysis`.
   JSON-only response contract, parser oraz report-only quality gate.
 - `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific
   GitLab/DB tool evidence capture nad generycznymi eventami invocation.
-- Job, flow i evidence nadal mieszkaja w `analysis.*`.
+- `features.incidentanalysis.flow` zawiera glowna orkiestracje runtime
+  analizy incydentu.
+- Job i evidence nadal mieszkaja w `analysis.*`.
   Przenos kolejne fragmenty inkrementalnie, bez zmian zachowania runtime.
 
 ## Weryfikacja

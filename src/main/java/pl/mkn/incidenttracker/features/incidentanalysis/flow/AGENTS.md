@@ -2,8 +2,8 @@
 
 ## Zakres
 
-Ten katalog odpowiada za glowna orkiestracje runtime analizy, kontrakt flow i
-obiekty przechodzace miedzy job API a evidence/AI.
+Ten katalog odpowiada za glowna orkiestracje runtime analizy incydentu,
+kontrakt flow i obiekty przechodzace miedzy job API a evidence/AI.
 
 Obejmuje:
 
@@ -13,8 +13,8 @@ Obejmuje:
 
 Nie obejmuje:
 
-- kontrolerow HTTP z `../job`,
-- integracji z systemami zewnetrznymi z `../adapter`,
+- kontrolerow HTTP z `analysis.job`,
+- integracji z systemami zewnetrznymi z `integrations`,
 - implementacji providerow evidence i AI.
 
 ## Zasady modyfikacji
@@ -39,7 +39,7 @@ Nie obejmuje:
 - Zmiany w orkiestracji powinny miec testy jednostkowe albo integracyjne,
   ktore potwierdzaja kolejnosc flow i mapowanie wyniku.
 - Gdy zmienia sie kontrakt response albo job payload, sprawdz downstream w
-  `../job` i `src/main/java/pl/mkn/incidenttracker/api`.
+  `analysis.job` i `src/main/java/pl/mkn/incidenttracker/api`.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie
 

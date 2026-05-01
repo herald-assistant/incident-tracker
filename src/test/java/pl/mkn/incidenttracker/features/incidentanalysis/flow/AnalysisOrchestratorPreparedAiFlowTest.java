@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.flow;
+package pl.mkn.incidenttracker.features.incidentanalysis.flow;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;

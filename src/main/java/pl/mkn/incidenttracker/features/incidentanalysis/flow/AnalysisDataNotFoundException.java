@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.flow;
+package pl.mkn.incidenttracker.features.incidentanalysis.flow;
 
 public class AnalysisDataNotFoundException extends RuntimeException {
 

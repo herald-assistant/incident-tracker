@@ -37,9 +37,9 @@ wynik, historie rozmowy i tool evidence, ale nie uruchamia ponownie
 
 ## Najwazniejsze klasy
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisOrchestrator.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisExecution.java`
-- `src/main/java/pl/mkn/incidenttracker/analysis/flow/AnalysisExecutionListener.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisOrchestrator.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisExecution.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AnalysisExecutionListener.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AnalysisJobService.java`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/state/AnalysisJobStateListener.java`
 

@@ -32,7 +32,7 @@ import pl.mkn.incidenttracker.analysis.evidence.provider.gitlabdeterministic.Git
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextCatalogMatcher;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.analysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
-import pl.mkn.incidenttracker.analysis.flow.AnalysisOrchestrator;
+import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.analysis.job.api.AnalysisChatMessageRequest;
 import pl.mkn.incidenttracker.analysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.incidenttracker.analysis.TestInitialAnalysisProvider;
