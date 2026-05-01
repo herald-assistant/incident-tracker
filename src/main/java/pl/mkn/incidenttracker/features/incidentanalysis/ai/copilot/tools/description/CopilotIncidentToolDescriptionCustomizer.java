@@ -1,18 +1,20 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.description;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer;
 
 @Component
 @RequiredArgsConstructor
-public class CopilotToolDescriptionDecorator {
+public class CopilotIncidentToolDescriptionCustomizer implements CopilotToolDescriptionCustomizer {
 
     private static final String GUIDANCE_HEADER = "Copilot guidance:";
 
-    private final CopilotToolGuidanceCatalog guidanceCatalog;
+    private final CopilotIncidentToolGuidanceCatalog guidanceCatalog;
 
-    public String decorate(String toolName, String description) {
+    @Override
+    public String customize(String toolName, String description) {
         var baseDescription = StringUtils.hasText(description) ? description.trim() : "";
         var guidance = guidanceCatalog.guidanceFor(toolName);
 

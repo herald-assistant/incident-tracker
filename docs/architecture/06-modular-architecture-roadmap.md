@@ -136,6 +136,7 @@ Warstwa platformy AI posiada:
 - przygotowanie technicznej sesji na podstawie parametrow feature'a,
 - `SessionConfig`, allowliste tools i hidden context jako mechanizmy runtime,
 - generic tool invocation handler,
+- neutralny kontrakt customizacji opisow tools,
 - policies, budget, telemetry, logging i lifecycle sesji,
 - generic artifact/prompt delivery mechanics tam, gdzie nie sa feature-specific.
 
@@ -252,7 +253,10 @@ aktualnych providerow Copilota: `CopilotInitialAnalysisProvider` i
 
 `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific GitLab i
 Database tool evidence capture: listenery eventow invocation oraz mappery
-wynikow tools na operator-facing `AnalysisEvidenceSection`.
+wynikow tools na operator-facing `AnalysisEvidenceSection`. Podpakiet
+`features.incidentanalysis.ai.copilot.tools.description` zawiera
+incident-specific guidance doklejane do opisow GitLab/DB tools przez
+platformowy `CopilotToolDescriptionCustomizer`.
 
 Platform-owned runtime jest juz poza `preparation`, w
 `aiplatform.copilot.runtime`:
@@ -470,7 +474,8 @@ Kroki:
    Platformowe `aiplatform.copilot.tools` zawiera juz
    `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
-   session validation, logging invocation i session-bound tool evidence store.
+   session validation, logging invocation, description customization contract i
+   session-bound tool evidence store.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
    options, skill resources, available tools, hidden context, evidence sink i
    response handler/parser, ale nie zaklada `correlationId`.
@@ -490,7 +495,8 @@ Kroki:
    assembly i coverage heurystyki mieszkaja juz w
    `features.incidentanalysis.ai.copilot`. Operator-facing GitLab/DB tool
    evidence mapping mieszka juz w
-   `features.incidentanalysis.ai.copilot.tools`.
+   `features.incidentanalysis.ai.copilot.tools`, a incident-specific guidance
+   opisow tools w `features.incidentanalysis.ai.copilot.tools.description`.
 7. Platformowy tool invocation handler moze znac mechanike callbackow,
    allowlisty, policies, hidden context map i telemetryki, ale nie powinien
    znac nazw capability jako reguly domenowej, np. "GitLab przed DB dla
@@ -618,8 +624,8 @@ Kryterium done:
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
     capture przeniesione; platformowe tool
-    handler/context/events/policy/logging/evidence store przeniesione do
-    `aiplatform.copilot.tools`].
+    handler/context/events/policy/logging/description/evidence store
+    przeniesione do `aiplatform.copilot.tools`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

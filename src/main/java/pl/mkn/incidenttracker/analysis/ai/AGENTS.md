@@ -30,10 +30,10 @@ Obejmuje:
   To jest stan przejsciowy przed rozdzieleniem platformowej mechaniki
   invocation od incident-specific policy/capture.
   Platformowy `CopilotToolInvocationHandler`, `context/`, `events/`,
-  `policy/session`, `logging/` i session evidence store sa juz w
+  `policy/session`, `logging/`, description customization contract i session
+  evidence store sa juz w
   `aiplatform.copilot.tools`.
   Szczegoly trzymane tutaj to:
-  - `description/` dekorowanie opisow tools,
   - `policy/budget/` przejsciowy budget runtime powiazany z telemetryka
     analizy.
 
@@ -105,9 +105,12 @@ trafia do `aiplatform`.
   `analysis.ai.copilot.tools.policy.budget`, bo korzysta z telemetryki analizy.
 - Incident-specific GitLab/DB evidence capture mieszka w
   `features.incidentanalysis.ai.copilot.tools`. W `analysis.ai.copilot.tools`
-  zostawiaj tylko przejsciowa bramke invocation, opisy i budget. Handler,
+  zostawiaj tylko przejsciowa bramke invocation i budget. Incident-specific
+  guidance opisow tools mieszka w
+  `features.incidentanalysis.ai.copilot.tools.description`. Handler,
   hidden context, eventy invocation, policy contracts, session validation,
-  logging i session evidence store sa platformowe w `aiplatform.copilot.tools`.
+  logging, description customization contract i session evidence store sa
+  platformowe w `aiplatform.copilot.tools`.
 - User-facing tool evidence ma pozostac proste: GitLab pokazuje plik, kod i
   `reason`, a Database pokazuje wynik i `reason`. Nie przywracaj dodatkowych
   pseudo-heurystyk ani technicznych pol do payloadu dla operatora.

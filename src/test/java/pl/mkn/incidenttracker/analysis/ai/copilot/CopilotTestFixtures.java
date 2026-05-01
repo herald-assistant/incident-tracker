@@ -14,11 +14,12 @@ import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolInvocatio
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotToolInvocationHandler;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolContextFactory;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolDescriptionDecorator;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolGuidanceCatalog;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database.DatabaseToolEvidenceCaptureListener;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.database.DatabaseToolEvidenceMapper;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description.CopilotIncidentToolDescriptionCustomizer;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description.CopilotIncidentToolGuidanceCatalog;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationEventPublisher;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationFinishedEvent;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationOutcome;
@@ -49,8 +50,8 @@ public final class CopilotTestFixtures {
         return new CopilotToolEvidenceSessionStore();
     }
 
-    public static CopilotToolDescriptionDecorator toolDescriptionDecorator() {
-        return new CopilotToolDescriptionDecorator(new CopilotToolGuidanceCatalog());
+    public static List<CopilotToolDescriptionCustomizer> toolDescriptionCustomizers() {
+        return List.of(new CopilotIncidentToolDescriptionCustomizer(new CopilotIncidentToolGuidanceCatalog()));
     }
 
     public static CopilotSdkToolFactory toolFactory(
@@ -84,7 +85,7 @@ public final class CopilotTestFixtures {
         return new CopilotSdkToolFactory(
                 toolCallbackProviders,
                 objectMapper,
-                toolDescriptionDecorator(),
+                toolDescriptionCustomizers(),
                 new CopilotToolInvocationHandler(
                         objectMapper,
                         new CopilotToolContextFactory(),

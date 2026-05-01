@@ -188,11 +188,13 @@ zakonczonej analizy:
 - Database wymaga resolved `environment`,
 - raw SQL pozostaje domyslnie wylaczony.
 
-`CopilotToolDescriptionDecorator` w `tools.description` dodaje Copilot-facing
-guidance do opisow drogich albo ryzykownych tools.
+`CopilotSdkToolFactory` wywoluje platformowe
+`CopilotToolDescriptionCustomizer`. Incident-specific guidance dla drogich albo
+ryzykownych GitLab/DB tools dostarcza
+`features.incidentanalysis.ai.copilot.tools.description`.
 
 `CopilotSdkToolFactory` odpowiada za rejestracje definicji tools: zbiera Spring
-callbacks, sortuje je, dekoruje description, parsuje input schema i tworzy
+callbacks, sortuje je, customizuje description, parsuje input schema i tworzy
 `ToolDefinition`. `aiplatform.copilot.tools.CopilotToolInvocationHandler`
 odpowiada za wykonanie:
 uruchamia generyczne `CopilotToolInvocationPolicy` before/after, buduje hidden

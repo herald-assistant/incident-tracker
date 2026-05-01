@@ -57,13 +57,14 @@ Przy nowej sesji najlepiej zaczac od:
 - `aiplatform.copilot.tools.events`
 - `aiplatform.copilot.tools.policy`
 - `aiplatform.copilot.tools.logging`
+- `aiplatform.copilot.tools.description`
 - `aiplatform.copilot.tools.evidence`
 - `features.incidentanalysis.ai.copilot`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
-- `analysis.ai.copilot.tools.description`
 - `analysis.ai.copilot.tools.policy.budget`
 - `features.incidentanalysis.ai.copilot.tools`
+- `features.incidentanalysis.ai.copilot.tools.description`
 - `analysis.ai.copilot.telemetry`
 - `CopilotIncidentArtifactService`
 - `CopilotRenderedArtifact`

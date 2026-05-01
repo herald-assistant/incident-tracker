@@ -289,7 +289,8 @@ migracji, a nie wzorzec dla nowych tools.
 Po refaktorze factory robi tylko rejestracje definicji i jest glowna klasa
 wejsciowa pakietu `tools` dla preparation:
 
-- dekorowanie opisow przez `tools.description.CopilotToolDescriptionDecorator`,
+- customizacja opisow przez platformowy
+  `aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer`,
 - parsowanie input schema,
 - utworzenie `ToolDefinition` z handlerem wykonania.
 

@@ -114,14 +114,15 @@ Zasady granic:
 - Obecnie `analysis.ai.copilot.tools` ma pozostac czytelnym rootem runtime
   tools dla `CopilotSdkToolFactory`. Platformowa mechanika invocation, hidden
   `ToolContext`, eventow invocation, policy contracts, session validation,
-  loggingu invocation i session-bound tool evidence store mieszka juz w
+  loggingu invocation, description customization contract i session-bound
+  tool evidence store mieszka juz w
   `aiplatform.copilot.tools`. W `analysis.ai.copilot.tools` zostaja
-  przejsciowo `description` oraz `policy.budget`, dopoki budzet jest spiety z
-  telemetryka analizy. Generyczne helpery aplikacyjne, np. `JsonPayloadReader`,
-  trzymaj poza Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific
-  GitLab/DB evidence mapping mieszka w `features.incidentanalysis.ai.copilot.tools`;
-  podczas dalszej ekstrakcji do `aiplatform.copilot` zostawiaj w runtime tylko
-  mechanike invocation.
+  przejsciowo `policy.budget`, dopoki budzet jest spiety z telemetryka analizy.
+  Generyczne helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj poza
+  Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB
+  evidence mapping i Copilot-facing guidance opisow tools mieszkaja w
+  `features.incidentanalysis.ai.copilot.tools`; podczas dalszej ekstrakcji do
+  `aiplatform.copilot` zostawiaj w runtime tylko mechanike invocation.
 - `aiplatform.copilot.tools.CopilotToolInvocationHandler` nie powinien
   zawierac logiki konkretnego toola. Walidacje i limity dodawaj jako
   `CopilotToolInvocationPolicy`, a logowanie, telemetryke i evidence capture

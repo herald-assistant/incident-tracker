@@ -99,8 +99,6 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
 - `copilot/tools` - root z przejsciowa klasa wejsciowa runtime tools:
   `CopilotSdkToolFactory`,
-- `copilot/tools/description` - Copilot-facing guidance doklejane do opisow
-  Spring tools,
 - `copilot/tools/policy/budget` - przejsciowy budget policy invocation
   powiazany z telemetryka analizy,
 
@@ -121,6 +119,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
 - `aiplatform.copilot.tools/policy` - neutralne policy contracts, kontrolowany
   rejection i session validation,
 - `aiplatform.copilot.tools/logging` - listener logujacy invocation,
+- `aiplatform.copilot.tools/description` - neutralny kontrakt customizacji
+  opisow tools,
 - `aiplatform.copilot.tools/evidence` - session-bound store publikujacy
   neutralne evidence z wynikow tool invocation.
 
@@ -133,7 +133,8 @@ Dedykowany feature analizy incydentow. Pierwszy przeniesiony slice to
 `preparation` dla promptu, artefaktow, tool policy, hidden contextu i
 initial/follow-up run assembly oraz `coverage` dla incident-specific coverage
 report i evidence gaps. Podpakiet `tools` zawiera GitLab/DB listener + mapper
-user-facing tool evidence dla analizy incydentow.
+user-facing tool evidence dla analizy incydentow oraz `tools.description` z
+incident-specific guidance opisow tools.
 
 ### `common`
 

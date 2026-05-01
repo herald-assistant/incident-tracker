@@ -170,6 +170,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   validation.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.logging`
   Subskrypcja eventow invocation do operacyjnego logowania request/result.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools.description`
+  Neutralny kontrakt customizacji opisow tools, wykonywany przez runtime
+  factory bez wiedzy o semantyce konkretnego feature'a.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence`
   Session-bound store publikujacy neutralne `AnalysisEvidenceSection` z wynikow
   tool invocation przez sink przekazany przez feature.
@@ -178,13 +181,14 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
   Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory`. Root trzyma
   przejsciowa klase, przez ktora wchodzi sie do warstwy tools.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`
-  Dekorowanie opisow Spring tools guidance'em dla Copilota.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget`
   Przejsciowy budget policy invocation powiazany z telemetryka analizy.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools`
   Incident-specific subskrypcje eventow GitLab/Database tools i mapowanie
   wynikow do user-facing evidence.
+- `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description`
+  Incident-specific guidance doklejane do opisow GitLab/Database tools dla
+  Copilota.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.telemetry`
   Metryki sesji Copilota, usage events SDK, tool metrics i summary log.
 - `pl.mkn.incidenttracker.integrations.elasticsearch`

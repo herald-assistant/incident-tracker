@@ -70,7 +70,8 @@ architektonicznych.
    context,
 5. jesli tool ma ukryty scope, dodaj go przez
    `aiplatform.copilot.tools.context`,
-6. jesli tool jest drogi lub ryzykowny, dodaj guidance w `tools.description`,
+6. jesli tool jest drogi lub ryzykowny dla analizy incydentow, dodaj guidance w
+   `features.incidentanalysis.ai.copilot.tools.description`,
 7. jesli tool ma limit albo walidacje runtime, dodaj
    `CopilotToolInvocationPolicy` w `aiplatform.copilot.tools.policy`,
 8. jesli wynik ma trafic do user-facing evidence, dodaj listener i mapper w

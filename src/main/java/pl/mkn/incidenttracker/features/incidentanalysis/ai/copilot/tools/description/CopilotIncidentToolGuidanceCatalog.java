@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.description;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class CopilotToolGuidanceCatalog {
+public class CopilotIncidentToolGuidanceCatalog {
 
     private static final List<String> DATABASE_REASON_GUIDANCE = List.of(
             "For JPA, repository or data-access symptoms, first ground the entity/repository/table mapping from deterministic GitLab evidence or an enabled GitLab tool call; use DB discovery as fallback only when code grounding is unavailable.",

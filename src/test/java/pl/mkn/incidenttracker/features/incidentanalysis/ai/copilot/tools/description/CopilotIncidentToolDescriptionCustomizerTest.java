@@ -1,19 +1,19 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.description;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CopilotToolDescriptionDecoratorTest {
+class CopilotIncidentToolDescriptionCustomizerTest {
 
-    private final CopilotToolDescriptionDecorator decorator = new CopilotToolDescriptionDecorator(
-            new CopilotToolGuidanceCatalog()
+    private final CopilotIncidentToolDescriptionCustomizer customizer = new CopilotIncidentToolDescriptionCustomizer(
+            new CopilotIncidentToolGuidanceCatalog()
     );
 
     @Test
     void shouldAppendGuidanceForExpensiveGitLabFileRead() {
-        var description = decorator.decorate("gitlab_read_repository_file", "Read repository file.");
+        var description = customizer.customize("gitlab_read_repository_file", "Read repository file.");
 
         assertTrue(description.contains("Read repository file."));
         assertTrue(description.contains("Copilot guidance:"));
@@ -24,7 +24,7 @@ class CopilotToolDescriptionDecoratorTest {
 
     @Test
     void shouldAppendGuidanceForRawSql() {
-        var description = decorator.decorate("db_execute_readonly_sql", "Executes SQL.");
+        var description = customizer.customize("db_execute_readonly_sql", "Executes SQL.");
 
         assertTrue(description.contains("Last resort only."));
         assertTrue(description.contains("Use typed DB tools first."));
@@ -33,7 +33,7 @@ class CopilotToolDescriptionDecoratorTest {
 
     @Test
     void shouldAppendCodeGroundingGuidanceForDbDiscovery() {
-        var description = decorator.decorate("db_find_tables", "Finds tables.");
+        var description = customizer.customize("db_find_tables", "Finds tables.");
 
         assertTrue(description.contains("ground the entity/repository/table mapping"));
         assertTrue(description.contains("use DB discovery as fallback"));
@@ -43,7 +43,7 @@ class CopilotToolDescriptionDecoratorTest {
 
     @Test
     void shouldAppendCrossRepositoryGuidanceForGitLabClassReferences() {
-        var description = decorator.decorate("gitlab_find_class_references", "Finds class references.");
+        var description = customizer.customize("gitlab_find_class_references", "Finds class references.");
 
         assertTrue(description.contains("focused retry across operational-context codeSearchProjects"));
         assertTrue(description.contains("before declaring it missing"));
@@ -51,7 +51,7 @@ class CopilotToolDescriptionDecoratorTest {
 
     @Test
     void shouldLeaveUnknownToolDescriptionUntouched() {
-        var description = decorator.decorate("custom_tool", "  Custom description.  ");
+        var description = customizer.customize("custom_tool", "  Custom description.  ");
 
         assertEquals("Custom description.", description);
     }

@@ -273,9 +273,10 @@ handler i disabled skills.
 
 ## 15. Tool descriptions moga byc dekorowane dla Copilota
 
-`CopilotToolDescriptionDecorator` w `tools.description` dokleja krotkie
-guidance do opisow drogich lub ryzykownych tools bez zmiany implementacji
-Spring tools. Przyklady:
+Platformowy kontrakt `CopilotToolDescriptionCustomizer` pozwala feature'owi
+uzupelnic opisy tools bez zmiany implementacji Spring tools. Incident feature
+dostarcza `CopilotIncidentToolDescriptionCustomizer`, ktory dokleja krotkie
+guidance do opisow drogich lub ryzykownych tools. Przyklady:
 
 - full file read jest expensive i preferuje chunks/outline,
 - GitLab search/flow context powinien uzywac konkretnych, ugruntowanych

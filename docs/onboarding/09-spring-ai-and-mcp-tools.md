@@ -79,8 +79,10 @@ targeted tools na podstawie resolved scope'u z zakonczonej analizy:
 
 ## Opisy tools dla Copilota
 
-`CopilotToolDescriptionDecorator` w `tools.description` dokleja do Spring tool
-descriptions krotkie guidance dla modelu. To nie zmienia implementacji tools.
+`CopilotSdkToolFactory` wywoluje platformowy kontrakt
+`CopilotToolDescriptionCustomizer`, dzieki czemu feature moze uzupelnic Spring
+tool descriptions bez zmiany implementacji tools. Incident feature dostarcza
+`CopilotIncidentToolDescriptionCustomizer` z guidance dla GitLab/DB.
 
 Przyklady guidance:
 
@@ -183,8 +185,8 @@ konkretnej capability w `tools.<capability>`.
 - Tool powinien miec waski, typed contract.
 - Scope incydentu ma pochodzic z `ToolContext`, nie od modelu.
 - Dodaj test dla rejestracji i zachowania toola.
-- Jesli tool jest drogi albo ryzykowny, dodaj guidance w
-  `tools.description.CopilotToolGuidanceCatalog`.
+- Jesli tool jest drogi albo ryzykowny dla analizy incydentow, dodaj guidance
+  w `features.incidentanalysis.ai.copilot.tools.description`.
 - Jesli wynik toola jest diagnostycznie wazny, dodaj capture do
   odpowiedniego listenera i mappera w `tools.<capability>`.
 - Jesli tool potrzebuje blokady, limitu albo walidacji, dodaj

@@ -9,13 +9,12 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotToolInvocationHandler;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.description.CopilotToolDescriptionDecorator;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -23,7 +22,7 @@ public class CopilotSdkToolFactory {
 
     private final List<ToolCallbackProvider> toolCallbackProviders;
     private final ObjectMapper objectMapper;
-    private final CopilotToolDescriptionDecorator descriptionDecorator;
+    private final List<CopilotToolDescriptionCustomizer> descriptionCustomizers;
     private final CopilotToolInvocationHandler invocationHandler;
 
     public List<ToolDefinition> createToolDefinitions(CopilotToolSessionContext sessionContext) {
@@ -47,17 +46,28 @@ public class CopilotSdkToolFactory {
 
     private ToolDefinition toCopilotToolDefinition(ToolCallback callback, CopilotToolSessionContext sessionContext) {
         var springToolDefinition = callback.getToolDefinition();
-        var decoratedDescription = descriptionDecorator.decorate(
+        var customizedDescription = customizeDescription(
                 springToolDefinition.name(),
                 springToolDefinition.description()
         );
 
         return ToolDefinition.createSkipPermission(
                 springToolDefinition.name(),
-                decoratedDescription,
+                customizedDescription,
                 parseInputSchema(springToolDefinition.inputSchema()),
                 invocation -> invocationHandler.invokeSpringToolCallback(callback, invocation, sessionContext)
         );
+    }
+
+    private String customizeDescription(String toolName, String description) {
+        var customizedDescription = description != null ? description : "";
+        for (var customizer : descriptionCustomizers) {
+            customizedDescription = customizer.customize(toolName, customizedDescription);
+            if (customizedDescription == null) {
+                customizedDescription = "";
+            }
+        }
+        return customizedDescription;
     }
 
     private Map<String, Object> parseInputSchema(String inputSchema) {
