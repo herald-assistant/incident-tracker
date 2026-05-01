@@ -304,12 +304,13 @@ wejsciowa pakietu `tools` dla preparation:
 - normalizacje kontrolowanego rejection na wynik zwracany do SDK.
 
 Walidacje session id robi `CopilotToolSessionValidationPolicy` w
-`tools.policy.session`; budzet robi `CopilotToolBudgetPolicy` w
-`tools.policy.budget`.
+`aiplatform.copilot.tools.policy.session`; budzet robi
+`CopilotToolBudgetPolicy` w `analysis.ai.copilot.tools.policy.budget`.
 
 Side-effecty tool invocation sa subskrybowane przez Spring event listeners:
 
-- `tools.logging.CopilotToolInvocationLoggingListener` loguje request/result preview,
+- `aiplatform.copilot.tools.logging.CopilotToolInvocationLoggingListener`
+  loguje request/result preview,
 - `telemetry.CopilotToolInvocationTelemetryListener` zapisuje metryki tooli,
 - `tools.gitlab.GitLabToolEvidenceCaptureListener` mapuje wyniki GitLaba do
   tool evidence,

@@ -12,10 +12,10 @@ import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocat
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationFinishedEvent;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationOutcome;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.events.CopilotToolInvocationStartedEvent;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicy;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyResult;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationRejectedException;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
 
 import java.util.List;
 import java.util.Map;

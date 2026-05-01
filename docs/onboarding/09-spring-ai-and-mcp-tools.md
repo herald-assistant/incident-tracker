@@ -98,11 +98,11 @@ Przyklady guidance:
 
 ## Budget policy
 
-`CopilotToolBudgetPolicy` w `tools.policy.budget` pilnuje limitow na sesje jako
-`CopilotToolInvocationPolicy`. Domyslnie dziala w trybie `soft`, czyli
-ostrzega i metrykuje, ale nie blokuje. Tryb `hard` rzuca kontrolowany
-`CopilotToolInvocationRejectedException`; handler zamienia go na wynik
-`denied_by_tool_budget` dla SDK.
+`CopilotToolBudgetPolicy` w `analysis.ai.copilot.tools.policy.budget` pilnuje
+limitow na sesje jako platformowy `CopilotToolInvocationPolicy`. Domyslnie
+dziala w trybie `soft`, czyli ostrzega i metrykuje, ale nie blokuje. Tryb
+`hard` rzuca kontrolowany `CopilotToolInvocationRejectedException`; handler
+zamienia go na wynik `denied_by_tool_budget` dla SDK.
 
 Limity obejmuja:
 
@@ -133,7 +133,7 @@ Wykonanie toola jest w `CopilotToolInvocationHandler`. Handler:
 - parsuje result do obiektu zwracanego SDK.
 
 Walidacje session id robi `CopilotToolSessionValidationPolicy` w
-`tools.policy.session`, przed publikacja eventu `Started`.
+`aiplatform.copilot.tools.policy.session`, przed publikacja eventu `Started`.
 
 Logowanie, telemetryka i capture evidence sa listenerami tych eventow.
 Dzieki temu definicja i invocation toola zostaja czyste, a incident analysis ma

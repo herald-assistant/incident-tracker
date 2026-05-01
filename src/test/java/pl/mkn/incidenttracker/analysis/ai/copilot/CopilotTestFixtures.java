@@ -27,7 +27,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.gitlab.
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.session.CopilotToolSessionValidationPolicy;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.session.CopilotToolSessionValidationPolicy;
 import pl.mkn.incidenttracker.common.JsonPayloadReader;
 
 import java.util.List;

@@ -72,7 +72,7 @@ architektonicznych.
    `aiplatform.copilot.tools.context`,
 6. jesli tool jest drogi lub ryzykowny, dodaj guidance w `tools.description`,
 7. jesli tool ma limit albo walidacje runtime, dodaj
-   `CopilotToolInvocationPolicy` w `tools.policy`,
+   `CopilotToolInvocationPolicy` w `aiplatform.copilot.tools.policy`,
 8. jesli wynik ma trafic do user-facing evidence, dodaj listener i mapper w
    feature'u, np. `features.incidentanalysis.ai.copilot.tools.<capability>`.
 
@@ -114,8 +114,9 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 1. rejestracje definicji zmieniaj w `CopilotSdkToolFactory`,
 2. hidden scope i `ToolContext` zmieniaj w
    `aiplatform.copilot.tools.context`,
-3. session validation, budget albo inne blokady zmieniaj jako
-   `CopilotToolInvocationPolicy`,
+3. session validation albo inne neutralne blokady zmieniaj jako
+   `CopilotToolInvocationPolicy` w `aiplatform.copilot.tools.policy`; budget
+   jest przejsciowo w `analysis.ai.copilot.tools.policy.budget`,
 4. logowanie/metryki/audyt dopinaj jako listenery eventow invocation,
 5. GitLab/DB albo przyszla capability evidence mapuj w swoim
    `tools.<capability>`,

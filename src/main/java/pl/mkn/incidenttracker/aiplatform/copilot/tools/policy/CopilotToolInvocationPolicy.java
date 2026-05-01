@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy;
 
 public interface CopilotToolInvocationPolicy {
 

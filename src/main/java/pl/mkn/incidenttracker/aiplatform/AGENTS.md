@@ -18,6 +18,11 @@ Obecnie obejmuje:
 - `copilot/tools/events/`
   platformowe eventy invocation `Started`/`Finished`, outcome oraz publisher
   chroniacy runtime przed wyjatkami listenerow.
+- `copilot/tools/policy/`
+  neutralne kontrakty policy invocation, kontrolowany rejection oraz session
+  validation.
+- `copilot/tools/logging/`
+  operacyjny listener logujacy request/result preview invocation.
 
 Nie obejmuje:
 

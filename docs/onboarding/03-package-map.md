@@ -102,9 +102,8 @@ Najwazniejsze podpakiety Copilota:
   `CopilotToolEvidenceSessionStore`,
 - `copilot/tools/description` - Copilot-facing guidance doklejane do opisow
   Spring tools,
-- `copilot/tools/policy` - generyczne policies invocation, session validation
-  i budget,
-- `copilot/tools/logging` - listener logujacy invocation,
+- `copilot/tools/policy/budget` - przejsciowy budget policy invocation
+  powiazany z telemetryka analizy,
 
 ### `aiplatform`
 
@@ -117,7 +116,10 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
   scope jako neutralna mechanika platformy,
 - `aiplatform.copilot.tools/events` - eventy `Started`/`Finished` dla
-  invocation.
+  invocation,
+- `aiplatform.copilot.tools/policy` - neutralne policy contracts, kontrolowany
+  rejection i session validation,
+- `aiplatform.copilot.tools/logging` - listener logujacy invocation.
 
 Ten pakiet nie zna incident promptu, coverage ani flow jobow.
 

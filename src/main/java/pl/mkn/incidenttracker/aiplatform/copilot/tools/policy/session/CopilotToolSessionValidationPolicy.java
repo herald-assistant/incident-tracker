@@ -1,11 +1,11 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.session;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.session;
 
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicy;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

@@ -5,10 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetDtos.Decision;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicy;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationPolicyResult;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.CopilotToolInvocationRejectedException;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 
 @Slf4j

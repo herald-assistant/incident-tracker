@@ -161,6 +161,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.events`
   Wewnetrzne eventy tool invocation: `Started` oraz terminalny `Finished` z
   outcome `COMPLETED`, `REJECTED` albo `FAILED`.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools.policy`
+  Neutralne kontrakty policy invocation, kontrolowany rejection oraz session
+  validation.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools.logging`
+  Subskrypcja eventow invocation do operacyjnego logowania request/result.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
@@ -169,10 +174,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   trzyma tylko klasy, przez ktore wchodzi sie do warstwy tools.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`
   Dekorowanie opisow Spring tools guidance'em dla Copilota.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy`
-  Generyczne polityki invocation, w tym session validation i budget.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.logging`
-  Subskrypcja eventow invocation do operacyjnego logowania request/result.
+- `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget`
+  Przejsciowy budget policy invocation powiazany z telemetryka analizy.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools`
   Incident-specific subskrypcje eventow GitLab/Database tools i mapowanie
   wynikow do user-facing evidence.

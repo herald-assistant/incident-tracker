@@ -199,7 +199,7 @@ flowchart LR
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> shared` | 15 | oczekiwane | Incident artifacts, coverage i tool evidence capture czytaja neutralne DTO evidence. |
-| `analysis.ai -> aiplatform` | 21 | oczekiwane przejsciowo | Techniczne wykonanie/model options i pozostala bramka tools korzystaja z wydzielonego platformowego runtime oraz context/events. |
+| `analysis.ai -> aiplatform` | 24 | oczekiwane przejsciowo | Techniczne wykonanie/model options i pozostala bramka tools korzystaja z wydzielonego platformowego runtime oraz context/events/policy/logging. |
 | `analysis.ai -> agenttools` | 8 | oczekiwane przejsciowo | Runtime tools uzywaja neutralnych nazw capability w opisach/policies. |
 | `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> shared` | 9 | oczekiwane | Runtime tools, response/quality i telemetry konsumuja neutralny model evidence. |
@@ -222,8 +222,9 @@ Do obserwacji zostaly krawedzie:
 
    Incident feature korzysta jeszcze z kontraktow AI, execution gateway,
    response/quality, telemetry, runtime tools i session evidence store
-   mieszkajacych pod `analysis.ai`. Hidden context i eventy invocation sa juz
-   w `aiplatform.copilot.tools`. Nie dodawac krawedzi odwrotnej
+   mieszkajacych pod `analysis.ai`. Hidden context, eventy invocation,
+   neutralne policy contracts, session validation i logging sa juz w
+   `aiplatform.copilot.tools`. Nie dodawac krawedzi odwrotnej
    `analysis.ai -> features`; kolejne reusable mechanizmy nalezy przenosic do
    `aiplatform`.
 
@@ -306,10 +307,11 @@ Zamkniete krawedzie, ktorych nie przywracac:
   user-facing tool evidence mapping mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools`; runtime tools publikuja tylko
   neutralne eventy i session-bound evidence store.
-- Dawne `context/events` spod `analysis.ai.copilot.tools`: hidden
-  `ToolContext` i eventy invocation mieszkaja teraz w
-  `aiplatform.copilot.tools.context/events`; `analysis.ai.copilot.tools`
-  korzysta z nich jako przejsciowa bramka runtime.
+- Dawne `context/events/policy/session/logging` spod
+  `analysis.ai.copilot.tools`: hidden `ToolContext`, eventy invocation,
+  neutralne policy contracts, session validation i logging mieszkaja teraz w
+  `aiplatform.copilot.tools`; `analysis.ai.copilot.tools` korzysta z nich jako
+  przejsciowa bramka runtime.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.
