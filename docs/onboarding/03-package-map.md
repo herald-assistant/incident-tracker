@@ -63,13 +63,15 @@ Docelowa reusable warstwa capability adapters. Przeniesione pakiety to
 
 ### `analysis/mcp`
 
-Warstwa tools wystawianych przez Spring AI.
-Sa tu dzisiaj tools Elastica, GitLaba i warunkowo Database.
+Historyczna warstwa tools wystawianych przez Spring AI.
+Sa tu dzisiaj tools GitLaba i warunkowo Database; Elasticsearch MCP zostal
+przeniesiony do `agenttools.elasticsearch.mcp`.
 
 ### `agenttools`
 
-Neutralne kontrakty tools/capability uzywane przez MCP wrappers i Copilot
-runtime: hidden tool context keys oraz nazwy tools/prefixy capability.
+Reusable tools/capability uzywane przez MCP wrappers i Copilot runtime: hidden
+tool context keys, nazwy tools/prefixy capability oraz przenoszone wrappery
+MCP. Pierwszy przeniesiony wrapper to `agenttools.elasticsearch.mcp`.
 
 ### `analysis/ai`
 

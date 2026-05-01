@@ -6,8 +6,6 @@ Ten katalog odpowiada za MCP tools i ich rejestracje po stronie Spring AI.
 
 Obejmuje:
 
-- `elasticsearch/`
-  tools do dodatkowego dogrywania logow po `correlationId`,
 - `gitlab/`
   session-bound tools do wyszukiwania repozytoriow i czytania kodu,
 - `database/`
@@ -20,6 +18,10 @@ Nie obejmuje:
 - providerow evidence z `../evidence`,
 - budowy promptu i skilli z `../ai`.
 
+Elasticsearch MCP jest juz przeniesiony do
+`pl.mkn.incidenttracker.agenttools.elasticsearch.mcp`; ten katalog jest
+historycznym miejscem dla pozostalych wrapperow przed ich migracja.
+
 ## Zasady modyfikacji
 
 - Tool ma delegowac do najwyzszego sensownego use case'u: portu, serwisu albo
@@ -27,16 +29,17 @@ Nie obejmuje:
 - Kontrakty tooli maja pozostac jawne i male: tylko dane potrzebne do
   wykonania jednego konkretnego kroku eksploracji.
 - Neutralne kontrakty wielokrotnego uzycia, np. hidden tool context keys i
-  nazwy tools, trzymaj w `pl.mkn.incidenttracker.agenttools`. DB
-  request/result/scope/operator DTO sa capability contract adaptera DB w
-  `integrations.database`, a MCP mapuje hidden `ToolContext` na adapterowy
-  scope.
+  nazwy tools, oraz przenoszone wrappery MCP trzymaj w
+  `pl.mkn.incidenttracker.agenttools`. DB request/result/scope/operator DTO sa
+  capability contract adaptera DB w `integrations.database`, a MCP mapuje
+  hidden `ToolContext` na adapterowy scope.
 - Jesli kontekst runtime jest juz znany po stronie backendu, np. `environment`,
   `gitLabGroup`, `gitLabBranch` albo `correlationId`, przekazuj go przez hidden
   `ToolContext`, a nie przez model-facing parametry.
-- Uwaga na stan zastany: `ElasticMcpTools` nadal ma jawny parametr
-  `correlationId`. Nie powielaj tego wzorca; przy zmianach w Elastic MCP
-  migruj go do hidden `ToolContext` i zaktualizuj testy schema/factory.
+- Uwaga na stan zastany: `agenttools.elasticsearch.mcp.ElasticMcpTools` nadal
+  ma jawny parametr `correlationId`. Nie powielaj tego wzorca; przy zmianach
+  kontraktu Elastic MCP migruj go do hidden `ToolContext` i zaktualizuj testy
+  schema/factory.
 - Dla GitLab i Database tools jedyny operator-facing powod wywolania to
   opcjonalny `reason`. Nie dodawaj model-facing parametrow eksploracyjnych,
   pytan diagnostycznych ani innych pol, ktore probuja zastapic prosty powod.

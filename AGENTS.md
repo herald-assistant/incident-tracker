@@ -153,12 +153,12 @@ Zasady granic:
   Historyczny katalog po ekstrakcji adapterow. Nie dodawaj tu nowego kodu;
   nowe integracje trafiaja do `integrations`.
 - `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
-  MCP tools i ich konfiguracja rejestracji, delegujace do adapterow albo use
-  case'ow.
+  Historyczne miejsce MCP tools i ich konfiguracji rejestracji przed migracja
+  do `agenttools`.
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
-  Neutralne kontrakty tools/capability wspolne dla MCP wrappers i platform AI,
-  np. hidden tool context keys oraz nazwy tools. Adaptery nie powinny
-  importowac `agenttools`.
+  Reusable tools/capability wspolne dla MCP wrappers i platform AI, np. hidden
+  tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
+  integracjami. Adaptery nie powinny importowac `agenttools`.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`.

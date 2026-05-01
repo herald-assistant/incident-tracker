@@ -39,8 +39,9 @@ Tool ma maly kontrakt i robi jeden konkretny krok eksploracji.
 ### MCP
 
 W tym projekcie to warstwa ekspozycji tools po stronie Spring AI. Nazwa
-`analysis.mcp` grupuje narzedzia, ale ich logika deleguje dalej do adapterow
-albo use case'ow.
+`analysis.mcp` historycznie grupowala narzedzia; docelowe reusable wrappery
+trafiaja do `agenttools.<capability>.mcp`. Ich logika deleguje dalej do
+adapterow albo use case'ow.
 
 ### Prompt
 

@@ -427,10 +427,13 @@ Kroki:
 
 1. Przeniesc tool contracts i names do `agenttools.<capability>`.
    Stan obecny: tool names/prefixy dla Elasticsearch, GitLab i Database
-   mieszkaja w `agenttools.<capability>`, a wrappery `@Tool` nadal sa w
-   `analysis.mcp.*`.
+   mieszkaja w `agenttools.<capability>`. Elasticsearch wrapper `@Tool`
+   mieszka juz w `agenttools.elasticsearch.mcp`, a GitLab i Database nadal sa
+   w `analysis.mcp.*`.
 2. Przeniesc Spring AI/MCP wrappers do `agenttools.mcp.<capability>` albo
    `agenttools.<capability>.mcp`.
+   Stan obecny: wybrany kierunek to `agenttools.<capability>.mcp`; pierwszy
+   przeniesiony slice to Elasticsearch.
 3. Zostawic w tools tylko delegacje do integrations/use case'ow.
 4. Utrzymac hidden scope jako neutralny `AgentToolContext`, a nie
    `CopilotToolContext`.
@@ -585,7 +588,7 @@ Kryterium done:
 13. PR: przeniesc neutralne tool names/prefixy do `agenttools.<capability>`
     [done].
 14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
-    tools.
+    tools; Elasticsearch [done], GitLab i Database pozostaja do przeniesienia.
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest.
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
@@ -597,8 +600,9 @@ Nie trzeba rozstrzygac wszystkiego od razu. Te decyzje powinny zapasc wtedy,
 gdy dotykamy danego obszaru:
 
 - Rozstrzygniete: generic evidence model mieszka w `shared.evidence`.
-- Czy `agenttools` ma strukture `agenttools.<capability>.mcp`, czy
-  `agenttools.mcp.<capability>`?
+- Rozstrzygniete: `agenttools` uzywa struktury
+  `agenttools.<capability>.mcp`, zeby kontrakt capability i jego ekspozycja MCP
+  byly blisko siebie.
 - Czy helper endpointy adapterow mieszkaja przy `integrations.<capability>.api`,
   czy w osobnym `api.integrations`?
 - Czy `analysis.ai.initial` zostaje feature-specific, czy rozbijamy go na

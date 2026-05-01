@@ -63,7 +63,8 @@ architektonicznych.
 
 ## Playbook 3: nowy tool
 
-1. dodaj go do `analysis.mcp.<capability>`,
+1. dodaj go do `agenttools.<capability>.mcp` albo, jesli capability nie zostalo
+   jeszcze przeniesione, do historycznego `analysis.mcp.<capability>`,
 2. deleguj do adaptera albo use case'u,
 3. dopisz rejestracje przez `ToolCallbackProvider`,
 4. sprawdz `CopilotSdkToolFactory`, policyke dostepu do tooli i testy MCP

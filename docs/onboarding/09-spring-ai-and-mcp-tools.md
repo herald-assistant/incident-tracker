@@ -5,11 +5,12 @@ i jak backend pilnuje scope, budgetu oraz audytu.
 
 ## Warstwy
 
-Tools sa implementowane w pakiecie `analysis.mcp` i deleguja do adapterow albo
-use case'ow aplikacji. Copilot nie wywoluje adapterow bezposrednio.
+Tools sa implementowane w reusable warstwie `agenttools` albo w historycznym
+pakiecie `analysis.mcp` podczas migracji. Deleguja do adapterow albo use
+case'ow aplikacji. Copilot nie wywoluje adapterow bezposrednio.
 Neutralne nazwy tools i prefixy capability mieszkaja w `agenttools`, zeby MCP
 wrappers, policy Copilota, telemetryka i dekoratory opisow nie importowaly ich
-z warstwy implementacji `analysis.mcp`.
+z historycznej warstwy implementacji.
 
 Najwazniejsze grupy:
 
@@ -32,11 +33,11 @@ start analizy przyjmuje `correlationId`, ale scope integracji nadal jest
 rozwiazywany i ukrywany po stronie backendu.
 
 Aktualny kod jest juz w pelni hidden-scope dla GitLab i Database tools.
-`ElasticMcpTools.searchLogsByCorrelationId(...)` nadal ma jawny parametr
-`correlationId`, mimo ze policy sesji ogranicza dostep do toola. Traktuj to
-jako znany drift wzgledem docelowego invariantu MCP: przy najblizszej zmianie
-Elastic tool powinien przejsc na `ToolContext`, a model-facing schema nie
-powinna wymagac `correlationId`.
+`agenttools.elasticsearch.mcp.ElasticMcpTools.searchLogsByCorrelationId(...)`
+nadal ma jawny parametr `correlationId`, mimo ze policy sesji ogranicza dostep
+do toola. Traktuj to jako znany drift wzgledem docelowego invariantu MCP: przy
+najblizszej zmianie kontraktu Elastic tool powinien przejsc na `ToolContext`,
+a model-facing schema nie powinna wymagac `correlationId`.
 
 ## Coverage-aware allowlista
 

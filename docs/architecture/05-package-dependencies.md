@@ -49,9 +49,9 @@ ponizszych zasad:
   endpoint REST albo przyszly feature.
 - `analysis.adapter` jest historycznym katalogiem po ekstrakcji adapterow.
   Nowe i przenoszone capability maja trafiac do `integrations.*`.
-- `analysis.mcp` i przyszla warstwa tools to reusable ekspozycja capability
-  nad adapterami. Nie powinny zalezec od dedykowanej analizy incydentow ani od
-  szczegolow providera Copilot SDK.
+- `agenttools` i pozostale przejsciowo `analysis.mcp` to reusable ekspozycja
+  capability nad adapterami. Nie powinny zalezec od dedykowanej analizy
+  incydentow ani od szczegolow providera Copilot SDK.
 - `analysis.ai.copilot` to aktualny adapter platformy AI runtime. Moze
   korzystac z reusable tools/MCP, budowac session config, allowliste,
   hidden context, telemetryke i evidence capture, ale docelowo ma robic to na
@@ -96,7 +96,7 @@ flowchart LR
 
     FLOW --> INITIAL["analysis.ai.initial"]
     INITIAL --> TOOLS["analysis.ai.copilot.tools"]
-    TOOLS --> MCP["analysis.mcp"]
+    TOOLS --> MCP["analysis.mcp / agenttools.*.mcp"]
     MCP --> INTEGRATIONS
 
     JOB --> CHAT
@@ -119,9 +119,9 @@ Najwazniejsze lancuchy ownership/dependency:
 - initial AI:
   `analysis.flow -> analysis.ai.initial`,
 - AI-guided tools podczas initial analysis:
-  `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp -> integrations`,
+  `analysis.ai.initial -> analysis.ai.copilot.tools -> analysis.mcp/agenttools.*.mcp -> integrations`,
 - follow-up chat:
-  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> analysis.mcp -> integrations`,
+  `analysis.job -> analysis.ai.chat -> analysis.ai.copilot.tools -> analysis.mcp/agenttools.*.mcp -> integrations`,
 - model/options:
   `analysis.job`, `analysis.flow` i `analysis.ai` korzystaja z bocznego
   kontraktu `analysis.options`.
@@ -158,6 +158,7 @@ flowchart LR
 
     MCP --> INTEGRATIONS
     MCP --> AGENTTOOLS
+    AGENTTOOLS --> INTEGRATIONS
 
     API["api"] --> INTEGRATIONS
     API --> FLOW
@@ -186,8 +187,9 @@ flowchart LR
 | `analysis.ai -> analysis.options` | 6 | oczekiwane | Providerzy AI, preparation i chat dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> common` | 2 | oczekiwane | Mappery tool evidence uzywaja `JsonPayloadReader`. |
 | `analysis.ai -> shared` | 26 | oczekiwane | Providerzy AI, Copilot runtime/preparation i evidence capture konsumuja neutralny model evidence. |
-| `analysis.mcp -> integrations` | 9 | oczekiwane | Elasticsearch, GitLab i Database MCP tools korzystaja z docelowych reusable integracji. |
-| `analysis.mcp -> agenttools` | 25 | oczekiwane przejsciowo | MCP wrappers uzywaja neutralnych hidden context keys oraz nazw tools. |
+| `analysis.mcp -> integrations` | 7 | oczekiwane przejsciowo | GitLab i Database MCP tools korzystaja z docelowych reusable integracji, dopoki nie zostana przeniesione do `agenttools`. |
+| `analysis.mcp -> agenttools` | 24 | oczekiwane przejsciowo | Pozostale MCP wrappers uzywaja neutralnych hidden context keys oraz nazw tools. |
+| `agenttools -> integrations` | 2 | oczekiwane | Pierwszy przeniesiony wrapper Elasticsearch MCP deleguje do `integrations.elasticsearch`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
 | `api -> analysis.flow` | 1 | oczekiwane | Globalny handler HTTP mapuje `AnalysisDataNotFoundException`. |
 | `api -> analysis.job` | 2 | oczekiwane | Globalny handler HTTP mapuje wyjatki job API. |
@@ -214,7 +216,7 @@ Preferowany kierunek kompilacyjny dla obecnych pakietow:
 analysis.job -> analysis.flow -> analysis.evidence -> integrations
 analysis.evidence -> shared
 analysis.flow -> analysis.ai.initial
-analysis.ai.copilot -> analysis.mcp -> integrations
+analysis.ai.copilot -> analysis.mcp/agenttools.*.mcp -> integrations
 analysis.ai.copilot/analysis.mcp -> agenttools
 analysis.job/flow/ai -> analysis.options
 analysis.job/flow/ai -> shared

@@ -33,6 +33,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.ai.usage`
 - `agenttools.context`
 - `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
+- `agenttools.elasticsearch.mcp`
 - `integrations.database`
 - `analysis.evidence.provider.deployment`
 - `analysis.evidence.provider.elasticsearch`
@@ -73,7 +74,8 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za Elastica odpowiadaja glownie
 
 - `integrations.elasticsearch`
-- `analysis.mcp.elasticsearch`
+- `agenttools.elasticsearch`
+- `agenttools.elasticsearch.mcp`
 
 ### Za operational context odpowiadaja glownie
 
@@ -200,10 +202,11 @@ chatu, a nie mieszane z deterministycznym pipeline evidence.
 ### Znany drift MCP Elasticsearch
 
 Docelowy invariant mowi, ze scope tools ma przychodzic z hidden `ToolContext`.
-GitLab i Database tools juz tak dzialaja. `ElasticMcpTools` nadal ma
-model-facing parametr `correlationId`; jesli dotykasz MCP Elastica, pierwszym
-bezpiecznym kierunkiem jest migracja tego parametru do `ToolContext` i
-aktualizacja testow tool factory/schema.
+GitLab i Database tools juz tak dzialaja. `ElasticMcpTools` w
+`agenttools.elasticsearch.mcp` nadal ma model-facing parametr `correlationId`;
+jesli zmieniasz kontrakt albo zachowanie MCP Elastica, pierwszym bezpiecznym
+kierunkiem jest migracja tego parametru do `ToolContext` i aktualizacja testow
+tool factory/schema.
 
 ### Copilot tools po refaktorze eventowym
 

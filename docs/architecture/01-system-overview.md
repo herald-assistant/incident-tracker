@@ -94,9 +94,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis`
   Wspolne DTO, wynik i wyjatki analizy.
 - `pl.mkn.incidenttracker.agenttools`
-  Neutralne kontrakty reusable tools/capability uzywane przez MCP wrappers i
-  platforme AI, np. hidden tool context keys i nazwy tools. Adaptery nie
-  powinny importowac `agenttools`.
+  Reusable tools/capability uzywane przez MCP wrappers i platforme AI, np.
+  hidden tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
+  integracjami. Adaptery nie powinny importowac `agenttools`.
 - `pl.mkn.incidenttracker.common`
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
 - `pl.mkn.incidenttracker.analysis.flow`
@@ -181,8 +181,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.integrations.elasticsearch`
   Properties, porty, adapter REST, modele logow oraz endpoint testowy dla
   Elasticsearch/Kibana.
-- `pl.mkn.incidenttracker.analysis.mcp.elasticsearch`
-  MCP tools Elastica.
+- `pl.mkn.incidenttracker.agenttools.elasticsearch.mcp`
+  MCP tools Elastica delegujace do `integrations.elasticsearch`.
 - `pl.mkn.incidenttracker.integrations.database`
   Routing polaczen, metadata Oracle, readonly query execution i SQL guard DB
   capability.
