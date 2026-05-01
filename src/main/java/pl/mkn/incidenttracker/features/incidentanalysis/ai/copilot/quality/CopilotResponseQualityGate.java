@@ -1,15 +1,17 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.quality;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityMode;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualitySeverity;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -74,12 +76,12 @@ public class CopilotResponseQualityGate {
 
     private final CopilotResponseQualityProperties properties;
 
-    public Report evaluate(
+    public CopilotResponseQualityReport evaluate(
             InitialAnalysisRequest request,
             StructuredAnalysisResponse response
     ) {
         if (properties == null || !properties.isEnabled()) {
-            return Report.disabled(mode());
+            return CopilotResponseQualityReport.disabled(mode());
         }
 
         var evidence = EvidenceSummary.from(request);
@@ -93,7 +95,7 @@ public class CopilotResponseQualityGate {
         validateHighConfidence(response, evidence, findings);
         validateRationaleStructure(response, findings);
 
-        return new Report(true, mode(), findings.isEmpty(), findings);
+        return new CopilotResponseQualityReport(true, mode(), findings.isEmpty(), findings);
     }
 
     private void validateAffectedFunction(
@@ -301,10 +303,10 @@ public class CopilotResponseQualityGate {
         return value != null ? value.trim() : "";
     }
 
-    private CopilotResponseQualityProperties.Mode mode() {
+    private CopilotResponseQualityMode mode() {
         return properties != null && properties.getMode() != null
                 ? properties.getMode()
-                : CopilotResponseQualityProperties.Mode.REPORT_ONLY;
+                : CopilotResponseQualityMode.REPORT_ONLY;
     }
 
     private Finding finding(String code, String field, String message) {

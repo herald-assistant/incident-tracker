@@ -254,6 +254,11 @@ feature'a.
 aktualnych providerow Copilota: `CopilotInitialAnalysisProvider` i
 `CopilotSdkAnalysisChatProvider`. Dzieki temu `analysis.ai` nie importuje
 `features.*`; pozostaje kontraktem/fasada techniczna dla obecnego flow.
+Podpakiety `features.incidentanalysis.ai.copilot.response` i
+`features.incidentanalysis.ai.copilot.quality` zawieraja incidentowy JSON-only
+response contract, parser oraz report-only quality gate. Telemetryka zapisuje
+wynik gate'a przez neutralny `aiplatform.copilot.runtime.quality`
+`CopilotResponseQualityReport`, zeby nie importowac feature'a.
 
 `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific GitLab i
 Database tool evidence capture: listenery eventow invocation oraz mappery
@@ -269,7 +274,9 @@ Platform-owned runtime jest juz poza `preparation`, w
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
 `CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory`,
 `CopilotSessionConfigFactory`, `CopilotSdkExecutionGateway` oraz
-`CopilotSessionExecutionMetricsRecorder`. Skill loader odpowiada tylko za materializacje
+`CopilotSessionExecutionMetricsRecorder`. Neutralny
+`aiplatform.copilot.runtime.quality` zawiera tylko payload raportu jakosci dla
+metryk, bez incidentowych regul oceny. Skill loader odpowiada tylko za materializacje
 skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 `CopilotSessionConfigRequest`. Platformowe tools zawieraja tez
@@ -497,8 +504,9 @@ Kroki:
    do `features.incidentanalysis`.
    Stan obecny: incident prompt i digest oraz initial/follow-up providery
    Copilota mieszkaja juz w `features.incidentanalysis.ai.copilot`. Response
-   parser/quality sa jeszcze w `analysis.ai.copilot` jako przejsciowa mechanika
-   obecnego providera.
+   parser i quality gate mieszkaja juz w
+   `features.incidentanalysis.ai.copilot.response/quality`, a telemetryka
+   dostaje neutralny quality report z `aiplatform.copilot.runtime.quality`.
 6. Przeniesc incident tool access policy, incident coverage heurystyki,
    incident skill selection i operator-facing tool evidence mapping do
    `features.incidentanalysis`.

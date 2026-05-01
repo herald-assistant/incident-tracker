@@ -1,12 +1,12 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.quality;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
 import java.util.List;
 
@@ -146,7 +146,7 @@ class CopilotResponseQualityGateTest {
         assertTrue(report.findings().isEmpty());
     }
 
-    private void assertFinding(Report report, String code) {
+    private void assertFinding(CopilotResponseQualityReport report, String code) {
         assertFalse(report.passed());
         assertTrue(report.findings().stream().anyMatch(finding -> code.equals(finding.code())));
     }

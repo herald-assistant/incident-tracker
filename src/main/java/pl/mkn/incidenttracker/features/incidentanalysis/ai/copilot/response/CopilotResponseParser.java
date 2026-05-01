@@ -1,13 +1,13 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.response;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.EvidenceReference;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.ParseResult;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.EvidenceReference;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.ParseResult;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;

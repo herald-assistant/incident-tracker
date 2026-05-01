@@ -12,9 +12,9 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExe
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityGate;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.response.CopilotResponseParser;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityProperties;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;

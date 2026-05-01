@@ -135,8 +135,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.ai.usage`
   Generyczny kontrakt token/cost/usage dla UI.
 - `pl.mkn.incidenttracker.analysis.ai.copilot`
-  Techniczna integracja Copilot SDK dla model options, response, quality i
-  telemetry. Incident initial/chat providery mieszkaja w
+  Techniczna integracja Copilot SDK dla model options i telemetry. Incident
+  initial/chat providery, response parser i quality gate mieszkaja w
   `features.incidentanalysis.ai.copilot`, a execution gateway w platformie.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
@@ -149,7 +149,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   reuse'u przez evidence i kolejne capability.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot`
   Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
-  skill selection, tool policy i initial/follow-up run assembly.
+  skill selection, tool policy, response parser, quality gate i
+  initial/follow-up run assembly.
   Ten pakiet sklada parametry dla platformowego runtime Copilota.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
@@ -158,6 +159,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz neutralny port
   metryk execution bez zaleznosci od konkretnego feature'a.
+- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality`
+  Neutralny payload raportu jakosci odpowiedzi uzywany przez telemetryke; same
+  reguly quality gate pozostaja po stronie feature'a.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
   neutralna mechanika platformy.

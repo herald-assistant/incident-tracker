@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityMode;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
 
 import java.util.List;
 
@@ -36,7 +36,7 @@ public record CopilotAnalysisMetrics(
         String detectedProblem,
         String responseConfidence,
         boolean qualityGateEnabled,
-        CopilotResponseQualityProperties.Mode qualityGateMode,
+        CopilotResponseQualityMode qualityGateMode,
         boolean qualityGatePassed,
         int qualityFindingCount,
         List<Finding> qualityFindings,

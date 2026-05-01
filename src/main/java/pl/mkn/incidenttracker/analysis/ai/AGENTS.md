@@ -33,8 +33,8 @@ Nie obejmuje:
 
 - klas adapterow integracyjnych z `../adapter`,
 - sekwencyjnego pipeline evidence z `../evidence`,
-- incident promptu, digestu, coverage i tool policy; te klasy mieszkaja w
-  `features.incidentanalysis.ai.copilot`,
+- incident promptu, digestu, response parsera, quality gate, coverage i tool
+  policy; te klasy mieszkaja w `features.incidentanalysis.ai.copilot`,
 - opcji AI, katalogu modeli i endpointu `GET /analysis/ai/options` z
   `../options`,
 - kontrolerow HTTP i job flow z `../job`.
@@ -44,6 +44,8 @@ Nie obejmuje:
 Incident-specific preparation i coverage sa juz poza tym katalogiem:
 
 - `features.incidentanalysis.ai.copilot.preparation`
+- `features.incidentanalysis.ai.copilot.response`
+- `features.incidentanalysis.ai.copilot.quality`
 - `features.incidentanalysis.ai.copilot.coverage`
 
 Nie importuj `features.*` z `analysis.ai`. Obecny kierunek zaleznosci to
@@ -131,7 +133,8 @@ trafia do `aiplatform`.
   definitions.
 - Zmiany w `aiplatform.copilot.runtime.execution` powinny zachowac kontrakty i
   obserwowalnosc lifecycle klienta i sesji.
-- Zmiany w providerze AI powinny miec testy parsowania odpowiedzi modelu.
+- Zmiany w `features.incidentanalysis.ai.copilot.response/quality` powinny
+  miec testy parsowania odpowiedzi modelu i quality gate.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie
 

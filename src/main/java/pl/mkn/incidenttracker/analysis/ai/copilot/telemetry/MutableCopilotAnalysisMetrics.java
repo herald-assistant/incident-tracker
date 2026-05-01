@@ -1,11 +1,11 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityMode;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -54,7 +54,7 @@ final class MutableCopilotAnalysisMetrics {
     private String detectedProblem;
     private String responseConfidence;
     private boolean qualityGateEnabled;
-    private CopilotResponseQualityProperties.Mode qualityGateMode;
+    private CopilotResponseQualityMode qualityGateMode;
     private boolean qualityGatePassed = true;
     private List<Finding> qualityFindings = List.of();
     private int budgetSoftLimitExceededCount;
@@ -167,7 +167,7 @@ final class MutableCopilotAnalysisMetrics {
         this.responseConfidence = responseConfidence;
     }
 
-    synchronized void recordQualityReport(Report report) {
+    synchronized void recordQualityReport(CopilotResponseQualityReport report) {
         qualityGateEnabled = report.enabled();
         qualityGateMode = report.mode();
         qualityGatePassed = report.passed();

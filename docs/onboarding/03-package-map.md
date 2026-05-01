@@ -93,8 +93,6 @@ Najwazniejsze podpakiety Copilota:
 - `copilot` - root aktualnej integracji Copilot SDK, m.in.
   `CopilotSdkModelOptionsProvider`; incident initial/chat providery sa juz w
   `features.incidentanalysis.ai.copilot`,
-- `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
-- `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
 
 ### `aiplatform`
@@ -107,6 +105,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   sesji SDK,
 - `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
   execution gateway i neutralny port metryk execution,
+- `aiplatform.copilot.runtime.quality` - neutralny payload raportu jakosci
+  odpowiedzi uzywany przez telemetryke,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
   scope jako neutralna mechanika platformy,
 - `aiplatform.copilot.tools/CopilotSdkToolFactory` - rejestracja Spring tools
@@ -133,10 +133,11 @@ Ten pakiet nie zna incident promptu, coverage ani flow jobow.
 Dedykowany feature analizy incydentow. Pierwszy przeniesiony slice to
 `features.incidentanalysis.ai.copilot`: incident initial/chat providery,
 `preparation` dla promptu, artefaktow, tool policy, hidden contextu i
-initial/follow-up run assembly oraz `coverage` dla incident-specific coverage
-report i evidence gaps. Podpakiet `tools` zawiera GitLab/DB listener + mapper
-user-facing tool evidence dla analizy incydentow oraz `tools.description` z
-incident-specific guidance opisow tools.
+initial/follow-up run assembly, `response` dla JSON-only parsera odpowiedzi,
+`quality` dla report-only quality gate oraz `coverage` dla incident-specific
+coverage report i evidence gaps. Podpakiet `tools` zawiera GitLab/DB listener
++ mapper user-facing tool evidence dla analizy incydentow oraz
+`tools.description` z incident-specific guidance opisow tools.
 
 ### `common`
 

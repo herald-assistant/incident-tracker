@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.quality;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality;
 
 public enum CopilotResponseQualitySeverity {
     WARNING,

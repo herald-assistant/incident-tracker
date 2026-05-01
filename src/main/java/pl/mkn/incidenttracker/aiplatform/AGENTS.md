@@ -16,6 +16,9 @@ Obecnie obejmuje:
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception i neutralny port metryk
   execution.
+- `copilot/runtime/quality/`
+  neutralny payload raportu jakosci odpowiedzi dla telemetryki. Reguly oceny
+  odpowiedzi konkretnego feature'a nie mieszkaja w platformie.
 - `copilot/tools/context/`
   platformowa mechanika budowania hidden `ToolContext` oraz neutralny
   `CopilotToolSessionContext` przekazywany przez feature.

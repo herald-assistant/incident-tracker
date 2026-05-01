@@ -6,7 +6,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSessionExecutionMetricsRecorder;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 
@@ -119,7 +119,7 @@ public class CopilotSessionMetricsRegistry implements CopilotSessionExecutionMet
         ));
     }
 
-    public void recordQualityReport(String copilotSessionId, Report report) {
+    public void recordQualityReport(String copilotSessionId, CopilotResponseQualityReport report) {
         if (report == null) {
             return;
         }

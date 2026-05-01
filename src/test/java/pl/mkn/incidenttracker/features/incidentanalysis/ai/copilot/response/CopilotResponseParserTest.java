@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.response;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

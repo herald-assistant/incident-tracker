@@ -2,15 +2,15 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityMode;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualityReport.Finding;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality.CopilotResponseQualitySeverity;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualityProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotResponseQualitySeverity;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
@@ -79,9 +79,9 @@ class CopilotSessionMetricsRegistryTest {
         );
         registry.recordQualityReport(
                 context.copilotSessionId(),
-                new Report(
+                new CopilotResponseQualityReport(
                         true,
-                        CopilotResponseQualityProperties.Mode.REPORT_ONLY,
+                        CopilotResponseQualityMode.REPORT_ONLY,
                         false,
                         List.of(new Finding(
                                 CopilotResponseQualitySeverity.WARNING,
@@ -130,7 +130,7 @@ class CopilotSessionMetricsRegistryTest {
         assertTrue(metrics.structuredResponse());
         assertEquals("DOWNSTREAM_TIMEOUT", metrics.detectedProblem());
         assertTrue(metrics.qualityGateEnabled());
-        assertEquals(CopilotResponseQualityProperties.Mode.REPORT_ONLY, metrics.qualityGateMode());
+        assertEquals(CopilotResponseQualityMode.REPORT_ONLY, metrics.qualityGateMode());
         assertEquals(1, metrics.qualityFindingCount());
         assertEquals("GENERIC_RECOMMENDED_ACTION", metrics.qualityFindings().get(0).code());
     }
