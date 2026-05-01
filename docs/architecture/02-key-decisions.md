@@ -295,8 +295,9 @@ Spring tools. Przyklady:
 
 ## 16. Tool evidence jest czescia audytu
 
-`CopilotToolEvidenceSessionStore` publikuje tool evidence przez neutralny
-session-bound sink `Consumer<AnalysisEvidenceSection>`. Provider AI adaptuje
+`aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` publikuje
+tool evidence przez neutralny session-bound sink
+`Consumer<AnalysisEvidenceSection>`. Provider AI adaptuje
 `AnalysisAiToolEvidenceListener` do tego sinka przed wywolaniem execution
 gatewaya.
 
@@ -342,9 +343,9 @@ Event lifecycle:
 Side-effecty sa subskrybowane przez dedykowane listenery: telemetry/logging,
 GitLab evidence capture i Database evidence capture. Publikator eventow izoluje
 bledy listenerow, zeby awaria audytu albo logowania nie zmieniala wyniku toola.
-`CopilotToolEvidenceSessionStore` zarzadza lifecycle sesji i publikacja
-zaktualizowanych sekcji, ale szczegoly mapowania GitLab/DB pozostaja w
-odpowiednich pakietach tool capability.
+`aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` zarzadza
+lifecycle sesji i publikacja zaktualizowanych sekcji, ale szczegoly mapowania
+GitLab/DB pozostaja w odpowiednich pakietach tool capability.
 
 ## 17. Telemetry jest pierwsza warstwa optymalizacji
 

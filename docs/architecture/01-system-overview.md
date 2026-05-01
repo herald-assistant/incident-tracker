@@ -170,12 +170,14 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   validation.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.logging`
   Subskrypcja eventow invocation do operacyjnego logowania request/result.
+- `pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence`
+  Session-bound store publikujacy neutralne `AnalysisEvidenceSection` z wynikow
+  tool invocation przez sink przekazany przez feature.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
   Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools`
-  Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory` oraz
-  `CopilotToolEvidenceSessionStore`. Root trzyma tylko przejsciowe klasy, przez
-  ktore wchodzi sie do warstwy tools i evidence session store.
+  Wejsciowy pakiet runtime tools: `CopilotSdkToolFactory`. Root trzyma
+  przejsciowa klase, przez ktora wchodzi sie do warstwy tools.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.description`
   Dekorowanie opisow Spring tools guidance'em dla Copilota.
 - `pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget`

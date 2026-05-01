@@ -361,9 +361,10 @@ budget state nadal zachowuje informacje o denialu.
 
 ## 11. Tool evidence capture
 
-`CopilotToolEvidenceSessionStore` zarzadza sesja capture i publikuje
-dodatkowe sekcje evidence do job listenera. Samo mapowanie wynikow jest
-subskrybowane z eventow tool invocation przez pakiety capability:
+`aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` zarzadza
+sesja capture i publikuje dodatkowe sekcje evidence do job listenera. Samo
+mapowanie wynikow jest subskrybowane z eventow tool invocation przez pakiety
+capability:
 `tools.gitlab` i `tools.database`.
 
 Store nie zna JSON payloadow konkretnych tools. Udostepnia per-session

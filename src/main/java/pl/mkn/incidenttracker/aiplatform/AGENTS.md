@@ -26,6 +26,9 @@ Obecnie obejmuje:
   validation.
 - `copilot/tools/logging/`
   operacyjny listener logujacy request/result preview invocation.
+- `copilot/tools/evidence/`
+  session-bound store publikujacy neutralne `AnalysisEvidenceSection` z wynikow
+  tool invocation przez sink przekazany przez feature.
 
 Nie obejmuje:
 

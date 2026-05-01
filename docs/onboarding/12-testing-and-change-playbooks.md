@@ -122,7 +122,8 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 5. GitLab/DB albo przyszla capability evidence mapuj w swoim
    `tools.<capability>`,
 6. lifecycle publikacji sekcji evidence trzymaj w
-   `CopilotToolEvidenceSessionStore`, bez payload-specific logiki.
+   `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore`, bez
+   payload-specific logiki.
 
 Celowane testy po takiej zmianie:
 

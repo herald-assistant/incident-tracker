@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.tools;
+package pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

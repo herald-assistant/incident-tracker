@@ -97,8 +97,8 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
 - `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
-- `copilot/tools` - root z klasami wejsciowymi runtime tools:
-  `CopilotSdkToolFactory` i `CopilotToolEvidenceSessionStore`,
+- `copilot/tools` - root z przejsciowa klasa wejsciowa runtime tools:
+  `CopilotSdkToolFactory`,
 - `copilot/tools/description` - Copilot-facing guidance doklejane do opisow
   Spring tools,
 - `copilot/tools/policy/budget` - przejsciowy budget policy invocation
@@ -120,7 +120,9 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   invocation,
 - `aiplatform.copilot.tools/policy` - neutralne policy contracts, kontrolowany
   rejection i session validation,
-- `aiplatform.copilot.tools/logging` - listener logujacy invocation.
+- `aiplatform.copilot.tools/logging` - listener logujacy invocation,
+- `aiplatform.copilot.tools/evidence` - session-bound store publikujacy
+  neutralne evidence z wynikow tool invocation.
 
 Ten pakiet nie zna incident promptu, coverage ani flow jobow.
 

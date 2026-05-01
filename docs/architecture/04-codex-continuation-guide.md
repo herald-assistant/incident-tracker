@@ -57,6 +57,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `aiplatform.copilot.tools.events`
 - `aiplatform.copilot.tools.policy`
 - `aiplatform.copilot.tools.logging`
+- `aiplatform.copilot.tools.evidence`
 - `features.incidentanalysis.ai.copilot`
 - `analysis.ai.copilot.execution`
 - `analysis.ai.copilot.tools`
@@ -220,16 +221,16 @@ Root `analysis.ai.copilot.tools` jest jeszcze przejsciowa bramka do runtime
 tools:
 
 - `CopilotSdkToolFactory` tworzy `ToolDefinition` z istniejacych Spring
-  `ToolCallback`,
-- `CopilotToolEvidenceSessionStore` trzyma lifecycle tool evidence dla sesji.
+  `ToolCallback`.
 
 Logika pomocnicza jest rozdzielona wedlug ownership: platformowy context,
 handler invocation, eventy, policy contracts, session validation i logging
-mieszkaja w `aiplatform.copilot.tools`, a przejsciowe description i budget
-zostaja w `analysis.ai.copilot.tools`. GitLab i Database maja wlasne listenery
-oraz mappery evidence capture w feature. Przy kolejnych toolach unikaj
-dopisywania specjalnych przypadkow do handlera; dodaj policy albo listener
-eventu w odpowiednim pakiecie.
+mieszkaja w `aiplatform.copilot.tools`, a session evidence store w
+`aiplatform.copilot.tools.evidence`. Przejsciowe description i budget zostaja w
+`analysis.ai.copilot.tools`. GitLab i Database maja wlasne listenery oraz
+mappery evidence capture w feature. Przy kolejnych toolach unikaj dopisywania
+specjalnych przypadkow do handlera; dodaj policy albo listener eventu w
+odpowiednim pakiecie.
 
 Generyczne helpery JSON nie naleza do root `tools`. Wspolny reader payloadow to
 `pl.mkn.incidenttracker.common.JsonPayloadReader`.
