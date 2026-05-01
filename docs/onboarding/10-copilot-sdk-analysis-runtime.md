@@ -204,8 +204,10 @@ parsuje wynik dla SDK. Hidden context jest w
 `aiplatform.copilot.tools.events`, walidacja session id jest policy w
 `aiplatform.copilot.tools.policy.session`, budzet jest policy w
 `analysis.ai.copilot.tools.policy.budget`, a logowanie w
-`aiplatform.copilot.tools.logging`. Telemetryka i capture
-GitLab/DB sa listenerami tych eventow, dzieki czemu handler pozostaje granica
+`aiplatform.copilot.tools.logging`. Budget decisions i tool metrics maja
+neutralne kontrakty w `aiplatform.copilot.tools`, a telemetryka analizy tylko
+subskrybuje te dane przez adaptery. Telemetryka i capture GitLab/DB sa
+listenerami eventow invocation, dzieki czemu handler pozostaje granica
 wykonania, a semantyka poszczegolnych tool capability siedzi w dedykowanych
 pakietach.
 
@@ -218,6 +220,8 @@ nie zmienia wyniku tool callbacka.
 `CopilotToolBudgetRegistry` tworzy state per `copilotSessionId`.
 `CopilotToolBudgetPolicy` implementuje `CopilotToolInvocationPolicy` i jest
 wywolywany przez handler przed i po tool callbacku.
+Metryki budzetu zapisuje `CopilotToolBudgetMetricsListener`, implementujacy
+platformowy `CopilotToolBudgetTelemetry`.
 
 Domyslnie:
 

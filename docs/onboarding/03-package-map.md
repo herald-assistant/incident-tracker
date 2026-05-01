@@ -98,7 +98,7 @@ Najwazniejsze podpakiety Copilota:
 - `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
 - `copilot/tools/policy/budget` - przejsciowy budget policy invocation
-  powiazany z telemetryka analizy,
+  odpiety od telemetryki analizy przez platformowy listener contract,
 
 ### `aiplatform`
 
@@ -118,7 +118,10 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   invocation,
 - `aiplatform.copilot.tools/policy` - neutralne policy contracts, kontrolowany
   rejection i session validation,
+- `aiplatform.copilot.tools/policy/budget` - neutralna decyzja budzetu i
+  kontrakt listenera telemetryki budzetu,
 - `aiplatform.copilot.tools/logging` - listener logujacy invocation,
+- `aiplatform.copilot.tools/telemetry` - neutralna klasyfikacja tool invocation,
 - `aiplatform.copilot.tools/description` - neutralny kontrakt customizacji
   opisow tools,
 - `aiplatform.copilot.tools/evidence` - session-bound store publikujacy

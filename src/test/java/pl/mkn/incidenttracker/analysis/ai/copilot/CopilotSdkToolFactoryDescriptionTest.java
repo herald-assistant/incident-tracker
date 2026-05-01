@@ -9,6 +9,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolBudgetMetricsListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
 
@@ -36,7 +37,7 @@ class CopilotSdkToolFactoryDescriptionTest {
                         new pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetRegistry(
                                 new pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetProperties()
                         ),
-                        metricsRegistry
+                        List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
                 )
         );
 

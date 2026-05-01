@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
 
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolMetrics;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetDtos.Decision;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetDecision;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 
@@ -36,9 +36,9 @@ public class CopilotToolBudgetState {
         return sessionId;
     }
 
-    public synchronized Decision beforeInvocation(String toolName) {
+    public synchronized CopilotToolBudgetDecision beforeInvocation(String toolName) {
         if (!properties.active()) {
-            return Decision.allowed(sessionId, toolName);
+            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
         }
 
         if (isRawSqlTool(toolName)) {
@@ -47,23 +47,23 @@ public class CopilotToolBudgetState {
 
         var exceeded = exceededBeforeInvocation(toolName);
         if (exceeded.isEmpty()) {
-            return Decision.allowed(sessionId, toolName);
+            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
         }
 
         if (properties.getMode() == BudgetMode.HARD) {
             deniedToolCalls++;
             warnings.addAll(exceeded);
-            return Decision.denied(sessionId, toolName, exceeded);
+            return CopilotToolBudgetDecision.denied(sessionId, toolName, exceeded);
         }
 
         softLimitExceededCount += exceeded.size();
         warnings.addAll(exceeded);
-        return Decision.soft(sessionId, toolName, exceeded);
+        return CopilotToolBudgetDecision.soft(sessionId, toolName, exceeded);
     }
 
-    public synchronized Decision afterInvocation(String toolName, String rawResult) {
+    public synchronized CopilotToolBudgetDecision afterInvocation(String toolName, String rawResult) {
         if (!properties.active()) {
-            return Decision.allowed(sessionId, toolName);
+            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
         }
 
         var rawResultCharacters = rawResult != null ? rawResult.length() : 0L;
@@ -99,12 +99,12 @@ public class CopilotToolBudgetState {
 
         var exceeded = exceededAfterInvocation(toolName);
         if (exceeded.isEmpty()) {
-            return Decision.allowed(sessionId, toolName);
+            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
         }
 
         softLimitExceededCount += exceeded.size();
         warnings.addAll(exceeded);
-        return Decision.soft(sessionId, toolName, exceeded);
+        return CopilotToolBudgetDecision.soft(sessionId, toolName, exceeded);
     }
 
     public synchronized CopilotToolBudgetSnapshot snapshot() {

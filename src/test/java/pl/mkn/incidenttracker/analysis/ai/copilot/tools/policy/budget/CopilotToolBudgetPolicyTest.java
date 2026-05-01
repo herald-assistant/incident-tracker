@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolBudgetMetricsListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.util.List;
@@ -35,7 +36,10 @@ class CopilotToolBudgetPolicyTest {
         properties.setMaxTotalCalls(1);
         var metricsRegistry = metricsRegistry();
         var registry = new CopilotToolBudgetRegistry(properties);
-        var guard = new CopilotToolBudgetPolicy(registry, metricsRegistry);
+        var guard = new CopilotToolBudgetPolicy(
+                registry,
+                List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
+        );
         var context = registerMetrics(metricsRegistry);
         registry.registerSession(context.copilotSessionId());
 
@@ -100,7 +104,10 @@ class CopilotToolBudgetPolicyTest {
     ) {
         var registry = new CopilotToolBudgetRegistry(properties);
         registry.registerSession("analysis-run-1");
-        return new CopilotToolBudgetPolicy(registry, metricsRegistry);
+        return new CopilotToolBudgetPolicy(
+                registry,
+                List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
+        );
     }
 
     private CopilotToolBudgetProperties properties(BudgetMode mode) {

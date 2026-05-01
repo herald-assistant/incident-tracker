@@ -269,7 +269,9 @@ skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 `CopilotSessionConfigRequest`. Platformowe tools zawieraja tez
 `CopilotSdkToolFactory`, ktory rejestruje Spring tools jako Copilot
-`ToolDefinition` bez wiedzy o incident-specific guidance.
+`ToolDefinition` bez wiedzy o incident-specific guidance. Budget telemetry jest
+odpieta przez platformowe `CopilotToolBudgetTelemetry`, a neutralne
+`CopilotToolMetrics` mieszkaja w `aiplatform.copilot.tools.telemetry`.
 
 ### `features.incidentanalysis`
 
@@ -476,8 +478,9 @@ Kroki:
    Platformowe `aiplatform.copilot.tools` zawiera juz
    `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
-   session validation, logging invocation, description customization contract i
-   session-bound tool evidence store.
+   session validation, logging invocation, description customization contract,
+   budget decision/telemetry contracts, neutralne tool metrics i session-bound
+   tool evidence store.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
    options, skill resources, available tools, hidden context, evidence sink i
    response handler/parser, ale nie zaklada `correlationId`.
@@ -626,8 +629,9 @@ Kryterium done:
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
     capture przeniesione; platformowe tool
-    factory/handler/context/events/policy/logging/description/evidence store
-    przeniesione do `aiplatform.copilot.tools`].
+    factory/handler/context/events/policy/logging/description/budget
+    contracts/telemetry/evidence store przeniesione do
+    `aiplatform.copilot.tools`].
 16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
 17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.

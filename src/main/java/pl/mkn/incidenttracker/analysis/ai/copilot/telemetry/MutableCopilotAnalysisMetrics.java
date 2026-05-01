@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.analysis.ai.copilot.telemetry;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.analysis.ai.usage.AnalysisAiUsage;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Finding;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;

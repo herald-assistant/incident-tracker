@@ -236,9 +236,11 @@ sesje wyjatkiem. Technicznie `CopilotToolBudgetPolicy` rzuca kontrolowany
 SDK i event terminalny `REJECTED`.
 
 Budget policy mieszka przejsciowo w `analysis.ai.copilot.tools.policy.budget`,
-bo korzysta z telemetryki analizy. Walidacja session id jest takim samym
-mechanizmem policy w `aiplatform.copilot.tools.policy.session`, dzieki czemu
-handler nie ma osobnych warunkow dla konkretnych regul runtime.
+ale metryki sa juz odpiete przez platformowy
+`CopilotToolBudgetTelemetry` i adapter `CopilotToolBudgetMetricsListener`.
+Walidacja session id jest takim samym mechanizmem policy w
+`aiplatform.copilot.tools.policy.session`, dzieki czemu handler nie ma
+osobnych warunkow dla konkretnych regul runtime.
 
 Budzet rozroznia m.in. total calls, grupy Elastic/GitLab/DB, GitLab search,
 read file/chunk, returned characters oraz raw SQL attempts.

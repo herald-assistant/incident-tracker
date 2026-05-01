@@ -115,8 +115,10 @@ Zasady granic:
   `CopilotSdkToolFactory`, invocation handler, hidden `ToolContext`, eventy
   invocation, policy contracts, session validation, logging invocation,
   description customization contract i session-bound tool evidence store
-  mieszkaja w platformie. W `analysis.ai.copilot.tools` zostaje przejsciowo
-  tylko `policy.budget`, dopoki budzet jest spiety z telemetryka analizy.
+  budget decision/telemetry contracts i neutralne tool metrics mieszkaja w
+  platformie. W `analysis.ai.copilot.tools` zostaje przejsciowo tylko
+  `policy.budget`, dopoki fizyczny move budzetu nie bedzie osobnym malym
+  krokiem.
   Generyczne helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj poza
   Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB
   evidence mapping i Copilot-facing guidance opisow tools mieszkaja w

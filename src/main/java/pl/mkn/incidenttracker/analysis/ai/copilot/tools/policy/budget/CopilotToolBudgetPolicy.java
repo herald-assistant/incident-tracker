@@ -3,13 +3,15 @@ package pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.analysis.ai.copilot.tools.policy.budget.CopilotToolBudgetDtos.Decision;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetDecision;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetTelemetry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+
+import java.util.List;
 
 @Slf4j
 @Component
@@ -17,7 +19,7 @@ import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
 
     private final CopilotToolBudgetRegistry budgetRegistry;
-    private final CopilotSessionMetricsRegistry metricsRegistry;
+    private final List<CopilotToolBudgetTelemetry> telemetryListeners;
 
     @Override
     public void beforeInvocation(CopilotToolInvocationPolicyRequest request) {
@@ -35,17 +37,17 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
         afterInvocation(result.sessionId(), result.toolName(), result.rawResult());
     }
 
-    public Decision beforeInvocation(
+    public CopilotToolBudgetDecision beforeInvocation(
             String sessionId,
             String toolName,
             String argumentsJson
     ) {
         if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
-            metricsRegistry.recordBudgetRawSqlAttempt(sessionId);
+            telemetryListeners.forEach(listener -> listener.onRawSqlAttempt(sessionId));
         }
         var decision = budgetRegistry.state(sessionId)
                 .map(state -> state.beforeInvocation(toolName))
-                .orElseGet(() -> Decision.allowed(sessionId, toolName));
+                .orElseGet(() -> CopilotToolBudgetDecision.allowed(sessionId, toolName));
         recordDecision(decision);
         if (decision.denied()) {
             log.warn(
@@ -67,14 +69,14 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
         return decision;
     }
 
-    public Decision afterInvocation(
+    public CopilotToolBudgetDecision afterInvocation(
             String sessionId,
             String toolName,
             String rawResult
     ) {
         var decision = budgetRegistry.state(sessionId)
                 .map(state -> state.afterInvocation(toolName, rawResult))
-                .orElseGet(() -> Decision.allowed(sessionId, toolName));
+                .orElseGet(() -> CopilotToolBudgetDecision.allowed(sessionId, toolName));
         recordDecision(decision);
         if (decision.softLimitExceeded()) {
             log.warn(
@@ -88,13 +90,8 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
         return decision;
     }
 
-    private void recordDecision(Decision decision) {
-        if (decision.denied()) {
-            metricsRegistry.recordBudgetDenied(decision.sessionId(), decision.toolName(), decision.reason());
-        }
-        if (decision.softLimitExceeded()) {
-            metricsRegistry.recordBudgetWarnings(decision.sessionId(), decision.warnings());
-        }
+    private void recordDecision(CopilotToolBudgetDecision decision) {
+        telemetryListeners.forEach(listener -> listener.onDecision(decision));
     }
 
     private String abbreviate(String value, int maxLength) {

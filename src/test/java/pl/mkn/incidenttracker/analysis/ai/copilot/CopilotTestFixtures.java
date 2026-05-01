@@ -10,6 +10,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsLogger;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotMetricsProperties;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
+import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolBudgetMetricsListener;
 import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotToolInvocationTelemetryListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotToolInvocationHandler;
@@ -69,7 +70,7 @@ public final class CopilotTestFixtures {
                 metricsLogger,
                 new CopilotToolBudgetPolicy(
                         new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
-                        metricsRegistry
+                        List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
                 )
         );
     }

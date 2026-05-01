@@ -106,6 +106,11 @@ dziala w trybie `soft`, czyli ostrzega i metrykuje, ale nie blokuje. Tryb
 `hard` rzuca kontrolowany `CopilotToolInvocationRejectedException`; handler
 zamienia go na wynik `denied_by_tool_budget` dla SDK.
 
+Sama policy nie zapisuje juz metryk przez `CopilotSessionMetricsRegistry`.
+Publikuje neutralne decyzje przez `CopilotToolBudgetTelemetry`, a adapter
+`CopilotToolBudgetMetricsListener` w `analysis.ai.copilot.telemetry` mapuje je
+na metryki analizy.
+
 Limity obejmuja:
 
 - total tool calls,

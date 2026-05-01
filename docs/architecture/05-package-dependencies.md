@@ -199,11 +199,11 @@ flowchart LR
 | `features -> analysis.options` | 1 | oczekiwane przejsciowo | Incident session config mapuje operator-facing preferencje modelu. |
 | `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features -> shared` | 15 | oczekiwane | Incident artifacts, coverage i tool evidence capture czytaja neutralne DTO evidence. |
-| `analysis.ai -> aiplatform` | 14 | oczekiwane przejsciowo | Techniczne wykonanie/model options i przejsciowy budget korzystaja z wydzielonego platformowego runtime oraz handler/context/events/policy/logging/evidence. |
-| `analysis.ai -> agenttools` | 6 | oczekiwane przejsciowo | Przejsciowe policy/budget runtime uzywa neutralnych nazw capability. |
+| `analysis.ai -> aiplatform` | 25 | oczekiwane przejsciowo | Techniczne wykonanie/model options, telemetry adaptery i przejsciowy budget korzystaja z wydzielonego platformowego runtime oraz handler/context/events/policy/logging/telemetry/evidence. |
+| `analysis.ai -> agenttools` | 3 | oczekiwane przejsciowo | Przejsciowy budget runtime uzywa neutralnych nazw capability. |
 | `analysis.ai -> analysis.options` | 5 | oczekiwane | Providerzy AI/model options dostaja preferencje modelu/reasoning. |
 | `analysis.ai -> shared` | 6 | oczekiwane | Response/quality i telemetry konsumuja neutralny model evidence. |
-| `aiplatform -> agenttools` | 2 | oczekiwane | Platformowy hidden `ToolContext` uzywa neutralnych keys z `agenttools.context`, bez importu capability implementations. |
+| `aiplatform -> agenttools` | 5 | oczekiwane | Platformowy hidden `ToolContext` i neutralna klasyfikacja tool metrics uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 5 | oczekiwane | Platformowy run request, prepared session i tool evidence store niosa neutralny model evidence jako sink output tooli. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> integrations` | 6 | oczekiwane | Globalny handler HTTP mapuje wyniki/wyjatki helper endpointow Elasticsearch i GitLab z `integrations`. |
@@ -247,8 +247,10 @@ features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
 features.incidentanalysis.ai.copilot -> agenttools
 analysis.ai.copilot -> aiplatform.copilot.runtime/tools
+analysis.ai.copilot.tools.policy.budget -> aiplatform.copilot.tools.policy.budget
 analysis.ai.copilot -> agenttools
 aiplatform.copilot.tools -> agenttools
+aiplatform.copilot.tools.telemetry -> agenttools
 aiplatform.copilot.tools.evidence -> shared
 aiplatform.copilot.runtime -> shared
 agenttools.*.mcp -> integrations
@@ -316,10 +318,11 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - Dawne `factory/handler/context/events/policy/session/logging/evidence store`
   spod `analysis.ai.copilot.tools`: `CopilotSdkToolFactory`, handler
   invocation, hidden `ToolContext`, eventy invocation, neutralne policy
-  contracts, session validation, logging, description customization contract i
-  session-bound evidence store mieszkaja teraz w `aiplatform.copilot.tools`.
+  contracts, session validation, logging, description customization contract,
+  budget decision/telemetry contracts, neutralne tool metrics i session-bound
+  evidence store mieszkaja teraz w `aiplatform.copilot.tools`.
   W `analysis.ai.copilot.tools` zostaje tylko przejsciowy budget spiety z
-  telemetryka analizy.
+  platformowymi kontraktami decyzji/metryk.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.
