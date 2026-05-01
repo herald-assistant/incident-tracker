@@ -48,7 +48,8 @@ Flow:
    `CopilotInitialAnalysisPreparation`,
 2. orchestrator zapisuje `prepared.prompt()`,
 3. `CopilotInitialAnalysisProvider` wyciaga z niej `CopilotPreparedSession`,
-4. `CopilotSdkExecutionGateway` uruchamia sesje SDK,
+4. `aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway`
+   uruchamia sesje SDK,
 5. initial preparation jest zamykane po execution.
 
 Ownership initial preparation:

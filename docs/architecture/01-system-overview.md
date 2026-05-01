@@ -135,9 +135,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.analysis.ai.usage`
   Generyczny kontrakt token/cost/usage dla UI.
 - `pl.mkn.incidenttracker.analysis.ai.copilot`
-  Techniczna integracja Copilot SDK dla model options, execution, response,
-  quality, telemetry i runtime tools. Incident initial/chat providery mieszkaja
-  w `features.incidentanalysis.ai.copilot`.
+  Techniczna integracja Copilot SDK dla model options, response, quality i
+  telemetry. Incident initial/chat providery mieszkaja w
+  `features.incidentanalysis.ai.copilot`, a execution gateway w platformie.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -155,6 +155,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
   promptu ani incident policy.
+- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
+  Uruchamianie klienta Copilota, sesji, lifecycle logging oraz neutralny port
+  metryk execution bez zaleznosci od konkretnego feature'a.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
   neutralna mechanika platformy.
@@ -184,8 +187,6 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence`
   Session-bound store publikujacy neutralne `AnalysisEvidenceSection` z wynikow
   tool invocation przez sink przekazany przez feature.
-- `pl.mkn.incidenttracker.analysis.ai.copilot.execution`
-  Uruchamianie klienta Copilota, sesji i logowanie eventow runtime.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools`
   Incident-specific subskrypcje eventow GitLab/Database tools i mapowanie
   wynikow do user-facing evidence.

@@ -12,6 +12,10 @@ Obecnie obejmuje:
   loading, `CopilotRunRequest`, `CopilotPreparedSession`,
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory budujace
   `SessionConfig` i `MessageOptions`.
+- `copilot/runtime/execution/`
+  platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
+  event logging, controlled invocation exception i neutralny port metryk
+  execution.
 - `copilot/tools/context/`
   platformowa mechanika budowania hidden `ToolContext` oraz neutralny
   `CopilotToolSessionContext` przekazywany przez feature.

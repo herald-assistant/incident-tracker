@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSessionExecutionMetricsRecorder;
 import pl.mkn.incidenttracker.analysis.ai.copilot.quality.CopilotQualityDtos.Report;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
-public class CopilotSessionMetricsRegistry {
+public class CopilotSessionMetricsRegistry implements CopilotSessionExecutionMetricsRecorder {
 
     private final CopilotMetricsProperties properties;
     private final Map<String, MutableCopilotAnalysisMetrics> metricsBySessionId = new ConcurrentHashMap<>();
@@ -43,6 +44,7 @@ public class CopilotSessionMetricsRegistry {
         metrics.recordPreparation(toArtifactMetrics(context, request, artifacts, prompt, preparationDurationMs));
     }
 
+    @Override
     public void recordExecutionDurations(
             String copilotSessionId,
             long clientStartDurationMs,
@@ -58,6 +60,7 @@ public class CopilotSessionMetricsRegistry {
         ));
     }
 
+    @Override
     public void recordAssistantUsage(
             String copilotSessionId,
             String model,
@@ -79,6 +82,7 @@ public class CopilotSessionMetricsRegistry {
         ));
     }
 
+    @Override
     public void recordSessionUsageInfo(
             String copilotSessionId,
             double tokenLimit,

@@ -61,7 +61,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `aiplatform.copilot.tools.description`
 - `aiplatform.copilot.tools.evidence`
 - `features.incidentanalysis.ai.copilot`
-- `analysis.ai.copilot.execution`
+- `aiplatform.copilot.runtime.execution`
 - `features.incidentanalysis.ai.copilot.tools`
 - `features.incidentanalysis.ai.copilot.tools.description`
 - `analysis.ai.copilot.telemetry`

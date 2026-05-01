@@ -22,9 +22,7 @@ Obejmuje:
 - `copilot/`
   root aktualnej integracji Copilot SDK, m.in.
   `CopilotSdkModelOptionsProvider`; incident initial/chat providery mieszkaja
-  juz w `features.incidentanalysis.ai.copilot`,
-- `copilot/execution/`
-  wykonanie sesji, lifecycle klienta i logowanie eventow,
+  juz w `features.incidentanalysis.ai.copilot`.
 
 Platformowe runtime tools, czyli factory, invocation handler, context, eventy,
 neutralne policy contracts, session validation, logging, description
@@ -90,10 +88,10 @@ trafia do `aiplatform`.
 - `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` ma
   publikowac evidence przez neutralny session-bound sink, a nie bezposrednio
   zalezec od `AnalysisAiToolEvidenceListener`.
-- `CopilotSdkExecutionGateway` ma wykonywac neutralna `CopilotPreparedSession`.
-  Evidence sink powinien przychodzic z platformowego run requestu albo
-  przygotowanej sesji; adapter z `AnalysisAiToolEvidenceListener` trzymaj po
-  stronie providera AI.
+- `aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway` ma
+  wykonywac neutralna `CopilotPreparedSession`. Evidence sink powinien
+  przychodzic z platformowego run requestu albo przygotowanej sesji; adapter z
+  `AnalysisAiToolEvidenceListener` trzymaj po stronie providera AI.
 - Nowe neutralne walidacje runtime dodawaj jako
   `aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy`, a side-effecty
   jako listenery eventow invocation. Budget policy mieszka w
@@ -131,8 +129,8 @@ trafia do `aiplatform`.
   i model listing, jesli dotykaja tych mechanizmow.
 - Zmiany w `copilot/tools` powinny miec testy mapowania Spring tools na tool
   definitions.
-- Zmiany w `copilot/execution` powinny zachowac kontrakty i obserwowalnosc
-  lifecycle klienta i sesji.
+- Zmiany w `aiplatform.copilot.runtime.execution` powinny zachowac kontrakty i
+  obserwowalnosc lifecycle klienta i sesji.
 - Zmiany w providerze AI powinny miec testy parsowania odpowiedzi modelu.
 
 ## Dokumenty do aktualizacji po wiekszej zmianie

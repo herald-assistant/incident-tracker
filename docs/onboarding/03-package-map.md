@@ -93,7 +93,6 @@ Najwazniejsze podpakiety Copilota:
 - `copilot` - root aktualnej integracji Copilot SDK, m.in.
   `CopilotSdkModelOptionsProvider`; incident initial/chat providery sa juz w
   `features.incidentanalysis.ai.copilot`,
-- `copilot/execution` - lifecycle klienta/sesji SDK i usage events SDK,
 - `copilot/response` - JSON-only parser odpowiedzi finalnej analizy,
 - `copilot/quality` - report-only quality gate,
 - `copilot/telemetry` - metryki preparation/execution/tools i summary log,
@@ -106,6 +105,8 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   loader, `CopilotRunRequest`, `CopilotPreparedSession`,
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory konfiguracji
   sesji SDK,
+- `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
+  execution gateway i neutralny port metryk execution,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
   scope jako neutralna mechanika platformy,
 - `aiplatform.copilot.tools/CopilotSdkToolFactory` - rejestracja Spring tools

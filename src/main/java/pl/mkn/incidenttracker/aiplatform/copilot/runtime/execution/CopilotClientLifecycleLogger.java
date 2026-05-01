@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.execution;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
 import com.github.copilot.sdk.ConnectionState;
 import com.github.copilot.sdk.json.SessionLifecycleEvent;

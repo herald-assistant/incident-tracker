@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.execution;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
 import com.github.copilot.sdk.CopilotClient;
 import com.github.copilot.sdk.CopilotSession;
@@ -10,15 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.analysis.ai.copilot.telemetry.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
-import static pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotClientLifecycleLogger.*;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.execution.CopilotSessionEventLogger.*;
+import static pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotClientLifecycleLogger.*;
+import static pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSessionEventLogger.*;
 
 @Service
 @Slf4j
@@ -26,19 +25,19 @@ public class CopilotSdkExecutionGateway {
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
-    private final CopilotSessionMetricsRegistry metricsRegistry;
+    private final CopilotSessionExecutionMetricsRecorder metricsRecorder;
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
 
     @Autowired
     public CopilotSdkExecutionGateway(
             CopilotSdkProperties properties,
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotSessionMetricsRegistry metricsRegistry,
+            CopilotSessionExecutionMetricsRecorder metricsRecorder,
             CopilotToolBudgetRegistry toolBudgetRegistry
     ) {
         this.properties = properties;
         this.toolEvidenceSessionStore = toolEvidenceSessionStore;
-        this.metricsRegistry = metricsRegistry;
+        this.metricsRecorder = metricsRecorder;
         this.toolBudgetRegistry = toolBudgetRegistry;
     }
 
@@ -131,7 +130,7 @@ public class CopilotSdkExecutionGateway {
             );
             throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception);
         } finally {
-            metricsRegistry.recordExecutionDurations(
+            metricsRecorder.recordExecutionDurations(
                     copilotSessionId,
                     clientStartDurationMs,
                     createSessionDurationMs,
@@ -168,7 +167,7 @@ public class CopilotSdkExecutionGateway {
                 return;
             }
 
-            metricsRegistry.recordAssistantUsage(
+            metricsRecorder.recordAssistantUsage(
                     sessionId,
                     data.model(),
                     data.inputTokens(),
@@ -187,7 +186,7 @@ public class CopilotSdkExecutionGateway {
                 return;
             }
 
-            metricsRegistry.recordSessionUsageInfo(
+            metricsRecorder.recordSessionUsageInfo(
                     sessionId,
                     data.tokenLimit(),
                     data.currentTokens(),

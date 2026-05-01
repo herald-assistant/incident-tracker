@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot.execution;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
 public class CopilotSdkInvocationException extends RuntimeException {
 

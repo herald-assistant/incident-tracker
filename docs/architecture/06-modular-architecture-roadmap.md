@@ -185,6 +185,10 @@ wykonania przed wejsciem do platformowego runtime.
 `CopilotRunPreparationService` jest neutralnym wejsciem runtime
 `CopilotRunRequest -> CopilotPreparedSession`; incident preparation sklada run
 request, a runtime service przygotowuje techniczna sesje SDK.
+`CopilotSdkExecutionGateway` mieszka w `aiplatform.copilot.runtime.execution`
+i wykonuje neutralna `CopilotPreparedSession`; metryki usage/timing zapisuje
+przez platformowy port `CopilotSessionExecutionMetricsRecorder`, ktorego
+obecnym adapterem jest stary registry telemetryki.
 Rendered artifacts przechodza przez neutralny runtime type
 `CopilotRenderedArtifact`, a mapowanie do `CopilotRunRequest.artifactContents`
 robi platformowy `CopilotArtifactContentMapper`. Incident preparation nadal
@@ -263,8 +267,9 @@ Platform-owned runtime jest juz poza `preparation`, w
 `CopilotRunRequest`, `CopilotRunPreparationService`,
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
-`CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory` i
-`CopilotSessionConfigFactory`. Skill loader odpowiada tylko za materializacje
+`CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory`,
+`CopilotSessionConfigFactory`, `CopilotSdkExecutionGateway` oraz
+`CopilotSessionExecutionMetricsRecorder`. Skill loader odpowiada tylko za materializacje
 skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 `CopilotSessionConfigRequest`. Platformowe tools zawieraja tez
@@ -474,7 +479,8 @@ Kroki:
    `aiplatform.copilot`.
    Stan obecny: pierwszy neutralny slice jest przeniesiony:
    `aiplatform.copilot.runtime` zawiera run request, prepared session,
-   session config, properties, model listing, skill loader i artifact mapping.
+   session config, properties, model listing, skill loader, artifact mapping,
+   execution gateway i neutralny port metryk execution.
    Platformowe `aiplatform.copilot.tools` zawiera juz
    `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
