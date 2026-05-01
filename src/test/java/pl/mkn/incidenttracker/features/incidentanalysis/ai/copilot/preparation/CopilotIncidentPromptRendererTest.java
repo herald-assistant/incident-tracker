@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
 

@@ -1,10 +1,10 @@
 package pl.mkn.incidenttracker.analysis.job.state;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
-import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatTurn;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;

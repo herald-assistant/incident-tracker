@@ -27,6 +27,9 @@ Obecnie pierwszy feature to `incidentanalysis`.
 
 - `features.incidentanalysis.ai.copilot.preparation` zawiera przeniesione
   incident preparation dla initial/follow-up runow Copilota.
+- `features.incidentanalysis.ai.initial` i
+  `features.incidentanalysis.ai.chat` zawieraja kontrakty AI obecnego
+  incident flow.
 - `features.incidentanalysis.ai.copilot.coverage` zawiera incident-specific
   coverage/gap evaluation.
 - `features.incidentanalysis.ai.copilot.response` i
@@ -34,7 +37,7 @@ Obecnie pierwszy feature to `incidentanalysis`.
   JSON-only response contract, parser oraz report-only quality gate.
 - `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific
   GitLab/DB tool evidence capture nad generycznymi eventami invocation.
-- Czesc kontraktow AI, job, flow i evidence nadal mieszka w `analysis.*`.
+- Job, flow i evidence nadal mieszkaja w `analysis.*`.
   Przenos kolejne fragmenty inkrementalnie, bez zmian zachowania runtime.
 
 ## Weryfikacja

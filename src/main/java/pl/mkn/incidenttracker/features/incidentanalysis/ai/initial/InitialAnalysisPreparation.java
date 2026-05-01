@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.initial;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.initial;
 
 public interface InitialAnalysisPreparation extends AutoCloseable {
 

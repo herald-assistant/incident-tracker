@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;

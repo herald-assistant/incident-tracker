@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.analysis.flow;
 
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.analysis.evidence.AnalysisEvidenceProvider;

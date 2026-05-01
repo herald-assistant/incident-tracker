@@ -2,10 +2,10 @@ package pl.mkn.incidenttracker.analysis.ai.copilot;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
-import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
 

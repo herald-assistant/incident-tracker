@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import org.springframework.stereotype.Component;
-import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.ArrayList;

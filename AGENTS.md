@@ -74,8 +74,8 @@ Zasady granic:
   sam wybierac incident prompt, skille albo tools.
 - Telemetry sesji Copilota ma przechodzic przez neutralny port
   `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`; konkretne
-  registry/loggery moga zostac w adapterze `analysis.ai`, ale feature'y nie
-  powinny ich importowac.
+  registry/loggery mieszkaja w `aiplatform.copilot.runtime.telemetry.session`,
+  a feature'y nie powinny ich importowac.
 - Dedykowane feature'y analityczne dostarczaja prompt, evidence, skille,
   hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
   Feature moze zalezec od platformy, tools i adapterow; platforma, tools i
@@ -89,8 +89,9 @@ Zasady granic:
 
 ## Niezmienniki Copilot SDK i optymalizacji
 
-- Granica AI pozostaje generyczna: flow przekazuje do providera AI tylko
-  `InitialAnalysisRequest` oraz `shared.evidence.AnalysisEvidenceSection`;
+- Granica AI obecnego incident flow pozostaje waska: flow przekazuje do
+  providera AI tylko `InitialAnalysisRequest` oraz
+  `shared.evidence.AnalysisEvidenceSection`;
   nie wciskaj klas adapter-specific do prompt buildera ani kontraktu AI.
 - Docelowa platforma Copilot ma byc parametryzowana przez feature. Aktualnym
   pierwszym inputem runtime jest `CopilotRunRequest`; prompt, skille,
@@ -153,8 +154,6 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/integrations`
   Docelowa reusable warstwa capability adapters. Dynatrace, Elasticsearch,
   GitLab, operational context i Database mieszkaja juz w `integrations`.
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai`
-  Generyczny kontrakt AI i aktualna integracja Copilot SDK.
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
   Historyczny katalog po ekstrakcji adapterow. Nie dodawaj tu nowego kodu;
   nowe integracje trafiaja do `integrations`.
@@ -171,10 +170,11 @@ Zasady granic:
   handler/context/events/policy/logging/evidence; nie moze importowac incident
   analysis.
 - `src/main/java/pl/mkn/incidenttracker/features`
-  Dedykowane feature'y analityczne. Pierwszy slice to
-  `features.incidentanalysis.ai.copilot.preparation` i `coverage`, czyli
-  incident prompt/artifacts/tool policy, coverage heurystyki oraz GitLab/DB
-  tool evidence capture dla Copilota.
+  Dedykowane feature'y analityczne. `features.incidentanalysis.ai.initial` i
+  `chat` zawieraja kontrakty AI incident flow, a
+  `features.incidentanalysis.ai.copilot` zawiera incident prompt/artifacts/tool
+  policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
+  capture.
 - `src/main/java/pl/mkn/incidenttracker/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`
@@ -248,7 +248,6 @@ granice modulow byly czytelne i stabilne po refaktorach.
 
 - `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/evidence/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/analysis/job/AGENTS.md`
@@ -257,4 +256,5 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/AGENTS.md`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`

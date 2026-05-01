@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.chat;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.chat;
 
 public record AnalysisAiChatAnalysisSnapshot(
         String summary,

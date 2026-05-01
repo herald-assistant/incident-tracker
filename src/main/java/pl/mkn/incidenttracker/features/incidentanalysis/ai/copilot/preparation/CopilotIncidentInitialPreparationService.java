@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;

@@ -24,13 +24,14 @@ Przy nowej sesji najlepiej zaczac od:
 - `analysis.job`
 - `AnalysisEvidenceCollector`
 - `AnalysisEvidenceProvider`
-- `analysis.ai.initial.InitialAnalysisProvider`
-- `analysis.ai.chat.AnalysisAiChatProvider`
+- `features.incidentanalysis.ai.initial.InitialAnalysisProvider`
+- `features.incidentanalysis.ai.chat.AnalysisAiChatProvider`
 - `analysis.options.AnalysisAiModelOptionsProvider`
 - `aiplatform.copilot.runtime.options`
 - `shared.ai`
 - `shared.evidence`
-- `analysis.ai.initial`
+- `features.incidentanalysis.ai.initial`
+- `features.incidentanalysis.ai.chat`
 - `agenttools.context`
 - `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
 - `agenttools.elasticsearch.mcp`

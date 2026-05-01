@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.initial;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.initial;
 
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;

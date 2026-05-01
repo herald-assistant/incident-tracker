@@ -74,27 +74,25 @@ tool context keys, nazwy tools/prefixy capability oraz wrappery MCP.
 Wrappery mieszkaja w `agenttools.elasticsearch.mcp`, `agenttools.gitlab.mcp`
 i `agenttools.database.mcp`.
 
-### `analysis/ai`
+### `features/incidentanalysis/ai`
 
-Generyczne kontrakty AI initial/chat dla obecnego flow.
+Incidentowe kontrakty AI i implementacja Copilota dla obecnego flow:
 
-Root `analysis/ai` nie powinien trzymac klas kontraktu bezposrednio. Klasy sa
-pogrupowane wedlug funkcji:
-
-- `initial` - poczatkowa analiza joba: `InitialAnalysisProvider`,
+- `initial` - poczatkowa analiza incydentu: `InitialAnalysisProvider`,
   `InitialAnalysisRequest`, `InitialAnalysisPreparation`,
   `InitialAnalysisResponse`,
-- `chat` - follow-up chat po zakonczonym jobie.
+- `chat` - follow-up chat po zakonczonej analizie,
+- `copilot` - incidentowe providery, prompt/artifacts, coverage, response
+  parser, quality gate, tool policy i tool evidence capture.
 
-Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza `analysis.ai`:
+Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza feature'em:
 
 - `shared.evidence` - `AnalysisEvidenceSection`, item/attribute oraz
   `AnalysisAiToolEvidenceListener`,
 - `shared.ai` - generyczny usage/token/cost contract dla job UI i telemetryki.
 
-Nie dodawaj nowych elementow runtime Copilota do `analysis.ai`; platformowe
-mechanizmy SDK mieszkaja w `aiplatform.copilot`, a incidentowe providery w
-`features.incidentanalysis.ai.copilot`.
+Nie dodawaj nowych elementow runtime Copilota do feature'a; platformowe
+mechanizmy SDK mieszkaja w `aiplatform.copilot`.
 
 ### `aiplatform`
 
@@ -137,14 +135,15 @@ Ten pakiet nie zna incident promptu, coverage ani flow jobow.
 
 ### `features/incidentanalysis`
 
-Dedykowany feature analizy incydentow. Pierwszy przeniesiony slice to
-`features.incidentanalysis.ai.copilot`: incident initial/chat providery,
-`preparation` dla promptu, artefaktow, tool policy, hidden contextu i
-initial/follow-up run assembly, `response` dla JSON-only parsera odpowiedzi,
-`quality` dla report-only quality gate oraz `coverage` dla incident-specific
-coverage report i evidence gaps. Podpakiet `tools` zawiera GitLab/DB listener
-+ mapper user-facing tool evidence dla analizy incydentow oraz
-`tools.description` z incident-specific guidance opisow tools.
+Dedykowany feature analizy incydentow. `features.incidentanalysis.ai.initial`
+i `features.incidentanalysis.ai.chat` zawieraja kontrakty AI obecnego
+incident flow. `features.incidentanalysis.ai.copilot` zawiera incident
+initial/chat providery, `preparation` dla promptu, artefaktow, tool policy,
+hidden contextu i initial/follow-up run assembly, `response` dla JSON-only
+parsera odpowiedzi, `quality` dla report-only quality gate oraz `coverage` dla
+incident-specific coverage report i evidence gaps. Podpakiet `tools` zawiera
+GitLab/DB listener + mapper user-facing tool evidence dla analizy incydentow
+oraz `tools.description` z incident-specific guidance opisow tools.
 
 ### `common`
 
@@ -184,7 +183,6 @@ operational context enrichment.
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`
 - `src/main/java/pl/mkn/incidenttracker/features`
-- `src/main/java/pl/mkn/incidenttracker/analysis/ai`
 - `src/main/java/pl/mkn/incidenttracker/api`
 - `src/main/java/pl/mkn/incidenttracker/ui`
 - `frontend/src/app`

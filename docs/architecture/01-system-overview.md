@@ -122,14 +122,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
 - `pl.mkn.incidenttracker.analysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
-- `pl.mkn.incidenttracker.analysis.ai`
-  Modul generycznych kontraktow AI. Root jest tylko katalogiem modulowym;
-  kontrakty sa pogrupowane w podpakietach.
-- `pl.mkn.incidenttracker.analysis.ai.initial`
-  Poczatkowa analiza joba: provider, request, preparation i response JSON-only
-  diagnozy.
-- `pl.mkn.incidenttracker.analysis.ai.chat`
-  Follow-up chat po zakonczonym jobie.
+- `pl.mkn.incidenttracker.features.incidentanalysis.ai.initial`
+  Poczatkowa analiza incydentu: provider, request, preparation i response
+  JSON-only diagnozy.
+- `pl.mkn.incidenttracker.features.incidentanalysis.ai.chat`
+  Follow-up chat po zakonczonej analizie incydentu.
 - `pl.mkn.incidenttracker.shared.ai`
   Neutralny kontrakt token/cost/usage dla flow, job UI, telemetry i feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`

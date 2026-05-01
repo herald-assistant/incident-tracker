@@ -252,8 +252,9 @@ feature'a.
 
 `features.incidentanalysis.ai.copilot` zawiera tez incidentowe implementacje
 aktualnych providerow Copilota: `CopilotInitialAnalysisProvider` i
-`CopilotSdkAnalysisChatProvider`. Dzieki temu `analysis.ai` nie importuje
-`features.*`; pozostaje kontraktem/fasada techniczna dla obecnego flow.
+`CopilotSdkAnalysisChatProvider`. Kontrakty initial/chat obecnego flow
+mieszkaja juz w `features.incidentanalysis.ai.initial/chat`, wiec produkcyjny
+pakiet `analysis.ai` zostal wygaszony.
 Podpakiety `features.incidentanalysis.ai.copilot.response` i
 `features.incidentanalysis.ai.copilot.quality` zawieraja incidentowy JSON-only
 response contract, parser oraz report-only quality gate. Telemetryka zapisuje
@@ -558,7 +559,7 @@ analysis.job      -> features.incidentanalysis.job
 analysis.flow     -> features.incidentanalysis.flow
 analysis.evidence -> features.incidentanalysis.evidence
 analysis.ai.initial/chat contracts specific to incident
-                 -> features.incidentanalysis.ai
+                 -> features.incidentanalysis.ai [done]
 incident prompt/digest/coverage
                  -> features.incidentanalysis.ai
 incident skill selection/tool policy/hidden context
@@ -575,6 +576,9 @@ Uwagi:
   platform contract, albo jako feature facade nad platform options.
   Stan obecny: endpoint zostal jako fasada aplikacyjna nad platformowym
   katalogiem modeli Copilota.
+- `analysis.flow` i `analysis.job` moga przejsciowo importowac
+  `features.incidentanalysis.ai.initial/chat`, dopoki same nie zostana
+  przeniesione do feature'a.
 
 Kryterium done:
 
@@ -664,8 +668,10 @@ Kryterium done:
     `aiplatform.copilot.runtime.telemetry`, concrete session telemetry do
     `aiplatform.copilot.runtime.telemetry.session`, a model options provider do
     `aiplatform.copilot.runtime.options`].
-16. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
-17. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+16. PR: przeniesc incident AI initial/chat contracts do
+    `features.incidentanalysis.ai` [done].
+17. PR: przeniesc incident job/flow/evidence do `features.incidentanalysis`.
+18. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie
@@ -679,8 +685,9 @@ gdy dotykamy danego obszaru:
   byly blisko siebie.
 - Czy helper endpointy adapterow mieszkaja przy `integrations.<capability>.api`,
   czy w osobnym `api.integrations`?
-- Czy `analysis.ai.initial` zostaje feature-specific, czy rozbijamy go na
-  feature contract plus platform run contract?
+- Rozstrzygniete: `analysis.ai.initial/chat` byly feature-specific i mieszkaja
+  teraz w `features.incidentanalysis.ai.initial/chat`. Platform run contract
+  pozostaje osobno jako `aiplatform.copilot.runtime.CopilotRunRequest`.
 - Jaki bedzie docelowy ksztalt `CopilotRunRequest`: nazwa, pola, ownership
   `AutoCloseable` zasobow i kontrakt response parsera?
 - Czy wprowadzamy osobny Maven module dopiero po stabilizacji pakietow?

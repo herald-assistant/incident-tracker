@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunPreparationService;
-import pl.mkn.incidenttracker.analysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 
 @Service
 @RequiredArgsConstructor

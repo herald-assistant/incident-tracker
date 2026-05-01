@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.shared.evidence;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.analysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.analysis.options.AnalysisAiOptions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
