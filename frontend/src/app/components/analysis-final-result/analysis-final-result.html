@@ -48,6 +48,12 @@
       hasMeaningfulValue(analysisResult.affectedBoundedContext) ||
       hasMeaningfulValue(analysisResult.affectedTeam)
     ) {
+      <div class="analysis-context-actions">
+        <a class="secondary-button secondary-button--accent" routerLink="/operational-context">
+          Open Operational Context
+        </a>
+      </div>
+
       <div class="analysis-highlights">
         @if (hasMeaningfulValue(analysisResult.affectedProcess)) {
           <div class="analysis-highlight">

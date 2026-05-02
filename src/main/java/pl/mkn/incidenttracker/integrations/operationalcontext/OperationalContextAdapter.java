@@ -9,14 +9,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.OpenQuestion;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 
 @Component
@@ -54,21 +58,44 @@ public class OperationalContextAdapter implements OperationalContextPort {
     private OperationalContextCatalog buildCatalog() {
         var resourceRoot = normalizeRoot(properties.getResourceRoot());
 
-        var teams = loadYamlEntries(resourceRoot, "teams.yml", "teams");
-        var processes = loadYamlEntries(resourceRoot, "processes.yml", "processes");
-        var systems = loadYamlEntries(resourceRoot, "systems.yml", "systems");
-        var integrations = loadYamlEntries(resourceRoot, "integrations.yml", "integrations");
-        var repositories = loadYamlEntries(resourceRoot, "repo-map.yml", "repositories");
-        var boundedContexts = loadYamlEntries(resourceRoot, "bounded-contexts.yml", "boundedContexts");
+        var teamsDocument = loadYamlDocument(resourceRoot, "teams.yml");
+        var processesDocument = loadYamlDocument(resourceRoot, "processes.yml");
+        var systemsDocument = loadYamlDocument(resourceRoot, "systems.yml");
+        var integrationsDocument = loadYamlDocument(resourceRoot, "integrations.yml");
+        var repositoriesDocument = loadYamlDocument(resourceRoot, "repo-map.yml");
+        var boundedContextsDocument = loadYamlDocument(resourceRoot, "bounded-contexts.yml");
+
+        var teams = mapList(teamsDocument.get("teams"));
+        var processes = mapList(processesDocument.get("processes"));
+        var systems = mapList(systemsDocument.get("systems"));
+        var integrations = mapList(integrationsDocument.get("integrations"));
+        var repositories = mapList(repositoriesDocument.get("repositories"));
+        var boundedContexts = mapList(boundedContextsDocument.get("boundedContexts"));
         var glossaryDocument = readTextResource(resourceRoot, "glossary.md");
         var handoffRulesDocument = readTextResource(resourceRoot, "handoff-rules.md");
         var indexDocument = readTextResource(resourceRoot, "operational-context-index.md");
 
         var glossaryTerms = markdownParser.parseGlossary(glossaryDocument);
         var handoffRules = markdownParser.parseHandoffRules(handoffRulesDocument);
+        var openQuestions = openQuestions(
+                systemsDocument,
+                repositoriesDocument,
+                processesDocument,
+                integrationsDocument,
+                boundedContextsDocument,
+                teamsDocument,
+                glossaryDocument,
+                handoffRulesDocument,
+                systems,
+                repositories,
+                processes,
+                integrations,
+                boundedContexts,
+                teams
+        );
 
         log.info(
-                "Operational context catalog loaded resourceRoot={} teams={} processes={} systems={} integrations={} repositories={} boundedContexts={} glossaryTerms={} handoffRules={}",
+                "Operational context catalog loaded resourceRoot={} teams={} processes={} systems={} integrations={} repositories={} boundedContexts={} glossaryTerms={} handoffRules={} openQuestions={}",
                 resourceRoot,
                 teams.size(),
                 processes.size(),
@@ -77,7 +104,8 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 repositories.size(),
                 boundedContexts.size(),
                 glossaryTerms.size(),
-                handoffRules.size()
+                handoffRules.size(),
+                openQuestions.size()
         );
 
         return new OperationalContextCatalog(
@@ -89,6 +117,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 boundedContexts,
                 glossaryTerms,
                 handoffRules,
+                openQuestions,
                 indexDocument
         );
     }
@@ -106,6 +135,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 filterMapEntries(catalog.boundedContexts(), query, OperationalContextEntryType.BOUNDED_CONTEXT),
                 filterGlossaryTerms(catalog.glossaryTerms(), query),
                 filterHandoffRules(catalog.handoffRules(), query),
+                catalog.openQuestions(),
                 query.includeIndexDocument() ? catalog.indexDocument() : ""
         );
     }
@@ -242,11 +272,11 @@ public class OperationalContextAdapter implements OperationalContextPort {
         };
     }
 
-    private List<Map<String, Object>> loadYamlEntries(String resourceRoot, String fileName, String listKey) {
+    private Map<String, Object> loadYamlDocument(String resourceRoot, String fileName) {
         var resource = resource(resourceRoot, fileName);
         if (!resource.exists()) {
             log.warn("Operational context resource missing: {}", resource.getDescription());
-            return List.of();
+            return Map.of();
         }
 
         var factoryBean = new YamlMapFactoryBean();
@@ -255,10 +285,10 @@ public class OperationalContextAdapter implements OperationalContextPort {
 
         var document = factoryBean.getObject();
         if (document == null) {
-            return List.of();
+            return Map.of();
         }
 
-        return mapList(document.get(listKey));
+        return Map.copyOf(document);
     }
 
     private String readTextResource(String resourceRoot, String fileName) {
@@ -290,6 +320,180 @@ public class OperationalContextAdapter implements OperationalContextPort {
         }
         while (normalized.endsWith("/")) {
             normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private List<OpenQuestion> openQuestions(
+            Map<String, Object> systemsDocument,
+            Map<String, Object> repositoriesDocument,
+            Map<String, Object> processesDocument,
+            Map<String, Object> integrationsDocument,
+            Map<String, Object> boundedContextsDocument,
+            Map<String, Object> teamsDocument,
+            String glossaryDocument,
+            String handoffRulesDocument,
+            List<Map<String, Object>> systems,
+            List<Map<String, Object>> repositories,
+            List<Map<String, Object>> processes,
+            List<Map<String, Object>> integrations,
+            List<Map<String, Object>> boundedContexts,
+            List<Map<String, Object>> teams
+    ) {
+        var questions = new ArrayList<OpenQuestion>();
+        addYamlOpenQuestions(questions, "systems.yml", "system", null, systemsDocument.get("openQuestions"));
+        addEntityOpenQuestions(questions, "systems.yml", "system", systems);
+        addYamlOpenQuestions(questions, "repo-map.yml", "repository", null, repositoriesDocument.get("openQuestions"));
+        addEntityOpenQuestions(questions, "repo-map.yml", "repository", repositories);
+        addYamlOpenQuestions(questions, "processes.yml", "process", null, processesDocument.get("openQuestions"));
+        addEntityOpenQuestions(questions, "processes.yml", "process", processes);
+        addYamlOpenQuestions(questions, "integrations.yml", "integration", null, integrationsDocument.get("openQuestions"));
+        addEntityOpenQuestions(questions, "integrations.yml", "integration", integrations);
+        addYamlOpenQuestions(questions, "bounded-contexts.yml", "bounded-context", null, boundedContextsDocument.get("openQuestions"));
+        addEntityOpenQuestions(questions, "bounded-contexts.yml", "bounded-context", boundedContexts);
+        addYamlOpenQuestions(questions, "teams.yml", "team", null, teamsDocument.get("openQuestions"));
+        addEntityOpenQuestions(questions, "teams.yml", "team", teams);
+        addMarkdownOpenQuestions(questions, "glossary.md", glossaryDocument);
+        addMarkdownOpenQuestions(questions, "handoff-rules.md", handoffRulesDocument);
+        return List.copyOf(questions);
+    }
+
+    private void addEntityOpenQuestions(
+            List<OpenQuestion> questions,
+            String sourceFile,
+            String entityType,
+            List<Map<String, Object>> entries
+    ) {
+        for (var entry : entries) {
+            var entityId = text(entry, "id");
+            addYamlOpenQuestions(questions, sourceFile, entityType, entityId, entry.get("openQuestions"));
+        }
+    }
+
+    private void addYamlOpenQuestions(
+            List<OpenQuestion> questions,
+            String sourceFile,
+            String entityType,
+            String entityId,
+            Object source
+    ) {
+        var entries = source instanceof Iterable<?> iterable ? iterable : List.of();
+        var index = 0;
+        for (var item : entries) {
+            var question = "";
+            var severity = "";
+            var status = "open";
+            if (item instanceof Map<?, ?> map) {
+                question = text(map.get("question"));
+                severity = text(map.get("severity"));
+                status = text(map.get("status"));
+            } else {
+                question = text(item);
+            }
+
+            if (!isActionableOpenQuestion(question)) {
+                index++;
+                continue;
+            }
+
+            questions.add(new OpenQuestion(
+                    openQuestionId(sourceFile, entityType, entityId, question, index),
+                    sourceFile,
+                    entityType,
+                    entityId,
+                    question,
+                    StringUtils.hasText(severity) ? severity : inferSeverity(question),
+                    StringUtils.hasText(status) ? status : "open"
+            ));
+            index++;
+        }
+    }
+
+    private void addMarkdownOpenQuestions(List<OpenQuestion> questions, String sourceFile, String markdown) {
+        if (!StringUtils.hasText(markdown)) {
+            return;
+        }
+
+        var inOpenQuestions = false;
+        var index = 0;
+        for (var line : markdown.split("\\R")) {
+            var trimmed = line.trim();
+            if (trimmed.startsWith("## Open Questions")) {
+                inOpenQuestions = true;
+                continue;
+            }
+            if (inOpenQuestions && trimmed.startsWith("## ") && !trimmed.startsWith("## Open Questions")) {
+                break;
+            }
+            if (!inOpenQuestions || !trimmed.startsWith("- ")) {
+                continue;
+            }
+
+            var question = trimmed.substring(2).trim();
+            if (!isActionableOpenQuestion(question)) {
+                index++;
+                continue;
+            }
+
+            questions.add(new OpenQuestion(
+                    openQuestionId(sourceFile, "", null, question, index),
+                    sourceFile,
+                    "",
+                    null,
+                    question.replace("`", ""),
+                    inferSeverity(question),
+                    "open"
+            ));
+            index++;
+        }
+    }
+
+    private boolean isActionableOpenQuestion(String question) {
+        if (!StringUtils.hasText(question)) {
+            return false;
+        }
+
+        var normalized = question.trim().toLowerCase(Locale.ROOT);
+        return !normalized.equals("none")
+                && !normalized.equals("n/a")
+                && !normalized.equals("todo")
+                && !normalized.equals("-");
+    }
+
+    private String inferSeverity(String question) {
+        var normalized = question != null ? question.toLowerCase(Locale.ROOT) : "";
+        if (normalized.contains("block") || normalized.contains("critical") || normalized.contains("error")) {
+            return "error";
+        }
+        if (normalized.contains("owner") || normalized.contains("handoff") || normalized.contains("missing")) {
+            return "warning";
+        }
+        return "info";
+    }
+
+    private String openQuestionId(
+            String sourceFile,
+            String entityType,
+            String entityId,
+            String question,
+            int index
+    ) {
+        var seed = String.join(":",
+                sourceFile,
+                entityType != null ? entityType : "",
+                entityId != null ? entityId : "",
+                Integer.toString(index),
+                question != null ? question : ""
+        );
+        return "open-question-" + slug(seed);
+    }
+
+    private String slug(String value) {
+        var normalized = value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+        if (normalized.length() > 72) {
+            return normalized.substring(0, 72).replaceAll("-$", "");
         }
         return normalized;
     }

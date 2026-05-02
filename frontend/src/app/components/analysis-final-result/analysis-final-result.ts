@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { AnalysisResultResponse } from '../../core/models/analysis.models';
 import { hasMeaningfulValue } from '../../core/utils/analysis-display.utils';
@@ -6,7 +7,7 @@ import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
 @Component({
   selector: 'app-analysis-final-result',
-  imports: [MarkdownContentComponent],
+  imports: [RouterLink, MarkdownContentComponent],
   templateUrl: './analysis-final-result.html',
   styleUrl: './analysis-final-result.scss'
 })

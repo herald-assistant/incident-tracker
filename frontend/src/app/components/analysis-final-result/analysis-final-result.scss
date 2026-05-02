@@ -1,3 +1,16 @@
 :host {
   display: contents;
 }
+:host {
+  display: block;
+}
+
+.analysis-context-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.analysis-context-actions .secondary-button {
+  width: auto;
+  text-decoration: none;
+}

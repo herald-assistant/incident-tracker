@@ -11,4 +11,12 @@ class FrontendRouteController {
         return "forward:/index.html";
     }
 
+    @GetMapping({
+            "/operational-context",
+            "/operational-context/**"
+    })
+    String forwardOperationalContext() {
+        return "forward:/index.html";
+    }
+
 }

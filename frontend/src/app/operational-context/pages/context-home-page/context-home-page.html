@@ -1,0 +1,294 @@
+<div class="page-shell operational-context">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark">IR</div>
+      <div>
+        <p class="brand-eyebrow">Incident Diagnostics</p>
+        <h1 class="brand-title">Incident Tracker</h1>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <nav class="topbar-nav" aria-label="Widoki aplikacji">
+        <a
+          class="topbar-link"
+          routerLink="/"
+          routerLinkActive="topbar-link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Analysis
+        </a>
+        <a class="topbar-link" routerLink="/evidence" routerLinkActive="topbar-link--active">
+          Evidence
+        </a>
+        <a
+          class="topbar-link"
+          routerLink="/operational-context"
+          routerLinkActive="topbar-link--active"
+        >
+          Operational Context
+        </a>
+      </nav>
+      <div class="topbar-badge">Context Catalogue</div>
+    </div>
+  </header>
+
+  <main class="context-workspace">
+    <section class="context-toolbar">
+      <div>
+        <p class="section-eyebrow">Operational Context</p>
+        <h2>Searchable operational catalogue</h2>
+      </div>
+
+      <form class="signal-search signal-search--compact" (submit)="runSignalSearch($event)">
+        <input
+          class="text-input"
+          type="search"
+          placeholder="Search by service, container, project, endpoint, host, queue, topic, schema, package, class, marker or term"
+          [formControl]="searchControl"
+        />
+        <button class="primary-button" type="submit">
+          <span class="button-label">Resolve</span>
+        </button>
+      </form>
+
+      <div class="status-strip">
+        <span class="status-pill" [attr.data-status]="statusLabel()">{{ statusLabel() }}</span>
+        @if (summary(); as currentSummary) {
+          <span class="panel-chip">{{ currentSummary.validationFindings['error'] || 0 }} errors</span>
+          <span class="panel-chip">{{ currentSummary.validationFindings['warning'] || 0 }} warnings</span>
+          <span class="panel-chip">{{ currentSummary.openQuestions }} open questions</span>
+        }
+      </div>
+    </section>
+
+    <nav class="context-tabs" aria-label="Operational context sections">
+      @for (tab of tabs; track tab.id) {
+        <button
+          type="button"
+          [class.context-tab--active]="selectedTab() === tab.id"
+          (click)="selectTab(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </nav>
+
+    @if (isLoading()) {
+      <section class="context-panel">
+        <div class="empty-state">Loading operational context catalogue...</div>
+      </section>
+    } @else if (errorMessage()) {
+      <section class="context-panel">
+        <div class="response-error">
+          <p class="response-kicker">Error</p>
+          <h2>{{ errorMessage() }}</h2>
+        </div>
+      </section>
+    } @else {
+      @if (selectedTab() === 'overview') {
+        <section class="context-panel">
+          <div class="context-panel__header">
+            <div>
+              <p class="section-eyebrow">Overview</p>
+              <h2>Catalogue health</h2>
+            </div>
+          </div>
+
+          @if (isIncomplete()) {
+            <div class="empty-state">
+              Operational context catalogue is currently empty or incomplete. Fill systems.yml first,
+              then repo-map.yml, processes.yml, integrations.yml, bounded-contexts.yml, teams.yml,
+              glossary.md and handoff-rules.md.
+            </div>
+          }
+
+          <div class="health-grid">
+            @for (card of summary()?.healthCards || []; track card.label) {
+              <app-explainable-cell
+                [aggregate]="card"
+                (openDetails)="openEntity($event)"
+              ></app-explainable-cell>
+            }
+          </div>
+        </section>
+      } @else if (selectedTab() === 'signal-resolver') {
+        <section class="context-panel">
+          <div class="context-panel__header">
+            <div>
+              <p class="section-eyebrow">Signal Resolver</p>
+              <h2>Resolve runtime or code signals</h2>
+            </div>
+          </div>
+
+          <form class="signal-search" (submit)="runSignalSearch($event)">
+            <input
+              class="text-input"
+              type="search"
+              placeholder="Search by service, container, project, endpoint, host, queue, topic, schema, package, class, marker or term"
+              [formControl]="searchControl"
+            />
+            <button class="primary-button" type="submit">
+              <span class="button-label">Search</span>
+            </button>
+          </form>
+
+          <div class="resolver-table">
+            <div class="resolver-table__header">
+              <span>Match</span>
+              <span>Type</span>
+              <span>Confidence</span>
+              <span>Why matched</span>
+              <span>Actions</span>
+            </div>
+            @if (!searchResults().length) {
+              <div class="catalog-table__empty">No matches yet.</div>
+            } @else {
+              @for (result of searchResults(); track result.type + result.id) {
+                <div class="resolver-table__row">
+                  <strong>{{ result.label }}</strong>
+                  <span>{{ result.type }}</span>
+                  <span class="confidence-chip">{{ result.confidence }}</span>
+                  <app-why-popover
+                    title="Why this?"
+                    [summary]="result.why"
+                    [confidence]="result.confidence"
+                    [reasons]="[{ label: 'Matched fields', detail: result.matchedFields.join(', '), strength: 'strong' }]"
+                    [warnings]="[]"
+                    [sourceRefs]="[]"
+                  ></app-why-popover>
+                  <button class="secondary-button" type="button" (click)="openSearchResult(result)">
+                    Open details
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      } @else if (selectedTab() === 'validation') {
+        <section class="context-panel">
+          <div class="context-panel__header">
+            <div>
+              <p class="section-eyebrow">Validation Inbox</p>
+              <h2>Catalogue quality findings</h2>
+            </div>
+          </div>
+          <ng-container *ngTemplateOutlet="filters"></ng-container>
+          <div class="validation-table">
+            <div class="validation-table__header">
+              <span>Severity</span>
+              <span>Category</span>
+              <span>Entity</span>
+              <span>Problem</span>
+              <span>Suggested fix</span>
+              <span>Impact</span>
+              <span>Source</span>
+            </div>
+            @for (finding of validationRows(); track finding.id) {
+              <button
+                class="validation-table__row"
+                type="button"
+                (click)="openEntity({ type: finding.entityType, id: finding.entityId })"
+              >
+                <span [class]="validationStatusClass(finding.severity)">{{ finding.severity }}</span>
+                <span>{{ finding.category }}</span>
+                <span>{{ finding.entityType }}/{{ finding.entityId }}</span>
+                <strong>{{ finding.title }}</strong>
+                <span>{{ finding.suggestedFix }}</span>
+                <span>{{ finding.impact }}</span>
+                <span>{{ finding.sourceRefs[0]?.file }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      } @else if (selectedTab() === 'open-questions') {
+        <section class="context-panel">
+          <div class="context-panel__header">
+            <div>
+              <p class="section-eyebrow">Open Questions</p>
+              <h2>Unresolved catalogue questions</h2>
+            </div>
+          </div>
+          <ng-container *ngTemplateOutlet="filters"></ng-container>
+          <div class="question-table">
+            <div class="question-table__header">
+              <span>Question</span>
+              <span>Source file</span>
+              <span>Entity</span>
+              <span>Severity</span>
+              <span>Status</span>
+            </div>
+            @if (!openQuestionRows().length) {
+              <div class="catalog-table__empty">No open questions.</div>
+            } @else {
+              @for (question of openQuestionRows(); track question.id) {
+                <div class="question-table__row">
+                  <strong>{{ question.question }}</strong>
+                  <span>{{ question.sourceFile }}</span>
+                  <span>{{ question.entityType }} {{ question.entityId }}</span>
+                  <span [class]="validationStatusClass(question.severity)">{{ question.severity }}</span>
+                  <span>{{ question.status }}</span>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="context-panel">
+          <div class="context-panel__header">
+            <div>
+              <p class="section-eyebrow">Catalogue</p>
+              <h2>{{ selectedTabLabel() }}</h2>
+            </div>
+          </div>
+          <ng-container *ngTemplateOutlet="filters"></ng-container>
+          <div
+            class="catalog-scroll"
+            [style.--context-table-columns]="tableColumnCount()"
+          >
+            <app-context-catalog-table
+              [columns]="currentColumns()"
+              [rows]="currentRows()"
+              [entityType]="entityTypeForTab(selectedTab())"
+              emptyText="No catalogue rows."
+              (openRow)="openRow($event)"
+              (openAggregateDetails)="openEntity($event)"
+            ></app-context-catalog-table>
+          </div>
+        </section>
+      }
+    }
+
+    @if (detailError()) {
+      <p class="form-error">{{ detailError() }}</p>
+    }
+
+    <app-context-entity-drawer
+      [detail]="detail()"
+      (closeDrawer)="closeDrawer()"
+    ></app-context-entity-drawer>
+  </main>
+</div>
+
+<ng-template #filters>
+  <div class="context-filters">
+    <input
+      class="text-input"
+      type="search"
+      placeholder="Quick filter current view"
+      [formControl]="localFilterControl"
+    />
+    <label class="toggle-row">
+      <input type="checkbox" [formControl]="onlyWarningsControl" />
+      <span>Warnings</span>
+    </label>
+    <label class="toggle-row">
+      <input type="checkbox" [formControl]="onlyMissingOwnerControl" />
+      <span>Missing owner</span>
+    </label>
+    <label class="toggle-row">
+      <input type="checkbox" [formControl]="onlyOpenQuestionsControl" />
+      <span>Open questions</span>
+    </label>
+  </div>
+</ng-template>

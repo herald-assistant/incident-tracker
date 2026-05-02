@@ -1,0 +1,119 @@
+@if (detail(); as entity) {
+  <aside class="entity-drawer" aria-label="Operational context detail">
+    <div class="entity-drawer__header">
+      <div>
+        <p class="section-eyebrow">{{ entity.type }}</p>
+        <h2>{{ entity.title }}</h2>
+        @if (entity.subtitle) {
+          <p>{{ entity.subtitle }}</p>
+        }
+      </div>
+      <button type="button" class="entity-drawer__close" (click)="closeDrawer.emit()">
+        <mat-icon fontSet="material-symbols-outlined">close</mat-icon>
+      </button>
+    </div>
+
+    @for (section of entity.overviewSections; track section.title) {
+      <section class="entity-drawer__section">
+        <h3>{{ section.title }}</h3>
+        <dl>
+          @for (field of fieldEntries(section.fields); track field.key) {
+            <div>
+              <dt>{{ field.key }}</dt>
+              <dd>{{ field.value }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
+
+    <section class="entity-drawer__section">
+      <h3>Recognition signals</h3>
+      @if (!entity.recognitionSignals.length) {
+        <p class="muted-text">No signals documented.</p>
+      } @else {
+        @for (group of entity.recognitionSignals; track group.label) {
+          <div class="drawer-group">
+            <strong>{{ group.label }} ({{ group.count }})</strong>
+            @for (item of group.items; track item.id + item.label) {
+              <span>{{ item.label }}</span>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section class="entity-drawer__section">
+      <h3>Related entities</h3>
+      @if (!entity.relatedEntities.length) {
+        <p class="muted-text">No related entities.</p>
+      } @else {
+        @for (group of entity.relatedEntities; track group.label) {
+          <div class="drawer-group">
+            <strong>{{ group.label }} ({{ group.count }})</strong>
+            @for (item of group.items; track item.id + item.label) {
+              <span [attr.data-status]="item.status">{{ item.label }}</span>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section class="entity-drawer__section">
+      <h3>Explainability</h3>
+      <div class="drawer-popovers">
+        @for (section of entity.explainabilitySections; track section.title) {
+          <app-why-popover
+            [title]="section.title"
+            [summary]="section.summary"
+            [confidence]="section.confidence"
+            [reasons]="section.reasons"
+            [warnings]="section.warnings"
+            [sourceRefs]="section.sourceRefs"
+          ></app-why-popover>
+        }
+      </div>
+    </section>
+
+    @if (entity.validationFindings.length) {
+      <section class="entity-drawer__section">
+        <h3>Validation findings</h3>
+        @for (finding of entity.validationFindings; track finding.id) {
+          <article class="drawer-issue" [attr.data-severity]="finding.severity">
+            <strong>{{ finding.title }}</strong>
+            <p>{{ finding.detail }}</p>
+            @if (finding.suggestedFix) {
+              <small>{{ finding.suggestedFix }}</small>
+            }
+          </article>
+        }
+      </section>
+    }
+
+    @if (entity.openQuestions.length) {
+      <section class="entity-drawer__section">
+        <h3>Open questions</h3>
+        @for (question of entity.openQuestions; track question.id) {
+          <article class="drawer-issue" [attr.data-severity]="question.severity">
+            <strong>{{ question.question }}</strong>
+            <small>{{ question.sourceFile }} · {{ question.status }}</small>
+          </article>
+        }
+      </section>
+    }
+
+    <section class="entity-drawer__section">
+      <h3>Sources</h3>
+      @for (source of entity.sourceReferences; track source.file + source.path + source.entityId) {
+        <p class="source-line">{{ source.file }} {{ source.path }}</p>
+      }
+    </section>
+
+    @if (entity.rawSourcePreview) {
+      <section class="entity-drawer__section">
+        <h3>Raw source preview</h3>
+        <pre>{{ entity.rawSourcePreview }}</pre>
+      </section>
+    }
+  </aside>
+}

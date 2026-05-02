@@ -1,0 +1,36 @@
+<div class="catalog-table" role="table">
+  <div class="catalog-table__header" role="row">
+    @for (column of columns(); track column.key) {
+      <span role="columnheader">{{ column.label }}</span>
+    }
+  </div>
+
+  @if (!rows().length) {
+    <div class="catalog-table__empty">{{ emptyText() }}</div>
+  } @else {
+    @for (row of rows(); track textValue(row, 'id') || textValue(row, 'title')) {
+      <div
+        class="catalog-table__row"
+        role="row"
+        tabindex="0"
+        (click)="openRow.emit(row)"
+        (keydown.enter)="openRow.emit(row)"
+      >
+        @for (column of columns(); track column.key) {
+          <span role="cell">
+            @if (column.type === 'aggregate') {
+              <app-explainable-cell
+                [aggregate]="aggregateValue(row, column.key)"
+                (openDetails)="openAggregateDetails.emit($event)"
+              ></app-explainable-cell>
+            } @else if (column.type === 'owner') {
+              <app-explainable-cell [value]="ownerValue(row, column.key)"></app-explainable-cell>
+            } @else {
+              {{ textValue(row, column.key) }}
+            }
+          </span>
+        }
+      </div>
+    }
+  }
+</div>

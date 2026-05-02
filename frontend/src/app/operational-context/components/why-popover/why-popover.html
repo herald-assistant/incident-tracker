@@ -1,0 +1,45 @@
+<details class="why-popover">
+  <summary [matTooltip]="summary() || title()" matTooltipClass="analysis-log-tooltip">
+    <mat-icon fontSet="material-symbols-outlined">help</mat-icon>
+    <span>{{ title() }}</span>
+    @if (confidence()) {
+      <strong>{{ confidence() }}</strong>
+    }
+  </summary>
+
+  <div class="why-popover__panel">
+    @if (summary()) {
+      <p class="why-popover__summary">{{ summary() }}</p>
+    }
+
+    @if (reasons().length) {
+      <section>
+        <h4>Reasons</h4>
+        @for (reason of reasons(); track reason.label + reason.detail) {
+          <p>
+            <strong>{{ reason.strength }}</strong>
+            {{ reason.label }}: {{ reason.detail }}
+          </p>
+        }
+      </section>
+    }
+
+    @if (warnings().length) {
+      <section>
+        <h4>Warnings</h4>
+        @for (warning of warnings(); track warning) {
+          <p class="why-popover__warning">{{ warning }}</p>
+        }
+      </section>
+    }
+
+    @if (sourceRefs().length) {
+      <section>
+        <h4>Sources</h4>
+        @for (source of sourceRefs(); track source.file + source.path + source.entityId) {
+          <p class="why-popover__source">{{ source.file }} {{ source.path }}</p>
+        }
+      </section>
+    }
+  </div>
+</details>

@@ -1,0 +1,133 @@
+:host {
+  display: block;
+  min-width: 160px;
+}
+
+.explainable-cell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.explainable-cell summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.explainable-cell summary::-webkit-details-marker {
+  display: none;
+}
+
+.explainable-cell__label {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.explainable-cell__icon {
+  color: var(--text-soft);
+  transition: transform 140ms ease;
+}
+
+.explainable-cell[open] .explainable-cell__icon {
+  transform: rotate(180deg);
+}
+
+.confidence-chip {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(23, 43, 77, 0.08);
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.explainable-cell--ok {
+  border-color: rgba(33, 110, 78, 0.24);
+}
+
+.explainable-cell--warning {
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+.explainable-cell--error {
+  border-color: rgba(174, 46, 36, 0.34);
+}
+
+.explainable-cell__body {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+  border-top: 1px solid #eef3f8;
+}
+
+.breakdown-group,
+.reason-list,
+.warning-list {
+  display: grid;
+  gap: 6px;
+}
+
+.breakdown-group h4,
+.reason-list h4,
+.warning-list h4 {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.breakdown-group ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breakdown-group li {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
+.breakdown-group li[data-status='missing'],
+.breakdown-group li[data-status='conflicting'] {
+  background: var(--danger-soft);
+}
+
+.breakdown-group small,
+.muted-text,
+.reason-list p,
+.warning-list p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.breakdown-group button {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.warning-list p {
+  color: var(--danger-text);
+}

@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.api;
 
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
+import pl.mkn.incidenttracker.api.operationalcontext.OperationalContextEntityNotFoundException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
@@ -59,6 +60,19 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleAnalysisJobNotFound(AnalysisJobNotFoundException exception) {
         var response = new ApiErrorResponse(
                 "ANALYSIS_JOB_NOT_FOUND",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(OperationalContextEntityNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleOperationalContextEntityNotFound(
+            OperationalContextEntityNotFoundException exception
+    ) {
+        var response = new ApiErrorResponse(
+                "OPERATIONAL_CONTEXT_ENTITY_NOT_FOUND",
                 exception.getMessage(),
                 List.of()
         );

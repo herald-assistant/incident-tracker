@@ -13,6 +13,13 @@ export const routes: Routes = [
     component: EvidenceConsoleComponent
   },
   {
+    path: 'operational-context',
+    loadChildren: () =>
+      import('./operational-context/operational-context.routes').then(
+        (routesModule) => routesModule.operationalContextRoutes
+      )
+  },
+  {
     path: '**',
     redirectTo: ''
   }
