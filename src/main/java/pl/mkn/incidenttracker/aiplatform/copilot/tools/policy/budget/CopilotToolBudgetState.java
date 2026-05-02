@@ -1,8 +1,9 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget;
 
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry.CopilotToolMetrics;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,10 +67,9 @@ public class CopilotToolBudgetState {
         }
 
         var rawResultCharacters = rawResult != null ? rawResult.length() : 0L;
-        var toolMetrics = CopilotToolMetrics.from(null, sessionId, null, toolName, 0L, rawResult);
         totalCalls++;
 
-        switch (toolMetrics.toolGroup()) {
+        switch (toolGroup(toolName)) {
             case "elasticsearch" -> elasticCalls++;
             case "gitlab" -> {
                 gitLabCalls++;
@@ -86,13 +86,13 @@ public class CopilotToolBudgetState {
         if (isGitLabSearchTool(toolName)) {
             gitLabSearchCalls++;
         }
-        if (toolMetrics.gitLabReadFileCall()) {
+        if (GitLabToolNames.READ_REPOSITORY_FILE.equals(toolName)) {
             gitLabReadFileCalls++;
         }
-        if (toolMetrics.gitLabReadChunkCall()) {
+        if (isGitLabChunkTool(toolName)) {
             gitLabReadChunkCalls++;
         }
-        if (toolMetrics.databaseRawSqlCall()) {
+        if (isRawSqlTool(toolName)) {
             dbRawSqlCalls++;
         }
 
@@ -130,8 +130,7 @@ public class CopilotToolBudgetState {
         var exceeded = new ArrayList<String>();
         addIfLimitExceeded(exceeded, "total tool call budget exceeded", totalCalls + 1, properties.getMaxTotalCalls());
 
-        var toolGroup = CopilotToolMetrics.toolGroup(toolName);
-        switch (toolGroup) {
+        switch (toolGroup(toolName)) {
             case "elasticsearch" -> addIfLimitExceeded(
                     exceeded,
                     "Elasticsearch tool call budget exceeded",
@@ -197,7 +196,7 @@ public class CopilotToolBudgetState {
 
     private List<String> exceededAfterInvocation(String toolName) {
         var exceeded = new ArrayList<String>();
-        if (CopilotToolMetrics.toolGroup(toolName).equals("gitlab")) {
+        if (toolGroup(toolName).equals("gitlab")) {
             addIfLimitExceeded(
                     exceeded,
                     "GitLab returned character budget exceeded",
@@ -205,7 +204,7 @@ public class CopilotToolBudgetState {
                     properties.getMaxGitlabReturnedCharacters()
             );
         }
-        if (CopilotToolMetrics.toolGroup(toolName).equals("database")) {
+        if (toolGroup(toolName).equals("database")) {
             addIfLimitExceeded(
                     exceeded,
                     "Database returned character budget exceeded",
@@ -235,6 +234,22 @@ public class CopilotToolBudgetState {
 
     private boolean isRawSqlTool(String toolName) {
         return DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName);
+    }
+
+    private String toolGroup(String toolName) {
+        if (!StringUtils.hasText(toolName)) {
+            return "unknown";
+        }
+        if (toolName.startsWith(ElasticToolNames.PREFIX)) {
+            return "elasticsearch";
+        }
+        if (toolName.startsWith(GitLabToolNames.PREFIX)) {
+            return "gitlab";
+        }
+        if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
+            return "database";
+        }
+        return "other";
     }
 
     public record CopilotToolBudgetSnapshot(

@@ -35,8 +35,7 @@ public class CopilotIncidentInitialRunAssembler {
                         prompt,
                         sessionConfigRequest,
                         renderedArtifacts
-                ),
-                new CopilotInitialAnalysisPreparationMetrics(toolSessionContext, renderedArtifacts)
+                )
         );
     }
 }

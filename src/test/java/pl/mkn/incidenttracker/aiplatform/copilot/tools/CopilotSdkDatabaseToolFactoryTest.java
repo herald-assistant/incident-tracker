@@ -9,9 +9,6 @@ import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.integrations.database.DatabaseToolService;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.agenttools.database.mcp.DatabaseMcpTools;
 
 import java.util.List;
@@ -41,9 +38,7 @@ class CopilotSdkDatabaseToolFactoryTest {
         var factory = toolFactory(
                 java.util.List.of(databaseToolProvider()),
                 objectMapper,
-                toolEvidenceSessionStore(objectMapper),
-                metricsRegistry(),
-                metricsLogger()
+                toolEvidenceSessionStore(objectMapper)
         );
         var toolsByName = factory.createToolDefinitions(new CopilotToolSessionContext(
                 "run-1",
@@ -87,9 +82,7 @@ class CopilotSdkDatabaseToolFactoryTest {
         var factory = toolFactory(
                 List.of(databaseToolProvider(databaseToolService)),
                 objectMapper,
-                registry,
-                metricsRegistry(),
-                metricsLogger()
+                registry
         );
         var sessionContext = sessionContext();
         var tool = factory.createToolDefinitions(sessionContext).stream()
@@ -170,13 +163,5 @@ class CopilotSdkDatabaseToolFactoryTest {
         return MethodToolCallbackProvider.builder()
                 .toolObjects(new DatabaseMcpTools(databaseToolService))
                 .build();
-    }
-
-    private CopilotSessionMetricsRegistry metricsRegistry() {
-        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
-    }
-
-    private CopilotMetricsLogger metricsLogger() {
-        return new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper);
     }
 }

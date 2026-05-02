@@ -153,7 +153,7 @@ Warstwa platformy AI posiada:
 - `SessionConfig`, allowliste tools i hidden context jako mechanizmy runtime,
 - generic tool invocation handler,
 - neutralny kontrakt customizacji opisow tools,
-- policies, budget, telemetry, logging i lifecycle sesji,
+- policies, budget, logging, user-visible usage i lifecycle sesji,
 - generic artifact/prompt delivery mechanics tam, gdzie nie sa feature-specific.
 
 Warstwa platformy AI nie posiada:
@@ -193,8 +193,8 @@ requestu.
 mapowanie rendered artifacts na platformowy input runtime jest w jednym miejscu.
 `CopilotIncidentInitialRunAssembler` sklada juz
 `CopilotIncidentInitialRunAssembly`, ktory trzyma `CopilotRunRequest`
-oddzielnie od `CopilotInitialAnalysisPreparationMetrics`, zeby metryki
-preparation nie wchodzily do neutralnego requestu runtime.
+oddzielnie od szczegolow przygotowania, zeby techniczne dane preparation nie
+wchodzily do neutralnego requestu runtime.
 `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio neutralny
 `CopilotRunRequest`, wiec chat nie ma osobnego follow-up-only kontraktu
 wykonania przed wejsciem do platformowego runtime.
@@ -202,9 +202,9 @@ wykonania przed wejsciem do platformowego runtime.
 `CopilotRunRequest -> CopilotPreparedSession`; incident preparation sklada run
 request, a runtime service przygotowuje techniczna sesje SDK.
 `CopilotSdkExecutionGateway` mieszka w `aiplatform.copilot.runtime.execution`
-i wykonuje neutralna `CopilotPreparedSession`; metryki usage/timing zapisuje
-przez platformowy port `CopilotSessionExecutionMetricsRecorder`, ktorego
-obecnym adapterem jest stary registry telemetryki.
+i wykonuje neutralna `CopilotPreparedSession`; zwraca `CopilotExecutionResult`
+z trescia odpowiedzi i user-visible `shared.ai.AnalysisAiUsage` agregowanym z
+eventow SDK.
 Rendered artifacts przechodza przez neutralny runtime type
 `CopilotRenderedArtifact`, a mapowanie do `CopilotRunRequest.artifactContents`
 robi platformowy `CopilotArtifactContentMapper`. Incident preparation nadal
@@ -238,7 +238,6 @@ platforme parametryzowana przez feature, a nie wlasciciela incident promptu.
 - `CopilotIncidentFollowUpRunAssembler`
 - `CopilotIncidentInitialRunAssembly`
 - `CopilotInitialAnalysisPreparation`
-- `CopilotInitialAnalysisPreparationMetrics`
 - `CopilotIncidentPromptRenderer`
 - `CopilotIncidentFollowUpPromptRenderer`
 - `CopilotIncidentDigestService`
@@ -273,9 +272,9 @@ mieszkaja juz w `features.incidentanalysis.ai.initial/chat`, wiec produkcyjny
 pakiet `analysis.ai` zostal wygaszony.
 Podpakiety `features.incidentanalysis.ai.copilot.response` i
 `features.incidentanalysis.ai.copilot.quality` zawieraja incidentowy JSON-only
-response contract, parser oraz report-only quality gate. Telemetryka zapisuje
-wynik gate'a przez neutralny `aiplatform.copilot.runtime.quality`
-`CopilotResponseQualityReport`, zeby nie importowac feature'a.
+response contract, parser oraz report-only quality gate. Platforma nie zapisuje
+obecnie osobnej telemetryki quality gate; findings sa logowane po stronie
+feature'a i nie zmieniaja odpowiedzi runtime.
 
 `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific GitLab i
 Database tool evidence capture: listenery eventow invocation oraz mappery
@@ -290,17 +289,15 @@ Platform-owned runtime jest juz poza `preparation`, w
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
 `CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory`,
-`CopilotSessionConfigFactory`, `CopilotSdkExecutionGateway` oraz
-`CopilotSessionExecutionMetricsRecorder`. Neutralny
+`CopilotSessionConfigFactory` oraz `CopilotSdkExecutionGateway`. Neutralny
 `aiplatform.copilot.runtime.quality` zawiera tylko payload raportu jakosci dla
-metryk, bez incidentowych regul oceny. Skill loader odpowiada tylko za materializacje
+feature'y, bez incidentowych regul oceny. Skill loader odpowiada tylko za materializacje
 skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 `CopilotSessionConfigRequest`. Platformowe tools zawieraja tez
 `CopilotSdkToolFactory`, ktory rejestruje Spring tools jako Copilot
-`ToolDefinition` bez wiedzy o incident-specific guidance. Budget telemetry jest
-odpieta przez platformowe `CopilotToolBudgetTelemetry`, a neutralne
-`CopilotToolMetrics` mieszkaja w `aiplatform.copilot.tools.telemetry`.
+`ToolDefinition` bez wiedzy o incident-specific guidance. Budget state jest
+session-bound i zostaje w platformie tylko jako guardrail runtime.
 Platformowy katalog modeli Copilota mieszka w
 `aiplatform.copilot.runtime.options`; neutralne preferencje wykonania AI
 mieszkaja w `shared.ai`, a HTTP fasada katalogu modeli w `api.aioptions`.
@@ -426,7 +423,7 @@ Najbardziej oplacalne ruchy:
    `AnalysisAiToolEvidenceListener` takze mieszka w `shared.evidence`, bo
    laczy provider AI, job i feature bez zaleznosci od `analysis.ai`.
 4. Trzymac token/cost usage DTO w neutralnym `shared.ai`, bo jest konsumowany
-   przez telemetryke, flow, job UI i feature.
+   przez flow, job UI i feature.
 
 Kryterium done:
 
@@ -537,21 +534,19 @@ Cel: zrobic z Copilot SDK runtime platforme, a nie czesc incident feature'a.
 
 Kroki:
 
-1. Przeniesc generic execution/session/tool invocation/telemetry do
+1. Przeniesc generic execution/session/tool invocation do
    `aiplatform.copilot`.
    Stan obecny: pierwszy neutralny slice jest przeniesiony:
    `aiplatform.copilot.runtime` zawiera run request, prepared session,
    session config, properties, model listing, skill loader, artifact mapping,
-   execution gateway, neutralny port metryk execution oraz neutralny port
-   telemetry sesji (`aiplatform.copilot.runtime.telemetry`).
-   Concrete registry/logging/listenery telemetry mieszkaja teraz w
-   `aiplatform.copilot.runtime.telemetry.session`.
+   execution gateway oraz user-visible usage mapping w execution result.
+   Niewidoczna dla operatora telemetryka sesji Copilota zostala usunieta z
+   aktualnego runtime.
    Platformowe `aiplatform.copilot.tools` zawiera juz
    `CopilotSdkToolFactory`, `CopilotToolInvocationHandler`, hidden `ToolContext`,
    `CopilotToolSessionContext`, eventy invocation, neutralne policy contracts,
    session validation, logging invocation, description customization contract,
-   budget policy/state/registry, neutralne tool metrics i session-bound tool
-   evidence store.
+   budget policy/state/registry i session-bound tool evidence store.
 2. Zdefiniowac neutralny request platformowy, ktory niesie prompt, model
    options, skill resources, available tools, hidden context, evidence sink i
    response handler/parser, ale nie zaklada `correlationId`.
@@ -567,11 +562,9 @@ Kroki:
    Stan obecny: incident prompt i digest oraz initial/follow-up providery
    Copilota mieszkaja juz w `features.incidentanalysis.ai.copilot`. Response
    parser i quality gate mieszkaja juz w
-   `features.incidentanalysis.ai.copilot.response/quality`, a telemetryka
-   dostaje neutralny quality report z `aiplatform.copilot.runtime.quality`
-   przez platformowy `CopilotSessionTelemetry`; konkretny registry/logger
-   jest juz platformowa implementacja w
-   `aiplatform.copilot.runtime.telemetry.session`.
+   `features.incidentanalysis.ai.copilot.response/quality`. Quality findings
+   sa logowane po stronie feature'a; nie ma obecnie platformowego registry
+   telemetryki quality gate.
 6. Przeniesc incident tool access policy, incident coverage heurystyki,
    incident skill selection i operator-facing tool evidence mapping do
    `features.incidentanalysis`.
@@ -582,7 +575,7 @@ Kroki:
    `features.incidentanalysis.ai.copilot.tools`, a incident-specific guidance
    opisow tools w `features.incidentanalysis.ai.copilot.tools.description`.
 7. Platformowy tool invocation handler moze znac mechanike callbackow,
-   allowlisty, policies, hidden context map i telemetryki, ale nie powinien
+   allowlisty, policies, hidden context map i logowania, ale nie powinien
    znac nazw capability jako reguly domenowej, np. "GitLab przed DB dla
    incydentu".
 8. Nie przenosic `InitialAnalysisRequest` do platformy w obecnym ksztalcie,
@@ -715,10 +708,8 @@ Kryterium done:
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
     capture przeniesione; platformowe tool
     factory/handler/context/events/policy/logging/description/budget
-    telemetry/evidence store przeniesione do
-    `aiplatform.copilot.tools`, a session telemetry port przeniesiony do
-    `aiplatform.copilot.runtime.telemetry`, concrete session telemetry do
-    `aiplatform.copilot.runtime.telemetry.session`, a model options provider do
+    evidence store przeniesione do `aiplatform.copilot.tools`, execution
+    gateway zwraca content + user-visible usage, a model options provider do
     `aiplatform.copilot.runtime.options`].
 16. PR: przeniesc incident AI initial/chat contracts do
     `features.incidentanalysis.ai` [done].

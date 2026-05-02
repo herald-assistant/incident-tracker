@@ -92,7 +92,7 @@ skroty. Brak cykli jest skutkiem zdrowych granic, nie celem samym w sobie.
 Docelowy runtime Copilota ma byc parametryzowany: feature przekazuje prompt,
 skille, allowliste tools, hidden context, evidence sink i response parser.
 Platforma zna Copilot SDK, session lifecycle, tool invocation, policies,
-telemetryke i techniczna obsluge wynikow, ale nie wybiera incidentowych tools
+user-visible usage i techniczna obsluge wynikow, ale nie wybiera incidentowych tools
 ani nie zna `correlationId` jako stalego wymogu platformowego.
 
 ## Runtime Ownership Flow
@@ -180,14 +180,14 @@ flowchart LR
 | --- | ---: | --- | --- |
 | `features.incidentanalysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `features.incidentanalysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
-| `features (bez evidence) -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
+| `features (bez evidence) -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload i uzywa platformowego session-bound evidence store. |
 | `features (bez evidence) -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
 | `features (bez evidence) -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
 | `features (bez evidence) -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features (bez evidence) -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`; pozostale importy integracji w feature sa w wydzielonym podgrafie evidence. |
-| `features (bez evidence) -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
-| `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
-| `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
+| `features (bez evidence) -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, coverage, quality gate, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
+| `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext` i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
+| `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, user-visible usage i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
 | `api -> aiplatform` | 3 | oczekiwane | `api.aioptions` mapuje platformowy katalog modeli Copilota na kontrakt endpointu `GET /analysis/ai/options`. |
 | `api -> integrations` | 15 | oczekiwane | Shared/operator endpointy Elasticsearch/GitLab deleguja do `integrations`, a globalny handler HTTP mapuje wyniki/wyjatki helper endpointow. |
@@ -220,17 +220,14 @@ features.incidentanalysis.job -> features.incidentanalysis.ai.chat
 features -> shared.ai/shared.evidence
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.execution
-features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.telemetry
 features.incidentanalysis.ai.copilot.quality -> aiplatform.copilot.runtime.quality
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
 features.incidentanalysis.ai.copilot -> agenttools
 api.aioptions -> aiplatform.copilot.runtime.options
 api.<sharedoperator> -> integrations/aiplatform/shared [target]
-aiplatform.copilot.runtime.telemetry.session -> aiplatform.copilot.runtime.quality/telemetry/tools
 aiplatform.copilot.runtime.execution -> aiplatform.copilot.runtime/tools
 aiplatform.copilot.tools -> agenttools
-aiplatform.copilot.tools.telemetry -> agenttools
 aiplatform.copilot.tools.policy.budget -> agenttools
 aiplatform.copilot.tools.evidence -> shared
 aiplatform.copilot.runtime -> shared
@@ -335,30 +332,24 @@ Zamkniete krawedzie, ktorych nie przywracac:
   spod `analysis.ai.copilot.tools`: `CopilotSdkToolFactory`, handler
   invocation, hidden `ToolContext`, eventy invocation, neutralne policy
   contracts, session validation, logging, description customization contract,
-  budget policy/state/registry, neutralne tool metrics i session-bound evidence
-  store mieszkaja teraz w `aiplatform.copilot.tools`.
+  budget policy/state/registry i session-bound evidence store mieszkaja teraz
+  w `aiplatform.copilot.tools`.
 - Dawne `analysis.ai.copilot.execution`: `CopilotSdkExecutionGateway`, lifecycle
   logger, event logger i invocation exception mieszkaja teraz w
-  `aiplatform.copilot.runtime.execution`. Gateway uzywa neutralnego portu
-  `CopilotSessionExecutionMetricsRecorder`, ktory pozwala platformowej
-  telemetryce zostac wymienna implementacja.
+  `aiplatform.copilot.runtime.execution`. Gateway zwraca `CopilotExecutionResult`
+  z trescia odpowiedzi i user-visible `shared.ai.AnalysisAiUsage`, bez osobnego
+  registry niewidocznej telemetryki.
 - Dawne `analysis.ai.copilot.telemetry`: registry/loggery/listenery telemetry
-  sesji Copilota mieszkaja teraz w
-  `aiplatform.copilot.runtime.telemetry.session` i nie importuja `analysis.*`,
-  `features.*` ani `integrations.*`.
+  sesji Copilota zostaly usuniete z aktualnego runtime. Zostaje tylko usage
+  widoczny w job state/UI oraz tool evidence widoczne dla operatora.
 - Dawne `analysis.ai.copilot.CopilotSdkModelOptionsProvider`: provider
   katalogu modeli Copilota mieszka teraz w
   `aiplatform.copilot.runtime.options`. Preferencje requestu mieszkaja w
   `shared.ai`, a HTTP fasada `GET /analysis/ai/options` w `api.aioptions`.
-- Dawna konkretna zaleznosc telemetry w incident feature: preparation/provider
-  uzywaja teraz platformowego `CopilotSessionTelemetry`, a
-  `CopilotSessionMetricsRegistry` i `CopilotMetricsLogger` sa implementacja
-  platformowa w `aiplatform.copilot.runtime.telemetry.session`.
 - Dawne `analysis.ai.copilot.response/quality`: JSON-only parser odpowiedzi
   incidentu i incident-specific quality gate mieszkaja teraz w
-  `features.incidentanalysis.ai.copilot.response/quality`. Telemetryka nie
-  importuje feature'a, bo zapisuje neutralny
-  `aiplatform.copilot.runtime.quality.CopilotResponseQualityReport`.
+  `features.incidentanalysis.ai.copilot.response/quality`. Platforma widzi
+  tylko neutralny payload raportu jakosci, gdy feature go potrzebuje.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.

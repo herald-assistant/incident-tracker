@@ -14,10 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
 import java.time.Duration;
 import java.io.Closeable;
@@ -48,8 +44,7 @@ class CopilotSdkExecutionGatewayTest {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
                 properties,
-                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
-                metricsRegistry()
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
         );
         var preparedRequest = new CopilotPreparedSession(
                 "corr-123",
@@ -75,7 +70,7 @@ class CopilotSdkExecutionGatewayTest {
         })) {
             var response = gateway.execute(preparedRequest);
 
-            assertEquals("Structured answer", response);
+            assertEquals("Structured answer", response.content());
             verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L));
         }
     }
@@ -86,8 +81,7 @@ class CopilotSdkExecutionGatewayTest {
         properties.setSendAndWaitTimeout(Duration.ofSeconds(90));
         var gateway = executionGateway(
                 properties,
-                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
-                metricsRegistry()
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
         );
         var preparedRequest = new CopilotPreparedSession(
                 "corr-456",
@@ -113,7 +107,7 @@ class CopilotSdkExecutionGatewayTest {
         })) {
             var response = gateway.execute(preparedRequest);
 
-            assertEquals("Configured timeout answer", response);
+            assertEquals("Configured timeout answer", response.content());
             verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(90_000L));
         }
     }
@@ -123,8 +117,7 @@ class CopilotSdkExecutionGatewayTest {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
                 properties,
-                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
-                metricsRegistry()
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
         );
 
         var preparedRequest = new CopilotPreparedSession(
@@ -147,41 +140,18 @@ class CopilotSdkExecutionGatewayTest {
             when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
                     .thenReturn(CompletableFuture.completedFuture(assistantMessage("Structured answer")));
         })) {
-            assertEquals("Structured answer", gateway.execute(preparedRequest));
+            assertEquals("Structured answer", gateway.execute(preparedRequest).content());
         }
     }
 
     @Test
-    void shouldRecordTokenUsageEventsInSessionMetrics() {
+    void shouldReturnTokenUsageEventsInExecutionResult() {
         var properties = new CopilotSdkProperties();
-        var metricsRegistry = metricsRegistry();
         var gateway = executionGateway(
                 properties,
-                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
-                metricsRegistry
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
         );
         var sessionId = "analysis-usage";
-        var sessionContext = new CopilotToolSessionContext(
-                "run-usage",
-                sessionId,
-                "corr-usage",
-                "dev3",
-                "main",
-                "sample/runtime"
-        );
-        metricsRegistry.recordPreparation(
-                new CopilotSessionPreparationMetrics(
-                        sessionContext.analysisRunId(),
-                        sessionContext.copilotSessionId(),
-                        sessionContext.correlationId(),
-                        0,
-                        0,
-                        0,
-                        0L,
-                        "Diagnose incident".length(),
-                        1L
-                )
-        );
         var preparedRequest = new CopilotPreparedSession(
                 "corr-usage",
                 new CopilotClientOptions(),
@@ -214,21 +184,22 @@ class CopilotSdkExecutionGatewayTest {
                         return CompletableFuture.completedFuture(assistantMessage("Structured answer"));
                     });
         })) {
-            assertEquals("Structured answer", gateway.execute(preparedRequest));
-        }
+            var response = gateway.execute(preparedRequest);
 
-        var usage = metricsRegistry.snapshot(sessionId).orElseThrow().usage();
-        assertNotNull(usage);
-        assertEquals(2400L, usage.inputTokens());
-        assertEquals(420L, usage.outputTokens());
-        assertEquals(2820L, usage.totalTokens());
-        assertEquals(300L, usage.cacheReadTokens());
-        assertEquals(50L, usage.cacheWriteTokens());
-        assertEquals(1, usage.apiCallCount());
-        assertEquals("gpt-5.4", usage.model());
-        assertEquals(128000L, usage.contextTokenLimit());
-        assertEquals(9200L, usage.contextCurrentTokens());
-        assertEquals(6L, usage.contextMessages());
+            assertEquals("Structured answer", response.content());
+            var usage = response.usage();
+            assertNotNull(usage);
+            assertEquals(2400L, usage.inputTokens());
+            assertEquals(420L, usage.outputTokens());
+            assertEquals(2820L, usage.totalTokens());
+            assertEquals(300L, usage.cacheReadTokens());
+            assertEquals(50L, usage.cacheWriteTokens());
+            assertEquals(1, usage.apiCallCount());
+            assertEquals("gpt-5.4", usage.model());
+            assertEquals(128000L, usage.contextTokenLimit());
+            assertEquals(9200L, usage.contextCurrentTokens());
+            assertEquals(6L, usage.contextMessages());
+        }
     }
 
     @Test
@@ -236,8 +207,7 @@ class CopilotSdkExecutionGatewayTest {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
                 properties,
-                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
-                metricsRegistry()
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
         );
         var messageOptions = new MessageOptions().setPrompt("Diagnose incident");
         var preparedRequest = mock(CopilotPreparedSession.class);
@@ -258,7 +228,7 @@ class CopilotSdkExecutionGatewayTest {
             when(session.sendAndWait(same(messageOptions), eq(300_000L)))
                     .thenReturn(CompletableFuture.completedFuture(assistantMessage("Structured answer")));
         })) {
-            assertEquals("Structured answer", gateway.execute(preparedRequest));
+            assertEquals("Structured answer", gateway.execute(preparedRequest).content());
         }
 
         verify(preparedRequest, never()).close();
@@ -319,9 +289,5 @@ class CopilotSdkExecutionGatewayTest {
                 messagesLength
         ));
         return event;
-    }
-
-    private CopilotSessionMetricsRegistry metricsRegistry() {
-        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
     }
 }

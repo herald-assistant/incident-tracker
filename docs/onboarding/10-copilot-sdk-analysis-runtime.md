@@ -13,7 +13,7 @@ Platforma powinna znac:
 
 - Copilot SDK i lifecycle sesji,
 - `SessionConfig`, allowliste tools i hidden context jako mechanizmy,
-- tool invocation handler, policies, budget, telemetry i eventy,
+- tool invocation handler, policies, budget, user-visible usage i eventy,
 - techniczne ladowanie skilli i delivery promptu, jezeli nie jest
   feature-specific.
 
@@ -71,8 +71,7 @@ Nie ma produkcyjnego shortcutu `analyze(request)` ani oddzielnego
 - buduje coverage-aware tool policy,
 - renderuje artefakty inline,
 - laduje runtime skills,
-- generuje prompt JSON-only,
-- rejestruje metryki preparation.
+- generuje prompt JSON-only.
 
 Po refaktorze `CopilotIncidentInitialPreparationService` jest kompozytorem
 zaleznosci:
@@ -93,7 +92,7 @@ zaleznosci:
   promptu, session config request i artifact contents,
 - `CopilotIncidentInitialRunAssembler` sklada
   `CopilotIncidentInitialRunAssembly`, ktory niesie platformowy
-  `CopilotRunRequest` oraz osobny snapshot metryk preparation,
+  `CopilotRunRequest`,
 - `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio platformowy
   `CopilotRunRequest`,
 - `CopilotRunPreparationService` jest neutralnym wejsciem runtime:
@@ -105,9 +104,6 @@ zaleznosci:
 - `AnalysisAiOptions` z requestu jobowego moze nadpisac skonfigurowany
   `model` i `reasoningEffort` dla pojedynczej sesji; brak wyboru oznacza
   fallback do properties albo domyslow SDK.
-- Metryki preparation ida przez platformowy
-  `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`, dzieki czemu
-  feature nie importuje konkretnego registry/loggera telemetry.
 - `CopilotSdkModelOptionsProvider` mieszka w
   `aiplatform.copilot.runtime.options`. Udostepnia osobny katalog modeli dla
   UI przez `CopilotClient.listModels()`, bez wpychania metadanych SDK do
@@ -210,9 +206,8 @@ parsuje wynik dla SDK. Hidden context jest w
 `aiplatform.copilot.tools.events`, walidacja session id jest policy w
 `aiplatform.copilot.tools.policy.session`, budzet jest policy w
 `aiplatform.copilot.tools.policy.budget`, a logowanie w
-`aiplatform.copilot.tools.logging`. Budget decisions i tool metrics maja
-neutralne kontrakty w `aiplatform.copilot.tools`, a telemetryka analizy tylko
-subskrybuje te dane przez adaptery. Telemetryka i capture GitLab/DB sa
+`aiplatform.copilot.tools.logging`. Budget decisions i state maja neutralne
+kontrakty w `aiplatform.copilot.tools`. Logowanie i capture GitLab/DB sa
 listenerami eventow invocation, dzieki czemu handler pozostaje granica
 wykonania, a semantyka poszczegolnych tool capability siedzi w dedykowanych
 pakietach.
@@ -226,8 +221,6 @@ nie zmienia wyniku tool callbacka.
 `CopilotToolBudgetRegistry` tworzy state per `copilotSessionId`.
 `CopilotToolBudgetPolicy` implementuje `CopilotToolInvocationPolicy` i jest
 wywolywany przez handler przed i po tool callbacku.
-Metryki budzetu zapisuje `CopilotToolBudgetMetricsListener`, implementujacy
-platformowy `CopilotToolBudgetTelemetry`.
 
 Domyslnie:
 
@@ -240,8 +233,8 @@ Soft mode nie blokuje. Hard mode rzuca kontrolowany rejection, ktory handler
 zamienia na result `denied_by_tool_budget`.
 
 Rejection publikuje terminalny event `Finished(REJECTED)`, ale nie publikuje
-`Started`, bo invocation nie przeszlo wszystkich before-policies. Telemetryka
-nie liczy rejection jako wykonanego tool calla.
+`Started`, bo invocation nie przeszlo wszystkich before-policies. Budget state
+zachowuje informacje o rejection do konca sesji.
 
 ## Tool evidence
 
@@ -306,33 +299,24 @@ Fallback zachowuje czesciowo sparsowane pola i ustawia
 ## Quality gate
 
 `CopilotResponseQualityGate` dziala domyslnie w `REPORT_ONLY`.
-Findings sa widoczne w telemetryce/logach, ale nie zmieniaja runtime result.
+Findings sa widoczne w logach, ale nie zmieniaja runtime result.
 
-## Telemetry
+## User-visible usage
 
-Feature initial analysis uzywa neutralnego
-`aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`.
-`aiplatform.copilot.runtime.telemetry.session.CopilotSessionTelemetryAdapter`
-mapuje ten port na platformowe `CopilotSessionMetricsRegistry` i
-`CopilotMetricsLogger`.
+Nie ma obecnie osobnego registry telemetryki sesji Copilota, ktorej operator
+nie widzi. Runtime zostawia tylko dane, ktore trafiaja do job state/UI albo
+operator-facing evidence.
 
-Metryki obejmuja:
+`CopilotSdkExecutionGateway` mapuje eventy SDK do
+`shared.ai.AnalysisAiUsage`:
 
-- rozmiary promptu i artefaktow,
 - token usage z eventow `assistant.usage` oraz ostatni snapshot wykorzystania
   context window z `session.usage_info`,
-- duration preparation/client/create session/sendAndWait/total,
-- tool calls wedlug grup,
-- drogie tool counters i returned characters,
-- parser/fallback state,
-- detected problem/confidence,
-- quality findings,
-- budget warnings/denials.
+- liczbe wywolan API, model, koszt i czas API.
 
-Mutable stan licznikow jest oddzielony od registry, ale pola
-`CopilotAnalysisMetrics` i JSON summary log pozostaja generyczne dla aplikacji.
-Provider mapuje token usage na `shared.ai.AnalysisAiUsage`, dzieki czemu job
-UI pokazuje sume tokenow w ostatnim kroku bez zaleznosci od typow SDK.
+Provider przekazuje `AnalysisAiUsage` do `InitialAnalysisResponse`, dzieki
+czemu job UI pokazuje sume tokenow w ostatnim kroku bez zaleznosci od typow
+SDK.
 Frontend dodatkowo liczy product-facing estymacje GitHub AI Credits i USD na
 podstawie tokenow, modelu i prostego cennika. To ma pokazywac rzad wielkosci
 kosztu analizy, nie zastepowac rozliczen GitHuba.
@@ -363,10 +347,6 @@ analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
 analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
-
-analysis.ai.copilot.metrics.enabled=true
-analysis.ai.copilot.metrics.log-summary=true
-analysis.ai.copilot.metrics.log-tool-events=true
 
 analysis.ai.copilot.quality-gate.enabled=true
 analysis.ai.copilot.quality-gate.mode=report-only

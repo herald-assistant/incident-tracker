@@ -23,13 +23,13 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
         try (var preparedSession = preparationService.prepare(request)) {
-            var content = executionGateway.execute(
+            var executionResult = executionGateway.execute(
                     withToolEvidenceSink(preparedSession, toolEvidenceListener)
             );
 
             return new AnalysisAiChatResponse(
                     "copilot-sdk",
-                    content != null ? content.trim() : "",
+                    executionResult.content() != null ? executionResult.content().trim() : "",
                     preparedSession.prompt()
             );
         }

@@ -3,17 +3,10 @@ package pl.mkn.incidenttracker.testsupport.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactService;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentDigestService;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionTelemetryAdapter;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotToolBudgetMetricsListener;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotToolInvocationTelemetryListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotToolInvocationHandler;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolContextFactory;
@@ -60,19 +53,14 @@ public final class CopilotTestFixtures {
     public static CopilotSdkToolFactory toolFactory(
             List<ToolCallbackProvider> toolCallbackProviders,
             ObjectMapper objectMapper,
-            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore
     ) {
         return toolFactory(
                 toolCallbackProviders,
                 objectMapper,
                 toolEvidenceSessionStore,
-                metricsRegistry,
-                metricsLogger,
                 new CopilotToolBudgetPolicy(
-                        new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
-                        List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
+                        new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties())
                 )
         );
     }
@@ -81,8 +69,6 @@ public final class CopilotTestFixtures {
             List<ToolCallbackProvider> toolCallbackProviders,
             ObjectMapper objectMapper,
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger,
             CopilotToolBudgetPolicy budgetPolicy
     ) {
         return new CopilotSdkToolFactory(
@@ -95,9 +81,7 @@ public final class CopilotTestFixtures {
                         List.of(new CopilotToolSessionValidationPolicy(), budgetPolicy),
                         toolInvocationEventPublisher(
                                 objectMapper,
-                                toolEvidenceSessionStore,
-                                metricsRegistry,
-                                metricsLogger
+                                toolEvidenceSessionStore
                         )
                 )
         );
@@ -105,9 +89,7 @@ public final class CopilotTestFixtures {
 
     public static CopilotToolInvocationEventPublisher toolInvocationEventPublisher(
             ObjectMapper objectMapper,
-            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore
     ) {
         var payloadReader = new JsonPayloadReader(objectMapper);
         var gitLabListener = new GitLabToolEvidenceCaptureListener(
@@ -118,11 +100,8 @@ public final class CopilotTestFixtures {
                 toolEvidenceSessionStore,
                 new DatabaseToolEvidenceMapper(payloadReader)
         );
-        var telemetryListener = new CopilotToolInvocationTelemetryListener(metricsRegistry, metricsLogger);
-
         return new CopilotToolInvocationEventPublisher(event -> {
             if (event instanceof CopilotToolInvocationFinishedEvent finishedEvent) {
-                telemetryListener.onToolInvocationFinished(finishedEvent);
                 if (finishedEvent.outcome() == CopilotToolInvocationOutcome.COMPLETED) {
                     gitLabListener.onToolInvocationFinished(finishedEvent);
                     databaseListener.onToolInvocationFinished(finishedEvent);
@@ -133,29 +112,12 @@ public final class CopilotTestFixtures {
 
     public static CopilotSdkExecutionGateway executionGateway(
             CopilotSdkProperties properties,
-            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotSessionMetricsRegistry metricsRegistry
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore
     ) {
         return new CopilotSdkExecutionGateway(
                 properties,
                 toolEvidenceSessionStore,
-                metricsRegistry,
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties())
         );
-    }
-
-    public static CopilotMetricsLogger metricsLogger(ObjectMapper objectMapper) {
-        return new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper);
-    }
-
-    public static CopilotSessionMetricsRegistry metricsRegistry() {
-        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
-    }
-
-    public static CopilotSessionTelemetry sessionTelemetry(
-            CopilotSessionMetricsRegistry metricsRegistry,
-            CopilotMetricsLogger metricsLogger
-    ) {
-        return new CopilotSessionTelemetryAdapter(metricsRegistry, metricsLogger);
     }
 }

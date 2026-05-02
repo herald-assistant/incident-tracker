@@ -70,13 +70,13 @@ Zasady granic:
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.
 - Copilot SDK runtime jest platform adapterem AI: przygotowuje sesje,
-  allowliste tools, hidden context, execution, telemetry i capture jako
+  allowliste tools, hidden context, execution i capture jako
   mechanike runtime. Docelowo ma dostawac te parametry od feature'a, a nie
   sam wybierac incident prompt, skille albo tools.
-- Telemetry sesji Copilota ma przechodzic przez neutralny port
-  `aiplatform.copilot.runtime.telemetry.CopilotSessionTelemetry`; konkretne
-  registry/loggery mieszkaja w `aiplatform.copilot.runtime.telemetry.session`,
-  a feature'y nie powinny ich importowac.
+- Obecnie nie utrzymujemy niewidocznej dla uzytkownika telemetryki sesji
+  Copilota. Zostaje tylko usage/token/cost widoczny w job state/UI oraz
+  user-facing tool evidence. Nowa telemetryka moze wrocic dopiero jako jawny,
+  productized element z widocznym celem, testami i dokumentacja.
 - Dedykowane feature'y analityczne dostarczaja prompt, evidence, skille,
   hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
   Feature moze zalezec od platformy, tools i adapterow; platforma, tools i
@@ -125,7 +125,7 @@ Zasady granic:
   `CopilotSdkToolFactory`, invocation handler, hidden `ToolContext`, eventy
   invocation, policy contracts, session validation, logging invocation,
   description customization contract, session-bound tool evidence store,
-  budget policy oraz neutralne tool metrics mieszkaja w platformie.
+  budget policy i budget state mieszkaja w platformie.
   Generyczne helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj poza
   Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB
   evidence mapping i Copilot-facing guidance opisow tools mieszkaja w
@@ -133,7 +133,7 @@ Zasady granic:
   `aiplatform.copilot` zostawiaj w runtime tylko mechanike invocation.
 - `aiplatform.copilot.tools.CopilotToolInvocationHandler` nie powinien
   zawierac logiki konkretnego toola. Walidacje i limity dodawaj jako
-  `CopilotToolInvocationPolicy`, a logowanie, telemetryke i evidence capture
+  `CopilotToolInvocationPolicy`, a logowanie i evidence capture
   jako listenery eventow invocation.
 - GitLab i Elasticsearch tools sa fallback-only, gdy odpowiadajace evidence nie
   jest juz osadzone w artefaktach. Database tools sa opcjonalna capability
@@ -182,7 +182,7 @@ Zasady granic:
   oraz listener aktualizacji tool evidence.
 - `src/main/java/pl/mkn/incidenttracker/shared/ai`
   Neutralne DTO preferencji wykonania AI oraz usage/token/cost dla flow, job
-  UI, telemetryki i feature'ow.
+  UI i feature'ow.
 - `src/main/java/pl/mkn/incidenttracker/api`
   Globalny kontrakt bledow HTTP i docelowe miejsce na shared/operator API
   niezalezne od jednego feature'a. Nie przenos tu orchestration feature'a,

@@ -9,16 +9,13 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.CopilotInitialAnalysisProvider;
 
 import java.util.List;
 
@@ -27,7 +24,6 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotInitialAnalysisProviderTest {
 
@@ -84,7 +80,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for timeout-123");
-        when(executionGateway.execute(same(preparedRequest))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Downstream timeout is likely tied to recent HTTP client timeout changes.",
@@ -98,7 +94,7 @@ class CopilotInitialAnalysisProviderTest {
                   "evidenceReferences": [],
                   "visibilityLimits": []
                 }
-                """.trim());
+                """.trim()));
 
         var response = analyze(provider, request);
 
@@ -144,7 +140,7 @@ class CopilotInitialAnalysisProviderTest {
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-123");
         when(executionGateway.execute(same(preparedRequest)))
-                .thenReturn("Looks like a timeout, but the answer is not formatted.");
+                .thenReturn(executionResult("Looks like a timeout, but the answer is not formatted."));
 
         var response = analyze(provider, request);
 
@@ -177,7 +173,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-456");
-        when(executionGateway.execute(same(preparedRequest))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "EntityNotFoundException thrown when no ActiveCaseRecord exists for caseId 7001234567 matching the active-status filter",
                   "summary": "**Żądanie** dla `CASE_ID=7001234567` dotarło do `ActiveCaseRecordController.getActiveCaseRecordForCaseId`.\\n\\n- **Potwierdzone:** wywołanie przeszło przez `ActiveCaseRecordQueryService` i zakończyło się w `ActiveCaseRecordDomainRepository`.\\n- **Granica widoczności:** brak bezpośredniego wglądu w DB i w faktyczną listę `statuses`.",
@@ -191,7 +187,7 @@ class CopilotInitialAnalysisProviderTest {
                   "evidenceReferences": [],
                   "visibilityLimits": []
                 }
-                """.trim());
+                """.trim()));
 
         var response = analyze(provider, request);
 
@@ -249,7 +245,7 @@ class CopilotInitialAnalysisProviderTest {
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared prompt for corr-999");
-        when(executionGateway.execute(same(preparedRequest))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Timeout is visible in the downstream call path.",
@@ -262,7 +258,7 @@ class CopilotInitialAnalysisProviderTest {
                   "evidenceReferences": [],
                   "visibilityLimits": []
                 }
-                """.trim());
+                """.trim()));
 
         var response = analyze(provider, request);
 
@@ -277,16 +273,16 @@ class CopilotInitialAnalysisProviderTest {
             CopilotIncidentInitialPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
-        var properties = new CopilotMetricsProperties();
-        var registry = new CopilotSessionMetricsRegistry(properties);
-        var logger = new CopilotMetricsLogger(properties, objectMapper);
         return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
-                new CopilotResponseQualityGate(new CopilotResponseQualityProperties()),
-                sessionTelemetry(registry, logger)
+                new CopilotResponseQualityGate(new CopilotResponseQualityProperties())
         );
+    }
+
+    private CopilotExecutionResult executionResult(String content) {
+        return new CopilotExecutionResult(content, null);
     }
 
     private CopilotInitialAnalysisPreparation preparedAnalysis(

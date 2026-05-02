@@ -88,7 +88,7 @@ Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza feature'em:
 - `shared.evidence` - `AnalysisEvidenceSection`, item/attribute oraz
   `AnalysisAiToolEvidenceListener`,
 - `shared.ai` - neutralne `AnalysisAiOptions` oraz generyczny
-  usage/token/cost contract dla job UI i telemetryki.
+  usage/token/cost contract dla job UI.
 
 Nie dodawaj nowych elementow runtime Copilota do feature'a; platformowe
 mechanizmy SDK mieszkaja w `aiplatform.copilot`.
@@ -104,13 +104,10 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
 - `aiplatform.copilot.runtime.options` - platformowy katalog modeli Copilota
   oraz neutralne DTO opcji modeli mapowane przez fasade `api/aioptions`,
 - `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
-  execution gateway i neutralny port metryk execution,
-- `aiplatform.copilot.runtime.telemetry` - neutralny port telemetry sesji:
-  preparation metrics, response state, quality report i usage snapshot,
-- `aiplatform.copilot.runtime.telemetry/session` - platformowa implementacja
-  metryk preparation/execution/tools, summary log i budget telemetry,
+  execution gateway oraz `CopilotExecutionResult` z content + user-visible
+  usage,
 - `aiplatform.copilot.runtime.quality` - neutralny payload raportu jakosci
-  odpowiedzi uzywany przez telemetryke,
+  odpowiedzi,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
   scope jako neutralna mechanika platformy,
 - `aiplatform.copilot.tools/CopilotSdkToolFactory` - rejestracja Spring tools
@@ -121,10 +118,9 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
   invocation,
 - `aiplatform.copilot.tools/policy` - neutralne policy contracts, kontrolowany
   rejection i session validation,
-- `aiplatform.copilot.tools/policy/budget` - neutralna decyzja budzetu i
-  kontrakt listenera telemetryki budzetu,
+- `aiplatform.copilot.tools/policy/budget` - neutralna decyzja budzetu,
+  session-bound state i registry,
 - `aiplatform.copilot.tools/logging` - listener logujacy invocation,
-- `aiplatform.copilot.tools/telemetry` - neutralna klasyfikacja tool invocation,
 - `aiplatform.copilot.tools/description` - neutralny kontrakt customizacji
   opisow tools,
 - `aiplatform.copilot.tools/evidence` - session-bound store publikujacy

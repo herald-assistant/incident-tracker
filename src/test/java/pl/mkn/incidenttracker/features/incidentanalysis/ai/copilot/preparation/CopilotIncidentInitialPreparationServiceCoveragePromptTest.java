@@ -23,8 +23,6 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 
@@ -39,8 +37,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
-import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.metricsLogger;
-import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
 
@@ -72,10 +68,6 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
                 ),
                 new CopilotRunPreparationService(
                         new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
-                ),
-                sessionTelemetry(
-                        new CopilotSessionMetricsRegistry(new CopilotMetricsProperties()),
-                        metricsLogger(objectMapper)
                 )
         );
 

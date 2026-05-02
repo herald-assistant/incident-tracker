@@ -102,14 +102,13 @@ Przyklady guidance:
 
 `CopilotToolBudgetPolicy` w `aiplatform.copilot.tools.policy.budget` pilnuje
 limitow na sesje jako platformowy `CopilotToolInvocationPolicy`. Domyslnie
-dziala w trybie `soft`, czyli ostrzega i metrykuje, ale nie blokuje. Tryb
+dziala w trybie `soft`, czyli ostrzega w logach, ale nie blokuje. Tryb
 `hard` rzuca kontrolowany `CopilotToolInvocationRejectedException`; handler
 zamienia go na wynik `denied_by_tool_budget` dla SDK.
 
-Sama policy nie zapisuje juz metryk przez `CopilotSessionMetricsRegistry`.
-Publikuje neutralne decyzje przez `CopilotToolBudgetTelemetry`, a adapter
-`CopilotToolBudgetMetricsListener` w
-`aiplatform.copilot.runtime.telemetry.session` mapuje je na metryki analizy.
+Policy utrzymuje session-bound state tylko na czas sesji Copilota. Ten state
+jest guardrailem runtime i logiem operacyjnym, nie osobnym payloadem widocznym
+w UI.
 
 Limity obejmuja:
 
@@ -143,14 +142,14 @@ Wykonanie toola jest w
 Walidacje session id robi `CopilotToolSessionValidationPolicy` w
 `aiplatform.copilot.tools.policy.session`, przed publikacja eventu `Started`.
 
-Logowanie, telemetryka i capture evidence sa listenerami tych eventow.
+Logowanie i capture evidence sa listenerami tych eventow.
 Dzieki temu definicja i invocation toola zostaja czyste, a incident analysis ma
 wlasny pakiet `features.incidentanalysis.ai.copilot.tools` odpowiedzialny za
 interpretacje wynikow GitLab/DB dla operator-facing evidence.
 
 `CopilotToolInvocationEventPublisher` izoluje bledy listenerow. Awaria
-logowania, metryk albo capture evidence nie powinna zamieniac poprawnego
-wyniku toola w blad SDK.
+logowania albo capture evidence nie powinna zamieniac poprawnego wyniku toola
+w blad SDK.
 
 Blad callbacka pozostaje failed future dla SDK. Handler nie ukrywa takiego
 bledu jako pustego wyniku.
@@ -197,8 +196,8 @@ konkretnej capability w `tools.<capability>`.
   odpowiedniego listenera i mappera w `tools.<capability>`.
 - Jesli tool potrzebuje blokady, limitu albo walidacji, dodaj
   `CopilotToolInvocationPolicy`, zamiast dopisywac warunek do handlera.
-- Jesli tool potrzebuje tylko logowania albo telemetryki, subskrybuj eventy
-  invocation, zamiast zmieniac factory lub handler.
+- Jesli tool potrzebuje tylko logowania, subskrybuj eventy invocation, zamiast
+  zmieniac factory lub handler.
 - Nie eksportuj DTO adapterow jako publicznego kontraktu AI.
 - Nie zmieniaj publicznego scope'u analizy: `/analysis/jobs` przyjmuje tylko
   `correlationId` oraz generyczne preferencje AI (`model`, `reasoningEffort`),

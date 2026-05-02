@@ -43,7 +43,7 @@ Heurystyki sa dozwolone tylko jako:
 - ocena coverage i luk evidence,
 - polityka dostepu do tools,
 - walidacja shape/jakosci odpowiedzi AI,
-- telemetryka i audyt.
+- logowanie i audyt evidence widoczny dla operatora.
 
 Heurystyki nie powinny zastapic modelu w budowaniu diagnozy biznesowej.
 
@@ -185,8 +185,8 @@ JSON niesie tez pola pomocnicze: `rationale`, `affectedProcess`,
 - `confidence=high` przy slabym evidence,
 - rationale bez rozdzielenia faktow, hipotez i ograniczen.
 
-Domyslny tryb to `REPORT_ONLY`. Findings ida do logow/telemetryki, ale nie
-zmieniaja runtime result.
+Domyslny tryb to `REPORT_ONLY`. Findings ida do logow, ale nie zmieniaja
+runtime result ani odpowiedzi zwracanej do uzytkownika.
 
 ## 12. Tool policy jest coverage-aware
 
@@ -229,16 +229,15 @@ przed i po wywolaniu callbacka. Handler nie zna szczegolow budzetu ani
 payloadu odmowy.
 
 Domyslnie `analysis.ai.copilot.tool-budget.mode=soft`, czyli przekroczenia sa
-logowane i trafiaja do telemetryki, ale tool call nie jest blokowany. Tryb
+logowane w backendzie, ale tool call nie jest blokowany. Tryb
 `hard` zwraca kontrolowany wynik `denied_by_tool_budget`, zamiast zabijac cala
 sesje wyjatkiem. Technicznie `CopilotToolBudgetPolicy` rzuca kontrolowany
 `CopilotToolInvocationRejectedException`, a handler zamienia go na wynik dla
 SDK i event terminalny `REJECTED`.
 
-Budget policy mieszka w `aiplatform.copilot.tools.policy.budget`, a metryki sa
-odpiete przez platformowy `CopilotToolBudgetTelemetry` i adapter
-`CopilotToolBudgetMetricsListener`. Walidacja session id jest takim samym
-mechanizmem policy w
+Budget policy mieszka w `aiplatform.copilot.tools.policy.budget` i utrzymuje
+session-bound state tylko na czas sesji Copilota. Walidacja session id jest
+takim samym mechanizmem policy w
 `aiplatform.copilot.tools.policy.session`, dzieki czemu handler nie ma
 osobnych warunkow dla konkretnych regul runtime.
 
@@ -344,32 +343,28 @@ Event lifecycle:
 4. policy after-invocation tylko po udanym callbacku,
 5. terminalny `Finished(COMPLETED|REJECTED|FAILED)`.
 
-Side-effecty sa subskrybowane przez dedykowane listenery: telemetry/logging,
+Side-effecty sa subskrybowane przez dedykowane listenery: logging,
 GitLab evidence capture i Database evidence capture. Publikator eventow izoluje
 bledy listenerow, zeby awaria audytu albo logowania nie zmieniala wyniku toola.
 `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` zarzadza
 lifecycle sesji i publikacja zaktualizowanych sekcji, ale szczegoly mapowania
 GitLab/DB pozostaja w odpowiednich pakietach tool capability.
 
-## 17. Telemetry jest pierwsza warstwa optymalizacji
+## 17. Zostaje tylko usage widoczny dla uzytkownika
 
-Copilot zbiera metryki per analiza/sesja:
+Na teraz nie utrzymujemy osobnej, niewidocznej dla operatora telemetryki
+sesji Copilota. Runtime agreguje jedynie usage z eventow SDK
+`assistant.usage` i `session.usage_info` do neutralnego
+`shared.ai.AnalysisAiUsage`, bo ten kontrakt jest pokazany w job state/UI.
 
-- liczby sekcji/items/artifacts,
-- rozmiary artifacts i promptu,
-- token usage z eventow SDK `assistant.usage` oraz ostatni snapshot okna
-  kontekstu z `session.usage_info`,
-- duration preparation/client/session/sendAndWait/total,
-- liczby tool calls wedlug grup,
-- liczniki drogich tools,
-- returned characters,
-- parser/fallback/structured response,
-- detected problem/confidence,
-- quality findings,
-- budget warnings/denials.
+Tool evidence pobrane przez model nadal jest czescia audytu uzytkownika:
+GitLab/DB capture publikuje `toolEvidenceSections`, a UI pokazuje je przy
+analizie. Budzet tools pozostaje backendowym guardrailem i loguje
+przekroczenia, ale jego liczniki nie sa osobnym feature'em telemetrycznym.
 
-Celem jest porownywanie trafnosci, kosztu i latency przed wymuszaniem
-kolejnych ograniczen.
+Jesli metryki optymalizacyjne wroca, powinny byc zaprojektowane jako jawny
+productized element: z celem widocznym dla zespolu/operacji, testami,
+dokumentacja i decyzja, gdzie uzytkownik lub operator ma do nich dostep.
 
 ## 18. Raw SQL jest oddzielnym ryzykiem
 
@@ -377,8 +372,8 @@ kolejnych ograniczen.
 Domyslnie tool policy go nie wlacza, a budzet ma osobny limit
 `max-db-raw-sql-calls=0`.
 
-Zmiana tej decyzji musi byc jawna i powinna obejmowac properties, testy,
-metryki i audyt wyniku.
+Zmiana tej decyzji musi byc jawna i powinna obejmowac properties, testy oraz
+audyt wyniku widoczny dla operatora.
 
 ## 19. Frontend/job API nie powinny wymagac wiedzy o SDK
 
@@ -439,7 +434,7 @@ Konsekwencje:
 
 Kolejnosc prac:
 
-1. telemetry i baseline,
+1. user-visible usage i baseline jakosci wyniku,
 2. JSON response contract,
 3. quality gate,
 4. coverage-aware tool policy,
@@ -456,8 +451,8 @@ multi-stage flow, routing modeli albo alternatywne delivery mode artefaktow.
 
 Docelowy `aiplatform.copilot` nie jest wlascicielem analizy incydentu. To
 warstwa, ktora zna Copilot SDK, lifecycle sesji, `SessionConfig`, allowliste
-tools, hidden context jako mechanizm, invocation handler, policies, telemetryke
-i techniczne eventy.
+tools, hidden context jako mechanizm, invocation handler, policies i
+techniczne eventy.
 
 Feature ma przekazac platformie gotowa konfiguracje uruchomienia, np.:
 

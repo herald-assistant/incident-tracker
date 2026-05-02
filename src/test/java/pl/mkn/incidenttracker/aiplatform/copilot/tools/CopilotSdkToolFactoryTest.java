@@ -11,13 +11,9 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
 
 import java.util.List;
@@ -347,9 +343,7 @@ class CopilotSdkToolFactoryTest {
         return toolFactory(
                 providers,
                 objectMapper,
-                toolEvidenceSessionStore,
-                new CopilotSessionMetricsRegistry(new CopilotMetricsProperties()),
-                new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper)
+                toolEvidenceSessionStore
         );
     }
 

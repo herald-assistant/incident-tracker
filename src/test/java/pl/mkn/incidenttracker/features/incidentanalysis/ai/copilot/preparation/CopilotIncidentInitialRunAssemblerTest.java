@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 class CopilotIncidentInitialRunAssemblerTest {
 
     @Test
-    void shouldAssembleRunRequestAndMetricsSnapshotForInitialAnalysis() {
+    void shouldAssembleRunRequestForInitialAnalysis() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var toolSessionContextFactory = mock(CopilotIncidentToolSessionContextFactory.class);
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
@@ -76,14 +76,11 @@ class CopilotIncidentInitialRunAssemblerTest {
 
         var assembly = assembler.assemble(request);
         var runRequest = assembly.runRequest();
-        var metrics = assembly.metrics();
 
         assertEquals("corr-123", runRequest.runReference());
         assertEquals("Initial prompt", runRequest.prompt());
         assertSame(sessionConfigRequest, runRequest.sessionConfigRequest());
         assertEquals(Map.of("01-incident-digest.md", "# Digest"), runRequest.artifactContents());
-        assertSame(toolSessionContext, metrics.toolSessionContext());
-        assertEquals(artifacts, metrics.renderedArtifacts());
         verify(sessionConfigRequestFactory).create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options);
         verify(promptRenderer).render(request, toolAccessPolicy, artifacts);
     }

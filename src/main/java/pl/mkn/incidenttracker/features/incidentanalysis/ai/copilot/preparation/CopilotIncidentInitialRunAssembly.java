@@ -4,12 +4,10 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
 import java.util.Objects;
 
 public record CopilotIncidentInitialRunAssembly(
-        CopilotRunRequest runRequest,
-        CopilotInitialAnalysisPreparationMetrics metrics
+        CopilotRunRequest runRequest
 ) {
 
     public CopilotIncidentInitialRunAssembly {
         Objects.requireNonNull(runRequest, "runRequest must not be null");
-        Objects.requireNonNull(metrics, "metrics must not be null");
     }
 }

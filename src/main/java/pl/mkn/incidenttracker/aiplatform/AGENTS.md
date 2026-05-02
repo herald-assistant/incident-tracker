@@ -17,16 +17,10 @@ Obecnie obejmuje:
   dla `CopilotClient.listModels()`.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
-  event logging, controlled invocation exception i neutralny port metryk
-  execution.
-- `copilot/runtime/telemetry/`
-  neutralny port telemetry sesji Copilota: preparation metrics, response state,
-  quality report i usage snapshot.
-- `copilot/runtime/telemetry/session/`
-  platformowa implementacja telemetry sesji: registry, summary/tool logging,
-  usage aggregation, budget metrics listener i adapter `CopilotSessionTelemetry`.
+  event logging, controlled invocation exception oraz `CopilotExecutionResult`
+  z trescia odpowiedzi i user-visible `AnalysisAiUsage`.
 - `copilot/runtime/quality/`
-  neutralny payload raportu jakosci odpowiedzi dla telemetryki. Reguly oceny
+  neutralny payload raportu jakosci odpowiedzi. Reguly oceny
   odpowiedzi konkretnego feature'a nie mieszkaja w platformie.
 - `copilot/tools/context/`
   platformowa mechanika budowania hidden `ToolContext` oraz neutralny
@@ -44,10 +38,7 @@ Obecnie obejmuje:
   validation.
 - `copilot/tools/policy/budget/`
   platformowa budget policy, state, registry, properties oraz neutralny
-  kontrakt decyzji i telemetry listenera.
-- `copilot/tools/telemetry/`
-  neutralna klasyfikacja/metryki pojedynczego tool invocation uzywane przez
-  telemetryke i budzety.
+  kontrakt decyzji.
 - `copilot/tools/logging/`
   operacyjny listener logujacy request/result preview invocation.
 - `copilot/tools/description/`
@@ -73,9 +64,10 @@ Nie obejmuje:
   SDK/technicznych.
 - Feature ma dostarczac prompt, skill resources, available tools, hidden
   context, evidence sink i response handling jako parametry uruchomienia.
-- Feature moze uzywac `copilot/runtime/telemetry/CopilotSessionTelemetry`,
-  ale platformowy port i jego implementacja nie moga importowac DTO odpowiedzi
-  UI ani klas telemetry konkretnego feature'a.
+- Platforma nie utrzymuje obecnie niewidocznej dla uzytkownika telemetryki
+  sesji. Zdarzenia SDK usage sa agregowane tylko do `AnalysisAiUsage`, ktore
+  trafia do job state/UI. Nowa telemetryka moze wrocic dopiero jako jawny,
+  productized element z widocznym celem, testami i dokumentacja.
 - Platforma nie moze zakladac `correlationId`, GitLaba, Database ani
   semantyki incident analysis jako stalego wymogu runtime.
 - Jesli kiedys wydzielasz kolejny runtime element z dawnego obszaru Copilota,

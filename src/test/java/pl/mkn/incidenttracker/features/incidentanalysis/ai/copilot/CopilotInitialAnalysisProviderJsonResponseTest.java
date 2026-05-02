@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.SessionConfig;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
@@ -13,10 +14,6 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.C
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.CopilotInitialAnalysisProvider;
 
 import java.util.List;
 
@@ -24,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotInitialAnalysisProviderJsonResponseTest {
 
@@ -41,7 +37,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
         when(preparationService.prepare(request)).thenReturn(new CopilotInitialAnalysisPreparation(request, preparedRequest));
         when(preparedRequest.prompt()).thenReturn("Prepared JSON prompt");
         when(preparedRequest.sessionConfig()).thenReturn(new SessionConfig().setSessionId("analysis-json"));
-        when(executionGateway.execute(same(preparedRequest))).thenReturn("""
+        when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "summary": "Timeout w `CatalogClient`.",
@@ -55,7 +51,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
                   "evidenceReferences": [],
                   "visibilityLimits": []
                 }
-                """);
+                """));
 
         var response = analyze(provider, request);
 
@@ -74,15 +70,16 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
             CopilotIncidentInitialPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
-        var metricsProperties = new CopilotMetricsProperties();
-        var registry = new CopilotSessionMetricsRegistry(metricsProperties);
         return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
-                new CopilotResponseQualityGate(new CopilotResponseQualityProperties()),
-                sessionTelemetry(registry, new CopilotMetricsLogger(metricsProperties, objectMapper))
+                new CopilotResponseQualityGate(new CopilotResponseQualityProperties())
         );
+    }
+
+    private CopilotExecutionResult executionResult(String content) {
+        return new CopilotExecutionResult(content, null);
     }
 
     private InitialAnalysisResponse analyze(CopilotInitialAnalysisProvider provider, InitialAnalysisRequest request) {

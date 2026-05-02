@@ -25,29 +25,23 @@ public class CopilotSdkExecutionGateway {
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
-    private final CopilotSessionExecutionMetricsRecorder metricsRecorder;
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
 
     @Autowired
     public CopilotSdkExecutionGateway(
             CopilotSdkProperties properties,
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotSessionExecutionMetricsRecorder metricsRecorder,
             CopilotToolBudgetRegistry toolBudgetRegistry
     ) {
         this.properties = properties;
         this.toolEvidenceSessionStore = toolEvidenceSessionStore;
-        this.metricsRecorder = metricsRecorder;
         this.toolBudgetRegistry = toolBudgetRegistry;
     }
 
-    public String execute(CopilotPreparedSession preparedSession) {
+    public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
         var overallStart = System.nanoTime();
         var runReference = preparedSession.runReference();
-        var copilotSessionId = preparedSession.sessionConfig().getSessionId();
-        long clientStartDurationMs = 0L;
-        long createSessionDurationMs = 0L;
-        long sendAndWaitDurationMs = 0L;
+        var usageAccumulator = new CopilotUsageAccumulator();
 
         try {
             try (var client = new CopilotClient(preparedSession.clientOptions())) {
@@ -56,15 +50,13 @@ public class CopilotSdkExecutionGateway {
                 var clientStart = System.nanoTime();
                 client.start().join();
                 logClientState("after-start", client.getState(), runReference);
-                clientStartDurationMs = nanosToMillis(clientStart);
-                logDuration("client-start", runReference, clientStartDurationMs);
+                logDuration("client-start", runReference, nanosToMillis(clientStart));
 
                 try {
                     var createSessionStart = System.nanoTime();
 
                     try (var session = client.createSession(preparedSession.sessionConfig()).join()) {
-                        createSessionDurationMs = nanosToMillis(createSessionStart);
-                        logDuration("create-session", runReference, createSessionDurationMs);
+                        logDuration("create-session", runReference, nanosToMillis(createSessionStart));
                         var sessionSummary = newSessionLogSummary(runReference);
 
                         toolEvidenceSessionStore.registerSession(
@@ -73,7 +65,7 @@ public class CopilotSdkExecutionGateway {
                         );
                         toolBudgetRegistry.registerSession(session.getSessionId());
 
-                        session.on(event -> handleSessionEvent(event, session, sessionSummary));
+                        session.on(event -> handleSessionEvent(event, session, sessionSummary, usageAccumulator));
 
                         try {
                             var sendAndWaitStart = System.nanoTime();
@@ -85,15 +77,14 @@ public class CopilotSdkExecutionGateway {
                             );
                             var response = session.sendAndWait(preparedSession.messageOptions(), timeoutMs).join();
 
-                            sendAndWaitDurationMs = nanosToMillis(sendAndWaitStart);
-                            logDuration("send-and-wait", runReference, sendAndWaitDurationMs);
+                            logDuration("send-and-wait", runReference, nanosToMillis(sendAndWaitStart));
                             var content = response.getData() != null ? response.getData().content() : null;
                             if (content == null || content.isBlank()) {
                                 throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
                             }
 
                             logSessionSummary(session.getSessionId(), sessionSummary, nanosToMillis(overallStart));
-                            return content;
+                            return new CopilotExecutionResult(content, usageAccumulator.snapshot());
                         } finally {
                             toolEvidenceSessionStore.unregisterSession(session.getSessionId());
                             toolBudgetRegistry.unregisterSession(session.getSessionId()).ifPresent(snapshot -> log.info(
@@ -129,14 +120,6 @@ public class CopilotSdkExecutionGateway {
                     exception
             );
             throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception);
-        } finally {
-            metricsRecorder.recordExecutionDurations(
-                    copilotSessionId,
-                    clientStartDurationMs,
-                    createSessionDurationMs,
-                    sendAndWaitDurationMs,
-                    nanosToMillis(overallStart)
-            );
         }
     }
 
@@ -154,21 +137,21 @@ public class CopilotSdkExecutionGateway {
     private void handleSessionEvent(
             AbstractSessionEvent event,
             CopilotSession session,
-            SessionLogSummary sessionSummary
+            SessionLogSummary sessionSummary,
+            CopilotUsageAccumulator usageAccumulator
     ) {
         logSessionEvent(event, session, sessionSummary);
-        recordUsageEvent(event, session.getSessionId());
+        recordUsageEvent(event, usageAccumulator);
     }
 
-    private void recordUsageEvent(AbstractSessionEvent event, String sessionId) {
+    private void recordUsageEvent(AbstractSessionEvent event, CopilotUsageAccumulator usageAccumulator) {
         if (event instanceof AssistantUsageEvent assistantUsageEvent) {
             var data = assistantUsageEvent.getData();
             if (data == null) {
                 return;
             }
 
-            metricsRecorder.recordAssistantUsage(
-                    sessionId,
+            usageAccumulator.recordAssistantUsage(
                     data.model(),
                     data.inputTokens(),
                     data.outputTokens(),
@@ -186,8 +169,7 @@ public class CopilotSdkExecutionGateway {
                 return;
             }
 
-            metricsRecorder.recordSessionUsageInfo(
-                    sessionId,
+            usageAccumulator.recordSessionUsageInfo(
                     data.tokenLimit(),
                     data.currentTokens(),
                     data.messagesLength()

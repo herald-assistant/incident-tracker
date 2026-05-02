@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
@@ -15,10 +16,6 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.C
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.CopilotInitialAnalysisProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
@@ -34,7 +31,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotInitialAnalysisProviderPreparedFlowTest {
 
@@ -57,7 +53,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
 
         when(executionGateway.execute(same(preparedSession)))
-                .thenReturn("""
+                .thenReturn(executionResult("""
                         {
                           "detectedProblem": "PREPARED_RESPONSE",
                           "summary": "Prepared request executed.",
@@ -71,7 +67,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
                           "evidenceReferences": [],
                           "visibilityLimits": []
                         }
-                        """);
+                        """));
 
         var response = provider.analyze(preparedAnalysis, AnalysisAiToolEvidenceListener.NO_OP);
 
@@ -93,7 +89,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis);
         when(preparedSession.prompt()).thenReturn("Owned prompt body");
         when(executionGateway.execute(same(preparedSession)))
-                .thenReturn(structuredResponse("OWNED_RESPONSE"));
+                .thenReturn(executionResult(structuredResponse("OWNED_RESPONSE")));
 
         InitialAnalysisResponse response;
         try (var prepared = provider.prepare(request)) {
@@ -127,7 +123,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
                 .thenAnswer(invocation -> {
                     var session = (CopilotPreparedSession) invocation.getArgument(0);
                     session.evidenceSink().accept(new AnalysisEvidenceSection("test", "tool-results", List.of()));
-                    return structuredResponse("CALLER_OWNED_RESPONSE");
+                    return executionResult(structuredResponse("CALLER_OWNED_RESPONSE"));
                 });
 
         var response = provider.analyze(preparedAnalysis, listener);
@@ -145,15 +141,16 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
             CopilotIncidentInitialPreparationService preparationService,
             CopilotSdkExecutionGateway executionGateway
     ) {
-        var metricsProperties = new CopilotMetricsProperties();
-        var registry = new CopilotSessionMetricsRegistry(metricsProperties);
         return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
                 new CopilotResponseParser(objectMapper),
-                new CopilotResponseQualityGate(new CopilotResponseQualityProperties()),
-                sessionTelemetry(registry, new CopilotMetricsLogger(metricsProperties, objectMapper))
+                new CopilotResponseQualityGate(new CopilotResponseQualityProperties())
         );
+    }
+
+    private CopilotExecutionResult executionResult(String content) {
+        return new CopilotExecutionResult(content, null);
     }
 
     private String structuredResponse(String detectedProblem) {

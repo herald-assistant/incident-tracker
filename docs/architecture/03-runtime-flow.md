@@ -318,7 +318,6 @@ Side-effecty tool invocation sa subskrybowane przez Spring event listeners:
 
 - `aiplatform.copilot.tools.logging.CopilotToolInvocationLoggingListener`
   loguje request/result preview,
-- `telemetry.CopilotToolInvocationTelemetryListener` zapisuje metryki tooli,
 - `tools.gitlab.GitLabToolEvidenceCaptureListener` mapuje wyniki GitLaba do
   tool evidence,
 - `tools.database.DatabaseToolEvidenceCaptureListener` mapuje wyniki DB do
@@ -349,8 +348,8 @@ Budzet jest session-bound:
    terminalny event `Finished(COMPLETED)`,
 6. gateway usuwa state w `finally`.
 
-Domyslny tryb to `soft`: przekroczenia sa logowane i metrykowane, ale nie
-blokuja. `hard` zwraca:
+Domyslny tryb to `soft`: przekroczenia sa logowane, ale nie blokuja. `hard`
+zwraca:
 
 ```json
 {
@@ -362,8 +361,7 @@ blokuja. `hard` zwraca:
 ```
 
 `Finished(REJECTED)` jest traktowany jako odmowa przed faktycznym wykonaniem
-toola. Telemetry listener nie liczy takiego zdarzenia jako executed tool call;
-budget state nadal zachowuje informacje o denialu.
+toola. Budget state nadal zachowuje informacje o denialu do konca sesji.
 
 ## 11. Tool evidence capture
 
@@ -434,35 +432,27 @@ gdy brakuje `detectedProblem`.
 
 Po parsingu provider uruchamia `CopilotResponseQualityGate`.
 
-W trybie domyslnym `REPORT_ONLY` findings sa logowane i podpinane pod
-telemetryke, ale nie zmieniaja odpowiedzi zwracanej do uzytkownika.
+W trybie domyslnym `REPORT_ONLY` findings sa logowane, ale nie zmieniaja
+odpowiedzi zwracanej do uzytkownika.
 
 Quality gate ocenia m.in. glebokosc `affectedFunction`, konkretnosc
 `recommendedAction`, ugruntowanie ownership/process/context, spojnosci
 confidence oraz strukture rationale.
 
-## 14. Telemetry
+## 14. User-visible usage
 
-Metryki sesji sa trzymane w `CopilotSessionMetricsRegistry` i logowane przez
-`CopilotMetricsLogger`.
+Nie ma obecnie osobnego registry niewidocznej dla operatora telemetryki sesji.
+Execution gateway agreguje tylko zdarzenia SDK potrzebne do publicznego
+`shared.ai.AnalysisAiUsage`:
 
-Zbierane sa:
-
-- counts evidence sections/items/artifacts,
-- artifact total characters,
-- prompt characters,
-- token usage z eventow `assistant.usage`:
-  input/output/cache read/cache write, liczba wywolan API, model i czas API,
+- token usage z eventow `assistant.usage`: input/output/cache read/cache write,
+  liczba wywolan API, model, koszt i czas API,
 - ostatni snapshot `session.usage_info`, czyli context token limit/current
-  tokens/messages length,
-- preparation/client/create session/sendAndWait/total durations,
-- tool calls total i wedlug grup,
-- drogie GitLab/DB tool counters,
-- returned characters,
-- structured/fallback/parser state,
-- detected problem/confidence,
-- quality findings,
-- budget warnings i denials.
+  tokens/messages length.
+
+Ten usage trafia do finalnego kroku `AI_ANALYSIS` i job state, a UI pokazuje go
+jako zuzycie tokenow/kosztu. Dane, ktorych operator nie widzi, nie sa obecnie
+utrzymywane jako osobny feature runtime.
 
 ## 15. Job state i UI
 
@@ -503,10 +493,6 @@ analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
 analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
-
-analysis.ai.copilot.metrics.enabled=true
-analysis.ai.copilot.metrics.log-summary=true
-analysis.ai.copilot.metrics.log-tool-events=true
 
 analysis.ai.copilot.quality-gate.enabled=true
 analysis.ai.copilot.quality-gate.mode=report-only

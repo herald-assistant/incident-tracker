@@ -30,9 +30,6 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunPreparationSe
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
@@ -52,7 +49,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
-import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.sessionTelemetry;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
@@ -69,9 +65,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                             .build()
             ),
             objectMapper,
-            toolEvidenceSessionStore(objectMapper),
-            metricsRegistry(),
-            metricsLogger()
+            toolEvidenceSessionStore(objectMapper)
     );
 
     @Test
@@ -263,8 +257,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
-                runPreparationService(properties),
-                sessionTelemetry(metricsRegistry(), metricsLogger())
+                runPreparationService(properties)
         );
 
         try (var prepared = service.prepare(request)) {
@@ -316,8 +309,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
-                runPreparationService(properties),
-                sessionTelemetry(metricsRegistry(), metricsLogger())
+                runPreparationService(properties)
         );
 
         try (var prepared = service.prepare(request)) {
@@ -357,8 +349,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
-                runPreparationService(properties),
-                sessionTelemetry(metricsRegistry(), metricsLogger())
+                runPreparationService(properties)
         );
 
         try (var prepared = service.prepare(request)) {
@@ -485,8 +476,7 @@ class CopilotIncidentInitialPreparationServiceTest {
     private CopilotIncidentInitialPreparationService createService(CopilotSdkProperties properties) {
         return new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, toolFactory),
-                runPreparationService(properties),
-                sessionTelemetry(metricsRegistry(), metricsLogger())
+                runPreparationService(properties)
         );
     }
 
@@ -518,15 +508,6 @@ class CopilotIncidentInitialPreparationServiceTest {
                 new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
         );
     }
-
-    private CopilotSessionMetricsRegistry metricsRegistry() {
-        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
-    }
-
-    private CopilotMetricsLogger metricsLogger() {
-        return new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper);
-    }
-
     private CopilotSdkProperties baseProperties() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\Users\\mknie\\IdeaProjects\\incidenttracker");

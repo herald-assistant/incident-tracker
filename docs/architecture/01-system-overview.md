@@ -128,7 +128,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Follow-up chat po zakonczonej analizie incydentu.
 - `pl.mkn.incidenttracker.shared.ai`
   Neutralne preferencje wykonania AI oraz kontrakt token/cost/usage dla flow,
-  job UI, telemetry i feature'ow.
+  job UI i feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -153,18 +153,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `api.aioptions` jest fasada mapujaca ten katalog na endpoint
   `GET /analysis/ai/options`.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
-  Uruchamianie klienta Copilota, sesji, lifecycle logging oraz neutralny port
-  metryk execution bez zaleznosci od konkretnego feature'a.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry`
-  Neutralny port telemetry sesji Copilota: preparation metrics, response state,
-  quality report i usage snapshot bez zaleznosci od incident feature'a ani
-  obecnego kontraktu UI usage.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session`
-  Platformowa implementacja telemetry sesji Copilota: registry metryk,
-  summary/tool logging, usage events SDK, budget metrics listener i adapter
-  `CopilotSessionTelemetry`.
+  Uruchamianie klienta Copilota, sesji, lifecycle logging oraz
+  `CopilotExecutionResult` z trescia odpowiedzi i user-visible
+  `AnalysisAiUsage`.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality`
-  Neutralny payload raportu jakosci odpowiedzi uzywany przez telemetryke; same
+  Neutralny payload raportu jakosci odpowiedzi; same
   reguly quality gate pozostaja po stronie feature'a.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
@@ -181,12 +174,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   validation.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget`
   Platformowa budget policy, state, registry, properties oraz neutralny
-  kontrakt decyzji i telemetry listenera.
+  kontrakt decyzji.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.logging`
   Subskrypcja eventow invocation do operacyjnego logowania request/result.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.telemetry`
-  Neutralna klasyfikacja pojedynczego tool invocation dla telemetryki i
-  budgetow.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.description`
   Neutralny kontrakt customizacji opisow tools, wykonywany przez runtime
   factory bez wiedzy o semantyce konkretnego feature'a.

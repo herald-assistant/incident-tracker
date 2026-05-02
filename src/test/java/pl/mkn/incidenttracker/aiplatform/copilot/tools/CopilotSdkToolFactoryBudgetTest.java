@@ -6,12 +6,6 @@ import com.github.copilot.sdk.json.ToolInvocation;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.CopilotSessionPreparationMetrics;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotToolBudgetMetricsListener;
-import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.BudgetMode;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
@@ -38,10 +32,9 @@ class CopilotSdkToolFactoryBudgetTest {
         var properties = new CopilotToolBudgetProperties();
         properties.setMode(BudgetMode.HARD);
         properties.setMaxDbRawSqlCalls(0);
-        var metricsRegistry = metricsRegistry();
         var budgetRegistry = new CopilotToolBudgetRegistry(properties);
-        var factory = factory(tools, budgetRegistry, metricsRegistry);
-        var context = registerSession(budgetRegistry, metricsRegistry);
+        var factory = factory(tools, budgetRegistry);
+        var context = registerSession(budgetRegistry);
         var tool = toolByName(factory, context, "db_execute_readonly_sql");
 
         var result = invoke(tool, context, "tool-db-1");
@@ -54,10 +47,10 @@ class CopilotSdkToolFactoryBudgetTest {
         assertTrue(payload.get("reason").toString().contains("Database raw SQL tool call budget exceeded"));
         assertEquals(0, tools.rawSqlCalls.get());
 
-        var metrics = metricsRegistry.snapshot(context.copilotSessionId()).orElseThrow();
-        assertEquals(1, metrics.budgetRawSqlAttempts());
-        assertEquals(1, metrics.budgetDeniedToolCalls());
-        assertEquals(0, metrics.databaseRawSqlCalls());
+        var snapshot = budgetRegistry.state(context.copilotSessionId()).orElseThrow().snapshot();
+        assertEquals(1, snapshot.rawSqlAttempts());
+        assertEquals(1, snapshot.deniedToolCalls());
+        assertEquals(0, snapshot.dbRawSqlCalls());
     }
 
     @Test
@@ -66,10 +59,9 @@ class CopilotSdkToolFactoryBudgetTest {
         var properties = new CopilotToolBudgetProperties();
         properties.setMode(BudgetMode.SOFT);
         properties.setMaxTotalCalls(0);
-        var metricsRegistry = metricsRegistry();
         var budgetRegistry = new CopilotToolBudgetRegistry(properties);
-        var factory = factory(tools, budgetRegistry, metricsRegistry);
-        var context = registerSession(budgetRegistry, metricsRegistry);
+        var factory = factory(tools, budgetRegistry);
+        var context = registerSession(budgetRegistry);
         var tool = toolByName(factory, context, "gitlab_read_repository_file");
 
         var result = invoke(tool, context, "tool-gitlab-1");
@@ -79,35 +71,26 @@ class CopilotSdkToolFactoryBudgetTest {
         var payload = (Map<String, Object>) result;
         assertEquals("ok", payload.get("status"));
         assertEquals(1, tools.gitLabReadFileCalls.get());
-        var metrics = metricsRegistry.snapshot(context.copilotSessionId()).orElseThrow();
-        assertTrue(metrics.budgetSoftLimitExceededCount() > 0);
-        assertEquals(1, metrics.gitLabReadFileCalls());
+        var snapshot = budgetRegistry.state(context.copilotSessionId()).orElseThrow().snapshot();
+        assertTrue(snapshot.softLimitExceededCount() > 0);
+        assertEquals(1, snapshot.gitLabReadFileCalls());
     }
 
     private CopilotSdkToolFactory factory(
             BudgetTestTools tools,
-            CopilotToolBudgetRegistry budgetRegistry,
-            CopilotSessionMetricsRegistry metricsRegistry
+            CopilotToolBudgetRegistry budgetRegistry
     ) {
-        var metricsProperties = new CopilotMetricsProperties();
-        metricsProperties.setLogToolEvents(false);
         return toolFactory(
                 List.of(MethodToolCallbackProvider.builder().toolObjects(tools).build()),
                 objectMapper,
                 toolEvidenceSessionStore(objectMapper),
-                metricsRegistry,
-                new CopilotMetricsLogger(metricsProperties, objectMapper),
                 new CopilotToolBudgetPolicy(
-                        budgetRegistry,
-                        List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
+                        budgetRegistry
                 )
         );
     }
 
-    private CopilotToolSessionContext registerSession(
-            CopilotToolBudgetRegistry budgetRegistry,
-            CopilotSessionMetricsRegistry metricsRegistry
-    ) {
+    private CopilotToolSessionContext registerSession(CopilotToolBudgetRegistry budgetRegistry) {
         var context = new CopilotToolSessionContext(
                 "run-1",
                 "analysis-run-1",
@@ -117,24 +100,7 @@ class CopilotSdkToolFactoryBudgetTest {
                 "sample/runtime"
         );
         budgetRegistry.registerSession(context.copilotSessionId());
-        metricsRegistry.recordPreparation(
-                new CopilotSessionPreparationMetrics(
-                        context.analysisRunId(),
-                        context.copilotSessionId(),
-                        context.correlationId(),
-                        0,
-                        0,
-                        0,
-                        0L,
-                        "prompt".length(),
-                        1L
-                )
-        );
         return context;
-    }
-
-    private CopilotSessionMetricsRegistry metricsRegistry() {
-        return new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
     }
 
     private ToolDefinition toolByName(

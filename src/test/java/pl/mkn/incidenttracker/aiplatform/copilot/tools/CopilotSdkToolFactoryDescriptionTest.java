@@ -6,10 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsLogger;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotMetricsProperties;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotSessionMetricsRegistry;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.telemetry.session.CopilotToolBudgetMetricsListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
 
@@ -26,18 +22,14 @@ class CopilotSdkToolFactoryDescriptionTest {
 
     @Test
     void shouldDecorateCopilotFacingToolDescriptions() {
-        var metricsRegistry = new CopilotSessionMetricsRegistry(new CopilotMetricsProperties());
         var factory = toolFactory(
                 List.of(gitLabToolProvider()),
                 objectMapper,
                 toolEvidenceSessionStore(objectMapper),
-                metricsRegistry,
-                new CopilotMetricsLogger(new CopilotMetricsProperties(), objectMapper),
                 new pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy(
                         new pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry(
                                 new pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties()
-                        ),
-                        List.of(new CopilotToolBudgetMetricsListener(metricsRegistry))
+                        )
                 )
         );
 

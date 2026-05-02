@@ -7,9 +7,6 @@ import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocat
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
-import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
-
-import java.util.List;
 
 @Slf4j
 @Component
@@ -17,7 +14,6 @@ import java.util.List;
 public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
 
     private final CopilotToolBudgetRegistry budgetRegistry;
-    private final List<CopilotToolBudgetTelemetry> telemetryListeners;
 
     @Override
     public void beforeInvocation(CopilotToolInvocationPolicyRequest request) {
@@ -40,13 +36,9 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
             String toolName,
             String argumentsJson
     ) {
-        if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
-            telemetryListeners.forEach(listener -> listener.onRawSqlAttempt(sessionId));
-        }
         var decision = budgetRegistry.state(sessionId)
                 .map(state -> state.beforeInvocation(toolName))
                 .orElseGet(() -> CopilotToolBudgetDecision.allowed(sessionId, toolName));
-        recordDecision(decision);
         if (decision.denied()) {
             log.warn(
                     "Copilot tool budget denied sessionId={} toolName={} reason={} arguments={}",
@@ -75,7 +67,6 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
         var decision = budgetRegistry.state(sessionId)
                 .map(state -> state.afterInvocation(toolName, rawResult))
                 .orElseGet(() -> CopilotToolBudgetDecision.allowed(sessionId, toolName));
-        recordDecision(decision);
         if (decision.softLimitExceeded()) {
             log.warn(
                     "Copilot tool budget post-call warning sessionId={} toolName={} warnings={} rawResultLength={}",
@@ -86,10 +77,6 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
             );
         }
         return decision;
-    }
-
-    private void recordDecision(CopilotToolBudgetDecision decision) {
-        telemetryListeners.forEach(listener -> listener.onDecision(decision));
     }
 
     private String abbreviate(String value, int maxLength) {
