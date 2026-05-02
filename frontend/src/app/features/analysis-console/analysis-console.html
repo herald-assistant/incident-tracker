@@ -21,6 +21,7 @@
           Evidence
         </a>
       </nav>
+      <div class="topbar-badge topbar-badge--auth">{{ authBadgeText() }}</div>
       <div class="topbar-badge">Analysis Console</div>
     </div>
   </header>
@@ -80,6 +81,31 @@
             </label>
           </div>
 
+          @if (githubAuthStatus()?.mode === 'GITHUB_APP') {
+            <div
+              class="github-auth-panel"
+              [class.github-auth-panel--connected]="githubAuthStatus()?.connected"
+            >
+              <div>
+                <p class="github-auth-panel__title">{{ authPanelTitle() }}</p>
+                <p class="github-auth-panel__description">{{ authPanelDescription() }}</p>
+              </div>
+              @if (githubAuthStatus()?.connected) {
+                <button class="secondary-button" type="button" (click)="logoutGithub()">
+                  Rozłącz
+                </button>
+              } @else {
+                <button class="primary-button" type="button" (click)="connectGithub()">
+                  {{ authActionLabel() }}
+                </button>
+              }
+            </div>
+          }
+
+          @if (githubAuthError()) {
+            <p class="form-error">{{ githubAuthError() }}</p>
+          }
+
           <div class="analysis-toolbar">
             <input
               id="correlationId"
@@ -97,7 +123,7 @@
               <button
                 class="primary-button"
                 type="submit"
-                [disabled]="isLoading()"
+                [disabled]="isLoading() || isAnalysisBlockedByAuth()"
                 [class.is-loading]="isLoading()"
                 [attr.aria-busy]="isLoading()"
               >
@@ -285,6 +311,11 @@
 
               @if (chatError()) {
                 <p class="form-error">{{ chatError() }}</p>
+              }
+              @if (chatNeedsGithubAuth()) {
+                <button class="secondary-button secondary-button--accent" type="button" (click)="connectGithub()">
+                  {{ authActionLabel() }}
+                </button>
               }
             </form>
           </section>

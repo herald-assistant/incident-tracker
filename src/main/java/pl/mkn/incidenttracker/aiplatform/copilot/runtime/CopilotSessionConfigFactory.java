@@ -8,34 +8,62 @@ import com.github.copilot.sdk.json.PreToolUseHookOutput;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.SessionHooks;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-@RequiredArgsConstructor
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class CopilotSessionConfigFactory {
 
     private final CopilotSdkProperties properties;
+    private final CopilotAccessTokenResolver accessTokenResolver;
 
-    public CopilotClientOptions clientOptions() {
+    public CopilotSessionConfigFactory(CopilotSdkProperties properties) {
+        this(
+                properties,
+                auth -> new pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessToken(
+                        testCompatibleToken(properties),
+                        null,
+                        null,
+                        false
+                )
+        );
+    }
+
+    private static String testCompatibleToken(CopilotSdkProperties properties) {
+        if (properties.getAuth() != null
+                && properties.getAuth().getLocal() != null
+                && StringUtils.hasText(properties.getAuth().getLocal().getGithubToken())) {
+            return properties.getAuth().getLocal().getGithubToken();
+        }
+        if (StringUtils.hasText(properties.getGithubToken())) {
+            return properties.getGithubToken();
+        }
+        return "test-token";
+    }
+
+    public CopilotClientOptions clientOptions(CopilotRunAuth auth) {
+        var accessToken = accessTokenResolver.resolve(auth);
         var clientOptions = new CopilotClientOptions()
-                .setUseLoggedInUser(true)
+                .setUseLoggedInUser(false)
+                .setGitHubToken(accessToken.value())
                 .setCwd(properties.getWorkingDirectory());
 
         if (properties.getCliPath() != null && !properties.getCliPath().isBlank()) {
             clientOptions.setCliPath(properties.getCliPath());
         }
 
-        if (properties.getGithubToken() != null && !properties.getGithubToken().isBlank()) {
-            clientOptions
-                    .setGitHubToken(properties.getGithubToken())
-                    .setUseLoggedInUser(false);
-        }
-
         return clientOptions;
+    }
+
+    public CopilotClientOptions clientOptions() {
+        return clientOptions(CopilotRunAuth.localToken());
     }
 
     public SessionConfig sessionConfig(CopilotSessionConfigRequest request) {

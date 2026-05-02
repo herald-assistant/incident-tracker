@@ -11,21 +11,24 @@ job flow.
 - jak prezentowany jest progres i evidence,
 - po co UI pokazuje prepared prompt i dane diagnostyczne,
 - jak wyglada drugi widok `/evidence`,
+- jak UI obsluguje auth Copilot SDK bez znajomosci tokenow,
 - jak dziala follow-up chat po zakonczonej analizie,
 - jak dziala import i eksport zakonczonej analizy.
 
 ## Model pracy operatora
 
-1. frontend pobiera katalog modeli z `GET /analysis/ai/options`,
-2. operator wpisuje `correlationId` i opcjonalnie wybiera model AI oraz
+1. frontend pobiera status auth z `GET /api/auth/github/status`,
+2. jesli auth jest connected, frontend pobiera katalog modeli z
+   `GET /analysis/ai/options`,
+3. operator wpisuje `correlationId` i opcjonalnie wybiera model AI oraz
    dostepny dla niego `reasoningEffort`,
-3. frontend startuje job,
-4. frontend polluje status,
-5. pokazuje overview, kroki evidence, prompt i finalny wynik,
-6. po `COMPLETED` operator moze wyslac follow-up message do AI,
-7. frontend polluje `chatMessages` w tym samym job snapshotcie,
-8. moze wyeksportowac zakonczony job do JSON albo zaimportowac go z pliku,
-9. w razie potrzeby operator uzywa tez widoku `GET /evidence`.
+4. frontend startuje job,
+5. frontend polluje status,
+6. pokazuje overview, kroki evidence, prompt i finalny wynik,
+7. po `COMPLETED` operator moze wyslac follow-up message do AI,
+8. frontend polluje `chatMessages` w tym samym job snapshotcie,
+9. moze wyeksportowac zakonczony job do JSON albo zaimportowac go z pliku,
+10. w razie potrzeby operator uzywa tez widoku `GET /evidence`.
 
 Aktualny frontend ma dwa route'y Angulara:
 
@@ -36,7 +39,14 @@ Aktualny frontend ma dwa route'y Angulara:
 
 - `AnalysisJobStateSnapshot` jest projekcja dla UI, nie nowy model domenowy,
 - lista modeli i effortow pochodzi z backendu, a frontend tylko renderuje
-  odpowiedz `GET /analysis/ai/options`,
+  odpowiedz `GET /analysis/ai/options`; frontend nie pobiera tego endpointu,
+  dopoki `GET /api/auth/github/status` nie zwroci connected,
+- frontend nie zna GitHub tokenow, OAuth code, refresh tokenow ani typow
+  Copilot SDK,
+- w `LOCAL_TOKEN` UI pokazuje subtelny stan lokalnego tokena i nie wymaga
+  logowania operatora,
+- w `GITHUB_APP` UI pokazuje CTA polaczenia GitHub, stan zalogowanego loginu
+  oraz kontrolowane CTA reauth przy `GITHUB_COPILOT_REAUTH_REQUIRED`,
 - job snapshot pokazuje wybrane `aiModel` i `reasoningEffort`, ale te pola sa
   tylko preferencja sesji AI, nie scope'em evidence,
 - frontend potrzebuje aktualnego kroku, historii krokow, evidence i bledow,
@@ -46,8 +56,9 @@ Aktualny frontend ma dwa route'y Angulara:
   dane dociagniete przez AI tools juz w trakcie kroku `AI_ANALYSIS`,
 - `chatMessages` jest historia kontynuacji po analizie; kazda odpowiedz
   assistant moze miec wlasne `toolEvidenceSections`,
-- eksport analizy ma envelope `incident-tracker.analysis-export` w wersji 3,
-  a importer wspiera wersje 2 i 3, zeby stare zapisy bez chatu nadal dzialaly,
+- eksport analizy ma envelope `incident-tracker.analysis-export` w wersji 4,
+  a importer wspiera wersje 2, 3 i 4, zeby stare zapisy bez chatu albo bez
+  nowszych pol nadal dzialaly,
 - widok krokow ma specjalne rendery dla logow Elasticsearch, code evidence i
   discovery evidence z GitLaba, runtime signals Dynatrace i wynikow DB tools,
 - GitLab tool evidence pokazuje `reason` jako naglowek wpisu; dla pobranego
@@ -60,6 +71,8 @@ Aktualny frontend ma dwa route'y Angulara:
   helper endpointy Spring Boot.
 - importowany JSON jest read-only dla chatu, bo backend nie ma odpowiadajacego
   mu live joba w pamieci.
+- eksport/import nie moze zawierac access tokenow, refresh tokenow, OAuth code,
+  OAuth state, client secret ani zaszyfrowanych tokenow.
 
 ## Przeczytaj w kodzie
 
@@ -67,6 +80,8 @@ Aktualny frontend ma dwa route'y Angulara:
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/state/AnalysisJobState.java`
 - `src/main/java/pl/mkn/incidenttracker/ui/FrontendRouteController.java`
 - `frontend/src/app`
+- `frontend/src/app/core/services/github-auth.service.ts`
+- `frontend/src/app/features/analysis-console/analysis-console.ts`
 
 ## Sprawdz lokalnie
 

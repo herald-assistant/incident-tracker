@@ -33,6 +33,7 @@ public class CopilotIncidentFollowUpRunAssembler {
 
         return runRequestFactory.create(
                 request.correlationId(),
+                request.authRef(),
                 prompt,
                 sessionConfigRequest,
                 renderedArtifacts

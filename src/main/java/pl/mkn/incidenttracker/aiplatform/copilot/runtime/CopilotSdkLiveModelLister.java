@@ -4,6 +4,8 @@ import com.github.copilot.sdk.CopilotClient;
 import com.github.copilot.sdk.json.ModelInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -16,9 +18,9 @@ class CopilotSdkLiveModelLister implements CopilotSdkModelLister {
     private final CopilotSdkProperties properties;
 
     @Override
-    public List<ModelInfo> listModels() {
+    public List<ModelInfo> listModels(CopilotRunAuth auth) {
         var timeout = timeout();
-        try (var client = new CopilotClient(sessionConfigFactory.clientOptions())) {
+        try (var client = new CopilotClient(sessionConfigFactory.clientOptions(auth))) {
             client.start().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             return client.listModels().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException exception) {

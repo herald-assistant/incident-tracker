@@ -7,6 +7,29 @@ export interface ApiErrorResponse {
   code: string;
   message: string;
   fieldErrors: ApiFieldError[];
+  authStartUrl?: string | null;
+}
+
+export type CopilotAuthMode = 'LOCAL_TOKEN' | 'GITHUB_APP';
+
+export interface GitHubAuthStatus {
+  mode: CopilotAuthMode;
+  required: boolean;
+  connected: boolean;
+  githubLogin?: string | null;
+  displayName?: string | null;
+  tokenExpiresAt?: string | null;
+  reauthRequired: boolean;
+  authStartUrl?: string | null;
+}
+
+export interface AuthRequiredError {
+  code:
+    | 'GITHUB_COPILOT_AUTH_REQUIRED'
+    | 'GITHUB_COPILOT_REAUTH_REQUIRED'
+    | 'COPILOT_LOCAL_TOKEN_MISSING';
+  message: string;
+  authStartUrl?: string | null;
 }
 
 export type AnalysisJobStatus =
@@ -170,6 +193,7 @@ export interface TransportErrorState {
   message: string;
   details: string[];
   status: number;
+  authStartUrl?: string | null;
 }
 
 export interface AnalysisExportEnvelope {

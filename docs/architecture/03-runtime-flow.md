@@ -37,6 +37,25 @@ preferencje requestu mieszkaja w `shared.ai`.
 (`correlationId`, `environment`, `gitLabBranch`, `gitLabGroup`) pochodzi z
 zakonczonego joba i ukrytego requestu AI zapisanego po finalnej analizie.
 
+Copilot auth jest osobnym shared/operator flow:
+
+```http
+GET /api/auth/github/status
+GET /api/auth/github/start?returnUrl=/...
+GET /api/auth/github/callback?code=...&state=...
+POST /api/auth/github/logout
+```
+
+W `LOCAL_TOKEN` backend uzywa skonfigurowanego tokena lokalnego. W
+`GITHUB_APP` UI laczy konto przez GitHub App OAuth, a backend zapisuje
+zaszyfrowany GitHub App user access token dla backendowej operator session.
+Frontend nigdy nie dostaje tokena, OAuth code ani SDK-specific typu.
+
+`AnalysisJobService` przed utworzeniem joba rozwiązuje non-secret
+`AnalysisAiAuthRef` dla aktualnego requestu i sprawdza, czy token da sie
+uzyskac. Do background flow trafia tylko ta referencja, nie token. Follow-up
+chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
+
 ## 2. Orkiestracja wysokiego poziomu
 
 `AnalysisOrchestrator` wykonuje flow:
@@ -93,6 +112,7 @@ Preparation obejmuje:
 - osadzenie artifact contents inline w promptcie,
 - zaladowanie runtime skills,
 - zbudowanie platformowego requestu sesji,
+- dolaczenie platformowego `CopilotRunAuth` z non-secret auth reference,
 - zastosowanie requestowych preferencji AI (`model`, `reasoningEffort`) albo
   fallback do properties,
 - zebranie metryk preparation.
@@ -126,11 +146,20 @@ renderingu i konfiguracji SDK:
   `CopilotSessionConfigFactory` buduje client options, session config,
   permission handler, hooks i disabled skills.
 
+`CopilotSessionConfigFactory` rozwiązuje access token przez
+`aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver` dopiero podczas
+tworzenia `CopilotClientOptions`. Client options zawsze dostaja jawne
+`githubToken` oraz `useLoggedInUser=false`; runtime nie korzysta z lokalnych
+credentiali GitHub CLI/Copilot CLI.
+
 `CopilotSdkModelOptionsProvider` mieszka w
 `aiplatform.copilot.runtime.options`. Uzywa zaleznosci runtime do pobrania
 katalogu modeli przez SDK, ale nie miesza tej metadanej z evidence ani
-promptem incydentu. Endpoint `GET /analysis/ai/options` jest shared/operator
-API w `api.aioptions`, mapujacym platformowe DTO na kontrakt UI.
+promptem incydentu. Provider jest auth-aware: w `LOCAL_TOKEN` moze cache'owac
+globalnie, a w `GITHUB_APP` cache key zawiera auth principal, zeby nie mieszac
+katalogow miedzy operatorami. Endpoint `GET /analysis/ai/options` jest
+shared/operator API w `api.aioptions`, mapujacym platformowe DTO na kontrakt
+UI.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.

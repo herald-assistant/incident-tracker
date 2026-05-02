@@ -28,9 +28,12 @@ Przy nowej sesji najlepiej zaczac od:
 - `features.incidentanalysis.ai.chat.AnalysisAiChatProvider`
 - `api.aioptions.AnalysisAiModelOptionsProvider` jako shared/operator fasada
   opcji AI
+- `api.githubauth` jako shared/operator fasada GitHub App OAuth i statusu
+  autoryzacji Copilota
 - `api.elasticsearch`, `api.gitlab`, `api.gitlab.source` jako shared/operator
   fasady helper endpointow nad integracjami
 - `aiplatform.copilot.runtime.options`
+- `aiplatform.copilot.runtime.auth`
 - `shared.ai`
 - `api` jako docelowe miejsce cross-screen FE/operator API
 - `shared.evidence`
@@ -47,6 +50,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `integrations.dynatrace`
 - `integrations.gitlab`
 - `integrations.gitlab.source`
+- `integrations.github.auth`
 - `integrations.operationalcontext`
 - `integrations.database`
 - `features.incidentanalysis.evidence.provider.deployment`
@@ -66,6 +70,7 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za GitHub Copilot SDK odpowiadaja glownie
 
 - `aiplatform.copilot.runtime`
+- `aiplatform.copilot.runtime.auth`
 - `aiplatform.copilot.runtime.options`
 - `aiplatform.copilot.tools`
 - `aiplatform.copilot.tools.context`
@@ -84,6 +89,14 @@ Przy nowej sesji najlepiej zaczac od:
 - `CopilotRenderedArtifact`
 - `CopilotArtifactContentMapper`
 - `CopilotIncidentFollowUpPreparationService`
+
+### Za Copilot auth odpowiadaja glownie
+
+- `api.githubauth`
+- `integrations.github.auth`
+- `aiplatform.copilot.runtime.auth`
+- `shared.ai.AnalysisAiAuthRef`
+- `shared.ai.AnalysisAiAuthRefResolver`
 
 ### Za GitLaba odpowiadaja glownie
 
@@ -159,11 +172,27 @@ trafiaja do `AnalysisAiOptions` i `SessionConfig`, nie do
 deployment/GitLab/DB scope'u.
 
 Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
-Frontend pobiera ja z `GET /analysis/ai/options`, a fasada
-`AnalysisAiModelOptionsProvider` mapuje platformowy katalog modeli Copilota na
-kontrakt aplikacji. To jest shared/operator API dla UI, nie czesc incident job
-flow. Controller/DTO mieszkaja w `api.aioptions`, a neutralne preferencje
-wykonania AI w `shared.ai`.
+Frontend najpierw pobiera status Copilot auth z `GET /api/auth/github/status`.
+Jesli status jest connected, pobiera katalog z `GET /analysis/ai/options`, a
+fasada `AnalysisAiModelOptionsProvider` mapuje platformowy katalog modeli
+Copilota na kontrakt aplikacji. To jest shared/operator API dla UI, nie czesc
+incident job flow. Controller/DTO mieszkaja w `api.aioptions`, a neutralne
+preferencje wykonania AI i non-secret auth reference w `shared.ai`.
+
+Tryby auth:
+
+- `LOCAL_TOKEN`: backend uzywa skonfigurowanego GitHub tokena i nigdy nie
+  fallbackuje do lokalnego uzytkownika CLI.
+- `GITHUB_APP`: operator laczy konto GitHub przez OAuth GitHub App; backend
+  trzyma zaszyfrowane user access/refresh tokeny powiazane z HttpOnly
+  operator session cookie.
+
+Publiczne requesty `POST /analysis/jobs` i
+`POST /analysis/jobs/{analysisId}/chat/messages` nie przyjmuja tokenow,
+OAuth code ani loginu GitHub. Job state moze przenosic tylko
+`AnalysisAiAuthRef`; token jest rozwiazywany tuz przed utworzeniem
+`CopilotClientOptions`, gdzie zawsze ustawiamy jawny `githubToken` oraz
+`useLoggedInUser=false`.
 
 ### `gitLabGroup`
 
@@ -192,7 +221,8 @@ Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
 Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
 albo wybrac `model` i dostepny dla niego `reasoningEffort` dla sesji AI. Opcje
-sa pobierane z backendu przez `GET /analysis/ai/options`.
+sa pobierane z backendu przez `GET /analysis/ai/options` dopiero po pozytywnym
+statusie auth.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba,
 kontekst lookupow GitLaba i wyniki DB dociagniete przez AI tools podczas kroku
 `AI_ANALYSIS`.

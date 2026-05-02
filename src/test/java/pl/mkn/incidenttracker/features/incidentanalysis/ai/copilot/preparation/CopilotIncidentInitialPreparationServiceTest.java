@@ -83,8 +83,8 @@ class CopilotIncidentInitialPreparationServiceTest {
         try (var prepared = service.prepare(request)) {
             assertEquals("C:\\tools\\copilot.exe", prepared.session().clientOptions().getCliPath());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().clientOptions().getCwd());
-            assertEquals(Boolean.TRUE, prepared.session().clientOptions().getUseLoggedInUser());
-            assertEquals(null, prepared.session().clientOptions().getGithubToken());
+            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
 
             assertEquals("incidenttracker-test", prepared.session().sessionConfig().getClientName());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
@@ -408,7 +408,7 @@ class CopilotIncidentInitialPreparationServiceTest {
     }
 
     @Test
-    void shouldFallbackToLoggedInUserWhenGithubTokenIsMissing() {
+    void shouldDisableLoggedInUserFallbackWhenGithubTokenIsMissingInTestFactory() {
         var properties = baseProperties();
         var service = createService(properties);
         var request = new InitialAnalysisRequest(
@@ -422,8 +422,8 @@ class CopilotIncidentInitialPreparationServiceTest {
         try (var prepared = service.prepare(request)) {
             assertEquals("incidenttracker", prepared.session().sessionConfig().getClientName());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
-            assertEquals(Boolean.TRUE, prepared.session().clientOptions().getUseLoggedInUser());
-            assertEquals(null, prepared.session().clientOptions().getGithubToken());
+            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
             assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());
             assertEquals(1, prepared.session().sessionConfig().getSkillDirectories().size());

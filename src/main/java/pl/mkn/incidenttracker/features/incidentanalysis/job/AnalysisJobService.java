@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.job;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -15,6 +16,10 @@ import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStart
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobState;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobStateListener;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRefResolver;
 
 import java.util.Map;
 import java.util.UUID;
@@ -22,26 +27,52 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class AnalysisJobService {
 
     private final AnalysisOrchestrator analysisOrchestrator;
     private final AnalysisAiChatProvider analysisAiChatProvider;
     private final TaskExecutor applicationTaskExecutor;
+    private final AnalysisAiAuthRefResolver authRefResolver;
+    private final CopilotRunAuthMapper runAuthMapper;
+    private final CopilotAccessTokenResolver accessTokenResolver;
 
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
 
+    public AnalysisJobService(
+            AnalysisOrchestrator analysisOrchestrator,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor applicationTaskExecutor
+    ) {
+        this(
+                analysisOrchestrator,
+                analysisAiChatProvider,
+                applicationTaskExecutor,
+                () -> AnalysisAiAuthRef.localToken(null),
+                new CopilotRunAuthMapper(),
+                auth -> new pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessToken(
+                        "test-token",
+                        null,
+                        null,
+                        false
+                )
+        );
+    }
+
     public AnalysisJobStateSnapshot startAnalysis(AnalysisJobStartRequest request) {
+        var authRef = authRefResolver.resolveForCurrentRequest();
+        accessTokenResolver.resolve(runAuthMapper.toRunAuth(authRef));
         var analysisId = UUID.randomUUID().toString();
         var job = new AnalysisJobState(
                 analysisId,
                 request.correlationId(),
                 request.aiOptions(),
+                authRef,
                 analysisOrchestrator.providerDescriptors()
         );
 
         jobs.put(analysisId, job);
-        applicationTaskExecutor.execute(() -> runAnalysis(job, request));
+        applicationTaskExecutor.execute(() -> runAnalysis(job, request, authRef));
 
         return job.snapshot();
     }
@@ -52,6 +83,7 @@ public class AnalysisJobService {
 
     public AnalysisJobStateSnapshot startChatMessage(String analysisId, AnalysisChatMessageRequest request) {
         var job = jobOrThrow(analysisId);
+        accessTokenResolver.resolve(runAuthMapper.toRunAuth(job.completedAuthRefForChat()));
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var chatRequest = job.startChatMessage(userMessageId, assistantMessageId, request.message());
@@ -61,11 +93,12 @@ public class AnalysisJobService {
         return job.snapshot();
     }
 
-    private void runAnalysis(AnalysisJobState job, AnalysisJobStartRequest request) {
+    private void runAnalysis(AnalysisJobState job, AnalysisJobStartRequest request, AnalysisAiAuthRef authRef) {
         try {
             var execution = analysisOrchestrator.analyze(
                     request.correlationId(),
                     request.aiOptions(),
+                    authRef,
                     new AnalysisJobStateListener(job)
             );
             job.markCompleted(execution);

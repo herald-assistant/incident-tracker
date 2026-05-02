@@ -6,6 +6,7 @@ import com.github.copilot.sdk.json.ModelSupports;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
 import java.time.Duration;
 import java.util.List;
@@ -22,14 +23,14 @@ class CopilotSdkModelOptionsProviderTest {
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
         var provider = new CopilotSdkModelOptionsProvider(
-                () -> List.of(
+                auth -> List.of(
                         reasoningModel("gpt-5.4", "GPT-5.4", List.of("low", "medium", "high"), "medium"),
                         plainModel("gpt-5.4-mini", "GPT-5.4 Mini")
                 ),
                 properties
         );
 
-        var response = provider.modelOptions();
+        var response = provider.modelOptions(CopilotRunAuth.localToken());
 
         assertEquals("gpt-5.4", response.defaultModel());
         assertEquals("medium", response.defaultReasoningEffort());
@@ -50,13 +51,13 @@ class CopilotSdkModelOptionsProviderTest {
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
         var provider = new CopilotSdkModelOptionsProvider(
-                () -> {
+                auth -> {
                     throw new IllegalStateException("CLI unavailable");
                 },
                 properties
         );
 
-        var response = provider.modelOptions();
+        var response = provider.modelOptions(CopilotRunAuth.localToken());
 
         assertEquals("gpt-5.4", response.defaultModel());
         assertEquals("medium", response.defaultReasoningEffort());
@@ -71,8 +72,8 @@ class CopilotSdkModelOptionsProviderTest {
         var lister = new CountingModelLister();
         var provider = new CopilotSdkModelOptionsProvider(lister, properties);
 
-        provider.modelOptions();
-        provider.modelOptions();
+        provider.modelOptions(CopilotRunAuth.localToken());
+        provider.modelOptions(CopilotRunAuth.localToken());
 
         assertEquals(1, lister.calls);
     }
@@ -107,7 +108,7 @@ class CopilotSdkModelOptionsProviderTest {
         private int calls;
 
         @Override
-        public List<ModelInfo> listModels() {
+        public List<ModelInfo> listModels(CopilotRunAuth auth) {
             calls++;
             return List.of(new ModelInfo().setId("gpt-5.4").setName("GPT-5.4"));
         }

@@ -8,6 +8,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.*;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 import java.util.List;
@@ -33,6 +34,15 @@ public class AnalysisOrchestrator {
             AnalysisAiOptions options,
             AnalysisExecutionListener listener
     ) {
+        return analyze(correlationId, options, AnalysisAiAuthRef.localToken(null), listener);
+    }
+
+    public AnalysisExecution analyze(
+            String correlationId,
+            AnalysisAiOptions options,
+            AnalysisAiAuthRef authRef,
+            AnalysisExecutionListener listener
+    ) {
         var context = analysisEvidenceCollector.collect(correlationId, listener);
 
         if (!context.hasAnyEvidence()) {
@@ -46,7 +56,8 @@ public class AnalysisOrchestrator {
                 deploymentContext.gitLabBranch(),
                 gitLabProperties.getGroup(),
                 context.evidenceSections(),
-                options
+                options,
+                authRef
         );
 
         listener.onAiStarted(aiRequest, context);

@@ -10,11 +10,18 @@ import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveServ
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessToken;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
@@ -47,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -117,6 +125,52 @@ class AnalysisJobServiceTest {
         var completed = service.getAnalysis(started.analysisId());
         assertEquals("gpt-5.4", completed.aiModel());
         assertEquals("high", completed.reasoningEffort());
+    }
+
+    @Test
+    void shouldResolveCopilotTokenBeforeCreatingJob() {
+        var provider = new CapturingOptionsInitialAnalysisProvider();
+        var authRef = AnalysisAiAuthRef.githubApp("operator-session-1", "octocat");
+        var tokenResolver = new CapturingAccessTokenResolver("ghu_secret_operator_token");
+        var authTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                provider,
+                new TestAnalysisChatProvider(),
+                authTaskExecutor,
+                () -> authRef,
+                tokenResolver
+        );
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+
+        assertEquals("operator-session-1", tokenResolver.lastAuth.principalId());
+        assertEquals("octocat", tokenResolver.lastAuth.githubLogin());
+        assertFalse(started.toString().contains("ghu_secret_operator_token"));
+
+        authTaskExecutor.runNext();
+
+        assertEquals(authRef, provider.lastPreparedRequest.authRef());
+        assertFalse(service.getAnalysis(started.analysisId()).toString().contains("ghu_secret_operator_token"));
+    }
+
+    @Test
+    void shouldRejectJobBeforeQueueingWhenCopilotAuthIsMissing() {
+        var authTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                authTaskExecutor,
+                () -> {
+                    throw new GitHubCopilotAuthRequiredException();
+                },
+                auth -> new CopilotAccessToken("unused", null, null, false)
+        );
+
+        assertThrows(
+                GitHubCopilotAuthRequiredException.class,
+                () -> service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null))
+        );
+        assertTrue(authTaskExecutor.isEmpty());
     }
 
     @Test
@@ -267,6 +321,22 @@ class AnalysisJobServiceTest {
             AnalysisAiChatProvider analysisAiChatProvider,
             TaskExecutor taskExecutor
     ) {
+        return analysisJobService(
+                initialAnalysisProvider,
+                analysisAiChatProvider,
+                taskExecutor,
+                () -> AnalysisAiAuthRef.localToken(null),
+                auth -> new CopilotAccessToken("test-token", null, null, false)
+        );
+    }
+
+    private AnalysisJobService analysisJobService(
+            InitialAnalysisProvider initialAnalysisProvider,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor taskExecutor,
+            AnalysisAiAuthRefResolver authRefResolver,
+            CopilotAccessTokenResolver accessTokenResolver
+    ) {
         return new AnalysisJobService(
                 new AnalysisOrchestrator(
                         new AnalysisEvidenceCollector(
@@ -287,7 +357,10 @@ class AnalysisJobServiceTest {
                         gitLabProperties
                 ),
                 analysisAiChatProvider,
-                taskExecutor
+                taskExecutor,
+                authRefResolver,
+                new CopilotRunAuthMapper(),
+                accessTokenResolver
         );
     }
 
@@ -351,6 +424,22 @@ class AnalysisJobServiceTest {
                 AnalysisAiToolEvidenceListener toolEvidenceListener
         ) {
             throw new IllegalStateException("AI gateway timeout");
+        }
+    }
+
+    private static final class CapturingAccessTokenResolver implements CopilotAccessTokenResolver {
+
+        private final String token;
+        private CopilotRunAuth lastAuth;
+
+        private CapturingAccessTokenResolver(String token) {
+            this.token = token;
+        }
+
+        @Override
+        public CopilotAccessToken resolve(CopilotRunAuth auth) {
+            lastAuth = auth;
+            return new CopilotAccessToken(token, auth.githubLogin(), null, auth.userBilling());
         }
     }
 

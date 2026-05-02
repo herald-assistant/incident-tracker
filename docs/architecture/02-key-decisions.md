@@ -31,6 +31,37 @@ Konsekwencje:
   i moze uzyc fallbacku do skonfigurowanych domyslow, gdy SDK chwilowo nie
   zwroci katalogu.
 
+## 1a. Copilot authentication ma dwa tryby
+
+Copilot authentication has two modes:
+
+- `LOCAL_TOKEN` for local/dev runs, using a configured GitHub token from
+  `analysis.ai.copilot.auth.local.github-token` albo `COPILOT_GITHUB_TOKEN`.
+- `GITHUB_APP` for operator-facing runs, using a GitHub App user access token
+  zwiazany z backendowa operator session cookie.
+
+Public analysis and chat requests never carry GitHub tokens or OAuth codes.
+The job flow carries only a non-secret AI auth reference. The actual token is
+resolved inside `aiplatform.copilot.runtime.auth` immediately before
+`CopilotClientOptions` are created.
+
+`CopilotClientOptions` must always receive `githubToken` explicitly and
+`useLoggedInUser=false`, so the backend never falls back to locally cached CLI
+credentials. GitHub App installation tokens are not used for Copilot SDK,
+because Copilot usage should belong to the GitHub user account in
+operator-facing mode.
+
+Konsekwencje:
+
+- frontend pobiera status przez `GET /api/auth/github/status` zanim pobierze
+  `GET /analysis/ai/options`,
+- `GET /analysis/ai/options`, `POST /analysis/jobs` i follow-up chat sa
+  auth-aware, ale ich publiczne payloady pozostaja minimalne,
+- GitHub App access/refresh tokens pozostaja po stronie backendu, w store sa
+  zaszyfrowane, a refresh token rotation jest zapisywana atomowo,
+- missing local token, missing GitHub auth i reauth sa kontrolowanymi bledami
+  API, nie fallbackiem do lokalnie zalogowanego uzytkownika.
+
 ## 2. Flow pozostaje AI-first
 
 Evidence pipeline zbiera deterministyczny material, ale diagnoza i

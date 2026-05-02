@@ -32,6 +32,7 @@ public class CopilotIncidentInitialRunAssembler {
         return new CopilotIncidentInitialRunAssembly(
                 runRequestFactory.create(
                         request.correlationId(),
+                        request.authRef(),
                         prompt,
                         sessionConfigRequest,
                         renderedArtifacts

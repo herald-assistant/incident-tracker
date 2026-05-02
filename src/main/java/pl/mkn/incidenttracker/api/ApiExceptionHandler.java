@@ -1,8 +1,13 @@
 package pl.mkn.incidenttracker.api;
 
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchException;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
+import pl.mkn.incidenttracker.integrations.github.auth.GitHubOAuthExchangeException;
+import pl.mkn.incidenttracker.integrations.github.auth.GitHubOAuthStateInvalidException;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchException;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveException;
@@ -72,6 +77,67 @@ public class ApiExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(GitHubCopilotAuthRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleGitHubCopilotAuthRequired(
+            GitHubCopilotAuthRequiredException exception
+    ) {
+        var response = new ApiErrorResponse(
+                "GITHUB_COPILOT_AUTH_REQUIRED",
+                exception.getMessage(),
+                List.of(),
+                exception.authStartUrl()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(GitHubCopilotReauthRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleGitHubCopilotReauthRequired(
+            GitHubCopilotReauthRequiredException exception
+    ) {
+        var response = new ApiErrorResponse(
+                "GITHUB_COPILOT_REAUTH_REQUIRED",
+                exception.getMessage(),
+                List.of(),
+                exception.authStartUrl()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(CopilotLocalTokenMissingException.class)
+    public ResponseEntity<ApiErrorResponse> handleCopilotLocalTokenMissing(CopilotLocalTokenMissingException exception) {
+        var response = new ApiErrorResponse(
+                "COPILOT_LOCAL_TOKEN_MISSING",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(GitHubOAuthStateInvalidException.class)
+    public ResponseEntity<ApiErrorResponse> handleGitHubOAuthStateInvalid(GitHubOAuthStateInvalidException exception) {
+        var response = new ApiErrorResponse(
+                "GITHUB_OAUTH_STATE_INVALID",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(GitHubOAuthExchangeException.class)
+    public ResponseEntity<ApiErrorResponse> handleGitHubOAuthExchange(GitHubOAuthExchangeException exception) {
+        var response = new ApiErrorResponse(
+                "GITHUB_OAUTH_EXCHANGE_FAILED",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(response);
     }
 
     @ExceptionHandler(GitLabSourceResolveException.class)

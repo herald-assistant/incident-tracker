@@ -38,9 +38,9 @@ Initial flow dostaje przygotowana analize przez generyczne
 `aiplatform.copilot.runtime` wykonuje techniczna sesje
 `CopilotPreparedSession`, zbudowana z platformowego `CopilotRunRequest`. Run
 request jest miejscem, w ktorym feature przekazuje runtime prompt, parametry
-sesji, logical artifacts, evidence sink i neutralny `runReference`; incident
-analysis mapuje tam `correlationId` tylko jako wartosc identyfikujaca konkretne
-uruchomienie.
+sesji, logical artifacts, evidence sink, neutralny `runReference` oraz
+platformowy `CopilotRunAuth`; incident analysis mapuje tam `correlationId`
+tylko jako wartosc identyfikujaca konkretne uruchomienie.
 
 Flow:
 
@@ -110,6 +110,37 @@ zaleznosci:
   promptu albo job state. `api.aioptions` jest shared/operator fasada endpointu
   `GET /analysis/ai/options`, a neutralne preferencje requestu mieszkaja w
   `shared.ai`.
+
+## Auth
+
+Copilot authentication has two modes:
+
+- `LOCAL_TOKEN` for local/dev runs, using a configured GitHub token.
+- `GITHUB_APP` for operator-facing runs, using a GitHub App user access token.
+
+Public analysis and chat requests never carry GitHub tokens or OAuth codes.
+The job flow carries only a non-secret AI auth reference
+(`shared.ai.AnalysisAiAuthRef`). The actual token is resolved inside
+`aiplatform.copilot.runtime.auth` immediately before `CopilotClientOptions`
+are created.
+
+`CopilotClientOptions` must always receive `githubToken` explicitly and
+`useLoggedInUser=false`, so the backend never falls back to locally cached CLI
+credentials. GitHub App installation tokens are not passed to Copilot SDK.
+
+Auth composition:
+
+- `api.githubauth` owns HTTP-facing status/start/callback/logout and backend
+  operator session cookies,
+- `integrations.github.auth` owns GitHub OAuth exchange, refresh, profile
+  lookup, encrypted authorization store and AES-GCM token cipher,
+- `aiplatform.copilot.runtime.auth` owns runtime token resolving and maps
+  non-secret auth refs to SDK-ready access tokens.
+
+`GitHub App` access tokens can expire, so runtime resolving may refresh them.
+Refresh token rotation updates access token and refresh token together in the
+authorization store. Token values must not be logged, rendered into prompts,
+returned to the frontend, included in job snapshots or exported JSON.
 
 Follow-up chat po zakonczonym jobie nie reuse'uje `InitialAnalysisProvider`.
 Ma osobny kontrakt `AnalysisAiChatProvider` i przygotowanie

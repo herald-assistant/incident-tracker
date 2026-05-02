@@ -7,11 +7,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAuthMode;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -22,19 +29,24 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
     private final CopilotSdkModelLister modelLister;
     private final CopilotSdkProperties properties;
 
-    private volatile CacheEntry cache;
+    private final Map<String, CacheEntry> cache = new LinkedHashMap<>();
 
     @Override
-    public CopilotModelOptionsResponse modelOptions() {
-        var cached = cache;
+    public synchronized CopilotModelOptionsResponse modelOptions(CopilotRunAuth auth) {
+        var cacheKey = cacheKey(auth);
+        var cached = cache.get(cacheKey);
         if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
             return cached.response();
         }
 
         try {
-            var response = responseFrom(modelLister.listModels());
-            cache = new CacheEntry(response, Instant.now().plus(cacheTtl()));
+            var response = responseFrom(modelLister.listModels(auth));
+            cache.put(cacheKey, new CacheEntry(response, Instant.now().plus(cacheTtl())));
             return response;
+        } catch (CopilotLocalTokenMissingException
+                 | GitHubCopilotAuthRequiredException
+                 | GitHubCopilotReauthRequiredException exception) {
+            throw exception;
         } catch (RuntimeException exception) {
             log.warn(
                     "Copilot model options are unavailable; returning configured defaults only. reason={}",
@@ -142,6 +154,15 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
 
     private String normalized(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private String cacheKey(CopilotRunAuth auth) {
+        var mode = auth != null && auth.mode() != null ? auth.mode() : CopilotAuthMode.LOCAL_TOKEN;
+        if (mode == CopilotAuthMode.GITHUB_APP) {
+            return mode.name() + ":" + (auth.principalId() != null ? auth.principalId() : "");
+        }
+
+        return mode.name();
     }
 
     private record CacheEntry(

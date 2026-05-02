@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 
 import java.time.Duration;
 import java.util.List;
@@ -27,7 +28,11 @@ public class CopilotSdkProperties {
     private Duration sendAndWaitTimeout = Duration.ofMinutes(5);
     private Duration modelOptionsTimeout = Duration.ofSeconds(20);
     private Duration modelOptionsCacheTtl = Duration.ofMinutes(10);
+    /**
+     * Legacy single-token property. Prefer analysis.ai.copilot.auth.local.github-token.
+     */
     private String githubToken;
+    private Auth auth = new Auth();
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
     private List<String> skillResourceRoots = List.of("copilot/skills");
     private String skillRuntimeDirectory = defaultSkillRuntimeDirectory();
@@ -38,5 +43,21 @@ public class CopilotSdkProperties {
         return System.getProperty("java.io.tmpdir") + java.io.File.separator
                 + "incidenttracker" + java.io.File.separator
                 + "copilot-skills";
+    }
+
+    @Getter
+    @Setter
+    public static class Auth {
+
+        private CopilotAuthMode mode = CopilotAuthMode.LOCAL_TOKEN;
+        private Local local = new Local();
+    }
+
+    @Getter
+    @Setter
+    public static class Local {
+
+        private String githubToken;
+        private String displayName = "Local developer token";
     }
 }

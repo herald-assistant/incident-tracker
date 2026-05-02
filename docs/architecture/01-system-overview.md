@@ -41,6 +41,10 @@ Na dzisiaj projekt ma:
 - endpoint shared/operator API `GET /analysis/ai/options`, ktory zwraca
   katalog modeli i dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby
   frontend nie trzymal lokalnej listy modeli,
+- shared/operator API `GET /api/auth/github/status`,
+  `GET /api/auth/github/start`, `GET /api/auth/github/callback` i
+  `POST /api/auth/github/logout` dla autoryzacji Copilot SDK w trybach
+  `LOCAL_TOKEN` oraz `GITHUB_APP`,
 - AI-first flow oparty o `AnalysisEvidenceProvider`, `InitialAnalysisProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
@@ -75,6 +79,18 @@ Na dzisiaj projekt ma:
   Shared/operator API z katalogiem modeli AI dla UI. Backend pobiera go z
   Copilot SDK i zwraca `reasoningEffort` tylko dla modeli, ktore SDK opisuje
   jako wspierajace te ustawienia. Endpoint nie jest krokiem incident job flow.
+- `GET /api/auth/github/status`
+  Shared/operator API statusu autoryzacji Copilota. W `LOCAL_TOKEN` pokazuje
+  lokalny token jako backendowy tryb dev, a w `GITHUB_APP` tworzy backendowa
+  operator session cookie i raportuje, czy konto GitHub jest polaczone.
+- `GET /api/auth/github/start`
+  Start GitHub App OAuth web flow. Akceptuje tylko lokalny `returnUrl`, tworzy
+  jednorazowy `state` powiazany z operator session i redirectuje do GitHuba.
+- `GET /api/auth/github/callback`
+  Callback OAuth: wymienia code na GitHub App user access token, pobiera profil
+  i zapisuje zaszyfrowane tokeny po stronie backendu.
+- `POST /api/auth/github/logout`
+  Odlacza autoryzacje GitHub App dla biezacej operator session.
 - `POST /api/gitlab/source/resolve`
   Narzedzie pomocnicze do znalezienia pliku po symbolu.
 - `POST /api/gitlab/source/resolve/preview`
@@ -116,6 +132,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Shared/operator API dla katalogu modeli i endpointu
   `GET /analysis/ai/options`. Implementacja endpointu mapuje platformowy
   katalog modeli Copilota na obecne DTO aplikacji.
+- `pl.mkn.incidenttracker.api.githubauth`
+  Shared/operator API autoryzacji GitHub dla UI oraz backendowa operator
+  session cookie. Ten pakiet zna request HTTP, ale nie przechowuje tokenow w
+  frontendzie ani publicznych requestach joba.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -127,8 +147,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.chat`
   Follow-up chat po zakonczonej analizie incydentu.
 - `pl.mkn.incidenttracker.shared.ai`
-  Neutralne preferencje wykonania AI oraz kontrakt token/cost/usage dla flow,
-  job UI i feature'ow.
+  Neutralne preferencje wykonania AI, non-secret `AnalysisAiAuthRef` oraz
+  kontrakt token/cost/usage dla flow, job UI i feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -147,6 +167,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
   promptu ani incident policy.
+- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth`
+  Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
+  `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i
+  ustawia `useLoggedInUser=false`.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.options`
   Platformowy provider katalogu modeli Copilota i neutralne DTO opcji modeli.
   `api.aioptions` jest fasada mapujaca ten katalog na endpoint
@@ -209,6 +233,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
 - `pl.mkn.incidenttracker.integrations.gitlab`
   Konfiguracja, porty, adapter REST oraz modele/search service GitLaba.
+- `pl.mkn.incidenttracker.integrations.github.auth`
+  Integracja GitHub App OAuth: properties, klient exchange/refresh, profil
+  uzytkownika, state store, zaszyfrowany authorization store i AES-GCM cipher.
 - `pl.mkn.incidenttracker.api.gitlab`
   Shared/operator endpoint repository search GitLaba delegujacy do integracji.
 - `pl.mkn.incidenttracker.api.gitlab.source`

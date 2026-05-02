@@ -41,8 +41,8 @@ class CopilotSessionConfigFactoryTest {
 
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
-        assertEquals(Boolean.TRUE, clientOptions.getUseLoggedInUser());
-        assertEquals(null, clientOptions.getGithubToken());
+        assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser());
+        assertEquals("test-token", clientOptions.getGithubToken());
         assertEquals("analysis-123", sessionConfig.getSessionId());
         assertEquals("incidenttracker-test", sessionConfig.getClientName());
         assertEquals("C:\\workspace", sessionConfig.getWorkingDirectory());

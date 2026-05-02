@@ -5,6 +5,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTurn;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -39,6 +40,7 @@ public final class AnalysisJobState {
     private final String analysisId;
     private final String correlationId;
     private final AnalysisAiOptions aiOptions;
+    private final AnalysisAiAuthRef authRef;
     private final Instant createdAt;
     private final List<StepState> steps;
     private final List<AnalysisEvidenceSection> evidenceSections;
@@ -62,11 +64,13 @@ public final class AnalysisJobState {
             String analysisId,
             String correlationId,
             AnalysisAiOptions aiOptions,
+            AnalysisAiAuthRef authRef,
             List<AnalysisEvidenceProviderDescriptor> providerDescriptors
     ) {
         this.analysisId = analysisId;
         this.correlationId = correlationId;
         this.aiOptions = aiOptions != null ? aiOptions : AnalysisAiOptions.DEFAULT;
+        this.authRef = authRef != null ? authRef : AnalysisAiAuthRef.localToken(null);
         this.createdAt = Instant.now();
         this.updatedAt = createdAt;
         this.status = AnalysisJobStatus.QUEUED;
@@ -196,8 +200,20 @@ public final class AnalysisJobState {
                 analysisSnapshot(),
                 history,
                 message,
-                completedAiRequest.options()
+                completedAiRequest.options(),
+                completedAiRequest.authRef()
         );
+    }
+
+    public synchronized AnalysisAiAuthRef completedAuthRefForChat() {
+        if (status != AnalysisJobStatus.COMPLETED || result == null || completedAiRequest == null) {
+            throw new AnalysisJobChatUnavailableException(
+                    "ANALYSIS_CHAT_NOT_READY",
+                    "Follow-up chat is available only after a completed analysis."
+            );
+        }
+
+        return completedAiRequest.authRef();
     }
 
     public synchronized void markChatToolEvidenceUpdated(String assistantMessageId, AnalysisEvidenceSection section) {
