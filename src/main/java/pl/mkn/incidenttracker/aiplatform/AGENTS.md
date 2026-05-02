@@ -78,9 +78,9 @@ Nie obejmuje:
   UI ani klas telemetry konkretnego feature'a.
 - Platforma nie moze zakladac `correlationId`, GitLaba, Database ani
   semantyki incident analysis jako stalego wymogu runtime.
-- Jesli przenosisz kolejne klasy z `analysis.ai.copilot`, najpierw upewnij sie,
-  ze nie wnosza incident-specific policy, coverage, promptu albo evidence
-  mappingu.
+- Jesli kiedys wydzielasz kolejny runtime element z dawnego obszaru Copilota,
+  najpierw upewnij sie, ze nie wnosi incident-specific policy, coverage,
+  promptu albo evidence mappingu.
 
 ## Weryfikacja
 

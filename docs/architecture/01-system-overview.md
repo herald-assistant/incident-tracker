@@ -91,8 +91,8 @@ Na dzisiaj projekt ma:
 Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 `05-package-dependencies.md`.
 
-- `pl.mkn.incidenttracker.analysis`
-  Wspolne DTO, wynik i wyjatki analizy.
+- `pl.mkn.incidenttracker`
+  Glowna aplikacja Spring Boot.
 - `pl.mkn.incidenttracker.agenttools`
   Reusable tools/capability uzywane przez MCP wrappers i platforme AI, np.
   hidden tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
@@ -224,8 +224,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.integrations.gitlab`
   Konfiguracja, porty, adapter REST oraz modele/search service GitLaba.
 - `pl.mkn.incidenttracker.api.gitlab`
-  Shared/operator endpointy testowe GitLaba delegujace do integracji:
-  repository search i source resolve.
+  Shared/operator endpoint repository search GitLaba delegujacy do integracji.
+- `pl.mkn.incidenttracker.api.gitlab.source`
+  Shared/operator endpointy source resolve GitLaba:
+  `POST /api/gitlab/source/resolve` i wariant preview.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.agenttools.gitlab.mcp`
@@ -237,6 +239,13 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   endpointow FE niezaleznych od jednego feature'a, np. fasady nad platforma
   albo integracjami. Endpointy konkretnego use case'u zostaja przy
   `features.<feature>.api`.
+- `pl.mkn.incidenttracker.ui`
+  Cienki routing Spring MVC dla route'ow Angulara, np. `/evidence`.
+- Zamkniety root `pl.mkn.incidenttracker.analysis`
+  Produkcyjny i testowy root `analysis.*` jest zamkniety. Publiczne URL-e
+  moga nadal zawierac slowo `analysis`, ale nowe klasy Javy trafiaja do
+  aktualnych wlascicieli: `features`, `api`, `integrations`, `agenttools`,
+  `aiplatform`, `shared`, `common` albo `ui`.
 - `frontend/`
   Workspace Angular z komponentami, serwisami i konfiguracja buildu UI.
 - `src/main/resources/static`

@@ -32,6 +32,13 @@ shared/operator API w `api.*`, ale deleguja do adapterow.
 Pakiet dla adapterow to `integrations.<system>`. Historyczny
 `analysis.adapter` nie jest juz miejscem na nowe capability.
 
+### Zamkniety root `analysis.*`
+
+`analysis.*` to historyczny root po pierwszej wersji incident analysis.
+Produkcyjnie i testowo jest zamkniety: nowe klasy trafiaja do aktualnych
+wlascicieli (`features`, `integrations`, `agenttools`, `aiplatform`, `api`,
+`shared`, `common`, `ui`) albo do dedykowanego `testsupport`.
+
 ### Tool
 
 Jawne narzedzie wystawione przez Spring AI i reuse'owane przez sesje Copilota.

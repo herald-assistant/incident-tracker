@@ -2,13 +2,15 @@
 
 ## Cel
 
-Ten dokument opisuje, jak dojsc z obecnego ukladu `analysis.*` do docelowego
-modelu, w ktorym incident analysis jest jednym z feature'ow zbudowanych na
-reusable capability, tools i platformie AI.
+Ten dokument opisuje, jak projekt przeszedl z historycznego ukladu
+`analysis.*` do docelowego modelu, w ktorym incident analysis jest jednym z
+feature'ow zbudowanych na reusable capability, tools i platformie AI.
 
-To nie jest plan "big bang rename". Kolejnosc prac ma najpierw wygasic zle
-zaleznosci i ustabilizowac kontrakty, a dopiero pozniej przenosic wieksze
-pakiety do docelowych nazw.
+To nie byl plan "big bang rename". Kolejnosc prac najpierw wygaszala zle
+zaleznosci i stabilizowala kontrakty, a dopiero pozniej przenosila wieksze
+pakiety do docelowych nazw. Obecny stan: produkcyjny i testowy root
+`analysis.*` sa zamkniete; kolejny dowod architektury to drugi feature albo
+spike reuse'u platformy/tools.
 
 ## Docelowy Model
 

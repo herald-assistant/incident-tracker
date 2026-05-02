@@ -25,6 +25,8 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 3. `architecture/02-key-decisions.md`
 4. `architecture/03-runtime-flow.md`
 5. `architecture/04-codex-continuation-guide.md`
+6. `architecture/05-package-dependencies.md`
+7. `architecture/06-modular-architecture-roadmap.md`
 
 ## Co jest gdzie
 

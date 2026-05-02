@@ -14,6 +14,11 @@ rzeczywiste importy Javy.
 Import graph ponizej powstal ze skanu `src/main/java` z uwzglednieniem
 zwyklych i static importow.
 
+W tabeli ponizej `features.incidentanalysis.evidence` jest pokazane jako osobny
+wezlowy podgraf. Wiersze `features -> ...` licza wiec pozostale pakiety
+feature'owe bez samego evidence pipeline, zeby nie dublowac tych samych
+importow.
+
 ## Turbo Wazne: Model Rozszerzalnosci
 
 Compile-time graph ma wspierac docelowy model produktu, a nie tylko wygladac
@@ -152,7 +157,7 @@ flowchart LR
     EVIDENCE --> INTEGRATIONS["integrations"]
     EVIDENCE --> SHARED
 
-    FEATURES --> AIPLATFORM["aiplatform"]
+    FEATURES["features\nbez evidence"] --> AIPLATFORM["aiplatform"]
     FEATURES --> AGENTTOOLS["agenttools"]
     FEATURES --> EVIDENCE
     FEATURES --> COMMON["common"]
@@ -175,12 +180,12 @@ flowchart LR
 | --- | ---: | --- | --- |
 | `features.incidentanalysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `features.incidentanalysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
-| `features -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
-| `features -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
-| `features -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
-| `features -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
-| `features -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`. |
-| `features -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
+| `features (bez evidence) -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload, telemetry port i uzywa platformowego session-bound evidence store. |
+| `features (bez evidence) -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
+| `features (bez evidence) -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
+| `features (bez evidence) -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
+| `features (bez evidence) -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`; pozostale importy integracji w feature sa w wydzielonym podgrafie evidence. |
+| `features (bez evidence) -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, preparation metrics, coverage, quality gate, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext`, neutralna klasyfikacja tool metrics i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, telemetry session metrics i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
@@ -196,7 +201,7 @@ zamknieta granica i nie nalezy jej przywracac.
 
 Do obserwacji zostaly krawedzie wewnatrz feature'a:
 
-1. `features -> features.incidentanalysis.evidence`
+1. `features (bez evidence) -> features.incidentanalysis.evidence`
 
    Incident job/flow uruchamiaja collector i pokazuja kroki pipeline, a
    coverage/artifacts czytaja typed evidence view helpers. To jest oczekiwane,

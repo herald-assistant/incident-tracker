@@ -28,6 +28,8 @@ Przy nowej sesji najlepiej zaczac od:
 - `features.incidentanalysis.ai.chat.AnalysisAiChatProvider`
 - `api.aioptions.AnalysisAiModelOptionsProvider` jako shared/operator fasada
   opcji AI
+- `api.elasticsearch`, `api.gitlab`, `api.gitlab.source` jako shared/operator
+  fasady helper endpointow nad integracjami
 - `aiplatform.copilot.runtime.options`
 - `shared.ai`
 - `api` jako docelowe miejsce cross-screen FE/operator API
@@ -40,16 +42,26 @@ Przy nowej sesji najlepiej zaczac od:
 - `agenttools.gitlab.mcp`
 - `agenttools.database.mcp`
 - `aiplatform.copilot.runtime`
+- `aiplatform.copilot.tools`
+- `integrations.elasticsearch`
+- `integrations.dynatrace`
+- `integrations.gitlab`
+- `integrations.gitlab.source`
+- `integrations.operationalcontext`
 - `integrations.database`
 - `features.incidentanalysis.evidence.provider.deployment`
 - `features.incidentanalysis.evidence.provider.elasticsearch`
+- `features.incidentanalysis.evidence.provider.dynatrace`
+- `features.incidentanalysis.evidence.provider.gitlabdeterministic`
 - `features.incidentanalysis.evidence.provider.operationalcontext`
-- `agenttools.database.mcp`
+- `ui`
 - `frontend/`
 - `frontend/src/app`
 - `src/main/resources/copilot/skills`
 - `src/main/resources/operational-context`
 - `src/main/resources/static`
+- produkcyjny i testowy root `pl.mkn.incidenttracker.analysis` sa zamkniete;
+  nie wznawiac tam klas ani testow
 
 ### Za GitHub Copilot SDK odpowiadaja glownie
 

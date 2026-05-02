@@ -28,11 +28,13 @@ architektonicznych.
 ### MCP i AI
 
 - `src/test/java/pl/mkn/incidenttracker/agenttools`
-- `src/test/java/pl/mkn/incidenttracker/analysis/ai/copilot`
-  przejsciowo zawiera starsze testy Copilota, dopoki nazwy test packages nie
-  zostana domkniete do obecnych pakietow produkcyjnych,
 - `src/test/java/pl/mkn/incidenttracker/aiplatform/copilot`
 - `src/test/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/copilot`
+- `src/test/java/pl/mkn/incidenttracker/testsupport`
+  wspolne fixture'y testowe dla platformy i feature'ow.
+
+Testowy root `src/test/java/pl/mkn/incidenttracker/analysis` jest zamkniety tak
+samo jak produkcyjny root `analysis.*`.
 
 ### UI i frontend
 
