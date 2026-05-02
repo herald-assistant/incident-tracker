@@ -14,7 +14,7 @@ Obecnie pierwszy feature to `incidentanalysis`.
 - Platforma AI, tools, integracje, shared i common nie moga importowac
   `features.*`.
 - `features.incidentanalysis` jest wlascicielem incident promptu, digestu,
-  response parsera, quality gate, coverage heurystyk, incident tool policy,
+  response parsera, coverage heurystyk, incident tool policy,
   hidden tool contextu i mapowania incident artifacts na platformowy run
   request oraz user-facing tool evidence.
 - Nie traktuj `features.incidentanalysis` jako generycznego core dla kolejnych
@@ -32,9 +32,8 @@ Obecnie pierwszy feature to `incidentanalysis`.
   incident flow.
 - `features.incidentanalysis.ai.copilot.coverage` zawiera incident-specific
   coverage/gap evaluation.
-- `features.incidentanalysis.ai.copilot.response` i
-  `features.incidentanalysis.ai.copilot.quality` zawieraja incidentowy
-  JSON-only response contract, parser oraz report-only quality gate.
+- `features.incidentanalysis.ai.copilot.response` zawiera incidentowy
+  JSON-only response contract i parser.
 - `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific
   GitLab/DB tool evidence capture nad generycznymi eventami invocation.
 - `features.incidentanalysis.flow` zawiera glowna orkiestracje runtime

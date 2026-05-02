@@ -42,7 +42,7 @@ Heurystyki sa dozwolone tylko jako:
 - deterministyczne wzbogacanie `AnalysisContext`,
 - ocena coverage i luk evidence,
 - polityka dostepu do tools,
-- walidacja shape/jakosci odpowiedzi AI,
+- walidacja shape odpowiedzi AI,
 - logowanie i audyt evidence widoczny dla operatora.
 
 Heurystyki nie powinny zastapic modelu w budowaniu diagnozy biznesowej.
@@ -174,19 +174,13 @@ JSON niesie tez pola pomocnicze: `rationale`, `affectedProcess`,
 `affectedBoundedContext`, `affectedTeam`, `confidence`,
 `evidenceReferences` i `visibilityLimits`.
 
-## 11. Quality gate jest report-only
+## 11. Ukryty quality gate jest usuniety
 
-`CopilotResponseQualityGate` sprawdza uzytecznosc i ugruntowanie wyniku:
-
-- zbyt plytkie `affectedFunction`,
-- generyczne `recommendedAction`,
-- data issue bez DB evidence albo visibility limit,
-- ownership/context bez evidence,
-- `confidence=high` przy slabym evidence,
-- rationale bez rozdzielenia faktow, hipotez i ograniczen.
-
-Domyslny tryb to `REPORT_ONLY`. Findings ida do logow, ale nie zmieniaja
-runtime result ani odpowiedzi zwracanej do uzytkownika.
+Nie utrzymujemy obecnie niewidocznego dla uzytkownika quality gate po
+parsingu odpowiedzi. Jakosc odpowiedzi jest egzekwowana przez prompt, JSON
+schema, parser/fallback i testy kontraktu. Jesli walidacja jakosci ma wrocic,
+powinna byc jawna dla operatora albo realnie zmieniac runtime, np. przez
+repair/retry z testami i dokumentacja.
 
 ## 12. Tool policy jest coverage-aware
 
@@ -436,7 +430,7 @@ Kolejnosc prac:
 
 1. user-visible usage i baseline jakosci wyniku,
 2. JSON response contract,
-3. quality gate,
+3. testy kontraktu odpowiedzi,
 4. coverage-aware tool policy,
 5. incident digest, item IDs i evidence references,
 6. tool budget,

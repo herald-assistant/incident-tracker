@@ -296,10 +296,12 @@ Dodatkowe pola:
 Fallback zachowuje czesciowo sparsowane pola i ustawia
 `AI_UNSTRUCTURED_RESPONSE` tylko wtedy, gdy brakuje `detectedProblem`.
 
-## Quality gate
+## Response quality
 
-`CopilotResponseQualityGate` dziala domyslnie w `REPORT_ONLY`.
-Findings sa widoczne w logach, ale nie zmieniaja runtime result.
+Nie ma obecnie osobnego quality gate po parsingu odpowiedzi. Jakosc wyniku
+trzymamy przez prompt, JSON-only response contract, parser/fallback i testy
+kontraktu, czyli elementy, ktore bezposrednio wplywaja na odpowiedz widoczna
+dla uzytkownika.
 
 ## User-visible usage
 
@@ -347,9 +349,6 @@ analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
 analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
-
-analysis.ai.copilot.quality-gate.enabled=true
-analysis.ai.copilot.quality-gate.mode=report-only
 
 analysis.ai.copilot.tool-budget.enabled=true
 analysis.ai.copilot.tool-budget.mode=soft

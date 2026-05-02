@@ -81,7 +81,7 @@ Incidentowe kontrakty AI i implementacja Copilota dla obecnego flow:
   `InitialAnalysisResponse`,
 - `chat` - follow-up chat po zakonczonej analizie,
 - `copilot` - incidentowe providery, prompt/artifacts, coverage, response
-  parser, quality gate, tool policy i tool evidence capture.
+  parser, tool policy i tool evidence capture.
 
 Neutralne kontrakty wspolne dla AI, joba i feature'ow sa poza feature'em:
 
@@ -106,8 +106,6 @@ Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y:
 - `aiplatform.copilot.runtime.execution` - lifecycle klienta/sesji SDK,
   execution gateway oraz `CopilotExecutionResult` z content + user-visible
   usage,
-- `aiplatform.copilot.runtime.quality` - neutralny payload raportu jakosci
-  odpowiedzi,
 - `aiplatform.copilot.tools/context` - hidden `ToolContext` i session-bound
   scope jako neutralna mechanika platformy,
 - `aiplatform.copilot.tools/CopilotSdkToolFactory` - rejestracja Spring tools
@@ -135,8 +133,8 @@ i `features.incidentanalysis.ai.chat` zawieraja kontrakty AI obecnego
 incident flow. `features.incidentanalysis.ai.copilot` zawiera incident
 initial/chat providery, `preparation` dla promptu, artefaktow, tool policy,
 hidden contextu i initial/follow-up run assembly, `response` dla JSON-only
-parsera odpowiedzi, `quality` dla report-only quality gate oraz `coverage` dla
-incident-specific coverage report i evidence gaps. Podpakiet `tools` zawiera
+parsera odpowiedzi oraz `coverage` dla incident-specific coverage report i
+evidence gaps. Podpakiet `tools` zawiera
 GitLab/DB listener + mapper user-facing tool evidence dla analizy incydentow
 oraz `tools.description` z incident-specific guidance opisow tools.
 

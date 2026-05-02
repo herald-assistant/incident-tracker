@@ -16,7 +16,7 @@ Obejmuje:
   turny i snapshot poczatkowej analizy,
 - `copilot/`
   incidentowe providery Copilota, preparation, prompt/artifacts, coverage,
-  response parser, quality gate oraz GitLab/DB tool evidence capture.
+  response parser oraz GitLab/DB tool evidence capture.
 
 Neutralne mechanizmy runtime Copilota mieszkaja w `aiplatform.copilot`, a
 neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
@@ -40,5 +40,4 @@ neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
   request mapping.
 - Zmiany w `copilot/preparation` powinny miec testy promptu, incident run
   assembly i ladowania skilli.
-- Zmiany w `copilot/response` albo `copilot/quality` powinny miec testy
-  parsowania odpowiedzi modelu i quality gate.
+- Zmiany w `copilot/response` powinny miec testy parsowania odpowiedzi modelu.

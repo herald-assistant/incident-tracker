@@ -19,9 +19,6 @@ Obecnie obejmuje:
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception oraz `CopilotExecutionResult`
   z trescia odpowiedzi i user-visible `AnalysisAiUsage`.
-- `copilot/runtime/quality/`
-  neutralny payload raportu jakosci odpowiedzi. Reguly oceny
-  odpowiedzi konkretnego feature'a nie mieszkaja w platformie.
 - `copilot/tools/context/`
   platformowa mechanika budowania hidden `ToolContext` oraz neutralny
   `CopilotToolSessionContext` przekazywany przez feature.

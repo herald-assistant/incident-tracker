@@ -180,12 +180,12 @@ flowchart LR
 | --- | ---: | --- | --- |
 | `features.incidentanalysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `features.incidentanalysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
-| `features (bez evidence) -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract, quality report payload i uzywa platformowego session-bound evidence store. |
+| `features (bez evidence) -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract i uzywa platformowego session-bound evidence store. |
 | `features (bez evidence) -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
 | `features (bez evidence) -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
 | `features (bez evidence) -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features (bez evidence) -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`; pozostale importy integracji w feature sa w wydzielonym podgrafie evidence. |
-| `features (bez evidence) -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, coverage, quality gate, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
+| `features (bez evidence) -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, coverage, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
 | `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext` i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, user-visible usage i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
@@ -220,7 +220,6 @@ features.incidentanalysis.job -> features.incidentanalysis.ai.chat
 features -> shared.ai/shared.evidence
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.runtime.execution
-features.incidentanalysis.ai.copilot.quality -> aiplatform.copilot.runtime.quality
 features.incidentanalysis.ai.copilot -> aiplatform.copilot.tools
 features.incidentanalysis.ai.copilot.tools.description -> aiplatform.copilot.tools.description
 features.incidentanalysis.ai.copilot -> agenttools
@@ -347,9 +346,8 @@ Zamkniete krawedzie, ktorych nie przywracac:
   `aiplatform.copilot.runtime.options`. Preferencje requestu mieszkaja w
   `shared.ai`, a HTTP fasada `GET /analysis/ai/options` w `api.aioptions`.
 - Dawne `analysis.ai.copilot.response/quality`: JSON-only parser odpowiedzi
-  incidentu i incident-specific quality gate mieszkaja teraz w
-  `features.incidentanalysis.ai.copilot.response/quality`. Platforma widzi
-  tylko neutralny payload raportu jakosci, gdy feature go potrzebuje.
+  incidentu mieszka teraz w `features.incidentanalysis.ai.copilot.response`.
+  Ukryty report-only quality gate zostal usuniety z aktualnego runtime.
 
 Najwazniejsze zamkniete krawedzie sa pilnowane przez
 `PackageDependencyGuardTest`, ktory skanuje importy w `src/main/java`.

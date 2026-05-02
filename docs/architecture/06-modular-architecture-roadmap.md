@@ -270,11 +270,9 @@ aktualnych providerow Copilota: `CopilotInitialAnalysisProvider` i
 `CopilotSdkAnalysisChatProvider`. Kontrakty initial/chat obecnego flow
 mieszkaja juz w `features.incidentanalysis.ai.initial/chat`, wiec produkcyjny
 pakiet `analysis.ai` zostal wygaszony.
-Podpakiety `features.incidentanalysis.ai.copilot.response` i
-`features.incidentanalysis.ai.copilot.quality` zawieraja incidentowy JSON-only
-response contract, parser oraz report-only quality gate. Platforma nie zapisuje
-obecnie osobnej telemetryki quality gate; findings sa logowane po stronie
-feature'a i nie zmieniaja odpowiedzi runtime.
+Podpakiet `features.incidentanalysis.ai.copilot.response` zawiera incidentowy
+JSON-only response contract i parser. Ukryty report-only quality gate zostal
+usuniety, bo operator nie mial dostepu do jego findings.
 
 `features.incidentanalysis.ai.copilot.tools` zawiera incident-specific GitLab i
 Database tool evidence capture: listenery eventow invocation oraz mappery
@@ -289,9 +287,7 @@ Platform-owned runtime jest juz poza `preparation`, w
 `CopilotPreparedSession`, `CopilotSessionConfigRequest`,
 `CopilotSkillRuntimeLoader`, `CopilotRenderedArtifact`,
 `CopilotArtifactContentMapper`, `CopilotPreparedSessionFactory`,
-`CopilotSessionConfigFactory` oraz `CopilotSdkExecutionGateway`. Neutralny
-`aiplatform.copilot.runtime.quality` zawiera tylko payload raportu jakosci dla
-feature'y, bez incidentowych regul oceny. Skill loader odpowiada tylko za materializacje
+`CopilotSessionConfigFactory` oraz `CopilotSdkExecutionGateway`. Skill loader odpowiada tylko za materializacje
 skonfigurowanych skill resources/directories do katalogow runtime. Feature
 nadal decyduje, czy dana sesja uzyje tych katalogow, skladajac
 `CopilotSessionConfigRequest`. Platformowe tools zawieraja tez
@@ -561,10 +557,8 @@ Kroki:
    do `features.incidentanalysis`.
    Stan obecny: incident prompt i digest oraz initial/follow-up providery
    Copilota mieszkaja juz w `features.incidentanalysis.ai.copilot`. Response
-   parser i quality gate mieszkaja juz w
-   `features.incidentanalysis.ai.copilot.response/quality`. Quality findings
-   sa logowane po stronie feature'a; nie ma obecnie platformowego registry
-   telemetryki quality gate.
+   parser mieszka juz w `features.incidentanalysis.ai.copilot.response`.
+   Ukryty quality gate zostal usuniety z aktualnego runtime.
 6. Przeniesc incident tool access policy, incident coverage heurystyki,
    incident skill selection i operator-facing tool evidence mapping do
    `features.incidentanalysis`.

@@ -13,8 +13,6 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotExecut
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityProperties;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 
 import java.util.List;
@@ -276,8 +274,7 @@ class CopilotInitialAnalysisProviderTest {
         return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
-                new CopilotResponseParser(objectMapper),
-                new CopilotResponseQualityGate(new CopilotResponseQualityProperties())
+                new CopilotResponseParser(objectMapper)
         );
     }
 

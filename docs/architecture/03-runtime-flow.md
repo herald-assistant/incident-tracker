@@ -428,16 +428,12 @@ labeled parser nie istnieje. Jesli brakuje wymaganych pol, fallback zachowuje
 czesciowo sparsowane pola i ustawia `AI_UNSTRUCTURED_RESPONSE` tylko wtedy,
 gdy brakuje `detectedProblem`.
 
-## 13. Quality gate
+## 13. Response quality
 
-Po parsingu provider uruchamia `CopilotResponseQualityGate`.
-
-W trybie domyslnym `REPORT_ONLY` findings sa logowane, ale nie zmieniaja
-odpowiedzi zwracanej do uzytkownika.
-
-Quality gate ocenia m.in. glebokosc `affectedFunction`, konkretnosc
-`recommendedAction`, ugruntowanie ownership/process/context, spojnosci
-confidence oraz strukture rationale.
+Nie ma obecnie osobnego quality gate po parsingu odpowiedzi. Runtime zachowuje
+prosty kontrakt: prompt wymaga JSON, parser mapuje wynik na publiczny response,
+a fallback obsluguje brak wymaganych pol. Dodatkowe oceny jakosci nie sa
+liczone w tle, bo operator nie ma do nich dostepu.
 
 ## 14. User-visible usage
 
@@ -493,9 +489,6 @@ analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
 analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
-
-analysis.ai.copilot.quality-gate.enabled=true
-analysis.ai.copilot.quality-gate.mode=report-only
 
 analysis.ai.copilot.tool-budget.enabled=true
 analysis.ai.copilot.tool-budget.mode=soft

@@ -13,7 +13,6 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExe
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.quality.CopilotResponseQualityGate;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
 
@@ -25,7 +24,6 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
     private final CopilotIncidentInitialPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotResponseParser responseParser;
-    private final CopilotResponseQualityGate qualityGate;
 
     @Override
     public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
@@ -58,7 +56,6 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
                 withToolEvidenceSink(preparedSession, toolEvidenceListener)
         );
         var parseResult = responseParser.parse(executionResult.content());
-        var qualityReport = qualityGate.evaluate(request, parseResult.response());
         var response = toAiResponse(
                 parseResult.response(),
                 preparedSession.prompt(),
@@ -66,13 +63,11 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         );
 
         log.info(
-                "Copilot response parse correlationId={} parsedKeys={} structuredResponse={} fallbackResponseUsed={} qualityPassed={} qualityFindingCount={}",
+                "Copilot response parse correlationId={} parsedKeys={} structuredResponse={} fallbackResponseUsed={}",
                 request.correlationId(),
                 parseResult.parsedFields(),
                 parseResult.structuredResponse(),
-                parseResult.fallbackResponseUsed(),
-                qualityReport.passed(),
-                qualityReport.findingCount()
+                parseResult.fallbackResponseUsed()
         );
 
         log.info(

@@ -141,8 +141,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   reuse'u przez evidence i kolejne capability.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot`
   Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
-  skill selection, tool policy, response parser, quality gate i
-  initial/follow-up run assembly.
+  skill selection, tool policy, response parser i initial/follow-up run assembly.
   Ten pakiet sklada parametry dla platformowego runtime Copilota.
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
@@ -156,9 +155,6 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz
   `CopilotExecutionResult` z trescia odpowiedzi i user-visible
   `AnalysisAiUsage`.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.quality`
-  Neutralny payload raportu jakosci odpowiedzi; same
-  reguly quality gate pozostaja po stronie feature'a.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
   neutralna mechanika platformy.
