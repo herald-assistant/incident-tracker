@@ -34,7 +34,7 @@ Aktualny frontend ma dwa route'y Angulara:
 
 ## Co jest wazne dla backend developera
 
-- `AnalysisJobResponse` jest projekcja dla UI, nie nowy model domenowy,
+- `AnalysisJobStateSnapshot` jest projekcja dla UI, nie nowy model domenowy,
 - lista modeli i effortow pochodzi z backendu, a frontend tylko renderuje
   odpowiedz `GET /analysis/ai/options`,
 - job snapshot pokazuje wybrane `aiModel` i `reasoningEffort`, ale te pola sa
@@ -63,7 +63,7 @@ Aktualny frontend ma dwa route'y Angulara:
 
 ## Przeczytaj w kodzie
 
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/api/AnalysisJobResponse.java`
+- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/api/AnalysisJobStateSnapshot.java`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/state/AnalysisJobState.java`
 - `src/main/java/pl/mkn/incidenttracker/ui/FrontendRouteController.java`
 - `frontend/src/app`

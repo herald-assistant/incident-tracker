@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.evidence;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.task.TaskRejectedException;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -18,6 +18,7 @@ import java.util.concurrent.CompletionException;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class AnalysisEvidenceCollector {
 
     private final ElasticLogEvidenceProvider elasticLogEvidenceProvider;
@@ -25,23 +26,7 @@ public class AnalysisEvidenceCollector {
     private final DynatraceEvidenceProvider dynatraceEvidenceProvider;
     private final GitLabDeterministicEvidenceProvider gitLabDeterministicEvidenceProvider;
     private final OperationalContextEvidenceProvider operationalContextEvidenceProvider;
-    private final TaskExecutor parallelEvidenceTaskExecutor;
-
-    public AnalysisEvidenceCollector(
-            ElasticLogEvidenceProvider elasticLogEvidenceProvider,
-            DeploymentContextEvidenceProvider deploymentContextEvidenceProvider,
-            DynatraceEvidenceProvider dynatraceEvidenceProvider,
-            GitLabDeterministicEvidenceProvider gitLabDeterministicEvidenceProvider,
-            OperationalContextEvidenceProvider operationalContextEvidenceProvider,
-            @Qualifier("analysisEvidenceTaskExecutor") TaskExecutor parallelEvidenceTaskExecutor
-    ) {
-        this.elasticLogEvidenceProvider = elasticLogEvidenceProvider;
-        this.deploymentContextEvidenceProvider = deploymentContextEvidenceProvider;
-        this.dynatraceEvidenceProvider = dynatraceEvidenceProvider;
-        this.gitLabDeterministicEvidenceProvider = gitLabDeterministicEvidenceProvider;
-        this.operationalContextEvidenceProvider = operationalContextEvidenceProvider;
-        this.parallelEvidenceTaskExecutor = parallelEvidenceTaskExecutor;
-    }
+    private final TaskExecutor analysisEvidenceTaskExecutor;
 
     public AnalysisContext collect(String correlationId, AnalysisEvidenceCollectionListener listener) {
         var context = AnalysisContext.initialize(correlationId);
@@ -95,7 +80,7 @@ public class AnalysisEvidenceCollector {
             AnalysisContext context
     ) {
         try {
-            return CompletableFuture.supplyAsync(() -> provider.collect(context), parallelEvidenceTaskExecutor);
+            return CompletableFuture.supplyAsync(() -> provider.collect(context), analysisEvidenceTaskExecutor);
         } catch (TaskRejectedException exception) {
             log.warn(
                     "Parallel evidence executor saturated, falling back to inline execution for step={} correlationId={}",

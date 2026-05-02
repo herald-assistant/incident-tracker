@@ -6,6 +6,16 @@ import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisExecutionListener;
 
+/**
+ * Adapts incident analysis flow events to the in-memory job state projection
+ * used by the operator UI.
+ *
+ * <p>This class is intentionally kept next to {@link AnalysisJobState}: it does
+ * not orchestrate analysis, fetch evidence, or call AI. It only translates
+ * {@link AnalysisExecutionListener} callbacks into state mutations that make
+ * progress, prepared prompts, AI tool evidence, and terminal results visible
+ * through the job API.</p>
+ */
 public final class AnalysisJobStateListener implements AnalysisExecutionListener {
 
     private final AnalysisJobState job;

@@ -35,7 +35,7 @@ class AnalysisJobControllerTest {
     @Test
     void shouldStartAnalysisJob() throws Exception {
         when(analysisJobService.startAnalysis(any(AnalysisJobStartRequest.class)))
-                .thenReturn(new AnalysisJobResponse(
+                .thenReturn(new AnalysisJobStateSnapshot(
                         "job-123",
                         "timeout-123",
                         "gpt-5.4",
@@ -110,7 +110,7 @@ class AnalysisJobControllerTest {
     @Test
     void shouldReturnAnalysisJobSnapshot() throws Exception {
         when(analysisJobService.getAnalysis("job-123"))
-                .thenReturn(new AnalysisJobResponse(
+                .thenReturn(new AnalysisJobStateSnapshot(
                         "job-123",
                         "timeout-123",
                         "gpt-5.4",
@@ -166,7 +166,7 @@ class AnalysisJobControllerTest {
     @Test
     void shouldStartFollowUpChatMessage() throws Exception {
         when(analysisJobService.startChatMessage(any(String.class), any(AnalysisChatMessageRequest.class)))
-                .thenReturn(new AnalysisJobResponse(
+                .thenReturn(new AnalysisJobStateSnapshot(
                         "job-123",
                         "timeout-123",
                         "gpt-5.4",

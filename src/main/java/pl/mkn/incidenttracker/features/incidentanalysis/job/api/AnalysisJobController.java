@@ -21,18 +21,18 @@ public class AnalysisJobController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public AnalysisJobResponse start(@Valid @RequestBody AnalysisJobStartRequest request) {
+    public AnalysisJobStateSnapshot start(@Valid @RequestBody AnalysisJobStartRequest request) {
         return analysisJobService.startAnalysis(request);
     }
 
     @GetMapping("/{analysisId}")
-    public AnalysisJobResponse get(@PathVariable String analysisId) {
+    public AnalysisJobStateSnapshot get(@PathVariable String analysisId) {
         return analysisJobService.getAnalysis(analysisId);
     }
 
     @PostMapping("/{analysisId}/chat/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public AnalysisJobResponse chat(
+    public AnalysisJobStateSnapshot chat(
             @PathVariable String analysisId,
             @Valid @RequestBody AnalysisChatMessageRequest request
     ) {

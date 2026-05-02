@@ -18,7 +18,7 @@ import {
   ApiErrorResponse,
   AnalysisChatMessageResponse,
   AnalysisEvidenceSection,
-  AnalysisJobResponse,
+  AnalysisJobStateSnapshot,
   ExportState,
   TransportErrorState
 } from '../../core/models/analysis.models';
@@ -88,7 +88,7 @@ export class AnalysisConsoleComponent {
   readonly placeholderMode = signal<'idle' | 'loading'>('idle');
   readonly loadingCorrelationId = signal('');
   readonly transportError = signal<TransportErrorState | null>(null);
-  readonly job = signal<AnalysisJobResponse | null>(null);
+  readonly job = signal<AnalysisJobStateSnapshot | null>(null);
   readonly exportState = signal<ExportState | null>(null);
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
   readonly selectedAiModel = signal('');
@@ -542,7 +542,7 @@ export class AnalysisConsoleComponent {
     return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
   }
 
-  private applyJob(job: AnalysisJobResponse, metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>): void {
+  private applyJob(job: AnalysisJobStateSnapshot, metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>): void {
     const normalizedJob = normalizeAnalysisJob(job);
     this.placeholderMode.set('idle');
     this.transportError.set(null);
@@ -551,7 +551,7 @@ export class AnalysisConsoleComponent {
   }
 
   private syncExportableState(
-    job: AnalysisJobResponse,
+    job: AnalysisJobStateSnapshot,
     metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>
   ): void {
     if (!isTerminalStatus(job.status) || hasInProgressChat(job)) {
@@ -577,7 +577,7 @@ export class AnalysisConsoleComponent {
     this.scrollResponseIntoView();
   }
 
-  private shouldKeepPolling(job: AnalysisJobResponse): boolean {
+  private shouldKeepPolling(job: AnalysisJobStateSnapshot): boolean {
     return !isTerminalStatus(job.status) || hasInProgressChat(job);
   }
 

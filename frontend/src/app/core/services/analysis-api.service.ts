@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import {
   AnalysisChatMessageRequest,
   AnalysisAiModelOptionsResponse,
-  AnalysisJobResponse,
+  AnalysisJobStateSnapshot,
   AnalysisStartRequest
 } from '../models/analysis.models';
 
@@ -15,23 +15,23 @@ import {
 export class AnalysisApiService {
   private readonly http = inject(HttpClient);
 
-  startAnalysis(request: AnalysisStartRequest): Observable<AnalysisJobResponse> {
-    return this.http.post<AnalysisJobResponse>('/analysis/jobs', request);
+  startAnalysis(request: AnalysisStartRequest): Observable<AnalysisJobStateSnapshot> {
+    return this.http.post<AnalysisJobStateSnapshot>('/analysis/jobs', request);
   }
 
   getAiModelOptions(): Observable<AnalysisAiModelOptionsResponse> {
     return this.http.get<AnalysisAiModelOptionsResponse>('/analysis/ai/options');
   }
 
-  getAnalysis(analysisId: string): Observable<AnalysisJobResponse> {
-    return this.http.get<AnalysisJobResponse>(`/analysis/jobs/${encodeURIComponent(analysisId)}`);
+  getAnalysis(analysisId: string): Observable<AnalysisJobStateSnapshot> {
+    return this.http.get<AnalysisJobStateSnapshot>(`/analysis/jobs/${encodeURIComponent(analysisId)}`);
   }
 
   sendChatMessage(
     analysisId: string,
     request: AnalysisChatMessageRequest
-  ): Observable<AnalysisJobResponse> {
-    return this.http.post<AnalysisJobResponse>(
+  ): Observable<AnalysisJobStateSnapshot> {
+    return this.http.post<AnalysisJobStateSnapshot>(
       `/analysis/jobs/${encodeURIComponent(analysisId)}/chat/messages`,
       request
     );

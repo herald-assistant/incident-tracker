@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
-import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.*;
@@ -34,7 +33,7 @@ public class AnalysisOrchestrator {
             AnalysisAiOptions options,
             AnalysisExecutionListener listener
     ) {
-        var context = analysisEvidenceCollector.collect(correlationId, adaptEvidenceListener(listener));
+        var context = analysisEvidenceCollector.collect(correlationId, listener);
 
         if (!context.hasAnyEvidence()) {
             throw new AnalysisDataNotFoundException(correlationId);
@@ -88,20 +87,6 @@ public class AnalysisOrchestrator {
 
     public List<AnalysisEvidenceProviderDescriptor> providerDescriptors() {
         return analysisEvidenceCollector.providerDescriptors();
-    }
-
-    private AnalysisEvidenceCollectionListener adaptEvidenceListener(AnalysisExecutionListener listener) {
-        return new AnalysisEvidenceCollectionListener() {
-            @Override
-            public void onProviderStarted(AnalysisEvidenceProvider provider, AnalysisContext context) {
-                listener.onProviderStarted(provider, context);
-            }
-
-            @Override
-            public void onProviderCompleted(AnalysisEvidenceProvider provider, AnalysisEvidenceSection section, AnalysisContext updatedContext) {
-                listener.onProviderCompleted(provider, section, updatedContext);
-            }
-        };
     }
 
 }

@@ -2,7 +2,6 @@ package pl.mkn.incidenttracker.features.incidentanalysis.job;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -11,7 +10,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRe
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
-import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobState;
@@ -28,12 +27,11 @@ public class AnalysisJobService {
 
     private final AnalysisOrchestrator analysisOrchestrator;
     private final AnalysisAiChatProvider analysisAiChatProvider;
-    @Qualifier("applicationTaskExecutor")
-    private final TaskExecutor taskExecutor;
+    private final TaskExecutor applicationTaskExecutor;
 
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
 
-    public AnalysisJobResponse startAnalysis(AnalysisJobStartRequest request) {
+    public AnalysisJobStateSnapshot startAnalysis(AnalysisJobStartRequest request) {
         var analysisId = UUID.randomUUID().toString();
         var job = new AnalysisJobState(
                 analysisId,
@@ -43,22 +41,22 @@ public class AnalysisJobService {
         );
 
         jobs.put(analysisId, job);
-        taskExecutor.execute(() -> runAnalysis(job, request));
+        applicationTaskExecutor.execute(() -> runAnalysis(job, request));
 
         return job.snapshot();
     }
 
-    public AnalysisJobResponse getAnalysis(String analysisId) {
+    public AnalysisJobStateSnapshot getAnalysis(String analysisId) {
         return jobOrThrow(analysisId).snapshot();
     }
 
-    public AnalysisJobResponse startChatMessage(String analysisId, AnalysisChatMessageRequest request) {
+    public AnalysisJobStateSnapshot startChatMessage(String analysisId, AnalysisChatMessageRequest request) {
         var job = jobOrThrow(analysisId);
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var chatRequest = job.startChatMessage(userMessageId, assistantMessageId, request.message());
 
-        taskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest));
+        applicationTaskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest));
 
         return job.snapshot();
     }

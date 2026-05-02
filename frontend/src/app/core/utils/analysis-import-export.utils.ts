@@ -5,7 +5,7 @@ import {
   AnalysisChatMessageResponse,
   AnalysisAiUsage,
   AnalysisExportEnvelope,
-  AnalysisJobResponse,
+  AnalysisJobStateSnapshot,
   AnalysisJobStepResponse,
   AnalysisResultResponse
 } from '../models/analysis.models';
@@ -16,7 +16,7 @@ export const EXPORT_VERSION = 4;
 const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4]);
 
 export function buildExportEnvelope(
-  job: AnalysisJobResponse,
+  job: AnalysisJobStateSnapshot,
   exportedAt: string
 ): AnalysisExportEnvelope {
   return {
@@ -32,7 +32,7 @@ export function buildExportEnvelope(
 
 export function parseImportedAnalysis(payload: unknown): {
   exportedAt: string;
-  job: AnalysisJobResponse;
+  job: AnalysisJobStateSnapshot;
 } {
   const payloadObject = asObject(payload);
   if (!payloadObject) {
@@ -75,7 +75,7 @@ export function parseImportedAnalysis(payload: unknown): {
   };
 }
 
-export function normalizeAnalysisJob(job: unknown): AnalysisJobResponse {
+export function normalizeAnalysisJob(job: unknown): AnalysisJobStateSnapshot {
   const jobObject = asObject(job);
   if (!jobObject) {
     throw new Error('Plik eksportu nie zawiera poprawnego obiektu joba analizy.');
@@ -113,7 +113,7 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobResponse {
   };
 }
 
-export function buildExportFileName(job: AnalysisJobResponse, exportedAt: string): string {
+export function buildExportFileName(job: AnalysisJobStateSnapshot, exportedAt: string): string {
   const correlationId = sanitizeFileNamePart(job.correlationId || job.analysisId || 'analysis');
   const status = sanitizeFileNamePart((job.status || 'result').toLowerCase());
   return `incident-analysis-${correlationId}-${status}-${formatFileTimestamp(exportedAt)}.json`;

@@ -234,6 +234,8 @@ Zasady granic:
 - DTO preferencyjnie jako `record`.
 - Walidacja przez `@Valid` i `jakarta.validation`.
 - Wstrzykiwanie zaleznosci przez Lombok `@RequiredArgsConstructor`.
+- Gdy Spring ma rozstrzygac po nazwie beana, preferuj nazwe pola/parametru
+  identyczna z nazwa beana zamiast lokalnego `@Qualifier`.
 - HTTP po stronie integracji przez `RestClient`.
 - Wspolne bledy API przez `ApiExceptionHandler`.
 - Testy web przez `MockMvc`, testy integracyjne HTTP przez

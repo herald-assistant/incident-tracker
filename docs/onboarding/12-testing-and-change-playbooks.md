@@ -97,7 +97,7 @@ Handler ma pozostac boundary invocation, a side-effecty maja isc przez eventy.
 
 ## Playbook 5: zmiana job payloadu albo frontendu
 
-1. zaktualizuj kontrakt backendowy i projekcje `AnalysisJobResponse`,
+1. zaktualizuj kontrakt backendowy i projekcje `AnalysisJobStateSnapshot`,
 2. zaktualizuj modele TS w `frontend/src/app/core/models`,
 3. sprawdz komponenty widoku analizy i `/evidence`,
 4. odpal `src/test/java/pl/mkn/incidenttracker/ui`,

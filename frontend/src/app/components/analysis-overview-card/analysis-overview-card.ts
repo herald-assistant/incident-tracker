@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
-import { AnalysisJobResponse } from '../../core/models/analysis.models';
+import { AnalysisJobStateSnapshot } from '../../core/models/analysis.models';
 import {
   bannerClassName,
   buildJobBannerMessage,
@@ -17,7 +17,7 @@ import {
   styleUrl: './analysis-overview-card.scss'
 })
 export class AnalysisOverviewCardComponent {
-  readonly job = input.required<AnalysisJobResponse>();
+  readonly job = input.required<AnalysisJobStateSnapshot>();
 
   protected readonly jobTitle = computed(() => buildJobTitle(this.job()));
   protected readonly statusLabel = computed(() => formatStatus(this.job().status));

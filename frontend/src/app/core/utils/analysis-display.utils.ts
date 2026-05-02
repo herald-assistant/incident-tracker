@@ -2,7 +2,7 @@ import {
   AnalysisEvidenceAttribute,
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
-  AnalysisJobResponse,
+  AnalysisJobStateSnapshot,
   AnalysisJobStatus,
   AnalysisJobStepResponse,
   ExportState
@@ -50,7 +50,7 @@ export function isTerminalStatus(status: string | null | undefined): boolean {
   return TERMINAL_STATUSES.has(status ?? '');
 }
 
-export function hasInProgressChat(job: AnalysisJobResponse | null | undefined): boolean {
+export function hasInProgressChat(job: AnalysisJobStateSnapshot | null | undefined): boolean {
   return Boolean(
     job?.chatMessages?.some(
       (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'
@@ -90,11 +90,11 @@ export function bannerClassName(status: string | null | undefined): string {
   return 'job-banner--running';
 }
 
-export function buildJobTitle(job: AnalysisJobResponse): string {
+export function buildJobTitle(job: AnalysisJobStateSnapshot): string {
   return job.correlationId ? `Analiza ${job.correlationId}` : `Analiza ${shortId(job.analysisId)}`;
 }
 
-export function buildJobBannerMessage(job: AnalysisJobResponse): string {
+export function buildJobBannerMessage(job: AnalysisJobStateSnapshot): string {
   if (job.status === 'FAILED' || job.status === 'NOT_FOUND') {
     return job.errorMessage || 'Analiza zakończona błędem.';
   }

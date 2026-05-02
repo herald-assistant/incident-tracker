@@ -6,7 +6,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import java.time.Instant;
 import java.util.List;
 
-public record AnalysisJobResponse(
+public record AnalysisJobStateSnapshot(
         String analysisId,
         String correlationId,
         String aiModel,

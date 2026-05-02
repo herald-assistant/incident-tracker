@@ -135,7 +135,7 @@ export interface AnalysisChatMessageResponse {
   prompt: string;
 }
 
-export interface AnalysisJobResponse {
+export interface AnalysisJobStateSnapshot {
   analysisId: string;
   correlationId: string;
   aiModel: string;
@@ -162,7 +162,7 @@ export interface ExportState {
   origin: 'live' | 'imported';
   exportedAt: string;
   fileName: string;
-  job: AnalysisJobResponse;
+  job: AnalysisJobStateSnapshot;
 }
 
 export interface TransportErrorState {
@@ -178,6 +178,6 @@ export interface AnalysisExportEnvelope {
   exportedAt: string;
   payload: {
     type: 'analysis-job';
-    job: AnalysisJobResponse;
+    job: AnalysisJobStateSnapshot;
   };
 }

@@ -15,7 +15,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deploy
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisExecution;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageResponse;
-import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobResponse;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStepResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
 
@@ -247,8 +247,8 @@ public final class AnalysisJobState {
         touch();
     }
 
-    public synchronized AnalysisJobResponse snapshot() {
-        return new AnalysisJobResponse(
+    public synchronized AnalysisJobStateSnapshot snapshot() {
+        return new AnalysisJobStateSnapshot(
                 analysisId,
                 correlationId,
                 aiOptions.model(),
