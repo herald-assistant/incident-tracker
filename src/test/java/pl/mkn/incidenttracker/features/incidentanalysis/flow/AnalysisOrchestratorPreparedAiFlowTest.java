@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
-import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
+import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;

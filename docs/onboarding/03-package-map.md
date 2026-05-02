@@ -53,10 +53,11 @@ Konkretne kroki pipeline:
 
 ### Zamkniety root `analysis/*`
 
-Produkcyjny root `analysis.*` jest zamkniety. Nie dodawaj tam nowych klas ani
-lokalnych instrukcji. Publiczne URL-e moga nadal zawierac slowo `analysis`, ale
-ownership Javy jest teraz w `features.*`, `api.*`, `integrations.*`,
-`agenttools.*`, `aiplatform.*`, `shared.*` albo `common.*`.
+Produkcyjny i testowy root `analysis.*` jest zamkniety. Nie dodawaj tam nowych
+klas, testow ani lokalnych instrukcji. Publiczne URL-e moga nadal zawierac
+slowo `analysis`, ale ownership Javy jest teraz w `features.*`, `api.*`,
+`integrations.*`, `agenttools.*`, `aiplatform.*`, `shared.*`, `common.*` albo
+dedykowanym `testsupport.*`.
 
 ### `integrations`
 

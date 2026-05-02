@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.sdk.json.ToolDefinition;
@@ -36,9 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.metricsLogger;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.sessionTelemetry;
+import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
+import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.metricsLogger;
+import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.sessionTelemetry;
 
 class CopilotIncidentInitialPreparationServiceMetricsTest {
 

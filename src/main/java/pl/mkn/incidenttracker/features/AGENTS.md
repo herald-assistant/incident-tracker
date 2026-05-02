@@ -41,10 +41,10 @@ Obecnie pierwszy feature to `incidentanalysis`.
   analizy incydentu.
 - `features.incidentanalysis.job` zawiera job API, state i follow-up chat dla
   analizy incydentu.
-- Produkcyjny root `analysis.*` jest zamkniety. Nie dodawaj tam nowych klas
-  ani lokalnych instrukcji; nowe elementy feature'a trzymaj pod `features.*`,
-  a reusable capability w `integrations`, `agenttools`, `aiplatform`, `shared`
-  albo `common`.
+- Produkcyjny i testowy root `analysis.*` jest zamkniety. Nie dodawaj tam
+  nowych klas, testow ani lokalnych instrukcji; nowe elementy feature'a trzymaj
+  pod `features.*`, a reusable capability w `integrations`, `agenttools`,
+  `aiplatform`, `shared` albo `common`.
 
 ## Weryfikacja
 

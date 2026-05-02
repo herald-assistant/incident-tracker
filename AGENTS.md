@@ -64,8 +64,8 @@ Zasady granic:
 - `integrations.*` nie moze zalezec od `analysis.*`, `agenttools.*`,
   `aiplatform.*` ani `features.*`. Adaptery
   maja byc mozliwe do reuse'u przez evidence pipeline, tools/MCP i zwykle
-  endpointy REST. Produkcyjny root `analysis.*` jest zamkniety; nie dodawaj
-  tam nowych klas ani lokalnych instrukcji.
+  endpointy REST. Produkcyjny i testowy root `analysis.*` jest zamkniety; nie
+  dodawaj tam nowych klas, testow ani lokalnych instrukcji.
 - Tools/MCP nie powinny zalezec od dedykowanej analizy incydentow ani od
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.

@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot;
+package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import com.github.copilot.sdk.json.ToolDefinition;
 import org.junit.jupiter.api.Test;

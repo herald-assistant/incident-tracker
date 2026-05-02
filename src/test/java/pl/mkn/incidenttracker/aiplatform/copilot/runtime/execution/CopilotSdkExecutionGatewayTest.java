@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.ai.copilot;
+package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
 import com.github.copilot.sdk.ConnectionState;
 import com.github.copilot.sdk.CopilotClient;
@@ -38,8 +38,8 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.executionGateway;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
+import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.executionGateway;
+import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
 class CopilotSdkExecutionGatewayTest {
 

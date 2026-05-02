@@ -12,7 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static pl.mkn.incidenttracker.analysis.ai.copilot.CopilotTestFixtures.artifactService;
+import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotIncidentArtifactServiceDigestOrderTest {
 

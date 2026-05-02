@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis;
+package pl.mkn.incidenttracker.features.incidentanalysis.testsupport;
 
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;

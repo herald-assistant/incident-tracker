@@ -16,7 +16,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveServ
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveSession;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
-import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
+import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;

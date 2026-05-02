@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PackageDependencyGuardTest {
 
     private static final Path MAIN_JAVA = Path.of("src/main/java");
+    private static final Path TEST_JAVA = Path.of("src/test/java");
     private static final Pattern PACKAGE_PATTERN = Pattern.compile("^package\\s+([^;]+);");
     private static final Pattern IMPORT_PATTERN = Pattern.compile("^import\\s+(?:static\\s+)?([^;]+);");
 
@@ -166,8 +167,27 @@ class PackageDependencyGuardTest {
                 "pl.mkn.incidenttracker.analysis"
         );
 
+        var violations = findClosedPackageDeclarations(MAIN_JAVA, closedPackages);
+
+        assertTrue(violations.isEmpty(), () -> "Closed production package(s) were recreated:\n"
+                + String.join("\n", violations));
+    }
+
+    @Test
+    void shouldNotRecreateClosedTestPackages() throws IOException {
+        var closedPackages = List.of(
+                "pl.mkn.incidenttracker.analysis"
+        );
+
+        var violations = findClosedPackageDeclarations(TEST_JAVA, closedPackages);
+
+        assertTrue(violations.isEmpty(), () -> "Closed test package(s) were recreated:\n"
+                + String.join("\n", violations));
+    }
+
+    private static List<String> findClosedPackageDeclarations(Path sourceRoot, List<String> closedPackages) throws IOException {
         var violations = new ArrayList<String>();
-        try (var files = Files.walk(MAIN_JAVA)) {
+        try (var files = Files.walk(sourceRoot)) {
             for (var file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
                 var lines = Files.readAllLines(file);
                 for (var i = 0; i < lines.size(); i++) {
@@ -179,7 +199,7 @@ class PackageDependencyGuardTest {
                     var sourcePackage = packageMatcher.group(1);
                     for (var closedPackage : closedPackages) {
                         if (Rule.startsWithPackage(sourcePackage, closedPackage)) {
-                            violations.add("- " + MAIN_JAVA.relativize(file).toString().replace('\\', '/')
+                            violations.add("- " + sourceRoot.relativize(file).toString().replace('\\', '/')
                                     + ":" + (i + 1)
                                     + " declares closed package " + sourcePackage);
                         }
@@ -187,9 +207,7 @@ class PackageDependencyGuardTest {
                 }
             }
         }
-
-        assertTrue(violations.isEmpty(), () -> "Closed production package(s) were recreated:\n"
-                + String.join("\n", violations));
+        return violations;
     }
 
     private static List<String> findViolations(List<Rule> rules) throws IOException {

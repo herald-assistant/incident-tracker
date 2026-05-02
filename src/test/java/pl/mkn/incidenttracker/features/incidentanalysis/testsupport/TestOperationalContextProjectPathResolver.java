@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis;
+package pl.mkn.incidenttracker.features.incidentanalysis.testsupport;
 
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;

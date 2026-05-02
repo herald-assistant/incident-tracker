@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
-import pl.mkn.incidenttracker.analysis.TestOperationalContextProjectPathResolver;
+import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
@@ -35,7 +35,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operat
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
-import pl.mkn.incidenttracker.analysis.TestInitialAnalysisProvider;
+import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestInitialAnalysisProvider;
 
 import java.util.ArrayDeque;
 import java.util.List;

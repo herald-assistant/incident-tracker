@@ -460,7 +460,7 @@ Kroki:
 
 Kryterium done:
 
-- produkcyjny root `analysis.*` jest zamkniety,
+- produkcyjny i testowy root `analysis.*` jest zamkniety,
 - adaptery mieszkaja w `integrations.*`,
 - wrappery MCP/tools mieszkaja w `agenttools.<capability>.mcp`,
 - cykle pozostaja tylko tam, gdzie sa jawnie zaakceptowane jako przejsciowe.
@@ -733,7 +733,10 @@ Kryterium done:
     [done].
 22. PR: zamknac produkcyjny root `analysis.*` w guardzie i usunac ostatnie
     lokalne instrukcje z historycznych katalogow [done].
-23. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+23. PR: zamknac testowy root `analysis.*` i przeniesc testy do pakietow
+    aktualnych wlascicieli: `features`, `aiplatform`, `integrations` oraz
+    `testsupport` [done].
+24. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

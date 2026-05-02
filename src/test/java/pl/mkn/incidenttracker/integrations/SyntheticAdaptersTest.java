@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.analysis.adapter;
+package pl.mkn.incidenttracker.integrations;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.integrations.dynatrace.DynatraceIncidentQuery;
