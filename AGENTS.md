@@ -64,8 +64,8 @@ Zasady granic:
 - `integrations.*` nie moze zalezec od `analysis.*`, `agenttools.*`,
   `aiplatform.*` ani `features.*`. Adaptery
   maja byc mozliwe do reuse'u przez evidence pipeline, tools/MCP i zwykle
-  endpointy REST. Nie przywracaj nowych adapterow do historycznego
-  `analysis.adapter`.
+  endpointy REST. Produkcyjny root `analysis.*` jest zamkniety; nie dodawaj
+  tam nowych klas ani lokalnych instrukcji.
 - Tools/MCP nie powinny zalezec od dedykowanej analizy incydentow ani od
   szczegolow providera Copilot. Maja byc mozliwe do podpiecia pod dowolny loop
   agenta albo inna platforme AI.
@@ -159,12 +159,6 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/integrations`
   Docelowa reusable warstwa capability adapters. Dynatrace, Elasticsearch,
   GitLab, operational context i Database mieszkaja juz w `integrations`.
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter`
-  Historyczny katalog po ekstrakcji adapterow. Nie dodawaj tu nowego kodu;
-  nowe integracje trafiaja do `integrations`.
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp`
-  Historyczny katalog po ekstrakcji MCP tools. Nie dodawaj tu nowego kodu;
-  nowe tools trafiaja do `agenttools.<capability>.mcp`.
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
   Reusable tools/capability wspolne dla MCP wrappers i platform AI, np. hidden
   tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
@@ -258,11 +252,9 @@ Podstawowe komendy:
 Utrzymujemy lokalne instrukcje na poziomie bezposrednich podkatalogow, zeby
 granice modulow byly czytelne i stabilne po refaktorach.
 
-- `src/main/java/pl/mkn/incidenttracker/analysis/adapter/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/analysis/mcp/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
 - `src/main/java/pl/mkn/incidenttracker/api/AGENTS.md`

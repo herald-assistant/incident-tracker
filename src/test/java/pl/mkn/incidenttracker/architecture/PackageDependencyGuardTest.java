@@ -163,11 +163,7 @@ class PackageDependencyGuardTest {
     @Test
     void shouldNotRecreateClosedProductionPackages() throws IOException {
         var closedPackages = List.of(
-                "pl.mkn.incidenttracker.analysis.ai",
-                "pl.mkn.incidenttracker.analysis.flow",
-                "pl.mkn.incidenttracker.analysis.job",
-                "pl.mkn.incidenttracker.analysis.evidence",
-                "pl.mkn.incidenttracker.analysis.options"
+                "pl.mkn.incidenttracker.analysis"
         );
 
         var violations = new ArrayList<String>();

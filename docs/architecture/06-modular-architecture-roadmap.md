@@ -460,9 +460,9 @@ Kroki:
 
 Kryterium done:
 
-- `analysis.adapter` nie importuje `analysis.evidence`, `analysis.mcp`,
-  `analysis.ai` ani `agenttools`,
-- `analysis.mcp` nie importuje `analysis.ai.copilot`,
+- produkcyjny root `analysis.*` jest zamkniety,
+- adaptery mieszkaja w `integrations.*`,
+- wrappery MCP/tools mieszkaja w `agenttools.<capability>.mcp`,
 - cykle pozostaja tylko tam, gdzie sa jawnie zaakceptowane jako przejsciowe.
 
 ## Faza 3: Ekstrakcja `integrations`
@@ -731,7 +731,9 @@ Kryterium done:
 21. PR: przeniesc stabilne helper endpointy Elasticsearch/GitLab do shared/operator
     API `api.*`, zostawiajac adaptery, serwisy i modele w `integrations.*`
     [done].
-22. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
+22. PR: zamknac produkcyjny root `analysis.*` w guardzie i usunac ostatnie
+    lokalne instrukcje z historycznych katalogow [done].
+23. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
     platformy i tools.
 
 ## Decyzje Do Podjecia W Trakcie

@@ -38,17 +38,17 @@ dedykowane feature'y analityczne
   -> reusable adaptery/integracje
 ```
 
-W obecnym kodzie te warstwy nadal mieszkaja pod `analysis.*`, bo incident
-analysis byl pierwszym use case'em. Nie oznacza to, ze wszystkie pakiety pod
-`analysis` sa feature-specific. Przy kazdej wiekszej zmianie trzeba pilnowac
+Historycznie te warstwy mieszkaly pod `analysis.*`, bo incident analysis byl
+pierwszym use case'em. Produkcyjny root `analysis.*` jest juz zamkniety i nie
+jest miejscem na nowe klasy. Przy kazdej wiekszej zmianie trzeba pilnowac
 ponizszych zasad:
 
 - `integrations.*` to docelowa reusable warstwa capability integracyjnych.
   Nie moze zalezec od evidence pipeline, MCP/tools, Copilota, flow ani job API.
   Ten sam adapter ma byc uzywalny przez provider evidence, tool, helper
   endpoint REST albo przyszly feature.
-- `analysis.adapter` jest historycznym katalogiem po ekstrakcji adapterow.
-  Nowe i przenoszone capability maja trafiac do `integrations.*`.
+- Nowe i przenoszone capability integracyjne maja trafiac do `integrations.*`,
+  nie do historycznych pakietow `analysis.*`.
 - `agenttools` to reusable ekspozycja capability nad adapterami. Nie powinno
   zalezec od dedykowanej analizy incydentow ani od szczegolow providera
   Copilot SDK.
@@ -242,6 +242,7 @@ Unikac nowych zaleznosci:
 - `analysis.adapter -> analysis.mcp`,
 - `analysis.adapter -> analysis.ai`,
 - `analysis.adapter -> agenttools`,
+- `any production package declaration under analysis.*`,
 - `integrations -> analysis`,
 - `integrations -> agenttools`,
 - `integrations -> features`,
@@ -314,6 +315,9 @@ Zamkniete krawedzie, ktorych nie przywracac:
 - `analysis.options`: neutralne preferencje AI mieszkaja w `shared.ai`, a
   endpoint `GET /analysis/ai/options` w `api.aioptions`; historycznego pakietu
   produkcyjnego `analysis.options` nie przywracac.
+- `analysis.adapter` i `analysis.mcp`: produkcyjne adaptery mieszkaja w
+  `integrations.*`, a wrappery MCP w `agenttools.<capability>.mcp`; historycznych
+  pakietow produkcyjnych `analysis.adapter` i `analysis.mcp` nie przywracac.
 - `runtime tools -> capability evidence capture`: GitLab/DB user-facing tool
   evidence mapping mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools`; platformowe runtime tools

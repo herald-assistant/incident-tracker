@@ -9,8 +9,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 
 ## Po tym kroku rozumiesz
 
-- za co odpowiada kazdy glowny podkatalog `analysis/*` i
-  `features/incidentanalysis/*`,
+- za co odpowiada kazdy glowny podkatalog `features/incidentanalysis/*` oraz
+  reusable warstwy,
 - gdzie szukac zmian przy konkretnym typie feature'a,
 - jak rozpoznac, ze klasa wyladowala za wysoko albo za nisko.
 
@@ -51,21 +51,18 @@ Konkretne kroki pipeline:
 - GitLab deterministic,
 - operational context.
 
-### `analysis/adapter`
+### Zamkniety root `analysis/*`
 
-Historyczny katalog po ekstrakcji adapterow. Nowe capability nie powinny tu
-trafiac.
+Produkcyjny root `analysis.*` jest zamkniety. Nie dodawaj tam nowych klas ani
+lokalnych instrukcji. Publiczne URL-e moga nadal zawierac slowo `analysis`, ale
+ownership Javy jest teraz w `features.*`, `api.*`, `integrations.*`,
+`agenttools.*`, `aiplatform.*`, `shared.*` albo `common.*`.
 
 ### `integrations`
 
 Docelowa reusable warstwa capability adapters. Przeniesione pakiety to
 `integrations/dynatrace`, `integrations/elasticsearch`, `integrations/gitlab`,
 `integrations/operationalcontext` i `integrations/database`.
-
-### `analysis/mcp`
-
-Historyczny katalog po ekstrakcji tools wystawianych przez Spring AI.
-Nie ma tu juz aktywnych wrapperow MCP.
 
 ### `agenttools`
 
