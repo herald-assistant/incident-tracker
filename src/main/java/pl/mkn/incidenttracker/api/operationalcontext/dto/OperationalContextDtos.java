@@ -57,7 +57,7 @@ public final class OperationalContextDtos {
     public record ExplainableBreakdownItemDto(
             String id,
             String label,
-            String type,
+            String kind,
             String reason,
             String status,
             List<SourceReferenceDto> sourceRefs
@@ -108,10 +108,10 @@ public final class OperationalContextDtos {
     public record OperationalContextSystemRowDto(
             String id,
             String name,
-            String type,
+            String kind,
             ExplainableValueDto<String> owner,
             String purpose,
-            ExplainableAggregateDto repos,
+            ExplainableAggregateDto repositories,
             ExplainableAggregateDto processes,
             ExplainableAggregateDto contexts,
             ExplainableAggregateDto integrations,
@@ -146,7 +146,7 @@ public final class OperationalContextDtos {
             String purpose,
             ExplainableAggregateDto systems,
             ExplainableAggregateDto externalSystems,
-            ExplainableAggregateDto repos,
+            ExplainableAggregateDto repositories,
             ExplainableAggregateDto contexts,
             ExplainableAggregateDto steps,
             ExplainableAggregateDto completionSignals,
@@ -158,12 +158,12 @@ public final class OperationalContextDtos {
     public record OperationalContextIntegrationRowDto(
             String id,
             String name,
-            String from,
-            String to,
+            String sourceSystem,
+            String targetSystems,
             ExplainableValueDto<String> owner,
             ExplainableAggregateDto partnerTeams,
-            String protocol,
-            String type,
+            String protocols,
+            String integrationStyle,
             ExplainableAggregateDto processes,
             ExplainableAggregateDto contexts,
             ExplainableAggregateDto signals,
@@ -178,11 +178,11 @@ public final class OperationalContextDtos {
             ExplainableValueDto<String> owner,
             String purpose,
             ExplainableAggregateDto systems,
-            ExplainableAggregateDto repos,
+            ExplainableAggregateDto repositories,
             ExplainableAggregateDto processes,
             ExplainableAggregateDto terms,
             ExplainableAggregateDto relations,
-            ExplainableAggregateDto runtimeFingerprints,
+            ExplainableAggregateDto runtimeSignals,
             ExplainableAggregateDto validation
     ) {
     }
@@ -192,7 +192,7 @@ public final class OperationalContextDtos {
             String name,
             String purpose,
             ExplainableAggregateDto ownsSystems,
-            ExplainableAggregateDto ownsRepos,
+            ExplainableAggregateDto ownsRepositories,
             ExplainableAggregateDto ownsProcesses,
             ExplainableAggregateDto ownsContexts,
             ExplainableAggregateDto ownsIntegrations,
@@ -207,7 +207,7 @@ public final class OperationalContextDtos {
             String term,
             String category,
             String definition,
-            ExplainableAggregateDto typicalEvidenceSignals,
+            ExplainableAggregateDto matchSignals,
             ExplainableAggregateDto canonicalReferences
     ) {
     }

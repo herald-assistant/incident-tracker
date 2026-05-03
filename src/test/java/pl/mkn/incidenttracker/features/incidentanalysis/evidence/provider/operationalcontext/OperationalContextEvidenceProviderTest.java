@@ -66,8 +66,8 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(titles.contains("Operational glossary term soap-fault"));
         assertTrue(titles.contains("Operational handoff rule integration-external-sync-failure"));
         assertEquals("app-core", view.systems().get(0).systemId());
-        assertTrue(view.systems().get(0).repoIds().contains("app-shared-lib-repo"));
-        assertTrue(view.systems().get(0).codeSearchRepoIds().contains("app-shared-lib-repo"));
+        assertTrue(view.systems().get(0).repositoryIds().contains("app-shared-lib-repo"));
+        assertTrue(view.systems().get(0).codeSearchRepositoryIds().contains("app-shared-lib-repo"));
         assertTrue(view.systems().get(0).codeSearchProjects().contains("libs/app-shared-lib"));
         assertTrue(view.systems().get(0).sourcePackages().contains("com.example.shared"));
         assertTrue(view.systems().get(0).classHints().contains("SharedPredicate"));

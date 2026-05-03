@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
@@ -36,22 +37,53 @@ final class OperationalContextMatchingSupport {
     }
 
     static List<String> genericSignals(Map<String, Object> entry) {
-        return textListAny(
+        var values = new LinkedHashSet<String>();
+        for (var confidence : List.of("exact", "strong", "medium", "weak")) {
+            for (var key : List.of(
+                    "serviceNames",
+                    "containerNames",
+                    "projectNames",
+                    "packagePrefixes",
+                    "endpointPrefixes",
+                    "endpointTemplates",
+                    "operationNames",
+                    "hosts",
+                    "hostPatterns",
+                    "queues",
+                    "topics",
+                    "routingKeys",
+                    "datasourceNames",
+                    "schemas",
+                    "spans",
+                    "markers",
+                    "errors",
+                    "events",
+                    "terms",
+                    "classHints",
+                    "paths",
+                    "pathHints"
+            )) {
+                values.addAll(textList(entry, "matchSignals." + confidence + "." + key));
+            }
+        }
+        values.addAll(textListAny(
                 entry,
-                "signals.serviceNames",
-                "signals.containerNames",
-                "signals.projectNames",
-                "signals.packagePrefixes",
-                "signals.endpoints",
-                "signals.hosts",
-                "signals.queues",
-                "signals.topics",
-                "signals.schemas",
-                "signals.spans",
-                "signals.markers",
-                "signals.errors",
-                "signals.events"
-        );
+                "transport.http.endpointPrefixes",
+                "transport.http.endpointTemplates",
+                "transport.http.operationNames",
+                "transport.http.hosts",
+                "transport.http.hostPatterns",
+                "transport.http.clientNames",
+                "transport.messaging.queues",
+                "transport.messaging.topics",
+                "transport.messaging.routingKeys",
+                "transport.database.datasourceNames"
+        ));
+        for (var channel : mapList(entry, "channels")) {
+            values.addAll(textList(channel, "signals"));
+            values.addAll(textListAny(channel, "type", "name"));
+        }
+        return List.copyOf(values);
     }
 
     static boolean containsId(Map<String, Object> entry, String path, String id) {

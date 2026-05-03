@@ -1,49 +1,56 @@
 # Operational Context Index
 
-This directory stores the compact operational catalog used by the
-`operational-context` evidence provider.
+```yaml
+schemaVersion: 1
+kind: operational-context.index
+```
 
-The current files are intentionally starter templates.
-They should contain only information that helps:
+## Catalog Purpose
 
-- identify the affected runtime system,
-- target the right GitLab repository or module,
-- understand the likely business or technical flow,
-- explain domain vocabulary,
-- route the incident to the right owner.
+This directory contains a reusable, evidence-backed operational context catalog. Incident analysis is the first consumer, but the catalog also supports deterministic mapping, code-search scope construction, function explanation, impact analysis, DB/code grounding, integration dependency analysis, process and bounded-context understanding, local vocabulary disambiguation, QA, onboarding and future AI analysis features.
 
-## File Purpose
+## Operational Graph Model
 
-- `systems.yml`
-  map of internal and external runtime systems with recognition signals and
-  handoff hints.
-- `repo-map.yml`
-  mapping from runtime evidence to GitLab repositories, packages, classes and
-  likely code areas.
-- `processes.yml`
-  short map of the business or operational flows that matter during incident
-  triage.
-- `integrations.yml`
-  operational contracts between systems together with the signals that reveal
-  them in incidents.
-- `bounded-contexts.yml`
-  semantic boundaries and domain language clusters that help explain what area
-  of the business is affected.
-- `teams.yml`
-  ownership map aligned with the ids reused by the other catalog files.
-- `glossary.md`
-  local terms and synonyms that help interpret logs, code and handoff labels.
-- `handoff-rules.md`
-  short routing rules that change who should act next.
+The catalog describes an operational graph, not a single ownership table. The graph connects logical systems, runtime components, repositories, modules, source layouts, code-search scopes, generated clients, shared libraries, integrations, processes, bounded contexts, glossary terms, teams, external parties, responsibility relations, deterministic match signals, routing overlays and durable gaps.
 
-## How to use this catalog
+A single runtime component, repository, process, integration or bounded context may involve several teams with different roles. Shared libraries and generated clients may be part of code-search scope without becoming runtime owners.
 
-1. Identify the system with `systems.yml`.
-2. Target code with `repo-map.yml`.
-3. Understand the flow with `processes.yml` and `integrations.yml`.
-4. Interpret the domain with `bounded-contexts.yml` and `glossary.md`.
-5. Route the incident with `handoff-rules.md` and `teams.yml`.
+## Catalog Files
 
-If the evidence is too weak to fill a file confidently, keep the structure
-minimal and add an `openQuestions` entry instead of inventing ownership or
-domain boundaries.
+- `systems.yml` owns logical systems, deployed runtime components, runtime recognition signals, dependencies, code-search references and system-level gaps.
+- `repo-map.yml` owns repositories, modules, source layouts and top-level `codeSearchScopes` used to search service code together with shared libraries, generated clients and config sources.
+- `processes.yml` owns business, operational, technical, scheduled, event-driven and data processes, including operationally meaningful steps.
+- `integrations.yml` owns operational contracts between systems, mediators, brokers, external targets, data stores and channels.
+- `bounded-contexts.yml` owns semantic/domain boundaries, local language, context relations and DB/code grounding hints.
+- `teams.yml` owns internal teams, external parties and role-based responsibility relations.
+- `glossary.md` owns local vocabulary, aliases, acronyms, error markers and term-level disambiguation.
+- `handoff-rules.md` is a derived coordination overlay for incident handoff and routing thresholds.
+
+## Deterministic Signals
+
+Catalog entries should keep stable, queryable signals outside prose: service names, deployments, containers, GitLab project paths, package prefixes, class hints, endpoint prefixes, queues, topics, exchanges, routing keys, events, schemas, datasource names, Hikari pools, DB schemas and tables, job names, workflow names, config keys, log markers, exception classes, error codes, metrics, spans, terms and aliases.
+
+Exact or strong signals are required for high-confidence deterministic mapping. Weak or generic words such as `backend`, `service`, `timeout`, `failure`, `database`, `integration` or `queue` are not enough to assert a system, responsibility or route without stronger evidence.
+
+## Query And Consumption Model
+
+Runtime features and LLM agents should query an operational-context adapter for focused graph slices instead of loading the whole catalog by default. A useful query result includes matched candidates, matched signals, summaries, code-search projects, package/class hints, related systems, repositories, processes, integrations, bounded contexts, teams, terms, responsibility or routing views, source coverage, limitations and durable gaps.
+
+## Responsibilities And Routing
+
+Responsibilities are role-based relations, not forced owners. A team may be a runtime operator, repo maintainer, module steward, domain steward, integration-side steward, producer, consumer, platform support, data owner, first responder, worker, contributor or external owner. Routing and handoff are downstream views over those facts and must not overwrite catalog ownership, topology, integration, process or vocabulary facts.
+
+## Gaps And Build Memory
+
+Use `gaps` for durable catalog-level unresolved issues that affect deterministic mapping, code-search scope, system/runtime recognition, process/context interpretation, integration analysis, responsibility, handoff behavior, DB/code grounding or LLM answers.
+
+Temporary scan-order uncertainty belongs in `BUILD MEMORY`, discovery reports or sidecar outputs. Do not use final catalog gaps as scratchpad memory between repository scans.
+
+## Update Quality Gates
+
+- Preserve existing evidence-backed facts unless explicit contradictory evidence is available.
+- Merge confirmed positive facts; do not regenerate global truth from one source.
+- Treat absence in one repository or document as `not observed`, not global absence.
+- Keep code-search scopes explicit when runtime code spans service repositories, shared libraries, generated clients or config repositories.
+- Keep handoff rules concise, evidence-backed and subordinate to core catalog facts.
+- Do not store secrets, credentials, tokens, personal contact data, full production payloads or sensitive business records.

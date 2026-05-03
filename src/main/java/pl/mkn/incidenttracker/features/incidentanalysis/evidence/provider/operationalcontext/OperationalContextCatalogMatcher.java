@@ -23,7 +23,6 @@ import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsId;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.genericSignals;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.matchedIds;
-import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textAny;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textListAny;
 
 @Component
@@ -171,31 +170,9 @@ public class OperationalContextCatalogMatcher {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, system, "system");
         addSignalMatches(score, signals, genericSignals(system), 10, 6, "signal");
-        addSignalMatches(score, signals, textListAny(system, "processes", "domainContext.processes"), 4, 2, "process");
-        addSignalMatches(score, signals, textListAny(system, "contexts", "domainContext.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textListAny(system, "repos", "repositories.primary"), 6, 4, "repo");
-        addSignalMatches(score, signals, textListAny(system, "dependsOn", "dependencies.externalSystemIds"), 3, 2, "dependency");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.serviceNames"), 12, 8, "serviceName");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.containerNames"), 12, 8, "containerName");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.applicationNames"), 10, 6, "applicationName");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.projectNames"), 10, 6, "projectName");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.packagePrefixes"), 9, 5, "packagePrefix");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.endpointPrefixes"), 9, 5, "endpointPrefix");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.hostPatterns"), 9, 5, "hostPattern");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.queueNames"), 9, 5, "queueName");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.topicNames"), 9, 5, "topicName");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.eventTypes"), 7, 4, "eventType");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.databaseSchemas"), 7, 4, "databaseSchema");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.traceSpans"), 8, 5, "traceSpan");
-        addSignalMatches(score, signals, textList(system, "runtimeFingerprints.logMarkers"), 6, 3, "logMarker");
-        addSignalMatches(score, signals, textList(system, "repositories.primary"), 6, 4, "repository");
-        addSignalMatches(score, signals, textList(system, "repositories.secondary"), 4, 2, "repository");
-        addSignalMatches(score, signals, textList(system, "repositories.backendModules"), 5, 3, "backendModule");
-        addSignalMatches(score, signals, textList(system, "repositories.frontendModules"), 5, 3, "frontendModule");
-        addSignalMatches(score, signals, textList(system, "repositories.packageRoots"), 7, 4, "packageRoot");
-        addSignalMatches(score, signals, textList(system, "dependencies.upstreamSystemIds"), 3, 2, "upstreamSystem");
-        addSignalMatches(score, signals, textList(system, "dependencies.downstreamSystemIds"), 3, 2, "downstreamSystem");
-        addSignalMatches(score, signals, textList(system, "dependencies.externalSystemIds"), 3, 2, "externalSystem");
+        addSignalMatches(score, signals, textList(system, "references.processes"), 4, 2, "process");
+        addSignalMatches(score, signals, textList(system, "references.boundedContexts"), 5, 3, "context");
+        addSignalMatches(score, signals, textList(system, "references.repositories"), 6, 4, "repository");
         return score;
     }
 
@@ -207,53 +184,19 @@ public class OperationalContextCatalogMatcher {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, integration, "integration");
         addSignalMatches(score, signals, genericSignals(integration), 11, 7, "signal");
-        addSignalMatches(
-                score,
-                signals,
-                textListAny(integration, "processes", "topology.sourceProcessIds", "topology.targetProcessIds"),
-                4,
-                2,
-                "process"
-        );
-        addSignalMatches(score, signals, textListAny(integration, "contexts", "topology.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textList(integration, "contract.operations"), 6, 3, "operation");
-        addSignalMatches(score, signals, textList(integration, "contract.endpointPatterns"), 11, 7, "endpoint");
-        addSignalMatches(score, signals, textList(integration, "contract.hostPatterns"), 11, 7, "host");
-        addSignalMatches(score, signals, textList(integration, "contract.soapActions"), 9, 5, "soapAction");
-        addSignalMatches(score, signals, textList(integration, "contract.queueNames"), 9, 5, "queue");
-        addSignalMatches(score, signals, textList(integration, "contract.topicNames"), 9, 5, "topic");
-        addSignalMatches(score, signals, textList(integration, "contract.exchangeNames"), 8, 4, "exchange");
-        addSignalMatches(score, signals, textList(integration, "contract.routingKeys"), 8, 4, "routingKey");
-        addSignalMatches(score, signals, textList(integration, "contract.databaseSchemas"), 8, 4, "databaseSchema");
-        addSignalMatches(score, signals, textList(integration, "contract.filePatterns"), 8, 4, "filePattern");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.serviceNames"), 8, 5, "serviceName");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.containerNames"), 8, 5, "containerName");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.applicationNames"), 7, 4, "applicationName");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.endpointPrefixes"), 9, 5, "endpointPrefix");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.hostPatterns"), 9, 5, "hostPattern");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.queueNames"), 9, 5, "queueName");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.topicNames"), 9, 5, "topicName");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.exchangeNames"), 8, 4, "exchangeName");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.routingKeys"), 8, 4, "routingKey");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.databaseSchemas"), 8, 4, "databaseSchema");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.traceSpans"), 8, 4, "traceSpan");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.logMarkers"), 6, 3, "logMarker");
-        addSignalMatches(score, signals, textList(integration, "runtimeFingerprints.errorMarkers"), 8, 5, "errorMarker");
-        addSignalMatches(score, signals, textList(integration, "failureModes.commonSymptoms"), 5, 3, "symptom");
-        addSignalMatches(score, signals, textList(integration, "failureModes.retriableIndicators"), 6, 3, "retriableIndicator");
-        addSignalMatches(score, signals, textList(integration, "failureModes.nonRetriableIndicators"), 6, 3, "nonRetriableIndicator");
-        addSignalMatches(score, signals, textList(integration, "failureModes.timeoutIndicators"), 7, 4, "timeoutIndicator");
-        addSignalMatches(score, signals, textList(integration, "failureModes.dataMismatchIndicators"), 7, 4, "dataMismatchIndicator");
+        addSignalMatches(score, signals, textList(integration, "references.processes"), 4, 2, "process");
+        addSignalMatches(score, signals, textList(integration, "references.boundedContexts"), 5, 3, "context");
+        addSignalMatches(score, signals, textList(integration, "transport.protocols"), 4, 2, "protocol");
 
         var matchedSystemIds = matchedIds(systemMatches);
         if (containsAnyId(
                 matchedSystemIds,
-                textAny(integration, "from", "topology.sourceSystemId"),
-                textAny(integration, "to", "topology.targetSystemId")
+                text(integration, "participants.source.system"),
+                firstOf(textList(integration, "participants.finalTargets"))
         )) {
             score.add(10, "sourceOrTargetSystemMatches");
         }
-        if (anyOverlap(textList(integration, "topology.intermediarySystemIds"), matchedSystemIds)) {
+        if (anyOverlap(textList(integration, "participants.intermediarySystems"), matchedSystemIds)) {
             score.add(6, "intermediarySystemMatches");
         }
 
@@ -268,52 +211,26 @@ public class OperationalContextCatalogMatcher {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, repository, "repository");
         addSignalMatches(score, signals, genericSignals(repository), 11, 7, "signal");
-        addSignalMatch(score, signals, text(repository, "project"), 12, 8, "project");
-        addSignalMatch(score, signals, text(repository, "group"), 5, 2, "group");
-        addSignalMatches(score, signals, textListAny(repository, "systems", "topology.systemIds"), 6, 3, "system");
-        addSignalMatches(score, signals, textListAny(repository, "processes", "topology.processIds"), 5, 3, "process");
-        addSignalMatches(score, signals, textListAny(repository, "contexts", "topology.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textList(repository, "gitLab.projectPath"), 12, 8, "projectPath");
-        addSignalMatches(score, signals, textList(repository, "gitLab.groupPath"), 6, 3, "groupPath");
-        addSignalMatches(score, signals, textList(repository, "sourceLayout.packageRoots"), 10, 6, "packageRoot");
-        addSignalMatches(score, signals, textList(repository, "sourceLayout.classNamePrefixes"), 8, 5, "classNamePrefix");
+        addSignalMatch(score, signals, text(repository, "git.projectPath"), 12, 8, "projectPath");
+        addSignalMatch(score, signals, text(repository, "git.project"), 10, 6, "project");
+        addSignalMatch(score, signals, text(repository, "git.group"), 5, 2, "group");
+        addSignalMatches(score, signals, textList(repository, "references.systems"), 6, 3, "system");
+        addSignalMatches(score, signals, textList(repository, "references.processes"), 5, 3, "process");
+        addSignalMatches(score, signals, textList(repository, "references.boundedContexts"), 5, 3, "context");
+        addSignalMatches(score, signals, textList(repository, "sourceLayout.sourceRoots"), 10, 6, "sourceRoot");
+        addSignalMatches(score, signals, textList(repository, "sourceLayout.modulePaths"), 8, 5, "modulePath");
         addSignalMatches(score, signals, textList(repository, "sourceLayout.importantPaths"), 8, 5, "importantPath");
-        addSignalMatches(score, signals, textList(repository, "sourceLayout.entrypoints"), 7, 4, "entrypoint");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.serviceNames"), 8, 5, "serviceName");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.containerNames"), 8, 5, "containerName");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.applicationNames"), 7, 4, "applicationName");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.projectNames"), 11, 7, "projectName");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.endpointPrefixes"), 8, 5, "endpointPrefix");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.queueNames"), 8, 5, "queueName");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.topicNames"), 8, 5, "topicName");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.databaseSchemas"), 8, 5, "databaseSchema");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.logMarkers"), 6, 3, "logMarker");
-        addSignalMatches(score, signals, textList(repository, "runtimeMappings.traceSpans"), 8, 4, "traceSpan");
-        addSignalMatches(score, signals, textList(repository, "sourceLookupHints.stacktraceHotspots"), 8, 5, "stacktraceHotspot");
-        addSignalMatches(score, signals, textList(repository, "sourceLookupHints.likelyEntryClasses"), 7, 4, "entryClass");
-        addSignalMatches(score, signals, textList(repository, "sourceLookupHints.likelyConfigFiles"), 7, 4, "configFile");
-        addSignalMatches(score, signals, textList(repository, "incidentHints.likelyChangeAreas"), 7, 4, "changeArea");
+        addSignalMatches(score, signals, textList(repository, "codeSearch.entrypoints"), 7, 4, "entrypoint");
 
         for (var module : mapList(repository, "modules")) {
             addIdentityMatches(score, signals, module, "module");
-            addSignalMatches(score, signals, textListAny(module, "paths", "pathPrefixes"), 8, 5, "modulePath");
-            addSignalMatches(score, signals, textListAny(module, "packages", "packageRoots"), 9, 5, "modulePackage");
-            addSignalMatches(score, signals, textListAny(module, "classHints", "runtimeFingerprints.classNameHints"), 8, 5, "classHint");
-            addSignalMatches(score, signals, textList(module, "packageRoots"), 9, 5, "modulePackageRoot");
-            addSignalMatches(score, signals, textList(module, "pathPrefixes"), 8, 5, "modulePath");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.serviceNames"), 7, 4, "moduleServiceName");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.containerNames"), 7, 4, "moduleContainerName");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.endpointPrefixes"), 7, 4, "moduleEndpointPrefix");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.queueNames"), 7, 4, "moduleQueueName");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.topicNames"), 7, 4, "moduleTopicName");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.databaseSchemas"), 7, 4, "moduleDatabaseSchema");
-            addSignalMatches(score, signals, textList(module, "runtimeFingerprints.classNameHints"), 8, 5, "classNameHint");
-            addSignalMatches(score, signals, textList(module, "sourceLookupHints.stacktraceHotspots"), 7, 4, "moduleStacktraceHotspot");
-            addSignalMatches(score, signals, textList(module, "sourceLookupHints.likelyEntryClasses"), 7, 4, "moduleEntryClass");
+            addSignalMatches(score, signals, textList(module, "sourceRoots"), 8, 5, "moduleSourceRoot");
+            addSignalMatches(score, signals, textList(module, "importantPaths"), 8, 5, "moduleImportantPath");
+            addSignalMatches(score, signals, genericSignals(module), 8, 5, "moduleSignal");
         }
 
-        if (anyOverlap(textListAny(repository, "systems", "topology.systemIds"), matchedIds(systemMatches))) {
-            score.add(8, "topologySystemMatches");
+        if (anyOverlap(textList(repository, "references.systems"), matchedIds(systemMatches))) {
+            score.add(8, "referenceSystemMatches");
         }
 
         return score;
@@ -326,45 +243,21 @@ public class OperationalContextCatalogMatcher {
     ) {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, process, "process");
-        addSignalMatches(score, signals, textListAny(process, "systems", "systems.internal"), 6, 3, "system");
-        addSignalMatches(score, signals, textListAny(process, "externalSystems", "systems.external"), 6, 3, "externalSystem");
-        addSignalMatches(score, signals, textListAny(process, "repos", "systems.repositories"), 6, 3, "repo");
-        addSignalMatches(score, signals, textListAny(process, "contexts", "scope.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textListAny(process, "completionSignals", "outcomes.completionSignals"), 7, 4, "completionSignal");
-        addSignalMatches(score, signals, textList(process, "scope.businessDomains"), 4, 2, "businessDomain");
-        addSignalMatches(score, signals, textList(process, "scope.boundedContexts"), 5, 3, "boundedContext");
-        addSignalMatches(score, signals, textList(process, "entryCriteria.triggers"), 5, 3, "trigger");
-        addSignalMatches(score, signals, textList(process, "entryCriteria.inboundArtifacts"), 5, 3, "inboundArtifact");
-        addSignalMatches(score, signals, textList(process, "entryCriteria.initiatingSystems"), 6, 3, "initiatingSystem");
+        addSignalMatches(score, signals, textList(process, "participants.primarySystems"), 6, 3, "system");
+        addSignalMatches(score, signals, textList(process, "participants.externalSystems"), 6, 3, "externalSystem");
+        addSignalMatches(score, signals, textList(process, "references.repositories"), 6, 3, "repository");
+        addSignalMatches(score, signals, textList(process, "references.boundedContexts"), 5, 3, "context");
+        addSignalMatches(score, signals, textList(process, "processBoundary.endsWhen"), 7, 4, "completionSignal");
         addSignalMatches(score, signals, textList(process, "outcomes.successArtifacts"), 5, 3, "successArtifact");
-        addSignalMatches(score, signals, textList(process, "outcomes.failureArtifacts"), 5, 3, "failureArtifact");
-        addSignalMatches(score, signals, textList(process, "outcomes.completionSignals"), 7, 4, "completionSignal");
-        addSignalMatches(score, signals, textList(process, "systems.internal"), 6, 3, "internalSystem");
-        addSignalMatches(score, signals, textList(process, "systems.external"), 6, 3, "externalSystem");
-        addSignalMatches(score, signals, textList(process, "systems.repositories"), 6, 3, "repository");
-        addSignalMatches(score, signals, textList(process, "incidentRouting.likelyExternalSystemIds"), 5, 3, "routingExternalSystem");
-        addSignalMatches(score, signals, textList(process, "observability.expectedPrimarySignals"), 7, 4, "expectedSignal");
 
-        for (var step : mapList(process, "steps")) {
+        for (var step : mapList(process, "processSteps")) {
             addIdentityMatches(score, signals, step, "step");
             addSignalMatches(score, signals, genericSignals(step), 8, 5, "stepSignal");
-            addSignalMatches(score, signals, textList(step, "systems"), 6, 3, "stepSystem");
-            addSignalMatches(score, signals, textList(step, "participatingSystems"), 6, 3, "participatingSystem");
-            addSignalMatches(score, signals, textList(step, "inboundArtifacts"), 5, 3, "stepInboundArtifact");
-            addSignalMatches(score, signals, textList(step, "outboundArtifacts"), 5, 3, "stepOutboundArtifact");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.serviceNames"), 8, 5, "stepServiceName");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.containerNames"), 8, 5, "stepContainerName");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.endpointPrefixes"), 8, 5, "stepEndpointPrefix");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.queueNames"), 8, 5, "stepQueueName");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.topicNames"), 8, 5, "stepTopicName");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.eventTypes"), 7, 4, "stepEventType");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.batchJobs"), 7, 4, "stepBatchJob");
-            addSignalMatches(score, signals, textList(step, "runtimeFingerprints.hostPatterns"), 7, 4, "stepHostPattern");
-            addSignalMatches(score, signals, textList(step, "completionSignals"), 8, 5, "stepCompletionSignal");
+            addSignalMatches(score, signals, textList(step, "participants.systems"), 6, 3, "stepSystem");
         }
 
-        if (anyOverlap(textList(process, "systems.internal"), matchedIds(systemMatches))
-                || anyOverlap(textList(process, "systems.external"), matchedIds(systemMatches))) {
+        if (anyOverlap(textList(process, "participants.primarySystems"), matchedIds(systemMatches))
+                || anyOverlap(textList(process, "participants.externalSystems"), matchedIds(systemMatches))) {
             score.add(8, "processSystemMatches");
         }
 
@@ -381,48 +274,25 @@ public class OperationalContextCatalogMatcher {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, boundedContext, "boundedContext");
         addSignalMatches(score, signals, genericSignals(boundedContext), 9, 5, "signal");
-        addSignalMatches(score, signals, textListAny(boundedContext, "systems", "scope.systemIds"), 6, 3, "system");
-        addSignalMatches(score, signals, textListAny(boundedContext, "repos", "scope.repositoryIds"), 6, 3, "repo");
-        addSignalMatches(score, signals, textListAny(boundedContext, "processes", "scope.processIds"), 5, 3, "process");
-        addSignalMatches(score, signals, textList(boundedContext, "terms"), 6, 3, "term");
-        addSignalMatches(score, signals, textList(boundedContext, "scope.businessDomains"), 4, 2, "businessDomain");
-        addSignalMatches(score, signals, textList(boundedContext, "scope.capabilities"), 5, 3, "capability");
-        addSignalMatches(score, signals, textList(boundedContext, "boundaries.incomingInputs"), 5, 3, "incomingInput");
-        addSignalMatches(score, signals, textList(boundedContext, "boundaries.outgoingOutputs"), 5, 3, "outgoingOutput");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.serviceNames"), 9, 5, "serviceName");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.containerNames"), 9, 5, "containerName");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.endpointPrefixes"), 9, 5, "endpointPrefix");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.queueNames"), 8, 5, "queueName");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.topicNames"), 8, 5, "topicName");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.databaseSchemas"), 8, 5, "databaseSchema");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.packagePrefixes"), 9, 5, "packagePrefix");
-        addSignalMatches(score, signals, textList(boundedContext, "runtimeFingerprints.logMarkers"), 6, 3, "logMarker");
-        addSignalMatches(score, signals, textList(boundedContext, "incidentHints.likelySymptoms"), 6, 3, "symptom");
-        addSignalMatches(score, signals, textList(boundedContext, "observability.expectedBusinessSignals"), 6, 3, "businessSignal");
-
-        for (var term : mapList(boundedContext, "ubiquitousLanguage.keyTerms")) {
-            addSignalMatch(score, signals, text(term, "term"), 8, 5, "ubiquitousTerm");
-            addSignalMatches(score, signals, textList(term, "synonyms"), 6, 3, "ubiquitousSynonym");
-        }
-
-        for (var relation : mapList(boundedContext, "relationships.relationMap")) {
-            addSignalMatch(score, signals, text(relation, "targetContextId"), 5, 3, "targetContext");
-            addSignalMatches(score, signals, textList(relation, "viaSystemIds"), 6, 3, "relationSystem");
-            addSignalMatches(score, signals, textList(relation, "viaIntegrationIds"), 6, 3, "relationIntegration");
-            addSignalMatches(score, signals, textList(relation, "publishedLanguage"), 6, 3, "publishedLanguage");
-        }
+        addSignalMatches(score, signals, textList(boundedContext, "references.systems"), 6, 3, "system");
+        addSignalMatches(score, signals, textList(boundedContext, "references.repositories"), 6, 3, "repository");
+        addSignalMatches(score, signals, textList(boundedContext, "references.processes"), 5, 3, "process");
+        addSignalMatches(score, signals, textList(boundedContext, "references.terms"), 6, 3, "term");
+        addSignalMatches(score, signals, textList(boundedContext, "operationalSignals.serviceNames"), 9, 5, "serviceName");
+        addSignalMatches(score, signals, textList(boundedContext, "operationalSignals.endpointPrefixes"), 9, 5, "endpointPrefix");
+        addSignalMatches(score, signals, textList(boundedContext, "operationalSignals.packagePrefixes"), 9, 5, "packagePrefix");
         for (var relation : mapList(boundedContext, "relations")) {
             addSignalMatch(score, signals, text(relation, "target"), 5, 3, "targetContext");
             addSignalMatches(score, signals, textList(relation, "via"), 6, 3, "relationVia");
         }
 
-        if (anyOverlap(textListAny(boundedContext, "systems", "scope.systemIds"), matchedIds(systemMatches))) {
+        if (anyOverlap(textList(boundedContext, "references.systems"), matchedIds(systemMatches))) {
             score.add(8, "scopeSystemMatches");
         }
-        if (anyOverlap(textListAny(boundedContext, "processes", "scope.processIds"), matchedIds(processMatches))) {
+        if (anyOverlap(textList(boundedContext, "references.processes"), matchedIds(processMatches))) {
             score.add(8, "scopeProcessMatches");
         }
-        if (anyOverlap(textListAny(boundedContext, "repos", "scope.repositoryIds"), matchedIds(repositoryMatches))) {
+        if (anyOverlap(textList(boundedContext, "references.repositories"), matchedIds(repositoryMatches))) {
             score.add(8, "scopeRepositoryMatches");
         }
 
@@ -449,20 +319,20 @@ public class OperationalContextCatalogMatcher {
         addTeamOwnershipMatches(score, teamId, boundedContextMatches, "boundedContext");
         addTeamOwnershipMatches(score, teamId, integrationMatches, "integration");
 
-        if (anyOverlap(textListAny(team, "owns.systems", "ownership.systems"), matchedIds(systemMatches))) {
-            score.add(8, "ownsMatchedSystem");
+        if (anyOverlap(textList(team, "references.systems"), matchedIds(systemMatches))) {
+            score.add(8, "referencesMatchedSystem");
         }
-        if (anyOverlap(textListAny(team, "owns.processes", "scope.processes"), matchedIds(processMatches))) {
-            score.add(8, "ownsMatchedProcess");
+        if (anyOverlap(textList(team, "references.processes"), matchedIds(processMatches))) {
+            score.add(8, "referencesMatchedProcess");
         }
-        if (anyOverlap(textListAny(team, "owns.repos", "ownership.repositories"), matchedIds(repositoryMatches))) {
-            score.add(8, "ownsMatchedRepository");
+        if (anyOverlap(textList(team, "references.repositories"), matchedIds(repositoryMatches))) {
+            score.add(8, "referencesMatchedRepository");
         }
-        if (anyOverlap(textListAny(team, "owns.contexts", "scope.boundedContexts"), matchedIds(boundedContextMatches))) {
-            score.add(8, "ownsMatchedBoundedContext");
+        if (anyOverlap(textList(team, "references.boundedContexts"), matchedIds(boundedContextMatches))) {
+            score.add(8, "referencesMatchedBoundedContext");
         }
-        if (anyOverlap(textListAny(team, "owns.integrations", "ownership.integrations"), matchedIds(integrationMatches))) {
-            score.add(8, "ownsMatchedIntegration");
+        if (anyOverlap(textList(team, "references.integrations"), matchedIds(integrationMatches))) {
+            score.add(8, "referencesMatchedIntegration");
         }
 
         return score;
@@ -479,7 +349,7 @@ public class OperationalContextCatalogMatcher {
         addSignalMatch(score, signals, term.definition(), 3, 1, "definition");
         addSignalMatches(score, signals, term.useInContext(), 4, 2, "useContext");
         addSignalMatches(score, signals, term.doNotConfuseWith(), 4, 2, "doNotConfuse");
-        addSignalMatches(score, signals, term.typicalEvidenceSignals(), 8, 5, "evidenceSignal");
+        addSignalMatches(score, signals, term.matchSignals(), 8, 5, "matchSignal");
         addSignalMatches(score, signals, term.canonicalReferences(), 6, 3, "canonicalReference");
         addSignalMatches(score, signals, term.synonyms(), 7, 4, "synonym");
         addSignalMatches(score, signals, term.notes(), 3, 1, "note");
@@ -524,21 +394,29 @@ public class OperationalContextCatalogMatcher {
         for (var match : matches) {
             var entry = match.entry();
             var entryId = text(entry, "id");
-            if (normalize(teamId).equals(normalize(text(entry, "ownerTeamId")))
-                    || containsId(entry, "ownership.owningTeamIds", teamId)
-                    || containsId(entry, "scope.owningTeamIds", teamId)
-                    || containsId(entry, "incidentHints.likelyOwningTeamIds", teamId)
-                    || containsId(entry, "incidentRouting.likelyOwningTeamIds", teamId)) {
+            if (containsId(entry, "references.teams", teamId)
+                    || responsibilityTeamIds(entry).contains(normalize(teamId))) {
                 score.add(12, relationLabel + "Owner=" + entryId);
             }
-            if (containsId(entry, "partnerTeamIds", teamId)
-                    || containsId(entry, "ownership.supportingTeamIds", teamId)
-                    || containsId(entry, "scope.supportingTeamIds", teamId)
-                    || containsId(entry, "incidentHints.likelyPartnerTeamIds", teamId)
-                    || containsId(entry, "incidentRouting.likelyPartnerTeamIds", teamId)) {
+            if (containsId(entry, "handoffHints.partnerTeamIds", teamId)) {
                 score.add(7, relationLabel + "Partner=" + entryId);
             }
         }
+    }
+
+    private List<String> responsibilityTeamIds(Map<String, Object> entry) {
+        return mapList(entry, "responsibilities").stream()
+                .map(responsibility -> text(responsibility, "teamId"))
+                .filter(StringUtils::hasText)
+                .map(value -> normalize(value))
+                .toList();
+    }
+
+    private String firstOf(List<String> values) {
+        return values.stream()
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse(null);
     }
 
     private void addSignalMatches(

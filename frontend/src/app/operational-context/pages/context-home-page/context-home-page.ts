@@ -86,9 +86,9 @@ const TABS: ContextTabItem[] = [
 const COLUMNS: Record<string, ContextCatalogColumn[]> = {
   systems: [
     { key: 'name', label: 'System' },
-    { key: 'type', label: 'Type' },
+    { key: 'kind', label: 'Kind' },
     { key: 'owner', label: 'Owner', type: 'owner' },
-    { key: 'repos', label: 'Repos', type: 'aggregate' },
+    { key: 'repositories', label: 'Repositories', type: 'aggregate' },
     { key: 'processes', label: 'Processes', type: 'aggregate' },
     { key: 'contexts', label: 'Contexts', type: 'aggregate' },
     { key: 'integrations', label: 'Integrations', type: 'aggregate' },
@@ -119,10 +119,10 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
   ],
   integrations: [
     { key: 'name', label: 'Integration' },
-    { key: 'from', label: 'From' },
-    { key: 'to', label: 'To' },
-    { key: 'protocol', label: 'Protocol' },
-    { key: 'type', label: 'Type' },
+    { key: 'sourceSystem', label: 'Source' },
+    { key: 'targetSystems', label: 'Targets' },
+    { key: 'protocols', label: 'Protocols' },
+    { key: 'integrationStyle', label: 'Style' },
     { key: 'owner', label: 'Owner', type: 'owner' },
     { key: 'partnerTeams', label: 'Partner teams', type: 'aggregate' },
     { key: 'signals', label: 'Signals', type: 'aggregate' },
@@ -133,7 +133,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     { key: 'name', label: 'Context' },
     { key: 'owner', label: 'Owner', type: 'owner' },
     { key: 'systems', label: 'Systems', type: 'aggregate' },
-    { key: 'repos', label: 'Repos', type: 'aggregate' },
+    { key: 'repositories', label: 'Repositories', type: 'aggregate' },
     { key: 'processes', label: 'Processes', type: 'aggregate' },
     { key: 'terms', label: 'Terms', type: 'aggregate' },
     { key: 'relations', label: 'Relations', type: 'aggregate' },
@@ -142,7 +142,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
   teams: [
     { key: 'name', label: 'Team' },
     { key: 'ownsSystems', label: 'Systems', type: 'aggregate' },
-    { key: 'ownsRepos', label: 'Repos', type: 'aggregate' },
+    { key: 'ownsRepositories', label: 'Repositories', type: 'aggregate' },
     { key: 'ownsProcesses', label: 'Processes', type: 'aggregate' },
     { key: 'ownsContexts', label: 'Contexts', type: 'aggregate' },
     { key: 'ownsIntegrations', label: 'Integrations', type: 'aggregate' },
@@ -153,7 +153,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     { key: 'term', label: 'Term' },
     { key: 'category', label: 'Category' },
     { key: 'definition', label: 'Definition' },
-    { key: 'typicalEvidenceSignals', label: 'Typical signals', type: 'aggregate' },
+    { key: 'matchSignals', label: 'Match signals', type: 'aggregate' },
     { key: 'canonicalReferences', label: 'Canonical references', type: 'aggregate' }
   ],
   handoff: [

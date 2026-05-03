@@ -227,7 +227,7 @@ function systemRow(): OperationalContextSystemRowDto {
   return {
     id: 'app-core',
     name: 'App Core',
-    type: 'internal',
+    kind: 'internal-application',
     owner: {
       value: 'core-team',
       label: 'Core Team',
@@ -237,7 +237,7 @@ function systemRow(): OperationalContextSystemRowDto {
       sourceRefs: []
     },
     purpose: 'Runs the core flow.',
-    repos: aggregate('Repos', 1),
+    repositories: aggregate('Repositories', 1),
     processes: aggregate('Processes', 0),
     contexts: aggregate('Contexts', 0),
     integrations: aggregate('Integrations', 0),

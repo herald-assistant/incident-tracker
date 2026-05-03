@@ -3,21 +3,30 @@ schemaVersion: 1
 boundedContexts:
   - id: core-context
     name: Core Context
-    ownerTeamId: core-team
+    category: supporting-domain
     purpose: Owns the main internal semantics.
-    systems: [app-core]
-    repos: [app-core-repo]
-    processes: [main-process]
-    terms: [work-item]
-    signals:
-      packagePrefixes: [com.example.app]
-      endpoints: [/api/resources]
-      topics: []
-      schemas: []
-      markers: [APP_CORE]
+    references:
+      systems: [app-core]
+      repositories: [app-core-repo]
+      processes: [main-process]
+      integrations: [app-core-to-partner-sync]
+      terms: [work-item]
+      teams: [core-team]
+    responsibilities:
+      - teamId: core-team
+        role: context-owner
+    matchSignals:
+      strong:
+        packagePrefixes: [com.example.app]
+        endpointPrefixes: [/api/resources]
+        markers: [APP_CORE]
     relations:
       - target: partner-context
         type: conformist
         via: [app-core-to-partner-sync]
+    handoffHints:
+      defaultRouteLabel: core-team
+      firstResponderTeamIds: [core-team]
+      requiredEvidence: [correlationId, environment, boundedContext]
 
 openQuestions: []

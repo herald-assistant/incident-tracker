@@ -16,7 +16,7 @@ describe('ExplainableCellComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Repos: 1');
+    expect(compiled.textContent).toContain('Repositories: 1');
     expect(compiled.textContent).toContain('app-core-repo');
     expect(compiled.textContent).toContain('Explicit reference');
   });
@@ -24,20 +24,20 @@ describe('ExplainableCellComponent', () => {
 
 function aggregate(): ExplainableAggregateDto {
   return {
-    label: 'Repos',
+    label: 'Repositories',
     count: 1,
     severity: 'ok',
     confidence: 'high',
     tooltip: 'Repository scope.',
     groups: [
       {
-        label: 'Repos',
+        label: 'Repositories',
         count: 1,
         items: [
           {
             id: 'app-core-repo',
             label: 'app-core-repo',
-            type: 'repository',
+            kind: 'repository',
             reason: 'System lists this repository.',
             status: 'verified',
             sourceRefs: []

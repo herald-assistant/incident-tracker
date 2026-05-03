@@ -2,53 +2,77 @@ schemaVersion: 1
 
 repositories:
   - id: app-core-repo
-    project: app-core-repo
-    group: example/platform
-    ownerTeamId: core-team
-    systems: [app-core]
-    processes: [main-process]
-    contexts: [core-context]
+    name: App Core Repository
+    git:
+      group: example/platform
+      project: app-core-repo
+      projectPath: example/platform/app-core-repo
+    references:
+      systems: [app-core]
+      processes: [main-process]
+      boundedContexts: [core-context]
+      teams: [core-team]
+      runtimeComponents: [app-core]
+    responsibilities:
+      - teamId: core-team
+        role: code-owner
+    sourceLayout:
+      sourceRoots: [src/main/java/com/example/app]
+      importantPaths: [src/main/java/com/example/app/core]
     modules:
-      - id: core-module
+      - moduleId: core-module
         name: Core Module
-        paths: [src/main/java/com/example/app/core]
-        packages: [com.example.app.core]
-        classHints: [SyncGateway]
-    signals:
-      projectNames: [app-core-repo]
-      serviceNames: [app-core]
-      containerNames: [app-core]
-      packagePrefixes: [com.example.app]
-      paths: [src/main/java/com/example/app]
-      endpoints: [/api/resources]
-      schemas: []
-    handoff:
-      target: core-team
-      requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]
+        sourceRoots: [src/main/java/com/example/app/core]
+        matchSignals:
+          strong:
+            packagePrefixes: [com.example.app.core]
+            classHints: [SyncGateway]
+    matchSignals:
+      exact:
+        projectNames: [app-core-repo]
+      strong:
+        serviceNames: [app-core]
+        containerNames: [app-core]
+        packagePrefixes: [com.example.app]
+        endpointPrefixes: [/api/resources]
+    handoffHints:
+      defaultRouteLabel: core-team
+      firstResponderTeamIds: [core-team]
+      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
 
   - id: app-shared-lib-repo
-    project: libs/app-shared-lib
-    group: example/platform
-    ownerTeamId: core-team
-    systems: [app-core]
-    processes: [main-process]
-    contexts: [core-context]
+    name: App Shared Library
+    git:
+      group: example/platform
+      project: libs/app-shared-lib
+      projectPath: example/platform/libs/app-shared-lib
+    references:
+      systems: [app-core]
+      processes: [main-process]
+      boundedContexts: [core-context]
+      teams: [core-team]
+      runtimeComponents: [app-core]
+    responsibilities:
+      - teamId: core-team
+        role: code-owner
+    sourceLayout:
+      sourceRoots: [src/main/java/com/example/shared]
     modules:
-      - id: shared-domain-module
+      - moduleId: shared-domain-module
         name: Shared Domain Module
-        paths: [src/main/java/com/example/shared]
-        packages: [com.example.shared]
-        classHints: [SharedPredicate, SharedLookupClient]
-    signals:
-      projectNames: [app-shared-lib]
-      serviceNames: []
-      containerNames: []
-      packagePrefixes: [com.example.shared]
-      paths: [src/main/java/com/example/shared]
-      endpoints: []
-      schemas: []
-    handoff:
-      target: core-team
-      requiredEvidence: [correlationId, environment, gitLabBranch, project, filePath, className, exception]
+        sourceRoots: [src/main/java/com/example/shared]
+        matchSignals:
+          strong:
+            packagePrefixes: [com.example.shared]
+            classHints: [SharedPredicate, SharedLookupClient]
+    matchSignals:
+      exact:
+        projectNames: [app-shared-lib]
+      strong:
+        packagePrefixes: [com.example.shared]
+    handoffHints:
+      defaultRouteLabel: core-team
+      firstResponderTeamIds: [core-team]
+      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
 
 openQuestions: []

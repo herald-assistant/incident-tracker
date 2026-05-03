@@ -1,0 +1,168 @@
+# current-run.yml
+#
+# Manual single-repository operational-context update run configuration.
+#
+# Place this file in:
+#   <catalogRoot>/.github/run/current-run.yml
+#
+# The Coordinator Agent must treat `catalogRoot` as the only writable root.
+# The source repository is read-only and is analyzed only as a partial source.
+
+schemaVersion: 1
+
+run:
+  id: backend-2026-05-04
+  mode: single-repository-manual-run
+  description: Analyze one source repository and update the operational-context catalog in the catalog root.
+
+# Workspace roots.
+#
+# Prefer VS Code multi-root workspace folder names here, not only absolute paths.
+# Example workspace roots:
+#   - incident-tracker
+#   - backend
+#
+# `catalogRoot` is the workspace root that contains:
+#   - .github/agents/
+#   - .github/prompts/
+#   - src/main/resources/operational-context/
+#
+# `sourceRepositoryRoot` is the workspace root to analyze.
+roots:
+  catalogRoot: incident-tracker
+  sourceRepositoryRoot: backend
+
+# Optional absolute paths.
+#
+# Use these when workspace root names are ambiguous or when the agent needs
+# explicit local path confirmation.
+paths:
+  catalogRootPath: C:\Users\mknie\IdeaProjects\incident-tracker
+  sourceRepositoryPath: C:\Users\mknie\IdeaProjects\backend
+
+# Source repository metadata.
+#
+# This metadata is used for discovery report identity and provenance.
+sourceRepository:
+  id: backend
+  name: Backend
+  type: service-repository # service-repository | library-repository | generated-client-repository | documentation-fragment | config-repository | unknown
+  branch: main
+  commit: null
+  description: Main source repository analyzed during this manual operational-context run.
+
+# Optional additional read-only roots.
+#
+# Keep this empty by default.
+# Add a repo only when this single run explicitly needs to inspect it.
+additionalReadOnlyRoots: []
+# Example:
+# additionalReadOnlyRoots:
+#   - crm-shared-lib
+#   - email-client-generated
+
+# Operational-context file locations under catalogRoot.
+#
+# Adjust `catalogFilesRoot` to match your project layout.
+# If your final catalog lives in src/main/resources/operational-context,
+# keep the default below.
+locations:
+  promptsRoot: .github/prompts
+  runRoot: .github/run
+  discoveryRoot: .github/run/discovery
+  reportsRoot: .github/run/reports
+  catalogFilesRoot: src/main/resources/operational-context
+
+  targetFiles:
+    systems: src/main/resources/operational-context/systems.yml
+    repoMap: src/main/resources/operational-context/repo-map.yml
+    integrations: src/main/resources/operational-context/integrations.yml
+    processes: src/main/resources/operational-context/processes.yml
+    boundedContexts: src/main/resources/operational-context/bounded-contexts.yml
+    teams: src/main/resources/operational-context/teams.yml
+    glossary: src/main/resources/operational-context/glossary.md
+    handoffRules: src/main/resources/operational-context/handoff-rules.md
+    index: src/main/resources/operational-context/operational-context-index.md
+
+# Prompt files under promptsRoot.
+prompts:
+  parent: 00-parent-operational-context-update-prompt.md
+  discovery: 01-repository-discovery-prompt.md
+  validation: 02-validation-prompt.md
+  filePrompts:
+    systems: systems-yml-update-prompt.md
+    repoMap: repo-map-yml-update-prompt.md
+    integrations: integrations-yml-update-prompt.md
+    processes: processes-yml-update-prompt.md
+    boundedContexts: bounded-contexts-yml-update-prompt.md
+    teams: teams-yml-update-prompt.md
+    glossary: glossary-md-update-prompt.md
+    handoffRules: handoff-rules-md-update-prompt.md
+    index: operational-context-index-md-update-prompt.md
+
+# Which target files may be updated in this run.
+#
+# Use `autoDetect` when Coordinator should choose based on discovery.
+# Use explicit keys for a narrower/manual run.
+updatePlan:
+  mode: autoDetect # autoDetect | explicit
+  explicitTargetFiles: []
+  # Example:
+  # explicitTargetFiles:
+  #   - repoMap
+  #   - systems
+  #   - integrations
+
+# Safety rules.
+#
+# These are repeated here intentionally so that every run is self-describing.
+safety:
+  readOnlySourceRepository: true
+  writeOnlyCatalogRoot: true
+  doNotAnalyzeOtherWorkspaceRoots: true
+  doNotInferGlobalAbsenceFromLocalAbsence: true
+  doNotUseOpenQuestionsAsTemporaryMemory: true
+  monotonicMergeOnly: true
+  preserveExistingFactsUnlessContradicted: true
+  requireHumanReviewBeforeCommit: true
+
+# How Coordinator should write intermediate and final artifacts.
+outputs:
+  discoveryReport: .github/run/discovery/backend.discovery.yml
+  validationReport: .github/run/reports/backend.validation-report.md
+  runSummary: .github/run/reports/backend.run-summary.md
+
+# Optional limits for large repositories.
+limits:
+  maxDiscoveryFilesToInspect: 500
+  preferFocusedSearchOverFullScan: true
+  excludePaths:
+    - .git/**
+    - target/**
+    - build/**
+    - dist/**
+    - node_modules/**
+    - .idea/**
+    - .vscode/**
+    - "**/*.class"
+    - "**/*.jar"
+    - "**/*.war"
+    - "**/*.zip"
+
+# Hints for this source repository.
+#
+# These are optional and should only guide search. They are not facts until
+# confirmed by repository evidence.
+hints:
+  likelyServiceNames: []
+  likelyPackagePrefixes: []
+  likelyEndpointPrefixes: []
+  likelyQueuesOrTopics: []
+  likelyRuntimeMarkers: []
+  likelyBusinessCapabilities: []
+
+# Notes for the human operator.
+operatorNotes:
+  - Update `roots.sourceRepositoryRoot`, `paths.sourceRepositoryPath`, and `sourceRepository.id` before each manual run.
+  - Keep `additionalReadOnlyRoots` empty unless this run explicitly needs another source repo.
+  - Review all diffs under catalogRoot before committing.

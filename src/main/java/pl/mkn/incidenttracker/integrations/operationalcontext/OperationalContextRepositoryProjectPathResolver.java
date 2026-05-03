@@ -82,18 +82,12 @@ public class OperationalContextRepositoryProjectPathResolver {
     }
 
     private List<String> systemRepositoryIds(Map<String, Object> system) {
-        var repositoryIds = new LinkedHashSet<String>();
-        repositoryIds.addAll(textList(system, "repos"));
-        repositoryIds.addAll(textList(system, "repositories.primary"));
-        repositoryIds.addAll(textList(system, "repositories.secondary"));
-        repositoryIds.addAll(textList(system, "repositories.backendModules"));
-        repositoryIds.addAll(textList(system, "repositories.frontendModules"));
-        return List.copyOf(repositoryIds);
+        return textList(system, "references.repositories");
     }
 
     private List<String> projectPaths(String configuredGroup, Map<String, Object> repository) {
         var projectPaths = new LinkedHashSet<String>();
-        for (var projectPath : textList(repository, "gitLab.projectPath")) {
+        for (var projectPath : textList(repository, "git.projectPath")) {
             addProjectPath(projectPaths, configuredGroup, projectPath);
         }
         return List.copyOf(projectPaths);
@@ -117,8 +111,7 @@ public class OperationalContextRepositoryProjectPathResolver {
 
         var normalizedConfiguredGroup = normalizeGroupPath(configuredGroup);
         var repositoryGroups = new LinkedHashSet<String>();
-        repositoryGroups.addAll(textList(repository, "gitLab.groupPath"));
-        repositoryGroups.addAll(textList(repository, "group"));
+        repositoryGroups.addAll(textList(repository, "git.group"));
 
         if (repositoryGroups.isEmpty()) {
             return true;

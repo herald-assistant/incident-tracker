@@ -19,69 +19,15 @@ final class OperationalContextMarkdownParser {
     private static final Pattern ENTRY_HEADING = Pattern.compile("^###\\s+(.+?)\\s*$");
     private static final Pattern SECTION_HEADING = Pattern.compile("^##\\s+(.+?)\\s*$");
     private static final Set<String> SIGNAL_FIELDS = Set.of(
-            "signals",
-            "signal",
-            "typical evidence signals",
-            "rest endpoints",
-            "rest operations",
-            "endpoints",
-            "hikaripool",
-            "error markers",
-            "error",
-            "queues",
-            "exchange",
-            "exchanges",
-            "agreement exchanges",
-            "agreement queues",
-            "decision exchange",
-            "mq channels",
-            "mq consumers",
-            "events",
-            "hosts",
-            "host",
-            "marker",
-            "markers",
-            "package",
-            "packages",
-            "controller",
-            "controllers",
-            "service",
-            "services",
-            "key classes",
-            "classes",
-            "entity",
-            "entities",
-            "feign client",
-            "feign clients",
-            "db table",
-            "db tables",
-            "schema",
-            "schemas",
-            "constants"
+            "match signals",
+            "exact signals",
+            "strong signals",
+            "medium signals",
+            "weak signals"
     );
     private static final Set<String> REFERENCE_FIELDS = Set.of(
             "canonical references",
-            "library",
-            "libraries",
-            "module",
-            "modules",
-            "groupid",
-            "version",
-            "access",
-            "protocol",
-            "types",
-            "values",
-            "enum value",
-            "key fields",
-            "sub-entities",
-            "jobs",
-            "rating paths",
-            "valuation statuses",
-            "valuation actions",
-            "supported product types",
-            "simulation types",
-            "clp->sf statuses",
-            "sf->clp statuses"
+            "related terms"
     );
 
     List<GlossaryTerm> parseGlossary(String markdown) {
@@ -93,11 +39,11 @@ final class OperationalContextMarkdownParser {
                     firstValue(entry, "term", entry.title()),
                     firstValue(entry, "category", entry.category()),
                     entry.scalarFields().get("definition"),
-                    valuesFor(entry, "use in our context", "context"),
-                    valuesFor(entry, "do not confuse with", "not to confuse with"),
+                    valuesFor(entry, "local meaning and boundaries"),
+                    valuesFor(entry, "not to confuse with"),
                     signalValues(entry),
                     referenceValues(entry),
-                    valuesFor(entry, "synonyms"),
+                    valuesFor(entry, "aliases"),
                     noteValues(entry)
             ));
         }
@@ -109,106 +55,98 @@ final class OperationalContextMarkdownParser {
         var rules = new ArrayList<HandoffRule>();
 
         for (var entry : parseEntries(markdown)) {
+            if (!isHandoffRuleEntry(entry)) {
+                continue;
+            }
             rules.add(new HandoffRule(
                     entry.id(),
                     firstValue(entry, "title", entry.id()),
-                    entry.scalarFields().getOrDefault("route to", ""),
-                    valuesFor(entry, "use when"),
-                    valuesFor(entry, "do not use when"),
+                    routeTo(entry),
+                    valuesFor(entry, "applies when"),
+                    valuesFor(entry, "does not apply when"),
                     valuesFor(entry, "required evidence"),
-                    valuesFor(entry, "expected first action"),
-                    valuesFor(entry, "partner teams"),
-                    valuesFor(entry, "notes")
-            ));
-        }
-
-        rules.addAll(parseHandoffTables(markdown, rules.stream()
-                .map(HandoffRule::id)
-                .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll)));
-
-        return List.copyOf(rules);
-    }
-
-    private List<HandoffRule> parseHandoffTables(String markdown, Set<String> usedIds) {
-        if (!StringUtils.hasText(markdown)) {
-            return List.of();
-        }
-
-        var rules = new ArrayList<HandoffRule>();
-        var currentCategory = "General";
-        var headers = List.<String>of();
-        var skippingOpenQuestions = false;
-
-        for (var line : markdown.split("\\R")) {
-            var trimmedLine = line.trim();
-            var sectionMatcher = SECTION_HEADING.matcher(trimmedLine);
-            if (sectionMatcher.matches()) {
-                var sectionTitle = stripMarkdown(sectionMatcher.group(1));
-                skippingOpenQuestions = sectionTitle.toLowerCase(Locale.ROOT).startsWith("open questions");
-                headers = List.of();
-                if (!skippingOpenQuestions) {
-                    currentCategory = sectionTitle;
-                }
-                continue;
-            }
-
-            if (skippingOpenQuestions) {
-                continue;
-            }
-
-            if (!isTableRow(trimmedLine)) {
-                headers = List.of();
-                continue;
-            }
-
-            var cells = tableCells(trimmedLine);
-            if (cells.isEmpty() || isTableSeparator(cells)) {
-                continue;
-            }
-
-            if (headers.isEmpty()) {
-                var normalizedHeaders = cells.stream()
-                        .map(this::normalizeFieldLabel)
-                        .toList();
-                if (normalizedHeaders.contains("symptom")
-                        && normalizedHeaders.contains("route to")
-                        && normalizedHeaders.contains("required evidence")) {
-                    headers = normalizedHeaders;
-                }
-                continue;
-            }
-
-            var row = tableRow(headers, cells);
-            var symptom = row.getOrDefault("symptom", "");
-            var routeTo = row.getOrDefault("route to", "");
-            var requiredEvidence = splitValues(row.getOrDefault("required evidence", ""));
-            if (!StringUtils.hasText(symptom) || !StringUtils.hasText(routeTo)) {
-                continue;
-            }
-
-            var id = uniqueId(slug(currentCategory + "-" + symptom), usedIds);
-            rules.add(new HandoffRule(
-                    id,
-                    symptom,
-                    routeTo,
-                    List.of(symptom),
-                    List.of(),
-                    requiredEvidence,
-                    List.of("Route to " + routeTo + "."),
-                    partnerTeams(routeTo),
-                    List.of("Parsed from `" + currentCategory + "` markdown table.")
+                    valuesFor(entry, "expected first actions"),
+                    partnerTeams(entry),
+                    valuesFor(entry, "notes", "llm tool hints", "limitations")
             ));
         }
 
         return List.copyOf(rules);
     }
 
-    private boolean isTableRow(String line) {
-        return line.startsWith("|") && line.endsWith("|");
+    private boolean isHandoffRuleEntry(MarkdownEntry entry) {
+        return !"gaps".equals(entry.category().toLowerCase(Locale.ROOT))
+                && !entry.scalarFields().containsKey("gap id")
+                && (entry.scalarFields().containsKey("rule id") || entry.scalarFields().containsKey("title"));
     }
 
-    private boolean isTableSeparator(List<String> cells) {
-        return cells.stream().allMatch(cell -> cell.replace(":", "").replace("-", "").isBlank());
+    private String routeTo(MarkdownEntry entry) {
+        var candidateTeams = firstDefined(first(valuesFor(entry, "candidate teams")), routeDecisionValue(entry, "candidate teams"));
+        if (StringUtils.hasText(candidateTeams)) {
+            return candidateTeams;
+        }
+
+        var externalParties = firstDefined(first(valuesFor(entry, "external parties")), routeDecisionValue(entry, "external parties"));
+        if (StringUtils.hasText(externalParties)) {
+            return externalParties;
+        }
+
+        return routingRoleTarget(entry);
+    }
+
+    private List<String> partnerTeams(MarkdownEntry entry) {
+        var partners = new ArrayList<String>();
+        partners.addAll(valuesFor(entry, "partner teams"));
+
+        var routeDecisionPartners = firstDefined(first(valuesFor(entry, "partner teams")), routeDecisionValue(entry, "partner teams"));
+        if (StringUtils.hasText(routeDecisionPartners)) {
+            partners.addAll(splitValues(routeDecisionPartners));
+        }
+
+        return distinct(partners);
+    }
+
+    private String routeDecisionValue(MarkdownEntry entry, String label) {
+        var normalizedLabel = normalizeFieldLabel(label);
+        for (var value : valuesFor(entry, "route decision")) {
+            var separator = value.indexOf(':');
+            if (separator < 1) {
+                continue;
+            }
+            var currentLabel = normalizeFieldLabel(value.substring(0, separator));
+            if (!normalizedLabel.equals(currentLabel)) {
+                continue;
+            }
+            var currentValue = value.substring(separator + 1).trim();
+            if (!isNone(currentValue)) {
+                return currentValue;
+            }
+        }
+        return "";
+    }
+
+    private String routingRoleTarget(MarkdownEntry entry) {
+        for (var line : valuesFor(entry, "routing roles")) {
+            if (!line.contains("|")) {
+                continue;
+            }
+            var cells = tableCells(line);
+            if (cells.size() < 2 || "role".equalsIgnoreCase(cells.get(0))) {
+                continue;
+            }
+            var role = cells.get(0);
+            var target = cells.get(1);
+            if ((role.equals("first-responder") || role.equals("current-handler")) && !isNone(target)) {
+                return target;
+            }
+        }
+        return "";
+    }
+
+    private boolean isNone(String value) {
+        return !StringUtils.hasText(value)
+                || "none".equalsIgnoreCase(value.trim())
+                || "null".equalsIgnoreCase(value.trim());
     }
 
     private List<String> tableCells(String line) {
@@ -223,25 +161,6 @@ final class OperationalContextMarkdownParser {
                 .map(this::stripMarkdown)
                 .map(String::trim)
                 .toList();
-    }
-
-    private Map<String, String> tableRow(List<String> headers, List<String> cells) {
-        var row = new LinkedHashMap<String, String>();
-        for (var index = 0; index < headers.size() && index < cells.size(); index++) {
-            row.put(headers.get(index), cells.get(index));
-        }
-        return row;
-    }
-
-    private List<String> partnerTeams(String routeTo) {
-        if (!StringUtils.hasText(routeTo)) {
-            return List.of();
-        }
-        var normalized = routeTo.toLowerCase(Locale.ROOT);
-        if (normalized.contains("owner of ") || normalized.contains("integration owner")) {
-            return List.of();
-        }
-        return List.of(routeTo);
     }
 
     private List<MarkdownEntry> parseEntries(String markdown) {
@@ -376,6 +295,22 @@ final class OperationalContextMarkdownParser {
         return StringUtils.hasText(value) ? value : fallback;
     }
 
+    private String first(List<String> values) {
+        return values.stream()
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse("");
+    }
+
+    private String firstDefined(String... values) {
+        for (var value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return "";
+    }
+
     private List<String> valuesFor(MarkdownEntry entry, String... fields) {
         var values = new ArrayList<String>();
         for (var field : fields) {
@@ -387,9 +322,24 @@ final class OperationalContextMarkdownParser {
     private List<String> signalValues(MarkdownEntry entry) {
         var values = new ArrayList<String>();
         for (var field : SIGNAL_FIELDS) {
-            values.addAll(entry.listFields().getOrDefault(field, List.of()));
+            values.addAll(cleanSignalValues(entry.listFields().getOrDefault(field, List.of())));
         }
         return distinct(values);
+    }
+
+    private List<String> cleanSignalValues(List<String> values) {
+        return values.stream()
+                .map(this::stripMarkdown)
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .filter(value -> !isNone(value))
+                .filter(value -> !isMatchSignalBucketLabel(value))
+                .toList();
+    }
+
+    private boolean isMatchSignalBucketLabel(String value) {
+        var normalized = normalizeFieldLabel(value.replaceAll(":$", ""));
+        return Set.of("exact", "strong", "medium", "weak").contains(normalized);
     }
 
     private List<String> referenceValues(MarkdownEntry entry) {
@@ -403,10 +353,9 @@ final class OperationalContextMarkdownParser {
     private List<String> noteValues(MarkdownEntry entry) {
         var notes = new ArrayList<String>();
         notes.addAll(entry.listFields().getOrDefault("notes", List.of()));
-        notes.addAll(entry.listFields().getOrDefault("note", List.of()));
         for (var field : entry.listFields().entrySet()) {
-            if (Set.of("term", "category", "definition", "use in our context", "context", "do not confuse with",
-                    "not to confuse with", "synonyms", "notes", "note").contains(field.getKey())) {
+            if (Set.of("term", "category", "definition", "local meaning and boundaries",
+                    "not to confuse with", "aliases", "notes").contains(field.getKey())) {
                 continue;
             }
             if (SIGNAL_FIELDS.contains(field.getKey()) || REFERENCE_FIELDS.contains(field.getKey())) {
@@ -467,6 +416,7 @@ final class OperationalContextMarkdownParser {
         while (stripped.startsWith("- ") || stripped.startsWith("* ")) {
             stripped = stripped.substring(2).trim();
         }
+        stripped = stripped.replaceFirst("^\\d+\\.\\s+", "");
         return stripped;
     }
 

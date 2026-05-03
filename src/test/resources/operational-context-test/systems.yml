@@ -3,56 +3,50 @@ schemaVersion: 1
 systems:
   - id: app-core
     name: App Core
-    type: internal
-    ownerTeamId: core-team
-    partnerTeamIds: [integration-team]
-    externalOwner: null
+    kind: internal-application
     purpose: Executes the main application behavior.
-    processes: [main-process]
-    contexts: [core-context]
-    repos: [app-core-repo, app-shared-lib-repo]
-    dependsOn: [partner-service]
-    signals:
-      serviceNames: [app-core]
-      containerNames: [app-core]
-      projectNames: [app-core-repo, app-shared-lib]
-      packagePrefixes: [com.example.app, com.example.shared]
-      endpoints: [/api/resources]
-      hosts: []
-      queues: []
-      topics: []
-      schemas: []
-      spans: [SyncGateway.call]
-      markers: [APP_CORE]
-    handoff:
-      target: core-team
+    references:
+      repositories: [app-core-repo, app-shared-lib-repo]
+      processes: [main-process]
+      boundedContexts: [core-context]
+      teams: [core-team]
+    responsibilities:
+      - teamId: core-team
+        role: first-responder
+    matchSignals:
+      exact:
+        serviceNames: [app-core]
+        containerNames: [app-core]
+      strong:
+        projectNames: [app-core-repo, app-shared-lib]
+        packagePrefixes: [com.example.app, com.example.shared]
+        endpointPrefixes: [/api/resources]
+        spans: [SyncGateway.call]
+        markers: [APP_CORE]
+    handoffHints:
+      defaultRouteLabel: core-team
+      firstResponderTeamIds: [core-team]
+      partnerTeamIds: [integration-team]
       requiredEvidence: [correlationId, environment, serviceName, className, endpoint, exception]
 
   - id: partner-service
     name: Partner Service
-    type: external
-    ownerTeamId: null
-    partnerTeamIds: [integration-team]
-    externalOwner: partner-owner
+    kind: external-system
     purpose: Provides data used by the main application flow.
-    processes: [main-process]
-    contexts: [partner-context]
-    repos: []
-    dependsOn: []
-    signals:
-      serviceNames: []
-      containerNames: []
-      projectNames: []
-      packagePrefixes: []
-      endpoints: [/partner/resource]
-      hosts: [api.partner.local]
-      queues: []
-      topics: []
-      schemas: []
-      spans: []
-      markers: [PARTNER]
-    handoff:
-      target: integration-team
+    references:
+      processes: [main-process]
+      boundedContexts: [partner-context]
+      teams: [integration-team]
+    matchSignals:
+      exact:
+        endpointPrefixes: [/partner/resource]
+        hosts: [api.partner.local]
+      strong:
+        markers: [PARTNER]
+    handoffHints:
+      defaultRouteLabel: integration-team
+      firstResponderTeamIds: [integration-team]
+      partnerTeamIds: [core-team]
       requiredEvidence: [correlationId, environment, host, endpoint, exception]
 
 openQuestions: []

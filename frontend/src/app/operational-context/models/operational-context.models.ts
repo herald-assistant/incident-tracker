@@ -42,7 +42,7 @@ export interface ExplainableBreakdownGroupDto {
 export interface ExplainableBreakdownItemDto {
   id: string;
   label: string;
-  type: string;
+  kind: string;
   reason: string;
   status: 'verified' | 'needs-review' | 'missing' | 'conflicting' | 'unknown' | string;
   sourceRefs: SourceReferenceDto[];
@@ -89,10 +89,10 @@ export interface OperationalContextSummaryDto {
 export interface OperationalContextSystemRowDto {
   id: string;
   name: string;
-  type: string;
+  kind: string;
   owner: ExplainableValueDto<string>;
   purpose: string;
-  repos: ExplainableAggregateDto;
+  repositories: ExplainableAggregateDto;
   processes: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
   integrations: ExplainableAggregateDto;
@@ -125,7 +125,7 @@ export interface OperationalContextProcessRowDto {
   purpose: string;
   systems: ExplainableAggregateDto;
   externalSystems: ExplainableAggregateDto;
-  repos: ExplainableAggregateDto;
+  repositories: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
   steps: ExplainableAggregateDto;
   completionSignals: ExplainableAggregateDto;
@@ -136,12 +136,12 @@ export interface OperationalContextProcessRowDto {
 export interface OperationalContextIntegrationRowDto {
   id: string;
   name: string;
-  from: string;
-  to: string;
+  sourceSystem: string;
+  targetSystems: string;
   owner: ExplainableValueDto<string>;
   partnerTeams: ExplainableAggregateDto;
-  protocol: string;
-  type: string;
+  protocols: string;
+  integrationStyle: string;
   processes: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
   signals: ExplainableAggregateDto;
@@ -155,11 +155,11 @@ export interface OperationalContextBoundedContextRowDto {
   owner: ExplainableValueDto<string>;
   purpose: string;
   systems: ExplainableAggregateDto;
-  repos: ExplainableAggregateDto;
+  repositories: ExplainableAggregateDto;
   processes: ExplainableAggregateDto;
   terms: ExplainableAggregateDto;
   relations: ExplainableAggregateDto;
-  runtimeFingerprints: ExplainableAggregateDto;
+  runtimeSignals: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }
 
@@ -168,7 +168,7 @@ export interface OperationalContextTeamRowDto {
   name: string;
   purpose: string;
   ownsSystems: ExplainableAggregateDto;
-  ownsRepos: ExplainableAggregateDto;
+  ownsRepositories: ExplainableAggregateDto;
   ownsProcesses: ExplainableAggregateDto;
   ownsContexts: ExplainableAggregateDto;
   ownsIntegrations: ExplainableAggregateDto;
@@ -182,7 +182,7 @@ export interface OperationalContextGlossaryRowDto {
   term: string;
   category: string;
   definition: string;
-  typicalEvidenceSignals: ExplainableAggregateDto;
+  matchSignals: ExplainableAggregateDto;
   canonicalReferences: ExplainableAggregateDto;
 }
 

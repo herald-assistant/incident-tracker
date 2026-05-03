@@ -32,11 +32,69 @@ class OperationalContextViewServiceTest {
         var service = new OperationalContextViewService(port(sampleCatalog()));
 
         assertEquals(2, service.systems().size());
-        assertEquals("app-core", service.systems().get(0).id());
+        assertEquals("new-system", service.systems().get(0).id());
         assertEquals(1, service.repositories().size());
-        assertEquals("app-core-repo", service.repositories().get(0).id());
+        assertEquals("new-repo", service.repositories().get(0).id());
         assertEquals(1, service.processes().size());
         assertEquals(1, service.integrations().size());
+    }
+
+    @Test
+    void shouldExposeRowsFromCurrentOperationalContextContract() {
+        var service = new OperationalContextViewService(port(currentContractCatalog()));
+
+        var system = service.systems().get(0);
+        assertEquals("new-system", system.id());
+        assertEquals("internal-application", system.kind());
+        assertEquals("team-a", system.owner().value());
+        assertEquals(1, system.repositories().count());
+        assertEquals(1, system.processes().count());
+        assertEquals(1, system.contexts().count());
+        assertEquals(1, system.signals().count());
+
+        var repository = service.repositories().get(0);
+        assertEquals("Group/new-service", repository.project());
+        assertEquals("Group", repository.group());
+        assertEquals("team-a", repository.owner().value());
+        assertEquals(1, repository.systems().count());
+        assertEquals(1, repository.processes().count());
+        assertEquals(1, repository.contexts().count());
+        assertFalse(repository.packageRoots().detailsIds().isEmpty());
+        assertFalse(repository.entrypoints().detailsIds().isEmpty());
+
+        var process = service.processes().get(0);
+        assertEquals("Current process summary", process.purpose());
+        assertEquals(1, process.systems().count());
+        assertEquals(1, process.externalSystems().count());
+        assertEquals(1, process.repositories().count());
+        assertEquals(1, process.contexts().count());
+        assertEquals(1, process.steps().count());
+        assertEquals(1, process.completionSignals().count());
+
+        var integration = service.integrations().get(0);
+        assertEquals("new-system", integration.sourceSystem());
+        assertEquals("partner-system", integration.targetSystems());
+        assertEquals("REST", integration.protocols());
+        assertEquals("synchronous-request", integration.integrationStyle());
+        assertEquals(1, integration.processes().count());
+        assertEquals(1, integration.contexts().count());
+
+        var context = service.boundedContexts().get(0);
+        assertEquals("Current bounded context summary", context.purpose());
+        assertEquals(1, context.systems().count());
+        assertEquals(1, context.repositories().count());
+        assertEquals(1, context.processes().count());
+        assertEquals(1, context.terms().count());
+
+        var team = service.teams().get(0);
+        assertEquals(1, team.ownsSystems().count());
+        assertEquals(1, team.ownsRepositories().count());
+        assertEquals(1, team.ownsProcesses().count());
+        assertEquals(1, team.ownsContexts().count());
+        assertEquals(1, team.ownsIntegrations().count());
+
+        assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
+        assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
     }
 
     @Test
@@ -61,20 +119,20 @@ class OperationalContextViewServiceTest {
     void shouldSearchByServiceProjectEndpointAndTerm() {
         var service = new OperationalContextViewService(port(sampleCatalog()));
 
-        assertFalse(service.search("app-core").isEmpty());
-        assertTrue(service.search("app-core-repo").stream().anyMatch(result -> result.type().equals("repository")));
-        assertTrue(service.search("/api/resources").stream().anyMatch(result -> result.type().equals("system")));
-        assertTrue(service.search("SOAP Fault").stream().anyMatch(result -> result.type().equals("glossary-term")));
+        assertFalse(service.search("new-system").isEmpty());
+        assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
+        assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
+        assertTrue(service.search("New Term").stream().anyMatch(result -> result.type().equals("glossary-term")));
     }
 
     @Test
     void shouldReturnEntityDetailsAndControlledNotFound() {
         var service = new OperationalContextViewService(port(sampleCatalog()));
 
-        var detail = service.entity("system", "app-core");
+        var detail = service.entity("system", "new-system");
 
         assertEquals("system", detail.type());
-        assertEquals("app-core", detail.id());
+        assertEquals("new-system", detail.id());
         assertFalse(detail.recognitionSignals().isEmpty());
         assertThrows(
                 OperationalContextEntityNotFoundException.class,
@@ -102,51 +160,38 @@ class OperationalContextViewServiceTest {
     }
 
     private static OperationalContextCatalog sampleCatalog() {
-        return new OperationalContextCatalog(
-                List.of(team("core-team", "Core Team", "app-core", "app-core-repo", "main-process", "core-context", "app-core-to-partner")),
-                List.of(process("main-process", "Main Process", "core-team", List.of("app-core"), List.of("partner-service"), List.of("app-core-repo"), List.of("core-context"))),
-                List.of(
-                        system("app-core", "App Core", "internal", "core-team", List.of("app-core-repo"), List.of("main-process"), List.of("core-context"), List.of("app-core"), List.of("/api/resources")),
-                        system("partner-service", "Partner Service", "external", "", List.of(), List.of("main-process"), List.of("core-context"), List.of("partner-service"), List.of("/partner/resource"))
-                ),
-                List.of(integration("app-core-to-partner", "app-core", "partner-service", "core-team", List.of("main-process"), List.of("core-context"))),
-                List.of(repository("app-core-repo", "app-core-repo", "core-team", List.of("app-core"), List.of("main-process"), List.of("core-context"))),
-                List.of(context("core-context", "Core Context", "core-team", List.of("app-core"), List.of("app-core-repo"), List.of("main-process"))),
-                List.of(new OperationalContextCatalog.GlossaryTerm(
-                        "soap-fault",
-                        "SOAP Fault",
-                        "integration-term",
-                        "Error returned by a synchronous SOAP integration.",
-                        List.of(),
-                        List.of(),
-                        List.of("SOAPFault", "api.partner.local"),
-                        List.of("app-core-to-partner"),
-                        List.of(),
-                        List.of()
-                )),
-                List.of(new OperationalContextCatalog.HandoffRule(
-                        "integration-failure",
-                        "External integration failure",
-                        "Core Team",
-                        List.of("Evidence points to partner endpoint"),
-                        List.of(),
-                        List.of("correlationId", "endpoint"),
-                        List.of("Verify external call"),
-                        List.of("Core Team"),
-                        List.of()
-                )),
-                List.of(),
-                "index"
-        );
+        return currentContractCatalog();
     }
 
     private static OperationalContextCatalog brokenCatalog() {
         return new OperationalContextCatalog(
-                List.of(team("core-team", "Core Team", "", "", "", "", "")),
+                List.of(map(
+                        "id", "core-team",
+                        "name", "Core Team",
+                        "references", map(
+                                "systems", List.of(),
+                                "repositories", List.of(),
+                                "processes", List.of(),
+                                "boundedContexts", List.of(),
+                                "integrations", List.of()
+                        )
+                )),
                 List.of(),
                 List.of(
-                        system("app-core", "App Core", "internal", "core-team", List.of("missing-repo"), List.of("missing-process"), List.of(), List.of("shared-service"), List.of("/api/shared")),
-                        system("billing-core", "Billing Core", "internal", "", List.of(), List.of(), List.of(), List.of("shared-service"), List.of("/api/shared"))
+                        map(
+                                "id", "app-core",
+                                "name", "App Core",
+                                "kind", "internal-application",
+                                "references", map("repositories", List.of("missing-repo"), "processes", List.of("missing-process")),
+                                "responsibilities", List.of(map("teamId", "core-team")),
+                                "matchSignals", map("exact", map("serviceNames", List.of("shared-service"), "endpointPrefixes", List.of("/api/shared")))
+                        ),
+                        map(
+                                "id", "billing-core",
+                                "name", "Billing Core",
+                                "kind", "internal-application",
+                                "matchSignals", map("exact", map("serviceNames", List.of("shared-service"), "endpointPrefixes", List.of("/api/shared")))
+                        )
                 ),
                 List.of(),
                 List.of(),
@@ -158,141 +203,138 @@ class OperationalContextViewServiceTest {
         );
     }
 
-    private static Map<String, Object> system(
-            String id,
-            String name,
-            String type,
-            String ownerTeamId,
-            List<String> repos,
-            List<String> processes,
-            List<String> contexts,
-            List<String> serviceNames,
-            List<String> endpoints
-    ) {
-        return map(
-                "id", id,
-                "name", name,
-                "type", type,
-                "ownerTeamId", ownerTeamId,
-                "repos", repos,
-                "processes", processes,
-                "contexts", contexts,
-                "signals", map("serviceNames", serviceNames, "endpoints", endpoints),
-                "handoff", map("target", ownerTeamId, "requiredEvidence", List.of("correlationId"))
-        );
-    }
-
-    private static Map<String, Object> repository(
-            String id,
-            String project,
-            String ownerTeamId,
-            List<String> systems,
-            List<String> processes,
-            List<String> contexts
-    ) {
-        return map(
-                "id", id,
-                "project", project,
-                "group", "example/platform",
-                "ownerTeamId", ownerTeamId,
-                "systems", systems,
-                "processes", processes,
-                "contexts", contexts,
-                "modules", List.of(map("id", "core", "packages", List.of("com.example.app"), "classHints", List.of("AppController"))),
-                "signals", map("projectNames", List.of(project), "packagePrefixes", List.of("com.example.app")),
-                "handoff", map("target", ownerTeamId, "requiredEvidence", List.of("project", "filePath"))
-        );
-    }
-
-    private static Map<String, Object> process(
-            String id,
-            String name,
-            String ownerTeamId,
-            List<String> systems,
-            List<String> externalSystems,
-            List<String> repos,
-            List<String> contexts
-    ) {
-        return map(
-                "id", id,
-                "name", name,
-                "ownerTeamId", ownerTeamId,
-                "systems", systems,
-                "externalSystems", externalSystems,
-                "repos", repos,
-                "contexts", contexts,
-                "steps", List.of(map("id", "call-core", "name", "Call core")),
-                "completionSignals", List.of("done")
-        );
-    }
-
-    private static Map<String, Object> integration(
-            String id,
-            String from,
-            String to,
-            String ownerTeamId,
-            List<String> processes,
-            List<String> contexts
-    ) {
-        return map(
-                "id", id,
-                "name", "App Core -> Partner",
-                "from", from,
-                "to", to,
-                "ownerTeamId", ownerTeamId,
-                "protocol", "HTTP",
-                "type", "sync",
-                "processes", processes,
-                "contexts", contexts,
-                "signals", map("endpoints", List.of("/partner/resource")),
-                "handoff", map("target", ownerTeamId, "requiredEvidence", List.of("endpoint"))
-        );
-    }
-
-    private static Map<String, Object> context(
-            String id,
-            String name,
-            String ownerTeamId,
-            List<String> systems,
-            List<String> repos,
-            List<String> processes
-    ) {
-        return map(
-                "id", id,
-                "name", name,
-                "ownerTeamId", ownerTeamId,
-                "systems", systems,
-                "repos", repos,
-                "processes", processes,
-                "terms", List.of("soap-fault")
-        );
-    }
-
-    private static Map<String, Object> team(
-            String id,
-            String name,
-            String system,
-            String repo,
-            String process,
-            String context,
-            String integration
-    ) {
-        return map(
-                "id", id,
-                "name", name,
-                "owns", map(
-                        "systems", values(system),
-                        "repos", values(repo),
-                        "processes", values(process),
-                        "contexts", values(context),
-                        "integrations", values(integration)
+    private static OperationalContextCatalog currentContractCatalog() {
+        return new OperationalContextCatalog(
+                List.of(map(
+                        "id", "team-a",
+                        "name", "Team A",
+                        "purpose", "Owns current-contract sample.",
+                        "references", map(
+                                "systems", List.of("new-system"),
+                                "repositories", List.of("new-repo"),
+                                "processes", List.of("new-process"),
+                                "boundedContexts", List.of("new-context"),
+                                "integrations", List.of("new-integration")
+                        ),
+                        "responsibilities", List.of(
+                                map("targetType", "system", "targetId", "new-system", "teamId", "team-a"),
+                                map("targetType", "repository", "targetId", "new-repo", "teamId", "team-a"),
+                                map("targetType", "process", "targetId", "new-process", "teamId", "team-a"),
+                                map("targetType", "bounded-context", "targetId", "new-context", "teamId", "team-a"),
+                                map("targetType", "integration", "targetId", "new-integration", "teamId", "team-a")
+                        ),
+                        "handoffHints", map(
+                                "defaultRouteLabel", "Team A",
+                                "requiredEvidence", List.of("correlationId")
+                        )
+                )),
+                List.of(map(
+                        "id", "new-process",
+                        "name", "New Process",
+                        "summary", "Current process summary",
+                        "participants", map(
+                                "primarySystems", List.of("new-system"),
+                                "externalSystems", List.of("partner-system")
+                        ),
+                        "references", map(
+                                "repositories", List.of("new-repo"),
+                                "boundedContexts", List.of("new-context"),
+                                "teams", List.of("team-a")
+                        ),
+                        "responsibilities", List.of(map("teamId", "team-a")),
+                        "processSteps", List.of(map("id", "step-1", "name", "Run step")),
+                        "processBoundary", map("endsWhen", List.of("finished")),
+                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("correlationId"))
+                )),
+                List.of(
+                        map(
+                                "id", "new-system",
+                                "name", "New System",
+                                "kind", "internal-application",
+                                "purpose", "Current system purpose",
+                                "references", map(
+                                        "repositories", List.of("new-repo"),
+                                        "processes", List.of("new-process"),
+                                        "boundedContexts", List.of("new-context"),
+                                        "teams", List.of("team-a")
+                                ),
+                                "responsibilities", List.of(map("teamId", "team-a")),
+                                "matchSignals", map("exact", map("serviceNames", List.of("new-service"))),
+                                "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("correlationId"))
+                        ),
+                        map(
+                                "id", "partner-system",
+                                "name", "Partner System",
+                                "kind", "external-system",
+                                "matchSignals", map("exact", map("serviceNames", List.of("partner-service"))),
+                                "handoffHints", map("defaultRouteLabel", "Partner", "requiredEvidence", List.of("endpoint"))
+                        )
                 ),
-                "handoff", map("target", "tech-lead", "requiredEvidence", List.of("correlationId"))
+                List.of(map(
+                        "id", "new-integration",
+                        "name", "New System to Partner",
+                        "summary", "Current integration summary",
+                        "integrationStyle", "synchronous-request",
+                        "participants", map(
+                                "source", map("system", "new-system"),
+                                "targets", List.of(map("system", "partner-system")),
+                                "finalTargets", List.of("partner-system")
+                        ),
+                        "transport", map("protocols", List.of("REST"), "http", map("endpointPrefixes", List.of("/new/api"))),
+                        "references", map(
+                                "processes", List.of("new-process"),
+                                "boundedContexts", List.of("new-context"),
+                                "teams", List.of("team-a")
+                        ),
+                        "responsibilities", List.of(map("teamId", "team-a")),
+                        "matchSignals", map("strong", map("endpointPrefixes", List.of("/new/api"))),
+                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("endpoint"))
+                )),
+                List.of(map(
+                        "id", "new-repo",
+                        "name", "New Repo",
+                        "git", map("group", "Group", "project", "new-service", "projectPath", "Group/new-service"),
+                        "references", map(
+                                "systems", List.of("new-system"),
+                                "processes", List.of("new-process"),
+                                "boundedContexts", List.of("new-context")
+                        ),
+                        "sourceLayout", map("sourceRoots", List.of("src/main/java/com/example/newservice")),
+                        "matchSignals", map("strong", map("packagePrefixes", List.of("com.example.newservice"), "classHints", List.of("NewController"))),
+                        "modules", List.of(map("moduleId", "api", "sourceRoots", List.of("src/main/java"), "matchSignals", map("strong", map("classHints", List.of("NewController"))))),
+                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("projectPath"))
+                )),
+                List.of(map(
+                        "id", "new-context",
+                        "name", "New Context",
+                        "summary", "Current bounded context summary",
+                        "references", map(
+                                "systems", List.of("new-system"),
+                                "repositories", List.of("new-repo"),
+                                "processes", List.of("new-process"),
+                                "terms", List.of("new-term"),
+                                "teams", List.of("team-a")
+                        ),
+                        "responsibilities", List.of(map("teamId", "team-a")),
+                        "matchSignals", map("exact", map("terms", List.of("new-term"))),
+                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("bounded context"))
+                )),
+                List.of(new OperationalContextCatalog.GlossaryTerm(
+                        "new-term",
+                        "New Term",
+                        "domain-term",
+                        "A term from current contract.",
+                        List.of(),
+                        List.of(),
+                        List.of("new-term"),
+                        List.of("new-context"),
+                        List.of(),
+                        List.of()
+                )),
+                List.of(),
+                List.of(),
+                "index"
         );
-    }
-
-    private static List<String> values(String value) {
-        return value == null || value.isBlank() ? List.of() : List.of(value);
     }
 
     private static Map<String, Object> map(Object... values) {

@@ -120,7 +120,7 @@ public class CopilotIncidentDigestService {
                         .flatMap(system -> system.codeSearchProjects().stream())
                         .toList(),
                 operationalContext.repositories().stream()
-                        .map(OperationalContextEvidenceView.RepositoryItem::project)
+                        .map(OperationalContextEvidenceView.RepositoryItem::projectPath)
                         .toList()
         ));
         var packages = distinct(joinLists(

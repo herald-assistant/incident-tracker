@@ -18,13 +18,13 @@ describe('ContextCatalogTableComponent', () => {
     fixture.componentInstance.openAggregateDetails.subscribe(openAggregateDetails);
     fixture.componentRef.setInput('columns', [
       { key: 'project', label: 'Repository' },
-      { key: 'repos', label: 'Repos', type: 'aggregate' }
+      { key: 'repositories', label: 'Repositories', type: 'aggregate' }
     ]);
     fixture.componentRef.setInput('rows', [
       {
         id: 'repo-1',
         project: 'repo-1',
-        repos: aggregate()
+        repositories: aggregate()
       }
     ]);
     fixture.detectChanges();
@@ -62,20 +62,20 @@ describe('ContextCatalogTableComponent', () => {
 
 function aggregate(): ExplainableAggregateDto {
   return {
-    label: 'Repos',
+    label: 'Repositories',
     count: 2,
     severity: 'ok',
     confidence: 'high',
     tooltip: 'Repository scope.',
     groups: [
       {
-        label: 'Repos',
+        label: 'Repositories',
         count: 2,
         items: [
           {
             id: 'repo-1',
             label: 'repo-1',
-            type: 'repository',
+            kind: 'repository',
             reason: 'Explicit reference.',
             status: 'verified',
             sourceRefs: []
@@ -83,7 +83,7 @@ function aggregate(): ExplainableAggregateDto {
           {
             id: 'repo-2',
             label: 'repo-2',
-            type: 'repository',
+            kind: 'repository',
             reason: 'Referenced repository is not present in the catalogue.',
             status: 'missing',
             sourceRefs: []

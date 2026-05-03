@@ -155,10 +155,10 @@ public class OperationalContextViewService {
                         term.category(),
                         term.definition(),
                         valueAggregate(
-                                "Typical signals",
+                                "Match signals",
                                 GLOSSARY_TERM,
                                 term.id(),
-                                term.typicalEvidenceSignals(),
+                                term.matchSignals(),
                                 "Signals listed directly on the glossary term.",
                                 "signal"
                         ),
@@ -238,16 +238,15 @@ public class OperationalContextViewService {
 
     private OperationalContextSystemRowDto systemRow(CatalogView view, Map<String, Object> system) {
         var id = id(system);
-        var repos = combineLists(system, "repos", "repositories.primary", "repositories.secondary", "repositories.backendModules", "repositories.frontendModules");
         return new OperationalContextSystemRowDto(
                 id,
                 name(system),
-                text(system, "type"),
+                systemKind(system),
                 ownerValue(view, SYSTEM, system),
-                text(system, "purpose"),
-                idAggregate("Repos", SYSTEM, id, REPOSITORY, repos, view.repositoriesById(), "System lists these repositories as its code scope."),
-                idAggregate("Processes", SYSTEM, id, PROCESS, textList(system, "processes"), view.processesById(), "System is attached to these operational processes."),
-                idAggregate("Contexts", SYSTEM, id, BOUNDED_CONTEXT, textList(system, "contexts"), view.contextsById(), "System participates in these semantic contexts."),
+                summaryText(system),
+                idAggregate("Repositories", SYSTEM, id, REPOSITORY, repositoryIds(system), view.repositoriesById(), "System lists these repositories as its code scope."),
+                idAggregate("Processes", SYSTEM, id, PROCESS, processIds(system), view.processesById(), "System is attached to these operational processes."),
+                idAggregate("Contexts", SYSTEM, id, BOUNDED_CONTEXT, boundedContextIds(system), view.contextsById(), "System participates in these semantic contexts."),
                 idAggregate("Integrations", SYSTEM, id, INTEGRATION, integrationIdsForSystem(view, id), view.integrationsById(), "Integration contracts reference this system as source or target."),
                 signalAggregate(SYSTEM, id, system),
                 handoffAggregate(SYSTEM, id, system),
@@ -260,12 +259,12 @@ public class OperationalContextViewService {
         var id = id(repository);
         return new OperationalContextRepositoryRowDto(
                 id,
-                firstDefined(text(repository, "gitLab.projectPath"), text(repository, "project"), id),
-                firstDefined(text(repository, "gitLab.groupPath"), text(repository, "group"), ""),
+                repositoryProjectPath(repository),
+                repositoryGroup(repository),
                 ownerValue(view, REPOSITORY, repository),
-                idAggregate("Systems", REPOSITORY, id, SYSTEM, textList(repository, "systems"), view.systemsById(), "Repository lists these runtime systems."),
-                idAggregate("Processes", REPOSITORY, id, PROCESS, textList(repository, "processes"), view.processesById(), "Repository is scoped to these processes."),
-                idAggregate("Contexts", REPOSITORY, id, BOUNDED_CONTEXT, textList(repository, "contexts"), view.contextsById(), "Repository contributes code to these contexts."),
+                idAggregate("Systems", REPOSITORY, id, SYSTEM, systemIds(repository), view.systemsById(), "Repository lists these runtime systems."),
+                idAggregate("Processes", REPOSITORY, id, PROCESS, processIds(repository), view.processesById(), "Repository is scoped to these processes."),
+                idAggregate("Contexts", REPOSITORY, id, BOUNDED_CONTEXT, boundedContextIds(repository), view.contextsById(), "Repository contributes code to these contexts."),
                 valueAggregate("Package roots", REPOSITORY, id, packageRoots(repository), "Package and source hints define the code search scope.", "package"),
                 valueAggregate("Entry classes", REPOSITORY, id, entrypoints(repository), "Entrypoint and class hints help target code search.", "entrypoint"),
                 valueAggregate("Runtime mappings", REPOSITORY, id, runtimeMappings(repository), "Runtime signals map deployed services back to this repository.", "runtime-signal"),
@@ -281,14 +280,14 @@ public class OperationalContextViewService {
                 id,
                 name(process),
                 ownerValue(view, PROCESS, process),
-                text(process, "purpose"),
-                idAggregate("Systems", PROCESS, id, SYSTEM, textList(process, "systems"), view.systemsById(), "Process runs through these internal systems."),
-                idAggregate("External systems", PROCESS, id, SYSTEM, textList(process, "externalSystems"), view.systemsById(), "Process depends on these external systems."),
-                idAggregate("Repos", PROCESS, id, REPOSITORY, textList(process, "repos"), view.repositoriesById(), "Process references these code scopes."),
-                idAggregate("Contexts", PROCESS, id, BOUNDED_CONTEXT, textList(process, "contexts"), view.contextsById(), "Process belongs to these semantic contexts."),
+                summaryText(process),
+                idAggregate("Systems", PROCESS, id, SYSTEM, processSystemIds(process), view.systemsById(), "Process runs through these internal systems."),
+                idAggregate("External systems", PROCESS, id, SYSTEM, processExternalSystemIds(process), view.systemsById(), "Process depends on these external systems."),
+                idAggregate("Repositories", PROCESS, id, REPOSITORY, repositoryIds(process), view.repositoriesById(), "Process references these code scopes."),
+                idAggregate("Contexts", PROCESS, id, BOUNDED_CONTEXT, boundedContextIds(process), view.contextsById(), "Process belongs to these semantic contexts."),
                 stepAggregate(PROCESS, id, process),
-                valueAggregate("Completion signals", PROCESS, id, textList(process, "completionSignals"), "Completion signals show when the flow has finished.", "signal"),
-                valueAggregate("Handoff hints", PROCESS, id, textList(process, "handoffHints"), "Hints written directly on the process.", "hint"),
+                valueAggregate("Completion signals", PROCESS, id, completionSignals(process), "Completion signals show when the flow has finished.", "signal"),
+                valueAggregate("Handoff hints", PROCESS, id, handoffHintValues(process), "Hints written directly on the process.", "hint"),
                 validationAggregate(PROCESS, id, view.validationFindings())
         );
     }
@@ -298,14 +297,14 @@ public class OperationalContextViewService {
         return new OperationalContextIntegrationRowDto(
                 id,
                 name(integration),
-                text(integration, "from"),
-                text(integration, "to"),
+                integrationSourceSystem(integration),
+                String.join(", ", integrationTargetSystems(integration)),
                 ownerValue(view, INTEGRATION, integration),
-                idAggregate("Partner teams", INTEGRATION, id, TEAM, textList(integration, "partnerTeamIds"), view.teamsById(), "Partner teams are listed on this integration contract."),
-                text(integration, "protocol"),
-                text(integration, "type"),
-                idAggregate("Processes", INTEGRATION, id, PROCESS, textList(integration, "processes"), view.processesById(), "Integration supports these processes."),
-                idAggregate("Contexts", INTEGRATION, id, BOUNDED_CONTEXT, textList(integration, "contexts"), view.contextsById(), "Integration crosses these bounded contexts."),
+                idAggregate("Partner teams", INTEGRATION, id, TEAM, integrationPartnerTeamIds(integration), view.teamsById(), "Partner teams are listed on this integration contract."),
+                String.join(", ", integrationProtocols(integration)),
+                integrationType(integration),
+                idAggregate("Processes", INTEGRATION, id, PROCESS, processIds(integration), view.processesById(), "Integration supports these processes."),
+                idAggregate("Contexts", INTEGRATION, id, BOUNDED_CONTEXT, boundedContextIds(integration), view.contextsById(), "Integration crosses these bounded contexts."),
                 signalAggregate(INTEGRATION, id, integration),
                 handoffAggregate(INTEGRATION, id, integration),
                 validationAggregate(INTEGRATION, id, view.validationFindings())
@@ -318,13 +317,13 @@ public class OperationalContextViewService {
                 id,
                 name(context),
                 ownerValue(view, BOUNDED_CONTEXT, context),
-                text(context, "purpose"),
-                idAggregate("Systems", BOUNDED_CONTEXT, id, SYSTEM, textList(context, "systems"), view.systemsById(), "Context is implemented by these systems."),
-                idAggregate("Repos", BOUNDED_CONTEXT, id, REPOSITORY, textList(context, "repos"), view.repositoriesById(), "Context is implemented in these repositories."),
-                idAggregate("Processes", BOUNDED_CONTEXT, id, PROCESS, textList(context, "processes"), view.processesById(), "Context participates in these processes."),
-                valueAggregate("Terms", BOUNDED_CONTEXT, id, textList(context, "terms"), "Terms describe the local domain vocabulary.", GLOSSARY_TERM),
+                summaryText(context),
+                idAggregate("Systems", BOUNDED_CONTEXT, id, SYSTEM, systemIds(context), view.systemsById(), "Context is implemented by these systems."),
+                idAggregate("Repositories", BOUNDED_CONTEXT, id, REPOSITORY, repositoryIds(context), view.repositoriesById(), "Context is implemented in these repositories."),
+                idAggregate("Processes", BOUNDED_CONTEXT, id, PROCESS, processIds(context), view.processesById(), "Context participates in these processes."),
+                valueAggregate("Terms", BOUNDED_CONTEXT, id, termIds(context), "Terms describe the local domain vocabulary.", GLOSSARY_TERM),
                 relationAggregate(BOUNDED_CONTEXT, id, context),
-                valueAggregate("Runtime fingerprints", BOUNDED_CONTEXT, id, runtimeFingerprints(context), "Signals that reveal this semantic area in runtime evidence.", "fingerprint"),
+                valueAggregate("Runtime signals", BOUNDED_CONTEXT, id, runtimeSignals(context), "Signals that reveal this semantic area in runtime evidence.", "signal"),
                 validationAggregate(BOUNDED_CONTEXT, id, view.validationFindings())
         );
     }
@@ -334,12 +333,12 @@ public class OperationalContextViewService {
         return new OperationalContextTeamRowDto(
                 id,
                 name(team),
-                text(team, "purpose"),
-                idAggregate("Systems", TEAM, id, SYSTEM, textList(team, "owns.systems"), view.systemsById(), "Team owns these systems."),
-                idAggregate("Repos", TEAM, id, REPOSITORY, textList(team, "owns.repos"), view.repositoriesById(), "Team owns these repositories."),
-                idAggregate("Processes", TEAM, id, PROCESS, textList(team, "owns.processes"), view.processesById(), "Team owns these processes."),
-                idAggregate("Contexts", TEAM, id, BOUNDED_CONTEXT, textList(team, "owns.contexts"), view.contextsById(), "Team owns these contexts."),
-                idAggregate("Integrations", TEAM, id, INTEGRATION, textList(team, "owns.integrations"), view.integrationsById(), "Team owns these integration contracts."),
+                summaryText(team),
+                idAggregate("Systems", TEAM, id, SYSTEM, teamOwnedIds(team, SYSTEM), view.systemsById(), "Team owns these systems."),
+                idAggregate("Repositories", TEAM, id, REPOSITORY, teamOwnedIds(team, REPOSITORY), view.repositoriesById(), "Team owns these repositories."),
+                idAggregate("Processes", TEAM, id, PROCESS, teamOwnedIds(team, PROCESS), view.processesById(), "Team owns these processes."),
+                idAggregate("Contexts", TEAM, id, BOUNDED_CONTEXT, teamOwnedIds(team, BOUNDED_CONTEXT), view.contextsById(), "Team owns these contexts."),
+                idAggregate("Integrations", TEAM, id, INTEGRATION, teamOwnedIds(team, INTEGRATION), view.integrationsById(), "Team owns these integration contracts."),
                 signalAggregate(TEAM, id, team),
                 handoffAggregate(TEAM, id, team),
                 validationAggregate(TEAM, id, view.validationFindings())
@@ -407,7 +406,7 @@ public class OperationalContextViewService {
                         "notes", term.notes()
                 ))),
                 List.of(valueAggregate("Canonical references", GLOSSARY_TERM, term.id(), term.canonicalReferences(), "Glossary term references these catalog ids.", "reference").groups().get(0)),
-                valueAggregate("Typical evidence signals", GLOSSARY_TERM, term.id(), term.typicalEvidenceSignals(), "Signals listed on the term.", "signal").groups(),
+                valueAggregate("Match signals", GLOSSARY_TERM, term.id(), term.matchSignals(), "Signals listed on the term.", "signal").groups(),
                 List.of(new OperationalContextExplainabilitySectionDto(
                         "Vocabulary",
                         "This term is parsed from glossary.md and helps explain incident evidence.",
@@ -507,152 +506,151 @@ public class OperationalContextViewService {
     private void validateReferences(CatalogView view, List<ValidationFindingDto> findings) {
         for (var system : view.catalog().systems()) {
             var id = id(system);
-            requireReferences(findings, SYSTEM, id, "repo", REPOSITORY, allRepositoryIds(system), view.repositoriesById(), "System references unknown repository.");
-            requireReferences(findings, SYSTEM, id, "process", PROCESS, textList(system, "processes"), view.processesById(), "System references unknown process.");
-            requireReferences(findings, SYSTEM, id, "context", BOUNDED_CONTEXT, textList(system, "contexts"), view.contextsById(), "System references unknown bounded context.");
-            requireReferences(findings, SYSTEM, id, "ownerTeamId", TEAM, listOf(text(system, "ownerTeamId")), view.teamsById(), "System ownerTeamId points to an unknown team.");
-            requireReferences(findings, SYSTEM, id, "partnerTeamIds", TEAM, textList(system, "partnerTeamIds"), view.teamsById(), "System partnerTeamIds points to an unknown team.");
+            requireReferences(findings, SYSTEM, id, "repositories", REPOSITORY, repositoryIds(system), view.repositoriesById(), "System references unknown repository.");
+            requireReferences(findings, SYSTEM, id, "processes", PROCESS, processIds(system), view.processesById(), "System references unknown process.");
+            requireReferences(findings, SYSTEM, id, "boundedContexts", BOUNDED_CONTEXT, boundedContextIds(system), view.contextsById(), "System references unknown bounded context.");
+            requireReferences(findings, SYSTEM, id, "teams", TEAM, ownerTeamIds(system), view.teamsById(), "System team reference points to an unknown team.");
+            requireReferences(findings, SYSTEM, id, "handoffHints.partnerTeamIds", TEAM, textList(system, "handoffHints.partnerTeamIds"), view.teamsById(), "System partner team reference points to an unknown team.");
             requireReferences(findings, SYSTEM, id, "dependsOn", SYSTEM, textList(system, "dependsOn"), view.systemsById(), "System dependsOn references unknown system.");
         }
         for (var repository : view.catalog().repositories()) {
             var id = id(repository);
-            requireReferences(findings, REPOSITORY, id, "systems", SYSTEM, textList(repository, "systems"), view.systemsById(), "Repository references unknown system.");
-            requireReferences(findings, REPOSITORY, id, "processes", PROCESS, textList(repository, "processes"), view.processesById(), "Repository references unknown process.");
-            requireReferences(findings, REPOSITORY, id, "contexts", BOUNDED_CONTEXT, textList(repository, "contexts"), view.contextsById(), "Repository references unknown bounded context.");
-            requireReferences(findings, REPOSITORY, id, "ownerTeamId", TEAM, listOf(text(repository, "ownerTeamId")), view.teamsById(), "Repository ownerTeamId points to an unknown team.");
+            requireReferences(findings, REPOSITORY, id, "systems", SYSTEM, systemIds(repository), view.systemsById(), "Repository references unknown system.");
+            requireReferences(findings, REPOSITORY, id, "processes", PROCESS, processIds(repository), view.processesById(), "Repository references unknown process.");
+            requireReferences(findings, REPOSITORY, id, "contexts", BOUNDED_CONTEXT, boundedContextIds(repository), view.contextsById(), "Repository references unknown bounded context.");
+            requireReferences(findings, REPOSITORY, id, "teams", TEAM, ownerTeamIds(repository), view.teamsById(), "Repository team reference points to an unknown team.");
         }
         for (var process : view.catalog().processes()) {
             var id = id(process);
-            requireReferences(findings, PROCESS, id, "systems", SYSTEM, textList(process, "systems"), view.systemsById(), "Process references unknown system.");
-            requireReferences(findings, PROCESS, id, "externalSystems", SYSTEM, textList(process, "externalSystems"), view.systemsById(), "Process references unknown external system.");
-            requireReferences(findings, PROCESS, id, "repos", REPOSITORY, textList(process, "repos"), view.repositoriesById(), "Process references unknown repository.");
-            requireReferences(findings, PROCESS, id, "contexts", BOUNDED_CONTEXT, textList(process, "contexts"), view.contextsById(), "Process references unknown bounded context.");
-            requireReferences(findings, PROCESS, id, "ownerTeamId", TEAM, listOf(text(process, "ownerTeamId")), view.teamsById(), "Process ownerTeamId points to an unknown team.");
-            requireReferences(findings, PROCESS, id, "partnerTeamIds", TEAM, textList(process, "partnerTeamIds"), view.teamsById(), "Process partnerTeamIds points to an unknown team.");
+            requireReferences(findings, PROCESS, id, "systems", SYSTEM, processSystemIds(process), view.systemsById(), "Process references unknown system.");
+            requireReferences(findings, PROCESS, id, "externalSystems", SYSTEM, processExternalSystemIds(process), view.systemsById(), "Process references unknown external system.");
+            requireReferences(findings, PROCESS, id, "repositories", REPOSITORY, repositoryIds(process), view.repositoriesById(), "Process references unknown repository.");
+            requireReferences(findings, PROCESS, id, "contexts", BOUNDED_CONTEXT, boundedContextIds(process), view.contextsById(), "Process references unknown bounded context.");
+            requireReferences(findings, PROCESS, id, "teams", TEAM, ownerTeamIds(process), view.teamsById(), "Process team reference points to an unknown team.");
+            requireReferences(findings, PROCESS, id, "handoffHints.partnerTeamIds", TEAM, textList(process, "handoffHints.partnerTeamIds"), view.teamsById(), "Process partner team reference points to an unknown team.");
         }
         for (var integration : view.catalog().integrations()) {
             var id = id(integration);
-            requireReferences(findings, INTEGRATION, id, "from", SYSTEM, listOf(text(integration, "from")), view.systemsById(), "Integration source system is not modeled.");
-            requireReferences(findings, INTEGRATION, id, "to", SYSTEM, listOf(text(integration, "to")), view.systemsById(), "Integration target system is not modeled.");
-            requireReferences(findings, INTEGRATION, id, "processes", PROCESS, textList(integration, "processes"), view.processesById(), "Integration references unknown process.");
-            requireReferences(findings, INTEGRATION, id, "contexts", BOUNDED_CONTEXT, textList(integration, "contexts"), view.contextsById(), "Integration references unknown bounded context.");
-            requireReferences(findings, INTEGRATION, id, "ownerTeamId", TEAM, listOf(text(integration, "ownerTeamId")), view.teamsById(), "Integration ownerTeamId points to an unknown team.");
-            requireReferences(findings, INTEGRATION, id, "partnerTeamIds", TEAM, textList(integration, "partnerTeamIds"), view.teamsById(), "Integration partnerTeamIds points to an unknown team.");
+            requireReferences(findings, INTEGRATION, id, "participants", SYSTEM, integrationSystems(integration), view.systemsById(), "Integration source or target system is not modeled.");
+            requireReferences(findings, INTEGRATION, id, "processes", PROCESS, processIds(integration), view.processesById(), "Integration references unknown process.");
+            requireReferences(findings, INTEGRATION, id, "contexts", BOUNDED_CONTEXT, boundedContextIds(integration), view.contextsById(), "Integration references unknown bounded context.");
+            requireReferences(findings, INTEGRATION, id, "teams", TEAM, ownerTeamIds(integration), view.teamsById(), "Integration team reference points to an unknown team.");
+            requireReferences(findings, INTEGRATION, id, "handoffHints.partnerTeamIds", TEAM, integrationPartnerTeamIds(integration), view.teamsById(), "Integration partner team reference points to an unknown team.");
         }
         for (var context : view.catalog().boundedContexts()) {
             var id = id(context);
-            requireReferences(findings, BOUNDED_CONTEXT, id, "systems", SYSTEM, textList(context, "systems"), view.systemsById(), "Bounded context references unknown system.");
-            requireReferences(findings, BOUNDED_CONTEXT, id, "repos", REPOSITORY, textList(context, "repos"), view.repositoriesById(), "Bounded context references unknown repository.");
-            requireReferences(findings, BOUNDED_CONTEXT, id, "processes", PROCESS, textList(context, "processes"), view.processesById(), "Bounded context references unknown process.");
-            requireReferences(findings, BOUNDED_CONTEXT, id, "ownerTeamId", TEAM, listOf(text(context, "ownerTeamId")), view.teamsById(), "Bounded context ownerTeamId points to an unknown team.");
+            requireReferences(findings, BOUNDED_CONTEXT, id, "systems", SYSTEM, systemIds(context), view.systemsById(), "Bounded context references unknown system.");
+            requireReferences(findings, BOUNDED_CONTEXT, id, "repositories", REPOSITORY, repositoryIds(context), view.repositoriesById(), "Bounded context references unknown repository.");
+            requireReferences(findings, BOUNDED_CONTEXT, id, "processes", PROCESS, processIds(context), view.processesById(), "Bounded context references unknown process.");
+            requireReferences(findings, BOUNDED_CONTEXT, id, "teams", TEAM, ownerTeamIds(context), view.teamsById(), "Bounded context team reference points to an unknown team.");
         }
         for (var team : view.catalog().teams()) {
             var id = id(team);
-            requireReferences(findings, TEAM, id, "owns.systems", SYSTEM, textList(team, "owns.systems"), view.systemsById(), "Team owns unknown system.");
-            requireReferences(findings, TEAM, id, "owns.repos", REPOSITORY, textList(team, "owns.repos"), view.repositoriesById(), "Team owns unknown repository.");
-            requireReferences(findings, TEAM, id, "owns.processes", PROCESS, textList(team, "owns.processes"), view.processesById(), "Team owns unknown process.");
-            requireReferences(findings, TEAM, id, "owns.contexts", BOUNDED_CONTEXT, textList(team, "owns.contexts"), view.contextsById(), "Team owns unknown bounded context.");
-            requireReferences(findings, TEAM, id, "owns.integrations", INTEGRATION, textList(team, "owns.integrations"), view.integrationsById(), "Team owns unknown integration.");
+            requireReferences(findings, TEAM, id, "references.systems", SYSTEM, teamOwnedIds(team, SYSTEM), view.systemsById(), "Team references unknown system.");
+            requireReferences(findings, TEAM, id, "references.repositories", REPOSITORY, teamOwnedIds(team, REPOSITORY), view.repositoriesById(), "Team references unknown repository.");
+            requireReferences(findings, TEAM, id, "references.processes", PROCESS, teamOwnedIds(team, PROCESS), view.processesById(), "Team references unknown process.");
+            requireReferences(findings, TEAM, id, "references.boundedContexts", BOUNDED_CONTEXT, teamOwnedIds(team, BOUNDED_CONTEXT), view.contextsById(), "Team references unknown bounded context.");
+            requireReferences(findings, TEAM, id, "references.integrations", INTEGRATION, teamOwnedIds(team, INTEGRATION), view.integrationsById(), "Team references unknown integration.");
         }
     }
 
     private void validateOwnership(CatalogView view, List<ValidationFindingDto> findings) {
-        validateOwnerBackReference(findings, view, SYSTEM, view.catalog().systems(), "owns.systems");
-        validateOwnerBackReference(findings, view, REPOSITORY, view.catalog().repositories(), "owns.repos");
-        validateOwnerBackReference(findings, view, PROCESS, view.catalog().processes(), "owns.processes");
-        validateOwnerBackReference(findings, view, BOUNDED_CONTEXT, view.catalog().boundedContexts(), "owns.contexts");
-        validateOwnerBackReference(findings, view, INTEGRATION, view.catalog().integrations(), "owns.integrations");
-        validateTeamOwnership(findings, view, SYSTEM, view.catalog().systems(), "owns.systems");
-        validateTeamOwnership(findings, view, REPOSITORY, view.catalog().repositories(), "owns.repos");
-        validateTeamOwnership(findings, view, PROCESS, view.catalog().processes(), "owns.processes");
-        validateTeamOwnership(findings, view, BOUNDED_CONTEXT, view.catalog().boundedContexts(), "owns.contexts");
-        validateTeamOwnership(findings, view, INTEGRATION, view.catalog().integrations(), "owns.integrations");
+        validateOwnerBackReference(findings, view, SYSTEM, view.catalog().systems(), "references.systems");
+        validateOwnerBackReference(findings, view, REPOSITORY, view.catalog().repositories(), "references.repositories");
+        validateOwnerBackReference(findings, view, PROCESS, view.catalog().processes(), "references.processes");
+        validateOwnerBackReference(findings, view, BOUNDED_CONTEXT, view.catalog().boundedContexts(), "references.boundedContexts");
+        validateOwnerBackReference(findings, view, INTEGRATION, view.catalog().integrations(), "references.integrations");
+        validateTeamOwnership(findings, view, SYSTEM, view.catalog().systems(), "references.systems");
+        validateTeamOwnership(findings, view, REPOSITORY, view.catalog().repositories(), "references.repositories");
+        validateTeamOwnership(findings, view, PROCESS, view.catalog().processes(), "references.processes");
+        validateTeamOwnership(findings, view, BOUNDED_CONTEXT, view.catalog().boundedContexts(), "references.boundedContexts");
+        validateTeamOwnership(findings, view, INTEGRATION, view.catalog().integrations(), "references.integrations");
 
         for (var system : view.catalog().systems()) {
-            if ("internal".equalsIgnoreCase(text(system, "type")) && !StringUtils.hasText(text(system, "ownerTeamId"))) {
-                addFinding(findings, "warning", "ownership-consistency", SYSTEM, id(system), "Internal system has no owner", "Internal systems should declare ownerTeamId.", "Add ownerTeamId or mark the system as external.", "Routing and handoff may be ambiguous.");
+            if (internalSystem(system) && knownOwnerTeamIds(view, SYSTEM, system).isEmpty()) {
+                addFinding(findings, "warning", "ownership-consistency", SYSTEM, id(system), "Internal system has no owner", "Internal systems should declare responsibilities.teamId or references.teams.", "Add responsibilities/references or mark the system as external.", "Routing and handoff may be ambiguous.");
             }
         }
         for (var repository : view.catalog().repositories()) {
-            if (!StringUtils.hasText(text(repository, "ownerTeamId"))) {
-                addFinding(findings, "warning", "ownership-consistency", REPOSITORY, id(repository), "Repository has no owner", "Repositories should declare ownerTeamId.", "Add ownerTeamId and align teams.yml owns.repos.", "Code search scope cannot be routed confidently.");
+            if (knownOwnerTeamIds(view, REPOSITORY, repository).isEmpty()) {
+                addFinding(findings, "warning", "ownership-consistency", REPOSITORY, id(repository), "Repository has no owner", "Repositories should declare responsibilities.teamId or references.teams.", "Add ownership and align teams.yml references.repositories.", "Code search scope cannot be routed confidently.");
             }
         }
         for (var process : view.catalog().processes()) {
-            if (!StringUtils.hasText(text(process, "ownerTeamId"))) {
-                addFinding(findings, "warning", "ownership-consistency", PROCESS, id(process), "Process has no owner", "Processes should declare ownerTeamId.", "Add ownerTeamId and align teams.yml owns.processes.", "Business flow ownership is unclear.");
+            if (knownOwnerTeamIds(view, PROCESS, process).isEmpty()) {
+                addFinding(findings, "warning", "ownership-consistency", PROCESS, id(process), "Process has no owner", "Processes should declare responsibilities.teamId or references.teams.", "Add ownership and align teams.yml references.processes.", "Business flow ownership is unclear.");
             }
         }
         for (var context : view.catalog().boundedContexts()) {
-            if (!StringUtils.hasText(text(context, "ownerTeamId"))) {
-                addFinding(findings, "warning", "ownership-consistency", BOUNDED_CONTEXT, id(context), "Bounded context has no owner", "Bounded contexts should declare ownerTeamId.", "Add ownerTeamId and align teams.yml owns.contexts.", "Semantic routing is unclear.");
+            if (knownOwnerTeamIds(view, BOUNDED_CONTEXT, context).isEmpty()) {
+                addFinding(findings, "warning", "ownership-consistency", BOUNDED_CONTEXT, id(context), "Bounded context has no owner", "Bounded contexts should declare responsibilities.teamId or references.teams.", "Add ownership and align teams.yml references.boundedContexts.", "Semantic routing is unclear.");
             }
         }
         for (var integration : view.catalog().integrations()) {
-            if (!StringUtils.hasText(text(integration, "ownerTeamId"))) {
-                addFinding(findings, "warning", "ownership-consistency", INTEGRATION, id(integration), "Integration has no owner", "Integration contracts should declare ownerTeamId.", "Add ownerTeamId and align teams.yml owns.integrations.", "Contract ownership is unclear.");
+            if (knownOwnerTeamIds(view, INTEGRATION, integration).isEmpty()) {
+                addFinding(findings, "warning", "ownership-consistency", INTEGRATION, id(integration), "Integration has no owner", "Integration contracts should declare responsibilities.teamId or references.teams.", "Add ownership and align teams.yml references.integrations.", "Contract ownership is unclear.");
             }
         }
     }
 
     private void validateCompleteness(CatalogView view, List<ValidationFindingDto> findings) {
         for (var system : view.catalog().systems()) {
-            if ("internal".equalsIgnoreCase(text(system, "type")) && allRepositoryIds(system).isEmpty()) {
-                addFinding(findings, "warning", "completeness", SYSTEM, id(system), "Internal system has no repositories", "No repository/code scope is attached to this internal system.", "Add repos or repositories.* entries.", "AI and operators cannot target code confidently.");
+            if (internalSystem(system) && repositoryIds(system).isEmpty()) {
+                addFinding(findings, "warning", "completeness", SYSTEM, id(system), "Internal system has no repositories", "No repository/code scope is attached to this internal system.", "Add references.repositories.", "AI and operators cannot target code confidently.");
             }
         }
         for (var integration : view.catalog().integrations()) {
-            if (!StringUtils.hasText(text(integration, "protocol"))) {
-                addFinding(findings, "warning", "completeness", INTEGRATION, id(integration), "Integration protocol is missing", "The integration contract has no protocol.", "Set protocol, e.g. HTTP, SOAP, Kafka or JDBC.", "Operators cannot quickly understand the contract shape.");
+            if (integrationProtocols(integration).isEmpty()) {
+                addFinding(findings, "warning", "completeness", INTEGRATION, id(integration), "Integration protocols are missing", "The integration contract has no protocols.", "Set transport.protocols, e.g. HTTP, SOAP, Kafka or JDBC.", "Operators cannot quickly understand the contract shape.");
             }
-            if (!StringUtils.hasText(text(integration, "type"))) {
-                addFinding(findings, "warning", "completeness", INTEGRATION, id(integration), "Integration type is missing", "The integration contract has no type.", "Set type, e.g. sync, async, event or batch.", "Operators cannot classify the failure mode.");
+            if (!StringUtils.hasText(integrationType(integration))) {
+                addFinding(findings, "warning", "completeness", INTEGRATION, id(integration), "Integration style is missing", "The integration contract has no integrationStyle or category.", "Set integrationStyle or category.", "Operators cannot classify the failure mode.");
             }
-            if (!StringUtils.hasText(text(integration, "handoff.target")) || textList(integration, "handoff.requiredEvidence").isEmpty()) {
-                addFinding(findings, "warning", "completeness", INTEGRATION, id(integration), "Integration handoff checklist is incomplete", "Missing handoff target or required evidence.", "Fill handoff.target and handoff.requiredEvidence.", "Routing can stop at an unclear checklist.");
+            if (!StringUtils.hasText(handoffTarget(integration)) || handoffRequiredEvidence(integration).isEmpty()) {
+                addFinding(findings, "warning", "completeness", INTEGRATION, id(integration), "Integration handoff checklist is incomplete", "Missing handoff target or required evidence.", "Fill handoffHints.", "Routing can stop at an unclear checklist.");
             }
         }
         for (var process : view.catalog().processes()) {
-            if (textList(process, "systems").isEmpty()) {
-                addFinding(findings, "warning", "completeness", PROCESS, id(process), "Process has no systems", "No runtime systems are attached to this process.", "Add systems to the process.", "The flow cannot be linked to runtime evidence.");
+            if (processSystemIds(process).isEmpty()) {
+                addFinding(findings, "warning", "completeness", PROCESS, id(process), "Process has no systems", "No runtime systems are attached to this process.", "Add participants.primarySystems or references.systems to the process.", "The flow cannot be linked to runtime evidence.");
             }
-            if (textList(process, "completionSignals").isEmpty()) {
-                addFinding(findings, "info", "completeness", PROCESS, id(process), "Process has no completion signals", "No completion signals are documented.", "Add completionSignals when known.", "Operators may not know whether the flow finished.");
+            if (completionSignals(process).isEmpty()) {
+                addFinding(findings, "info", "completeness", PROCESS, id(process), "Process has no completion signals", "No completion signals are documented.", "Add processBoundary.endsWhen when known.", "Operators may not know whether the flow finished.");
             }
         }
         for (var repository : view.catalog().repositories()) {
-            if (!StringUtils.hasText(text(repository, "gitLab.projectPath")) && !StringUtils.hasText(text(repository, "project"))) {
-                addFinding(findings, "warning", "completeness", REPOSITORY, id(repository), "Repository project path is missing", "No GitLab project path or project is defined.", "Fill gitLab.projectPath or project.", "Code search cannot target the repository.");
+            if (!StringUtils.hasText(text(repository, "git.projectPath"))) {
+                addFinding(findings, "warning", "completeness", REPOSITORY, id(repository), "Repository project path is missing", "No Git project path is defined.", "Fill git.projectPath.", "Code search cannot target the repository.");
             }
             if (packageRoots(repository).isEmpty() && entrypoints(repository).isEmpty()) {
                 addFinding(findings, "warning", "completeness", REPOSITORY, id(repository), "Repository has no source hints", "No package roots, paths, modules or class hints are documented.", "Add modules, package prefixes, source paths or entrypoint hints.", "Code search has too broad a scope.");
             }
         }
         for (var context : view.catalog().boundedContexts()) {
-            if (textList(context, "terms").isEmpty()) {
-                addFinding(findings, "info", "completeness", BOUNDED_CONTEXT, id(context), "Bounded context has no terms", "No domain terms are attached to this context.", "Add terms or glossary references.", "Vocabulary explanation may be thin.");
+            if (termIds(context).isEmpty()) {
+                addFinding(findings, "info", "completeness", BOUNDED_CONTEXT, id(context), "Bounded context has no terms", "No domain terms are attached to this context.", "Add references.terms.", "Vocabulary explanation may be thin.");
             }
-            if (textList(context, "systems").isEmpty() && textList(context, "repos").isEmpty() && textList(context, "processes").isEmpty()) {
-                addFinding(findings, "warning", "completeness", BOUNDED_CONTEXT, id(context), "Bounded context has no scope", "No systems, repositories or processes define this context.", "Add systems, repos or processes.", "The semantic boundary cannot be linked to incidents.");
+            if (systemIds(context).isEmpty() && repositoryIds(context).isEmpty() && processIds(context).isEmpty()) {
+                addFinding(findings, "warning", "completeness", BOUNDED_CONTEXT, id(context), "Bounded context has no scope", "No systems, repositories or processes define this context.", "Add references.systems, references.repositories or references.processes.", "The semantic boundary cannot be linked to incidents.");
             }
         }
         for (var team : view.catalog().teams()) {
-            if (!StringUtils.hasText(text(team, "handoff.target"))) {
-                addFinding(findings, "warning", "completeness", TEAM, id(team), "Team has no handoff target", "No team handoff target is documented.", "Fill handoff.target.", "Escalation path is incomplete.");
+            if (!StringUtils.hasText(handoffTarget(team))) {
+                addFinding(findings, "warning", "completeness", TEAM, id(team), "Team has no handoff target", "No team handoff target is documented.", "Fill handoffHints.", "Escalation path is incomplete.");
             }
         }
     }
 
     private void validateSignalQuality(CatalogView view, List<ValidationFindingDto> findings) {
-        duplicateSignalFindings(view, findings, "signals.serviceNames", "serviceName", "Duplicate serviceName across systems");
-        duplicateSignalFindings(view, findings, "signals.endpoints", "endpoint", "Duplicate endpoint prefix across systems");
-        duplicateSignalFindings(view, findings, "signals.hosts", "host", "Duplicate host across systems");
+        duplicateSignalFindings(view, findings, "serviceName", "Duplicate serviceName across systems", "serviceNames");
+        duplicateSignalFindings(view, findings, "endpoint", "Duplicate endpoint prefix across systems", "endpointPrefixes", "endpointTemplates");
+        duplicateSignalFindings(view, findings, "host", "Duplicate host across systems", "hosts", "hostPatterns");
         for (var system : view.catalog().systems()) {
             var id = id(system);
-            if ("internal".equalsIgnoreCase(text(system, "type")) && signalValues(system).isEmpty()) {
+            if (internalSystem(system) && signalValues(system).isEmpty()) {
                 addFinding(findings, "warning", "signal-quality", SYSTEM, id, "Internal system has no recognition signals", "No service, container, endpoint, host, package or marker signals are documented.", "Add signals that appear in logs, traces, code or runtime metadata.", "Signal resolver cannot identify this system.");
             }
-            for (var marker : textList(system, "signals.markers")) {
+            for (var marker : signalValuesByKey(system, "markers", "logMarkers")) {
                 if (GENERIC_MARKERS.contains(normalize(marker)) || marker.trim().length() < 3) {
                     addFinding(findings, "info", "signal-quality", SYSTEM, id, "Very generic marker", "Marker `" + marker + "` may match too much evidence.", "Replace it with a more specific runtime or code marker.", "Search confidence may be noisy.");
                 }
@@ -689,11 +687,11 @@ public class OperationalContextViewService {
 
     private void validateHandoffReadiness(CatalogView view, List<ValidationFindingDto> findings) {
         for (var entry : allHandoffEntries(view)) {
-            if (!StringUtils.hasText(text(entry.entity(), "handoff.target"))) {
-                addFinding(findings, "warning", "handoff-readiness", entry.type(), id(entry.entity()), "Handoff target is missing", "The entity has no handoff.target.", "Fill handoff.target.", "Operators may not know where to route the incident.");
+            if (!StringUtils.hasText(handoffTarget(entry.entity()))) {
+                addFinding(findings, "warning", "handoff-readiness", entry.type(), id(entry.entity()), "Handoff target is missing", "The entity has no handoff target.", "Fill handoffHints.", "Operators may not know where to route the incident.");
             }
-            if (textList(entry.entity(), "handoff.requiredEvidence").isEmpty()) {
-                addFinding(findings, "info", "handoff-readiness", entry.type(), id(entry.entity()), "Required evidence checklist is empty", "The entity has no handoff.requiredEvidence.", "List the minimal evidence needed before handoff.", "Handoff quality may be inconsistent.");
+            if (handoffRequiredEvidence(entry.entity()).isEmpty()) {
+                addFinding(findings, "info", "handoff-readiness", entry.type(), id(entry.entity()), "Required evidence checklist is empty", "The entity has no required evidence checklist.", "List the minimal evidence needed before handoff.", "Handoff quality may be inconsistent.");
             }
         }
     }
@@ -734,16 +732,14 @@ public class OperationalContextViewService {
             String teamOwnsPath
     ) {
         for (var entry : entries) {
-            var ownerTeamId = text(entry, "ownerTeamId");
-            if (!StringUtils.hasText(ownerTeamId)) {
-                continue;
-            }
-            var team = view.teamsById().get(ownerTeamId);
-            if (team == null) {
-                continue;
-            }
-            if (!textList(team, teamOwnsPath).contains(id(entry))) {
-                addFinding(findings, "warning", "ownership-consistency", entityType, id(entry), "Owner team does not list this entity", "ownerTeamId points to `" + ownerTeamId + "`, but teams.yml does not list the entity in `" + teamOwnsPath + "`.", "Add the entity id to the owning team's owns section.", "Ownership matrix and entity owner disagree.");
+            for (var ownerTeamId : explicitOwnerTeamIds(entry)) {
+                var team = view.teamsById().get(ownerTeamId);
+                if (team == null) {
+                    continue;
+                }
+                if (!teamOwnedIds(team, entityType).contains(id(entry))) {
+                    addFinding(findings, "warning", "ownership-consistency", entityType, id(entry), "Owner team does not list this entity", "Owner team `" + ownerTeamId + "` points to this entity, but teams.yml does not list it in `" + teamOwnsPath + "` or responsibilities.", "Add the entity id to the owning team's references section.", "Ownership matrix and entity owner disagree.");
+                }
             }
         }
     }
@@ -757,14 +753,14 @@ public class OperationalContextViewService {
     ) {
         var byId = indexById(entries);
         for (var team : view.catalog().teams()) {
-            for (var ownedId : textList(team, teamOwnsPath)) {
+            for (var ownedId : teamOwnedIds(team, entityType)) {
                 var entity = byId.get(ownedId);
                 if (entity == null) {
                     continue;
                 }
-                var entityOwner = text(entity, "ownerTeamId");
-                if (StringUtils.hasText(entityOwner) && !Objects.equals(entityOwner, id(team))) {
-                    addFinding(findings, "warning", "ownership-consistency", entityType, ownedId, "Team ownership conflicts with entity owner", "Team `" + id(team) + "` owns this entity, but entity ownerTeamId is `" + entityOwner + "`.", "Choose one owner and align both sides.", "Routing may choose the wrong owner.");
+                var entityOwners = explicitOwnerTeamIds(entity);
+                if (!entityOwners.isEmpty() && !entityOwners.contains(id(team))) {
+                    addFinding(findings, "warning", "ownership-consistency", entityType, ownedId, "Team ownership conflicts with entity owner", "Team `" + id(team) + "` references this entity via `" + teamOwnsPath + "` or responsibilities, but entity owner is `" + String.join(", ", entityOwners) + "`.", "Choose one owner and align both sides.", "Routing may choose the wrong owner.");
                 }
             }
         }
@@ -773,13 +769,13 @@ public class OperationalContextViewService {
     private void duplicateSignalFindings(
             CatalogView view,
             List<ValidationFindingDto> findings,
-            String signalPath,
             String signalLabel,
-            String title
+            String title,
+            String... signalKeys
     ) {
         var owners = new LinkedHashMap<String, List<String>>();
         for (var system : view.catalog().systems()) {
-            for (var value : textList(system, signalPath)) {
+            for (var value : signalValuesByKey(system, signalKeys)) {
                 owners.computeIfAbsent(normalize(value), key -> new ArrayList<>()).add(id(system));
             }
         }
@@ -851,33 +847,48 @@ public class OperationalContextViewService {
 
     private ExplainableValueDto<String> ownerValue(CatalogView view, String entityType, Map<String, Object> entry) {
         var entityId = id(entry);
-        var ownerTeamId = text(entry, "ownerTeamId");
         var warnings = new ArrayList<String>();
         var reasons = new ArrayList<ExplanationReasonDto>();
-        if (StringUtils.hasText(ownerTeamId)) {
-            var team = view.teamsById().get(ownerTeamId);
-            if (team != null) {
-                reasons.add(reason("ownerTeamId", "Entity declares ownerTeamId `" + ownerTeamId + "` and the team exists in teams.yml.", "strong"));
-                return new ExplainableValueDto<>(ownerTeamId, name(team), "high", reasons, List.of(), List.of(sourceRef(entityType, entityId), sourceRef(TEAM, ownerTeamId)));
-            }
-            warnings.add("ownerTeamId points to an unknown team.");
-            reasons.add(reason("ownerTeamId", "Entity declares ownerTeamId `" + ownerTeamId + "`, but the team is missing.", "medium"));
-            return new ExplainableValueDto<>(ownerTeamId, ownerTeamId, "low", reasons, warnings, List.of(sourceRef(entityType, entityId)));
+        var ownerTeamIds = ownerTeamIds(entry);
+        var knownTeams = ownerTeamIds.stream()
+                .filter(teamId -> view.teamsById().containsKey(teamId))
+                .toList();
+        if (!knownTeams.isEmpty()) {
+            var label = knownTeams.stream()
+                    .map(teamId -> name(view.teamsById().get(teamId)))
+                    .distinct()
+                    .toList();
+            reasons.add(reason("responsibilities/references", "Owner hint is derived from responsibilities.teamId or references.teams in the current operational-context contract.", "medium"));
+            var refs = new ArrayList<SourceReferenceDto>();
+            refs.add(sourceRef(entityType, entityId));
+            knownTeams.forEach(teamId -> refs.add(sourceRef(TEAM, teamId)));
+            return new ExplainableValueDto<>(String.join(", ", knownTeams), String.join(", ", label), "medium", reasons, List.of(), refs);
+        }
+        var owningTeamIds = owningTeamIds(view, entityType, entityId);
+        if (!owningTeamIds.isEmpty()) {
+            var label = owningTeamIds.stream()
+                    .map(teamId -> name(view.teamsById().get(teamId)))
+                    .distinct()
+                    .toList();
+            reasons.add(reason("teams.yml references", "Owner hint is derived from teams.yml references or responsibilities pointing back to this entity.", "medium"));
+            var refs = new ArrayList<SourceReferenceDto>();
+            refs.add(sourceRef(entityType, entityId));
+            owningTeamIds.forEach(teamId -> refs.add(sourceRef(TEAM, teamId)));
+            return new ExplainableValueDto<>(String.join(", ", owningTeamIds), String.join(", ", label), "medium", reasons, List.of(), refs);
+        }
+        if (!ownerTeamIds.isEmpty()) {
+            warnings.add("Declared team references do not point to known teams.");
+            reasons.add(reason("responsibilities/references", "The entity declares team ids, but none exists in teams.yml.", "weak"));
+            return new ExplainableValueDto<>(String.join(", ", ownerTeamIds), String.join(", ", ownerTeamIds), "low", reasons, warnings, List.of(sourceRef(entityType, entityId)));
         }
 
-        var externalOwner = text(entry, "externalOwner");
-        if (StringUtils.hasText(externalOwner)) {
-            reasons.add(reason("externalOwner", "Entity declares an external owner instead of an internal ownerTeamId.", "medium"));
-            return new ExplainableValueDto<>(externalOwner, externalOwner, "medium", reasons, List.of(), List.of(sourceRef(entityType, entityId)));
-        }
-
-        var handoffTarget = text(entry, "handoff.target");
+        var handoffTarget = handoffTarget(entry);
         if (StringUtils.hasText(handoffTarget)) {
-            reasons.add(reason("handoff.target", "No ownerTeamId is present, so the handoff target is used as the closest owner hint.", "weak"));
+            reasons.add(reason("handoff target", "No explicit owner is present, so handoff target hints are used as the closest owner hint.", "weak"));
             return new ExplainableValueDto<>(handoffTarget, handoffTarget, "low", reasons, List.of("Owner is inferred from handoff target, not explicit ownership."), List.of(sourceRef(entityType, entityId)));
         }
 
-        return new ExplainableValueDto<>("", "Missing owner", "low", List.of(reason("No owner field", "No ownerTeamId, externalOwner or handoff target is present.", "weak")), List.of("Owner is missing."), List.of(sourceRef(entityType, entityId)));
+        return new ExplainableValueDto<>("", "Missing owner", "low", List.of(reason("No owner hint", "No responsibilities, references.teams or handoffHints owner hint is present.", "weak")), List.of("Owner is missing."), List.of(sourceRef(entityType, entityId)));
     }
 
     private ExplainableAggregateDto idAggregate(
@@ -956,7 +967,7 @@ public class OperationalContextViewService {
                 count > 0 ? "high" : "low",
                 count > 0 ? "Recognition signals available for search and matching." : "No recognition signals are documented.",
                 groups,
-                List.of(reason("signals.*", "Signals are read from the entity `signals` section.", "strong")),
+                List.of(reason("matchSignals/transport", "Signals are read from matchSignals, transport and channel sections.", "strong")),
                 count > 0 ? List.of() : List.of("No recognition signals documented."),
                 List.of(sourceRef(sourceType, sourceId)),
                 "signal",
@@ -967,17 +978,17 @@ public class OperationalContextViewService {
     private ExplainableAggregateDto handoffAggregate(String sourceType, String sourceId, Map<String, Object> entry) {
         var items = new ArrayList<ExplainableBreakdownItemDto>();
         var warnings = new ArrayList<String>();
-        var target = text(entry, "handoff.target");
+        var target = handoffTarget(entry);
         if (StringUtils.hasText(target)) {
-            items.add(item("target", target, "handoff-target", "handoff.target is defined.", "verified", sourceRef(sourceType, sourceId)));
+            items.add(item("target", target, "handoff-target", "Handoff target is defined.", "verified", sourceRef(sourceType, sourceId)));
         } else {
-            warnings.add("handoff.target is missing.");
-            items.add(item("target", "Missing target", "handoff-target", "handoff.target is not defined.", "missing", sourceRef(sourceType, sourceId)));
+            warnings.add("Handoff target is missing.");
+            items.add(item("target", "Missing target", "handoff-target", "No handoff target or handoff hint is defined.", "missing", sourceRef(sourceType, sourceId)));
         }
-        var requiredEvidence = textList(entry, "handoff.requiredEvidence");
+        var requiredEvidence = handoffRequiredEvidence(entry);
         if (requiredEvidence.isEmpty()) {
-            warnings.add("handoff.requiredEvidence is empty.");
-            items.add(item("requiredEvidence", "Missing required evidence", "handoff-evidence", "handoff.requiredEvidence is empty.", "missing", sourceRef(sourceType, sourceId)));
+            warnings.add("Handoff required evidence is empty.");
+            items.add(item("requiredEvidence", "Missing required evidence", "handoff-evidence", "No required evidence checklist is defined.", "missing", sourceRef(sourceType, sourceId)));
         } else {
             requiredEvidence.forEach(evidence -> items.add(item("requiredEvidence:" + evidence, evidence, "handoff-evidence", "Evidence required before handoff.", "verified", sourceRef(sourceType, sourceId))));
         }
@@ -989,7 +1000,7 @@ public class OperationalContextViewService {
                 warnings.isEmpty() ? "high" : "medium",
                 warnings.isEmpty() ? "Handoff target and checklist are available." : "Handoff information needs review.",
                 List.of(group("Handoff checklist", items)),
-                List.of(reason("handoff.*", "Handoff readiness is derived from handoff.target and handoff.requiredEvidence.", "strong")),
+                List.of(reason("handoffHints", "Handoff readiness is derived from handoffHints.", "strong")),
                 warnings,
                 List.of(sourceRef(sourceType, sourceId)),
                 "handoff",
@@ -1040,9 +1051,12 @@ public class OperationalContextViewService {
     private ExplainableAggregateDto moduleAggregate(String sourceType, String sourceId, Map<String, Object> repository) {
         var items = mapList(repository, "modules").stream()
                 .map(module -> {
-                    var moduleId = firstDefined(text(module, "id"), text(module, "name"), "module");
+                    var moduleId = firstDefined(text(module, "id"), text(module, "moduleId"), text(module, "name"), "module");
                     var label = firstDefined(text(module, "name"), moduleId);
-                    var reason = "Module paths/packages/classes: " + String.join(", ", combineLists(module, "paths", "packages", "classHints"));
+                    var reason = "Module paths/packages/classes: " + String.join(", ", distinct(combineValues(
+                            combineLists(module, "sourceRoots", "importantPaths"),
+                            signalValuesByKey(module, "packagePrefixes", "paths", "pathHints", "classHints")
+                    )));
                     return item(moduleId, label, "module", reason, "verified", sourceRef(sourceType, sourceId));
                 })
                 .toList();
@@ -1050,10 +1064,12 @@ public class OperationalContextViewService {
     }
 
     private ExplainableAggregateDto stepAggregate(String sourceType, String sourceId, Map<String, Object> process) {
-        var items = mapList(process, "steps").stream()
+        var steps = new ArrayList<Map<String, Object>>();
+        steps.addAll(mapList(process, "processSteps"));
+        var items = steps.stream()
                 .map(step -> item(firstDefined(text(step, "id"), text(step, "name"), "step"), firstDefined(text(step, "name"), text(step, "id"), "Step"), "process-step", "Step is declared in the process definition.", "verified", sourceRef(sourceType, sourceId)))
                 .toList();
-        return aggregate("Steps", items.size(), items.isEmpty() ? "unknown" : "ok", "high", tooltip("Steps", items.size(), "Process steps describe the operational flow."), List.of(group("Steps", items)), List.of(reason("steps", "Steps are parsed from process.steps.", "strong")), List.of(), List.of(sourceRef(sourceType, sourceId)), "process-step", ids(items));
+        return aggregate("Steps", items.size(), items.isEmpty() ? "unknown" : "ok", "high", tooltip("Steps", items.size(), "Process steps describe the operational flow."), List.of(group("Steps", items)), List.of(reason("processSteps", "Steps are parsed from process.processSteps.", "strong")), List.of(), List.of(sourceRef(sourceType, sourceId)), "process-step", ids(items));
     }
 
     private ExplainableAggregateDto relationAggregate(String sourceType, String sourceId, Map<String, Object> context) {
@@ -1095,29 +1111,29 @@ public class OperationalContextViewService {
         var id = id(entity);
         return switch (type) {
             case SYSTEM -> List.of(
-                    idAggregate("Repositories", type, id, REPOSITORY, allRepositoryIds(entity), view.repositoriesById(), "System lists these repositories.").groups().get(0),
-                    idAggregate("Processes", type, id, PROCESS, textList(entity, "processes"), view.processesById(), "System lists these processes.").groups().get(0),
+                    idAggregate("Repositories", type, id, REPOSITORY, repositoryIds(entity), view.repositoriesById(), "System lists these repositories.").groups().get(0),
+                    idAggregate("Processes", type, id, PROCESS, processIds(entity), view.processesById(), "System lists these processes.").groups().get(0),
                     idAggregate("Integrations", type, id, INTEGRATION, integrationIdsForSystem(view, id), view.integrationsById(), "Integrations reference this system.").groups().get(0)
             );
             case REPOSITORY -> List.of(
-                    idAggregate("Systems", type, id, SYSTEM, textList(entity, "systems"), view.systemsById(), "Repository lists these systems.").groups().get(0),
-                    idAggregate("Processes", type, id, PROCESS, textList(entity, "processes"), view.processesById(), "Repository lists these processes.").groups().get(0)
+                    idAggregate("Systems", type, id, SYSTEM, systemIds(entity), view.systemsById(), "Repository lists these systems.").groups().get(0),
+                    idAggregate("Processes", type, id, PROCESS, processIds(entity), view.processesById(), "Repository lists these processes.").groups().get(0)
             );
             case PROCESS -> List.of(
-                    idAggregate("Systems", type, id, SYSTEM, textList(entity, "systems"), view.systemsById(), "Process lists these systems.").groups().get(0),
-                    idAggregate("External systems", type, id, SYSTEM, textList(entity, "externalSystems"), view.systemsById(), "Process lists these external systems.").groups().get(0)
+                    idAggregate("Systems", type, id, SYSTEM, processSystemIds(entity), view.systemsById(), "Process lists these systems.").groups().get(0),
+                    idAggregate("External systems", type, id, SYSTEM, processExternalSystemIds(entity), view.systemsById(), "Process lists these external systems.").groups().get(0)
             );
             case INTEGRATION -> List.of(
-                    idAggregate("Systems", type, id, SYSTEM, combineValues(text(entity, "from"), text(entity, "to")), view.systemsById(), "Integration connects these systems.").groups().get(0),
-                    idAggregate("Processes", type, id, PROCESS, textList(entity, "processes"), view.processesById(), "Integration lists these processes.").groups().get(0)
+                    idAggregate("Systems", type, id, SYSTEM, integrationSystems(entity), view.systemsById(), "Integration connects these systems.").groups().get(0),
+                    idAggregate("Processes", type, id, PROCESS, processIds(entity), view.processesById(), "Integration lists these processes.").groups().get(0)
             );
             case BOUNDED_CONTEXT -> List.of(
-                    idAggregate("Systems", type, id, SYSTEM, textList(entity, "systems"), view.systemsById(), "Context lists these systems.").groups().get(0),
-                    idAggregate("Repositories", type, id, REPOSITORY, textList(entity, "repos"), view.repositoriesById(), "Context lists these repositories.").groups().get(0)
+                    idAggregate("Systems", type, id, SYSTEM, systemIds(entity), view.systemsById(), "Context lists these systems.").groups().get(0),
+                    idAggregate("Repositories", type, id, REPOSITORY, repositoryIds(entity), view.repositoriesById(), "Context lists these repositories.").groups().get(0)
             );
             case TEAM -> List.of(
-                    idAggregate("Owned systems", type, id, SYSTEM, textList(entity, "owns.systems"), view.systemsById(), "Team owns these systems.").groups().get(0),
-                    idAggregate("Owned repositories", type, id, REPOSITORY, textList(entity, "owns.repos"), view.repositoriesById(), "Team owns these repositories.").groups().get(0)
+                    idAggregate("Owned systems", type, id, SYSTEM, teamOwnedIds(entity, SYSTEM), view.systemsById(), "Team owns these systems.").groups().get(0),
+                    idAggregate("Owned repositories", type, id, REPOSITORY, teamOwnedIds(entity, REPOSITORY), view.repositoriesById(), "Team owns these repositories.").groups().get(0)
             );
             default -> List.of();
         };
@@ -1160,7 +1176,7 @@ public class OperationalContextViewService {
                     "term", term.term(),
                     "category", term.category(),
                     "definition", term.definition(),
-                    "typicalEvidenceSignals", term.typicalEvidenceSignals(),
+                    "matchSignals", term.matchSignals(),
                     "canonicalReferences", term.canonicalReferences(),
                     "synonyms", term.synonyms()
             );
@@ -1219,16 +1235,23 @@ public class OperationalContextViewService {
         var fields = new LinkedHashMap<String, Object>();
         fields.put("id", id(entry));
         fields.put("name", name(entry));
-        fields.put("type", text(entry, "type"));
-        fields.put("purpose", text(entry, "purpose"));
-        fields.put("projectName", firstDefined(text(entry, "project"), text(entry, "gitLab.projectPath")));
-        fields.put("group", firstDefined(text(entry, "group"), text(entry, "gitLab.groupPath")));
-        fields.put("ownerTeamId", text(entry, "ownerTeamId"));
-        fields.put("handoffTarget", text(entry, "handoff.target"));
+        fields.put("kind", systemKind(entry));
+        fields.put("integrationStyle", integrationType(entry));
+        fields.put("purpose", summaryText(entry));
+        fields.put("projectName", repositoryProjectPath(entry));
+        fields.put("group", repositoryGroup(entry));
+        fields.put("ownerTeamIds", ownerTeamIds(entry));
+        fields.put("handoffTarget", handoffTarget(entry));
+        fields.put("systems", systemIds(entry));
+        fields.put("repositories", repositoryIds(entry));
+        fields.put("processes", processIds(entry));
+        fields.put("contexts", boundedContextIds(entry));
+        fields.put("integrationSystems", integrationSystems(entry));
+        fields.put("protocols", integrationProtocols(entry));
         fields.putAll(signalMap(entry));
         fields.put("packagePrefix", packageRoots(entry));
         fields.put("classHint", entrypoints(entry));
-        fields.put("module", mapList(entry, "modules").stream().map(module -> firstDefined(text(module, "id"), text(module, "name"))).filter(StringUtils::hasText).toList());
+        fields.put("module", mapList(entry, "modules").stream().map(module -> firstDefined(text(module, "id"), text(module, "moduleId"), text(module, "name"))).filter(StringUtils::hasText).toList());
         fields.put("entityType", type);
         return fields;
     }
@@ -1333,24 +1356,47 @@ public class OperationalContextViewService {
 
     private String displayLabel(String type, String id, Map<String, Object> entry) {
         if (REPOSITORY.equals(type)) {
-            return firstDefined(text(entry, "gitLab.projectPath"), text(entry, "project"), name(entry), id);
+            return firstDefined(repositoryProjectPath(entry), name(entry), id);
         }
         return firstDefined(name(entry), id);
     }
 
     private String detailSubtitle(String type, Map<String, Object> entity) {
         return switch (type) {
-            case SYSTEM -> firstDefined(text(entity, "type"), text(entity, "purpose"), "");
-            case REPOSITORY -> String.join(" / ", distinct(combineValues(text(entity, "group"), text(entity, "gitLab.groupPath"))));
-            case PROCESS, BOUNDED_CONTEXT, TEAM -> firstDefined(text(entity, "purpose"), "");
-            case INTEGRATION -> String.join(" -> ", distinct(combineValues(text(entity, "from"), text(entity, "to"))));
+            case SYSTEM -> firstDefined(systemKind(entity), summaryText(entity), "");
+            case REPOSITORY -> String.join(" / ", distinct(combineValues(repositoryGroup(entity), repositoryProjectPath(entity))));
+            case PROCESS, BOUNDED_CONTEXT, TEAM -> summaryText(entity);
+            case INTEGRATION -> String.join(" -> ", distinct(combineValues(integrationSourceSystem(entity), String.join(", ", integrationTargetSystems(entity)))));
             default -> "";
         };
     }
 
     private Map<String, Object> overviewFields(Map<String, Object> entity) {
         var fields = new LinkedHashMap<String, Object>();
-        for (var key : List.of("id", "name", "type", "purpose", "project", "group", "ownerTeamId", "externalOwner", "from", "to", "protocol", "processes", "contexts", "repos", "systems", "externalSystems", "terms")) {
+        for (var key : List.of(
+                "id",
+                "name",
+                "kind",
+                "category",
+                "purpose",
+                "summary",
+                "git.projectPath",
+                "git.project",
+                "git.group",
+                "participants.source.system",
+                "participants.finalTargets",
+                "transport.protocols",
+                "integrationStyle",
+                "references.repositories",
+                "references.processes",
+                "references.boundedContexts",
+                "references.systems",
+                "references.terms",
+                "references.teams",
+                "handoffHints.defaultRouteLabel",
+                "handoffHints.firstResponderTeamIds",
+                "handoffHints.partnerTeamIds"
+        )) {
             var value = directValue(entity, key);
             if (value != null && !asTextValues(value).isEmpty()) {
                 fields.put(key, value);
@@ -1368,47 +1414,243 @@ public class OperationalContextViewService {
     }
 
     private List<String> allRepositoryIds(Map<String, Object> system) {
-        return combineLists(system, "repos", "repositories.primary", "repositories.secondary", "repositories.backendModules", "repositories.frontendModules");
+        return repositoryIds(system);
+    }
+
+    private String systemKind(Map<String, Object> system) {
+        return firstDefined(text(system, "kind"), text(system, "category"));
+    }
+
+    private boolean internalSystem(Map<String, Object> system) {
+        var kind = normalize(systemKind(system));
+        return kind.equals("internal") || kind.startsWith("internal-") || kind.equals("api-gateway");
+    }
+
+    private String summaryText(Map<String, Object> entry) {
+        return firstDefined(text(entry, "purpose"), text(entry, "summary"), text(entry, "localLanguageSummary"), text(entry, "description"));
+    }
+
+    private String repositoryProjectPath(Map<String, Object> repository) {
+        return firstDefined(text(repository, "git.projectPath"), text(repository, "git.project"), id(repository));
+    }
+
+    private String repositoryGroup(Map<String, Object> repository) {
+        return text(repository, "git.group");
+    }
+
+    private List<String> systemIds(Map<String, Object> entry) {
+        return textList(entry, "references.systems");
+    }
+
+    private List<String> repositoryIds(Map<String, Object> entry) {
+        return textList(entry, "references.repositories");
+    }
+
+    private List<String> processIds(Map<String, Object> entry) {
+        return textList(entry, "references.processes");
+    }
+
+    private List<String> boundedContextIds(Map<String, Object> entry) {
+        return textList(entry, "references.boundedContexts");
+    }
+
+    private List<String> termIds(Map<String, Object> entry) {
+        return textList(entry, "references.terms");
+    }
+
+    private List<String> processSystemIds(Map<String, Object> process) {
+        return distinct(combineValues(systemIds(process), textList(process, "participants.primarySystems")));
+    }
+
+    private List<String> processExternalSystemIds(Map<String, Object> process) {
+        return textList(process, "participants.externalSystems");
+    }
+
+    private List<String> completionSignals(Map<String, Object> process) {
+        return combineLists(process, "processBoundary.endsWhen", "outcomes.successArtifacts");
+    }
+
+    private List<String> handoffHintValues(Map<String, Object> entry) {
+        return combineLists(entry,
+                "handoffHints.defaultRouteLabel",
+                "handoffHints.firstResponderTeamIds",
+                "handoffHints.partnerTeamIds",
+                "handoffHints.requiredEvidence",
+                "handoffHints.routingNotes",
+                "handoffHints.escalationTriggers"
+        );
+    }
+
+    private String integrationSourceSystem(Map<String, Object> integration) {
+        return text(integration, "participants.source.system");
+    }
+
+    private List<String> integrationTargetSystems(Map<String, Object> integration) {
+        var values = new LinkedHashSet<String>();
+        for (var target : mapList(integration, "participants.targets")) {
+            var targetSystem = text(target, "system");
+            if (StringUtils.hasText(targetSystem)) {
+                values.add(targetSystem);
+            }
+        }
+        values.addAll(textList(integration, "participants.finalTargets"));
+        return List.copyOf(values);
+    }
+
+    private List<String> integrationSystems(Map<String, Object> integration) {
+        return distinct(combineValues(
+                listOf(integrationSourceSystem(integration)),
+                integrationTargetSystems(integration),
+                systemIds(integration)
+        ));
+    }
+
+    private List<String> integrationProtocols(Map<String, Object> integration) {
+        var values = new LinkedHashSet<String>();
+        values.addAll(textList(integration, "transport.protocols"));
+        return List.copyOf(values);
+    }
+
+    private String integrationType(Map<String, Object> integration) {
+        return firstDefined(text(integration, "integrationStyle"), text(integration, "category"));
+    }
+
+    private List<String> integrationPartnerTeamIds(Map<String, Object> integration) {
+        return distinct(combineValues(
+                textList(integration, "references.teams"),
+                textList(integration, "handoffHints.partnerTeamIds"),
+                responsibilityTeamIds(integration)
+        ));
+    }
+
+    private String handoffTarget(Map<String, Object> entry) {
+        return firstDefined(
+                text(entry, "handoffHints.defaultRouteLabel"),
+                first(textList(entry, "handoffHints.firstResponderTeamIds")),
+                first(textList(entry, "references.teams"))
+        );
+    }
+
+    private List<String> handoffRequiredEvidence(Map<String, Object> entry) {
+        return textList(entry, "handoffHints.requiredEvidence");
+    }
+
+    private List<String> ownerTeamIds(Map<String, Object> entry) {
+        return distinct(combineValues(
+                textList(entry, "references.teams"),
+                responsibilityTeamIds(entry)
+        ));
+    }
+
+    private List<String> explicitOwnerTeamIds(Map<String, Object> entry) {
+        return responsibilityTeamIds(entry);
+    }
+
+    private List<String> knownOwnerTeamIds(CatalogView view, String entityType, Map<String, Object> entry) {
+        return distinct(combineValues(
+                ownerTeamIds(entry),
+                owningTeamIds(view, entityType, id(entry))
+        )).stream()
+                .filter(teamId -> view.teamsById().containsKey(teamId))
+                .toList();
+    }
+
+    private List<String> owningTeamIds(CatalogView view, String entityType, String entityId) {
+        return view.catalog().teams().stream()
+                .filter(team -> teamOwnedIds(team, entityType).contains(entityId))
+                .map(this::id)
+                .filter(teamId -> view.teamsById().containsKey(teamId))
+                .toList();
+    }
+
+    private List<String> responsibilityTeamIds(Map<String, Object> entry) {
+        var values = new LinkedHashSet<String>();
+        for (var responsibility : mapList(entry, "responsibilities")) {
+            var teamId = text(responsibility, "teamId");
+            if (StringUtils.hasText(teamId)) {
+                values.add(teamId);
+            }
+            if ("team".equals(normalize(text(responsibility, "actorType")))) {
+                var actorId = text(responsibility, "actorId");
+                if (StringUtils.hasText(actorId)) {
+                    values.add(actorId);
+                }
+            }
+        }
+        return List.copyOf(values);
+    }
+
+    private List<String> responsibilityTargetIds(Map<String, Object> entry, String targetType) {
+        var values = new LinkedHashSet<String>();
+        for (var responsibility : mapList(entry, "responsibilities")) {
+            if (targetTypeMatches(text(responsibility, "targetType"), targetType)) {
+                var targetId = text(responsibility, "targetId");
+                if (StringUtils.hasText(targetId)) {
+                    values.add(targetId);
+                }
+            }
+        }
+        return List.copyOf(values);
+    }
+
+    private boolean targetTypeMatches(String actual, String expected) {
+        var normalized = normalize(actual).replace("_", "-");
+        return switch (expected) {
+            case SYSTEM -> normalized.equals("system");
+            case REPOSITORY -> normalized.equals("repository") || normalized.equals("repo");
+            case PROCESS -> normalized.equals("process");
+            case BOUNDED_CONTEXT -> normalized.equals("bounded-context") || normalized.equals("boundedcontext") || normalized.equals("context");
+            case INTEGRATION -> normalized.equals("integration");
+            default -> normalized.equals(expected);
+        };
+    }
+
+    private List<String> teamOwnedIds(Map<String, Object> team, String entityType) {
+        return switch (entityType) {
+            case SYSTEM -> distinct(combineValues(textList(team, "references.systems"), responsibilityTargetIds(team, SYSTEM)));
+            case REPOSITORY -> distinct(combineValues(textList(team, "references.repositories"), responsibilityTargetIds(team, REPOSITORY)));
+            case PROCESS -> distinct(combineValues(textList(team, "references.processes"), responsibilityTargetIds(team, PROCESS)));
+            case BOUNDED_CONTEXT -> distinct(combineValues(textList(team, "references.boundedContexts"), responsibilityTargetIds(team, BOUNDED_CONTEXT)));
+            case INTEGRATION -> distinct(combineValues(textList(team, "references.integrations"), responsibilityTargetIds(team, INTEGRATION)));
+            default -> List.of();
+        };
     }
 
     private List<String> packageRoots(Map<String, Object> repository) {
         var values = new LinkedHashSet<String>();
-        values.addAll(textList(repository, "signals.packagePrefixes"));
-        values.addAll(textList(repository, "signals.paths"));
-        values.addAll(textList(repository, "packageRoots"));
-        values.addAll(textList(repository, "sourceRoots"));
+        values.addAll(textList(repository, "sourceLayout.sourceRoots"));
+        values.addAll(textList(repository, "sourceLayout.modulePaths"));
+        values.addAll(textList(repository, "sourceLayout.importantPaths"));
+        values.addAll(signalValuesByKey(repository, "packagePrefixes", "paths", "pathHints"));
         for (var module : mapList(repository, "modules")) {
-            values.addAll(textList(module, "packages"));
-            values.addAll(textList(module, "paths"));
+            values.addAll(textList(module, "sourceRoots"));
+            values.addAll(textList(module, "importantPaths"));
+            values.addAll(signalValuesByKey(module, "packagePrefixes", "paths", "pathHints"));
         }
         return List.copyOf(values);
     }
 
     private List<String> entrypoints(Map<String, Object> repository) {
         var values = new LinkedHashSet<String>();
-        values.addAll(textList(repository, "entrypoints"));
-        values.addAll(textList(repository, "entryClasses"));
-        values.addAll(textList(repository, "signals.entrypoints"));
+        values.addAll(textList(repository, "codeSearch.entrypoints"));
+        values.addAll(signalValuesByKey(repository, "entrypoints", "classHints", "endpointPrefixes"));
         for (var module : mapList(repository, "modules")) {
-            values.addAll(textList(module, "classHints"));
+            values.addAll(signalValuesByKey(module, "entrypoints", "classHints", "endpointPrefixes"));
         }
-        values.addAll(textList(repository, "signals.endpoints"));
         return List.copyOf(values);
     }
 
     private List<String> runtimeMappings(Map<String, Object> repository) {
         var values = new LinkedHashSet<String>();
-        values.addAll(textList(repository, "runtimeMappings"));
-        values.addAll(textList(repository, "signals.serviceNames"));
-        values.addAll(textList(repository, "signals.containerNames"));
-        values.addAll(textList(repository, "signals.projectNames"));
+        values.addAll(textList(repository, "references.runtimeComponents"));
+        values.addAll(signalValuesByKey(repository, "serviceNames", "containerNames", "projectNames", "hosts"));
         return List.copyOf(values);
     }
 
-    private List<String> runtimeFingerprints(Map<String, Object> context) {
+    private List<String> runtimeSignals(Map<String, Object> context) {
         var values = new LinkedHashSet<String>();
         values.addAll(signalValues(context));
-        values.addAll(textList(context, "runtimeFingerprints"));
+        values.addAll(asTextValues(directMap(context.get("operationalSignals"))));
         return List.copyOf(values);
     }
 
@@ -1418,23 +1660,59 @@ public class OperationalContextViewService {
                 .toList();
     }
 
+    private List<String> signalValuesByKey(Map<String, Object> entry, String... keys) {
+        var values = new LinkedHashSet<String>();
+        var signals = signalMap(entry);
+        for (var key : keys) {
+            values.addAll(signals.getOrDefault(key, List.of()));
+        }
+        return List.copyOf(values);
+    }
+
     private Map<String, List<String>> signalMap(Map<String, Object> entry) {
         var signals = new LinkedHashMap<String, List<String>>();
-        var rawSignals = directMap(entry.get("signals"));
-        rawSignals.forEach((key, value) -> {
-            var values = asTextValues(value);
-            if (!values.isEmpty()) {
-                signals.put(key, values);
-            }
-        });
+        var matchSignals = directMap(entry.get("matchSignals"));
+        for (var confidence : List.of("exact", "strong", "medium", "weak")) {
+            addSignalSection(signals, directMap(matchSignals.get(confidence)));
+        }
+
+        addSignalValues(signals, "endpointPrefixes", textList(entry, "transport.http.endpointPrefixes"));
+        addSignalValues(signals, "endpointTemplates", textList(entry, "transport.http.endpointTemplates"));
+        addSignalValues(signals, "operationNames", textList(entry, "transport.http.operationNames"));
+        addSignalValues(signals, "hosts", textList(entry, "transport.http.hosts"));
+        addSignalValues(signals, "hostPatterns", textList(entry, "transport.http.hostPatterns"));
+        addSignalValues(signals, "clientNames", textList(entry, "transport.http.clientNames"));
+        addSignalValues(signals, "queues", textList(entry, "transport.messaging.queues"));
+        addSignalValues(signals, "topics", textList(entry, "transport.messaging.topics"));
+        addSignalValues(signals, "routingKeys", textList(entry, "transport.messaging.routingKeys"));
+        addSignalValues(signals, "datasourceNames", textList(entry, "transport.database.datasourceNames"));
+        for (var channel : mapList(entry, "channels")) {
+            addSignalValues(signals, "channels", combineValues(text(channel, "type"), text(channel, "name")));
+            addSignalValues(signals, "channelSignals", textList(channel, "signals"));
+        }
         return signals;
+    }
+
+    private void addSignalSection(Map<String, List<String>> signals, Map<String, Object> section) {
+        section.forEach((key, value) -> addSignalValues(signals, key, asTextValues(value)));
+    }
+
+    private void addSignalValues(Map<String, List<String>> signals, String key, Collection<String> values) {
+        var cleaned = values.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .toList();
+        if (cleaned.isEmpty()) {
+            return;
+        }
+        var current = new LinkedHashSet<>(signals.getOrDefault(key, List.of()));
+        current.addAll(cleaned);
+        signals.put(key, List.copyOf(current));
     }
 
     private List<String> integrationIdsForSystem(CatalogView view, String systemId) {
         return view.catalog().integrations().stream()
-                .filter(integration -> Objects.equals(text(integration, "from"), systemId)
-                        || Objects.equals(text(integration, "to"), systemId)
-                        || textList(integration, "systems").contains(systemId))
+                .filter(integration -> integrationSystems(integration).contains(systemId))
                 .map(this::id)
                 .toList();
     }
@@ -1559,6 +1837,19 @@ public class OperationalContextViewService {
         for (var value : values) {
             if (StringUtils.hasText(value)) {
                 combined.add(value);
+            }
+        }
+        return List.copyOf(combined);
+    }
+
+    @SafeVarargs
+    private final List<String> combineValues(Collection<String>... valueLists) {
+        var combined = new LinkedHashSet<String>();
+        for (var values : valueLists) {
+            for (var value : values) {
+                if (StringUtils.hasText(value)) {
+                    combined.add(value);
+                }
             }
         }
         return List.copyOf(combined);

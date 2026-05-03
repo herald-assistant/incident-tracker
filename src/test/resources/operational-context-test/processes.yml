@@ -4,26 +4,35 @@ processes:
   - id: main-process
     name: Main Process
     purpose: Handles the primary application flow.
-    ownerTeamId: core-team
-    partnerTeamIds: [integration-team]
-    systems: [app-core]
-    externalSystems: [partner-service]
-    repos: [app-core-repo]
-    contexts: [core-context]
-    steps:
+    participants:
+      primarySystems: [app-core]
+      externalSystems: [partner-service]
+    references:
+      repositories: [app-core-repo]
+      boundedContexts: [core-context]
+      integrations: [app-core-to-partner-sync]
+      teams: [core-team, integration-team]
+    responsibilities:
+      - teamId: core-team
+        role: process-owner
+    processSteps:
       - id: call-partner-service
         name: Call Partner Service
-        ownerTeamId: integration-team
-        systems: [app-core, partner-service]
-        signals:
-          serviceNames: [app-core]
-          endpoints: [/partner/resource]
-          hosts: [api.partner.local]
-          queues: []
-          topics: []
-          events: []
-    completionSignals: [main-process-completed]
+        participants:
+          systems: [app-core, partner-service]
+        matchSignals:
+          exact:
+            serviceNames: [app-core]
+            endpointPrefixes: [/partner/resource]
+            hosts: [api.partner.local]
+    processBoundary:
+      endsWhen: [main-process-completed]
     handoffHints:
-      - If the flow waits on the partner call, route first to the integration owner.
+      defaultRouteLabel: core-team
+      firstResponderTeamIds: [core-team]
+      partnerTeamIds: [integration-team]
+      requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+      routingNotes:
+        - If the flow waits on the partner call, route first to the integration owner.
 
 openQuestions: []

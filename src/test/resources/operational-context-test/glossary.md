@@ -8,10 +8,24 @@
 
 **Definition:** Error returned by a synchronous SOAP integration.
 
-**Typical evidence signals**
+**Match signals**
+
+Exact:
 
 - `SOAPFault`
 - `api.partner.local`
+
+Strong:
+
+- None
+
+Medium:
+
+- None
+
+Weak:
+
+- None
 
 **Canonical references**
 

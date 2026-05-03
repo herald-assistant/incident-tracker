@@ -438,7 +438,7 @@ class GitLabDeterministicEvidenceProviderTest {
     private static Map<String, Object> systemEntry(String id, List<String> repositoryIds) {
         var system = new LinkedHashMap<String, Object>();
         system.put("id", id);
-        system.put("repos", repositoryIds);
+        system.put("references", Map.of("repositories", repositoryIds));
         return system;
     }
 
@@ -452,16 +452,17 @@ class GitLabDeterministicEvidenceProviderTest {
     ) {
         var repository = new LinkedHashMap<String, Object>();
         repository.put("id", id);
-        repository.put("project", projectPath);
-        repository.put("group", group);
-        repository.put("gitLab", Map.of(
+        repository.put("git", Map.of(
+                "project", projectPath,
                 "projectPath", List.of(group + "/" + projectPath),
-                "groupPath", List.of(group)
+                "group", List.of(group)
         ));
-        repository.put("runtimeMappings", Map.of(
-                "projectNames", projectNames,
-                "serviceNames", serviceNames,
-                "containerNames", containerNames
+        repository.put("matchSignals", Map.of(
+                "strong", Map.of(
+                        "projectNames", projectNames,
+                        "serviceNames", serviceNames,
+                        "containerNames", containerNames
+                )
         ));
         return repository;
     }

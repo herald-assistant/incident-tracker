@@ -67,7 +67,7 @@ class OperationalContextRepositoryProjectPathResolverTest {
     private static Map<String, Object> system(String id, List<String> repositoryIds) {
         var system = new LinkedHashMap<String, Object>();
         system.put("id", id);
-        system.put("repos", repositoryIds);
+        system.put("references", Map.of("repositories", repositoryIds));
         return system;
     }
 
@@ -79,11 +79,11 @@ class OperationalContextRepositoryProjectPathResolverTest {
     ) {
         var repository = new LinkedHashMap<String, Object>();
         repository.put("id", id);
-        repository.put("gitLab", Map.of(
+        repository.put("git", Map.of(
                 "projectPath", List.of(projectPath),
-                "groupPath", List.of(groupPath)
+                "group", List.of(groupPath)
         ));
-        repository.put("runtimeMappings", runtimeMappings);
+        repository.put("matchSignals", Map.of("strong", runtimeMappings));
         return repository;
     }
 }
