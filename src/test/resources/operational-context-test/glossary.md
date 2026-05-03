@@ -31,6 +31,16 @@ Weak:
 
 - `app-core-to-partner-sync`
 
-## Open Questions
+## Gaps
 
-- None
+### `confirm-soap-fault-taxonomy`
+
+**Gap id:** `confirm-soap-fault-taxonomy`
+
+**Type:** `human-confirmation-required`
+
+**Severity:** `low`
+
+**Status:** `open`
+
+**Summary:** Confirm whether SOAP fault terminology needs separate domain-specific subtypes.

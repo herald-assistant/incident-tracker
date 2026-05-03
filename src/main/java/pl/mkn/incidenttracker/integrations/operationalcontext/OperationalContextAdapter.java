@@ -341,24 +341,24 @@ public class OperationalContextAdapter implements OperationalContextPort {
             List<Map<String, Object>> teams
     ) {
         var questions = new ArrayList<OpenQuestion>();
-        addYamlOpenQuestions(questions, "systems.yml", "system", null, systemsDocument.get("openQuestions"));
-        addEntityOpenQuestions(questions, "systems.yml", "system", systems);
-        addYamlOpenQuestions(questions, "repo-map.yml", "repository", null, repositoriesDocument.get("openQuestions"));
-        addEntityOpenQuestions(questions, "repo-map.yml", "repository", repositories);
-        addYamlOpenQuestions(questions, "processes.yml", "process", null, processesDocument.get("openQuestions"));
-        addEntityOpenQuestions(questions, "processes.yml", "process", processes);
-        addYamlOpenQuestions(questions, "integrations.yml", "integration", null, integrationsDocument.get("openQuestions"));
-        addEntityOpenQuestions(questions, "integrations.yml", "integration", integrations);
-        addYamlOpenQuestions(questions, "bounded-contexts.yml", "bounded-context", null, boundedContextsDocument.get("openQuestions"));
-        addEntityOpenQuestions(questions, "bounded-contexts.yml", "bounded-context", boundedContexts);
-        addYamlOpenQuestions(questions, "teams.yml", "team", null, teamsDocument.get("openQuestions"));
-        addEntityOpenQuestions(questions, "teams.yml", "team", teams);
-        addMarkdownOpenQuestions(questions, "glossary.md", glossaryDocument);
-        addMarkdownOpenQuestions(questions, "handoff-rules.md", handoffRulesDocument);
+        addYamlGaps(questions, "systems.yml", "system", null, systemsDocument.get("gaps"));
+        addEntityGaps(questions, "systems.yml", "system", systems);
+        addYamlGaps(questions, "repo-map.yml", "repository", null, repositoriesDocument.get("gaps"));
+        addEntityGaps(questions, "repo-map.yml", "repository", repositories);
+        addYamlGaps(questions, "processes.yml", "process", null, processesDocument.get("gaps"));
+        addEntityGaps(questions, "processes.yml", "process", processes);
+        addYamlGaps(questions, "integrations.yml", "integration", null, integrationsDocument.get("gaps"));
+        addEntityGaps(questions, "integrations.yml", "integration", integrations);
+        addYamlGaps(questions, "bounded-contexts.yml", "bounded-context", null, boundedContextsDocument.get("gaps"));
+        addEntityGaps(questions, "bounded-contexts.yml", "bounded-context", boundedContexts);
+        addYamlGaps(questions, "teams.yml", "team", null, teamsDocument.get("gaps"));
+        addEntityGaps(questions, "teams.yml", "team", teams);
+        addMarkdownGaps(questions, "glossary.md", glossaryDocument);
+        addMarkdownGaps(questions, "handoff-rules.md", handoffRulesDocument);
         return List.copyOf(questions);
     }
 
-    private void addEntityOpenQuestions(
+    private void addEntityGaps(
             List<OpenQuestion> questions,
             String sourceFile,
             String entityType,
@@ -366,89 +366,173 @@ public class OperationalContextAdapter implements OperationalContextPort {
     ) {
         for (var entry : entries) {
             var entityId = text(entry, "id");
-            addYamlOpenQuestions(questions, sourceFile, entityType, entityId, entry.get("openQuestions"));
+            addYamlGaps(questions, sourceFile, entityType, entityId, entry.get("gaps"));
         }
     }
 
-    private void addYamlOpenQuestions(
+    private void addYamlGaps(
             List<OpenQuestion> questions,
             String sourceFile,
             String entityType,
             String entityId,
             Object source
     ) {
-        var entries = source instanceof Iterable<?> iterable ? iterable : List.of();
+        var entries = mapList(source);
         var index = 0;
         for (var item : entries) {
-            var question = "";
-            var severity = "";
-            var status = "open";
-            if (item instanceof Map<?, ?> map) {
-                question = text(map.get("question"));
-                severity = text(map.get("severity"));
-                status = text(map.get("status"));
-            } else {
-                question = text(item);
-            }
-
-            if (!isActionableOpenQuestion(question)) {
+            var question = firstNonBlank(
+                    text(item, "question"),
+                    text(item, "summary"),
+                    text(item, "description"),
+                    text(item, "impact")
+            );
+            if (!isActionableGap(question)) {
                 index++;
                 continue;
             }
 
+            var effectiveEntityType = firstNonBlank(text(item, "entityType"), text(item, "targetType"), entityType);
+            var effectiveEntityId = firstNonBlank(text(item, "entityId"), text(item, "targetId"), entityId);
             questions.add(new OpenQuestion(
-                    openQuestionId(sourceFile, entityType, entityId, question, index),
+                    openQuestionId(sourceFile, effectiveEntityType, effectiveEntityId, question, index),
                     sourceFile,
-                    entityType,
-                    entityId,
+                    effectiveEntityType,
+                    effectiveEntityId,
                     question,
-                    StringUtils.hasText(severity) ? severity : inferSeverity(question),
-                    StringUtils.hasText(status) ? status : "open"
+                    firstNonBlank(text(item, "severity"), inferSeverity(question)),
+                    firstNonBlank(text(item, "status"), "open")
             ));
             index++;
         }
     }
 
-    private void addMarkdownOpenQuestions(List<OpenQuestion> questions, String sourceFile, String markdown) {
+    private void addMarkdownGaps(List<OpenQuestion> questions, String sourceFile, String markdown) {
         if (!StringUtils.hasText(markdown)) {
             return;
         }
 
-        var inOpenQuestions = false;
+        var inGaps = false;
+        var currentId = "";
+        var currentFields = new java.util.LinkedHashMap<String, String>();
+        String currentSection = null;
         var index = 0;
         for (var line : markdown.split("\\R")) {
             var trimmed = line.trim();
-            if (trimmed.startsWith("## Open Questions")) {
-                inOpenQuestions = true;
+            if (trimmed.startsWith("## Gaps")) {
+                inGaps = true;
                 continue;
             }
-            if (inOpenQuestions && trimmed.startsWith("## ") && !trimmed.startsWith("## Open Questions")) {
+            if (inGaps && trimmed.startsWith("## ") && !trimmed.startsWith("## Gaps")) {
                 break;
             }
-            if (!inOpenQuestions || !trimmed.startsWith("- ")) {
+            if (!inGaps) {
                 continue;
             }
 
-            var question = trimmed.substring(2).trim();
-            if (!isActionableOpenQuestion(question)) {
-                index++;
+            if (trimmed.startsWith("### ")) {
+                index = addMarkdownGap(questions, sourceFile, currentId, currentFields, index);
+                currentId = stripMarkdown(trimmed.substring(4));
+                currentFields = new java.util.LinkedHashMap<>();
+                currentSection = null;
                 continue;
             }
 
-            questions.add(new OpenQuestion(
-                    openQuestionId(sourceFile, "", null, question, index),
-                    sourceFile,
-                    "",
-                    null,
-                    question.replace("`", ""),
-                    inferSeverity(question),
-                    "open"
-            ));
-            index++;
+            if (!StringUtils.hasText(currentId)) {
+                continue;
+            }
+
+            var field = parseMarkdownField(trimmed);
+            if (field != null) {
+                currentFields.put(field.label(), field.value());
+                currentSection = StringUtils.hasText(field.value()) ? null : field.label();
+                continue;
+            }
+
+            if (currentSection != null && StringUtils.hasText(trimmed) && !trimmed.startsWith("- ")) {
+                appendMarkdownField(currentFields, currentSection, stripMarkdown(trimmed));
+            }
         }
+        addMarkdownGap(questions, sourceFile, currentId, currentFields, index);
     }
 
-    private boolean isActionableOpenQuestion(String question) {
+    private int addMarkdownGap(
+            List<OpenQuestion> questions,
+            String sourceFile,
+            String currentId,
+            Map<String, String> fields,
+            int index
+    ) {
+        if (!StringUtils.hasText(currentId)) {
+            return index;
+        }
+
+        var question = firstNonBlank(
+                fields.get("question"),
+                fields.get("summary"),
+                fields.get("description"),
+                fields.get("impact")
+        );
+        if (!isActionableGap(question)) {
+            return index + 1;
+        }
+
+        questions.add(new OpenQuestion(
+                openQuestionId(sourceFile, "", null, question, index),
+                sourceFile,
+                "",
+                null,
+                question,
+                firstNonBlank(fields.get("severity"), inferSeverity(question)),
+                firstNonBlank(fields.get("status"), "open")
+        ));
+        return index + 1;
+    }
+
+    private MarkdownField parseMarkdownField(String value) {
+        if (!value.startsWith("**")) {
+            return null;
+        }
+
+        var colonInsideBold = value.indexOf(":**", 2);
+        if (colonInsideBold > 1) {
+            return new MarkdownField(
+                    normalize(value.substring(2, colonInsideBold)),
+                    stripMarkdown(value.substring(colonInsideBold + 3))
+            );
+        }
+
+        var colonOutsideBold = value.indexOf("**:", 2);
+        if (colonOutsideBold > 1) {
+            return new MarkdownField(
+                    normalize(value.substring(2, colonOutsideBold)),
+                    stripMarkdown(value.substring(colonOutsideBold + 3))
+            );
+        }
+
+        if (value.endsWith("**")) {
+            return new MarkdownField(normalize(value.substring(2, value.length() - 2)), "");
+        }
+
+        return null;
+    }
+
+    private void appendMarkdownField(Map<String, String> fields, String field, String value) {
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+
+        var existing = fields.get(field);
+        fields.put(field, StringUtils.hasText(existing) ? existing + " " + value : value);
+    }
+
+    private String stripMarkdown(String value) {
+        if (!StringUtils.hasText(value)) {
+            return value;
+        }
+        return value.trim().replace("`", "");
+    }
+
+    private boolean isActionableGap(String question) {
         if (!StringUtils.hasText(question)) {
             return false;
         }
@@ -469,6 +553,15 @@ public class OperationalContextAdapter implements OperationalContextPort {
             return "warning";
         }
         return "info";
+    }
+
+    private String firstNonBlank(String... values) {
+        for (var value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private String openQuestionId(
@@ -496,5 +589,8 @@ public class OperationalContextAdapter implements OperationalContextPort {
             return normalized.substring(0, 72).replaceAll("-$", "");
         }
         return normalized;
+    }
+
+    private record MarkdownField(String label, String value) {
     }
 }

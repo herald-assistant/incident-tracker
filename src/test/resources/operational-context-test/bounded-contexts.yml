@@ -29,4 +29,11 @@ boundedContexts:
       firstResponderTeamIds: [core-team]
       requiredEvidence: [correlationId, environment, boundedContext]
 
-openQuestions: []
+gaps:
+  - id: confirm-core-context-boundary
+    type: human-confirmation-required
+    severity: medium
+    status: open
+    entityType: bounded-context
+    entityId: core-context
+    description: Confirm whether Core Context should include shared library semantics.

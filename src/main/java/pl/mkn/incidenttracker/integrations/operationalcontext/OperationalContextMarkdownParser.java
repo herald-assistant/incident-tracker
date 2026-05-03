@@ -34,6 +34,9 @@ final class OperationalContextMarkdownParser {
         var terms = new ArrayList<GlossaryTerm>();
 
         for (var entry : parseEntries(markdown)) {
+            if ("gaps".equals(entry.category().toLowerCase(Locale.ROOT))) {
+                continue;
+            }
             terms.add(new GlossaryTerm(
                     entry.id(),
                     firstValue(entry, "term", entry.title()),
@@ -173,7 +176,7 @@ final class OperationalContextMarkdownParser {
         var currentCategory = "General";
         String currentTitle = null;
         var currentLines = new ArrayList<String>();
-        var skippingOpenQuestions = false;
+        var skippingGaps = false;
 
         for (var line : markdown.split("\\R")) {
             var trimmedLine = line.trim();
@@ -186,14 +189,14 @@ final class OperationalContextMarkdownParser {
                 }
 
                 var sectionTitle = stripMarkdown(sectionMatcher.group(1));
-                skippingOpenQuestions = sectionTitle.toLowerCase(Locale.ROOT).startsWith("open questions");
-                if (!skippingOpenQuestions) {
+                skippingGaps = sectionTitle.toLowerCase(Locale.ROOT).startsWith("gaps");
+                if (!skippingGaps) {
                     currentCategory = sectionTitle;
                 }
                 continue;
             }
 
-            if (skippingOpenQuestions) {
+            if (skippingGaps) {
                 continue;
             }
 

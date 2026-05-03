@@ -49,4 +49,4 @@ systems:
       partnerTeamIds: [core-team]
       requiredEvidence: [correlationId, environment, host, endpoint, exception]
 
-openQuestions: []
+gaps: []

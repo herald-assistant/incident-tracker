@@ -67,7 +67,7 @@ class OperationalContextMarkdownParserTest {
                 - TTY (decision)
                 - TTL (limit)
 
-                ## Open Questions
+                ## Gaps
                 - Should not stop the parser.
 
                 ## Collateral Domain Terms

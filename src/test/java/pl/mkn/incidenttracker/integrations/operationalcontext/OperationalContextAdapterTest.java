@@ -25,6 +25,16 @@ class OperationalContextAdapterTest {
         assertEquals(2, catalog.teams().size());
         assertEquals(1, catalog.glossaryTerms().size());
         assertEquals(2, catalog.handoffRules().size());
+        assertEquals(3, catalog.openQuestions().size());
+        assertEquals("Confirm whether Core Context should include shared library semantics.", catalog.openQuestions().get(0).question());
+        assertEquals("bounded-context", catalog.openQuestions().get(0).entityType());
+        assertEquals("core-context", catalog.openQuestions().get(0).entityId());
+        assertTrue(catalog.openQuestions().stream()
+                .anyMatch(question -> question.sourceFile().equals("glossary.md")
+                        && question.question().equals("Confirm whether SOAP fault terminology needs separate domain-specific subtypes.")));
+        assertTrue(catalog.openQuestions().stream()
+                .anyMatch(question -> question.sourceFile().equals("handoff-rules.md")
+                        && question.question().equals("Confirm actual routing target for partner-service synchronous failures.")));
         assertFalse(catalog.indexDocument().isBlank());
     }
 

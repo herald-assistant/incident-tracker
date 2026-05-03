@@ -35,4 +35,4 @@ processes:
       routingNotes:
         - If the flow waits on the partner call, route first to the integration owner.
 
-openQuestions: []
+gaps: []

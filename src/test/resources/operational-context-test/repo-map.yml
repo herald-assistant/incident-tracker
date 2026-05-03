@@ -75,4 +75,4 @@ repositories:
       firstResponderTeamIds: [core-team]
       requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
 
-openQuestions: []
+gaps: []

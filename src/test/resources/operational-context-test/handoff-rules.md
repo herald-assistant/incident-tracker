@@ -48,6 +48,18 @@ Candidate teams: No handoff
 
 - Continue diagnosis locally
 
-## Open Questions
+## Gaps
 
-- None
+### `confirm-integration-routing`
+
+**Gap id:** `confirm-integration-routing`
+
+**Type:** `responsibility-routing`
+
+**Severity:** `medium`
+
+**Status:** `open`
+
+**Description**
+
+Confirm actual routing target for partner-service synchronous failures.
