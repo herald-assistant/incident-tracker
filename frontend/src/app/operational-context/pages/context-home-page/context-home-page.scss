@@ -18,7 +18,7 @@
 
 .context-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.4fr) auto;
+  grid-template-columns: minmax(220px, 1fr) auto;
   gap: 14px;
   align-items: center;
   padding: 16px 18px;
@@ -34,10 +34,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-}
-
-.signal-search--compact {
-  min-width: 0;
 }
 
 .status-strip {

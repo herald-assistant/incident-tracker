@@ -6,7 +6,9 @@ import { of } from 'rxjs';
 
 import {
   ExplainableAggregateDto,
+  OpenQuestionDto,
   OperationalContextEntityDetailDto,
+  OperationalContextHandoffRuleRowDto,
   OperationalContextSummaryDto,
   OperationalContextSystemRowDto
 } from '../../models/operational-context.models';
@@ -59,11 +61,86 @@ describe('ContextHomePageComponent', () => {
     expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
     expect(fixture.nativeElement.textContent).toContain('Core detail');
   });
+
+  it('should keep search only in the signal resolver tab', async () => {
+    const { fixture, api } = await createComponent(readySummary(), [systemRow()]);
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.context-toolbar .signal-search')).toBeNull();
+
+    component.selectTab('signal-resolver');
+    component.searchControl.setValue('api-gateway');
+    fixture.detectChanges();
+
+    component.runSignalSearch(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(api.search).toHaveBeenCalledWith('api-gateway');
+    expect(component.selectedTab()).toBe('signal-resolver');
+    expect(fixture.nativeElement.textContent).toContain('Resolve runtime or code signals');
+  });
+
+  it('should use relevant filters on open questions', async () => {
+    const { fixture } = await createComponent(readySummary(), [], [
+      openQuestion('question-warning', 'warning', 'Who owns this process?'),
+      openQuestion('question-info', 'info', 'Should this context be renamed?')
+    ]);
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.selectTab('open-questions');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const filterLabels = Array.from(
+      compiled.querySelectorAll('.context-filters .toggle-row span')
+    ).map((element) => element.textContent?.trim());
+    expect(filterLabels).toEqual(['Warnings']);
+    expect(fixture.nativeElement.textContent).toContain('Who owns this process?');
+    expect(fixture.nativeElement.textContent).toContain('Should this context be renamed?');
+
+    component.onlyWarningsControl.setValue(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Who owns this process?');
+    expect(fixture.nativeElement.textContent).not.toContain('Should this context be renamed?');
+  });
+
+  it('should not apply unsupported checkbox filters on handoff rules', async () => {
+    const { fixture } = await createComponent(
+      readySummary(),
+      [],
+      [],
+      [handoffRule()]
+    );
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.selectTab('handoff');
+    component.onlyWarningsControl.setValue(true);
+    component.onlyMissingOwnerControl.setValue(true);
+    component.onlyOpenQuestionsControl.setValue(true);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const filterLabels = Array.from(
+      compiled.querySelectorAll('.context-filters .toggle-row span')
+    ).map((element) => element.textContent?.trim());
+    expect(filterLabels).toEqual([]);
+    expect(fixture.nativeElement.textContent).toContain('Backend service error');
+  });
 });
 
 async function createComponent(
   summary: OperationalContextSummaryDto,
-  systems: OperationalContextSystemRowDto[]
+  systems: OperationalContextSystemRowDto[],
+  openQuestions: OpenQuestionDto[] = [],
+  handoffRules: OperationalContextHandoffRuleRowDto[] = []
 ) {
   const api = {
     getSummary: vi.fn(() => of(summary)),
@@ -74,9 +151,9 @@ async function createComponent(
     getBoundedContexts: vi.fn(() => of([])),
     getTeams: vi.fn(() => of([])),
     getGlossary: vi.fn(() => of([])),
-    getHandoffRules: vi.fn(() => of([])),
+    getHandoffRules: vi.fn(() => of(handoffRules)),
     getValidation: vi.fn(() => of([])),
-    getOpenQuestions: vi.fn(() => of([])),
+    getOpenQuestions: vi.fn(() => of(openQuestions)),
     search: vi.fn(() => of([])),
     getEntity: vi.fn(() => of(entityDetail()))
   };
@@ -94,6 +171,30 @@ async function createComponent(
   return {
     fixture: TestBed.createComponent(ContextHomePageComponent),
     api
+  };
+}
+
+function handoffRule(): OperationalContextHandoffRuleRowDto {
+  return {
+    id: 'backend-service-error',
+    title: 'Backend service error',
+    routeTo: 'Owner of backend',
+    useWhen: aggregate('Use when', 1),
+    requiredEvidence: aggregate('Required evidence', 2),
+    expectedFirstAction: 'Route to Owner of backend.',
+    partnerTeams: aggregate('Partner teams', 0)
+  };
+}
+
+function openQuestion(id: string, severity: string, question: string): OpenQuestionDto {
+  return {
+    id,
+    sourceFile: 'systems.yml',
+    entityType: 'system',
+    entityId: 'app-core',
+    question,
+    severity,
+    status: 'open'
   };
 }
 

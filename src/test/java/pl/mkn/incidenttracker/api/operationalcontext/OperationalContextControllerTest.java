@@ -6,6 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.ExplainableAggregateDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
 
@@ -84,6 +85,18 @@ class OperationalContextControllerTest {
                 .andExpect(jsonPath("$.code").value("OPERATIONAL_CONTEXT_ENTITY_NOT_FOUND"));
     }
 
+    @Test
+    void shouldExposeEntityEndpointWithQueryId() throws Exception {
+        when(viewService.entity("repository", "[CLP/backend]"))
+                .thenReturn(emptyDetail("repository", "[CLP/backend]"));
+
+        mockMvc.perform(get("/api/operational-context/entities/repository")
+                        .param("id", "[CLP/backend]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("repository"))
+                .andExpect(jsonPath("$.id").value("[CLP/backend]"));
+    }
+
     private static ExplainableAggregateDto emptyAggregate(String label) {
         return new ExplainableAggregateDto(
                 label,
@@ -97,6 +110,23 @@ class OperationalContextControllerTest {
                 List.of(),
                 "",
                 List.of()
+        );
+    }
+
+    private static OperationalContextEntityDetailDto emptyDetail(String type, String id) {
+        return new OperationalContextEntityDetailDto(
+                type,
+                id,
+                id,
+                "",
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                ""
         );
     }
 }

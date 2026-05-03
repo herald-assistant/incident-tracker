@@ -12,19 +12,30 @@
       <div
         class="catalog-table__row"
         role="row"
-        tabindex="0"
-        (click)="openRow.emit(row)"
-        (keydown.enter)="openRow.emit(row)"
       >
-        @for (column of columns(); track column.key) {
+        @for (column of columns(); track column.key; let columnIndex = $index) {
           <span role="cell">
             @if (column.type === 'aggregate') {
               <app-explainable-cell
                 [aggregate]="aggregateValue(row, column.key)"
+                variant="table"
+                [active]="isAggregateSelected(row, column)"
+                (inspect)="selectAggregate(row, column)"
                 (openDetails)="openAggregateDetails.emit($event)"
               ></app-explainable-cell>
             } @else if (column.type === 'owner') {
-              <app-explainable-cell [value]="ownerValue(row, column.key)"></app-explainable-cell>
+              <app-explainable-cell
+                [value]="ownerValue(row, column.key)"
+                variant="table"
+              ></app-explainable-cell>
+            } @else if (columnIndex === 0) {
+              <button
+                class="catalog-table__title-button"
+                type="button"
+                (click)="openRow.emit(row)"
+              >
+                {{ textValue(row, column.key) }}
+              </button>
             } @else {
               {{ textValue(row, column.key) }}
             }
@@ -34,3 +45,111 @@
     }
   }
 </div>
+
+@if (activeRow(); as row) {
+  @if (activeAggregate(); as aggregate) {
+    <div
+      class="catalog-table__modal-backdrop"
+      role="presentation"
+      (click)="closeInspector()"
+      (keydown.escape)="closeInspector()"
+    >
+      <section
+        class="catalog-table__modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="catalog-breakdown-title"
+        tabindex="-1"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="catalog-table__inspector-header">
+          <div>
+            <p class="catalog-table__inspector-eyebrow">Breakdown</p>
+            <h3 id="catalog-breakdown-title">{{ rowTitle(row) }}</h3>
+          </div>
+          <div class="catalog-table__inspector-summary">
+            <strong>{{ aggregate.label }}</strong>
+            <span>{{ aggregate.count }} items</span>
+            <span [attr.data-severity]="aggregate.severity">{{ statusText(aggregate) }}</span>
+            <button type="button" (click)="closeInspector()">Close</button>
+          </div>
+        </header>
+
+        <nav class="catalog-table__inspector-tabs" aria-label="Breakdown sections">
+          @for (column of aggregateColumns(); track column.key) {
+            @if (aggregateValue(row, column.key); as tabAggregate) {
+              <button
+                type="button"
+                [class.catalog-table__inspector-tab--active]="isAggregateSelected(row, column)"
+                (click)="selectInspectorTab(row, column)"
+              >
+                <span>{{ column.label }}</span>
+                <strong>{{ tabAggregate.count }}</strong>
+              </button>
+            }
+          }
+        </nav>
+
+        <div class="catalog-table__inspector-body">
+          @for (group of aggregate.groups; track group.label) {
+            <section class="catalog-table__inspector-group">
+              <h4>{{ group.label }} ({{ group.count }})</h4>
+              @if (!group.items.length) {
+                <p class="catalog-table__inspector-empty">No entries in this breakdown.</p>
+              } @else {
+                <div class="catalog-table__inspector-items">
+                  @for (item of group.items; track item.id + item.label) {
+                    <article class="catalog-table__inspector-item" [attr.data-status]="item.status">
+                      <div>
+                        <strong>{{ item.label }}</strong>
+                        <p>{{ item.reason }}</p>
+                      </div>
+                      <div class="catalog-table__inspector-item-meta">
+                        <mat-icon
+                          class="catalog-table__status-icon"
+                          fontSet="material-symbols-outlined"
+                          [attr.data-status]="item.status"
+                          [attr.aria-label]="itemStatusLabel(item.status)"
+                          [matTooltip]="itemStatusLabel(item.status)"
+                          matTooltipClass="analysis-log-tooltip"
+                        >
+                          {{ itemStatusIcon(item.status) }}
+                        </mat-icon>
+                        @if (canOpenItemDetails(aggregate, item)) {
+                          <button type="button" (click)="emitItemDetails(aggregate, item, $event)">
+                            Open details
+                          </button>
+                        }
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (aggregate.reasons.length || aggregate.warnings.length) {
+            <aside class="catalog-table__inspector-explain">
+              @if (aggregate.reasons.length) {
+                <section>
+                  <h4>Why this count?</h4>
+                  @for (reason of aggregate.reasons; track reason.label + reason.detail) {
+                    <p><strong>{{ reason.label }}</strong>: {{ reason.detail }}</p>
+                  }
+                </section>
+              }
+              @if (aggregate.warnings.length) {
+                <section>
+                  <h4>Warnings</h4>
+                  @for (warning of aggregate.warnings; track warning) {
+                    <p>{{ warning }}</p>
+                  }
+                </section>
+              }
+            </aside>
+          }
+        </div>
+      </section>
+    </div>
+  }
+}

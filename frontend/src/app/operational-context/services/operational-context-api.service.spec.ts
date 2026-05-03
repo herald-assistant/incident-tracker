@@ -36,11 +36,11 @@ describe('OperationalContextApiService', () => {
     request.flush([]);
   });
 
-  it('should encode entity detail URL', () => {
+  it('should pass entity id as a query parameter', () => {
     service.getEntity('bounded-context', 'core/context').subscribe();
 
     const request = http.expectOne(
-      '/api/operational-context/entities/bounded-context/core%2Fcontext'
+      '/api/operational-context/entities/bounded-context?id=core/context'
     );
     expect(request.request.method).toBe('GET');
     request.flush({});

@@ -29,7 +29,6 @@
           Operational Context
         </a>
       </nav>
-      <div class="topbar-badge">Context Catalogue</div>
     </div>
   </header>
 
@@ -40,24 +39,12 @@
         <h2>Searchable operational catalogue</h2>
       </div>
 
-      <form class="signal-search signal-search--compact" (submit)="runSignalSearch($event)">
-        <input
-          class="text-input"
-          type="search"
-          placeholder="Search by service, container, project, endpoint, host, queue, topic, schema, package, class, marker or term"
-          [formControl]="searchControl"
-        />
-        <button class="primary-button" type="submit">
-          <span class="button-label">Resolve</span>
-        </button>
-      </form>
-
       <div class="status-strip">
-        <span class="status-pill" [attr.data-status]="statusLabel()">{{ statusLabel() }}</span>
+        <span class="status-pill" [attr.data-status]="statusLabel()">{{ statusText() }}</span>
         @if (summary(); as currentSummary) {
-          <span class="panel-chip">{{ currentSummary.validationFindings['error'] || 0 }} errors</span>
-          <span class="panel-chip">{{ currentSummary.validationFindings['warning'] || 0 }} warnings</span>
-          <span class="panel-chip">{{ currentSummary.openQuestions }} open questions</span>
+          <span class="panel-chip">Errors {{ currentSummary.validationFindings['error'] || 0 }}</span>
+          <span class="panel-chip">Warnings {{ currentSummary.validationFindings['warning'] || 0 }}</span>
+          <span class="panel-chip">Open questions {{ currentSummary.openQuestions }}</span>
         }
       </div>
     </section>
@@ -278,17 +265,23 @@
       placeholder="Quick filter current view"
       [formControl]="localFilterControl"
     />
-    <label class="toggle-row">
-      <input type="checkbox" [formControl]="onlyWarningsControl" />
-      <span>Warnings</span>
-    </label>
-    <label class="toggle-row">
-      <input type="checkbox" [formControl]="onlyMissingOwnerControl" />
-      <span>Missing owner</span>
-    </label>
-    <label class="toggle-row">
-      <input type="checkbox" [formControl]="onlyOpenQuestionsControl" />
-      <span>Open questions</span>
-    </label>
+    @if (supportsWarningFilter()) {
+      <label class="toggle-row">
+        <input type="checkbox" [formControl]="onlyWarningsControl" />
+        <span>Warnings</span>
+      </label>
+    }
+    @if (supportsMissingOwnerFilter()) {
+      <label class="toggle-row">
+        <input type="checkbox" [formControl]="onlyMissingOwnerControl" />
+        <span>Missing owner</span>
+      </label>
+    }
+    @if (supportsOpenQuestionsFilter()) {
+      <label class="toggle-row">
+        <input type="checkbox" [formControl]="onlyOpenQuestionsControl" />
+        <span>Open questions</span>
+      </label>
+    }
   </div>
 </ng-template>

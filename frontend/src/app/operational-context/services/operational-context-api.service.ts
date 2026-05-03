@@ -81,8 +81,10 @@ export class OperationalContextApiService {
   }
 
   getEntity(type: string, id: string): Observable<OperationalContextEntityDetailDto> {
+    const params = new HttpParams().set('id', id);
     return this.http.get<OperationalContextEntityDetailDto>(
-      `${this.baseUrl}/entities/${encodeURIComponent(type)}/${encodeURIComponent(id)}`
+      `${this.baseUrl}/entities/${encodeURIComponent(type)}`,
+      { params }
     );
   }
 }

@@ -1,6 +1,6 @@
 :host {
   display: block;
-  min-width: 160px;
+  min-width: 0;
 }
 
 .explainable-cell {
@@ -9,12 +9,20 @@
   background: #fff;
 }
 
+button.explainable-cell {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .explainable-cell summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
-  min-height: 40px;
+  min-height: 48px;
   padding: 8px 10px;
   cursor: pointer;
   list-style: none;
@@ -24,12 +32,28 @@
   display: none;
 }
 
+.explainable-cell__summary-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .explainable-cell__label {
   min-width: 0;
   color: var(--text-main);
   font-size: 0.86rem;
   font-weight: 700;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explainable-cell__meta {
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .explainable-cell__icon {
@@ -38,6 +62,10 @@
 }
 
 .explainable-cell[open] .explainable-cell__icon {
+  transform: rotate(180deg);
+}
+
+.explainable-cell--active .explainable-cell__icon {
   transform: rotate(180deg);
 }
 
@@ -63,11 +91,53 @@
   border-color: rgba(174, 46, 36, 0.34);
 }
 
+.explainable-cell--table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+}
+
+.explainable-cell--table.explainable-cell__trigger:hover,
+.explainable-cell--table.explainable-cell--active {
+  border-color: rgba(12, 102, 228, 0.22);
+  background: var(--primary-soft);
+}
+
+.explainable-cell--table .explainable-cell__label {
+  font-size: 0.92rem;
+}
+
+.explainable-cell--table.explainable-cell--warning .explainable-cell__meta {
+  color: #92400e;
+}
+
+.explainable-cell--table.explainable-cell--error .explainable-cell__meta {
+  color: var(--danger-text);
+}
+
 .explainable-cell__body {
   display: grid;
   gap: 10px;
   padding: 0 10px 10px;
   border-top: 1px solid #eef3f8;
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.explainable-cell--table .explainable-cell__body {
+  margin-top: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(23, 43, 77, 0.08);
 }
 
 .breakdown-group,
@@ -97,7 +167,7 @@
   display: grid;
   gap: 4px;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface-alt);
 }
 

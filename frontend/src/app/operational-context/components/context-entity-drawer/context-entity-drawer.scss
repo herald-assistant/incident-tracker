@@ -6,7 +6,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 40;
+  z-index: 1100;
   display: grid;
   align-content: start;
   gap: 16px;
@@ -51,6 +51,15 @@
   background: #fff;
   color: var(--text-main);
   cursor: pointer;
+}
+
+.entity-drawer__close mat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  line-height: 22px;
 }
 
 .entity-drawer__section {

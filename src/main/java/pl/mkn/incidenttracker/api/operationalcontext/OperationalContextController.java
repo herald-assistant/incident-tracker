@@ -89,6 +89,14 @@ class OperationalContextController {
         return viewService.search(query);
     }
 
+    @GetMapping("/entities/{type}")
+    OperationalContextEntityDetailDto entityByQuery(
+            @PathVariable String type,
+            @RequestParam String id
+    ) {
+        return viewService.entity(type, id);
+    }
+
     @GetMapping("/entities/{type}/{id}")
     OperationalContextEntityDetailDto entity(
             @PathVariable String type,

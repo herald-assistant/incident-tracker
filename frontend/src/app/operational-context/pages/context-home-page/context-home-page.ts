@@ -209,6 +209,7 @@ export class ContextHomePageComponent {
   readonly currentRows = computed(() => this.filteredRows(this.selectedTab()));
   readonly tableColumnCount = computed(() => Math.max(this.currentColumns().length, 1));
   readonly statusLabel = computed(() => this.summary()?.catalogStatus || 'loading');
+  readonly statusText = computed(() => this.formatStatus(this.statusLabel()));
   readonly isIncomplete = computed(() => {
     const status = this.summary()?.catalogStatus;
     return status === 'empty' || status === 'partial';
@@ -309,13 +310,29 @@ export class ContextHomePageComponent {
   protected validationRows(): ValidationFindingDto[] {
     const query = normalize(this.localFilter());
     return this.data()
-      .validation.filter((finding) => !query || normalize(JSON.stringify(finding)).includes(query));
+      .validation.filter((finding) => {
+        if (query && !normalize(JSON.stringify(finding)).includes(query)) {
+          return false;
+        }
+        if (this.onlyWarnings() && !this.isWarningSeverity(finding.severity)) {
+          return false;
+        }
+        return true;
+      });
   }
 
   protected openQuestionRows(): OpenQuestionDto[] {
     const query = normalize(this.localFilter());
     return this.data()
-      .openQuestions.filter((question) => !query || normalize(JSON.stringify(question)).includes(query));
+      .openQuestions.filter((question) => {
+        if (query && !normalize(JSON.stringify(question)).includes(query)) {
+          return false;
+        }
+        if (this.onlyWarnings() && !this.isWarningSeverity(question.severity)) {
+          return false;
+        }
+        return true;
+      });
   }
 
   protected rowId(row: Record<string, unknown>): string {
@@ -333,6 +350,18 @@ export class ContextHomePageComponent {
 
   protected selectedTabLabel(): string {
     return this.tabs.find((tab) => tab.id === this.selectedTab())?.label ?? '';
+  }
+
+  protected supportsWarningFilter(): boolean {
+    return !['glossary', 'handoff'].includes(this.selectedTab());
+  }
+
+  protected supportsMissingOwnerFilter(): boolean {
+    return ['systems', 'repositories', 'processes', 'integrations', 'bounded-contexts'].includes(this.selectedTab());
+  }
+
+  protected supportsOpenQuestionsFilter(): boolean {
+    return this.selectedTab() === 'systems';
   }
 
   private loadCatalogue(): void {
@@ -384,13 +413,13 @@ export class ContextHomePageComponent {
       if (query && !normalize(JSON.stringify(row)).includes(query)) {
         return false;
       }
-      if (this.onlyWarnings() && !this.rowHasWarning(row)) {
+      if (this.supportsWarningFilter() && this.onlyWarnings() && !this.rowHasWarning(row)) {
         return false;
       }
-      if (this.onlyMissingOwner() && !this.rowMissingOwner(row)) {
+      if (this.supportsMissingOwnerFilter() && this.onlyMissingOwner() && !this.rowMissingOwner(row)) {
         return false;
       }
-      if (this.onlyOpenQuestions() && !this.rowHasOpenQuestions(row)) {
+      if (this.supportsOpenQuestionsFilter() && this.onlyOpenQuestions() && !this.rowHasOpenQuestions(row)) {
         return false;
       }
       return true;
@@ -450,7 +479,7 @@ export class ContextHomePageComponent {
         value &&
         typeof value === 'object' &&
         'severity' in value &&
-        ['warning', 'error'].includes(String((value as { severity?: string }).severity))
+        this.isWarningSeverity(String((value as { severity?: string }).severity))
     );
   }
 
@@ -462,6 +491,25 @@ export class ContextHomePageComponent {
   private rowHasOpenQuestions(row: Record<string, unknown>): boolean {
     const openQuestions = row['openQuestions'] as { count?: number } | undefined;
     return Number(openQuestions?.count || 0) > 0;
+  }
+
+  private formatStatus(status: string): string {
+    switch (status) {
+      case 'hasIssues':
+        return 'Has issues';
+      case 'ready':
+        return 'Ready';
+      case 'partial':
+        return 'Partial';
+      case 'empty':
+        return 'Empty';
+      default:
+        return status || 'Loading';
+    }
+  }
+
+  private isWarningSeverity(severity: string): boolean {
+    return ['warning', 'error'].includes(String(severity || '').toLowerCase());
   }
 }
 

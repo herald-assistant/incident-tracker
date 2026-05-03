@@ -1,78 +1,122 @@
-<details
-  class="explainable-cell"
-  [class.explainable-cell--ok]="aggregate()?.severity === 'ok'"
-  [class.explainable-cell--warning]="aggregate()?.severity === 'warning'"
-  [class.explainable-cell--error]="aggregate()?.severity === 'error'"
->
-  <summary [matTooltip]="tooltip()" matTooltipClass="analysis-log-tooltip">
-    <span class="explainable-cell__label">{{ displayLabel() }}</span>
-    @if (confidence()) {
-      <span class="confidence-chip">{{ confidence() }}</span>
-    }
-    <mat-icon class="explainable-cell__icon" fontSet="material-symbols-outlined">
-      expand_more
-    </mat-icon>
-  </summary>
+@if (isTableVariant()) {
+  @if (aggregate()) {
+    <button
+      class="explainable-cell explainable-cell--table explainable-cell__trigger"
+      type="button"
+      [class.explainable-cell--active]="active()"
+      [class.explainable-cell--ok]="aggregate()?.severity === 'ok'"
+      [class.explainable-cell--warning]="aggregate()?.severity === 'warning'"
+      [class.explainable-cell--error]="aggregate()?.severity === 'error'"
+      [matTooltip]="tooltip()"
+      matTooltipClass="analysis-log-tooltip"
+      (click)="emitInspect($event)"
+    >
+      <span class="explainable-cell__summary-copy">
+        <span class="explainable-cell__label">{{ displayLabel() }}</span>
+        <span class="explainable-cell__meta">{{ metaLabel() }}</span>
+      </span>
+      <mat-icon class="explainable-cell__icon" fontSet="material-symbols-outlined">
+        keyboard_arrow_down
+      </mat-icon>
+    </button>
+  } @else {
+    <div
+      class="explainable-cell explainable-cell--table explainable-cell__static"
+      [matTooltip]="tooltip()"
+      matTooltipClass="analysis-log-tooltip"
+    >
+      <span class="explainable-cell__summary-copy">
+        <span class="explainable-cell__label">{{ displayLabel() }}</span>
+        <span class="explainable-cell__meta">{{ metaLabel() }}</span>
+      </span>
+    </div>
+  }
+} @else {
+  <details
+    class="explainable-cell"
+    [class.explainable-cell--ok]="aggregate()?.severity === 'ok'"
+    [class.explainable-cell--warning]="aggregate()?.severity === 'warning'"
+    [class.explainable-cell--error]="aggregate()?.severity === 'error'"
+    (click)="stopInteraction($event)"
+  >
+    <summary [matTooltip]="tooltip()" matTooltipClass="analysis-log-tooltip">
+      <span class="explainable-cell__summary-copy">
+        <span class="explainable-cell__label">{{ displayLabel() }}</span>
+        <span class="explainable-cell__meta">{{ metaLabel() }}</span>
+      </span>
+      @if (confidence()) {
+        <span class="confidence-chip">{{ confidence() }}</span>
+      }
+      <mat-icon class="explainable-cell__icon" fontSet="material-symbols-outlined">
+        expand_more
+      </mat-icon>
+    </summary>
 
-  <div class="explainable-cell__body">
-    @if (aggregate(); as aggregateValue) {
-      @for (group of aggregateValue.groups; track group.label) {
-        <section class="breakdown-group">
-          <h4>{{ group.label }} ({{ group.count }})</h4>
-          @if (!group.items.length) {
-            <p class="muted-text">No entries.</p>
-          } @else {
-            <ul>
-              @for (item of group.items; track item.id + item.label) {
-                <li [attr.data-status]="item.status">
-                  <span>{{ item.label }}</span>
-                  <small>{{ item.reason }}</small>
-                  @if (detailsType() && item.id) {
-                    <button type="button" (click)="emitOpenDetails(item.id)">
-                      Open details
-                    </button>
-                  }
-                </li>
+    <div class="explainable-cell__body">
+      @if (aggregate(); as aggregateValue) {
+        @for (group of aggregateValue.groups; track group.label) {
+          <section class="breakdown-group">
+            <h4>{{ group.label }} ({{ group.count }})</h4>
+            @if (!group.items.length) {
+              <p class="muted-text">No entries.</p>
+            } @else {
+              <ul>
+                @for (item of visibleItems(group.items); track item.id + item.label) {
+                  <li [attr.data-status]="item.status">
+                    <span>{{ item.label }}</span>
+                    <small>{{ item.reason }}</small>
+                    @if (detailsType() && item.id) {
+                      <button type="button" (click)="emitOpenDetails($event, item.id)">
+                        Open details
+                      </button>
+                    }
+                  </li>
+                }
+              </ul>
+              @if (hiddenItemCount(group.items)) {
+                <p class="muted-text">
+                  {{ hiddenItemCount(group.items) }} more hidden here. Open details for the full audit.
+                </p>
               }
-            </ul>
-          }
-        </section>
-      }
+            }
+          </section>
+        }
 
-      @if (aggregateValue.reasons.length) {
-        <section class="reason-list">
-          <h4>Why</h4>
-          @for (reason of aggregateValue.reasons; track reason.label + reason.detail) {
-            <p><strong>{{ reason.label }}</strong>: {{ reason.detail }}</p>
-          }
-        </section>
-      }
+        @if (visibleReasons().length) {
+          <section class="reason-list">
+            <h4>Why</h4>
+            @for (reason of visibleReasons(); track reason.label + reason.detail) {
+              <p><strong>{{ reason.label }}</strong>: {{ reason.detail }}</p>
+            }
+          </section>
+        }
 
-      @if (aggregateValue.warnings.length) {
-        <section class="warning-list">
-          <h4>Warnings</h4>
-          @for (warning of aggregateValue.warnings; track warning) {
-            <p>{{ warning }}</p>
-          }
-        </section>
+        @if (visibleWarnings().length) {
+          <section class="warning-list">
+            <h4>Warnings</h4>
+            @for (warning of visibleWarnings(); track warning) {
+              <p>{{ warning }}</p>
+            }
+          </section>
+        }
+      } @else if (value(); as explainableValue) {
+        @if (visibleReasons().length) {
+          <section class="reason-list">
+            <h4>Why</h4>
+            @for (reason of visibleReasons(); track reason.label + reason.detail) {
+              <p><strong>{{ reason.label }}</strong>: {{ reason.detail }}</p>
+            }
+          </section>
+        }
+        @if (visibleWarnings().length) {
+          <section class="warning-list">
+            <h4>Warnings</h4>
+            @for (warning of visibleWarnings(); track warning) {
+              <p>{{ warning }}</p>
+            }
+          </section>
+        }
       }
-    } @else if (value(); as explainableValue) {
-      @if (explainableValue.reasons.length) {
-        <section class="reason-list">
-          <h4>Why</h4>
-          @for (reason of explainableValue.reasons; track reason.label + reason.detail) {
-            <p><strong>{{ reason.label }}</strong>: {{ reason.detail }}</p>
-          }
-        </section>
-      }
-      @if (explainableValue.warnings.length) {
-        <section class="warning-list">
-          <h4>Warnings</h4>
-          @for (warning of explainableValue.warnings; track warning) {
-            <p>{{ warning }}</p>
-          }
-        </section>
-      }
-    }
-  </div>
-</details>
+    </div>
+  </details>
+}
