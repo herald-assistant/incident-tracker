@@ -48,7 +48,7 @@ public record OperationalContextCatalog(
             String definition,
             List<String> useInContext,
             List<String> doNotConfuseWith,
-            List<String> typicalEvidenceSignals,
+            List<String> matchSignals,
             List<String> canonicalReferences,
             List<String> synonyms,
             List<String> notes

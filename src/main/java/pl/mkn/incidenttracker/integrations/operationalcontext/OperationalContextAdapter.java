@@ -249,7 +249,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
             case "definition" -> List.of(term.definition());
             case "useInContext" -> term.useInContext();
             case "doNotConfuseWith" -> term.doNotConfuseWith();
-            case "typicalEvidenceSignals" -> term.typicalEvidenceSignals();
+            case "matchSignals" -> term.matchSignals();
             case "canonicalReferences" -> term.canonicalReferences();
             case "synonyms" -> term.synonyms();
             case "notes" -> term.notes();

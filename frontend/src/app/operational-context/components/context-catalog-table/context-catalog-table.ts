@@ -207,7 +207,7 @@ export class ContextCatalogTableComponent {
     aggregate: ExplainableAggregateDto,
     item: ExplainableBreakdownItemDto
   ): { type: string; id: string } | null {
-    const type = this.normalizedDetailsType(item.type) || this.normalizedDetailsType(aggregate.detailsType || '');
+    const type = this.normalizedDetailsType(item.kind) || this.normalizedDetailsType(aggregate.detailsType || '');
     if (!type || !item.id) {
       return null;
     }
@@ -227,20 +227,6 @@ export class ContextCatalogTableComponent {
       case 'validation':
       case 'open-question':
         return type;
-      case 'systems':
-        return 'system';
-      case 'repo':
-      case 'repos':
-      case 'repositories':
-        return 'repository';
-      case 'context':
-      case 'contexts':
-      case 'bounded-contexts':
-        return 'bounded-context';
-      case 'teams':
-        return 'team';
-      case 'glossary':
-        return 'glossary-term';
       default:
         return '';
     }

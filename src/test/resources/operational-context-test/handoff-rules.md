@@ -4,9 +4,11 @@
 
 **Title:** External synchronous integration failure
 
-**Route to:** Integration Team
+**Route decision**
 
-**Use when**
+Candidate teams: Integration Team
+
+**Applies when**
 
 - Evidence points to an external host, endpoint, or SOAP fault
 
@@ -18,7 +20,7 @@
 - `endpoint`
 - `exception`
 
-**Expected first action**
+**Expected first actions**
 
 - Verify the external call path, timeout status, and contract ownership
 
@@ -30,9 +32,11 @@
 
 **Title:** Keep the incident with the current owner
 
-**Route to:** No handoff
+**Route decision**
 
-**Use when**
+Candidate teams: No handoff
+
+**Applies when**
 
 - Evidence still points to the current team or repository
 
@@ -40,7 +44,7 @@
 
 - local runtime or repo match
 
-**Expected first action**
+**Expected first actions**
 
 - Continue diagnosis locally
 
