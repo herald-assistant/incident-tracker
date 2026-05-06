@@ -510,6 +510,8 @@ public final class OperationalContextDtos {
 
     public record OperationalContextResponsibility(
             String teamId,
+            String actorType,
+            String actorId,
             String targetType,
             String targetId,
             String role,
@@ -1234,6 +1236,7 @@ public final class OperationalContextDtos {
     public record OperationalContextRelation(
             String type,
             String targetType,
+            String targetContextId,
             String target,
             List<String> via,
             String evidence
@@ -1698,6 +1701,8 @@ public final class OperationalContextDtos {
         return mapList(value).stream()
                 .map(source -> new OperationalContextResponsibility(
                         text(source, "teamId"),
+                        text(source, "actorType"),
+                        text(source, "actorId"),
                         text(source, "targetType"),
                         text(source, "targetId"),
                         text(source, "role"),
@@ -1943,6 +1948,7 @@ public final class OperationalContextDtos {
                 .map(source -> new OperationalContextRelation(
                         text(source, "type"),
                         text(source, "targetType"),
+                        text(source, "targetContextId"),
                         text(source, "target"),
                         textList(source, "via"),
                         text(source, "evidence")
