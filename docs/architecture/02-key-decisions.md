@@ -239,6 +239,11 @@ Polityka:
   `DB_CODE_GROUNDING_NEEDED`. Wtedy focused GitLab tools pozostaja dostepne do
   proby ugruntowania encji, repozytorium, tabel i relacji przed DB discovery,
   nawet jesli ogolny flow context z GitLaba wyglada na wystarczajacy.
+- `gitlab_list_available_repositories` jest lekkim discovery tool nad
+  operational context. Pozostaje dostepny razem z focused GitLab tools, zeby
+  model mogl odnalezc `projectName`/`gitLabPath` repozytorium po aliasie,
+  systemie, bounded context, pakiecie, endpointcie albo module, zanim uzyje
+  search/read tools.
 - DB tools sa wlaczane tylko przy resolved environment i
   `IncidentDataDiagnosticNeed=LIKELY/REQUIRED`.
 - Dla `POSSIBLE` dostepne sa tylko discovery tools.
@@ -309,9 +314,10 @@ guidance do opisow drogich lub ryzykownych tools. Przyklady:
   keywordow,
 - GitLab flow/search guidance przypomina, ze `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`
   jest powodem do malego, focused GitLab lookupu pod opis funkcji,
-- GitLab search/class/flow guidance przypomina, ze operational context moze
-  wskazywac kilka repozytoriow jednego komponentu wdrozeniowego; biblioteki i
-  shared modules z `codeSearchProjects` sa czescia scope'u szukania kodu,
+- GitLab available-repositories/search/class/flow guidance przypomina, ze
+  operational context moze wskazywac kilka repozytoriow jednego komponentu
+  wdrozeniowego; biblioteki i shared modules z `codeSearchProjects` sa czescia
+  scope'u szukania kodu,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow
   najpierw trzeba sprobowac ugruntowac encje, repozytorium, tabele i relacje z
@@ -331,7 +337,7 @@ wywolaniem execution gatewaya.
 Capture obejmuje:
 
 - GitLab file/chunk/chunks jako `gitlab/tool-fetched-code`,
-- GitLab search, outline, flow context i class references jako
+- GitLab available repositories, search, outline, flow context i class references jako
   `gitlab/tool-discovery`,
 - DB tools jako `database/tool-results`.
 

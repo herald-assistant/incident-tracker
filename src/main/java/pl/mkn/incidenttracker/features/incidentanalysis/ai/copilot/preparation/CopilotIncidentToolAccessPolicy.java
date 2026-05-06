@@ -24,6 +24,7 @@ public record CopilotIncidentToolAccessPolicy(
 ) {
 
     private static final Set<String> FOCUSED_GITLAB_TOOLS = Set.of(
+            GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
             GitLabToolNames.FIND_CLASS_REFERENCES,
             GitLabToolNames.FIND_FLOW_CONTEXT,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,

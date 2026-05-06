@@ -222,7 +222,8 @@ public class CopilotToolBudgetState {
     }
 
     private boolean isGitLabSearchTool(String toolName) {
-        return GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(toolName)
+        return GitLabToolNames.LIST_AVAILABLE_REPOSITORIES.equals(toolName)
+                || GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(toolName)
                 || GitLabToolNames.FIND_CLASS_REFERENCES.equals(toolName)
                 || GitLabToolNames.FIND_FLOW_CONTEXT.equals(toolName);
     }

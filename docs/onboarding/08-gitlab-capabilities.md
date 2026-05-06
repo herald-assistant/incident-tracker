@@ -46,6 +46,8 @@ Pakiet: `agenttools.gitlab.mcp`
 
 Odpowiada za:
 
+- listowanie repozytoriow GitLaba dostepnych w sesji na podstawie operational
+  context,
 - wyszukiwanie kandydatow repozytoriow,
 - znajdowanie referencji i importow dla ugruntowanej klasy,
 - znajdowanie szerszego flow context,
@@ -61,6 +63,12 @@ Kazdy GitLab MCP tool przyjmuje opcjonalne `reason`: krotki powod po polsku,
 po co model prosi o dany odczyt albo wyszukiwanie. `gitlab_find_flow_context`
 przyjmuje focused `keywords` z evidence/logow, bez osobnych parametrow klasy,
 metody albo pliku.
+
+`gitlab_list_available_repositories` nie szuka po kodzie i nie odpytuje GitLaba
+o pliki. Zwraca katalog repozytoriow z operational context dla biezacej grupy:
+`projectName` do dalszych GitLab tools, pelny `gitLabPath`, summary oraz
+sygnaly dopasowania takie jak aliases, systems, boundedContexts, package
+prefixes, endpoint prefixes i module paths.
 
 Operational context moze wskazac kilka repozytoriow dla jednego komponentu
 wdrozeniowego. Dla GitLab tools oznacza to jeden code search scope:

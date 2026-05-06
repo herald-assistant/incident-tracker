@@ -13,6 +13,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvide
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListAvailableRepositoriesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
@@ -25,6 +26,7 @@ import java.util.List;
 
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
@@ -57,6 +59,7 @@ public class GitLabToolEvidenceMapper {
                  READ_REPOSITORY_FILE_CHUNK,
                  READ_REPOSITORY_FILE_CHUNKS,
                  READ_REPOSITORY_FILE_OUTLINE,
+                 LIST_AVAILABLE_REPOSITORIES,
                  SEARCH_REPOSITORY_CANDIDATES,
                  FIND_CLASS_REFERENCES,
                  FIND_FLOW_CONTEXT -> true;
@@ -76,6 +79,12 @@ public class GitLabToolEvidenceMapper {
             case READ_REPOSITORY_FILE_CHUNK -> captureGitLabFileChunk(rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, sessionEvidence);
+            case LIST_AVAILABLE_REPOSITORIES -> captureGitLabAvailableRepositories(
+                    toolCallId,
+                    rawArguments,
+                    rawResult,
+                    sessionEvidence
+            );
             case SEARCH_REPOSITORY_CANDIDATES -> captureGitLabSearch(toolCallId, rawArguments, rawResult, sessionEvidence);
             case FIND_CLASS_REFERENCES -> captureGitLabClassReferences(
                     toolCallId,
@@ -217,6 +226,38 @@ public class GitLabToolEvidenceMapper {
             );
         } catch (JsonProcessingException exception) {
             log.warn("Failed to parse GitLab tool outline result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
+    private AnalysisEvidenceSection captureGitLabAvailableRepositories(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabListAvailableRepositoriesToolResponse.class);
+            var repositories = safeList(response.repositories());
+            var attributes = buildGitLabDiscoveryAttributes(LIST_AVAILABLE_REPOSITORIES, rawArguments);
+            addAttribute(attributes, "group", response.group());
+            addAttribute(attributes, "branch", response.branch());
+            addAttribute(attributes, "repositoryCount", String.valueOf(repositories.size()));
+            addJsonAttribute(attributes, "repositories", repositories);
+
+            return sessionEvidence.appendItem(
+                    GITLAB_PROVIDER,
+                    GITLAB_DISCOVERY_CATEGORY,
+                    discoveryKey(toolCallId, LIST_AVAILABLE_REPOSITORIES),
+                    GITLAB_DISCOVERY_ORDER_NAMESPACE,
+                    GITLAB_DISCOVERY_FALLBACK_KEY,
+                    new AnalysisEvidenceItem(
+                            gitLabDiscoveryTitle(LIST_AVAILABLE_REPOSITORIES),
+                            List.copyOf(attributes)
+                    )
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab available repositories result. reason={}", exception.getMessage(), exception);
             return null;
         }
     }
@@ -433,6 +474,7 @@ public class GitLabToolEvidenceMapper {
 
     private String gitLabDiscoveryTitle(String toolName) {
         return switch (toolName) {
+            case LIST_AVAILABLE_REPOSITORIES -> "GitLab available repositories";
             case SEARCH_REPOSITORY_CANDIDATES -> "GitLab search candidates";
             case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
             case FIND_CLASS_REFERENCES -> "GitLab class references";

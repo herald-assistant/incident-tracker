@@ -83,6 +83,46 @@ public final class GitLabToolDtos {
     ) {
     }
 
+    public record GitLabListAvailableRepositoriesToolResponse(
+            String group,
+            String branch,
+            List<GitLabAvailableRepository> repositories
+    ) {
+    }
+
+    public record GitLabAvailableRepository(
+            String repositoryId,
+            String name,
+            String summary,
+            String projectName,
+            String gitLabPath,
+            List<String> aliases,
+            String repositoryType,
+            String lifecycleStatus,
+            List<String> systems,
+            List<String> runtimeComponents,
+            List<String> boundedContexts,
+            List<String> processes,
+            List<String> integrations,
+            List<String> relatedRepositoryIds,
+            List<String> packagePrefixes,
+            List<String> endpointPrefixes,
+            List<String> modulePaths
+    ) {
+        public GitLabAvailableRepository {
+            aliases = aliases != null ? List.copyOf(aliases) : List.of();
+            systems = systems != null ? List.copyOf(systems) : List.of();
+            runtimeComponents = runtimeComponents != null ? List.copyOf(runtimeComponents) : List.of();
+            boundedContexts = boundedContexts != null ? List.copyOf(boundedContexts) : List.of();
+            processes = processes != null ? List.copyOf(processes) : List.of();
+            integrations = integrations != null ? List.copyOf(integrations) : List.of();
+            relatedRepositoryIds = relatedRepositoryIds != null ? List.copyOf(relatedRepositoryIds) : List.of();
+            packagePrefixes = packagePrefixes != null ? List.copyOf(packagePrefixes) : List.of();
+            endpointPrefixes = endpointPrefixes != null ? List.copyOf(endpointPrefixes) : List.of();
+            modulePaths = modulePaths != null ? List.copyOf(modulePaths) : List.of();
+        }
+    }
+
     public record GitLabReadRepositoryFileChunksToolResponse(
             String group,
             String branch,

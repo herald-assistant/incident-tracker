@@ -47,6 +47,22 @@ Use this especially when:
 
 Keep the search bounded: search the listed component repositories with the grounded class/package/method hints, read only the best matching outline/chunk, then stop if no useful library code is found.
 
+## Available repository catalog
+
+Use `gitlab_list_available_repositories` when the relevant repository is not grounded by logs, deterministic evidence, or existing code references, but the incident contains loose clues about another repository, component, module, package, endpoint, integration, system, bounded context, or process.
+
+The tool reads the repository catalog from operational context for the fixed session group. It does not search code and it does not change the fixed branch or group.
+
+Use the returned `projectName` as the input for later GitLab search, flow context, outline, chunk, and read tools. Treat `gitLabPath`, `summary`, and repository metadata as disambiguating context.
+
+Match incident clues against:
+
+- repository `name`, `aliases`, `projectName`, and `gitLabPath`,
+- `systems`, `runtimeComponents`, `boundedContexts`, `processes`, and `integrations`,
+- `packagePrefixes`, `endpointPrefixes`, and `modulePaths`.
+
+Prefer one catalog call at the beginning of a cross-repository investigation. Do not repeat the catalog lookup unless new evidence clearly points to another repository family.
+
 ## GitLab tool reason
 
 Every GitLab tool call must include the optional `reason` argument.
@@ -113,14 +129,15 @@ If the GitLab attempt finds no useful flow context, stop and state that limitati
 ## Tool order
 
 1. Prefer attached deterministic GitLab evidence.
-2. If operational context lists multiple `codeSearchProjects` for the matched system, use those projects as one component scope before treating a class as missing.
-3. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates.
-4. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
-5. When `gitlab_find_class_references` returns no useful result for the main project, retry once across the other operational-context projects for that component.
-6. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear; pass focused `keywords` grounded in logs, stacktrace, code evidence or current tool results.
-7. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
-8. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
-9. Use `gitlab_read_repository_file` only when:
+2. Use `gitlab_list_available_repositories` when projectName/GitLab path is unclear and evidence contains only loose repository, system, module, package, endpoint, integration, or bounded-context clues.
+3. If operational context lists multiple `codeSearchProjects` for the matched system, use those projects as one component scope before treating a class as missing.
+4. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates after using available catalog clues.
+5. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
+6. When `gitlab_find_class_references` returns no useful result for the main project, retry once across the other operational-context projects for that component.
+7. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear; pass focused `keywords` grounded in logs, stacktrace, code evidence or current tool results.
+8. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
+9. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
+10. Use `gitlab_read_repository_file` only when:
     - the file is short,
     - the chunk is insufficient,
     - class-level context is necessary,
@@ -142,6 +159,7 @@ Use inputs inferred from evidence:
 - downstream client names,
 - service/container/project hints,
 - operational-context `codeSearchProjects`, repository `project`, package roots and class hints,
+- available repository catalog signals such as aliases, systems, bounded contexts, package prefixes, endpoint prefixes and module paths,
 - business identifiers from logs.
 
 Search broadly enough to find the relevant project and direct collaborators, but do not read every candidate.
@@ -161,7 +179,7 @@ Instead:
    - mapper,
    - validator,
    - service.
-2. If the project is unclear, use `gitlab_search_repository_candidates`.
+2. If the project is unclear, use `gitlab_list_available_repositories` first when loose repository or component clues are available, then use `gitlab_search_repository_candidates` with the selected `projectName` values.
 3. If the class is grounded, use `gitlab_find_class_references` with:
    - the fully qualified class name when known,
    - the simple class name,

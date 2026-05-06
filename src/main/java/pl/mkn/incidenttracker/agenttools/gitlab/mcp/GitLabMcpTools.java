@@ -1,21 +1,26 @@
 package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextEntryType;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextQuery;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkResult;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextCandidate;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListAvailableRepositoriesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
@@ -29,10 +34,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
@@ -41,7 +48,6 @@ import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.SEARCH_RE
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class GitLabMcpTools {
 
     private static final int DEFAULT_MAX_CHARACTERS = 4_000;
@@ -70,6 +76,76 @@ public class GitLabMcpTools {
     );
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final OperationalContextPort operationalContextPort;
+
+    @Autowired
+    public GitLabMcpTools(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            OperationalContextPort operationalContextPort
+    ) {
+        this.gitLabRepositoryPort = gitLabRepositoryPort;
+        this.operationalContextPort = operationalContextPort;
+    }
+
+    public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
+        this(gitLabRepositoryPort, ignored -> emptyOperationalContextCatalog());
+    }
+
+    @Tool(
+            name = LIST_AVAILABLE_REPOSITORIES,
+            description = """
+                    Lists GitLab repositories registered in operational context and available in the current fixed session group.
+                    Use this when projectName or GitLab path is unknown and logs, traces, code, comments, package names,
+                    system names, module names, endpoints or bounded contexts mention another application or repository.
+                    Use returned projectName values as inputs for GitLab search, flow context and read tools.
+                    The group and branch are taken from hidden ToolContext.
+                    """
+    )
+    public GitLabListAvailableRepositoriesToolResponse listAvailableRepositories(
+            @ToolParam(required = false, description = "Krotki powod po polsku: dlaczego model potrzebuje katalogu repozytoriow.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = GitLabToolScope.from(toolContext);
+
+        log.info(
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={}",
+                LIST_AVAILABLE_REPOSITORIES,
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId()
+        );
+
+        var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
+                Set.of(OperationalContextEntryType.REPOSITORY),
+                List.of(),
+                false
+        ));
+        var repositories = GitLabAvailableRepositoryMapper.fromCatalog(scope.group(), catalog);
+
+        log.info(
+                "Tool result [{}] correlationId={} group={} branch={} environment={} repositoryCount={} projectNames={}",
+                LIST_AVAILABLE_REPOSITORIES,
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                repositories.size(),
+                abbreviateList(repositories.stream()
+                        .map(repository -> repository.projectName())
+                        .toList())
+        );
+
+        return new GitLabListAvailableRepositoriesToolResponse(
+                scope.group(),
+                scope.branch(),
+                repositories
+        );
+    }
 
     @Tool(
             name = SEARCH_REPOSITORY_CANDIDATES,
@@ -1101,6 +1177,20 @@ public class GitLabMcpTools {
 
     private String safeValue(String value) {
         return value != null ? value : "";
+    }
+
+    private static OperationalContextCatalog emptyOperationalContextCatalog() {
+        return new OperationalContextCatalog(
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                ""
+        );
     }
 
     record FileOutline(

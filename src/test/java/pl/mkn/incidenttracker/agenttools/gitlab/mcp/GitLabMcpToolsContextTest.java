@@ -24,6 +24,7 @@ class GitLabMcpToolsContextTest {
                 .collect(Collectors.toSet());
 
         assertTrue(toolNames.contains("gitlab_search_repository_candidates"));
+        assertTrue(toolNames.contains("gitlab_list_available_repositories"));
         assertTrue(toolNames.contains("gitlab_find_class_references"));
         assertTrue(toolNames.contains("gitlab_read_repository_file"));
         assertTrue(toolNames.contains("gitlab_read_repository_file_chunk"));

@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
@@ -14,6 +15,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolSco
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +32,105 @@ import static org.mockito.Mockito.when;
 class GitLabMcpToolsTest {
 
     private final GitLabMcpTools gitLabMcpTools = new GitLabMcpTools(new TestGitLabRepositoryPort());
+
+    @Test
+    void shouldListAvailableRepositoriesFromOperationalContextUsingSessionGroup() {
+        var tools = new GitLabMcpTools(
+                mock(GitLabRepositoryPort.class),
+                ignored -> operationalContextCatalog(
+                        repository(
+                                "backend-repo",
+                                "Backend",
+                                "service",
+                                "active",
+                                "CLP",
+                                "CLP/backend",
+                                "backend",
+                                List.of("backend", "CLP/backend"),
+                                List.of("backend"),
+                                List.of("backend-runtime"),
+                                List.of("decision", "limit"),
+                                List.of("decision-process"),
+                                List.of("cbp"),
+                                List.of("shared-lib-repo"),
+                                List.of("pl.santander.clp.backend"),
+                                List.of("/clp/process/decision"),
+                                List.of("backend-module")
+                        ),
+                        repository(
+                                "agreement-repo",
+                                "Agreement",
+                                "service",
+                                "active",
+                                "CLP",
+                                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+                                "CLP_AGREEMENT_PROCESS",
+                                List.of("agreement-process"),
+                                List.of("agreement"),
+                                List.of("agreement-runtime"),
+                                List.of("agreement"),
+                                List.of("agreement-process"),
+                                List.of(),
+                                List.of(),
+                                List.of("pl.santander.clp.agreement"),
+                                List.of("/clp/agreement"),
+                                List.of("agreement-bootstrap")
+                        ),
+                        repository(
+                                "outside-repo",
+                                "Outside",
+                                "service",
+                                "active",
+                                "OTHER",
+                                "OTHER/outside",
+                                "outside",
+                                List.of("outside"),
+                                List.of("outside"),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of("com.example.outside"),
+                                List.of("/outside"),
+                                List.of("outside-module")
+                        )
+                )
+        );
+
+        var response = tools.listAvailableRepositories(
+                "Sprawdzam katalog repozytoriow.",
+                gitLabToolContext("CLP", "release/2026.04", "corr-123")
+        );
+
+        assertEquals("CLP", response.group());
+        assertEquals("release/2026.04", response.branch());
+        assertEquals(2, response.repositories().size());
+
+        var backend = response.repositories().get(0);
+        assertEquals("backend-repo", backend.repositoryId());
+        assertEquals("Backend", backend.name());
+        assertEquals("backend", backend.projectName());
+        assertEquals("CLP/backend", backend.gitLabPath());
+        assertTrue(backend.summary().contains("Backend repository"));
+        assertTrue(backend.summary().contains("Bounded contexts: decision, limit."));
+        assertIterableEquals(List.of("backend-repo", "Backend", "backend", "CLP/backend"), backend.aliases());
+        assertEquals("service", backend.repositoryType());
+        assertEquals("active", backend.lifecycleStatus());
+        assertIterableEquals(List.of("backend"), backend.systems());
+        assertIterableEquals(List.of("backend-runtime"), backend.runtimeComponents());
+        assertIterableEquals(List.of("decision", "limit"), backend.boundedContexts());
+        assertIterableEquals(List.of("decision-process"), backend.processes());
+        assertIterableEquals(List.of("cbp"), backend.integrations());
+        assertIterableEquals(List.of("shared-lib-repo"), backend.relatedRepositoryIds());
+        assertIterableEquals(List.of("pl.santander.clp.backend"), backend.packagePrefixes());
+        assertIterableEquals(List.of("/clp/process/decision"), backend.endpointPrefixes());
+        assertIterableEquals(List.of("backend-module"), backend.modulePaths());
+
+        var agreement = response.repositories().get(1);
+        assertEquals("PROCESSES/CLP_AGREEMENT_PROCESS", agreement.projectName());
+        assertEquals("CLP/PROCESSES/CLP_AGREEMENT_PROCESS", agreement.gitLabPath());
+    }
 
     @Test
     void shouldDelegateSearchRepositoryCandidatesUsingSessionBoundScope() {
@@ -620,6 +721,72 @@ class GitLabMcpToolsTest {
 
     private ToolContext gitLabToolContext() {
         return gitLabToolContext("platform/backend", "feature/INC-123", "corr-123");
+    }
+
+    private OperationalContextCatalog operationalContextCatalog(Map<String, Object>... repositories) {
+        return new OperationalContextCatalog(
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(repositories),
+                List.of(),
+                List.of(),
+                List.of(),
+                ""
+        );
+    }
+
+    private Map<String, Object> repository(
+            String id,
+            String name,
+            String repositoryType,
+            String lifecycleStatus,
+            String group,
+            String projectPath,
+            String project,
+            List<String> aliases,
+            List<String> systems,
+            List<String> runtimeComponents,
+            List<String> boundedContexts,
+            List<String> processes,
+            List<String> integrations,
+            List<String> relatedRepositories,
+            List<String> packagePrefixes,
+            List<String> endpointPrefixes,
+            List<String> modulePaths
+    ) {
+        var repository = new LinkedHashMap<String, Object>();
+        repository.put("id", id);
+        repository.put("name", name);
+        repository.put("repositoryType", repositoryType);
+        repository.put("lifecycleStatus", lifecycleStatus);
+        repository.put("git", Map.of(
+                "provider", "gitlab",
+                "group", group,
+                "projectPath", projectPath,
+                "project", project,
+                "aliases", aliases
+        ));
+        repository.put("purpose", "%s repository represented in operational context.".formatted(name));
+        repository.put("references", Map.of(
+                "systems", systems,
+                "runtimeComponents", runtimeComponents,
+                "boundedContexts", boundedContexts,
+                "processes", processes,
+                "integrations", integrations,
+                "repositories", relatedRepositories
+        ));
+        repository.put("sourceLayout", Map.of(
+                "modulePaths", modulePaths
+        ));
+        repository.put("matchSignals", Map.of(
+                "strong", Map.of(
+                        "packagePrefixes", packagePrefixes,
+                        "endpointPrefixes", endpointPrefixes
+                )
+        ));
+        return repository;
     }
 
     private ToolContext gitLabToolContext(String group, String branch, String correlationId) {

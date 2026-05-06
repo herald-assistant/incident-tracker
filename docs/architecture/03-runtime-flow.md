@@ -269,10 +269,16 @@ GitLab tools:
   sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
   discovery,
 - dla znanego projektu/pliku zostaje focused toolset:
-  `gitlab_find_class_references`, `gitlab_find_flow_context`,
-  `gitlab_read_repository_file_outline`,
+  `gitlab_list_available_repositories`, `gitlab_find_class_references`,
+  `gitlab_find_flow_context`, `gitlab_read_repository_file_outline`,
   `gitlab_read_repository_file_chunk`,
   `gitlab_read_repository_file_chunks`,
+- `gitlab_list_available_repositories` zwraca repozytoria GitLaba dostepne w
+  biezacym session group z operational context: `projectName`, `gitLabPath`,
+  krotki summary oraz sygnaly dopasowania, m.in. aliases, systems,
+  runtimeComponents, boundedContexts, processes, integrations,
+  packagePrefixes, endpointPrefixes i modulePaths; `projectName` z odpowiedzi
+  jest inputem dla pozostalych GitLab tools,
 - broad search zostaje dla braku deterministic GitLab evidence,
 - `gitlab_find_flow_context` przyjmuje focused `keywords`, bez osobnych
   parametrow klasy/metody/pliku.
@@ -409,8 +415,8 @@ na ten sink przed wejsciem do execution gatewaya.
 Kategorie:
 
 - `gitlab/tool-fetched-code` dla file/chunk/chunks,
-- `gitlab/tool-discovery` dla search candidates, file outline, flow context i
-  class references,
+- `gitlab/tool-discovery` dla available repositories, search candidates, file
+  outline, flow context i class references,
 - `database/tool-results` dla DB tools.
 
 GitLab capture jest celowo prosty: user-facing evidence trzyma `reason` podany

@@ -50,11 +50,12 @@ class CopilotSdkToolFactoryTest {
                 null
         ));
 
-        assertEquals(7, tools.size());
+        assertEquals(8, tools.size());
         assertEquals(
                 Set.of(
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
+                        "gitlab_list_available_repositories",
                         "gitlab_search_repository_candidates",
                         "gitlab_read_repository_file",
                         "gitlab_read_repository_file_chunk",
@@ -141,6 +142,11 @@ class CopilotSdkToolFactoryTest {
         var toolsByName = factory.createToolDefinitions(gitLabSessionContext()).stream()
                 .collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
 
+        assertSchemaProperties(
+                toolsByName.get("gitlab_list_available_repositories"),
+                Set.of("reason"),
+                Set.of("group", "branch", "correlationId", "toolContext")
+        );
         assertSchemaProperties(
                 toolsByName.get("gitlab_search_repository_candidates"),
                 Set.of("projectNames", "operationNames", "keywords", "reason"),

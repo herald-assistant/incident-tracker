@@ -20,6 +20,15 @@ public class CopilotIncidentToolGuidanceCatalog {
 
     private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.ofEntries(
             Map.entry(
+                    GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
+                    List.of(
+                            "Use before GitLab search/read tools when projectName or GitLab path is not known from evidence.",
+                            "Use returned projectName values as inputs for GitLab search, flow context and read tools.",
+                            "Call once per investigation unless new evidence clearly points to another repository.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
+            Map.entry(
                     GitLabToolNames.READ_REPOSITORY_FILE,
                     List.of(
                             "Expensive. Use only when outline/chunk tools are insufficient.",

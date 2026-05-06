@@ -35,6 +35,40 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         capture(
                 toolEvidenceListener,
                 "session-1",
+                "tool-call-gitlab-list-1",
+                "gitlab_list_available_repositories",
+                "{\"reason\":\"Szukam dostepnych repozytoriow.\"}",
+                """
+                        {
+                          "group": "sample/runtime",
+                          "branch": "main",
+                          "repositories": [
+                            {
+                              "repositoryId": "orders-api-repo",
+                              "name": "Orders API",
+                              "summary": "Orders API repository.",
+                              "projectName": "orders-api",
+                              "gitLabPath": "sample/runtime/orders-api",
+                              "aliases": ["orders-api"],
+                              "repositoryType": "service",
+                              "lifecycleStatus": "active",
+                              "systems": ["orders"],
+                              "runtimeComponents": ["orders-api-runtime"],
+                              "boundedContexts": ["orders"],
+                              "processes": ["order-process"],
+                              "integrations": [],
+                              "relatedRepositoryIds": [],
+                              "packagePrefixes": ["pl.mkn.orders"],
+                              "endpointPrefixes": ["/orders"],
+                              "modulePaths": ["orders-api"]
+                            }
+                          ]
+                        }
+                        """
+        );
+        capture(
+                toolEvidenceListener,
+                "session-1",
                 "tool-call-gitlab-search-1",
                 "gitlab_search_repository_candidates",
                 "{\"reason\":\"Szukam kandydatow plikow.\"}",
@@ -125,35 +159,42 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                         """
         );
 
-        assertEquals(4, capturedSections.size());
-        var lastSection = capturedSections.get(3);
+        assertEquals(5, capturedSections.size());
+        var lastSection = capturedSections.get(4);
         assertEquals("gitlab", lastSection.provider());
         assertEquals("tool-discovery", lastSection.category());
-        assertEquals(4, lastSection.items().size());
+        assertEquals(5, lastSection.items().size());
 
-        var searchAttributes = attributes(lastSection.items().get(0));
+        var listAttributes = attributes(lastSection.items().get(0));
+        assertEquals("gitlab_list_available_repositories", listAttributes.get("toolName"));
+        assertEquals("Szukam dostepnych repozytoriow.", listAttributes.get("reason"));
+        assertEquals("1", listAttributes.get("repositoryCount"));
+        assertEquals("1", listAttributes.get("toolCaptureOrder"));
+        assertTrue(listAttributes.get("repositories").contains("orders-api"));
+
+        var searchAttributes = attributes(lastSection.items().get(1));
         assertEquals("gitlab_search_repository_candidates", searchAttributes.get("toolName"));
         assertEquals("Szukam kandydatow plikow.", searchAttributes.get("reason"));
         assertEquals("1", searchAttributes.get("candidateCount"));
-        assertEquals("1", searchAttributes.get("toolCaptureOrder"));
+        assertEquals("2", searchAttributes.get("toolCaptureOrder"));
         assertTrue(searchAttributes.get("candidates").contains("OrderService.java"));
 
-        var outlineAttributes = attributes(lastSection.items().get(1));
+        var outlineAttributes = attributes(lastSection.items().get(2));
         assertEquals("gitlab_read_repository_file_outline", outlineAttributes.get("toolName"));
         assertTrue(outlineAttributes.get("classes").contains("OrderService"));
-        assertEquals("2", outlineAttributes.get("toolCaptureOrder"));
+        assertEquals("3", outlineAttributes.get("toolCaptureOrder"));
 
-        var flowAttributes = attributes(lastSection.items().get(2));
+        var flowAttributes = attributes(lastSection.items().get(3));
         assertEquals("gitlab_find_flow_context", flowAttributes.get("toolName"));
         assertEquals("1", flowAttributes.get("groupCount"));
         assertEquals("1", flowAttributes.get("recommendedNextReadCount"));
         assertTrue(flowAttributes.get("groups").contains("OrderRepository.java"));
-        assertEquals("3", flowAttributes.get("toolCaptureOrder"));
+        assertEquals("4", flowAttributes.get("toolCaptureOrder"));
 
-        var classAttributes = attributes(lastSection.items().get(3));
+        var classAttributes = attributes(lastSection.items().get(4));
         assertEquals("gitlab_find_class_references", classAttributes.get("toolName"));
         assertEquals("OrderEntity", classAttributes.get("searchedClass"));
-        assertEquals("4", classAttributes.get("toolCaptureOrder"));
+        assertEquals("5", classAttributes.get("toolCaptureOrder"));
     }
 
     private Map<String, String> attributes(AnalysisEvidenceItem item) {
