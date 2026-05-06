@@ -39,8 +39,10 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_PROCESS_IDS = "processIds";
     static final String ATTRIBUTE_CONTEXT_IDS = "contextIds";
     static final String ATTRIBUTE_REPOSITORY_IDS = "repositoryIds";
+    static final String ATTRIBUTE_CODE_SEARCH_SCOPE_IDS = "codeSearchScopeIds";
     static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS = "codeSearchRepositoryIds";
     static final String ATTRIBUTE_CODE_SEARCH_PROJECTS = "codeSearchProjects";
+    static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES = "codeSearchRepositoryRoles";
     static final String ATTRIBUTE_MATCHED_BY = "matchedBy";
     static final String ATTRIBUTE_SOURCE_SYSTEM = "sourceSystem";
     static final String ATTRIBUTE_TARGET_SYSTEMS = "targetSystems";
@@ -116,8 +118,10 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CONTEXT_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_REPOSITORY_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_SCOPE_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_PROJECTS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PACKAGES)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CLASS_HINTS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
@@ -302,8 +306,10 @@ public record OperationalContextEvidenceView(
             List<String> processIds,
             List<String> contextIds,
             List<String> repositoryIds,
+            List<String> codeSearchScopeIds,
             List<String> codeSearchRepositoryIds,
             List<String> codeSearchProjects,
+            List<String> codeSearchRepositoryRoles,
             List<String> sourcePackages,
             List<String> classHints,
             List<String> matchedBy
@@ -314,8 +320,10 @@ public record OperationalContextEvidenceView(
             contextIds = immutable(contextIds);
             ownerTeamIds = immutable(ownerTeamIds);
             repositoryIds = immutable(repositoryIds);
+            codeSearchScopeIds = immutable(codeSearchScopeIds);
             codeSearchRepositoryIds = immutable(codeSearchRepositoryIds);
             codeSearchProjects = immutable(codeSearchProjects);
+            codeSearchRepositoryRoles = immutable(codeSearchRepositoryRoles);
             sourcePackages = immutable(sourcePackages);
             classHints = immutable(classHints);
             matchedBy = immutable(matchedBy);

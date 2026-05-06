@@ -218,6 +218,7 @@ export class ContextCatalogTableComponent {
     switch (type) {
       case 'system':
       case 'repository':
+      case 'code-search-scope':
       case 'process':
       case 'integration':
       case 'bounded-context':

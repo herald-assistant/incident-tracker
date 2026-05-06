@@ -24,6 +24,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     List.of(
                             "Use before GitLab search/read tools when projectName or GitLab path is not known from evidence.",
                             "Use returned projectName values as inputs for GitLab search, flow context and read tools.",
+                            "When codeSearchScopes are returned, prefer the matching scope and pass all its projectNames together.",
                             "Call once per investigation unless new evidence clearly points to another repository.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
@@ -44,7 +45,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                     List.of(
                             "Use when project or file is unclear.",
-                            "When operational context lists multiple codeSearchProjects for the matched component, search them as one component scope, including library/shared repositories.",
+                            "When operational context lists codeSearchScopes or multiple codeSearchProjects for the matched component, search them as one component scope, including library/shared repositories.",
                             "Prefer focused terms from stacktrace, exception, class, entity, repository or service names.",
                             "Use to ground a detailed non-code technical-functional affectedFunction when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed.",
                             "Do not use repeatedly with broad generic terms.",
@@ -80,7 +81,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
                             "Use when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed to identify the smallest functional flow for affectedFunction.",
-                            "If operational context points to library/shared repositories for the component, include those projects when they may contain the collaborator deciding the flow.",
+                            "If operational context points to a codeSearchScope with library/shared repositories for the component, include those projects when they may contain the collaborator deciding the flow.",
                             "Use focused keywords grounded in logs, stacktrace, code evidence or current tool results.",
                             "Use recommended next reads rather than launching broad searches.",
                             "Always provide reason as one short Polish sentence for the operator."
@@ -90,7 +91,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.FIND_CLASS_REFERENCES,
                     List.of(
                             "Use when a concrete class from stacktrace or code evidence needs ownership or caller context.",
-                            "If the class is not found in the main repository, make one focused retry across operational-context codeSearchProjects for the same component before declaring it missing.",
+                            "If the class is not found in the main repository, make one focused retry across the matching operational-context codeSearchScope or codeSearchProjects before declaring it missing.",
                             "Prefer class names and related hints from existing evidence.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )

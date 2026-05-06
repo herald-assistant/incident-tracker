@@ -34,9 +34,10 @@ Operational context can list several repositories for the same system/component,
 - generated clients or integration libraries,
 - supporting modules that are packaged into or called by the deployed service.
 
-When operational context provides `repoIds`, `codeSearchRepoIds`, `codeSearchProjects`, repository `project`, package roots or class hints for a matched system, treat that whole list as the code scope of the deployment component.
+When operational context provides `codeSearchScopeIds`, `codeSearchRepoIds`, `codeSearchProjects`, repository `project`, package roots or class hints for a matched system, treat that whole list as the code scope of the deployment component.
+If `codeSearchRepositoryRoles` are present, use the primary repository first and then the shared-library, generated-client, integration-library or collaborator repositories in priority order.
 
-If a grounded class, entity, DTO, mapper, client or repository is not found in the main service repository, do not conclude that the code is unavailable after one repository lookup. Make a focused GitLab attempt across the remaining `codeSearchProjects` or matched repository projects first.
+If a grounded class, entity, DTO, mapper, client or repository is not found in the main service repository, do not conclude that the code is unavailable after one repository lookup. Make a focused GitLab attempt across the matching `codeSearchScopes`, remaining `codeSearchProjects` or matched repository projects first.
 
 Use this especially when:
 
@@ -55,11 +56,14 @@ The tool reads the repository catalog from operational context for the fixed ses
 
 Use the returned `projectName` as the input for later GitLab search, flow context, outline, chunk, and read tools. Treat `gitLabPath`, `summary`, and repository metadata as disambiguating context.
 
+When the response contains `codeSearchScopes`, prefer the matching scope over a single repository. Pass all `projectNames` from that scope together to search/flow/class-reference tools. The scope repositories carry roles and priorities; start with `primary`, then follow supported shared libraries, generated clients or integration libraries only as needed.
+
 Match incident clues against:
 
 - repository `name`, `aliases`, `projectName`, and `gitLabPath`,
 - `systems`, `runtimeComponents`, `boundedContexts`, `processes`, and `integrations`,
-- `packagePrefixes`, `endpointPrefixes`, and `modulePaths`.
+- `packagePrefixes`, `endpointPrefixes`, and `modulePaths`,
+- `codeSearchScopes[].target`, `codeSearchScopes[].projectNames`, repository roles, package prefixes and class hints.
 
 Prefer one catalog call at the beginning of a cross-repository investigation. Do not repeat the catalog lookup unless new evidence clearly points to another repository family.
 
@@ -130,7 +134,7 @@ If the GitLab attempt finds no useful flow context, stop and state that limitati
 
 1. Prefer attached deterministic GitLab evidence.
 2. Use `gitlab_list_available_repositories` when projectName/GitLab path is unclear and evidence contains only loose repository, system, module, package, endpoint, integration, or bounded-context clues.
-3. If operational context lists multiple `codeSearchProjects` for the matched system, use those projects as one component scope before treating a class as missing.
+3. If operational context lists `codeSearchScopes` or multiple `codeSearchProjects` for the matched system, use those projects as one component scope before treating a class as missing.
 4. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates after using available catalog clues.
 5. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
 6. When `gitlab_find_class_references` returns no useful result for the main project, retry once across the other operational-context projects for that component.
@@ -158,7 +162,7 @@ Use inputs inferred from evidence:
 - queue/topic/message names,
 - downstream client names,
 - service/container/project hints,
-- operational-context `codeSearchProjects`, repository `project`, package roots and class hints,
+- operational-context `codeSearchScopes`, `codeSearchProjects`, repository `project`, package roots and class hints,
 - available repository catalog signals such as aliases, systems, bounded contexts, package prefixes, endpoint prefixes and module paths,
 - business identifiers from logs.
 
@@ -179,7 +183,7 @@ Instead:
    - mapper,
    - validator,
    - service.
-2. If the project is unclear, use `gitlab_list_available_repositories` first when loose repository or component clues are available, then use `gitlab_search_repository_candidates` with the selected `projectName` values.
+2. If the project is unclear, use `gitlab_list_available_repositories` first when loose repository or component clues are available, then use `gitlab_search_repository_candidates` with all `projectName` values from the selected `codeSearchScope` or repository set.
 3. If the class is grounded, use `gitlab_find_class_references` with:
    - the fully qualified class name when known,
    - the simple class name,

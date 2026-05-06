@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import {
   OpenQuestionDto,
   OperationalContextBoundedContextRowDto,
+  OperationalContextCodeSearchScopeRowDto,
   OperationalContextEntityDetailDto,
   OperationalContextGlossaryRowDto,
   OperationalContextHandoffRuleRowDto,
@@ -35,6 +36,12 @@ export class OperationalContextApiService {
 
   getRepositories(): Observable<OperationalContextRepositoryRowDto[]> {
     return this.http.get<OperationalContextRepositoryRowDto[]>(`${this.baseUrl}/repositories`);
+  }
+
+  getCodeSearchScopes(): Observable<OperationalContextCodeSearchScopeRowDto[]> {
+    return this.http.get<OperationalContextCodeSearchScopeRowDto[]>(
+      `${this.baseUrl}/code-search-scopes`
+    );
   }
 
   getProcesses(): Observable<OperationalContextProcessRowDto[]> {

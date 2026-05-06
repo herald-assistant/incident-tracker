@@ -92,6 +92,7 @@ public final class OperationalContextDtos {
     public record OperationalContextSummaryDto(
             int systems,
             int repositories,
+            int codeSearchScopes,
             int processes,
             int integrations,
             int boundedContexts,
@@ -134,7 +135,24 @@ public final class OperationalContextDtos {
             ExplainableAggregateDto entrypoints,
             ExplainableAggregateDto runtimeMappings,
             ExplainableAggregateDto modules,
+            ExplainableAggregateDto codeSearchScopes,
+            ExplainableAggregateDto codeSearchRoles,
             ExplainableAggregateDto handoffReadiness,
+            ExplainableAggregateDto validation
+    ) {
+    }
+
+    public record OperationalContextCodeSearchScopeRowDto(
+            String id,
+            String name,
+            String lifecycleStatus,
+            ExplainableAggregateDto targets,
+            ExplainableAggregateDto repositories,
+            ExplainableAggregateDto packageHints,
+            ExplainableAggregateDto entryHints,
+            ExplainableAggregateDto dataHints,
+            ExplainableAggregateDto workflowHints,
+            ExplainableAggregateDto strategy,
             ExplainableAggregateDto validation
     ) {
     }

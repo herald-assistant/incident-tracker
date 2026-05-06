@@ -41,9 +41,9 @@ Wazny detal:
 przez typed views albo helpery blisko capability, np. dla logow i deploymentu.
 To samo dotyczy operational context: provider publikuje generyczne evidence,
 ale downstream ma czytac je przez `OperationalContextEvidenceView`. Ten widok
-pokazuje tez `codeSearchProjects`, pakiety i class hints dla dopasowanego
-systemu, zeby AI traktowalo main repo, biblioteki i shared modules jako kod
-jednego komponentu wdrozeniowego.
+pokazuje tez `codeSearchScopeIds`, `codeSearchProjects`, role repozytoriow,
+pakiety i class hints dla dopasowanego systemu, zeby AI traktowalo main repo,
+biblioteki i shared modules jako kod jednego komponentu wdrozeniowego.
 
 To jest kompromis:
 

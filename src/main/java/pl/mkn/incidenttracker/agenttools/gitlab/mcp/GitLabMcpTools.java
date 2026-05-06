@@ -97,7 +97,8 @@ public class GitLabMcpTools {
                     Lists GitLab repositories registered in operational context and available in the current fixed session group.
                     Use this when projectName or GitLab path is unknown and logs, traces, code, comments, package names,
                     system names, module names, endpoints or bounded contexts mention another application or repository.
-                    Use returned projectName values as inputs for GitLab search, flow context and read tools.
+                    Prefer returned codeSearchScopes when a component maps to multiple repositories; use all projectName
+                    values from the matching scope as inputs for GitLab search, flow context and read tools.
                     The group and branch are taken from hidden ToolContext.
                     """
     )
@@ -126,15 +127,17 @@ public class GitLabMcpTools {
                 false
         ));
         var repositories = GitLabAvailableRepositoryMapper.fromCatalog(scope.group(), catalog);
+        var codeSearchScopes = GitLabAvailableRepositoryMapper.codeSearchScopesFromCatalog(scope.group(), catalog);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} repositoryCount={} projectNames={}",
+                "Tool result [{}] correlationId={} group={} branch={} environment={} repositoryCount={} codeSearchScopeCount={} projectNames={}",
                 LIST_AVAILABLE_REPOSITORIES,
                 scope.correlationId(),
                 scope.group(),
                 scope.branch(),
                 scope.environment(),
                 repositories.size(),
+                codeSearchScopes.size(),
                 abbreviateList(repositories.stream()
                         .map(repository -> repository.projectName())
                         .toList())
@@ -143,7 +146,8 @@ public class GitLabMcpTools {
         return new GitLabListAvailableRepositoriesToolResponse(
                 scope.group(),
                 scope.branch(),
-                repositories
+                repositories,
+                codeSearchScopes
         );
     }
 

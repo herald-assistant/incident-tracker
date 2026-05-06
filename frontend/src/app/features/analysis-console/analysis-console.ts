@@ -52,6 +52,11 @@ const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
   defaultReasoningEfforts: [],
   models: []
 };
+type SelectOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
 
 @Component({
   selector: 'app-analysis-console',
@@ -93,6 +98,7 @@ export class AnalysisConsoleComponent {
   readonly transportError = signal<TransportErrorState | null>(null);
   readonly job = signal<AnalysisJobStateSnapshot | null>(null);
   readonly exportState = signal<ExportState | null>(null);
+  readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
   readonly selectedAiModel = signal('');
   readonly githubAuthStatus = signal<GitHubAuthStatus | null>(null);
@@ -100,23 +106,47 @@ export class AnalysisConsoleComponent {
   readonly githubReauthRequiredByError = signal(false);
   readonly chatNeedsGithubAuth = signal(false);
 
-  readonly aiModelOptions = computed(() => [
-    { value: '', label: this.defaultModelLabel() },
-    ...this.aiModelCatalog().models.map((model) => ({
-      value: model.id,
-      label: this.modelLabel(model.id, model.name)
-    }))
-  ]);
+  readonly aiModelOptions = computed<SelectOption[]>(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return [
+        {
+          value: this.aiModelControl.value.trim(),
+          label: 'Ładowanie modeli AI...',
+          disabled: true
+        }
+      ];
+    }
+
+    return [
+      { value: '', label: this.defaultModelLabel() },
+      ...this.aiModelCatalog().models.map((model) => ({
+        value: model.id,
+        label: this.modelLabel(model.id, model.name)
+      }))
+    ];
+  });
   readonly availableReasoningEfforts = computed(() =>
     this.reasoningEffortsForModel(this.selectedAiModel())
   );
-  readonly reasoningEffortOptions = computed(() => [
-    { value: '', label: this.defaultReasoningEffortLabel() },
-    ...this.availableReasoningEfforts().map((effort) => ({
-      value: effort,
-      label: this.reasoningEffortLabel(effort)
-    }))
-  ]);
+  readonly reasoningEffortOptions = computed<SelectOption[]>(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return [
+        {
+          value: this.reasoningEffortControl.value.trim(),
+          label: 'Ładowanie reasoning effort...',
+          disabled: true
+        }
+      ];
+    }
+
+    return [
+      { value: '', label: this.defaultReasoningEffortLabel() },
+      ...this.availableReasoningEfforts().map((effort) => ({
+        value: effort,
+        label: this.reasoningEffortLabel(effort)
+      }))
+    ];
+  });
   readonly isAnalysisBlockedByAuth = computed(() => {
     const status = this.githubAuthStatus();
     return status?.mode === 'GITHUB_APP' && (!status.connected || status.reauthRequired);
@@ -297,6 +327,7 @@ export class AnalysisConsoleComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          this.isAiModelOptionsLoading.set(false);
           this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
           this.loadGithubAuthStatus();
         },
@@ -526,6 +557,7 @@ export class AnalysisConsoleComponent {
 
   private loadGithubAuthStatus(): void {
     this.githubAuthError.set('');
+    this.isAiModelOptionsLoading.set(true);
     this.githubAuth
       .getStatus()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -536,6 +568,7 @@ export class AnalysisConsoleComponent {
           if (status.connected) {
             this.loadAiModelOptions();
           } else {
+            this.isAiModelOptionsLoading.set(false);
             this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
             this.syncReasoningEffortSelection();
           }
@@ -546,6 +579,7 @@ export class AnalysisConsoleComponent {
             'Nie udało się odczytać statusu autoryzacji GitHub.'
           );
           this.githubAuthError.set(transportError.message);
+          this.isAiModelOptionsLoading.set(false);
           this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
           this.syncReasoningEffortSelection();
         }
@@ -553,9 +587,13 @@ export class AnalysisConsoleComponent {
   }
 
   private loadAiModelOptions(): void {
+    this.isAiModelOptionsLoading.set(true);
     this.analysisApi
       .getAiModelOptions()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isAiModelOptionsLoading.set(false))
+      )
       .subscribe({
         next: (options) => {
           this.aiModelCatalog.set(this.normalizeAiModelOptions(options));

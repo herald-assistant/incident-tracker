@@ -1,15 +1,23 @@
 package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchRepository;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchScope;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchStrategy;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableRepository;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 final class GitLabAvailableRepositoryMapper {
 
@@ -40,6 +48,28 @@ final class GitLabAvailableRepositoryMapper {
                         repository -> safeSortKey(repository.projectName()),
                         String.CASE_INSENSITIVE_ORDER
                 ))
+                .toList();
+    }
+
+    static List<GitLabAvailableCodeSearchScope> codeSearchScopesFromCatalog(
+            String sessionGroup,
+            OperationalContextCatalog catalog
+    ) {
+        if (catalog == null || catalog.codeSearchScopes() == null || catalog.codeSearchScopes().isEmpty()) {
+            return List.of();
+        }
+
+        var repositoriesById = fromCatalog(sessionGroup, catalog).stream()
+                .collect(Collectors.toMap(
+                        repository -> normalizeId(repository.repositoryId()),
+                        Function.identity(),
+                        (left, right) -> left
+                ));
+
+        return catalog.codeSearchScopes().stream()
+                .map(scope -> toCodeSearchScope(scope, repositoriesById))
+                .filter(scope -> scope != null && !scope.repositories().isEmpty())
+                .sorted(Comparator.comparing(scope -> safeSortKey(scope.scopeId()), String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
 
@@ -84,6 +114,74 @@ final class GitLabAvailableRepositoryMapper {
                 endpointPrefixes(repository),
                 modulePaths(repository)
         );
+    }
+
+    private static GitLabAvailableCodeSearchScope toCodeSearchScope(
+            OperationalContextRepositorySearchScope scope,
+            Map<String, GitLabAvailableRepository> repositoriesById
+    ) {
+        var repositories = sortedIncludedScopeRepositories(scope).stream()
+                .map(repository -> toCodeSearchRepository(repository, repositoriesById))
+                .filter(repository -> repository != null)
+                .toList();
+        var projectNames = distinctLimited(repositories.stream()
+                .flatMap(repository -> repository.projectNames().stream())
+                .toList(), MAX_MODULE_PATHS);
+
+        return new GitLabAvailableCodeSearchScope(
+                scope.id(),
+                firstNonBlank(scope.name(), scope.id()),
+                scope.lifecycleStatus(),
+                scope.target().systems(),
+                scope.target().runtimeComponents(),
+                scope.target().processes(),
+                scope.target().boundedContexts(),
+                scope.useFor(),
+                repositories,
+                projectNames,
+                distinctLimited(scope.packagePrefixes(), MAX_PACKAGE_PREFIXES),
+                distinctLimited(scope.classHints(), MAX_PACKAGE_PREFIXES),
+                distinctLimited(scope.endpointHints(), MAX_ENDPOINT_PREFIXES),
+                distinctLimited(scope.queueTopicHints(), MAX_ENDPOINT_PREFIXES),
+                new GitLabAvailableCodeSearchStrategy(
+                        scope.searchStrategy().priorityOrder(),
+                        scope.searchStrategy().includeGeneratedClients(),
+                        scope.searchStrategy().includeSharedLibraries(),
+                        scope.searchStrategy().includeDeploymentConfig(),
+                        scope.searchStrategy().includeDocumentation(),
+                        scope.searchStrategy().notes()
+                )
+        );
+    }
+
+    private static GitLabAvailableCodeSearchRepository toCodeSearchRepository(
+            OperationalContextRepositorySearchRepository scopeRepository,
+            Map<String, GitLabAvailableRepository> repositoriesById
+    ) {
+        var repository = repositoriesById.get(normalizeId(scopeRepository.repoId()));
+        if (repository == null) {
+            return null;
+        }
+
+        return new GitLabAvailableCodeSearchRepository(
+                repository.repositoryId(),
+                scopeRepository.role(),
+                scopeRepository.priority(),
+                distinctLimited(List.of(repository.projectName()), MAX_ALIASES),
+                scopeRepository.moduleIds(),
+                scopeRepository.reason()
+        );
+    }
+
+    private static List<OperationalContextRepositorySearchRepository> sortedIncludedScopeRepositories(
+            OperationalContextRepositorySearchScope scope
+    ) {
+        return scope.repositories().stream()
+                .filter(OperationalContextRepositorySearchRepository::include)
+                .sorted(Comparator.comparing(
+                        repository -> repository.priority() != null ? repository.priority() : Integer.MAX_VALUE
+                ))
+                .toList();
     }
 
     private static boolean isGitLabRepository(OperationalContextRepository repository) {
@@ -253,6 +351,10 @@ final class GitLabAvailableRepositoryMapper {
         return StringUtils.hasText(value)
                 ? trimSlashes(value.trim()).toLowerCase(Locale.ROOT)
                 : "";
+    }
+
+    private static String normalizeId(String value) {
+        return StringUtils.hasText(value) ? value.trim().toLowerCase(Locale.ROOT) : "";
     }
 
     private static String trimSlashes(String value) {

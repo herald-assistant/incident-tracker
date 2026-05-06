@@ -70,6 +70,11 @@ o pliki. Zwraca katalog repozytoriow z operational context dla biezacej grupy:
 sygnaly dopasowania takie jak aliases, systems, boundedContexts, package
 prefixes, endpoint prefixes i module paths.
 
+Ten tool zwraca tez `codeSearchScopes` z `repo-map.yml`. Scope pokazuje, ktore
+repozytoria trzeba przeszukiwac razem dla jednego komponentu wdrozeniowego,
+jakie maja role i priorytety oraz jakie `projectName` przekazac wspolnie do
+search/flow/class-reference tools.
+
 Operational context moze wskazac kilka repozytoriow dla jednego komponentu
 wdrozeniowego. Dla GitLab tools oznacza to jeden code search scope:
 repo glowne, biblioteki, shared modules i wygenerowane klienty powinny byc

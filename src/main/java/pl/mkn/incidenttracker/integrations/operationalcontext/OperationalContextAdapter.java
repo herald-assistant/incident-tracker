@@ -72,12 +72,16 @@ public class OperationalContextAdapter implements OperationalContextPort {
         var rawSystems = mapList(systemsDocument.get("systems"));
         var rawIntegrations = mapList(integrationsDocument.get("integrations"));
         var rawRepositories = mapList(repositoriesDocument.get("repositories"));
+        var rawCodeSearchScopes = mapList(repositoriesDocument.get("codeSearchScopes"));
         var rawBoundedContexts = mapList(boundedContextsDocument.get("boundedContexts"));
         var teams = rawTeams.stream().map(OperationalContextDtos::team).toList();
         var processes = rawProcesses.stream().map(OperationalContextDtos::process).toList();
         var systems = rawSystems.stream().map(OperationalContextDtos::system).toList();
         var integrations = rawIntegrations.stream().map(OperationalContextDtos::integration).toList();
         var repositories = rawRepositories.stream().map(OperationalContextDtos::repository).toList();
+        var codeSearchScopes = rawCodeSearchScopes.stream()
+                .map(OperationalContextDtos::repositorySearchScope)
+                .toList();
         var boundedContexts = rawBoundedContexts.stream().map(OperationalContextDtos::boundedContext).toList();
         var glossaryDocument = readTextResource(resourceRoot, "glossary.md");
         var handoffRulesDocument = readTextResource(resourceRoot, "handoff-rules.md");
@@ -103,13 +107,14 @@ public class OperationalContextAdapter implements OperationalContextPort {
         );
 
         log.info(
-                "Operational context catalog loaded resourceRoot={} teams={} processes={} systems={} integrations={} repositories={} boundedContexts={} glossaryTerms={} handoffRules={} openQuestions={}",
+                "Operational context catalog loaded resourceRoot={} teams={} processes={} systems={} integrations={} repositories={} codeSearchScopes={} boundedContexts={} glossaryTerms={} handoffRules={} openQuestions={}",
                 resourceRoot,
                 teams.size(),
                 processes.size(),
                 systems.size(),
                 integrations.size(),
                 repositories.size(),
+                codeSearchScopes.size(),
                 boundedContexts.size(),
                 glossaryTerms.size(),
                 handoffRules.size(),
@@ -122,6 +127,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 systems,
                 integrations,
                 repositories,
+                codeSearchScopes,
                 boundedContexts,
                 glossaryTerms,
                 handoffRules,
@@ -140,6 +146,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 filterEntries(catalog.systems(), query, OperationalContextEntryType.SYSTEM),
                 filterEntries(catalog.integrations(), query, OperationalContextEntryType.INTEGRATION),
                 filterEntries(catalog.repositories(), query, OperationalContextEntryType.REPOSITORY),
+                catalog.codeSearchScopes(),
                 filterEntries(catalog.boundedContexts(), query, OperationalContextEntryType.BOUNDED_CONTEXT),
                 filterGlossaryTerms(catalog.glossaryTerms(), query),
                 filterHandoffRules(catalog.handoffRules(), query),

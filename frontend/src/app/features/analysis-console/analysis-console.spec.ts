@@ -3,7 +3,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -56,6 +56,28 @@ describe('AnalysisConsoleComponent auth flow', () => {
       'Zużycie Copilot będzie przypisane do tego konta GitHub.'
     );
     expect(analysisApi.getAiModelOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it('should show loaders while AI model options are loading', async () => {
+    const aiModelOptions = new Subject<AnalysisAiModelOptionsResponse>();
+    const { fixture } = await createComponent(localStatus(), aiModelOptions.asObservable());
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Ładowanie modeli AI...');
+    expect(fixture.nativeElement.textContent).toContain('Ładowanie reasoning effort...');
+    expect(fixture.nativeElement.querySelectorAll('.select-loader')).toHaveLength(2);
+
+    aiModelOptions.next(modelOptions());
+    aiModelOptions.complete();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Ładowanie modeli AI...');
+    expect(fixture.nativeElement.textContent).not.toContain('Ładowanie reasoning effort...');
+    expect(fixture.nativeElement.querySelectorAll('.select-loader')).toHaveLength(0);
+    expect(fixture.nativeElement.textContent).toContain('Domyślny backend (gpt-5.4)');
   });
 
   it('should start analysis without GitHub tokens or OAuth fields', async () => {
@@ -134,9 +156,12 @@ describe('AnalysisConsoleComponent auth flow', () => {
     );
   });
 
-  async function createComponent(status: GitHubAuthStatus) {
+  async function createComponent(
+    status: GitHubAuthStatus,
+    aiModelOptions$: Observable<AnalysisAiModelOptionsResponse> = of(modelOptions())
+  ) {
     const analysisApi = {
-      getAiModelOptions: vi.fn(() => of(modelOptions())),
+      getAiModelOptions: vi.fn(() => aiModelOptions$),
       startAnalysis: vi.fn(() => of(queuedJob())),
       getAnalysis: vi.fn(() => of(queuedJob())),
       sendChatMessage: vi.fn(() => of(queuedJob()))

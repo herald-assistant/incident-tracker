@@ -86,8 +86,13 @@ public final class GitLabToolDtos {
     public record GitLabListAvailableRepositoriesToolResponse(
             String group,
             String branch,
-            List<GitLabAvailableRepository> repositories
+            List<GitLabAvailableRepository> repositories,
+            List<GitLabAvailableCodeSearchScope> codeSearchScopes
     ) {
+        public GitLabListAvailableRepositoriesToolResponse {
+            repositories = repositories != null ? List.copyOf(repositories) : List.of();
+            codeSearchScopes = codeSearchScopes != null ? List.copyOf(codeSearchScopes) : List.of();
+        }
     }
 
     public record GitLabAvailableRepository(
@@ -120,6 +125,71 @@ public final class GitLabToolDtos {
             packagePrefixes = packagePrefixes != null ? List.copyOf(packagePrefixes) : List.of();
             endpointPrefixes = endpointPrefixes != null ? List.copyOf(endpointPrefixes) : List.of();
             modulePaths = modulePaths != null ? List.copyOf(modulePaths) : List.of();
+        }
+    }
+
+    public record GitLabAvailableCodeSearchScope(
+            String scopeId,
+            String name,
+            String lifecycleStatus,
+            List<String> targetSystems,
+            List<String> targetRuntimeComponents,
+            List<String> targetProcesses,
+            List<String> targetBoundedContexts,
+            List<String> useFor,
+            List<GitLabAvailableCodeSearchRepository> repositories,
+            List<String> projectNames,
+            List<String> packagePrefixes,
+            List<String> classHints,
+            List<String> endpointHints,
+            List<String> queueTopicHints,
+            GitLabAvailableCodeSearchStrategy searchStrategy
+    ) {
+        public GitLabAvailableCodeSearchScope {
+            targetSystems = targetSystems != null ? List.copyOf(targetSystems) : List.of();
+            targetRuntimeComponents = targetRuntimeComponents != null ? List.copyOf(targetRuntimeComponents) : List.of();
+            targetProcesses = targetProcesses != null ? List.copyOf(targetProcesses) : List.of();
+            targetBoundedContexts = targetBoundedContexts != null ? List.copyOf(targetBoundedContexts) : List.of();
+            useFor = useFor != null ? List.copyOf(useFor) : List.of();
+            repositories = repositories != null ? List.copyOf(repositories) : List.of();
+            projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
+            packagePrefixes = packagePrefixes != null ? List.copyOf(packagePrefixes) : List.of();
+            classHints = classHints != null ? List.copyOf(classHints) : List.of();
+            endpointHints = endpointHints != null ? List.copyOf(endpointHints) : List.of();
+            queueTopicHints = queueTopicHints != null ? List.copyOf(queueTopicHints) : List.of();
+            searchStrategy = searchStrategy != null ? searchStrategy : GitLabAvailableCodeSearchStrategy.empty();
+        }
+    }
+
+    public record GitLabAvailableCodeSearchRepository(
+            String repositoryId,
+            String role,
+            Integer priority,
+            List<String> projectNames,
+            List<String> moduleIds,
+            String reason
+    ) {
+        public GitLabAvailableCodeSearchRepository {
+            projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
+            moduleIds = moduleIds != null ? List.copyOf(moduleIds) : List.of();
+        }
+    }
+
+    public record GitLabAvailableCodeSearchStrategy(
+            List<String> priorityOrder,
+            boolean includeGeneratedClients,
+            boolean includeSharedLibraries,
+            boolean includeDeploymentConfig,
+            boolean includeDocumentation,
+            List<String> notes
+    ) {
+        public GitLabAvailableCodeSearchStrategy {
+            priorityOrder = priorityOrder != null ? List.copyOf(priorityOrder) : List.of();
+            notes = notes != null ? List.copyOf(notes) : List.of();
+        }
+
+        public static GitLabAvailableCodeSearchStrategy empty() {
+            return new GitLabAvailableCodeSearchStrategy(List.of(), false, false, false, false, List.of());
         }
     }
 

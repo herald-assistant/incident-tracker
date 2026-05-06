@@ -28,6 +28,7 @@ type ContextTab =
   | 'signal-resolver'
   | 'systems'
   | 'repositories'
+  | 'code-search-scopes'
   | 'processes'
   | 'integrations'
   | 'bounded-contexts'
@@ -45,6 +46,7 @@ interface ContextTabItem {
 interface ContextDataState {
   systems: OperationalContextCatalogRow[];
   repositories: OperationalContextCatalogRow[];
+  codeSearchScopes: OperationalContextCatalogRow[];
   processes: OperationalContextCatalogRow[];
   integrations: OperationalContextCatalogRow[];
   boundedContexts: OperationalContextCatalogRow[];
@@ -58,6 +60,7 @@ interface ContextDataState {
 const EMPTY_STATE: ContextDataState = {
   systems: [],
   repositories: [],
+  codeSearchScopes: [],
   processes: [],
   integrations: [],
   boundedContexts: [],
@@ -73,6 +76,7 @@ const TABS: ContextTabItem[] = [
   { id: 'signal-resolver', label: 'Signal Resolver' },
   { id: 'systems', label: 'Systems' },
   { id: 'repositories', label: 'Repositories' },
+  { id: 'code-search-scopes', label: 'Code Search' },
   { id: 'processes', label: 'Processes' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'bounded-contexts', label: 'Bounded Contexts' },
@@ -104,7 +108,21 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     { key: 'entrypoints', label: 'Entry classes', type: 'aggregate' },
     { key: 'runtimeMappings', label: 'Runtime mappings', type: 'aggregate' },
     { key: 'modules', label: 'Modules', type: 'aggregate' },
+    { key: 'codeSearchScopes', label: 'Search scopes', type: 'aggregate' },
+    { key: 'codeSearchRoles', label: 'Scope roles', type: 'aggregate' },
     { key: 'handoffReadiness', label: 'Handoff', type: 'aggregate' },
+    { key: 'validation', label: 'Status', type: 'aggregate' }
+  ],
+  'code-search-scopes': [
+    { key: 'name', label: 'Scope' },
+    { key: 'lifecycleStatus', label: 'Lifecycle' },
+    { key: 'targets', label: 'Targets', type: 'aggregate' },
+    { key: 'repositories', label: 'Repositories', type: 'aggregate' },
+    { key: 'packageHints', label: 'Packages', type: 'aggregate' },
+    { key: 'entryHints', label: 'Entry hints', type: 'aggregate' },
+    { key: 'dataHints', label: 'Data hints', type: 'aggregate' },
+    { key: 'workflowHints', label: 'Workflows', type: 'aggregate' },
+    { key: 'strategy', label: 'Strategy', type: 'aggregate' },
     { key: 'validation', label: 'Status', type: 'aggregate' }
   ],
   processes: [
@@ -279,6 +297,7 @@ export class ContextHomePageComponent {
       ![
         'system',
         'repository',
+        'code-search-scope',
         'process',
         'integration',
         'bounded-context',
@@ -374,6 +393,7 @@ export class ContextHomePageComponent {
       summary: this.api.getSummary(),
       systems: this.api.getSystems(),
       repositories: this.api.getRepositories(),
+      codeSearchScopes: this.api.getCodeSearchScopes(),
       processes: this.api.getProcesses(),
       integrations: this.api.getIntegrations(),
       boundedContexts: this.api.getBoundedContexts(),
@@ -390,6 +410,7 @@ export class ContextHomePageComponent {
           this.data.set({
             systems: response.systems,
             repositories: response.repositories,
+            codeSearchScopes: response.codeSearchScopes,
             processes: response.processes,
             integrations: response.integrations,
             boundedContexts: response.boundedContexts,
@@ -435,6 +456,8 @@ export class ContextHomePageComponent {
         return data.systems;
       case 'repositories':
         return data.repositories;
+      case 'code-search-scopes':
+        return data.codeSearchScopes;
       case 'processes':
         return data.processes;
       case 'integrations':
@@ -458,6 +481,8 @@ export class ContextHomePageComponent {
         return 'system';
       case 'repositories':
         return 'repository';
+      case 'code-search-scopes':
+        return 'code-search-scope';
       case 'processes':
         return 'process';
       case 'integrations':

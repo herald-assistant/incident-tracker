@@ -239,11 +239,14 @@ public class GitLabToolEvidenceMapper {
         try {
             var response = objectMapper.readValue(rawResult, GitLabListAvailableRepositoriesToolResponse.class);
             var repositories = safeList(response.repositories());
+            var codeSearchScopes = safeList(response.codeSearchScopes());
             var attributes = buildGitLabDiscoveryAttributes(LIST_AVAILABLE_REPOSITORIES, rawArguments);
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "branch", response.branch());
             addAttribute(attributes, "repositoryCount", String.valueOf(repositories.size()));
+            addAttribute(attributes, "codeSearchScopeCount", String.valueOf(codeSearchScopes.size()));
             addJsonAttribute(attributes, "repositories", repositories);
+            addJsonAttribute(attributes, "codeSearchScopes", codeSearchScopes);
 
             return sessionEvidence.appendItem(
                     GITLAB_PROVIDER,

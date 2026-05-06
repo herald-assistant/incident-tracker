@@ -75,6 +75,7 @@ public final class OperationalContextDtos {
             List<OperationalContextSystem> systems,
             List<OperationalContextIntegration> integrations,
             List<OperationalContextRepository> repositories,
+            List<OperationalContextRepositorySearchScope> codeSearchScopes,
             List<OperationalContextBoundedContext> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
             List<OperationalContextHandoffRule> handoffRules,
@@ -88,11 +89,39 @@ public final class OperationalContextDtos {
             systems = copyList(systems);
             integrations = copyList(integrations);
             repositories = copyList(repositories);
+            codeSearchScopes = copyList(codeSearchScopes);
             boundedContexts = copyList(boundedContexts);
             glossaryTerms = copyList(glossaryTerms);
             handoffRules = copyList(handoffRules);
             openQuestions = copyList(openQuestions);
             indexDocument = indexDocument != null ? indexDocument : "";
+        }
+
+        public OperationalContextCatalog(
+                List<OperationalContextTeam> teams,
+                List<OperationalContextProcess> processes,
+                List<OperationalContextSystem> systems,
+                List<OperationalContextIntegration> integrations,
+                List<OperationalContextRepository> repositories,
+                List<OperationalContextBoundedContext> boundedContexts,
+                List<OperationalContextGlossaryTerm> glossaryTerms,
+                List<OperationalContextHandoffRule> handoffRules,
+                List<OperationalContextOpenQuestion> openQuestions,
+                String indexDocument
+        ) {
+            this(
+                    teams,
+                    processes,
+                    systems,
+                    integrations,
+                    repositories,
+                    List.of(),
+                    boundedContexts,
+                    glossaryTerms,
+                    handoffRules,
+                    openQuestions,
+                    indexDocument
+            );
         }
 
         public OperationalContextCatalog(
@@ -112,6 +141,7 @@ public final class OperationalContextDtos {
                     systems,
                     integrations,
                     repositories,
+                    List.of(),
                     boundedContexts,
                     glossaryTerms,
                     handoffRules,
@@ -122,6 +152,7 @@ public final class OperationalContextDtos {
 
         public static OperationalContextCatalog empty() {
             return new OperationalContextCatalog(
+                    List.of(),
                     List.of(),
                     List.of(),
                     List.of(),
@@ -1387,6 +1418,166 @@ public final class OperationalContextDtos {
         }
     }
 
+    public record OperationalContextRepositorySearchScope(
+            String id,
+            String name,
+            String lifecycleStatus,
+            OperationalContextRepositorySearchTarget target,
+            List<String> useFor,
+            List<OperationalContextRepositorySearchRepository> repositories,
+            List<String> packagePrefixes,
+            List<String> classHints,
+            List<String> endpointHints,
+            List<String> queueTopicHints,
+            OperationalContextRepositorySearchDatabaseHints databaseHints,
+            OperationalContextRepositorySearchWorkflowHints workflowHints,
+            OperationalContextRepositorySearchStrategy searchStrategy,
+            List<String> limitations,
+            Map<String, Object> payload
+    ) {
+
+        public OperationalContextRepositorySearchScope {
+            target = target != null ? target : OperationalContextRepositorySearchTarget.empty();
+            useFor = copyList(useFor);
+            repositories = copyList(repositories);
+            packagePrefixes = copyList(packagePrefixes);
+            classHints = copyList(classHints);
+            endpointHints = copyList(endpointHints);
+            queueTopicHints = copyList(queueTopicHints);
+            databaseHints = databaseHints != null
+                    ? databaseHints
+                    : OperationalContextRepositorySearchDatabaseHints.empty();
+            workflowHints = workflowHints != null
+                    ? workflowHints
+                    : OperationalContextRepositorySearchWorkflowHints.empty();
+            searchStrategy = searchStrategy != null
+                    ? searchStrategy
+                    : OperationalContextRepositorySearchStrategy.empty();
+            limitations = copyList(limitations);
+            payload = copyMap(payload);
+        }
+    }
+
+    public record OperationalContextRepositorySearchTarget(
+            List<String> systems,
+            List<String> runtimeComponents,
+            List<String> deploymentComponents,
+            List<String> processes,
+            List<String> boundedContexts,
+            List<String> integrations,
+            List<String> terms
+    ) {
+
+        public OperationalContextRepositorySearchTarget {
+            systems = copyList(systems);
+            runtimeComponents = copyList(runtimeComponents);
+            deploymentComponents = copyList(deploymentComponents);
+            processes = copyList(processes);
+            boundedContexts = copyList(boundedContexts);
+            integrations = copyList(integrations);
+            terms = copyList(terms);
+        }
+
+        public static OperationalContextRepositorySearchTarget empty() {
+            return new OperationalContextRepositorySearchTarget(
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of()
+            );
+        }
+    }
+
+    public record OperationalContextRepositorySearchRepository(
+            String repoId,
+            String role,
+            Integer priority,
+            boolean include,
+            List<String> moduleIds,
+            String reason
+    ) {
+
+        public OperationalContextRepositorySearchRepository {
+            moduleIds = copyList(moduleIds);
+        }
+    }
+
+    public record OperationalContextRepositorySearchDatabaseHints(
+            List<String> datasourceNames,
+            List<String> hikariPools,
+            List<String> schemas,
+            List<String> tables,
+            List<String> entities,
+            List<String> migrations
+    ) {
+
+        public OperationalContextRepositorySearchDatabaseHints {
+            datasourceNames = copyList(datasourceNames);
+            hikariPools = copyList(hikariPools);
+            schemas = copyList(schemas);
+            tables = copyList(tables);
+            entities = copyList(entities);
+            migrations = copyList(migrations);
+        }
+
+        public static OperationalContextRepositorySearchDatabaseHints empty() {
+            return new OperationalContextRepositorySearchDatabaseHints(
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of()
+            );
+        }
+    }
+
+    public record OperationalContextRepositorySearchWorkflowHints(
+            List<String> jobNames,
+            List<String> workflowNames,
+            List<String> definitionPaths
+    ) {
+
+        public OperationalContextRepositorySearchWorkflowHints {
+            jobNames = copyList(jobNames);
+            workflowNames = copyList(workflowNames);
+            definitionPaths = copyList(definitionPaths);
+        }
+
+        public static OperationalContextRepositorySearchWorkflowHints empty() {
+            return new OperationalContextRepositorySearchWorkflowHints(List.of(), List.of(), List.of());
+        }
+    }
+
+    public record OperationalContextRepositorySearchStrategy(
+            List<String> priorityOrder,
+            boolean includeGeneratedClients,
+            boolean includeSharedLibraries,
+            boolean includeDeploymentConfig,
+            boolean includeDocumentation,
+            List<String> notes
+    ) {
+
+        public OperationalContextRepositorySearchStrategy {
+            priorityOrder = copyList(priorityOrder);
+            notes = copyList(notes);
+        }
+
+        public static OperationalContextRepositorySearchStrategy empty() {
+            return new OperationalContextRepositorySearchStrategy(
+                    List.of(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    List.of()
+            );
+        }
+    }
+
     public record OperationalContextOperationalSignals(Map<String, List<String>> valuesByKey) {
 
         public OperationalContextOperationalSignals {
@@ -1484,6 +1675,7 @@ public final class OperationalContextDtos {
             List<Map<String, Object>> systems,
             List<Map<String, Object>> integrations,
             List<Map<String, Object>> repositories,
+            List<Map<String, Object>> codeSearchScopes,
             List<Map<String, Object>> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
             List<OperationalContextHandoffRule> handoffRules,
@@ -1496,7 +1688,35 @@ public final class OperationalContextDtos {
                 copyList(systems).stream().map(OperationalContextDtos::system).toList(),
                 copyList(integrations).stream().map(OperationalContextDtos::integration).toList(),
                 copyList(repositories).stream().map(OperationalContextDtos::repository).toList(),
+                copyList(codeSearchScopes).stream().map(OperationalContextDtos::repositorySearchScope).toList(),
                 copyList(boundedContexts).stream().map(OperationalContextDtos::boundedContext).toList(),
+                glossaryTerms,
+                handoffRules,
+                openQuestions,
+                indexDocument
+        );
+    }
+
+    public static OperationalContextCatalog catalogFromRaw(
+            List<Map<String, Object>> teams,
+            List<Map<String, Object>> processes,
+            List<Map<String, Object>> systems,
+            List<Map<String, Object>> integrations,
+            List<Map<String, Object>> repositories,
+            List<Map<String, Object>> boundedContexts,
+            List<OperationalContextGlossaryTerm> glossaryTerms,
+            List<OperationalContextHandoffRule> handoffRules,
+            List<OperationalContextOpenQuestion> openQuestions,
+            String indexDocument
+    ) {
+        return catalogFromRaw(
+                teams,
+                processes,
+                systems,
+                integrations,
+                repositories,
+                List.of(),
+                boundedContexts,
                 glossaryTerms,
                 handoffRules,
                 openQuestions,
@@ -1578,6 +1798,28 @@ public final class OperationalContextDtos {
                 textList(source, "packagePrefixes"),
                 textList(source, "endpointHints"),
                 textList(source, "queueTopicHints"),
+                source
+        );
+    }
+
+    public static OperationalContextRepositorySearchScope repositorySearchScope(Map<String, Object> source) {
+        return new OperationalContextRepositorySearchScope(
+                text(source, "id"),
+                text(source, "name"),
+                text(source, "lifecycleStatus"),
+                repositorySearchTarget(source.get("target")),
+                textList(source, "useFor"),
+                mapList(source, "repositories").stream()
+                        .map(OperationalContextDtos::repositorySearchRepository)
+                        .toList(),
+                textList(source, "packagePrefixes"),
+                textList(source, "classHints"),
+                textList(source, "endpointHints"),
+                textList(source, "queueTopicHints"),
+                repositorySearchDatabaseHints(source.get("databaseHints")),
+                repositorySearchWorkflowHints(source.get("workflowHints")),
+                repositorySearchStrategy(source.get("searchStrategy")),
+                textList(source, "limitations"),
                 source
         );
     }
@@ -2003,6 +2245,63 @@ public final class OperationalContextDtos {
         );
     }
 
+    private static OperationalContextRepositorySearchTarget repositorySearchTarget(Object value) {
+        var source = map(value);
+        return new OperationalContextRepositorySearchTarget(
+                textList(source, "systems"),
+                textList(source, "runtimeComponents"),
+                textList(source, "deploymentComponents"),
+                textList(source, "processes"),
+                textList(source, "boundedContexts"),
+                textList(source, "integrations"),
+                textList(source, "terms")
+        );
+    }
+
+    private static OperationalContextRepositorySearchRepository repositorySearchRepository(Map<String, Object> source) {
+        return new OperationalContextRepositorySearchRepository(
+                text(source, "repoId"),
+                text(source, "role"),
+                integer(source, "priority"),
+                bool(source, "include", true),
+                textList(source, "moduleIds"),
+                text(source, "reason")
+        );
+    }
+
+    private static OperationalContextRepositorySearchDatabaseHints repositorySearchDatabaseHints(Object value) {
+        var source = map(value);
+        return new OperationalContextRepositorySearchDatabaseHints(
+                textList(source, "datasourceNames"),
+                textList(source, "hikariPools"),
+                textList(source, "schemas"),
+                textList(source, "tables"),
+                textList(source, "entities"),
+                textList(source, "migrations")
+        );
+    }
+
+    private static OperationalContextRepositorySearchWorkflowHints repositorySearchWorkflowHints(Object value) {
+        var source = map(value);
+        return new OperationalContextRepositorySearchWorkflowHints(
+                textList(source, "jobNames"),
+                textList(source, "workflowNames"),
+                textList(source, "definitionPaths")
+        );
+    }
+
+    private static OperationalContextRepositorySearchStrategy repositorySearchStrategy(Object value) {
+        var source = map(value);
+        return new OperationalContextRepositorySearchStrategy(
+                textList(source, "priorityOrder"),
+                bool(source, "includeGeneratedClients", false),
+                bool(source, "includeSharedLibraries", false),
+                bool(source, "includeDeploymentConfig", false),
+                bool(source, "includeDocumentation", false),
+                textList(source, "notes")
+        );
+    }
+
     private static OperationalContextOperationalSignals operationalSignals(Object value) {
         var source = map(value);
         var signals = new LinkedHashMap<String, List<String>>();
@@ -2040,6 +2339,24 @@ public final class OperationalContextDtos {
     private static String firstText(Map<String, Object> source, String path) {
         var values = textList(source, path);
         return values.isEmpty() ? null : values.get(0);
+    }
+
+    private static Integer integer(Map<String, Object> source, String path) {
+        var value = firstText(source, path);
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+
+        try {
+            return Integer.valueOf(value.trim());
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private static boolean bool(Map<String, Object> source, String path, boolean defaultValue) {
+        var value = firstText(source, path);
+        return StringUtils.hasText(value) ? Boolean.parseBoolean(value.trim()) : defaultValue;
     }
 
     @SafeVarargs

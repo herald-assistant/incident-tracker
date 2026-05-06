@@ -115,6 +115,9 @@ public class CopilotIncidentDigestService {
         var systems = distinct(operationalContext.systems().stream()
                 .map(system -> firstNonBlank(system.systemId(), system.name()))
                 .toList());
+        var scopeIds = distinct(operationalContext.systems().stream()
+                .flatMap(system -> system.codeSearchScopeIds().stream())
+                .toList());
         var projects = distinct(joinLists(
                 operationalContext.systems().stream()
                         .flatMap(system -> system.codeSearchProjects().stream())
@@ -139,9 +142,14 @@ public class CopilotIncidentDigestService {
                         .flatMap(repository -> repository.classHints().stream())
                         .toList()
         ));
+        var repositoryRoles = distinct(operationalContext.systems().stream()
+                .flatMap(system -> system.codeSearchRepositoryRoles().stream())
+                .toList());
 
         addListValue(lines, "matched systems", systems);
+        addListValue(lines, "code search scopes", scopeIds);
         addListValue(lines, "GitLab projects to search as one deployment component", projects);
+        addListValue(lines, "code search repository roles", repositoryRoles.stream().limit(8).toList());
         addListValue(lines, "package roots", packages.stream().limit(8).toList());
         addListValue(lines, "class hints", classHints.stream().limit(8).toList());
         lines.add("");

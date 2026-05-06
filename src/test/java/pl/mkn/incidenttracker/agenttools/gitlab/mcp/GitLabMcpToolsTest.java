@@ -39,6 +39,19 @@ class GitLabMcpToolsTest {
         var tools = new GitLabMcpTools(
                 mock(GitLabRepositoryPort.class),
                 ignored -> operationalContextCatalog(
+                        List.of(codeSearchScope(
+                                "backend-component-code-search",
+                                List.of("backend"),
+                                List.of("backend-runtime"),
+                                List.of("decision-process"),
+                                List.of("decision", "limit"),
+                                List.of(
+                                        scopeRepository("backend-repo", "primary", 1, List.of("backend-module")),
+                                        scopeRepository("agreement-repo", "workflow-collaborator", 2, List.of("agreement-bootstrap"))
+                                ),
+                                List.of("pl.santander.clp.backend"),
+                                List.of("DecisionController")
+                        )),
                         repository(
                                 "backend-repo",
                                 "Backend",
@@ -107,6 +120,7 @@ class GitLabMcpToolsTest {
         assertEquals("CLP", response.group());
         assertEquals("release/2026.04", response.branch());
         assertEquals(2, response.repositories().size());
+        assertEquals(1, response.codeSearchScopes().size());
 
         var backend = response.repositories().get(0);
         assertEquals("backend-repo", backend.repositoryId());
@@ -131,6 +145,18 @@ class GitLabMcpToolsTest {
         var agreement = response.repositories().get(1);
         assertEquals("PROCESSES/CLP_AGREEMENT_PROCESS", agreement.projectName());
         assertEquals("CLP/PROCESSES/CLP_AGREEMENT_PROCESS", agreement.gitLabPath());
+
+        var scope = response.codeSearchScopes().get(0);
+        assertEquals("backend-component-code-search", scope.scopeId());
+        assertIterableEquals(List.of("backend"), scope.targetSystems());
+        assertIterableEquals(
+                List.of("backend", "PROCESSES/CLP_AGREEMENT_PROCESS"),
+                scope.projectNames()
+        );
+        assertEquals("primary", scope.repositories().get(0).role());
+        assertEquals("workflow-collaborator", scope.repositories().get(1).role());
+        assertIterableEquals(List.of("backend-module"), scope.repositories().get(0).moduleIds());
+        assertTrue(scope.searchStrategy().includeSharedLibraries());
     }
 
     @Test
@@ -725,16 +751,74 @@ class GitLabMcpToolsTest {
     }
 
     private OperationalContextCatalog operationalContextCatalog(Map<String, Object>... repositories) {
+        return operationalContextCatalog(List.of(), repositories);
+    }
+
+    private OperationalContextCatalog operationalContextCatalog(
+            List<Map<String, Object>> codeSearchScopes,
+            Map<String, Object>... repositories
+    ) {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
                 List.of(),
                 List.of(),
                 List.of(repositories),
+                codeSearchScopes,
+                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),
                 ""
+        );
+    }
+
+    private Map<String, Object> codeSearchScope(
+            String id,
+            List<String> systems,
+            List<String> runtimeComponents,
+            List<String> processes,
+            List<String> boundedContexts,
+            List<Map<String, Object>> repositories,
+            List<String> packagePrefixes,
+            List<String> classHints
+    ) {
+        var scope = new LinkedHashMap<String, Object>();
+        scope.put("id", id);
+        scope.put("name", "Backend component code search scope");
+        scope.put("lifecycleStatus", "active");
+        scope.put("target", Map.of(
+                "systems", systems,
+                "runtimeComponents", runtimeComponents,
+                "processes", processes,
+                "boundedContexts", boundedContexts
+        ));
+        scope.put("useFor", List.of("code-search", "incident-analysis"));
+        scope.put("repositories", repositories);
+        scope.put("packagePrefixes", packagePrefixes);
+        scope.put("classHints", classHints);
+        scope.put("searchStrategy", Map.of(
+                "priorityOrder", repositories.stream()
+                        .map(repository -> repository.get("repoId").toString())
+                        .toList(),
+                "includeSharedLibraries", true
+        ));
+        return scope;
+    }
+
+    private Map<String, Object> scopeRepository(
+            String repoId,
+            String role,
+            int priority,
+            List<String> moduleIds
+    ) {
+        return Map.of(
+                "repoId", repoId,
+                "role", role,
+                "priority", priority,
+                "include", true,
+                "moduleIds", moduleIds,
+                "reason", "Included in test code-search scope."
         );
     }
 

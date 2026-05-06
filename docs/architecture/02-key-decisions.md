@@ -244,6 +244,9 @@ Polityka:
   model mogl odnalezc `projectName`/`gitLabPath` repozytorium po aliasie,
   systemie, bounded context, pakiecie, endpointcie albo module, zanim uzyje
   search/read tools.
+- `gitlab_list_available_repositories` zwraca tez `codeSearchScopes` z
+  `repo-map.yml`: role, priorytety i `projectName` repozytoriow, ktore nalezy
+  przeszukiwac razem dla jednego komponentu wdrozeniowego.
 - DB tools sa wlaczane tylko przy resolved environment i
   `IncidentDataDiagnosticNeed=LIKELY/REQUIRED`.
 - Dla `POSSIBLE` dostepne sa tylko discovery tools.
@@ -316,8 +319,8 @@ guidance do opisow drogich lub ryzykownych tools. Przyklady:
   jest powodem do malego, focused GitLab lookupu pod opis funkcji,
 - GitLab available-repositories/search/class/flow guidance przypomina, ze
   operational context moze wskazywac kilka repozytoriow jednego komponentu
-  wdrozeniowego; biblioteki i shared modules z `codeSearchProjects` sa czescia
-  scope'u szukania kodu,
+  wdrozeniowego; biblioteki i shared modules z `codeSearchScopes` oraz
+  kompatybilnych `codeSearchProjects` sa czescia scope'u szukania kodu,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow
   najpierw trzeba sprobowac ugruntowac encje, repozytorium, tabele i relacje z

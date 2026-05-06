@@ -13,10 +13,13 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -69,7 +72,16 @@ public class OperationalContextEvidenceMapper {
             var system = match.entry();
             var systemId = system.id();
             var repoIds = systemRepositoryIds(system);
-            var codeSearchRepositories = resolveCodeSearchRepositories(catalog, systemId, repoIds);
+            var codeSearch = resolveCodeSearchSelection(catalog, system, repoIds);
+            var codeSearchRepositories = codeSearch.repositories();
+            var sourcePackages = new ArrayList<String>();
+            sourcePackages.addAll(repositoryPackages(codeSearchRepositories));
+            sourcePackages.addAll(system.codeSearchScope().packagePrefixes());
+            sourcePackages.addAll(codeSearch.packagePrefixes());
+            var classHints = new ArrayList<String>();
+            classHints.addAll(repositoryClassHints(codeSearchRepositories));
+            classHints.addAll(system.codeSearchScope().classHints());
+            classHints.addAll(codeSearch.classHints());
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_ID, systemId);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(system.name(), system.shortName()));
@@ -79,10 +91,12 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(system.references().processes()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(system.references().boundedContexts()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(repoIds));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_SCOPE_IDS, joined(codeSearch.scopeIds()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS, joined(repositoryIds(codeSearchRepositories)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_PROJECTS, joined(repositoryProjects(codeSearchRepositories)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PACKAGES, joined(limit(repositoryPackages(codeSearchRepositories), 10)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CLASS_HINTS, joined(limit(repositoryClassHints(codeSearchRepositories), 10)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES, joined(codeSearch.repositoryRoles()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PACKAGES, joined(limit(deduplicate(sourcePackages), 10)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CLASS_HINTS, joined(limit(deduplicate(classHints), 10)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational system " + firstNonBlank(system.id(), system.name()),
@@ -258,35 +272,136 @@ public class OperationalContextEvidenceMapper {
         return system.references().repositories();
     }
 
-    private List<OperationalContextRepository> resolveCodeSearchRepositories(
+    private CodeSearchSelection resolveCodeSearchSelection(
             OperationalContextCatalog catalog,
-            String systemId,
+            OperationalContextSystem system,
             List<String> repoIds
     ) {
         if (catalog == null || catalog.repositories().isEmpty()) {
-            return List.of();
+            return CodeSearchSelection.empty();
         }
 
         var repositories = catalog.repositories();
         var selected = new ArrayList<OperationalContextRepository>();
         var selectedIds = new LinkedHashSet<String>();
+        var scopeIds = new ArrayList<String>();
+        var repositoryRoles = new ArrayList<String>();
+        var packagePrefixes = new ArrayList<String>();
+        var classHints = new ArrayList<String>();
+        var seedRepoIds = new ArrayList<String>();
+        seedRepoIds.addAll(repoIds);
+        seedRepoIds.addAll(system.codeSearchScope().repositories());
+        var matchedScopes = matchingCodeSearchScopes(catalog, system, seedRepoIds);
 
-        for (var repoId : repoIds) {
-            repositories.stream()
-                    .filter(repository -> sameId(repository.id(), repoId))
-                    .findFirst()
+        for (var scope : matchedScopes) {
+            scopeIds.add(scope.id());
+            packagePrefixes.addAll(scope.packagePrefixes());
+            classHints.addAll(scope.classHints());
+            for (var scopeRepository : sortedIncludedScopeRepositories(scope)) {
+                findRepository(repositories, scopeRepository.repoId())
+                        .ifPresent(repository -> {
+                            addRepository(selected, selectedIds, repository);
+                            repositoryRoles.add(scopeRepositoryRole(scope, scopeRepository));
+                        });
+            }
+        }
+
+        for (var repoId : deduplicate(seedRepoIds)) {
+            findRepository(repositories, repoId)
                     .ifPresent(repository -> addRepository(selected, selectedIds, repository));
         }
 
-        if (StringUtils.hasText(systemId)) {
+        if (StringUtils.hasText(system.id())) {
             for (var repository : repositories) {
-                if (containsNormalized(repository.references().systems(), systemId)) {
+                if (containsNormalized(repository.references().systems(), system.id())) {
                     addRepository(selected, selectedIds, repository);
                 }
             }
         }
 
-        return List.copyOf(selected);
+        return new CodeSearchSelection(
+                selected,
+                deduplicate(scopeIds),
+                deduplicate(repositoryRoles),
+                deduplicate(packagePrefixes),
+                deduplicate(classHints)
+        );
+    }
+
+    private List<OperationalContextRepositorySearchScope> matchingCodeSearchScopes(
+            OperationalContextCatalog catalog,
+            OperationalContextSystem system,
+            List<String> seedRepoIds
+    ) {
+        if (catalog.codeSearchScopes().isEmpty()) {
+            return List.of();
+        }
+
+        return catalog.codeSearchScopes().stream()
+                .filter(scope -> matchesCodeSearchScope(scope, system, seedRepoIds))
+                .toList();
+    }
+
+    private boolean matchesCodeSearchScope(
+            OperationalContextRepositorySearchScope scope,
+            OperationalContextSystem system,
+            List<String> seedRepoIds
+    ) {
+        var target = scope.target();
+        return containsNormalized(target.systems(), system.id())
+                || intersectsNormalized(target.runtimeComponents(), system.references().runtimeComponents())
+                || intersectsNormalized(target.processes(), system.references().processes())
+                || intersectsNormalized(target.boundedContexts(), system.references().boundedContexts())
+                || intersectsNormalized(primaryScopeRepositoryIds(scope), seedRepoIds);
+    }
+
+    private List<OperationalContextRepositorySearchRepository> sortedIncludedScopeRepositories(
+            OperationalContextRepositorySearchScope scope
+    ) {
+        return scope.repositories().stream()
+                .filter(OperationalContextRepositorySearchRepository::include)
+                .sorted(Comparator.comparing(
+                        repository -> repository.priority() != null ? repository.priority() : Integer.MAX_VALUE
+                ))
+                .toList();
+    }
+
+    private List<String> primaryScopeRepositoryIds(OperationalContextRepositorySearchScope scope) {
+        var primaryIds = scope.repositories().stream()
+                .filter(repository -> "primary".equalsIgnoreCase(firstNonBlank(repository.role(), "")))
+                .map(OperationalContextRepositorySearchRepository::repoId)
+                .toList();
+        if (!primaryIds.isEmpty()) {
+            return primaryIds;
+        }
+
+        var firstPriority = sortedIncludedScopeRepositories(scope).stream()
+                .findFirst()
+                .map(OperationalContextRepositorySearchRepository::repoId);
+        return firstPriority.map(List::of).orElseGet(List::of);
+    }
+
+    private java.util.Optional<OperationalContextRepository> findRepository(
+            List<OperationalContextRepository> repositories,
+            String repoId
+    ) {
+        return repositories.stream()
+                .filter(repository -> sameId(repository.id(), repoId))
+                .findFirst();
+    }
+
+    private String scopeRepositoryRole(
+            OperationalContextRepositorySearchScope scope,
+            OperationalContextRepositorySearchRepository repository
+    ) {
+        var values = new ArrayList<String>();
+        values.add(scope.id());
+        values.add(repository.repoId());
+        values.add(firstNonBlank(repository.role(), "member"));
+        if (repository.priority() != null) {
+            values.add("priority=" + repository.priority());
+        }
+        return String.join(":", values.stream().filter(StringUtils::hasText).toList());
     }
 
     private void addRepository(
@@ -383,6 +498,21 @@ public class OperationalContextEvidenceMapper {
                 && values.stream().map(value -> normalize(value)).anyMatch(normalizedExpected::equals);
     }
 
+    private boolean intersectsNormalized(List<String> left, List<String> right) {
+        if (left.isEmpty() || right.isEmpty()) {
+            return false;
+        }
+
+        var normalizedRight = right.stream()
+                .map(value -> normalize(value))
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        return left.stream()
+                .map(value -> normalize(value))
+                .filter(StringUtils::hasText)
+                .anyMatch(normalizedRight::contains);
+    }
+
     private boolean sameId(String left, String right) {
         return StringUtils.hasText(left)
                 && StringUtils.hasText(right)
@@ -425,6 +555,27 @@ public class OperationalContextEvidenceMapper {
     private void addAttribute(List<AnalysisEvidenceAttribute> attributes, String name, String value) {
         if (StringUtils.hasText(value)) {
             attributes.add(new AnalysisEvidenceAttribute(name, value));
+        }
+    }
+
+    private record CodeSearchSelection(
+            List<OperationalContextRepository> repositories,
+            List<String> scopeIds,
+            List<String> repositoryRoles,
+            List<String> packagePrefixes,
+            List<String> classHints
+    ) {
+
+        private CodeSearchSelection {
+            repositories = List.copyOf(repositories);
+            scopeIds = List.copyOf(scopeIds);
+            repositoryRoles = List.copyOf(repositoryRoles);
+            packagePrefixes = List.copyOf(packagePrefixes);
+            classHints = List.copyOf(classHints);
+        }
+
+        private static CodeSearchSelection empty() {
+            return new CodeSearchSelection(List.of(), List.of(), List.of(), List.of(), List.of());
         }
     }
 

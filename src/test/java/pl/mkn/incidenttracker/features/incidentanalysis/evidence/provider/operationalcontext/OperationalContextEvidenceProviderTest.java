@@ -67,8 +67,12 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(titles.contains("Operational handoff rule integration-external-sync-failure"));
         assertEquals("app-core", view.systems().get(0).systemId());
         assertTrue(view.systems().get(0).repositoryIds().contains("app-shared-lib-repo"));
+        assertTrue(view.systems().get(0).codeSearchScopeIds().contains("app-core-code-search"));
         assertTrue(view.systems().get(0).codeSearchRepositoryIds().contains("app-shared-lib-repo"));
         assertTrue(view.systems().get(0).codeSearchProjects().contains("libs/app-shared-lib"));
+        assertTrue(view.systems().get(0).codeSearchRepositoryRoles().contains(
+                "app-core-code-search:app-shared-lib-repo:shared-library:priority=2"
+        ));
         assertTrue(view.systems().get(0).sourcePackages().contains("com.example.shared"));
         assertTrue(view.systems().get(0).classHints().contains("SharedPredicate"));
         assertEquals("app-core-to-partner-sync", view.integrations().get(0).integrationId());

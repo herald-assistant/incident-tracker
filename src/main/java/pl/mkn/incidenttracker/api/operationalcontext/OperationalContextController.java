@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OpenQuestionDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextBoundedContextRowDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextGlossaryRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextHandoffRuleRowDto;
@@ -42,6 +43,11 @@ class OperationalContextController {
     @GetMapping("/repositories")
     List<OperationalContextRepositoryRowDto> repositories() {
         return viewService.repositories();
+    }
+
+    @GetMapping("/code-search-scopes")
+    List<OperationalContextCodeSearchScopeRowDto> codeSearchScopes() {
+        return viewService.codeSearchScopes();
     }
 
     @GetMapping("/processes")

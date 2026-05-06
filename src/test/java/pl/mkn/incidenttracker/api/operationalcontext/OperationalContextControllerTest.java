@@ -6,6 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.ExplainableAggregateDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
@@ -38,6 +39,7 @@ class OperationalContextControllerTest {
                 1,
                 1,
                 1,
+                1,
                 0,
                 Map.of("info", 0, "warning", 0, "error", 0),
                 "ready",
@@ -47,6 +49,7 @@ class OperationalContextControllerTest {
         mockMvc.perform(get("/api/operational-context/summary"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.systems").value(1))
+                .andExpect(jsonPath("$.codeSearchScopes").value(1))
                 .andExpect(jsonPath("$.catalogStatus").value("ready"))
                 .andExpect(jsonPath("$.validationFindings.error").value(0));
     }
@@ -72,6 +75,28 @@ class OperationalContextControllerTest {
         mockMvc.perform(get("/api/operational-context/systems"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("app-core"))
+                .andExpect(jsonPath("$[0].repositories.count").value(0));
+    }
+
+    @Test
+    void shouldExposeCodeSearchScopesEndpoint() throws Exception {
+        when(viewService.codeSearchScopes()).thenReturn(List.of(new OperationalContextCodeSearchScopeRowDto(
+                "app-core-scope",
+                "App Core Scope",
+                "active",
+                emptyAggregate("Targets"),
+                emptyAggregate("Repositories"),
+                emptyAggregate("Package hints"),
+                emptyAggregate("Entry hints"),
+                emptyAggregate("Data hints"),
+                emptyAggregate("Workflow hints"),
+                emptyAggregate("Strategy"),
+                emptyAggregate("Validation")
+        )));
+
+        mockMvc.perform(get("/api/operational-context/code-search-scopes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("app-core-scope"))
                 .andExpect(jsonPath("$[0].repositories.count").value(0));
     }
 

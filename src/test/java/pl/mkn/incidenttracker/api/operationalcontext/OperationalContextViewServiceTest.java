@@ -25,6 +25,7 @@ class OperationalContextViewServiceTest {
         assertEquals("empty", summary.catalogStatus());
         assertEquals(0, summary.systems());
         assertEquals(0, summary.repositories());
+        assertEquals(0, summary.codeSearchScopes());
         assertEquals(0, summary.processes());
         assertEquals(0, summary.integrations());
     }
@@ -37,6 +38,8 @@ class OperationalContextViewServiceTest {
         assertEquals("new-system", service.systems().get(0).id());
         assertEquals(1, service.repositories().size());
         assertEquals("new-repo", service.repositories().get(0).id());
+        assertEquals(1, service.codeSearchScopes().size());
+        assertEquals("new-scope", service.codeSearchScopes().get(0).id());
         assertEquals(1, service.processes().size());
         assertEquals(1, service.integrations().size());
     }
@@ -63,6 +66,13 @@ class OperationalContextViewServiceTest {
         assertEquals(1, repository.contexts().count());
         assertFalse(repository.packageRoots().detailsIds().isEmpty());
         assertFalse(repository.entrypoints().detailsIds().isEmpty());
+        assertEquals(1, repository.codeSearchScopes().count());
+        assertEquals(1, repository.codeSearchRoles().count());
+
+        var codeSearchScope = service.codeSearchScopes().get(0);
+        assertEquals("New Scope", codeSearchScope.name());
+        assertEquals(1, codeSearchScope.repositories().count());
+        assertEquals(4, codeSearchScope.targets().count());
 
         var process = service.processes().get(0);
         assertEquals("Current process summary", process.purpose());
@@ -96,6 +106,7 @@ class OperationalContextViewServiceTest {
         assertEquals(1, team.ownsIntegrations().count());
 
         assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
+        assertTrue(service.search("primary-application").stream().anyMatch(result -> result.type().equals("code-search-scope")));
         assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
     }
 
@@ -294,6 +305,36 @@ class OperationalContextViewServiceTest {
                         "matchSignals", map("strong", map("packagePrefixes", List.of("com.example.newservice"), "classHints", List.of("NewController"))),
                         "modules", List.of(map("moduleId", "api", "sourceRoots", List.of("src/main/java"), "matchSignals", map("strong", map("classHints", List.of("NewController"))))),
                         "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("projectPath"))
+                )),
+                List.of(map(
+                        "id", "new-scope",
+                        "name", "New Scope",
+                        "lifecycleStatus", "active",
+                        "target", map(
+                                "systems", List.of("new-system"),
+                                "runtimeComponents", List.of("new-service"),
+                                "processes", List.of("new-process"),
+                                "boundedContexts", List.of("new-context")
+                        ),
+                        "useFor", List.of("incident-analysis"),
+                        "repositories", List.of(map(
+                                "repoId", "new-repo",
+                                "role", "primary-application",
+                                "priority", 1,
+                                "include", true,
+                                "moduleIds", List.of("api"),
+                                "reason", "Main code path for new-system."
+                        )),
+                        "packagePrefixes", List.of("com.example.newservice"),
+                        "classHints", List.of("NewController"),
+                        "endpointHints", List.of("/new/api"),
+                        "databaseHints", map("schemas", List.of("NEW_SCHEMA"), "tables", List.of("NEW_TABLE")),
+                        "workflowHints", map("workflowNames", List.of("NewWorkflow")),
+                        "searchStrategy", map(
+                                "priorityOrder", List.of("primary-application"),
+                                "includeGeneratedClients", false,
+                                "includeSharedLibraries", true
+                        )
                 )),
                 List.of(map(
                         "id", "new-context",

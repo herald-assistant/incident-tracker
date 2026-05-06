@@ -212,9 +212,10 @@ Manifest zawiera:
 
 Digest zawiera skompresowane fakty sesji, coverage, log signals, deployment,
 operational code search scope, runtime, code highlights i znane luki evidence.
-Operational code search scope pokazuje projekty GitLaba z operational context,
-ktore razem skladaja sie na kod dopasowanego komponentu wdrozeniowego, w tym
-biblioteki i shared modules.
+Operational code search scope pokazuje `codeSearchScopes`, projekty GitLaba,
+role repozytoriow, pakiety i class hints z operational context. Te dane
+okreslaja kod dopasowanego komponentu wdrozeniowego, w tym biblioteki i shared
+modules, ktore trzeba przeszukiwac razem z glownym repo.
 
 `itemId` sa stabilne tylko w renderingu Copilota. Nie zmieniaja publicznego
 kontraktu `AnalysisEvidenceItem`.
@@ -277,15 +278,17 @@ GitLab tools:
   biezacym session group z operational context: `projectName`, `gitLabPath`,
   krotki summary oraz sygnaly dopasowania, m.in. aliases, systems,
   runtimeComponents, boundedContexts, processes, integrations,
-  packagePrefixes, endpointPrefixes i modulePaths; `projectName` z odpowiedzi
+  packagePrefixes, endpointPrefixes i modulePaths. Zwraca tez
+  `codeSearchScopes`, czyli gotowe grupy repozytoriow z rolami, priorytetami i
+  lista `projectName` do wspolnego przeszukania; `projectName` z odpowiedzi
   jest inputem dla pozostalych GitLab tools,
 - broad search zostaje dla braku deterministic GitLab evidence,
 - `gitlab_find_flow_context` przyjmuje focused `keywords`, bez osobnych
   parametrow klasy/metody/pliku.
-- gdy operational context wskazuje `codeSearchProjects` albo kilka repo
-  dopasowanego systemu, Copilot ma traktowac te projekty jako jeden scope kodu
-  komponentu wdrozeniowego i wykonac focused probe takze po bibliotekach/shared
-  repozytoriach zanim uzna klase za niedostepna.
+- gdy operational context wskazuje `codeSearchScopes`, `codeSearchProjects`
+  albo kilka repo dopasowanego systemu, Copilot ma traktowac te projekty jako
+  jeden scope kodu komponentu wdrozeniowego i wykonac focused probe takze po
+  bibliotekach/shared repozytoriach zanim uzna klase za niedostepna.
 
 DB tools:
 

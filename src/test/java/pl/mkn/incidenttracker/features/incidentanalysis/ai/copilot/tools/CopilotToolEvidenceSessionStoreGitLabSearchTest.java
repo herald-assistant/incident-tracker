@@ -62,6 +62,41 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                               "endpointPrefixes": ["/orders"],
                               "modulePaths": ["orders-api"]
                             }
+                          ],
+                          "codeSearchScopes": [
+                            {
+                              "scopeId": "orders-code-search",
+                              "name": "Orders Code Search Scope",
+                              "lifecycleStatus": "active",
+                              "targetSystems": ["orders"],
+                              "targetRuntimeComponents": ["orders-api-runtime"],
+                              "targetProcesses": ["order-process"],
+                              "targetBoundedContexts": ["orders"],
+                              "useFor": ["code-search", "incident-analysis"],
+                              "repositories": [
+                                {
+                                  "repositoryId": "orders-api-repo",
+                                  "role": "primary",
+                                  "priority": 1,
+                                  "projectNames": ["orders-api"],
+                                  "moduleIds": ["orders-api"],
+                                  "reason": "Main orders API repository."
+                                }
+                              ],
+                              "projectNames": ["orders-api"],
+                              "packagePrefixes": ["pl.mkn.orders"],
+                              "classHints": ["OrderService"],
+                              "endpointHints": ["/orders"],
+                              "queueTopicHints": [],
+                              "searchStrategy": {
+                                "priorityOrder": ["orders-api-repo"],
+                                "includeGeneratedClients": false,
+                                "includeSharedLibraries": false,
+                                "includeDeploymentConfig": false,
+                                "includeDocumentation": false,
+                                "notes": []
+                              }
+                            }
                           ]
                         }
                         """
@@ -169,8 +204,10 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         assertEquals("gitlab_list_available_repositories", listAttributes.get("toolName"));
         assertEquals("Szukam dostepnych repozytoriow.", listAttributes.get("reason"));
         assertEquals("1", listAttributes.get("repositoryCount"));
+        assertEquals("1", listAttributes.get("codeSearchScopeCount"));
         assertEquals("1", listAttributes.get("toolCaptureOrder"));
         assertTrue(listAttributes.get("repositories").contains("orders-api"));
+        assertTrue(listAttributes.get("codeSearchScopes").contains("orders-code-search"));
 
         var searchAttributes = attributes(lastSection.items().get(1));
         assertEquals("gitlab_search_repository_candidates", searchAttributes.get("toolName"));

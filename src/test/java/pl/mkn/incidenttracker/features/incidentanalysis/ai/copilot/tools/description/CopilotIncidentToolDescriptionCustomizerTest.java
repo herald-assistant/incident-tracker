@@ -45,7 +45,7 @@ class CopilotIncidentToolDescriptionCustomizerTest {
     void shouldAppendCrossRepositoryGuidanceForGitLabClassReferences() {
         var description = customizer.customize("gitlab_find_class_references", "Finds class references.");
 
-        assertTrue(description.contains("focused retry across operational-context codeSearchProjects"));
+        assertTrue(description.contains("focused retry across the matching operational-context codeSearchScope"));
         assertTrue(description.contains("before declaring it missing"));
     }
 

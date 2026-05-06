@@ -146,6 +146,7 @@ async function createComponent(
     getSummary: vi.fn(() => of(summary)),
     getSystems: vi.fn(() => of(systems)),
     getRepositories: vi.fn(() => of([])),
+    getCodeSearchScopes: vi.fn(() => of([])),
     getProcesses: vi.fn(() => of([])),
     getIntegrations: vi.fn(() => of([])),
     getBoundedContexts: vi.fn(() => of([])),
@@ -202,6 +203,7 @@ function emptySummary(): OperationalContextSummaryDto {
   return {
     systems: 0,
     repositories: 0,
+    codeSearchScopes: 0,
     processes: 0,
     integrations: 0,
     boundedContexts: 0,

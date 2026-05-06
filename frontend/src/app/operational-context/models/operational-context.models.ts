@@ -74,6 +74,7 @@ export interface OpenQuestionDto {
 export interface OperationalContextSummaryDto {
   systems: number;
   repositories: number;
+  codeSearchScopes: number;
   processes: number;
   integrations: number;
   boundedContexts: number;
@@ -114,7 +115,23 @@ export interface OperationalContextRepositoryRowDto {
   entrypoints: ExplainableAggregateDto;
   runtimeMappings: ExplainableAggregateDto;
   modules: ExplainableAggregateDto;
+  codeSearchScopes: ExplainableAggregateDto;
+  codeSearchRoles: ExplainableAggregateDto;
   handoffReadiness: ExplainableAggregateDto;
+  validation: ExplainableAggregateDto;
+}
+
+export interface OperationalContextCodeSearchScopeRowDto {
+  id: string;
+  name: string;
+  lifecycleStatus: string;
+  targets: ExplainableAggregateDto;
+  repositories: ExplainableAggregateDto;
+  packageHints: ExplainableAggregateDto;
+  entryHints: ExplainableAggregateDto;
+  dataHints: ExplainableAggregateDto;
+  workflowHints: ExplainableAggregateDto;
+  strategy: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }
 
@@ -239,6 +256,7 @@ export interface OperationalContextEntityDetailDto {
 export type OperationalContextCatalogRow =
   | OperationalContextSystemRowDto
   | OperationalContextRepositoryRowDto
+  | OperationalContextCodeSearchScopeRowDto
   | OperationalContextProcessRowDto
   | OperationalContextIntegrationRowDto
   | OperationalContextBoundedContextRowDto

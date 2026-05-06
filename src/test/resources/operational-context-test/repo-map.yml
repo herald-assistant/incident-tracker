@@ -75,4 +75,39 @@ repositories:
       firstResponderTeamIds: [core-team]
       requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
 
+codeSearchScopes:
+  - id: app-core-code-search
+    name: App Core Code Search Scope
+    lifecycleStatus: active
+    target:
+      systems: [app-core]
+      runtimeComponents: [app-core]
+      processes: [main-process]
+      boundedContexts: [core-context]
+    useFor: [code-search, incident-analysis]
+    repositories:
+      - repoId: app-core-repo
+        role: primary
+        priority: 1
+        include: true
+        moduleIds: [core-module]
+        reason: Main service repository for app-core.
+      - repoId: app-shared-lib-repo
+        role: shared-library
+        priority: 2
+        include: true
+        moduleIds: [shared-domain-module]
+        reason: Shared domain predicates are used by app-core.
+    packagePrefixes: [com.example.app, com.example.shared]
+    classHints: [SyncGateway, SharedPredicate]
+    endpointHints: [/api/resources]
+    queueTopicHints: []
+    searchStrategy:
+      priorityOrder: [app-core-repo, app-shared-lib-repo]
+      includeGeneratedClients: false
+      includeSharedLibraries: true
+      includeDeploymentConfig: false
+      includeDocumentation: false
+      notes: [Search app-core first, then shared predicates if the class is not found.]
+
 gaps: []
