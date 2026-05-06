@@ -50,7 +50,7 @@ class OperationalContextRepositoryProjectPathResolverTest {
         return new OperationalContextRepositoryProjectPathResolver(query -> {
             assertTrue(query.includes(OperationalContextEntryType.SYSTEM));
             assertTrue(query.includes(OperationalContextEntryType.REPOSITORY));
-            return new OperationalContextCatalog(
+            return OperationalContextDtos.catalogFromRaw(
                     List.of(),
                     List.of(),
                     systems,

@@ -3,6 +3,8 @@ package pl.mkn.incidenttracker.integrations.operationalcontext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -10,9 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 
 @Component
 @RequiredArgsConstructor
@@ -65,10 +64,10 @@ public class OperationalContextRepositoryProjectPathResolver {
         return hints;
     }
 
-    private Map<String, Map<String, Object>> repositoriesById(List<Map<String, Object>> repositories) {
-        var repositoriesById = new LinkedHashMap<String, Map<String, Object>>();
+    private Map<String, OperationalContextRepository> repositoriesById(List<OperationalContextRepository> repositories) {
+        var repositoriesById = new LinkedHashMap<String, OperationalContextRepository>();
         for (var repository : repositories) {
-            var normalizedId = normalizeComparable(text(repository, "id"));
+            var normalizedId = normalizeComparable(repository.id());
             if (StringUtils.hasText(normalizedId)) {
                 repositoriesById.putIfAbsent(normalizedId, repository);
             }
@@ -76,20 +75,18 @@ public class OperationalContextRepositoryProjectPathResolver {
         return repositoriesById;
     }
 
-    private boolean matchesSystemId(Map<String, Object> system, Set<String> normalizedHints) {
-        var normalizedSystemId = normalizeComparable(text(system, "id"));
+    private boolean matchesSystemId(OperationalContextSystem system, Set<String> normalizedHints) {
+        var normalizedSystemId = normalizeComparable(system.id());
         return StringUtils.hasText(normalizedSystemId) && normalizedHints.contains(normalizedSystemId);
     }
 
-    private List<String> systemRepositoryIds(Map<String, Object> system) {
-        return textList(system, "references.repositories");
+    private List<String> systemRepositoryIds(OperationalContextSystem system) {
+        return system.references().repositories();
     }
 
-    private List<String> projectPaths(String configuredGroup, Map<String, Object> repository) {
+    private List<String> projectPaths(String configuredGroup, OperationalContextRepository repository) {
         var projectPaths = new LinkedHashSet<String>();
-        for (var projectPath : textList(repository, "git.projectPath")) {
-            addProjectPath(projectPaths, configuredGroup, projectPath);
-        }
+        addProjectPath(projectPaths, configuredGroup, repository.git().projectPath());
         return List.copyOf(projectPaths);
     }
 
@@ -104,14 +101,16 @@ public class OperationalContextRepositoryProjectPathResolver {
         }
     }
 
-    private boolean groupMatches(String configuredGroup, Map<String, Object> repository) {
+    private boolean groupMatches(String configuredGroup, OperationalContextRepository repository) {
         if (!StringUtils.hasText(configuredGroup)) {
             return true;
         }
 
         var normalizedConfiguredGroup = normalizeGroupPath(configuredGroup);
         var repositoryGroups = new LinkedHashSet<String>();
-        repositoryGroups.addAll(textList(repository, "git.group"));
+        if (StringUtils.hasText(repository.git().group())) {
+            repositoryGroups.add(repository.git().group());
+        }
 
         if (repositoryGroups.isEmpty()) {
             return true;

@@ -50,7 +50,7 @@ class OperationalContextAdapterTest {
         var catalog = adapter.loadContext(query);
 
         assertEquals(1, catalog.systems().size());
-        assertEquals("app-core", OperationalContextMaps.text(catalog.systems().get(0), "id"));
+        assertEquals("app-core", catalog.systems().get(0).id());
         assertTrue(catalog.integrations().isEmpty());
         assertTrue(catalog.processes().isEmpty());
         assertTrue(catalog.repositories().isEmpty());

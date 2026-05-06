@@ -24,7 +24,11 @@ import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextTeamRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.SourceReferenceDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.ValidationFindingDto;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextQuery;
 
@@ -460,8 +464,10 @@ public class OperationalContextViewService {
     }
 
     private CatalogView view() {
-        var catalog = operationalContextPort.loadContext(OperationalContextQuery.all());
-        var openQuestions = catalog.openQuestions().stream()
+        var loadedCatalog = operationalContextPort.loadContext(OperationalContextQuery.all());
+        var typedCatalog = loadedCatalog != null ? loadedCatalog : OperationalContextCatalog.empty();
+        var catalog = CatalogProjection.from(typedCatalog);
+        var openQuestions = typedCatalog.openQuestions().stream()
                 .map(question -> new OpenQuestionDto(
                         question.id(),
                         question.sourceFile(),
@@ -1167,7 +1173,7 @@ public class OperationalContextViewService {
 
     private void addGlossarySearchResults(
             List<OperationalContextSearchResultDto> results,
-            List<OperationalContextCatalog.GlossaryTerm> terms,
+            List<OperationalContextGlossaryTerm> terms,
             String normalizedQuery
     ) {
         for (var term : terms) {
@@ -1200,7 +1206,7 @@ public class OperationalContextViewService {
 
     private void addHandoffSearchResults(
             List<OperationalContextSearchResultDto> results,
-            List<OperationalContextCatalog.HandoffRule> rules,
+            List<OperationalContextHandoffRule> rules,
             String normalizedQuery
     ) {
         for (var rule : rules) {
@@ -1299,7 +1305,7 @@ public class OperationalContextViewService {
         return counts;
     }
 
-    private String catalogStatus(OperationalContextCatalog catalog, List<ValidationFindingDto> findings) {
+    private String catalogStatus(CatalogProjection catalog, List<ValidationFindingDto> findings) {
         var total = catalog.systems().size()
                 + catalog.repositories().size()
                 + catalog.processes().size()
@@ -2030,7 +2036,7 @@ public class OperationalContextViewService {
     }
 
     private record CatalogView(
-            OperationalContextCatalog catalog,
+            CatalogProjection catalog,
             Map<String, Map<String, Object>> systemsById,
             Map<String, Map<String, Object>> repositoriesById,
             Map<String, Map<String, Object>> processesById,
@@ -2053,6 +2059,59 @@ public class OperationalContextViewService {
                     openQuestions,
                     validationFindings
             );
+        }
+    }
+
+    private record CatalogProjection(
+            List<Map<String, Object>> teams,
+            List<Map<String, Object>> processes,
+            List<Map<String, Object>> systems,
+            List<Map<String, Object>> integrations,
+            List<Map<String, Object>> repositories,
+            List<Map<String, Object>> boundedContexts,
+            List<OperationalContextGlossaryTerm> glossaryTerms,
+            List<OperationalContextHandoffRule> handoffRules,
+            List<OperationalContextOpenQuestion> openQuestions,
+            String indexDocument
+    ) {
+
+        private static CatalogProjection from(OperationalContextCatalog catalog) {
+            var source = catalog != null ? catalog : OperationalContextCatalog.empty();
+            return new CatalogProjection(
+                    payloads(source.teams()),
+                    payloads(source.processes()),
+                    payloads(source.systems()),
+                    payloads(source.integrations()),
+                    payloads(source.repositories()),
+                    payloads(source.boundedContexts()),
+                    source.glossaryTerms(),
+                    source.handoffRules(),
+                    source.openQuestions(),
+                    source.indexDocument()
+            );
+        }
+
+        private CatalogProjection {
+            teams = copyList(teams);
+            processes = copyList(processes);
+            systems = copyList(systems);
+            integrations = copyList(integrations);
+            repositories = copyList(repositories);
+            boundedContexts = copyList(boundedContexts);
+            glossaryTerms = copyList(glossaryTerms);
+            handoffRules = copyList(handoffRules);
+            openQuestions = copyList(openQuestions);
+            indexDocument = indexDocument != null ? indexDocument : "";
+        }
+
+        private static List<Map<String, Object>> payloads(List<? extends OperationalContextEntry> entries) {
+            return entries.stream()
+                    .map(OperationalContextEntry::payload)
+                    .toList();
+        }
+
+        private static <T> List<T> copyList(List<T> values) {
+            return values != null ? List.copyOf(values) : List.of();
         }
     }
 

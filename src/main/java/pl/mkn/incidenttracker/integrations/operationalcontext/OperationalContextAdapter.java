@@ -7,9 +7,11 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.OpenQuestion;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -65,12 +67,18 @@ public class OperationalContextAdapter implements OperationalContextPort {
         var repositoriesDocument = loadYamlDocument(resourceRoot, "repo-map.yml");
         var boundedContextsDocument = loadYamlDocument(resourceRoot, "bounded-contexts.yml");
 
-        var teams = mapList(teamsDocument.get("teams"));
-        var processes = mapList(processesDocument.get("processes"));
-        var systems = mapList(systemsDocument.get("systems"));
-        var integrations = mapList(integrationsDocument.get("integrations"));
-        var repositories = mapList(repositoriesDocument.get("repositories"));
-        var boundedContexts = mapList(boundedContextsDocument.get("boundedContexts"));
+        var rawTeams = mapList(teamsDocument.get("teams"));
+        var rawProcesses = mapList(processesDocument.get("processes"));
+        var rawSystems = mapList(systemsDocument.get("systems"));
+        var rawIntegrations = mapList(integrationsDocument.get("integrations"));
+        var rawRepositories = mapList(repositoriesDocument.get("repositories"));
+        var rawBoundedContexts = mapList(boundedContextsDocument.get("boundedContexts"));
+        var teams = rawTeams.stream().map(OperationalContextDtos::team).toList();
+        var processes = rawProcesses.stream().map(OperationalContextDtos::process).toList();
+        var systems = rawSystems.stream().map(OperationalContextDtos::system).toList();
+        var integrations = rawIntegrations.stream().map(OperationalContextDtos::integration).toList();
+        var repositories = rawRepositories.stream().map(OperationalContextDtos::repository).toList();
+        var boundedContexts = rawBoundedContexts.stream().map(OperationalContextDtos::boundedContext).toList();
         var glossaryDocument = readTextResource(resourceRoot, "glossary.md");
         var handoffRulesDocument = readTextResource(resourceRoot, "handoff-rules.md");
         var indexDocument = readTextResource(resourceRoot, "operational-context-index.md");
@@ -86,12 +94,12 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 teamsDocument,
                 glossaryDocument,
                 handoffRulesDocument,
-                systems,
-                repositories,
-                processes,
-                integrations,
-                boundedContexts,
-                teams
+                rawSystems,
+                rawRepositories,
+                rawProcesses,
+                rawIntegrations,
+                rawBoundedContexts,
+                rawTeams
         );
 
         log.info(
@@ -127,12 +135,12 @@ public class OperationalContextAdapter implements OperationalContextPort {
             OperationalContextQuery query
     ) {
         return new OperationalContextCatalog(
-                filterMapEntries(catalog.teams(), query, OperationalContextEntryType.TEAM),
-                filterMapEntries(catalog.processes(), query, OperationalContextEntryType.PROCESS),
-                filterMapEntries(catalog.systems(), query, OperationalContextEntryType.SYSTEM),
-                filterMapEntries(catalog.integrations(), query, OperationalContextEntryType.INTEGRATION),
-                filterMapEntries(catalog.repositories(), query, OperationalContextEntryType.REPOSITORY),
-                filterMapEntries(catalog.boundedContexts(), query, OperationalContextEntryType.BOUNDED_CONTEXT),
+                filterEntries(catalog.teams(), query, OperationalContextEntryType.TEAM),
+                filterEntries(catalog.processes(), query, OperationalContextEntryType.PROCESS),
+                filterEntries(catalog.systems(), query, OperationalContextEntryType.SYSTEM),
+                filterEntries(catalog.integrations(), query, OperationalContextEntryType.INTEGRATION),
+                filterEntries(catalog.repositories(), query, OperationalContextEntryType.REPOSITORY),
+                filterEntries(catalog.boundedContexts(), query, OperationalContextEntryType.BOUNDED_CONTEXT),
                 filterGlossaryTerms(catalog.glossaryTerms(), query),
                 filterHandoffRules(catalog.handoffRules(), query),
                 catalog.openQuestions(),
@@ -140,8 +148,8 @@ public class OperationalContextAdapter implements OperationalContextPort {
         );
     }
 
-    private List<Map<String, Object>> filterMapEntries(
-            List<Map<String, Object>> entries,
+    private <T extends OperationalContextEntry> List<T> filterEntries(
+            List<T> entries,
             OperationalContextQuery query,
             OperationalContextEntryType entryType
     ) {
@@ -159,8 +167,8 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 .toList();
     }
 
-    private List<GlossaryTerm> filterGlossaryTerms(
-            List<GlossaryTerm> terms,
+    private List<OperationalContextGlossaryTerm> filterGlossaryTerms(
+            List<OperationalContextGlossaryTerm> terms,
             OperationalContextQuery query
     ) {
         if (!query.includes(OperationalContextEntryType.GLOSSARY_TERM)) {
@@ -177,8 +185,8 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 .toList();
     }
 
-    private List<HandoffRule> filterHandoffRules(
-            List<HandoffRule> rules,
+    private List<OperationalContextHandoffRule> filterHandoffRules(
+            List<OperationalContextHandoffRule> rules,
             OperationalContextQuery query
     ) {
         if (!query.includes(OperationalContextEntryType.HANDOFF_RULE)) {
@@ -195,16 +203,16 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 .toList();
     }
 
-    private boolean matchesAll(Map<String, Object> entry, List<OperationalContextFilter> filters) {
-        return filters.stream().allMatch(filter -> matchesAnyValue(textList(entry, filter.path()), filter));
+    private boolean matchesAll(OperationalContextEntry entry, List<OperationalContextFilter> filters) {
+        return filters.stream().allMatch(filter -> matchesAnyValue(entry.values(filter.path()), filter));
     }
 
-    private boolean matchesAll(GlossaryTerm term, List<OperationalContextFilter> filters) {
+    private boolean matchesAll(OperationalContextGlossaryTerm term, List<OperationalContextFilter> filters) {
         return filters.stream()
                 .allMatch(filter -> matchesAnyValue(glossaryTermValues(term, filter.path()), filter));
     }
 
-    private boolean matchesAll(HandoffRule rule, List<OperationalContextFilter> filters) {
+    private boolean matchesAll(OperationalContextHandoffRule rule, List<OperationalContextFilter> filters) {
         return filters.stream()
                 .allMatch(filter -> matchesAnyValue(handoffRuleValues(rule, filter.path()), filter));
     }
@@ -241,7 +249,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         return false;
     }
 
-    private List<String> glossaryTermValues(GlossaryTerm term, String path) {
+    private List<String> glossaryTermValues(OperationalContextGlossaryTerm term, String path) {
         return switch (path) {
             case "id" -> List.of(term.id());
             case "term" -> List.of(term.term());
@@ -257,7 +265,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         };
     }
 
-    private List<String> handoffRuleValues(HandoffRule rule, String path) {
+    private List<String> handoffRuleValues(OperationalContextHandoffRule rule, String path) {
         return switch (path) {
             case "id" -> List.of(rule.id());
             case "title" -> List.of(rule.title());
@@ -324,7 +332,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         return normalized;
     }
 
-    private List<OpenQuestion> openQuestions(
+    private List<OperationalContextOpenQuestion> openQuestions(
             Map<String, Object> systemsDocument,
             Map<String, Object> repositoriesDocument,
             Map<String, Object> processesDocument,
@@ -340,7 +348,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
             List<Map<String, Object>> boundedContexts,
             List<Map<String, Object>> teams
     ) {
-        var questions = new ArrayList<OpenQuestion>();
+        var questions = new ArrayList<OperationalContextOpenQuestion>();
         addYamlGaps(questions, "systems.yml", "system", null, systemsDocument.get("gaps"));
         addEntityGaps(questions, "systems.yml", "system", systems);
         addYamlGaps(questions, "repo-map.yml", "repository", null, repositoriesDocument.get("gaps"));
@@ -359,7 +367,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
     }
 
     private void addEntityGaps(
-            List<OpenQuestion> questions,
+            List<OperationalContextOpenQuestion> questions,
             String sourceFile,
             String entityType,
             List<Map<String, Object>> entries
@@ -371,7 +379,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
     }
 
     private void addYamlGaps(
-            List<OpenQuestion> questions,
+            List<OperationalContextOpenQuestion> questions,
             String sourceFile,
             String entityType,
             String entityId,
@@ -393,7 +401,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
 
             var effectiveEntityType = firstNonBlank(text(item, "entityType"), text(item, "targetType"), entityType);
             var effectiveEntityId = firstNonBlank(text(item, "entityId"), text(item, "targetId"), entityId);
-            questions.add(new OpenQuestion(
+            questions.add(new OperationalContextOpenQuestion(
                     openQuestionId(sourceFile, effectiveEntityType, effectiveEntityId, question, index),
                     sourceFile,
                     effectiveEntityType,
@@ -406,7 +414,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         }
     }
 
-    private void addMarkdownGaps(List<OpenQuestion> questions, String sourceFile, String markdown) {
+    private void addMarkdownGaps(List<OperationalContextOpenQuestion> questions, String sourceFile, String markdown) {
         if (!StringUtils.hasText(markdown)) {
             return;
         }
@@ -456,7 +464,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
     }
 
     private int addMarkdownGap(
-            List<OpenQuestion> questions,
+            List<OperationalContextOpenQuestion> questions,
             String sourceFile,
             String currentId,
             Map<String, String> fields,
@@ -476,7 +484,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
             return index + 1;
         }
 
-        questions.add(new OpenQuestion(
+        questions.add(new OperationalContextOpenQuestion(
                 openQuestionId(sourceFile, "", null, question, index),
                 sourceFile,
                 "",

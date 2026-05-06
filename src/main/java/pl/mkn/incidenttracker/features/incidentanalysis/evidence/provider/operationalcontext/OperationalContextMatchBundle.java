@@ -1,19 +1,24 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext;
 
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
 
 import java.util.List;
-import java.util.Map;
 
 record OperationalContextMatchBundle(
-        List<OperationalContextMatchedEntry<Map<String, Object>>> systemMatches,
-        List<OperationalContextMatchedEntry<Map<String, Object>>> integrationMatches,
-        List<OperationalContextMatchedEntry<Map<String, Object>>> processMatches,
-        List<OperationalContextMatchedEntry<Map<String, Object>>> repositoryMatches,
-        List<OperationalContextMatchedEntry<Map<String, Object>>> boundedContextMatches,
-        List<OperationalContextMatchedEntry<Map<String, Object>>> teamMatches,
-        List<OperationalContextMatchedEntry<GlossaryTerm>> glossaryMatches,
-        List<OperationalContextMatchedEntry<HandoffRule>> handoffMatches
+        List<OperationalContextMatchedEntry<OperationalContextSystem>> systemMatches,
+        List<OperationalContextMatchedEntry<OperationalContextIntegration>> integrationMatches,
+        List<OperationalContextMatchedEntry<OperationalContextProcess>> processMatches,
+        List<OperationalContextMatchedEntry<OperationalContextRepository>> repositoryMatches,
+        List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> boundedContextMatches,
+        List<OperationalContextMatchedEntry<OperationalContextTeam>> teamMatches,
+        List<OperationalContextMatchedEntry<OperationalContextGlossaryTerm>> glossaryMatches,
+        List<OperationalContextMatchedEntry<OperationalContextHandoffRule>> handoffMatches
 ) {
 }

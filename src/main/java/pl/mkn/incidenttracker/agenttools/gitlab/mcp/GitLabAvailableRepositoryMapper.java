@@ -2,18 +2,14 @@ package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableRepository;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 
 final class GitLabAvailableRepositoryMapper {
 
@@ -49,25 +45,25 @@ final class GitLabAvailableRepositoryMapper {
 
     private static GitLabAvailableRepository toRepository(
             String sessionGroup,
-            Map<String, Object> repository
+            OperationalContextRepository repository
     ) {
-        var rawProjectPath = first(textList(repository, "git.projectPath"));
+        var rawProjectPath = repository.git().projectPath();
         var projectName = firstNonBlank(
                 relativeProjectPath(sessionGroup, rawProjectPath),
-                relativeProjectPath(sessionGroup, text(repository, "git.project"))
+                relativeProjectPath(sessionGroup, repository.git().project())
         );
         if (!StringUtils.hasText(projectName)) {
             return null;
         }
 
         var gitLabPath = fullGitLabPath(sessionGroup, rawProjectPath, projectName);
-        var repositoryId = text(repository, "id");
-        var name = firstNonBlank(text(repository, "name"), repositoryId, projectName);
-        var systems = textList(repository, "references.systems");
-        var runtimeComponents = textList(repository, "references.runtimeComponents");
-        var boundedContexts = textList(repository, "references.boundedContexts");
-        var processes = textList(repository, "references.processes");
-        var integrations = textList(repository, "references.integrations");
+        var repositoryId = repository.id();
+        var name = firstNonBlank(repository.name(), repositoryId, projectName);
+        var systems = repository.references().systems();
+        var runtimeComponents = repository.references().runtimeComponents();
+        var boundedContexts = repository.references().boundedContexts();
+        var processes = repository.references().processes();
+        var integrations = repository.references().integrations();
 
         return new GitLabAvailableRepository(
                 repositoryId,
@@ -76,47 +72,48 @@ final class GitLabAvailableRepositoryMapper {
                 projectName,
                 gitLabPath,
                 aliases(repository, repositoryId, name, projectName, gitLabPath),
-                text(repository, "repositoryType"),
-                text(repository, "lifecycleStatus"),
+                repository.repositoryType(),
+                repository.lifecycleStatus(),
                 systems,
                 runtimeComponents,
                 boundedContexts,
                 processes,
                 integrations,
-                textList(repository, "references.repositories"),
+                repository.references().repositories(),
                 packagePrefixes(repository),
                 endpointPrefixes(repository),
                 modulePaths(repository)
         );
     }
 
-    private static boolean isGitLabRepository(Map<String, Object> repository) {
-        var provider = text(repository, "git.provider");
+    private static boolean isGitLabRepository(OperationalContextRepository repository) {
+        var provider = repository.git().provider();
         return !StringUtils.hasText(provider) || "gitlab".equalsIgnoreCase(provider.trim());
     }
 
-    private static boolean groupMatches(String sessionGroup, Map<String, Object> repository) {
+    private static boolean groupMatches(String sessionGroup, OperationalContextRepository repository) {
         if (!StringUtils.hasText(sessionGroup)) {
             return true;
         }
 
         var normalizedSessionGroup = normalizePath(sessionGroup);
-        var repositoryGroups = textList(repository, "git.group");
-        if (!repositoryGroups.isEmpty()) {
-            return repositoryGroups.stream()
-                    .map(GitLabAvailableRepositoryMapper::normalizePath)
-                    .anyMatch(normalizedSessionGroup::equals);
+        var repositoryGroup = repository.git().group();
+        if (StringUtils.hasText(repositoryGroup)) {
+            return normalizedSessionGroup.equals(normalizePath(repositoryGroup));
         }
 
-        var projectPaths = textList(repository, "git.projectPath");
-        return projectPaths.isEmpty()
-                || projectPaths.stream()
-                .map(GitLabAvailableRepositoryMapper::normalizePath)
-                .anyMatch(path -> path.equals(normalizedSessionGroup) || path.startsWith(normalizedSessionGroup + "/"));
+        var projectPath = repository.git().projectPath();
+        if (!StringUtils.hasText(projectPath)) {
+            return true;
+        }
+
+        var normalizedProjectPath = normalizePath(projectPath);
+        return normalizedProjectPath.equals(normalizedSessionGroup)
+                || normalizedProjectPath.startsWith(normalizedSessionGroup + "/");
     }
 
     private static List<String> aliases(
-            Map<String, Object> repository,
+            OperationalContextRepository repository,
             String repositoryId,
             String name,
             String projectName,
@@ -125,48 +122,34 @@ final class GitLabAvailableRepositoryMapper {
         var aliases = new ArrayList<String>();
         aliases.add(repositoryId);
         aliases.add(name);
-        aliases.add(text(repository, "git.project"));
+        aliases.add(repository.git().project());
         aliases.add(projectName);
         aliases.add(gitLabPath);
-        aliases.addAll(textList(repository, "git.aliases"));
-        aliases.addAll(textList(repository, "matchSignals.exact.projectNames"));
-        aliases.addAll(textList(repository, "matchSignals.exact.projectPaths"));
+        aliases.addAll(repository.git().aliases());
+        aliases.addAll(repository.matchSignals().exact().projectNames());
+        aliases.addAll(repository.matchSignals().exact().projectPaths());
         return distinctLimited(aliases, MAX_ALIASES);
     }
 
-    private static List<String> packagePrefixes(Map<String, Object> repository) {
-        var values = new ArrayList<String>();
-        values.addAll(textList(repository, "matchSignals.strong.packagePrefixes"));
-        values.addAll(textList(repository, "matchSignals.medium.packagePrefixes"));
-        for (var module : mapList(repository, "modules")) {
-            values.addAll(textList(module, "matchSignals.strong.packagePrefixes"));
-            values.addAll(textList(module, "matchSignals.medium.packagePrefixes"));
-        }
-        return distinctLimited(values, MAX_PACKAGE_PREFIXES);
+    private static List<String> packagePrefixes(OperationalContextRepository repository) {
+        return distinctLimited(repository.packagePrefixSignals(), MAX_PACKAGE_PREFIXES);
     }
 
-    private static List<String> endpointPrefixes(Map<String, Object> repository) {
-        var values = new ArrayList<String>();
-        values.addAll(textList(repository, "matchSignals.strong.endpointPrefixes"));
-        values.addAll(textList(repository, "matchSignals.medium.endpointPrefixes"));
-        for (var module : mapList(repository, "modules")) {
-            values.addAll(textList(module, "matchSignals.strong.endpointPrefixes"));
-            values.addAll(textList(module, "matchSignals.medium.endpointPrefixes"));
-        }
-        return distinctLimited(values, MAX_ENDPOINT_PREFIXES);
+    private static List<String> endpointPrefixes(OperationalContextRepository repository) {
+        return distinctLimited(repository.endpointPrefixSignals(), MAX_ENDPOINT_PREFIXES);
     }
 
-    private static List<String> modulePaths(Map<String, Object> repository) {
+    private static List<String> modulePaths(OperationalContextRepository repository) {
         var values = new ArrayList<String>();
-        values.addAll(textList(repository, "sourceLayout.modulePaths"));
-        for (var module : mapList(repository, "modules")) {
-            values.addAll(textList(module, "id"));
+        values.addAll(repository.sourceLayout().modulePaths());
+        for (var module : repository.modules()) {
+            values.add(module.effectiveId());
         }
         return distinctLimited(values, MAX_MODULE_PATHS);
     }
 
     private static String summary(
-            Map<String, Object> repository,
+            OperationalContextRepository repository,
             String name,
             List<String> systems,
             List<String> boundedContexts,
@@ -174,9 +157,8 @@ final class GitLabAvailableRepositoryMapper {
     ) {
         var parts = new ArrayList<String>();
         var explicitSummary = firstNonBlank(
-                text(repository, "summary"),
-                text(repository, "description"),
-                text(repository, "purpose")
+                repository.summary(),
+                repository.purpose()
         );
         if (StringUtils.hasText(explicitSummary)) {
             parts.add(explicitSummary);
@@ -245,10 +227,6 @@ final class GitLabAvailableRepositoryMapper {
             }
         }
         return List.copyOf(distinct);
-    }
-
-    private static String first(List<String> values) {
-        return values != null && !values.isEmpty() ? values.get(0) : null;
     }
 
     private static String firstNonBlank(String... values) {

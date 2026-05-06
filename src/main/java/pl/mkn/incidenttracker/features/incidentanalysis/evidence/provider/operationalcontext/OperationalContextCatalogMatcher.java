@@ -3,27 +3,28 @@ package pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.opera
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
 
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.anyOverlap;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsAnyId;
-import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsId;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.genericSignals;
 import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.matchedIds;
-import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textListAny;
 
 @Component
 @RequiredArgsConstructor
@@ -92,42 +93,42 @@ public class OperationalContextCatalogMatcher {
         );
     }
 
-    private List<OperationalContextMatchedEntry<Map<String, Object>>> matchEntries(
-            List<Map<String, Object>> entries,
-            Function<Map<String, Object>, OperationalContextMatchScore> scorer,
+    private <T extends OperationalContextEntry> List<OperationalContextMatchedEntry<T>> matchEntries(
+            List<T> entries,
+            Function<T, OperationalContextMatchScore> scorer,
             int limit
     ) {
         return entries.stream()
                 .map(entry -> new OperationalContextMatchedEntry<>(entry, scorer.apply(entry)))
                 .filter(match -> match.score().score() > 0)
                 .sorted(Comparator
-                        .comparingInt((OperationalContextMatchedEntry<Map<String, Object>> match) -> match.score().score())
+                        .comparingInt((OperationalContextMatchedEntry<T> match) -> match.score().score())
                         .reversed()
-                        .thenComparing(match -> text(match.entry(), "id"), Comparator.nullsLast(String::compareTo)))
+                        .thenComparing(match -> match.entry().id(), Comparator.nullsLast(String::compareTo)))
                 .limit(limit)
                 .toList();
     }
 
-    private List<OperationalContextMatchedEntry<GlossaryTerm>> matchGlossaryTerms(
-            List<GlossaryTerm> terms,
+    private List<OperationalContextMatchedEntry<OperationalContextGlossaryTerm>> matchGlossaryTerms(
+            List<OperationalContextGlossaryTerm> terms,
             OperationalContextIncidentSignals signals
     ) {
         return terms.stream()
                 .map(term -> new OperationalContextMatchedEntry<>(term, scoreGlossaryTerm(term, signals)))
                 .filter(match -> match.score().score() > 0)
                 .sorted(Comparator
-                        .comparingInt((OperationalContextMatchedEntry<GlossaryTerm> match) -> match.score().score())
+                        .comparingInt((OperationalContextMatchedEntry<OperationalContextGlossaryTerm> match) -> match.score().score())
                         .reversed()
                         .thenComparing(match -> match.entry().id()))
                 .limit(properties.getMaxGlossaryTerms())
                 .toList();
     }
 
-    private List<OperationalContextMatchedEntry<HandoffRule>> matchHandoffRules(
-            List<HandoffRule> rules,
+    private List<OperationalContextMatchedEntry<OperationalContextHandoffRule>> matchHandoffRules(
+            List<OperationalContextHandoffRule> rules,
             OperationalContextIncidentSignals signals,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> integrationMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> boundedContextMatches
+            List<OperationalContextMatchedEntry<OperationalContextIntegration>> integrationMatches,
+            List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> boundedContextMatches
     ) {
         var selectedRuleIds = new LinkedHashSet<String>();
         if (signals.containsAny("timeout", "soapfault", "connection reset", "read timed out")
@@ -156,7 +157,7 @@ public class OperationalContextCatalogMatcher {
                 .filter(rule -> selectedRuleIds.contains(rule.id()))
                 .map(rule -> new OperationalContextMatchedEntry<>(rule, scoreHandoffRule(rule, signals)))
                 .sorted(Comparator
-                        .comparingInt((OperationalContextMatchedEntry<HandoffRule> match) -> match.score().score())
+                        .comparingInt((OperationalContextMatchedEntry<OperationalContextHandoffRule> match) -> match.score().score())
                         .reversed()
                         .thenComparing(match -> match.entry().id()))
                 .limit(properties.getMaxHandoffRules())
@@ -164,39 +165,39 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreSystem(
-            Map<String, Object> system,
+            OperationalContextSystem system,
             OperationalContextIncidentSignals signals
     ) {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, system, "system");
         addSignalMatches(score, signals, genericSignals(system), 10, 6, "signal");
-        addSignalMatches(score, signals, textList(system, "references.processes"), 4, 2, "process");
-        addSignalMatches(score, signals, textList(system, "references.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textList(system, "references.repositories"), 6, 4, "repository");
+        addSignalMatches(score, signals, system.references().processes(), 4, 2, "process");
+        addSignalMatches(score, signals, system.references().boundedContexts(), 5, 3, "context");
+        addSignalMatches(score, signals, system.references().repositories(), 6, 4, "repository");
         return score;
     }
 
     private OperationalContextMatchScore scoreIntegration(
-            Map<String, Object> integration,
+            OperationalContextIntegration integration,
             OperationalContextIncidentSignals signals,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> systemMatches
+            List<OperationalContextMatchedEntry<OperationalContextSystem>> systemMatches
     ) {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, integration, "integration");
         addSignalMatches(score, signals, genericSignals(integration), 11, 7, "signal");
-        addSignalMatches(score, signals, textList(integration, "references.processes"), 4, 2, "process");
-        addSignalMatches(score, signals, textList(integration, "references.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textList(integration, "transport.protocols"), 4, 2, "protocol");
+        addSignalMatches(score, signals, integration.references().processes(), 4, 2, "process");
+        addSignalMatches(score, signals, integration.references().boundedContexts(), 5, 3, "context");
+        addSignalMatches(score, signals, integration.transport().protocols(), 4, 2, "protocol");
 
         var matchedSystemIds = matchedIds(systemMatches);
         if (containsAnyId(
                 matchedSystemIds,
-                text(integration, "participants.source.system"),
-                firstOf(textList(integration, "participants.finalTargets"))
+                integration.participants().source().system(),
+                firstOf(integration.participants().finalTargets())
         )) {
             score.add(10, "sourceOrTargetSystemMatches");
         }
-        if (anyOverlap(textList(integration, "participants.intermediarySystems"), matchedSystemIds)) {
+        if (anyOverlap(integration.participants().intermediarySystems(), matchedSystemIds)) {
             score.add(6, "intermediarySystemMatches");
         }
 
@@ -204,32 +205,33 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreRepository(
-            Map<String, Object> repository,
+            OperationalContextRepository repository,
             OperationalContextIncidentSignals signals,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> systemMatches
+            List<OperationalContextMatchedEntry<OperationalContextSystem>> systemMatches
     ) {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, repository, "repository");
         addSignalMatches(score, signals, genericSignals(repository), 11, 7, "signal");
-        addSignalMatch(score, signals, text(repository, "git.projectPath"), 12, 8, "projectPath");
-        addSignalMatch(score, signals, text(repository, "git.project"), 10, 6, "project");
-        addSignalMatch(score, signals, text(repository, "git.group"), 5, 2, "group");
-        addSignalMatches(score, signals, textList(repository, "references.systems"), 6, 3, "system");
-        addSignalMatches(score, signals, textList(repository, "references.processes"), 5, 3, "process");
-        addSignalMatches(score, signals, textList(repository, "references.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textList(repository, "sourceLayout.sourceRoots"), 10, 6, "sourceRoot");
-        addSignalMatches(score, signals, textList(repository, "sourceLayout.modulePaths"), 8, 5, "modulePath");
-        addSignalMatches(score, signals, textList(repository, "sourceLayout.importantPaths"), 8, 5, "importantPath");
-        addSignalMatches(score, signals, textList(repository, "codeSearch.entrypoints"), 7, 4, "entrypoint");
+        addSignalMatch(score, signals, repository.git().projectPath(), 12, 8, "projectPath");
+        addSignalMatch(score, signals, repository.git().project(), 10, 6, "project");
+        addSignalMatch(score, signals, repository.git().group(), 5, 2, "group");
+        addSignalMatches(score, signals, repository.references().systems(), 6, 3, "system");
+        addSignalMatches(score, signals, repository.references().processes(), 5, 3, "process");
+        addSignalMatches(score, signals, repository.references().boundedContexts(), 5, 3, "context");
+        addSignalMatches(score, signals, repository.sourceLayout().sourceRoots(), 10, 6, "sourceRoot");
+        addSignalMatches(score, signals, repository.sourceLayout().modulePaths(), 8, 5, "modulePath");
+        addSignalMatches(score, signals, repository.sourceLayout().importantPaths(), 8, 5, "importantPath");
+        addSignalMatches(score, signals, repository.classHintSignals(), 7, 4, "entrypoint");
 
-        for (var module : mapList(repository, "modules")) {
-            addIdentityMatches(score, signals, module, "module");
-            addSignalMatches(score, signals, textList(module, "sourceRoots"), 8, 5, "moduleSourceRoot");
-            addSignalMatches(score, signals, textList(module, "importantPaths"), 8, 5, "moduleImportantPath");
-            addSignalMatches(score, signals, genericSignals(module), 8, 5, "moduleSignal");
+        for (var module : repository.modules()) {
+            addSignalMatch(score, signals, module.effectiveId(), 10, 5, "moduleId");
+            addSignalMatch(score, signals, module.name(), 7, 3, "moduleName");
+            addSignalMatches(score, signals, module.sourceRoots(), 8, 5, "moduleSourceRoot");
+            addSignalMatches(score, signals, module.importantPaths(), 8, 5, "moduleImportantPath");
+            addSignalMatches(score, signals, module.genericSignals(), 8, 5, "moduleSignal");
         }
 
-        if (anyOverlap(textList(repository, "references.systems"), matchedIds(systemMatches))) {
+        if (anyOverlap(repository.references().systems(), matchedIds(systemMatches))) {
             score.add(8, "referenceSystemMatches");
         }
 
@@ -237,27 +239,28 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreProcess(
-            Map<String, Object> process,
+            OperationalContextProcess process,
             OperationalContextIncidentSignals signals,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> systemMatches
+            List<OperationalContextMatchedEntry<OperationalContextSystem>> systemMatches
     ) {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, process, "process");
-        addSignalMatches(score, signals, textList(process, "participants.primarySystems"), 6, 3, "system");
-        addSignalMatches(score, signals, textList(process, "participants.externalSystems"), 6, 3, "externalSystem");
-        addSignalMatches(score, signals, textList(process, "references.repositories"), 6, 3, "repository");
-        addSignalMatches(score, signals, textList(process, "references.boundedContexts"), 5, 3, "context");
-        addSignalMatches(score, signals, textList(process, "processBoundary.endsWhen"), 7, 4, "completionSignal");
-        addSignalMatches(score, signals, textList(process, "outcomes.successArtifacts"), 5, 3, "successArtifact");
+        addSignalMatches(score, signals, process.participants().primarySystems(), 6, 3, "system");
+        addSignalMatches(score, signals, process.participants().externalSystems(), 6, 3, "externalSystem");
+        addSignalMatches(score, signals, process.references().repositories(), 6, 3, "repository");
+        addSignalMatches(score, signals, process.references().boundedContexts(), 5, 3, "context");
+        addSignalMatches(score, signals, process.processBoundary().endsWhen(), 7, 4, "completionSignal");
+        addSignalMatches(score, signals, process.outcomes().successArtifacts(), 5, 3, "successArtifact");
 
-        for (var step : mapList(process, "processSteps")) {
-            addIdentityMatches(score, signals, step, "step");
-            addSignalMatches(score, signals, genericSignals(step), 8, 5, "stepSignal");
-            addSignalMatches(score, signals, textList(step, "participants.systems"), 6, 3, "stepSystem");
+        for (var step : process.steps()) {
+            addSignalMatch(score, signals, step.id(), 10, 5, "stepId");
+            addSignalMatch(score, signals, step.name(), 7, 3, "stepName");
+            addSignalMatches(score, signals, step.genericSignals(), 8, 5, "stepSignal");
+            addSignalMatches(score, signals, step.references().systems(), 6, 3, "stepSystem");
         }
 
-        if (anyOverlap(textList(process, "participants.primarySystems"), matchedIds(systemMatches))
-                || anyOverlap(textList(process, "participants.externalSystems"), matchedIds(systemMatches))) {
+        if (anyOverlap(process.participants().primarySystems(), matchedIds(systemMatches))
+                || anyOverlap(process.participants().externalSystems(), matchedIds(systemMatches))) {
             score.add(8, "processSystemMatches");
         }
 
@@ -265,34 +268,34 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreBoundedContext(
-            Map<String, Object> boundedContext,
+            OperationalContextBoundedContext boundedContext,
             OperationalContextIncidentSignals signals,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> systemMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> processMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> repositoryMatches
+            List<OperationalContextMatchedEntry<OperationalContextSystem>> systemMatches,
+            List<OperationalContextMatchedEntry<OperationalContextProcess>> processMatches,
+            List<OperationalContextMatchedEntry<OperationalContextRepository>> repositoryMatches
     ) {
         var score = new OperationalContextMatchScore();
         addIdentityMatches(score, signals, boundedContext, "boundedContext");
         addSignalMatches(score, signals, genericSignals(boundedContext), 9, 5, "signal");
-        addSignalMatches(score, signals, textList(boundedContext, "references.systems"), 6, 3, "system");
-        addSignalMatches(score, signals, textList(boundedContext, "references.repositories"), 6, 3, "repository");
-        addSignalMatches(score, signals, textList(boundedContext, "references.processes"), 5, 3, "process");
-        addSignalMatches(score, signals, textList(boundedContext, "references.terms"), 6, 3, "term");
-        addSignalMatches(score, signals, textList(boundedContext, "operationalSignals.serviceNames"), 9, 5, "serviceName");
-        addSignalMatches(score, signals, textList(boundedContext, "operationalSignals.endpointPrefixes"), 9, 5, "endpointPrefix");
-        addSignalMatches(score, signals, textList(boundedContext, "operationalSignals.packagePrefixes"), 9, 5, "packagePrefix");
-        for (var relation : mapList(boundedContext, "relations")) {
-            addSignalMatch(score, signals, text(relation, "target"), 5, 3, "targetContext");
-            addSignalMatches(score, signals, textList(relation, "via"), 6, 3, "relationVia");
+        addSignalMatches(score, signals, boundedContext.references().systems(), 6, 3, "system");
+        addSignalMatches(score, signals, boundedContext.references().repositories(), 6, 3, "repository");
+        addSignalMatches(score, signals, boundedContext.references().processes(), 5, 3, "process");
+        addSignalMatches(score, signals, boundedContext.references().terms(), 6, 3, "term");
+        addSignalMatches(score, signals, boundedContext.operationalSignals().serviceNames(), 9, 5, "serviceName");
+        addSignalMatches(score, signals, boundedContext.operationalSignals().endpointPrefixes(), 9, 5, "endpointPrefix");
+        addSignalMatches(score, signals, boundedContext.operationalSignals().packagePrefixes(), 9, 5, "packagePrefix");
+        for (var relation : boundedContext.relations()) {
+            addSignalMatch(score, signals, relation.target(), 5, 3, "targetContext");
+            addSignalMatches(score, signals, relation.via(), 6, 3, "relationVia");
         }
 
-        if (anyOverlap(textList(boundedContext, "references.systems"), matchedIds(systemMatches))) {
+        if (anyOverlap(boundedContext.references().systems(), matchedIds(systemMatches))) {
             score.add(8, "scopeSystemMatches");
         }
-        if (anyOverlap(textList(boundedContext, "references.processes"), matchedIds(processMatches))) {
+        if (anyOverlap(boundedContext.references().processes(), matchedIds(processMatches))) {
             score.add(8, "scopeProcessMatches");
         }
-        if (anyOverlap(textList(boundedContext, "references.repositories"), matchedIds(repositoryMatches))) {
+        if (anyOverlap(boundedContext.references().repositories(), matchedIds(repositoryMatches))) {
             score.add(8, "scopeRepositoryMatches");
         }
 
@@ -300,15 +303,15 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreTeam(
-            Map<String, Object> team,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> systemMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> processMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> repositoryMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> boundedContextMatches,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> integrationMatches
+            OperationalContextTeam team,
+            List<OperationalContextMatchedEntry<OperationalContextSystem>> systemMatches,
+            List<OperationalContextMatchedEntry<OperationalContextProcess>> processMatches,
+            List<OperationalContextMatchedEntry<OperationalContextRepository>> repositoryMatches,
+            List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> boundedContextMatches,
+            List<OperationalContextMatchedEntry<OperationalContextIntegration>> integrationMatches
     ) {
         var score = new OperationalContextMatchScore();
-        var teamId = text(team, "id");
+        var teamId = team.id();
         if (!StringUtils.hasText(teamId)) {
             return score;
         }
@@ -319,19 +322,19 @@ public class OperationalContextCatalogMatcher {
         addTeamOwnershipMatches(score, teamId, boundedContextMatches, "boundedContext");
         addTeamOwnershipMatches(score, teamId, integrationMatches, "integration");
 
-        if (anyOverlap(textList(team, "references.systems"), matchedIds(systemMatches))) {
+        if (anyOverlap(team.references().systems(), matchedIds(systemMatches))) {
             score.add(8, "referencesMatchedSystem");
         }
-        if (anyOverlap(textList(team, "references.processes"), matchedIds(processMatches))) {
+        if (anyOverlap(team.references().processes(), matchedIds(processMatches))) {
             score.add(8, "referencesMatchedProcess");
         }
-        if (anyOverlap(textList(team, "references.repositories"), matchedIds(repositoryMatches))) {
+        if (anyOverlap(team.references().repositories(), matchedIds(repositoryMatches))) {
             score.add(8, "referencesMatchedRepository");
         }
-        if (anyOverlap(textList(team, "references.boundedContexts"), matchedIds(boundedContextMatches))) {
+        if (anyOverlap(team.references().boundedContexts(), matchedIds(boundedContextMatches))) {
             score.add(8, "referencesMatchedBoundedContext");
         }
-        if (anyOverlap(textList(team, "references.integrations"), matchedIds(integrationMatches))) {
+        if (anyOverlap(team.references().integrations(), matchedIds(integrationMatches))) {
             score.add(8, "referencesMatchedIntegration");
         }
 
@@ -339,7 +342,7 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreGlossaryTerm(
-            GlossaryTerm term,
+            OperationalContextGlossaryTerm term,
             OperationalContextIncidentSignals signals
     ) {
         var score = new OperationalContextMatchScore();
@@ -357,7 +360,7 @@ public class OperationalContextCatalogMatcher {
     }
 
     private OperationalContextMatchScore scoreHandoffRule(
-            HandoffRule rule,
+            OperationalContextHandoffRule rule,
             OperationalContextIncidentSignals signals
     ) {
         var score = new OperationalContextMatchScore();
@@ -377,36 +380,44 @@ public class OperationalContextCatalogMatcher {
     private void addIdentityMatches(
             OperationalContextMatchScore score,
             OperationalContextIncidentSignals signals,
-            Map<String, Object> entry,
+            OperationalContextEntry entry,
             String label
     ) {
-        addSignalMatch(score, signals, text(entry, "id"), 10, 5, label + "Id");
-        addSignalMatch(score, signals, text(entry, "name"), 7, 3, label + "Name");
-        addSignalMatch(score, signals, text(entry, "shortName"), 6, 3, label + "ShortName");
+        addSignalMatch(score, signals, entry.id(), 10, 5, label + "Id");
+        addSignalMatch(score, signals, entry.name(), 7, 3, label + "Name");
+        addSignalMatch(score, signals, entry.shortName(), 6, 3, label + "ShortName");
     }
 
     private void addTeamOwnershipMatches(
             OperationalContextMatchScore score,
             String teamId,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches,
+            List<? extends OperationalContextMatchedEntry<? extends OperationalContextEntry>> matches,
             String relationLabel
     ) {
         for (var match : matches) {
             var entry = match.entry();
-            var entryId = text(entry, "id");
-            if (containsId(entry, "references.teams", teamId)
+            var entryId = entry.id();
+            if (containsNormalizedId(entry.references().teams(), teamId)
                     || responsibilityTeamIds(entry).contains(normalize(teamId))) {
                 score.add(12, relationLabel + "Owner=" + entryId);
             }
-            if (containsId(entry, "handoffHints.partnerTeamIds", teamId)) {
+            if (containsNormalizedId(entry.handoffHints().partnerTeamIds(), teamId)) {
                 score.add(7, relationLabel + "Partner=" + entryId);
             }
         }
     }
 
-    private List<String> responsibilityTeamIds(Map<String, Object> entry) {
-        return mapList(entry, "responsibilities").stream()
-                .map(responsibility -> text(responsibility, "teamId"))
+    private boolean containsNormalizedId(List<String> values, String id) {
+        var normalizedId = normalize(id);
+        return StringUtils.hasText(normalizedId)
+                && values.stream()
+                .map(value -> normalize(value))
+                .anyMatch(normalizedId::equals);
+    }
+
+    private List<String> responsibilityTeamIds(OperationalContextEntry entry) {
+        return entry.responsibilities().stream()
+                .map(responsibility -> responsibility.teamId())
                 .filter(StringUtils::hasText)
                 .map(value -> normalize(value))
                 .toList();

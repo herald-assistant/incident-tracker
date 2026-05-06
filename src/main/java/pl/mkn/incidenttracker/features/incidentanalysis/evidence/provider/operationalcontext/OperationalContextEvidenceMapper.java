@@ -5,20 +5,22 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.mapList;
 import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.normalize;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.text;
-import static pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextMaps.textList;
-import static pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.textListAny;
 
 @Component
 public class OperationalContextEvidenceMapper {
@@ -60,22 +62,22 @@ public class OperationalContextEvidenceMapper {
 
     private void addSystemItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches,
+            List<OperationalContextMatchedEntry<OperationalContextSystem>> matches,
             OperationalContextCatalog catalog
     ) {
         for (var match : matches) {
             var system = match.entry();
-            var systemId = text(system, "id");
+            var systemId = system.id();
             var repoIds = systemRepositoryIds(system);
             var codeSearchRepositories = resolveCodeSearchRepositories(catalog, systemId, repoIds);
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_ID, systemId);
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(text(system, "name"), text(system, "shortName")));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(system.name(), system.shortName()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(system)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(textList(system, "handoffHints.partnerTeamIds")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, text(system, "participants.externalOwner"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(textList(system, "references.processes")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(textList(system, "references.boundedContexts")));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(system.handoffHints().partnerTeamIds()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, system.participants().externalOwner());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(system.references().processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(system.references().boundedContexts()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(repoIds));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS, joined(repositoryIds(codeSearchRepositories)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_PROJECTS, joined(repositoryProjects(codeSearchRepositories)));
@@ -83,7 +85,7 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CLASS_HINTS, joined(limit(repositoryClassHints(codeSearchRepositories), 10)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
-                    "Operational system " + firstNonBlank(text(system, "id"), text(system, "name")),
+                    "Operational system " + firstNonBlank(system.id(), system.name()),
                     List.copyOf(attributes)
             ));
         }
@@ -91,23 +93,23 @@ public class OperationalContextEvidenceMapper {
 
     private void addIntegrationItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches
+            List<OperationalContextMatchedEntry<OperationalContextIntegration>> matches
     ) {
         for (var match : matches) {
             var integration = match.entry();
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_ID, text(integration, "id"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(text(integration, "name"), text(integration, "shortName")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_SYSTEM, text(integration, "participants.source.system"));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_ID, integration.id());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(integration.name(), integration.shortName()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_SYSTEM, integration.participants().source().system());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TARGET_SYSTEMS, joined(integrationTargetSystems(integration)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(integration)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(textList(integration, "handoffHints.partnerTeamIds")));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(integration.handoffHints().partnerTeamIds()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, integrationExternalOwner(integration));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROTOCOLS, joined(textList(integration, "transport.protocols")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, text(integration, "handoffHints.defaultRouteLabel"));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROTOCOLS, joined(integration.transport().protocols()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, integration.handoffHints().defaultRouteLabel());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
-                    "Operational integration " + firstNonBlank(text(integration, "id"), text(integration, "name")),
+                    "Operational integration " + firstNonBlank(integration.id(), integration.name()),
                     List.copyOf(attributes)
             ));
         }
@@ -115,21 +117,21 @@ public class OperationalContextEvidenceMapper {
 
     private void addProcessItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches
+            List<OperationalContextMatchedEntry<OperationalContextProcess>> matches
     ) {
         for (var match : matches) {
             var process = match.entry();
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_ID, text(process, "id"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(text(process, "name"), text(process, "shortName")));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_ID, process.id());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(process.name(), process.shortName()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(process)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(textList(process, "handoffHints.partnerTeamIds")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(textList(process, "participants.primarySystems")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_SYSTEM_IDS, joined(textList(process, "participants.externalSystems")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_COMPLETION_SIGNALS, joined(limit(textListAny(process, "processBoundary.endsWhen", "outcomes.successArtifacts"), 4)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(process.handoffHints().partnerTeamIds()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(process.participants().primarySystems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_SYSTEM_IDS, joined(process.participants().externalSystems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_COMPLETION_SIGNALS, joined(limit(completionSignals(process), 4)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
-                    "Operational process " + firstNonBlank(text(process, "id"), text(process, "name")),
+                    "Operational process " + firstNonBlank(process.id(), process.name()),
                     List.copyOf(attributes)
             ));
         }
@@ -137,25 +139,25 @@ public class OperationalContextEvidenceMapper {
 
     private void addRepositoryItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches
+            List<OperationalContextMatchedEntry<OperationalContextRepository>> matches
     ) {
         for (var match : matches) {
             var repository = match.entry();
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_ID, text(repository, "id"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROJECT_PATH, text(repository, "git.projectPath"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_GROUP, text(repository, "git.group"));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_ID, repository.id());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROJECT_PATH, repository.git().projectPath());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_GROUP, repository.git().group());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(repository)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(textList(repository, "references.systems")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(textList(repository, "references.processes")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(textList(repository, "references.boundedContexts")));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(repository.references().systems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(repository.references().processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(repository.references().boundedContexts()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MODULE_IDS, joined(moduleIds(repository)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PATHS, joined(limit(repositoryPaths(List.of(repository)), 10)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PACKAGES, joined(limit(repositoryPackages(List.of(repository)), 10)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CLASS_HINTS, joined(limit(repositoryClassHints(List.of(repository)), 10)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
-                    "Operational repository " + firstNonBlank(text(repository, "id"), text(repository, "git.projectPath"), text(repository, "name")),
+                    "Operational repository " + firstNonBlank(repository.id(), repository.git().projectPath(), repository.name()),
                     List.copyOf(attributes)
             ));
         }
@@ -163,21 +165,21 @@ public class OperationalContextEvidenceMapper {
 
     private void addBoundedContextItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches
+            List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> matches
     ) {
         for (var match : matches) {
             var boundedContext = match.entry();
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_BOUNDED_CONTEXT_ID, text(boundedContext, "id"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(text(boundedContext, "name"), text(boundedContext, "shortName")));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_BOUNDED_CONTEXT_ID, boundedContext.id());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(boundedContext.name(), boundedContext.shortName()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(boundedContext)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(textList(boundedContext, "references.systems")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(textList(boundedContext, "references.repositories")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(textList(boundedContext, "references.processes")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TERMS, joined(limit(textList(boundedContext, "references.terms"), 4)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(boundedContext.references().systems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(boundedContext.references().repositories()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(boundedContext.references().processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TERMS, joined(limit(boundedContext.references().terms(), 4)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
-                    "Operational bounded context " + firstNonBlank(text(boundedContext, "id"), text(boundedContext, "name")),
+                    "Operational bounded context " + firstNonBlank(boundedContext.id(), boundedContext.name()),
                     List.copyOf(attributes)
             ));
         }
@@ -185,22 +187,22 @@ public class OperationalContextEvidenceMapper {
 
     private void addTeamItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<Map<String, Object>>> matches
+            List<OperationalContextMatchedEntry<OperationalContextTeam>> matches
     ) {
         for (var match : matches) {
             var team = match.entry();
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TEAM_ID, text(team, "id"));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(text(team, "name"), text(team, "shortName")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(textList(team, "references.systems")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(textList(team, "references.repositories")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(textList(team, "references.processes")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(textList(team, "references.boundedContexts")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_IDS, joined(textList(team, "references.integrations")));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, text(team, "handoffHints.defaultRouteLabel"));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TEAM_ID, team.id());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(team.name(), team.shortName()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(team.references().systems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(team.references().repositories()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(team.references().processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(team.references().boundedContexts()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_IDS, joined(team.references().integrations()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, team.handoffHints().defaultRouteLabel());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
-                    "Operational team " + firstNonBlank(text(team, "id"), text(team, "name")),
+                    "Operational team " + firstNonBlank(team.id(), team.name()),
                     List.copyOf(attributes)
             ));
         }
@@ -208,7 +210,7 @@ public class OperationalContextEvidenceMapper {
 
     private void addGlossaryItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<GlossaryTerm>> matches
+            List<OperationalContextMatchedEntry<OperationalContextGlossaryTerm>> matches
     ) {
         for (var match : matches) {
             var term = match.entry();
@@ -227,7 +229,7 @@ public class OperationalContextEvidenceMapper {
 
     private void addHandoffRuleItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<HandoffRule>> matches
+            List<OperationalContextMatchedEntry<OperationalContextHandoffRule>> matches
     ) {
         for (var match : matches) {
             var rule = match.entry();
@@ -245,18 +247,18 @@ public class OperationalContextEvidenceMapper {
         }
     }
 
-    private List<String> moduleIds(Map<String, Object> repository) {
-        return mapList(repository, "modules").stream()
-                .map(module -> firstNonBlank(text(module, "moduleId"), text(module, "id")))
+    private List<String> moduleIds(OperationalContextRepository repository) {
+        return repository.modules().stream()
+                .map(module -> firstNonBlank(module.moduleId(), module.id()))
                 .filter(StringUtils::hasText)
                 .toList();
     }
 
-    private List<String> systemRepositoryIds(Map<String, Object> system) {
-        return textList(system, "references.repositories");
+    private List<String> systemRepositoryIds(OperationalContextSystem system) {
+        return system.references().repositories();
     }
 
-    private List<Map<String, Object>> resolveCodeSearchRepositories(
+    private List<OperationalContextRepository> resolveCodeSearchRepositories(
             OperationalContextCatalog catalog,
             String systemId,
             List<String> repoIds
@@ -266,19 +268,19 @@ public class OperationalContextEvidenceMapper {
         }
 
         var repositories = catalog.repositories();
-        var selected = new ArrayList<Map<String, Object>>();
+        var selected = new ArrayList<OperationalContextRepository>();
         var selectedIds = new LinkedHashSet<String>();
 
         for (var repoId : repoIds) {
             repositories.stream()
-                    .filter(repository -> sameId(text(repository, "id"), repoId))
+                    .filter(repository -> sameId(repository.id(), repoId))
                     .findFirst()
                     .ifPresent(repository -> addRepository(selected, selectedIds, repository));
         }
 
         if (StringUtils.hasText(systemId)) {
             for (var repository : repositories) {
-                if (containsNormalized(textList(repository, "references.systems"), systemId)) {
+                if (containsNormalized(repository.references().systems(), systemId)) {
                     addRepository(selected, selectedIds, repository);
                 }
             }
@@ -288,106 +290,91 @@ public class OperationalContextEvidenceMapper {
     }
 
     private void addRepository(
-            List<Map<String, Object>> repositories,
+            List<OperationalContextRepository> repositories,
             LinkedHashSet<String> selectedIds,
-            Map<String, Object> repository
+            OperationalContextRepository repository
     ) {
-        var id = firstNonBlank(text(repository, "id"), text(repository, "git.projectPath"));
+        var id = firstNonBlank(repository.id(), repository.git().projectPath());
         var normalizedId = normalize(id);
         if (StringUtils.hasText(normalizedId) && selectedIds.add(normalizedId)) {
             repositories.add(repository);
         }
     }
 
-    private List<String> repositoryIds(List<Map<String, Object>> repositories) {
+    private List<String> repositoryIds(List<OperationalContextRepository> repositories) {
         return deduplicate(repositories.stream()
-                .map(repository -> text(repository, "id"))
+                .map(OperationalContextRepository::id)
                 .toList());
     }
 
-    private List<String> repositoryProjects(List<Map<String, Object>> repositories) {
+    private List<String> repositoryProjects(List<OperationalContextRepository> repositories) {
         var values = new ArrayList<String>();
         for (var repository : repositories) {
-            values.add(text(repository, "git.projectPath"));
-            values.add(text(repository, "git.project"));
-            values.add(text(repository, "id"));
+            values.add(repository.git().projectPath());
+            values.add(repository.git().project());
+            values.add(repository.id());
         }
         return deduplicate(values);
     }
 
-    private List<String> repositoryPaths(List<Map<String, Object>> repositories) {
+    private List<String> repositoryPaths(List<OperationalContextRepository> repositories) {
         var values = new ArrayList<String>();
         for (var repository : repositories) {
-            values.addAll(textList(repository, "sourceLayout.sourceRoots"));
-            values.addAll(textList(repository, "sourceLayout.modulePaths"));
-            values.addAll(textList(repository, "sourceLayout.importantPaths"));
-            for (var module : mapList(repository, "modules")) {
-                values.addAll(textList(module, "sourceRoots"));
-                values.addAll(textList(module, "importantPaths"));
-                values.addAll(matchSignalValues(module, "paths", "pathHints"));
+            values.addAll(repository.sourceLayout().sourceRoots());
+            values.addAll(repository.sourceLayout().modulePaths());
+            values.addAll(repository.sourceLayout().importantPaths());
+            for (var module : repository.modules()) {
+                values.addAll(module.sourceRoots());
+                values.addAll(module.importantPaths());
+                values.addAll(module.matchSignals().valuesForKeys("paths", "pathHints"));
             }
         }
         return deduplicate(values);
     }
 
-    private List<String> repositoryPackages(List<Map<String, Object>> repositories) {
+    private List<String> repositoryPackages(List<OperationalContextRepository> repositories) {
         var values = new ArrayList<String>();
         for (var repository : repositories) {
-            values.addAll(matchSignalValues(repository, "packagePrefixes"));
-            for (var module : mapList(repository, "modules")) {
-                values.addAll(matchSignalValues(module, "packagePrefixes"));
-            }
+            values.addAll(repository.packagePrefixSignals());
         }
         return deduplicate(values);
     }
 
-    private List<String> repositoryClassHints(List<Map<String, Object>> repositories) {
+    private List<String> repositoryClassHints(List<OperationalContextRepository> repositories) {
         var values = new ArrayList<String>();
         for (var repository : repositories) {
-            values.addAll(textList(repository, "codeSearch.entrypoints"));
-            values.addAll(matchSignalValues(repository, "classHints", "entrypoints"));
-            for (var module : mapList(repository, "modules")) {
-                values.addAll(matchSignalValues(module, "classHints", "entrypoints"));
-            }
+            values.addAll(repository.classHintSignals());
         }
         return deduplicate(values);
     }
 
-    private List<String> ownerTeamIds(Map<String, Object> entry) {
+    private List<String> ownerTeamIds(OperationalContextEntry entry) {
         var values = new ArrayList<String>();
-        values.addAll(textList(entry, "references.teams"));
-        for (var responsibility : mapList(entry, "responsibilities")) {
-            values.add(text(responsibility, "teamId"));
+        values.addAll(entry.references().teams());
+        for (var responsibility : entry.responsibilities()) {
+            values.add(responsibility.teamId());
         }
         return deduplicate(values);
     }
 
-    private List<String> integrationTargetSystems(Map<String, Object> integration) {
+    private List<String> integrationTargetSystems(OperationalContextIntegration integration) {
+        return integration.participants().targetSystems();
+    }
+
+    private List<String> completionSignals(OperationalContextProcess process) {
         var values = new ArrayList<String>();
-        for (var target : mapList(integration, "participants.targets")) {
-            values.add(text(target, "system"));
-        }
-        values.addAll(textList(integration, "participants.finalTargets"));
+        values.addAll(process.processBoundary().endsWhen());
+        values.addAll(process.outcomes().successArtifacts());
         return deduplicate(values);
     }
 
-    private String integrationExternalOwner(Map<String, Object> integration) {
+    private String integrationExternalOwner(OperationalContextIntegration integration) {
         var owners = new ArrayList<String>();
-        owners.add(text(integration, "participants.source.externalOwner"));
-        for (var target : mapList(integration, "participants.targets")) {
-            owners.add(text(target, "externalOwner"));
+        owners.add(integration.participants().source().externalOwner());
+        for (var target : integration.participants().targets()) {
+            owners.add(target.externalOwner());
         }
         return joined(deduplicate(owners));
-    }
-
-    private List<String> matchSignalValues(Map<String, Object> entry, String... keys) {
-        var values = new ArrayList<String>();
-        for (var confidence : List.of("exact", "strong", "medium", "weak")) {
-            for (var key : keys) {
-                values.addAll(textList(entry, "matchSignals." + confidence + "." + key));
-            }
-        }
-        return deduplicate(values);
     }
 
     private boolean containsNormalized(List<String> values, String expected) {

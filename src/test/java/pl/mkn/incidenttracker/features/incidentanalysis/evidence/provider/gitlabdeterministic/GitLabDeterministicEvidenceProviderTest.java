@@ -11,7 +11,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryProjectCandida
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveMatch;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextResolver;
@@ -422,7 +422,7 @@ class GitLabDeterministicEvidenceProviderTest {
             List<Map<String, Object>> systems,
             List<Map<String, Object>> repositories
     ) {
-        return new OperationalContextRepositoryProjectPathResolver(query -> new OperationalContextCatalog(
+        return new OperationalContextRepositoryProjectPathResolver(query -> OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
                 systems,

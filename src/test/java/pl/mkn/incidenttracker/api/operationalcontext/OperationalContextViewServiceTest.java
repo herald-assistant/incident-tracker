@@ -1,7 +1,9 @@
 package pl.mkn.incidenttracker.api.operationalcontext;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.List;
@@ -145,18 +147,7 @@ class OperationalContextViewServiceTest {
     }
 
     private static OperationalContextCatalog emptyCatalog() {
-        return new OperationalContextCatalog(
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                ""
-        );
+        return OperationalContextCatalog.empty();
     }
 
     private static OperationalContextCatalog sampleCatalog() {
@@ -164,7 +155,7 @@ class OperationalContextViewServiceTest {
     }
 
     private static OperationalContextCatalog brokenCatalog() {
-        return new OperationalContextCatalog(
+        return OperationalContextDtos.catalogFromRaw(
                 List.of(map(
                         "id", "core-team",
                         "name", "Core Team",
@@ -204,7 +195,7 @@ class OperationalContextViewServiceTest {
     }
 
     private static OperationalContextCatalog currentContractCatalog() {
-        return new OperationalContextCatalog(
+        return OperationalContextDtos.catalogFromRaw(
                 List.of(map(
                         "id", "team-a",
                         "name", "Team A",
@@ -319,7 +310,7 @@ class OperationalContextViewServiceTest {
                         "matchSignals", map("exact", map("terms", List.of("new-term"))),
                         "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("bounded context"))
                 )),
-                List.of(new OperationalContextCatalog.GlossaryTerm(
+                List.of(new OperationalContextGlossaryTerm(
                         "new-term",
                         "New Term",
                         "domain-term",

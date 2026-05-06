@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.integrations.operationalcontext;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.GlossaryTerm;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog.HandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -30,14 +30,14 @@ final class OperationalContextMarkdownParser {
             "related terms"
     );
 
-    List<GlossaryTerm> parseGlossary(String markdown) {
-        var terms = new ArrayList<GlossaryTerm>();
+    List<OperationalContextGlossaryTerm> parseGlossary(String markdown) {
+        var terms = new ArrayList<OperationalContextGlossaryTerm>();
 
         for (var entry : parseEntries(markdown)) {
             if ("gaps".equals(entry.category().toLowerCase(Locale.ROOT))) {
                 continue;
             }
-            terms.add(new GlossaryTerm(
+            terms.add(new OperationalContextGlossaryTerm(
                     entry.id(),
                     firstValue(entry, "term", entry.title()),
                     firstValue(entry, "category", entry.category()),
@@ -54,14 +54,14 @@ final class OperationalContextMarkdownParser {
         return List.copyOf(terms);
     }
 
-    List<HandoffRule> parseHandoffRules(String markdown) {
-        var rules = new ArrayList<HandoffRule>();
+    List<OperationalContextHandoffRule> parseHandoffRules(String markdown) {
+        var rules = new ArrayList<OperationalContextHandoffRule>();
 
         for (var entry : parseEntries(markdown)) {
             if (!isHandoffRuleEntry(entry)) {
                 continue;
             }
-            rules.add(new HandoffRule(
+            rules.add(new OperationalContextHandoffRule(
                     entry.id(),
                     firstValue(entry, "title", entry.id()),
                     routeTo(entry),

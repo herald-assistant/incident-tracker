@@ -10,7 +10,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCatalog;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextQuery;
@@ -1180,17 +1180,7 @@ public class GitLabMcpTools {
     }
 
     private static OperationalContextCatalog emptyOperationalContextCatalog() {
-        return new OperationalContextCatalog(
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                ""
-        );
+        return OperationalContextCatalog.empty();
     }
 
     record FileOutline(
