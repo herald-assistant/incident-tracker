@@ -65,10 +65,10 @@ final class OperationalContextMarkdownParser {
                     entry.id(),
                     firstValue(entry, "title", entry.id()),
                     routeTo(entry),
-                    valuesFor(entry, "applies when"),
+                    valuesFor(entry, "applies when", "use when", "trigger condition"),
                     valuesFor(entry, "does not apply when"),
                     valuesFor(entry, "required evidence"),
-                    valuesFor(entry, "expected first actions"),
+                    valuesFor(entry, "expected first actions", "expected first action", "recommended first actions"),
                     partnerTeams(entry),
                     valuesFor(entry, "notes", "llm tool hints", "limitations")
             ));
@@ -92,6 +92,11 @@ final class OperationalContextMarkdownParser {
         var externalParties = firstDefined(first(valuesFor(entry, "external parties")), routeDecisionValue(entry, "external parties"));
         if (StringUtils.hasText(externalParties)) {
             return externalParties;
+        }
+
+        var scalarRouteTo = entry.scalarFields().get("route to");
+        if (StringUtils.hasText(scalarRouteTo)) {
+            return scalarRouteTo;
         }
 
         return routingRoleTarget(entry);
@@ -341,6 +346,13 @@ final class OperationalContextMarkdownParser {
     }
 
     private boolean isMatchSignalBucketLabel(String value) {
+        var colonIdx = value.indexOf(':');
+        if (colonIdx > 0) {
+            var prefix = normalizeFieldLabel(value.substring(0, colonIdx).trim());
+            if (Set.of("exact", "strong", "medium", "weak").contains(prefix)) {
+                return true;
+            }
+        }
         var normalized = normalizeFieldLabel(value.replaceAll(":$", ""));
         return Set.of("exact", "strong", "medium", "weak").contains(normalized);
     }

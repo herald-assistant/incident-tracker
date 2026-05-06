@@ -1071,6 +1071,7 @@ public class OperationalContextViewService {
 
     private ExplainableAggregateDto stepAggregate(String sourceType, String sourceId, Map<String, Object> process) {
         var steps = new ArrayList<Map<String, Object>>();
+        steps.addAll(mapList(process, "steps"));
         steps.addAll(mapList(process, "processSteps"));
         var items = steps.stream()
                 .map(step -> item(firstDefined(text(step, "id"), text(step, "name"), "step"), firstDefined(text(step, "name"), text(step, "id"), "Step"), "process-step", "Step is declared in the process definition.", "verified", sourceRef(sourceType, sourceId)))
@@ -1080,7 +1081,7 @@ public class OperationalContextViewService {
 
     private ExplainableAggregateDto relationAggregate(String sourceType, String sourceId, Map<String, Object> context) {
         var items = mapList(context, "relations").stream()
-                .map(relation -> item(firstDefined(text(relation, "target"), text(relation, "type"), "relation"), relationLabel(relation), "relation", "Relation is declared on the bounded context.", "verified", sourceRef(sourceType, sourceId)))
+                .map(relation -> item(firstDefined(text(relation, "targetContextId"), text(relation, "target"), text(relation, "type"), "relation"), relationLabel(relation), "relation", "Relation is declared on the bounded context.", "verified", sourceRef(sourceType, sourceId)))
                 .toList();
         return aggregate("Relations", items.size(), items.isEmpty() ? "unknown" : "ok", "high", tooltip("Relations", items.size(), "Relations explain context dependencies."), List.of(group("Relations", items)), List.of(reason("relations", "Relations are parsed from bounded context relations.", "strong")), List.of(), List.of(sourceRef(sourceType, sourceId)), "relation", ids(items));
     }
@@ -1424,7 +1425,7 @@ public class OperationalContextViewService {
     }
 
     private String systemKind(Map<String, Object> system) {
-        return firstDefined(text(system, "kind"), text(system, "category"));
+        return firstDefined(text(system, "kind"), text(system, "type"), text(system, "systemType"), text(system, "category"));
     }
 
     private boolean internalSystem(Map<String, Object> system) {
@@ -1499,7 +1500,15 @@ public class OperationalContextViewService {
                 values.add(targetSystem);
             }
         }
-        values.addAll(textList(integration, "participants.finalTargets"));
+        for (var finalTarget : mapList(integration, "participants.finalTargets")) {
+            var system = text(finalTarget, "system");
+            if (StringUtils.hasText(system)) {
+                values.add(system);
+            }
+        }
+        values.addAll(textList(integration, "participants.finalTargets").stream()
+                .filter(v -> !v.startsWith("{"))
+                .toList());
         return List.copyOf(values);
     }
 
@@ -1630,6 +1639,7 @@ public class OperationalContextViewService {
         values.addAll(signalValuesByKey(repository, "packagePrefixes", "paths", "pathHints"));
         for (var module : mapList(repository, "modules")) {
             values.addAll(textList(module, "sourceRoots"));
+            values.addAll(textList(module, "paths"));
             values.addAll(textList(module, "importantPaths"));
             values.addAll(signalValuesByKey(module, "packagePrefixes", "paths", "pathHints"));
         }
@@ -1641,6 +1651,7 @@ public class OperationalContextViewService {
         values.addAll(textList(repository, "codeSearch.entrypoints"));
         values.addAll(signalValuesByKey(repository, "entrypoints", "classHints", "endpointPrefixes"));
         for (var module : mapList(repository, "modules")) {
+            values.addAll(textList(module, "classHints"));
             values.addAll(signalValuesByKey(module, "entrypoints", "classHints", "endpointPrefixes"));
         }
         return List.copyOf(values);
@@ -1649,7 +1660,7 @@ public class OperationalContextViewService {
     private List<String> runtimeMappings(Map<String, Object> repository) {
         var values = new LinkedHashSet<String>();
         values.addAll(textList(repository, "references.runtimeComponents"));
-        values.addAll(signalValuesByKey(repository, "serviceNames", "containerNames", "projectNames", "hosts"));
+        values.addAll(signalValuesByKey(repository, "serviceNames", "containerNames", "projectNames", "hosts", "applicationNames"));
         return List.copyOf(values);
     }
 
@@ -1681,6 +1692,7 @@ public class OperationalContextViewService {
         for (var confidence : List.of("exact", "strong", "medium", "weak")) {
             addSignalSection(signals, directMap(matchSignals.get(confidence)));
         }
+        addSignalSection(signals, directMap(entry.get("match")));
 
         addSignalValues(signals, "endpointPrefixes", textList(entry, "transport.http.endpointPrefixes"));
         addSignalValues(signals, "endpointTemplates", textList(entry, "transport.http.endpointTemplates"));
@@ -1939,7 +1951,7 @@ public class OperationalContextViewService {
     }
 
     private String relationLabel(Map<String, Object> relation) {
-        return String.join(" ", distinct(combineValues(text(relation, "type"), text(relation, "target"), text(relation, "via"))));
+        return String.join(" ", distinct(combineValues(text(relation, "type"), text(relation, "targetContextId"), text(relation, "target"), text(relation, "via"))));
     }
 
     private String normalize(String value) {

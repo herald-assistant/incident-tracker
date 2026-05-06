@@ -125,6 +125,8 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     { key: 'integrationStyle', label: 'Style' },
     { key: 'owner', label: 'Owner', type: 'owner' },
     { key: 'partnerTeams', label: 'Partner teams', type: 'aggregate' },
+    { key: 'processes', label: 'Processes', type: 'aggregate' },
+    { key: 'contexts', label: 'Contexts', type: 'aggregate' },
     { key: 'signals', label: 'Signals', type: 'aggregate' },
     { key: 'handoffReadiness', label: 'Handoff', type: 'aggregate' },
     { key: 'validation', label: 'Status', type: 'aggregate' }
