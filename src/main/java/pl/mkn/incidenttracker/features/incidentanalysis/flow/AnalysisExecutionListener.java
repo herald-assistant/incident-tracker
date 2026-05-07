@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.flow;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceCollectionListener;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 /**
@@ -30,6 +31,9 @@ public interface AnalysisExecutionListener extends AnalysisEvidenceCollectionLis
     }
 
     default void onAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
+    }
+
+    default void onAiActivity(AnalysisAiActivityEvent event) {
     }
 
 }

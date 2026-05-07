@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentFollowUpPreparationService;
@@ -22,9 +23,18 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
             AnalysisAiChatRequest request,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
+        return chat(request, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
+    }
+
+    @Override
+    public AnalysisAiChatResponse chat(
+            AnalysisAiChatRequest request,
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
+    ) {
         try (var preparedSession = preparationService.prepare(request)) {
             var executionResult = executionGateway.execute(
-                    withToolEvidenceSink(preparedSession, toolEvidenceListener)
+                    withRuntimeSinks(preparedSession, toolEvidenceListener, activityListener)
             );
 
             return new AnalysisAiChatResponse(
@@ -35,14 +45,18 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
         }
     }
 
-    private CopilotPreparedSession withToolEvidenceSink(
+    private CopilotPreparedSession withRuntimeSinks(
             CopilotPreparedSession preparedSession,
-            AnalysisAiToolEvidenceListener listener
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
     ) {
-        if (listener == null || listener == AnalysisAiToolEvidenceListener.NO_OP) {
-            return preparedSession;
+        var session = preparedSession;
+        if (toolEvidenceListener != null && toolEvidenceListener != AnalysisAiToolEvidenceListener.NO_OP) {
+            session = session.withEvidenceSink(toolEvidenceListener::onToolEvidenceUpdated);
         }
-
-        return preparedSession.withEvidenceSink(listener::onToolEvidenceUpdated);
+        if (activityListener != null && activityListener != AnalysisAiActivityListener.NO_OP) {
+            session = session.withActivitySink(activityListener::onAiActivity);
+        }
+        return session;
     }
 }

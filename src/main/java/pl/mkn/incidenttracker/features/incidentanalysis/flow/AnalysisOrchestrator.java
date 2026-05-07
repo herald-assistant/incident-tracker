@@ -67,7 +67,8 @@ public class AnalysisOrchestrator {
 
             var aiResponse = initialAnalysisProvider.analyze(
                     preparedAnalysis,
-                    listener::onAiToolEvidenceUpdated
+                    listener::onAiToolEvidenceUpdated,
+                    listener::onAiActivity
             );
             var result = new AnalysisResultResponse(
                     "COMPLETED",

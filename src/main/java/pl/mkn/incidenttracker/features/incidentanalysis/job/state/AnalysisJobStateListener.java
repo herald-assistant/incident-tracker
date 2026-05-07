@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.job.state;
 
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
@@ -55,5 +56,10 @@ public final class AnalysisJobStateListener implements AnalysisExecutionListener
     @Override
     public void onAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
         job.markAiToolEvidenceUpdated(section);
+    }
+
+    @Override
+    public void onAiActivity(AnalysisAiActivityEvent event) {
+        job.markAiActivity(event);
     }
 }

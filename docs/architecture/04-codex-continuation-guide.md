@@ -229,6 +229,10 @@ kontekst lookupow GitLaba i wyniki DB dociagniete przez AI tools podczas kroku
 Krok `AI_ANALYSIS` moze tez zawierac `usage`: sumaryczne tokeny oraz szczegoly
 input/output/cache/context zebrane z eventow Copilot SDK i zmapowane na
 generyczny kontrakt aplikacji.
+Ten sam krok moze zawierac `aiActivityEvents`, czyli widoczny dla operatora
+timeline turnow, context/cache snapshots, lifecycle tools i bledow sesji. UI
+pokazuje prosty opis eventu, a zaawansowane `details` sa dostepne jako
+sformatowany JSON w custom tooltipie.
 Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
 `POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
 tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.
@@ -335,7 +339,8 @@ niepotrzebnie kosztu GitLab calls.
 Mozliwe kierunki:
 
 - lepsze formatowanie prostych wynikow DB tools bez dodawania diagnostycznych
-  pytan, parametrow ani technicznych badge'y,
+  pytan ani technicznych badge'y w glownym widoku; parametry wejscia toola
+  zostaja w JSON tooltipie,
 - pinowanie najwazniejszych wynikow AI tool calls,
 - czytelniejsze laczenie promptu, evidence i kodu dociagnietego przez AI,
 - lepsze porownanie "deterministic evidence" kontra "AI-guided reads".

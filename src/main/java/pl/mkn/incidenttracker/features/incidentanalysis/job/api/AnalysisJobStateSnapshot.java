@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -24,6 +25,7 @@ public record AnalysisJobStateSnapshot(
         List<AnalysisJobStepResponse> steps,
         List<AnalysisEvidenceSection> evidenceSections,
         List<AnalysisEvidenceSection> toolEvidenceSections,
+        List<AnalysisAiActivityEvent> aiActivityEvents,
         List<AnalysisChatMessageResponse> chatMessages,
         String preparedPrompt,
         AnalysisResultResponse result

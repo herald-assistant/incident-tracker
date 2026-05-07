@@ -67,6 +67,7 @@ class AnalysisJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         null,
                         null
                 ));
@@ -129,6 +130,7 @@ class AnalysisJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         "Prompt body for timeout-123",
                         new AnalysisResultResponse(
                                 "COMPLETED",
@@ -184,6 +186,7 @@ class AnalysisJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         List.of(new AnalysisChatMessageResponse(
                                 "msg-1",
                                 "USER",
@@ -194,6 +197,7 @@ class AnalysisJobControllerTest {
                                 Instant.parse("2026-04-12T18:02:00Z"),
                                 Instant.parse("2026-04-12T18:02:00Z"),
                                 Instant.parse("2026-04-12T18:02:00Z"),
+                                List.of(),
                                 List.of(),
                                 null
                         )),

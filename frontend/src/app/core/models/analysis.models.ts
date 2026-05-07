@@ -81,6 +81,22 @@ export interface AnalysisAiUsage {
   contextMessages: number | null;
 }
 
+export interface AnalysisAiActivityEvent {
+  eventId: string;
+  parentEventId: string;
+  type: string;
+  category: string;
+  status: string;
+  title: string;
+  summary: string;
+  turnId: string;
+  interactionId: string;
+  toolCallId: string;
+  toolName: string;
+  timestamp: string;
+  details: Record<string, unknown>;
+}
+
 export interface AnalysisStartRequest {
   correlationId: string;
   model?: string;
@@ -155,6 +171,7 @@ export interface AnalysisChatMessageResponse {
   updatedAt: string;
   completedAt: string;
   toolEvidenceSections: AnalysisEvidenceSection[];
+  aiActivityEvents: AnalysisAiActivityEvent[];
   prompt: string;
 }
 
@@ -176,6 +193,7 @@ export interface AnalysisJobStateSnapshot {
   steps: AnalysisJobStepResponse[];
   evidenceSections: AnalysisEvidenceSection[];
   toolEvidenceSections: AnalysisEvidenceSection[];
+  aiActivityEvents: AnalysisAiActivityEvent[];
   chatMessages: AnalysisChatMessageResponse[];
   preparedPrompt: string;
   result: AnalysisResultResponse | null;

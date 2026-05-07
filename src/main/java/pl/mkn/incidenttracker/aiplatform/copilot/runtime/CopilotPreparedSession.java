@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 import com.github.copilot.sdk.json.CopilotClientOptions;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.SessionConfig;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.Collections;
@@ -17,10 +18,13 @@ public record CopilotPreparedSession(
         MessageOptions messageOptions,
         String prompt,
         Map<String, String> artifactContents,
-        Consumer<AnalysisEvidenceSection> evidenceSink
+        Consumer<AnalysisEvidenceSection> evidenceSink,
+        Consumer<AnalysisAiActivityEvent> activitySink
 ) implements AutoCloseable {
 
     private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
+    };
+    private static final Consumer<AnalysisAiActivityEvent> NO_OP_ACTIVITY_SINK = event -> {
     };
 
     public CopilotPreparedSession(
@@ -38,7 +42,8 @@ public record CopilotPreparedSession(
                 messageOptions,
                 prompt,
                 artifactContents,
-                NO_OP_EVIDENCE_SINK
+                NO_OP_EVIDENCE_SINK,
+                NO_OP_ACTIVITY_SINK
         );
     }
 
@@ -47,6 +52,7 @@ public record CopilotPreparedSession(
                 ? Collections.unmodifiableMap(new LinkedHashMap<>(artifactContents))
                 : Map.of();
         evidenceSink = evidenceSink != null ? evidenceSink : NO_OP_EVIDENCE_SINK;
+        activitySink = activitySink != null ? activitySink : NO_OP_ACTIVITY_SINK;
     }
 
     public String providerName() {
@@ -61,7 +67,21 @@ public record CopilotPreparedSession(
                 messageOptions,
                 prompt,
                 artifactContents,
-                evidenceSink
+                evidenceSink,
+                activitySink
+        );
+    }
+
+    public CopilotPreparedSession withActivitySink(Consumer<AnalysisAiActivityEvent> activitySink) {
+        return new CopilotPreparedSession(
+                runReference,
+                clientOptions,
+                sessionConfig,
+                messageOptions,
+                prompt,
+                artifactContents,
+                evidenceSink,
+                activitySink
         );
     }
 

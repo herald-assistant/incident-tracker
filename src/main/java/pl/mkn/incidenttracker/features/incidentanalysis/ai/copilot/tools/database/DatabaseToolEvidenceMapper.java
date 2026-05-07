@@ -37,6 +37,13 @@ public class DatabaseToolEvidenceMapper {
         var argumentsNode = payloadReader.readJsonNode(rawArguments);
         var resultNode = payloadReader.readJsonNode(rawResult);
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+        addAttribute(attributes, "toolName", toolName);
+        addAttribute(attributes, "toolCallId", toolCallId);
+        addAttribute(
+                attributes,
+                "toolArguments",
+                payloadReader.prettyPayload(argumentsNode, rawArguments, "")
+        );
         addAttribute(attributes, "reason", payloadReader.readTopLevelText(argumentsNode, "reason"));
         addAttribute(attributes, "result", payloadReader.prettyPayload(userFacingResultNode(resultNode), rawResult, ""));
 

@@ -27,6 +27,9 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
   dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
   pollingiem joba,
+- w ekranie `GET /` ostatni krok AI pokazuje widoczny trace aktywnosci
+  Copilota: turny, komunikaty, tool start/koniec, usage i snapshoty kontekstu;
+  kazdy event ma techniczny JSON tooltip dla operatora,
 - w ekranie `GET /` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
@@ -148,7 +151,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Follow-up chat po zakonczonej analizie incydentu.
 - `pl.mkn.incidenttracker.shared.ai`
   Neutralne preferencje wykonania AI, non-secret `AnalysisAiAuthRef` oraz
-  kontrakt token/cost/usage dla flow, job UI i feature'ow.
+  kontrakty token/cost/usage i visible activity trace dla flow, job UI i
+  feature'ow.
 - `pl.mkn.incidenttracker.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -178,7 +182,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz
   `CopilotExecutionResult` z trescia odpowiedzi i user-visible
-  `AnalysisAiUsage`.
+  `AnalysisAiUsage`; session events SDK sa mapowane na neutralny
+  `AnalysisAiActivityEvent`, bez wystawiania typow SDK do UI.
 - `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
   neutralna mechanika platformy.
@@ -309,6 +314,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   frontendu.
   Frontend liczy orientacyjne GitHub AI Credits/USD z tokenow i modelu jako
   product-facing estymacje oplacalnosci, nie jako fakture.
+- Aktywnosc sesji Copilota jest productized i widoczna w job state jako
+  generyczne `shared.ai.AnalysisAiActivityEvent`: turny, komunikaty,
+  wywolania tooli, snapshoty context tokens/messages i usage eventy.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
   katalogu runtime.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego

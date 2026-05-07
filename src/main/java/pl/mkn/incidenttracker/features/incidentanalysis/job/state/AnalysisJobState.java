@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatAn
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -45,6 +46,7 @@ public final class AnalysisJobState {
     private final List<StepState> steps;
     private final List<AnalysisEvidenceSection> evidenceSections;
     private final List<AnalysisEvidenceSection> toolEvidenceSections;
+    private final List<AnalysisAiActivityEvent> aiActivityEvents;
     private final List<ChatMessageState> chatMessages;
 
     private AnalysisJobStatus status;
@@ -77,6 +79,7 @@ public final class AnalysisJobState {
         this.steps = new ArrayList<>();
         this.evidenceSections = new ArrayList<>();
         this.toolEvidenceSections = new ArrayList<>();
+        this.aiActivityEvents = new ArrayList<>();
         this.chatMessages = new ArrayList<>();
 
         for (var descriptor : providerDescriptors) {
@@ -131,6 +134,15 @@ public final class AnalysisJobState {
         }
 
         upsertSection(toolEvidenceSections, section);
+        touch();
+    }
+
+    synchronized void markAiActivity(AnalysisAiActivityEvent event) {
+        if (event == null) {
+            return;
+        }
+
+        aiActivityEvents.add(event);
         touch();
     }
 
@@ -225,6 +237,15 @@ public final class AnalysisJobState {
         touch();
     }
 
+    public synchronized void markChatAiActivity(String assistantMessageId, AnalysisAiActivityEvent event) {
+        if (event == null) {
+            return;
+        }
+
+        assistantMessage(assistantMessageId).markAiActivity(event);
+        touch();
+    }
+
     public synchronized void markChatCompleted(String assistantMessageId, String content, String prompt) {
         assistantMessage(assistantMessageId).markCompleted(content, prompt);
         touch();
@@ -282,6 +303,7 @@ public final class AnalysisJobState {
                 steps.stream().map(StepState::snapshot).toList(),
                 List.copyOf(evidenceSections),
                 List.copyOf(toolEvidenceSections),
+                List.copyOf(aiActivityEvents),
                 chatMessages.stream().map(ChatMessageState::snapshot).toList(),
                 preparedPrompt,
                 result
@@ -451,6 +473,7 @@ public final class AnalysisJobState {
         private final AnalysisChatMessageRole role;
         private final Instant createdAt;
         private final List<AnalysisEvidenceSection> toolEvidenceSections;
+        private final List<AnalysisAiActivityEvent> aiActivityEvents;
         private AnalysisChatMessageStatus status;
         private String content;
         private String errorCode;
@@ -474,6 +497,7 @@ public final class AnalysisJobState {
             this.updatedAt = createdAt;
             this.completedAt = status == AnalysisChatMessageStatus.COMPLETED ? createdAt : null;
             this.toolEvidenceSections = new ArrayList<>();
+            this.aiActivityEvents = new ArrayList<>();
         }
 
         private static ChatMessageState completed(
@@ -495,6 +519,11 @@ public final class AnalysisJobState {
 
         private void markToolEvidenceUpdated(AnalysisEvidenceSection section) {
             upsertSection(toolEvidenceSections, section);
+            updatedAt = Instant.now();
+        }
+
+        private void markAiActivity(AnalysisAiActivityEvent event) {
+            aiActivityEvents.add(event);
             updatedAt = Instant.now();
         }
 
@@ -526,6 +555,7 @@ public final class AnalysisJobState {
                     updatedAt,
                     completedAt,
                     List.copyOf(toolEvidenceSections),
+                    List.copyOf(aiActivityEvents),
                     prompt
             );
         }

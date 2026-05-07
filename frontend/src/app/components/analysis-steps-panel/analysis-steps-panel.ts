@@ -6,6 +6,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
+  AnalysisAiActivityEvent,
   AnalysisAiUsage,
   AnalysisEvidenceAttribute,
   AnalysisEvidenceReference,
@@ -241,6 +242,7 @@ interface GitLabToolLookupView {
 interface ToolEvidenceTimelineItemView {
   key: string;
   reason: string;
+  technicalTooltip: string;
   captureOrder: number | null;
   fallbackOrder: number;
   sourceLabel: string;
@@ -249,6 +251,17 @@ interface ToolEvidenceTimelineItemView {
   gitLabLookup: GitLabToolLookupView | null;
   databaseTool: DatabaseToolCardView | null;
   defaultItem: StepEvidenceItemView | null;
+}
+
+interface AiActivityEventView {
+  key: string;
+  category: string;
+  status: string;
+  title: string;
+  summary: string;
+  iconName: string;
+  meta: string[];
+  technicalTooltip: string;
 }
 
 interface StepEvidenceSectionView {
@@ -292,6 +305,7 @@ interface StepView {
   showUsage: boolean;
   usageStats: UsageStatView[];
   usageTooltip: string;
+  aiActivityEvents: AiActivityEventView[];
   emptyStateMessage: string;
 }
 
@@ -394,7 +408,13 @@ const GITLAB_TOOL_ATTRIBUTE_LABELS: Record<string, string> = {
 const DATABASE_TABLE_MAX_ROWS = 8;
 const DATABASE_TABLE_MAX_COLUMNS = 8;
 const TOOL_CAPTURE_ORDER_ATTRIBUTE = 'toolCaptureOrder';
-const TOOL_TIMELINE_INTERNAL_ATTRIBUTES = new Set(['reason', TOOL_CAPTURE_ORDER_ATTRIBUTE]);
+const TOOL_TIMELINE_INTERNAL_ATTRIBUTES = new Set([
+  'reason',
+  TOOL_CAPTURE_ORDER_ATTRIBUTE,
+  'toolName',
+  'toolCallId',
+  'toolArguments'
+]);
 const GITLAB_TOOL_STRUCTURED_ATTRIBUTES = new Set([
   'toolName',
   'summary',
@@ -469,6 +489,7 @@ export class AnalysisStepsPanelComponent {
   readonly steps = input<AnalysisJobStepResponse[]>([]);
   readonly evidenceSections = input<AnalysisEvidenceSection[]>([]);
   readonly toolEvidenceSections = input<AnalysisEvidenceSection[]>([]);
+  readonly aiActivityEvents = input<AnalysisAiActivityEvent[]>([]);
   readonly preparedPrompt = input<string>('');
   readonly result = input<AnalysisResultResponse | null>(null);
 
@@ -495,6 +516,10 @@ export class AnalysisStepsPanelComponent {
       const key = buildStepKey(step, index);
       const usageEstimate = estimateAnalysisAiCost(step.usage ?? null);
       const usageStats = buildUsageStats(step.usage ?? null, usageEstimate);
+      const aiActivityEvents =
+        step.code === 'AI_ANALYSIS'
+          ? prepareAiActivityEvents(this.aiActivityEvents())
+          : [];
 
       return {
         key,
@@ -517,9 +542,10 @@ export class AnalysisStepsPanelComponent {
         showUsage: usageStats.length > 0,
         usageStats,
         usageTooltip: buildUsageTooltip(step.usage ?? null, usageEstimate),
+        aiActivityEvents,
         emptyStateMessage: buildEmptyStateMessage(
           step,
-          detailSections.length,
+          detailSections.length + aiActivityEvents.length,
           showResultPreview,
           showPreparedPromptView
         )
@@ -971,6 +997,7 @@ function prepareToolEvidenceTimelineItem(
   const attributesByName = mapAttributesByName(item.attributes || []);
   const captureOrder = integerValue(attributesByName, TOOL_CAPTURE_ORDER_ATTRIBUTE);
   const fallbackOrder = sectionIndex * 10_000 + itemIndex;
+  const technicalTooltip = buildToolEvidenceTechnicalTooltip(section, item, itemIndex);
 
   if (isGitLabCodeSection(section)) {
     const codePanel = prepareRepoCodePanel(section, item, itemIndex, {
@@ -980,6 +1007,7 @@ function prepareToolEvidenceTimelineItem(
     return {
       key: codePanel.key,
       reason: nonEmptyValue(codePanel.reason) || 'Model nie podał powodu pobrania tego pliku.',
+      technicalTooltip,
       captureOrder,
       fallbackOrder,
       sourceLabel: 'GitLab',
@@ -997,6 +1025,7 @@ function prepareToolEvidenceTimelineItem(
     return {
       key: gitLabLookup.key,
       reason: gitLabLookup.reason,
+      technicalTooltip,
       captureOrder,
       fallbackOrder,
       sourceLabel: 'GitLab',
@@ -1014,6 +1043,7 @@ function prepareToolEvidenceTimelineItem(
     return {
       key: databaseTool.key,
       reason: databaseTool.reason,
+      technicalTooltip,
       captureOrder,
       fallbackOrder,
       sourceLabel: 'Baza danych',
@@ -1035,6 +1065,7 @@ function prepareToolEvidenceTimelineItem(
       nonEmptyValue(attributesByName.get('reason')) ||
       nonEmptyValue(item.title) ||
       formatEvidenceSectionTitle(section),
+    technicalTooltip,
     captureOrder,
     fallbackOrder,
     sourceLabel: formatEvidenceSectionTitle(section),
@@ -1063,6 +1094,155 @@ function compareToolEvidenceTimelineItems(
   }
 
   return left.fallbackOrder - right.fallbackOrder;
+}
+
+function prepareAiActivityEvents(events: AnalysisAiActivityEvent[]): AiActivityEventView[] {
+  return (events || []).map((event, index) => ({
+    key: event.eventId || `${event.type || 'ai-event'}-${index}`,
+    category: event.category || 'SYSTEM',
+    status: event.status || 'INFO',
+    title: event.title || formatAiActivityType(event.type),
+    summary: event.summary || 'Copilot zgłosił zdarzenie runtime.',
+    iconName: aiActivityIcon(event),
+    meta: buildAiActivityMeta(event),
+    technicalTooltip: buildAiActivityTooltip(event)
+  }));
+}
+
+function aiActivityIcon(event: AnalysisAiActivityEvent): string {
+  const category = String(event.category || '').toUpperCase();
+  const status = String(event.status || '').toUpperCase();
+
+  if (status === 'FAILED' || category === 'ERROR') {
+    return 'error';
+  }
+
+  switch (category) {
+    case 'TURN':
+      return status === 'STARTED' ? 'play_circle' : 'check_circle';
+    case 'TOOL':
+      return status === 'STARTED' ? 'construction' : 'build_circle';
+    case 'MESSAGE':
+      return 'chat_bubble';
+    case 'USAGE':
+      return 'speed';
+    case 'CONTEXT':
+      return 'account_tree';
+    default:
+      return 'radio_button_checked';
+  }
+}
+
+function buildAiActivityMeta(event: AnalysisAiActivityEvent): string[] {
+  const meta: string[] = [];
+  const formattedTimestamp = formatDateTime(event.timestamp);
+
+  if (formattedTimestamp) {
+    meta.push(formattedTimestamp);
+  }
+  if (event.turnId) {
+    meta.push(`turn ${event.turnId}`);
+  }
+  if (event.toolName) {
+    meta.push(event.toolName);
+  }
+  if (event.toolCallId) {
+    meta.push(`call ${event.toolCallId}`);
+  }
+  if (event.type) {
+    meta.push(event.type);
+  }
+
+  return meta;
+}
+
+function buildAiActivityTooltip(event: AnalysisAiActivityEvent): string {
+  return stringifyPretty({
+    eventId: event.eventId || null,
+    parentEventId: event.parentEventId || null,
+    type: event.type || null,
+    category: event.category || null,
+    status: event.status || null,
+    title: event.title || null,
+    summary: event.summary || null,
+    turnId: event.turnId || null,
+    interactionId: event.interactionId || null,
+    toolCallId: event.toolCallId || null,
+    toolName: event.toolName || null,
+    timestamp: event.timestamp || null,
+    details: event.details || {}
+  });
+}
+
+function formatAiActivityType(type: string): string {
+  if (!type) {
+    return 'Zdarzenie Copilota';
+  }
+
+  return type
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((token) => token.slice(0, 1).toUpperCase() + token.slice(1))
+    .join(' ');
+}
+
+function buildToolEvidenceTechnicalTooltip(
+  section: AnalysisEvidenceSection,
+  item: { title: string; attributes: AnalysisEvidenceAttribute[] },
+  itemIndex: number
+): string {
+  const attributesByName = mapAttributesByName(item.attributes || []);
+  const attributeDetails = Object.fromEntries(
+    (item.attributes || []).map((attribute) => [
+      attribute.name,
+      normalizeTechnicalAttributeValue(attribute.name, attribute.value)
+    ])
+  );
+
+  return stringifyPretty({
+    provider: section.provider || null,
+    category: section.category || null,
+    itemIndex,
+    title: item.title || null,
+    toolName: attributesByName.get('toolName') || item.title || null,
+    toolCallId: attributesByName.get('toolCallId') || null,
+    reason: attributesByName.get('reason') || null,
+    toolCaptureOrder: attributesByName.get(TOOL_CAPTURE_ORDER_ATTRIBUTE) || null,
+    toolArguments: parseOptionalJson(attributesByName.get('toolArguments')),
+    attributes: attributeDetails
+  });
+}
+
+function normalizeTechnicalAttributeValue(name: string, value: string): unknown {
+  if (name === 'toolArguments' || name === 'result') {
+    return parseOptionalJson(value);
+  }
+
+  if (name === 'content' && value.length > 1_200) {
+    return {
+      preview: `${value.slice(0, 1_200)}...(${value.length} chars)`,
+      length: value.length
+    };
+  }
+
+  return value;
+}
+
+function parseOptionalJson(value: string | undefined): unknown {
+  if (!value || !value.trim()) {
+    return null;
+  }
+
+  const parsed = parseJsonPayload(value);
+  return typeof parsed === 'string' ? value : parsed;
+}
+
+function stringifyPretty(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value ?? '');
+  }
 }
 
 function prepareEvidenceSections(sections: AnalysisEvidenceSection[]): StepEvidenceSectionView[] {

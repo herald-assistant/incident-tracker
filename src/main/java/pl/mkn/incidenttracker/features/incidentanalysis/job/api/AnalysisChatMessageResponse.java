@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -16,6 +17,7 @@ public record AnalysisChatMessageResponse(
         Instant updatedAt,
         Instant completedAt,
         List<AnalysisEvidenceSection> toolEvidenceSections,
+        List<AnalysisAiActivityEvent> aiActivityEvents,
         String prompt
 ) {
 }

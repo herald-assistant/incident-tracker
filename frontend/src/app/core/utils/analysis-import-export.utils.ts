@@ -2,6 +2,7 @@ import {
   AnalysisEvidenceAttribute,
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
+  AnalysisAiActivityEvent,
   AnalysisChatMessageResponse,
   AnalysisAiUsage,
   AnalysisExportEnvelope,
@@ -12,8 +13,8 @@ import {
 import { isTerminalStatus } from './analysis-display.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
-export const EXPORT_VERSION = 4;
-const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4]);
+export const EXPORT_VERSION = 5;
+const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4, 5]);
 
 export function buildExportEnvelope(
   job: AnalysisJobStateSnapshot,
@@ -105,6 +106,9 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobStateSnapshot {
     toolEvidenceSections: Array.isArray(jobObject['toolEvidenceSections'])
       ? jobObject['toolEvidenceSections'].map(normalizeEvidenceSection)
       : [],
+    aiActivityEvents: Array.isArray(jobObject['aiActivityEvents'])
+      ? jobObject['aiActivityEvents'].map(normalizeAiActivityEvent)
+      : [],
     chatMessages: Array.isArray(jobObject['chatMessages'])
       ? jobObject['chatMessages'].map(normalizeChatMessage)
       : [],
@@ -190,7 +194,29 @@ function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
     toolEvidenceSections: Array.isArray(messageObject?.['toolEvidenceSections'])
       ? messageObject['toolEvidenceSections'].map(normalizeEvidenceSection)
       : [],
+    aiActivityEvents: Array.isArray(messageObject?.['aiActivityEvents'])
+      ? messageObject['aiActivityEvents'].map(normalizeAiActivityEvent)
+      : [],
     prompt: normalizeString(messageObject?.['prompt'])
+  };
+}
+
+function normalizeAiActivityEvent(event: unknown): AnalysisAiActivityEvent {
+  const eventObject = asObject(event);
+  return {
+    eventId: normalizeString(eventObject?.['eventId']),
+    parentEventId: normalizeString(eventObject?.['parentEventId']),
+    type: normalizeString(eventObject?.['type']),
+    category: normalizeString(eventObject?.['category']),
+    status: normalizeString(eventObject?.['status']),
+    title: normalizeString(eventObject?.['title']),
+    summary: normalizeString(eventObject?.['summary']),
+    turnId: normalizeString(eventObject?.['turnId']),
+    interactionId: normalizeString(eventObject?.['interactionId']),
+    toolCallId: normalizeString(eventObject?.['toolCallId']),
+    toolName: normalizeString(eventObject?.['toolName']),
+    timestamp: normalizeString(eventObject?.['timestamp']),
+    details: asObject(eventObject?.['details']) ?? {}
   };
 }
 

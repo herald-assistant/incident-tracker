@@ -66,7 +66,7 @@ chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
 4. wywoluje `InitialAnalysisProvider.prepare(request)`,
 5. zapisuje `prepared.prompt()` w stanie joba,
 6. uruchamia `InitialAnalysisProvider.analyze(prepared, listener)`,
-7. mapuje odpowiedz AI i tool evidence do response/job state,
+7. mapuje odpowiedz AI, tool evidence i activity trace do response/job state,
 8. zamyka prepared analysis.
 
 Prepared analysis gwarantuje, ze prompt widoczny w UI/debug jest tym samym
@@ -313,6 +313,11 @@ sesji i nie przebudowuje policy ani promptu. Do logowania runtime uzywa
 neutralnego `runReference`; incident assembler przekazuje tam obecny
 `correlationId`.
 
+Execution gateway subskrybuje `session.on(...)` i mapuje SDK events na
+neutralne `shared.ai.AnalysisAiActivityEvent`. Te eventy sa user-visible:
+pokazuja turny, usage/context/cache snapshots, tool execution lifecycle,
+compaction/truncation i bledy sesji bez uzalezniania UI od typow Copilot SDK.
+
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal
 w glownym flow analizy. Integracyjne tools sa wywolywane przez Spring tool
 callbacks. GitLab i DB dostaja scope przez hidden `ToolContext`; Elastic nadal
@@ -426,12 +431,15 @@ GitLab capture jest celowo prosty: user-facing evidence trzyma `reason` podany
 przez model jako naglowek wpisu. Dla code reads zawiera plik/chunk, sciezke
 pliku, tresc kodu i opcjonalny numer linii startowej. Dla discovery reads
 zawiera uporzadkowane szczegoly lookupu: kandydatow plikow, grupy flow/class
-references, outline pliku i rekomendowane dalsze odczyty.
+references, outline pliku i rekomendowane dalsze odczyty. Techniczne pola
+`toolName`, `toolCallId` i `toolArguments` sa utrzymywane jako atrybuty evidence,
+ale glowny widok traktuje je jako szczegoly do JSON tooltipa.
 
 DB capture jest rowniez celowo prosty: user-facing evidence zawiera `reason`
-podany przez model oraz wynik toola jako `result`. Nie publikujemy juz osobnych
-pytan diagnostycznych, parametrow, srodowiska, aliasu bazy ani streszczen
-wyniku jako pol dla operatora.
+podany przez model oraz wynik toola jako `result`. Techniczne pola toola sa
+widoczne w JSON tooltipie, a nie jako osobne badge'e/operator-facing pola. Nie
+publikujemy juz osobnych pytan diagnostycznych, srodowiska, aliasu bazy ani
+streszczen wyniku jako pol dla operatora.
 
 ## 12. Response contract
 
@@ -473,7 +481,7 @@ prosty kontrakt: prompt wymaga JSON, parser mapuje wynik na publiczny response,
 a fallback obsluguje brak wymaganych pol. Dodatkowe oceny jakosci nie sa
 liczone w tle, bo operator nie ma do nich dostepu.
 
-## 14. User-visible usage
+## 14. User-visible usage i activity
 
 Nie ma obecnie osobnego registry niewidocznej dla operatora telemetryki sesji.
 Execution gateway agreguje tylko zdarzenia SDK potrzebne do publicznego
@@ -488,17 +496,30 @@ Ten usage trafia do finalnego kroku `AI_ANALYSIS` i job state, a UI pokazuje go
 jako zuzycie tokenow/kosztu. Dane, ktorych operator nie widzi, nie sa obecnie
 utrzymywane jako osobny feature runtime.
 
+Oprocz agregowanego usage runtime publikuje `AnalysisAiActivityEvent`. To jest
+jawny productized trace dla operatora: pokazuje turny wykonywane pomiedzy
+wywolaniami tools, lifecycle tools, context/cache snapshots i bledy sesji.
+Kazdy event ma uproszczony tytul/podsumowanie do timeline oraz `details` jako
+JSON-ready payload dla custom tooltipa.
+
 ## 15. Job state i UI
 
 Async flow zapisuje prepared prompt przed wykonaniem AI. Dzieki temu prompt
 jest dostepny nawet wtedy, gdy execution failuje.
 
-`toolEvidenceSections` sa osobnym polem job response i moga byc aktualizowane
-podczas sesji AI przez listener. UI nie zalezy od typow Copilot SDK.
+`toolEvidenceSections` oraz `aiActivityEvents` sa osobnymi polami job response
+i moga byc aktualizowane podczas sesji AI przez listenery. UI nie zalezy od
+typow Copilot SDK.
 
 Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
 `shared.ai.AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
 szczegolami zebranymi z eventow Copilota.
+
+Timeline AI pokazuje `aiActivityEvents` chronologicznie w kroku `AI_ANALYSIS`.
+Wywolania tools zachowuja prosty widok `reason` i zakresu evidence, a ich
+techniczne wejscie (`toolArguments`, `toolCallId`, `toolName`) trafia do JSON
+tooltipa. Follow-up chat moze miec wlasne `toolEvidenceSections` i
+`aiActivityEvents` przypisane do wiadomosci asystenta.
 
 Job request UI zawiera `correlationId` oraz opcjonalne preferencje AI
 (`model`, `reasoningEffort`). `gitLabGroup` pochodzi z konfiguracji, a

@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
 import org.springframework.stereotype.Service;
@@ -35,12 +36,22 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
             InitialAnalysisPreparation preparedAnalysis,
             AnalysisAiToolEvidenceListener toolEvidenceListener
     ) {
-        return analyzePrepared(preparedAnalysis, toolEvidenceListener);
+        return analyzePrepared(preparedAnalysis, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
+    }
+
+    @Override
+    public InitialAnalysisResponse analyze(
+            InitialAnalysisPreparation preparedAnalysis,
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
+    ) {
+        return analyzePrepared(preparedAnalysis, toolEvidenceListener, activityListener);
     }
 
     private InitialAnalysisResponse analyzePrepared(
             InitialAnalysisPreparation preparedAnalysis,
-            AnalysisAiToolEvidenceListener toolEvidenceListener
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
     ) {
         if (!(preparedAnalysis instanceof CopilotInitialAnalysisPreparation initialPreparation)) {
             throw new IllegalArgumentException(
@@ -53,7 +64,7 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         var request = initialPreparation.request();
         var analysisStart = System.nanoTime();
         var executionResult = executionGateway.execute(
-                withToolEvidenceSink(preparedSession, toolEvidenceListener)
+                withRuntimeSinks(preparedSession, toolEvidenceListener, activityListener)
         );
         var parseResult = responseParser.parse(executionResult.content());
         var response = toAiResponse(
@@ -81,15 +92,19 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         return response;
     }
 
-    private CopilotPreparedSession withToolEvidenceSink(
+    private CopilotPreparedSession withRuntimeSinks(
             CopilotPreparedSession preparedSession,
-            AnalysisAiToolEvidenceListener listener
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
     ) {
-        if (listener == null || listener == AnalysisAiToolEvidenceListener.NO_OP) {
-            return preparedSession;
+        var session = preparedSession;
+        if (toolEvidenceListener != null && toolEvidenceListener != AnalysisAiToolEvidenceListener.NO_OP) {
+            session = session.withEvidenceSink(toolEvidenceListener::onToolEvidenceUpdated);
         }
-
-        return preparedSession.withEvidenceSink(listener::onToolEvidenceUpdated);
+        if (activityListener != null && activityListener != AnalysisAiActivityListener.NO_OP) {
+            session = session.withActivitySink(activityListener::onAiActivity);
+        }
+        return session;
     }
 
     private InitialAnalysisResponse toAiResponse(

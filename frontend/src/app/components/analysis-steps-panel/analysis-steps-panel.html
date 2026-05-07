@@ -221,6 +221,68 @@
               </section>
             }
 
+            @if (step.aiActivityEvents.length > 0) {
+              <section class="ai-activity-trace">
+                <div class="ai-activity-trace__header">
+                  <div>
+                    <p class="result-card-label">Turny i kontekst Copilota</p>
+                    <h5 class="ai-activity-trace__title">Przebieg pracy AI</h5>
+                  </div>
+                  <span class="ai-activity-trace__count">
+                    {{ step.aiActivityEvents.length }}
+                  </span>
+                </div>
+
+                <div class="ai-activity-list">
+                  @for (event of step.aiActivityEvents; track event.key) {
+                    <article
+                      class="ai-activity-event"
+                      [class.ai-activity-event--tool]="event.category === 'TOOL'"
+                      [class.ai-activity-event--turn]="event.category === 'TURN'"
+                      [class.ai-activity-event--context]="event.category === 'CONTEXT'"
+                      [class.ai-activity-event--failed]="event.status === 'FAILED'"
+                    >
+                      <mat-icon
+                        class="ai-activity-event__icon"
+                        fontSet="material-symbols-outlined"
+                        aria-hidden="true"
+                      >
+                        {{ event.iconName }}
+                      </mat-icon>
+
+                      <div class="ai-activity-event__copy">
+                        <div class="ai-activity-event__header">
+                          <h6 class="ai-activity-event__title">{{ event.title }}</h6>
+                          <button
+                            class="technical-tooltip__trigger"
+                            type="button"
+                            [attr.aria-label]="'Szczegóły techniczne zdarzenia ' + event.title"
+                            [attr.data-technical-tooltip]="event.technicalTooltip"
+                            [matTooltip]="event.technicalTooltip"
+                            matTooltipPosition="above"
+                            matTooltipClass="analysis-json-tooltip"
+                            [matTooltipShowDelay]="100"
+                          >
+                            <mat-icon fontSet="material-symbols-outlined">data_object</mat-icon>
+                          </button>
+                        </div>
+
+                        <p class="ai-activity-event__summary">{{ event.summary }}</p>
+
+                        @if (event.meta.length > 0) {
+                          <div class="ai-activity-event__meta">
+                            @for (meta of event.meta; track meta) {
+                              <span>{{ meta }}</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </article>
+                  }
+                </div>
+              </section>
+            }
+
             @if (step.detailSections.length > 0) {
               <div class="stepper-detail__sections">
                 @for (section of step.detailSections; track section.key) {
@@ -375,6 +437,19 @@
                                   {{ event.iconName }}
                                 </mat-icon>
                                 <span class="tool-evidence-panel__reason">{{ event.reason }}</span>
+                                <button
+                                  class="technical-tooltip__trigger technical-tooltip__trigger--tool"
+                                  type="button"
+                                  [attr.aria-label]="'Szczegóły techniczne wywołania toola ' + event.reason"
+                                  [attr.data-technical-tooltip]="event.technicalTooltip"
+                                  [matTooltip]="event.technicalTooltip"
+                                  matTooltipPosition="above"
+                                  matTooltipClass="analysis-json-tooltip"
+                                  [matTooltipShowDelay]="100"
+                                  (click)="$event.stopPropagation()"
+                                >
+                                  <mat-icon fontSet="material-symbols-outlined">data_object</mat-icon>
+                                </button>
                                 <mat-icon
                                   class="tool-evidence-panel__expand-icon"
                                   fontSet="material-symbols-outlined"

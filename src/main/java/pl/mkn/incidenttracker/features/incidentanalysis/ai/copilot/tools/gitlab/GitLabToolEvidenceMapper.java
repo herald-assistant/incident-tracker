@@ -75,9 +75,9 @@ public class GitLabToolEvidenceMapper {
             CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
     ) {
         return switch (toolName) {
-            case READ_REPOSITORY_FILE -> captureGitLabFile(rawArguments, rawResult, sessionEvidence);
-            case READ_REPOSITORY_FILE_CHUNK -> captureGitLabFileChunk(rawArguments, rawResult, sessionEvidence);
-            case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(rawArguments, rawResult, sessionEvidence);
+            case READ_REPOSITORY_FILE -> captureGitLabFile(toolCallId, rawArguments, rawResult, sessionEvidence);
+            case READ_REPOSITORY_FILE_CHUNK -> captureGitLabFileChunk(toolCallId, rawArguments, rawResult, sessionEvidence);
+            case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(toolCallId, rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, sessionEvidence);
             case LIST_AVAILABLE_REPOSITORIES -> captureGitLabAvailableRepositories(
                     toolCallId,
@@ -98,6 +98,7 @@ public class GitLabToolEvidenceMapper {
     }
 
     private AnalysisEvidenceSection captureGitLabFile(
+            String toolCallId,
             String rawArguments,
             String rawResult,
             CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
@@ -114,6 +115,9 @@ public class GitLabToolEvidenceMapper {
                             response.projectName(),
                             response.filePath(),
                             toolReason(rawArguments),
+                            toolCallId,
+                            READ_REPOSITORY_FILE,
+                            rawArguments,
                             response.content(),
                             null
                     ),
@@ -126,6 +130,7 @@ public class GitLabToolEvidenceMapper {
     }
 
     private AnalysisEvidenceSection captureGitLabFileChunk(
+            String toolCallId,
             String rawArguments,
             String rawResult,
             CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
@@ -142,6 +147,9 @@ public class GitLabToolEvidenceMapper {
                             response.projectName(),
                             response.filePath(),
                             toolReason(rawArguments),
+                            toolCallId,
+                            READ_REPOSITORY_FILE_CHUNK,
+                            rawArguments,
                             response.content(),
                             response.returnedStartLine()
                     ),
@@ -154,6 +162,7 @@ public class GitLabToolEvidenceMapper {
     }
 
     private AnalysisEvidenceSection captureGitLabFileChunks(
+            String toolCallId,
             String rawArguments,
             String rawResult,
             CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
@@ -178,6 +187,9 @@ public class GitLabToolEvidenceMapper {
                                 chunk.projectName(),
                                 chunk.filePath(),
                                 reason,
+                                toolCallId,
+                                READ_REPOSITORY_FILE_CHUNKS,
+                                rawArguments,
                                 chunk.content(),
                                 chunk.returnedStartLine()
                         ),
@@ -200,7 +212,11 @@ public class GitLabToolEvidenceMapper {
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileOutlineToolResponse.class);
-            var attributes = buildGitLabDiscoveryAttributes(READ_REPOSITORY_FILE_OUTLINE, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    READ_REPOSITORY_FILE_OUTLINE,
+                    rawArguments
+            );
             addAttribute(attributes, "projectName", response.projectName());
             addAttribute(attributes, "filePath", response.filePath());
             addAttribute(attributes, "packageName", response.packageName());
@@ -240,7 +256,11 @@ public class GitLabToolEvidenceMapper {
             var response = objectMapper.readValue(rawResult, GitLabListAvailableRepositoriesToolResponse.class);
             var repositories = safeList(response.repositories());
             var codeSearchScopes = safeList(response.codeSearchScopes());
-            var attributes = buildGitLabDiscoveryAttributes(LIST_AVAILABLE_REPOSITORIES, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    LIST_AVAILABLE_REPOSITORIES,
+                    rawArguments
+            );
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "branch", response.branch());
             addAttribute(attributes, "repositoryCount", String.valueOf(repositories.size()));
@@ -274,7 +294,11 @@ public class GitLabToolEvidenceMapper {
         try {
             var response = objectMapper.readValue(rawResult, GitLabSearchRepositoryCandidatesToolResponse.class);
             var candidates = safeList(response.candidates());
-            var attributes = buildGitLabDiscoveryAttributes(SEARCH_REPOSITORY_CANDIDATES, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    SEARCH_REPOSITORY_CANDIDATES,
+                    rawArguments
+            );
             addAttribute(attributes, "candidateCount", String.valueOf(candidates.size()));
             addJsonAttribute(attributes, "candidates", candidates);
 
@@ -305,7 +329,11 @@ public class GitLabToolEvidenceMapper {
             var response = objectMapper.readValue(rawResult, GitLabFindClassReferencesToolResponse.class);
             var groups = safeList(response.groups());
             var recommendedNextReads = safeList(response.recommendedNextReads());
-            var attributes = buildGitLabDiscoveryAttributes(FIND_CLASS_REFERENCES, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    FIND_CLASS_REFERENCES,
+                    rawArguments
+            );
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "branch", response.branch());
             addAttribute(attributes, "searchedClass", response.searchedClass());
@@ -343,7 +371,11 @@ public class GitLabToolEvidenceMapper {
             var response = objectMapper.readValue(rawResult, GitLabFindFlowContextToolResponse.class);
             var groups = safeList(response.groups());
             var recommendedNextReads = safeList(response.recommendedNextReads());
-            var attributes = buildGitLabDiscoveryAttributes(FIND_FLOW_CONTEXT, rawArguments);
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    FIND_FLOW_CONTEXT,
+                    rawArguments
+            );
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "branch", response.branch());
             addAttribute(attributes, "groupCount", String.valueOf(groups.size()));
@@ -373,12 +405,16 @@ public class GitLabToolEvidenceMapper {
             String projectName,
             String filePath,
             String reason,
+            String toolCallId,
+            String toolName,
+            String rawArguments,
             String content,
             Integer startLine
     ) {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
         addAttribute(attributes, "filePath", filePath);
         addAttribute(attributes, "reason", reason);
+        addToolTechnicalAttributes(attributes, toolCallId, toolName, rawArguments);
         addAttribute(attributes, "content", content);
         if (startLine != null && startLine > 0) {
             addAttribute(attributes, "startLine", String.valueOf(startLine));
@@ -407,11 +443,30 @@ public class GitLabToolEvidenceMapper {
                 .anyMatch(attribute -> "startLine".equals(attribute.name()));
     }
 
-    private List<AnalysisEvidenceAttribute> buildGitLabDiscoveryAttributes(String toolName, String rawArguments) {
+    private List<AnalysisEvidenceAttribute> buildGitLabDiscoveryAttributes(
+            String toolCallId,
+            String toolName,
+            String rawArguments
+    ) {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-        addAttribute(attributes, "toolName", toolName);
         addAttribute(attributes, "reason", toolReason(rawArguments));
+        addToolTechnicalAttributes(attributes, toolCallId, toolName, rawArguments);
         return attributes;
+    }
+
+    private void addToolTechnicalAttributes(
+            List<AnalysisEvidenceAttribute> attributes,
+            String toolCallId,
+            String toolName,
+            String rawArguments
+    ) {
+        addAttribute(attributes, "toolCallId", toolCallId);
+        addAttribute(attributes, "toolName", toolName);
+        addAttribute(
+                attributes,
+                "toolArguments",
+                payloadReader.prettyPayload(payloadReader.readJsonNode(rawArguments), rawArguments, "")
+        );
     }
 
     private void addAttribute(List<AnalysisEvidenceAttribute> attributes, String name, String value) {

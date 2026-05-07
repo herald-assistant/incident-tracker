@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
 import {
+  AnalysisAiActivityEvent,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse
 } from '../../core/models/analysis.models';
@@ -197,6 +198,30 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(tooltip).toContain('Model zgłoszony przez SDK: gpt-5.4');
   });
 
+  it('should render Copilot turn activity with technical JSON tooltips', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('aiActivityEvents', buildAiActivityEvents());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const activityEvents = Array.from(compiled.querySelectorAll('.ai-activity-event'));
+    const technicalTooltip = activityEvents[1]
+      ?.querySelector('.technical-tooltip__trigger')
+      ?.getAttribute('data-technical-tooltip') ?? '';
+
+    expect(compiled.textContent).toContain('Turny i kontekst Copilota');
+    expect(compiled.textContent).toContain('Turn AI rozpoczęty');
+    expect(compiled.textContent).toContain('Kontekst sesji');
+    expect(compiled.textContent).toContain('Tool start: db_count_rows');
+    expect(activityEvents).toHaveLength(4);
+    expect(technicalTooltip).toContain('"currentTokens": 9200');
+    expect(technicalTooltip).toContain('"messagesLength": 6');
+  });
+
   it('should hide the prepared prompt on a failed AI step when no result is available', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildFailedAiStep()]);
@@ -295,6 +320,12 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).toContain('"tableName": "ORDER_EVENT"');
     expect(content).toContain('"count": 3');
     expect(content).not.toContain('Powód sprawdzenia');
+
+    const toolTooltip = compiled
+      .querySelector('.technical-tooltip__trigger--tool')
+      ?.getAttribute('data-technical-tooltip') ?? '';
+    expect(toolTooltip).toContain('"toolArguments"');
+    expect(toolTooltip).toContain('"tableName": "ORDER_EVENT"');
   });
 });
 
@@ -652,6 +683,18 @@ function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection
         attributes: [
           { name: 'reason', value: 'Sprawdzam, czy istnieją rekordy dla correlationId.' },
           { name: 'toolCaptureOrder', value: captureOrder },
+          { name: 'toolName', value: 'db_count_rows' },
+          { name: 'toolCallId', value: 'tool-call-db-1' },
+          {
+            name: 'toolArguments',
+            value: `{
+  "reason": "Sprawdzam, czy istnieją rekordy dla correlationId.",
+  "tableName": "ORDER_EVENT",
+  "filters": {
+    "CORRELATION_ID": "corr-123"
+  }
+}`
+          },
           {
             name: 'result',
             value: `{
@@ -670,6 +713,75 @@ function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection
       }
     ]
   };
+}
+
+function buildAiActivityEvents(): AnalysisAiActivityEvent[] {
+  return [
+    {
+      eventId: 'event-turn-1',
+      parentEventId: '',
+      type: 'assistant.turn_start',
+      category: 'TURN',
+      status: 'STARTED',
+      title: 'Turn AI rozpoczęty',
+      summary: 'Copilot rozpoczął turn turn-1.',
+      turnId: 'turn-1',
+      interactionId: 'interaction-1',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-04-14T12:00:12Z',
+      details: { turnId: 'turn-1', interactionId: 'interaction-1' }
+    },
+    {
+      eventId: 'event-context-1',
+      parentEventId: '',
+      type: 'session.usage_info',
+      category: 'CONTEXT',
+      status: 'INFO',
+      title: 'Kontekst sesji',
+      summary: 'Kontekst: 9200/128000 tokenów, 6 wiadomości.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-04-14T12:00:13Z',
+      details: { tokenLimit: 128000, currentTokens: 9200, messagesLength: 6 }
+    },
+    {
+      eventId: 'event-tool-1',
+      parentEventId: '',
+      type: 'tool.execution_start',
+      category: 'TOOL',
+      status: 'STARTED',
+      title: 'Tool start: db_count_rows',
+      summary: 'Copilot uruchamia db_count_rows.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: 'tool-call-db-1',
+      toolName: 'db_count_rows',
+      timestamp: '2026-04-14T12:00:14Z',
+      details: {
+        toolCallId: 'tool-call-db-1',
+        toolName: 'db_count_rows',
+        arguments: { tableName: 'ORDER_EVENT' }
+      }
+    },
+    {
+      eventId: 'event-turn-2',
+      parentEventId: '',
+      type: 'assistant.turn_end',
+      category: 'TURN',
+      status: 'COMPLETED',
+      title: 'Turn AI zakończony',
+      summary: 'Copilot zakończył turn turn-1.',
+      turnId: 'turn-1',
+      interactionId: '',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-04-14T12:00:15Z',
+      details: { turnId: 'turn-1' }
+    }
+  ];
 }
 
 function buildAiToolGitLabDiscoverySection(captureOrder = '3'): AnalysisEvidenceSection {

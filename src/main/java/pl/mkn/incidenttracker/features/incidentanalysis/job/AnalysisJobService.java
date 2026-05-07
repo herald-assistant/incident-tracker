@@ -128,7 +128,8 @@ public class AnalysisJobService {
         try {
             var response = analysisAiChatProvider.chat(
                     request,
-                    section -> job.markChatToolEvidenceUpdated(assistantMessageId, section)
+                    section -> job.markChatToolEvidenceUpdated(assistantMessageId, section),
+                    event -> job.markChatAiActivity(assistantMessageId, event)
             );
             job.markChatCompleted(assistantMessageId, response.content(), response.prompt());
         } catch (RuntimeException exception) {

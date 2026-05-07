@@ -44,6 +44,7 @@ function completedJob(): AnalysisJobStateSnapshot {
     steps: [],
     evidenceSections: [],
     toolEvidenceSections: [],
+    aiActivityEvents: [],
     chatMessages: [],
     preparedPrompt: 'Prepared prompt without GitHub tokens.',
     result: {

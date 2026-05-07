@@ -258,6 +258,7 @@ function queuedJob(): AnalysisJobStateSnapshot {
     steps: [],
     evidenceSections: [],
     toolEvidenceSections: [],
+    aiActivityEvents: [],
     chatMessages: [],
     preparedPrompt: '',
     result: null
