@@ -35,6 +35,7 @@ import {
   estimateAnalysisAiCost,
   GITHUB_AI_CREDIT_USD
 } from '../../core/utils/analysis-ai-usage-cost.utils';
+import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
@@ -3947,30 +3948,3 @@ function firstDefinedText(...values: Array<string | null | undefined>): string |
   return null;
 }
 
-async function copyTextToClipboard(value: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value);
-      return true;
-    }
-  } catch {
-    // Fallback below.
-  }
-
-  try {
-    const textarea = document.createElement('textarea');
-    textarea.value = value;
-    textarea.setAttribute('readonly', 'true');
-    textarea.style.position = 'fixed';
-    textarea.style.top = '-9999px';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    textarea.setSelectionRange(0, textarea.value.length);
-    const copied = document.execCommand('copy');
-    textarea.remove();
-    return copied;
-  } catch {
-    return false;
-  }
-}

@@ -156,6 +156,22 @@ describe('AnalysisConsoleComponent auth flow', () => {
     );
   });
 
+  it('should expose copy actions for every chat message', async () => {
+    const { fixture } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    component.job.set(completedJobWithChat());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const copyButtons = fixture.nativeElement.querySelectorAll('.chat-message__copy-button');
+
+    expect(copyButtons).toHaveLength(2);
+    expect(copyButtons[0].textContent).toContain('Kopiuj');
+    expect(copyButtons[1].textContent).toContain('Kopiuj');
+  });
+
   async function createComponent(
     status: GitHubAuthStatus,
     aiModelOptions$: Observable<AnalysisAiModelOptionsResponse> = of(modelOptions())
@@ -288,5 +304,41 @@ function completedJob(): AnalysisJobStateSnapshot {
       prompt: 'Prepared prompt without tokens.',
       usage: null
     }
+  };
+}
+
+function completedJobWithChat(): AnalysisJobStateSnapshot {
+  return {
+    ...completedJob(),
+    chatMessages: [
+      {
+        id: 'chat-user-1',
+        role: 'USER',
+        status: 'COMPLETED',
+        content: 'Przygotuj opis do Jiry.',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-05-02T10:02:00Z',
+        updatedAt: '2026-05-02T10:02:00Z',
+        completedAt: '2026-05-02T10:02:00Z',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        prompt: ''
+      },
+      {
+        id: 'chat-assistant-1',
+        role: 'ASSISTANT',
+        status: 'COMPLETED',
+        content: '**Diagnoza:** timeout na downstream.',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-05-02T10:03:00Z',
+        updatedAt: '2026-05-02T10:03:00Z',
+        completedAt: '2026-05-02T10:03:00Z',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        prompt: ''
+      }
+    ]
   };
 }

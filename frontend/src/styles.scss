@@ -606,6 +606,7 @@ app-root {
 
 .chat-message__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -613,8 +614,62 @@ app-root {
   font-size: 0.82rem;
 }
 
+.chat-message__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
 .chat-message__header strong {
   color: var(--text-main);
+}
+
+.chat-message__copy-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(12, 102, 228, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--primary-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.chat-message__copy-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(12, 102, 228, 0.42);
+  background: #fff;
+}
+
+.chat-message__copy-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.14);
+}
+
+.chat-message__copy-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.chat-message--failed .chat-message__copy-button {
+  border-color: rgba(174, 46, 36, 0.22);
+  color: var(--danger-text);
+}
+
+.chat-message__body {
+  min-width: 0;
 }
 
 .chat-message__text,

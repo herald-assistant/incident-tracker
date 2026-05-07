@@ -256,29 +256,47 @@
               } @else {
                 @for (message of currentJob.chatMessages; track message.id) {
                   <article
+                    #chatMessageElement
                     class="chat-message"
                     [class.chat-message--user]="message.role === 'USER'"
                     [class.chat-message--assistant]="message.role === 'ASSISTANT'"
                     [class.chat-message--failed]="message.status === 'FAILED'"
                   >
                     <div class="chat-message__header">
-                      <strong>{{ chatMessageTitle(message) }}</strong>
-                      <span>{{ chatMessageMeta(message) }}</span>
+                      <div class="chat-message__identity">
+                        <strong>{{ chatMessageTitle(message) }}</strong>
+                        <span>{{ chatMessageMeta(message) }}</span>
+                      </div>
+                      <button
+                        class="chat-message__copy-button"
+                        type="button"
+                        data-clipboard-exclude
+                        [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
+                        [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
+                        (click)="copyChatMessage(chatMessageElement, message)"
+                      >
+                        <span class="material-symbols-outlined" aria-hidden="true">
+                          {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
+                        </span>
+                        <span>{{ copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj' }}</span>
+                      </button>
                     </div>
 
-                    @if (message.status === 'IN_PROGRESS') {
-                      <p class="chat-message__pending">
-                        AI analizuje polecenie i w razie potrzeby korzysta z dostępnych narzędzi.
-                      </p>
-                    } @else if (message.status === 'FAILED') {
-                      <p class="chat-message__error">
-                        {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
-                      </p>
-                    } @else if (message.role === 'ASSISTANT') {
-                      <app-markdown-content [content]="message.content"></app-markdown-content>
-                    } @else {
-                      <p class="chat-message__text">{{ message.content }}</p>
-                    }
+                    <div class="chat-message__body">
+                      @if (message.status === 'IN_PROGRESS') {
+                        <p class="chat-message__pending">
+                          AI analizuje polecenie i w razie potrzeby korzysta z dostępnych narzędzi.
+                        </p>
+                      } @else if (message.status === 'FAILED') {
+                        <p class="chat-message__error">
+                          {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
+                        </p>
+                      } @else if (message.role === 'ASSISTANT') {
+                        <app-markdown-content [content]="message.content"></app-markdown-content>
+                      } @else {
+                        <p class="chat-message__text">{{ message.content }}</p>
+                      }
+                    </div>
 
                     @if (message.toolEvidenceSections.length > 0) {
                       <details class="chat-message__evidence">

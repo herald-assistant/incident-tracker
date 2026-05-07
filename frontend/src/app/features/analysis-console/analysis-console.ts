@@ -34,6 +34,7 @@ import {
   hasInProgressChat,
   isTerminalStatus
 } from '../../core/utils/analysis-display.utils';
+import { copyElementToClipboard } from '../../core/utils/clipboard.utils';
 import {
   buildExportEnvelope,
   buildExportFileName,
@@ -105,6 +106,7 @@ export class AnalysisConsoleComponent {
   readonly githubAuthError = signal('');
   readonly githubReauthRequiredByError = signal(false);
   readonly chatNeedsGithubAuth = signal(false);
+  readonly copiedChatMessageId = signal<string | null>(null);
 
   readonly aiModelOptions = computed<SelectOption[]>(() => {
     if (this.isAiModelOptionsLoading()) {
@@ -239,10 +241,14 @@ export class AnalysisConsoleComponent {
 
   private activeAnalysisId: string | null = null;
   private pollHandle: number | null = null;
+  private chatCopyFeedbackHandle: number | null = null;
 
   constructor() {
     this.loadGithubAuthStatus();
-    this.destroyRef.onDestroy(() => this.stopPolling());
+    this.destroyRef.onDestroy(() => {
+      this.stopPolling();
+      this.clearChatCopyFeedback();
+    });
   }
 
   submit(event: Event): void {
@@ -510,6 +516,30 @@ export class AnalysisConsoleComponent {
     return formatEvidenceSectionTitle(section);
   }
 
+  protected async copyChatMessage(
+    messageElement: HTMLElement,
+    message: AnalysisChatMessageResponse
+  ): Promise<void> {
+    const copied = await copyElementToClipboard(messageElement);
+    if (!copied) {
+      this.chatError.set('Nie udało się skopiować wiadomości do schowka.');
+      return;
+    }
+
+    this.chatError.set('');
+    this.copiedChatMessageId.set(message.id);
+    if (this.chatCopyFeedbackHandle !== null) {
+      window.clearTimeout(this.chatCopyFeedbackHandle);
+    }
+
+    this.chatCopyFeedbackHandle = window.setTimeout(() => {
+      if (this.copiedChatMessageId() === message.id) {
+        this.copiedChatMessageId.set(null);
+      }
+      this.chatCopyFeedbackHandle = null;
+    }, 1600);
+  }
+
   private pollAnalysis(analysisId: string): void {
     this.analysisApi
       .getAnalysis(analysisId)
@@ -553,6 +583,14 @@ export class AnalysisConsoleComponent {
       window.clearTimeout(this.pollHandle);
       this.pollHandle = null;
     }
+  }
+
+  private clearChatCopyFeedback(): void {
+    if (this.chatCopyFeedbackHandle !== null) {
+      window.clearTimeout(this.chatCopyFeedbackHandle);
+      this.chatCopyFeedbackHandle = null;
+    }
+    this.copiedChatMessageId.set(null);
   }
 
   private loadGithubAuthStatus(): void {
