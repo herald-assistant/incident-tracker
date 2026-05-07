@@ -27,9 +27,10 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
   dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
   pollingiem joba,
-- w ekranie `GET /` ostatni krok AI pokazuje widoczny trace aktywnosci
-  Copilota: turny, komunikaty, tool start/koniec, usage i snapshoty kontekstu;
-  kazdy event ma techniczny JSON tooltip dla operatora,
+- w ekranie `GET /` ostatni krok AI pokazuje jeden timeline aktywnosci
+  Copilota i user-facing tool evidence: `assistant.message` jako logiczny opis
+  turna, pod nim powiazane tools z loaderem/OK/error oraz technicznym JSON
+  tooltipem na lewej ikonie,
 - w ekranie `GET /` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
@@ -316,7 +317,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   product-facing estymacje oplacalnosci, nie jako fakture.
 - Aktywnosc sesji Copilota jest productized i widoczna w job state jako
   generyczne `shared.ai.AnalysisAiActivityEvent`: turny, komunikaty,
-  wywolania tooli, snapshoty context tokens/messages i usage eventy.
+  wywolania tooli, snapshoty context tokens/messages i usage eventy. Frontend
+  merge'uje te eventy z `toolEvidenceSections` w jeden timeline analizy.
 - Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
   katalogu runtime.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego

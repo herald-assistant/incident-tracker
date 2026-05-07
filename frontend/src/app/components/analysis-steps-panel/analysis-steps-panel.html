@@ -1,4 +1,181 @@
 <section class="panel-card panel-card--progress">
+  <ng-template #toolEvidenceResult let-event>
+    @if (event.codePanel; as panel) {
+      @if (panel.compactAttributes.length > 0) {
+        <div class="attribute-grid tool-evidence-panel__meta">
+          @for (attribute of panel.compactAttributes; track attribute.name + $index) {
+            <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+            <span class="attribute-value">{{ attribute.value }}</span>
+          }
+        </div>
+      }
+
+      @for (attribute of panel.blockAttributes; track attribute.name + $index) {
+        <div class="attribute-row attribute-row--block">
+          <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+          <pre class="attribute-block">{{ attribute.value }}</pre>
+        </div>
+      }
+
+      @if (panel.hasContent) {
+        <div class="repo-code-viewer repo-code-viewer--tool-evidence">
+          @for (line of panel.codeLines; track line.lineNumber ?? $index) {
+            <div
+              class="repo-code-viewer__row"
+              [class.repo-code-viewer__row--highlight]="line.highlighted"
+            >
+              <span
+                class="repo-code-viewer__line-number"
+                [class.repo-code-viewer__line-number--highlight]="line.highlighted"
+              >
+                {{ line.lineNumber }}
+              </span>
+              <span class="repo-code-viewer__line-content">{{ line.content || ' ' }}</span>
+            </div>
+          }
+        </div>
+      }
+    } @else if (event.gitLabLookup; as lookup) {
+      <section class="gitlab-tool-card">
+        <p class="gitlab-tool-card__summary">{{ lookup.summary }}</p>
+
+        @if (lookup.compactAttributes.length > 0) {
+          <div class="attribute-grid gitlab-tool-card__meta">
+            @for (attribute of lookup.compactAttributes; track attribute.name + $index) {
+              <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+              <span class="attribute-value">{{ attribute.value }}</span>
+            }
+          </div>
+        }
+
+        @if (lookup.candidateGroups.length > 0) {
+          <div class="gitlab-tool-card__sections">
+            @for (group of lookup.candidateGroups; track group.key) {
+              <section class="gitlab-tool-card__section">
+                <div class="gitlab-tool-card__section-header">
+                  <h6 class="gitlab-tool-card__section-title">{{ group.title }}</h6>
+                  <span class="gitlab-tool-card__count">{{ group.candidates.length }}</span>
+                </div>
+
+                <div class="gitlab-candidate-list">
+                  @for (candidate of group.candidates; track candidate.key) {
+                    <article class="gitlab-candidate">
+                      <div class="gitlab-candidate__header">
+                        <div>
+                          <h6 class="gitlab-candidate__title">{{ candidate.title }}</h6>
+                          <p class="gitlab-candidate__subtitle">{{ candidate.subtitle }}</p>
+                        </div>
+                        @if (candidate.score) {
+                          <span class="gitlab-tool-card__score">score {{ candidate.score }}</span>
+                        }
+                      </div>
+
+                      @if (candidate.role || candidate.strategy) {
+                        <div class="attribute-grid gitlab-candidate__meta">
+                          @if (candidate.role) {
+                            <span class="attribute-name">Rola</span>
+                            <span class="attribute-value">{{ candidate.role }}</span>
+                          }
+                          @if (candidate.strategy) {
+                            <span class="attribute-name">Następny odczyt</span>
+                            <span class="attribute-value">{{ candidate.strategy }}</span>
+                          }
+                        </div>
+                      }
+
+                      @if (candidate.preview) {
+                        <p class="gitlab-candidate__preview">{{ candidate.preview }}</p>
+                      }
+                    </article>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        }
+
+        @if (lookup.recommendedNextReads.length > 0) {
+          <section class="gitlab-tool-card__section">
+            <h6 class="gitlab-tool-card__section-title">Rekomendowane dalsze odczyty</h6>
+            <ul class="gitlab-tool-card__list">
+              @for (read of lookup.recommendedNextReads; track read) {
+                <li>{{ read }}</li>
+              }
+            </ul>
+          </section>
+        }
+      </section>
+    } @else if (event.databaseTool; as tool) {
+      <section class="database-tool-card database-tool-card--timeline">
+        @if (tool.tableViews.length > 0) {
+          <div class="database-tool-card__tables">
+            @for (table of tool.tableViews; track table.title) {
+              <section class="database-tool-card__section">
+                <div class="database-tool-card__table-header">
+                  <h6 class="database-tool-card__section-title">{{ table.title }}</h6>
+                  @if (table.truncated) {
+                    <span class="database-tool-card__table-note">
+                      Pokazano pierwsze {{ table.rows.length }} wierszy
+                    </span>
+                  }
+                </div>
+
+                <div
+                  class="database-tool-table"
+                  [style.--database-tool-columns]="table.columns.length"
+                >
+                  <table class="database-tool-table__grid">
+                    <thead>
+                      <tr>
+                        @for (column of table.columns; track column) {
+                          <th class="database-tool-table__cell database-tool-table__cell--header">
+                            {{ column }}
+                          </th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of table.rows; track $index) {
+                        <tr>
+                          @for (cell of row; track $index) {
+                            <td class="database-tool-table__cell">{{ cell }}</td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            }
+          </div>
+        } @else {
+          <section class="database-tool-card__section">
+            <h6 class="database-tool-card__section-title">Rezultat</h6>
+            <pre class="database-tool-card__result">{{ tool.result }}</pre>
+          </section>
+        }
+      </section>
+    } @else if (event.defaultItem; as item) {
+      <div class="attribute-list attribute-list--timeline">
+        @if (item.compactAttributes.length > 0) {
+          <div class="attribute-grid">
+            @for (attribute of item.compactAttributes; track attribute.name + $index) {
+              <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+              <span class="attribute-value">{{ attribute.value }}</span>
+            }
+          </div>
+        }
+
+        @for (attribute of item.blockAttributes; track attribute.name + $index) {
+          <div class="attribute-row attribute-row--block">
+            <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+            <pre class="attribute-block">{{ attribute.value }}</pre>
+          </div>
+        }
+      </div>
+    }
+  </ng-template>
+
   <div class="panel-card__header panel-card__header--compact">
     <div>
       <p class="section-eyebrow">Przebieg</p>
@@ -221,63 +398,174 @@
               </section>
             }
 
-            @if (step.aiActivityEvents.length > 0) {
-              <section class="ai-activity-trace">
-                <div class="ai-activity-trace__header">
+            @if (step.aiTimelineTurns.length > 0) {
+              <section class="ai-timeline">
+                <div class="ai-timeline__header">
                   <div>
-                    <p class="result-card-label">Turny i kontekst Copilota</p>
-                    <h5 class="ai-activity-trace__title">Przebieg pracy AI</h5>
+                    <p class="result-card-label">Przebieg pracy Copilota</p>
+                    <h5 class="ai-timeline__title">Logika analizy i częściowe rezultaty</h5>
                   </div>
-                  <span class="ai-activity-trace__count">
-                    {{ step.aiActivityEvents.length }}
+                  <span class="ai-timeline__count">
+                    {{ step.aiTimelineTurns.length }}
                   </span>
                 </div>
 
-                <div class="ai-activity-list">
-                  @for (event of step.aiActivityEvents; track event.key) {
-                    <article
-                      class="ai-activity-event"
-                      [class.ai-activity-event--tool]="event.category === 'TOOL'"
-                      [class.ai-activity-event--turn]="event.category === 'TURN'"
-                      [class.ai-activity-event--context]="event.category === 'CONTEXT'"
-                      [class.ai-activity-event--failed]="event.status === 'FAILED'"
-                    >
-                      <mat-icon
-                        class="ai-activity-event__icon"
-                        fontSet="material-symbols-outlined"
-                        aria-hidden="true"
-                      >
-                        {{ event.iconName }}
-                      </mat-icon>
-
-                      <div class="ai-activity-event__copy">
-                        <div class="ai-activity-event__header">
-                          <h6 class="ai-activity-event__title">{{ event.title }}</h6>
-                          <button
-                            class="technical-tooltip__trigger"
-                            type="button"
-                            [attr.aria-label]="'Szczegóły techniczne zdarzenia ' + event.title"
-                            [attr.data-technical-tooltip]="event.technicalTooltip"
-                            [matTooltip]="event.technicalTooltip"
-                            matTooltipPosition="above"
-                            matTooltipClass="analysis-json-tooltip"
-                            [matTooltipShowDelay]="100"
-                          >
-                            <mat-icon fontSet="material-symbols-outlined">data_object</mat-icon>
-                          </button>
-                        </div>
-
-                        <p class="ai-activity-event__summary">{{ event.summary }}</p>
-
-                        @if (event.meta.length > 0) {
-                          <div class="ai-activity-event__meta">
-                            @for (meta of event.meta; track meta) {
+                <div class="ai-timeline__turns">
+                  @for (turn of step.aiTimelineTurns; track turn.key) {
+                    <section class="ai-timeline-turn">
+                      <div class="ai-timeline-turn__header">
+                        <span class="ai-timeline-turn__title">{{ turn.title }}</span>
+                        @if (turn.meta.length > 0) {
+                          <span class="ai-timeline-turn__meta">
+                            @for (meta of turn.meta; track meta) {
                               <span>{{ meta }}</span>
                             }
-                          </div>
+                          </span>
                         }
                       </div>
-                    </article>
+
+                      <div class="ai-timeline-entry-list">
+                        @for (entry of turn.entries; track entry.key) {
+                          <article
+                            class="ai-timeline-entry"
+                            [class.ai-timeline-entry--message]="entry.kind === 'message'"
+                            [class.ai-timeline-entry--runtime]="entry.kind === 'runtime'"
+                            [class.ai-timeline-entry--tool]="entry.kind === 'tool'"
+                            [class.ai-timeline-entry--failed]="entry.status === 'FAILED'"
+                          >
+                            <button
+                              class="ai-timeline-entry__debug-trigger"
+                              type="button"
+                              [attr.aria-label]="'Szczegóły debug zdarzenia ' + entry.title"
+                              [attr.data-technical-tooltip]="entry.technicalTooltip"
+                              [matTooltip]="entry.technicalTooltip"
+                              matTooltipPosition="above"
+                              matTooltipClass="analysis-json-tooltip"
+                              [matTooltipShowDelay]="100"
+                            >
+                              <mat-icon fontSet="material-symbols-outlined">{{ entry.iconName }}</mat-icon>
+                            </button>
+
+                            <div class="ai-timeline-entry__body">
+                              <div class="ai-timeline-entry__header">
+                                <h6 class="ai-timeline-entry__title">{{ entry.title }}</h6>
+
+                                @if (entry.toolStatus) {
+                                  <span
+                                    class="ai-timeline-entry__status"
+                                    [class.ai-timeline-entry__status--pending]="entry.toolStatus === 'PENDING'"
+                                    [class.ai-timeline-entry__status--done]="entry.toolStatus === 'COMPLETED'"
+                                    [class.ai-timeline-entry__status--failed]="entry.toolStatus === 'FAILED'"
+                                    [attr.aria-label]="entry.toolStatusLabel"
+                                    [matTooltip]="entry.toolStatusTooltip"
+                                    matTooltipPosition="above"
+                                    matTooltipClass="analysis-log-tooltip"
+                                    [matTooltipShowDelay]="100"
+                                  >
+                                    @if (entry.toolStatus === 'PENDING') {
+                                      <span class="ai-timeline-entry__spinner" aria-hidden="true"></span>
+                                    } @else {
+                                      <mat-icon fontSet="material-symbols-outlined">
+                                        {{ entry.toolStatusIcon }}
+                                      </mat-icon>
+                                    }
+                                  </span>
+                                }
+                              </div>
+
+                              <p class="ai-timeline-entry__summary">{{ entry.summary }}</p>
+
+                              @if (entry.meta.length > 0) {
+                                <div class="ai-timeline-entry__meta">
+                                  @for (meta of entry.meta; track meta) {
+                                    <span>{{ meta }}</span>
+                                  }
+                                </div>
+                              }
+
+                              @if (entry.childTools.length > 0) {
+                                <div class="ai-timeline-entry__children">
+                                  @for (child of entry.childTools; track child.key) {
+                                    <article
+                                      class="ai-timeline-entry ai-timeline-entry--tool ai-timeline-entry--child-tool"
+                                      [class.ai-timeline-entry--failed]="child.status === 'FAILED'"
+                                    >
+                                      <button
+                                        class="ai-timeline-entry__debug-trigger"
+                                        type="button"
+                                        [attr.aria-label]="'Szczegóły debug wywołania toola ' + child.title"
+                                        [attr.data-technical-tooltip]="child.technicalTooltip"
+                                        [matTooltip]="child.technicalTooltip"
+                                        matTooltipPosition="above"
+                                        matTooltipClass="analysis-json-tooltip"
+                                        [matTooltipShowDelay]="100"
+                                      >
+                                        <mat-icon fontSet="material-symbols-outlined">{{ child.iconName }}</mat-icon>
+                                      </button>
+
+                                      <div class="ai-timeline-entry__body">
+                                        <div class="ai-timeline-entry__header">
+                                          <h6 class="ai-timeline-entry__title">{{ child.title }}</h6>
+                                          <span
+                                            class="ai-timeline-entry__status"
+                                            [class.ai-timeline-entry__status--pending]="child.toolStatus === 'PENDING'"
+                                            [class.ai-timeline-entry__status--done]="child.toolStatus === 'COMPLETED'"
+                                            [class.ai-timeline-entry__status--failed]="child.toolStatus === 'FAILED'"
+                                            [attr.aria-label]="child.toolStatusLabel"
+                                            [matTooltip]="child.toolStatusTooltip"
+                                            matTooltipPosition="above"
+                                            matTooltipClass="analysis-log-tooltip"
+                                            [matTooltipShowDelay]="100"
+                                          >
+                                            @if (child.toolStatus === 'PENDING') {
+                                              <span class="ai-timeline-entry__spinner" aria-hidden="true"></span>
+                                            } @else {
+                                              <mat-icon fontSet="material-symbols-outlined">
+                                                {{ child.toolStatusIcon }}
+                                              </mat-icon>
+                                            }
+                                          </span>
+                                        </div>
+
+                                        <p class="ai-timeline-entry__summary">{{ child.summary }}</p>
+
+                                        @if (child.meta.length > 0) {
+                                          <div class="ai-timeline-entry__meta">
+                                            @for (meta of child.meta; track meta) {
+                                              <span>{{ meta }}</span>
+                                            }
+                                          </div>
+                                        }
+
+                                        @if (child.toolEvidence; as toolEvidence) {
+                                          <details class="ai-timeline-tool-result">
+                                            <summary>Rezultat toola</summary>
+                                            <ng-container
+                                              [ngTemplateOutlet]="toolEvidenceResult"
+                                              [ngTemplateOutletContext]="{ $implicit: toolEvidence }"
+                                            ></ng-container>
+                                          </details>
+                                        }
+                                      </div>
+                                    </article>
+                                  }
+                                </div>
+                              }
+
+                              @if (entry.toolEvidence; as toolEvidence) {
+                                <details class="ai-timeline-tool-result">
+                                  <summary>Rezultat toola</summary>
+                                  <ng-container
+                                    [ngTemplateOutlet]="toolEvidenceResult"
+                                    [ngTemplateOutletContext]="{ $implicit: toolEvidence }"
+                                  ></ng-container>
+                                </details>
+                              }
+                            </div>
+                          </article>
+                        }
+                      </div>
+                    </section>
                   }
                 </div>
               </section>

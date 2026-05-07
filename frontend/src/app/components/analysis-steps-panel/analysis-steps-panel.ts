@@ -1,4 +1,5 @@
 import { STEPPER_GLOBAL_OPTIONS } from '@angular/cdk/stepper';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, input, signal } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
@@ -243,6 +244,8 @@ interface ToolEvidenceTimelineItemView {
   key: string;
   reason: string;
   technicalTooltip: string;
+  toolCallId: string;
+  toolName: string;
   captureOrder: number | null;
   fallbackOrder: number;
   sourceLabel: string;
@@ -253,8 +256,16 @@ interface ToolEvidenceTimelineItemView {
   defaultItem: StepEvidenceItemView | null;
 }
 
-interface AiActivityEventView {
+interface AiTimelineTurnView {
   key: string;
+  title: string;
+  meta: string[];
+  entries: AiTimelineEntryView[];
+}
+
+interface AiTimelineEntryView {
+  key: string;
+  kind: 'message' | 'runtime' | 'tool';
   category: string;
   status: string;
   title: string;
@@ -262,6 +273,13 @@ interface AiActivityEventView {
   iconName: string;
   meta: string[];
   technicalTooltip: string;
+  timestampMs: number;
+  toolStatus: 'PENDING' | 'COMPLETED' | 'FAILED' | null;
+  toolStatusIcon: string;
+  toolStatusLabel: string;
+  toolStatusTooltip: string;
+  toolEvidence: ToolEvidenceTimelineItemView | null;
+  childTools: AiTimelineEntryView[];
 }
 
 interface StepEvidenceSectionView {
@@ -305,7 +323,7 @@ interface StepView {
   showUsage: boolean;
   usageStats: UsageStatView[];
   usageTooltip: string;
-  aiActivityEvents: AiActivityEventView[];
+  aiTimelineTurns: AiTimelineTurnView[];
   emptyStateMessage: string;
 }
 
@@ -468,6 +486,7 @@ const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
     MatIconModule,
     MatStepperModule,
     MatTooltipModule,
+    NgTemplateOutlet,
     ResizableColumnDirective,
     ResizableColumnsHostDirective,
     MarkdownContentComponent,
@@ -516,9 +535,9 @@ export class AnalysisStepsPanelComponent {
       const key = buildStepKey(step, index);
       const usageEstimate = estimateAnalysisAiCost(step.usage ?? null);
       const usageStats = buildUsageStats(step.usage ?? null, usageEstimate);
-      const aiActivityEvents =
+      const aiTimelineTurns =
         step.code === 'AI_ANALYSIS'
-          ? prepareAiActivityEvents(this.aiActivityEvents())
+          ? prepareAiTimelineTurns(this.aiActivityEvents(), this.toolEvidenceSections())
           : [];
 
       return {
@@ -542,10 +561,10 @@ export class AnalysisStepsPanelComponent {
         showUsage: usageStats.length > 0,
         usageStats,
         usageTooltip: buildUsageTooltip(step.usage ?? null, usageEstimate),
-        aiActivityEvents,
+        aiTimelineTurns,
         emptyStateMessage: buildEmptyStateMessage(
           step,
-          detailSections.length + aiActivityEvents.length,
+          detailSections.length + aiTimelineTurns.length,
           showResultPreview,
           showPreparedPromptView
         )
@@ -948,7 +967,7 @@ function prepareStepDetailSections(
   toolEvidenceSections: AnalysisEvidenceSection[]
 ): StepEvidenceSectionView[] {
   if (step.code === 'AI_ANALYSIS') {
-    return prepareToolEvidenceTimelineSections(toolEvidenceSections);
+    return [];
   }
 
   return prepareEvidenceSections(resolveStepSections(step, evidenceSections));
@@ -998,6 +1017,8 @@ function prepareToolEvidenceTimelineItem(
   const captureOrder = integerValue(attributesByName, TOOL_CAPTURE_ORDER_ATTRIBUTE);
   const fallbackOrder = sectionIndex * 10_000 + itemIndex;
   const technicalTooltip = buildToolEvidenceTechnicalTooltip(section, item, itemIndex);
+  const toolCallId = nonEmptyValue(attributesByName.get('toolCallId'));
+  const toolName = nonEmptyValue(attributesByName.get('toolName')) || nonEmptyValue(item.title);
 
   if (isGitLabCodeSection(section)) {
     const codePanel = prepareRepoCodePanel(section, item, itemIndex, {
@@ -1008,6 +1029,8 @@ function prepareToolEvidenceTimelineItem(
       key: codePanel.key,
       reason: nonEmptyValue(codePanel.reason) || 'Model nie podał powodu pobrania tego pliku.',
       technicalTooltip,
+      toolCallId,
+      toolName,
       captureOrder,
       fallbackOrder,
       sourceLabel: 'GitLab',
@@ -1026,6 +1049,8 @@ function prepareToolEvidenceTimelineItem(
       key: gitLabLookup.key,
       reason: gitLabLookup.reason,
       technicalTooltip,
+      toolCallId,
+      toolName,
       captureOrder,
       fallbackOrder,
       sourceLabel: 'GitLab',
@@ -1044,6 +1069,8 @@ function prepareToolEvidenceTimelineItem(
       key: databaseTool.key,
       reason: databaseTool.reason,
       technicalTooltip,
+      toolCallId,
+      toolName,
       captureOrder,
       fallbackOrder,
       sourceLabel: 'Baza danych',
@@ -1066,6 +1093,8 @@ function prepareToolEvidenceTimelineItem(
       nonEmptyValue(item.title) ||
       formatEvidenceSectionTitle(section),
     technicalTooltip,
+    toolCallId,
+    toolName,
     captureOrder,
     fallbackOrder,
     sourceLabel: formatEvidenceSectionTitle(section),
@@ -1096,66 +1125,6 @@ function compareToolEvidenceTimelineItems(
   return left.fallbackOrder - right.fallbackOrder;
 }
 
-function prepareAiActivityEvents(events: AnalysisAiActivityEvent[]): AiActivityEventView[] {
-  return (events || []).map((event, index) => ({
-    key: event.eventId || `${event.type || 'ai-event'}-${index}`,
-    category: event.category || 'SYSTEM',
-    status: event.status || 'INFO',
-    title: event.title || formatAiActivityType(event.type),
-    summary: event.summary || 'Copilot zgłosił zdarzenie runtime.',
-    iconName: aiActivityIcon(event),
-    meta: buildAiActivityMeta(event),
-    technicalTooltip: buildAiActivityTooltip(event)
-  }));
-}
-
-function aiActivityIcon(event: AnalysisAiActivityEvent): string {
-  const category = String(event.category || '').toUpperCase();
-  const status = String(event.status || '').toUpperCase();
-
-  if (status === 'FAILED' || category === 'ERROR') {
-    return 'error';
-  }
-
-  switch (category) {
-    case 'TURN':
-      return status === 'STARTED' ? 'play_circle' : 'check_circle';
-    case 'TOOL':
-      return status === 'STARTED' ? 'construction' : 'build_circle';
-    case 'MESSAGE':
-      return 'chat_bubble';
-    case 'USAGE':
-      return 'speed';
-    case 'CONTEXT':
-      return 'account_tree';
-    default:
-      return 'radio_button_checked';
-  }
-}
-
-function buildAiActivityMeta(event: AnalysisAiActivityEvent): string[] {
-  const meta: string[] = [];
-  const formattedTimestamp = formatDateTime(event.timestamp);
-
-  if (formattedTimestamp) {
-    meta.push(formattedTimestamp);
-  }
-  if (event.turnId) {
-    meta.push(`turn ${event.turnId}`);
-  }
-  if (event.toolName) {
-    meta.push(event.toolName);
-  }
-  if (event.toolCallId) {
-    meta.push(`call ${event.toolCallId}`);
-  }
-  if (event.type) {
-    meta.push(event.type);
-  }
-
-  return meta;
-}
-
 function buildAiActivityTooltip(event: AnalysisAiActivityEvent): string {
   return stringifyPretty({
     eventId: event.eventId || null,
@@ -1172,6 +1141,793 @@ function buildAiActivityTooltip(event: AnalysisAiActivityEvent): string {
     timestamp: event.timestamp || null,
     details: event.details || {}
   });
+}
+
+interface AiTimelineTurnBuilder {
+  key: string;
+  turnId: string;
+  interactionId: string;
+  startedAtMs: number;
+  entries: AiTimelineEntryView[];
+}
+
+interface ToolActivityBundle {
+  start: AnalysisAiActivityEvent | null;
+  complete: AnalysisAiActivityEvent | null;
+}
+
+interface ToolRequestInfo {
+  toolCallId: string;
+  toolName: string;
+  reason: string;
+  arguments: Record<string, unknown>;
+  sourceEvent: AnalysisAiActivityEvent;
+}
+
+function prepareAiTimelineTurns(
+  events: AnalysisAiActivityEvent[],
+  toolEvidenceSections: AnalysisEvidenceSection[]
+): AiTimelineTurnView[] {
+  const sortedEvents = [...(events || [])].sort(compareAiEventsByTimestamp);
+  const toolEvidenceItems = prepareTimelineToolEvidenceItems(toolEvidenceSections);
+  const toolEvidenceByCallId = mapToolEvidenceByCallId(toolEvidenceItems);
+  const toolActivitiesByCallId = mapToolActivitiesByCallId(sortedEvents);
+  const toolRequestsByCallId = new Map<string, ToolRequestInfo>();
+  const consumedToolCallIds = new Set<string>();
+  const turns: AiTimelineTurnBuilder[] = [];
+  let currentTurn = ensureTimelineTurn(turns, '', '', null);
+  let pendingUsageEvent: AnalysisAiActivityEvent | null = null;
+
+  for (const event of sortedEvents) {
+    const type = normalizeEventType(event.type);
+
+    if (type === 'assistant.turn_start') {
+      currentTurn = ensureTimelineTurn(
+        turns,
+        event.turnId,
+        event.interactionId,
+        activityTimestampMs(event)
+      );
+      continue;
+    }
+
+    if (type === 'assistant.turn_end') {
+      continue;
+    }
+
+    if (type === 'assistant.usage') {
+      pendingUsageEvent = event;
+      continue;
+    }
+
+    if (type === 'tool.execution_start' || type === 'tool.execution_complete') {
+      continue;
+    }
+
+    if (type === 'assistant.message') {
+      const messageEntry = buildAssistantMessageTimelineEntry(event, pendingUsageEvent);
+      const toolRequests = extractToolRequests(event);
+
+      for (const request of toolRequests) {
+        if (request.toolCallId) {
+          toolRequestsByCallId.set(request.toolCallId, request);
+        }
+
+        const toolEvidence = request.toolCallId
+          ? toolEvidenceByCallId.get(request.toolCallId) ?? null
+          : null;
+        const toolActivity = request.toolCallId
+          ? toolActivitiesByCallId.get(request.toolCallId) ?? emptyToolActivityBundle()
+          : emptyToolActivityBundle();
+        const toolEntry = buildToolTimelineEntry(
+          toolEvidence,
+          request,
+          toolActivity,
+          messageEntry.childTools.length
+        );
+
+        messageEntry.childTools.push(toolEntry);
+        if (request.toolCallId) {
+          consumedToolCallIds.add(request.toolCallId);
+        }
+      }
+
+      currentTurn.entries.push(messageEntry);
+      pendingUsageEvent = null;
+      continue;
+    }
+
+    if (type === 'user.message') {
+      currentTurn.entries.push(buildUserMessageTimelineEntry(event));
+      continue;
+    }
+
+    if (shouldRenderRuntimeEvent(type)) {
+      currentTurn.entries.push(buildRuntimeTimelineEntry(event));
+    }
+  }
+
+  const orphanEvidenceToolEntries = toolEvidenceItems
+    .filter((toolEvidence) => !toolEvidence.toolCallId || !consumedToolCallIds.has(toolEvidence.toolCallId))
+    .map((toolEvidence, index) =>
+      buildToolTimelineEntry(
+        toolEvidence,
+        toolEvidence.toolCallId ? toolRequestsByCallId.get(toolEvidence.toolCallId) ?? null : null,
+        toolEvidence.toolCallId
+          ? toolActivitiesByCallId.get(toolEvidence.toolCallId) ?? emptyToolActivityBundle()
+          : emptyToolActivityBundle(),
+        index
+      )
+    );
+  const orphanActivityToolEntries = Array.from(toolActivitiesByCallId.entries())
+    .filter(
+      ([toolCallId]) => !consumedToolCallIds.has(toolCallId) && !toolEvidenceByCallId.has(toolCallId)
+    )
+    .map(([toolCallId, activity], index) =>
+      buildToolTimelineEntry(
+        null,
+        toolRequestsByCallId.get(toolCallId) ?? null,
+        activity,
+        orphanEvidenceToolEntries.length + index
+      )
+    );
+  const orphanToolEntries = [...orphanEvidenceToolEntries, ...orphanActivityToolEntries].sort(
+    compareAiTimelineEntries
+  );
+
+  if (orphanToolEntries.length > 0) {
+    const fallbackTurn = lastTimelineTurnWithEntries(turns) ?? currentTurn;
+    fallbackTurn.entries.push(...orphanToolEntries);
+  }
+
+  return turns
+    .map((turn, index) => buildTimelineTurnView(turn, index))
+    .filter((turn) => turn.entries.length > 0);
+}
+
+function lastTimelineTurnWithEntries(
+  turns: AiTimelineTurnBuilder[]
+): AiTimelineTurnBuilder | null {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    if (turns[index].entries.length > 0) {
+      return turns[index];
+    }
+  }
+
+  return null;
+}
+
+function prepareTimelineToolEvidenceItems(
+  sections: AnalysisEvidenceSection[]
+): ToolEvidenceTimelineItemView[] {
+  return (sections || [])
+    .flatMap((section, sectionIndex) =>
+      (section.items || []).map((item, itemIndex) =>
+        prepareToolEvidenceTimelineItem(section, item, itemIndex, sectionIndex)
+      )
+    )
+    .sort(compareToolEvidenceTimelineItems);
+}
+
+function ensureTimelineTurn(
+  turns: AiTimelineTurnBuilder[],
+  turnId: string,
+  interactionId: string,
+  startedAtMs: number | null
+): AiTimelineTurnBuilder {
+  const normalizedTurnId = turnId || '';
+  const normalizedInteractionId = interactionId || '';
+  const existing = turns.find(
+    (turn) =>
+      (normalizedTurnId && turn.turnId === normalizedTurnId) ||
+      (!normalizedTurnId && normalizedInteractionId && turn.interactionId === normalizedInteractionId)
+  );
+
+  if (existing) {
+    return existing;
+  }
+
+  const turn: AiTimelineTurnBuilder = {
+    key: normalizedTurnId || normalizedInteractionId || `implicit-turn-${turns.length}`,
+    turnId: normalizedTurnId,
+    interactionId: normalizedInteractionId,
+    startedAtMs: startedAtMs ?? Number.MAX_SAFE_INTEGER,
+    entries: []
+  };
+
+  turns.push(turn);
+  return turn;
+}
+
+function buildTimelineTurnView(
+  turn: AiTimelineTurnBuilder,
+  index: number
+): AiTimelineTurnView {
+  const sortedEntries = [...turn.entries].sort(compareAiTimelineEntries);
+  const title = turn.turnId ? `Turn ${turn.turnId}` : index === 0 ? 'Input do Copilota' : `Turn ${index + 1}`;
+  const meta: string[] = [];
+
+  if (turn.startedAtMs !== Number.MAX_SAFE_INTEGER) {
+    const startedAt = new Date(turn.startedAtMs).toISOString();
+    const formattedStartedAt = formatDateTime(startedAt);
+    if (formattedStartedAt) {
+      meta.push(formattedStartedAt);
+    }
+  }
+
+  if (turn.interactionId) {
+    meta.push(`interaction ${turn.interactionId}`);
+  }
+
+  return {
+    key: turn.key || `turn-${index}`,
+    title,
+    meta,
+    entries: sortedEntries
+  };
+}
+
+function buildAssistantMessageTimelineEntry(
+  event: AnalysisAiActivityEvent,
+  usageEvent: AnalysisAiActivityEvent | null
+): AiTimelineEntryView {
+  const toolRequests = extractToolRequests(event);
+  const details = activityDetails(event);
+  const contentPreview = stringFromRecord(details, 'contentPreview');
+  const summary =
+    nonEmptyValue(contentPreview) ||
+    buildAssistantToolRequestSummary(toolRequests) ||
+    event.summary ||
+    'Copilot wykonał kolejny krok analizy.';
+  const meta = buildTimelineEventMeta(event);
+
+  if (usageEvent) {
+    meta.push(...buildUsageMeta(usageEvent));
+  }
+
+  return {
+    key: event.eventId || `assistant-message-${activityTimestampMs(event)}`,
+    kind: 'message',
+    category: event.category || 'MESSAGE',
+    status: event.status || 'COMPLETED',
+    title: toolRequests.length > 0 ? 'AI wybiera następne sprawdzenia' : event.title || 'Wiadomość AI',
+    summary,
+    iconName: 'psychology',
+    meta,
+    technicalTooltip: stringifyPretty({
+      event,
+      usage: usageEvent ?? null,
+      toolRequests
+    }),
+    timestampMs: activityTimestampMs(event),
+    toolStatus: null,
+    toolStatusIcon: '',
+    toolStatusLabel: '',
+    toolStatusTooltip: '',
+    toolEvidence: null,
+    childTools: []
+  };
+}
+
+function buildUserMessageTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEntryView {
+  const details = activityDetails(event);
+  const contentPreview = stringFromRecord(details, 'contentPreview');
+
+  return {
+    key: event.eventId || `user-message-${activityTimestampMs(event)}`,
+    kind: 'message',
+    category: event.category || 'MESSAGE',
+    status: event.status || 'INFO',
+    title: event.title || 'Input do Copilota',
+    summary:
+      nonEmptyValue(contentPreview) ||
+      event.summary ||
+      'Aplikacja wysłała prompt i kontekst evidence do sesji Copilota.',
+    iconName: 'person',
+    meta: buildTimelineEventMeta(event),
+    technicalTooltip: buildAiActivityTooltip(event),
+    timestampMs: activityTimestampMs(event),
+    toolStatus: null,
+    toolStatusIcon: '',
+    toolStatusLabel: '',
+    toolStatusTooltip: '',
+    toolEvidence: null,
+    childTools: []
+  };
+}
+
+function buildRuntimeTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEntryView {
+  const type = normalizeEventType(event.type);
+  const status = String(event.status || '').toUpperCase();
+  const failed = status === 'FAILED' || type === 'session.error';
+
+  return {
+    key: event.eventId || `${event.type || 'runtime'}-${activityTimestampMs(event)}`,
+    kind: 'runtime',
+    category: event.category || 'SYSTEM',
+    status: failed ? 'FAILED' : event.status || 'INFO',
+    title: event.title || formatAiActivityType(event.type),
+    summary: event.summary || buildRuntimeSummary(event),
+    iconName: failed ? 'error' : runtimeEventIcon(type),
+    meta: buildTimelineEventMeta(event),
+    technicalTooltip: buildAiActivityTooltip(event),
+    timestampMs: activityTimestampMs(event),
+    toolStatus: null,
+    toolStatusIcon: '',
+    toolStatusLabel: '',
+    toolStatusTooltip: '',
+    toolEvidence: null,
+    childTools: []
+  };
+}
+
+function buildToolTimelineEntry(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  request: ToolRequestInfo | null,
+  activity: ToolActivityBundle,
+  index: number
+): AiTimelineEntryView {
+  const status = resolveToolTimelineStatus(toolEvidence, activity);
+  const timestampMs =
+    activity.start
+      ? activityTimestampMs(activity.start)
+      : activity.complete
+        ? activityTimestampMs(activity.complete)
+        : Number.MAX_SAFE_INTEGER - 100_000 + (toolEvidence?.captureOrder ?? index);
+  const toolName =
+    toolEvidence?.toolName ||
+    request?.toolName ||
+    activity.start?.toolName ||
+    activity.complete?.toolName ||
+    'tool';
+  const reason =
+    toolEvidence?.reason ||
+    request?.reason ||
+    toolReasonFromActivity(activity.start) ||
+    toolReasonFromActivity(activity.complete) ||
+    `Copilot wywołał ${toolName}.`;
+  const toolCallId =
+    toolEvidence?.toolCallId || request?.toolCallId || activity.start?.toolCallId || activity.complete?.toolCallId || '';
+  const meta = buildToolTimelineMeta(toolEvidence, request, activity, toolName, toolCallId);
+
+  return {
+    key: toolCallId || toolEvidence?.key || request?.sourceEvent.eventId || `tool-${index}`,
+    kind: 'tool',
+    category: 'TOOL',
+    status,
+    title: formatToolTimelineTitle(toolEvidence, toolName),
+    summary: reason,
+    iconName: toolEvidence?.iconName || toolIconByName(toolName),
+    meta,
+    technicalTooltip: buildMergedToolTooltip(toolEvidence, request, activity),
+    timestampMs,
+    toolStatus: status as 'PENDING' | 'COMPLETED' | 'FAILED',
+    toolStatusIcon: toolStatusIcon(status),
+    toolStatusLabel: toolStatusLabel(status),
+    toolStatusTooltip: toolStatusTooltip(status, activity.complete),
+    toolEvidence,
+    childTools: []
+  };
+}
+
+function mapToolEvidenceByCallId(
+  toolEvidenceItems: ToolEvidenceTimelineItemView[]
+): Map<string, ToolEvidenceTimelineItemView> {
+  const map = new Map<string, ToolEvidenceTimelineItemView>();
+
+  for (const item of toolEvidenceItems) {
+    if (item.toolCallId && !map.has(item.toolCallId)) {
+      map.set(item.toolCallId, item);
+    }
+  }
+
+  return map;
+}
+
+function mapToolActivitiesByCallId(
+  events: AnalysisAiActivityEvent[]
+): Map<string, ToolActivityBundle> {
+  const map = new Map<string, ToolActivityBundle>();
+
+  for (const event of events) {
+    const type = normalizeEventType(event.type);
+    if (type !== 'tool.execution_start' && type !== 'tool.execution_complete') {
+      continue;
+    }
+
+    const toolCallId = event.toolCallId || stringFromRecord(activityDetails(event), 'toolCallId');
+    if (!toolCallId) {
+      continue;
+    }
+
+    const bundle = map.get(toolCallId) ?? emptyToolActivityBundle();
+    if (type === 'tool.execution_start') {
+      bundle.start = event;
+    } else {
+      bundle.complete = event;
+    }
+    map.set(toolCallId, bundle);
+  }
+
+  return map;
+}
+
+function emptyToolActivityBundle(): ToolActivityBundle {
+  return { start: null, complete: null };
+}
+
+function extractToolRequests(event: AnalysisAiActivityEvent): ToolRequestInfo[] {
+  const details = activityDetails(event);
+  const rawRequests = arrayFromRecord(details, 'toolRequests');
+
+  return rawRequests
+    .map((rawRequest): ToolRequestInfo | null => {
+      if (!isRecord(rawRequest)) {
+        return null;
+      }
+
+      const argumentsRecord = recordFromValue(rawRequest['arguments']);
+      const toolCallId = stringFromValue(rawRequest['toolCallId']);
+      const toolName = stringFromValue(rawRequest['name']);
+
+      return {
+        toolCallId,
+        toolName,
+        reason: stringFromValue(argumentsRecord['reason']),
+        arguments: argumentsRecord,
+        sourceEvent: event
+      };
+    })
+    .filter((request): request is ToolRequestInfo => request !== null);
+}
+
+function shouldRenderRuntimeEvent(type: string): boolean {
+  return (
+    type === 'session.usage_info' ||
+    type === 'session.truncation' ||
+    type === 'session.compaction_complete' ||
+    type === 'session.context_changed' ||
+    type === 'session.error'
+  );
+}
+
+function buildAssistantToolRequestSummary(toolRequests: ToolRequestInfo[]): string {
+  if (toolRequests.length === 0) {
+    return '';
+  }
+
+  const toolNames = [...new Set(toolRequests.map((request) => request.toolName).filter(Boolean))];
+  if (toolNames.length === 0) {
+    return `AI zaplanowało ${toolRequests.length} wywołań tools.`;
+  }
+
+  return toolRequests.length === 1
+    ? `AI zaplanowało wywołanie ${toolNames[0]}.`
+    : `AI zaplanowało ${toolRequests.length} wywołania tools: ${toolNames.join(', ')}.`;
+}
+
+function buildRuntimeSummary(event: AnalysisAiActivityEvent): string {
+  const type = normalizeEventType(event.type);
+  const details = activityDetails(event);
+
+  if (type === 'session.usage_info') {
+    const currentTokens = numberFromRecord(details, 'currentTokens');
+    const tokenLimit = numberFromRecord(details, 'tokenLimit');
+    const messagesLength = numberFromRecord(details, 'messagesLength');
+    if (currentTokens !== null && tokenLimit !== null) {
+      return `Kontekst sesji: ${formatTokenCount(currentTokens)}/${formatTokenCount(tokenLimit)} tokenów, ${messagesLength ?? 0} wiadomości.`;
+    }
+  }
+
+  if (type === 'session.error') {
+    return (
+      stringFromRecord(details, 'message') ||
+      stringFromRecord(details, 'errorMessage') ||
+      'Copilot zgłosił błąd sesji.'
+    );
+  }
+
+  return 'Copilot zgłosił zdarzenie runtime.';
+}
+
+function buildTimelineEventMeta(event: AnalysisAiActivityEvent): string[] {
+  const meta: string[] = [];
+  const formattedTimestamp = formatDateTime(event.timestamp);
+
+  if (formattedTimestamp) {
+    meta.push(formattedTimestamp);
+  }
+  if (event.type) {
+    meta.push(event.type);
+  }
+
+  return meta;
+}
+
+function buildUsageMeta(event: AnalysisAiActivityEvent): string[] {
+  const details = activityDetails(event);
+  const meta: string[] = [];
+  const inputTokens = numberFromRecord(details, 'inputTokens');
+  const outputTokens = numberFromRecord(details, 'outputTokens');
+  const cacheReadTokens = numberFromRecord(details, 'cacheReadTokens');
+  const durationMs = numberFromRecord(details, 'durationMs');
+
+  if (inputTokens !== null) {
+    meta.push(`input ${formatCompactTokenCount(inputTokens)}`);
+  }
+  if (cacheReadTokens !== null) {
+    meta.push(`cache ${formatCompactTokenCount(cacheReadTokens)}`);
+  }
+  if (outputTokens !== null) {
+    meta.push(`output ${formatCompactTokenCount(outputTokens)}`);
+  }
+  if (durationMs !== null) {
+    meta.push(`${formatDuration(durationMs)}`);
+  }
+
+  return meta;
+}
+
+function buildToolTimelineMeta(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  request: ToolRequestInfo | null,
+  activity: ToolActivityBundle,
+  toolName: string,
+  toolCallId: string
+): string[] {
+  const meta: string[] = [];
+  const timestamp = activity.start?.timestamp || activity.complete?.timestamp || '';
+  const formattedTimestamp = formatDateTime(timestamp);
+
+  if (formattedTimestamp) {
+    meta.push(formattedTimestamp);
+  }
+  if (toolEvidence?.sourceLabel) {
+    meta.push(toolEvidence.sourceLabel);
+  }
+  if (toolName) {
+    meta.push(toolName);
+  }
+  if (toolEvidence?.captureOrder !== null && toolEvidence?.captureOrder !== undefined) {
+    meta.push(`#${toolEvidence.captureOrder}`);
+  }
+  if (toolCallId) {
+    meta.push(toolCallId);
+  }
+  if (request?.arguments && Object.keys(request.arguments).length > 0 && !toolEvidence) {
+    meta.push('arguments');
+  }
+
+  return meta;
+}
+
+function buildMergedToolTooltip(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  request: ToolRequestInfo | null,
+  activity: ToolActivityBundle
+): string {
+  return stringifyPretty({
+    toolCallId: toolEvidence?.toolCallId || request?.toolCallId || activity.start?.toolCallId || null,
+    toolName: toolEvidence?.toolName || request?.toolName || activity.start?.toolName || null,
+    request: request
+      ? {
+          eventId: request.sourceEvent.eventId,
+          arguments: request.arguments
+        }
+      : null,
+    activity: {
+      start: activity.start ?? null,
+      complete: activity.complete ?? null
+    },
+    evidence: toolEvidence
+      ? {
+          reason: toolEvidence.reason,
+          sourceLabel: toolEvidence.sourceLabel,
+          captureOrder: toolEvidence.captureOrder,
+          technical: parseOptionalJson(toolEvidence.technicalTooltip) ?? toolEvidence.technicalTooltip
+        }
+      : null
+  });
+}
+
+function resolveToolTimelineStatus(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  activity: ToolActivityBundle
+): 'PENDING' | 'COMPLETED' | 'FAILED' {
+  const completeStatus = String(activity.complete?.status || '').toUpperCase();
+  const completeDetails = activity.complete ? activityDetails(activity.complete) : {};
+  const success = booleanFromRecord(completeDetails, 'success');
+
+  if (completeStatus === 'FAILED' || success === false) {
+    return 'FAILED';
+  }
+
+  if (toolEvidence || activity.complete) {
+    return 'COMPLETED';
+  }
+
+  return 'PENDING';
+}
+
+function formatToolTimelineTitle(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  toolName: string
+): string {
+  if (toolEvidence?.databaseTool?.title) {
+    return toolEvidence.databaseTool.title;
+  }
+
+  if (toolEvidence?.gitLabLookup?.title) {
+    return toolEvidence.gitLabLookup.title;
+  }
+
+  if (toolEvidence?.codePanel?.headerTitle) {
+    return toolEvidence.codePanel.headerTitle;
+  }
+
+  return toolName || 'Wywołanie toola';
+}
+
+function toolStatusIcon(status: string): string {
+  if (status === 'FAILED') {
+    return 'error';
+  }
+
+  if (status === 'COMPLETED') {
+    return 'check_circle';
+  }
+
+  return 'progress_activity';
+}
+
+function toolStatusLabel(status: string): string {
+  if (status === 'FAILED') {
+    return 'Błąd';
+  }
+
+  if (status === 'COMPLETED') {
+    return 'OK';
+  }
+
+  return 'W toku';
+}
+
+function toolStatusTooltip(status: string, completeEvent: AnalysisAiActivityEvent | null): string {
+  if (status !== 'FAILED') {
+    return toolStatusLabel(status);
+  }
+
+  if (!completeEvent) {
+    return 'Tool zakończył się błędem.';
+  }
+
+  const details = activityDetails(completeEvent);
+  return (
+    stringFromRecord(details, 'errorMessage') ||
+    stringFromRecord(details, 'message') ||
+    stringFromRecord(details, 'error') ||
+    completeEvent.summary ||
+    'Tool zakończył się błędem.'
+  );
+}
+
+function toolReasonFromActivity(event: AnalysisAiActivityEvent | null): string {
+  if (!event) {
+    return '';
+  }
+
+  const args = recordFromValue(activityDetails(event)['arguments']);
+  return stringFromValue(args['reason']);
+}
+
+function toolIconByName(toolName: string): string {
+  const normalized = toolName.toLowerCase();
+
+  if (normalized.includes('gitlab')) {
+    return normalized.includes('read') ? 'code' : 'manage_search';
+  }
+
+  if (normalized.startsWith('db_')) {
+    return 'storage';
+  }
+
+  return 'build';
+}
+
+function runtimeEventIcon(type: string): string {
+  if (type === 'session.usage_info') {
+    return 'account_tree';
+  }
+  if (type === 'session.truncation') {
+    return 'content_cut';
+  }
+  if (type === 'session.compaction_complete') {
+    return 'compress';
+  }
+  if (type === 'session.context_changed') {
+    return 'swap_horiz';
+  }
+
+  return 'info';
+}
+
+function compareAiEventsByTimestamp(
+  left: AnalysisAiActivityEvent,
+  right: AnalysisAiActivityEvent
+): number {
+  return activityTimestampMs(left) - activityTimestampMs(right);
+}
+
+function compareAiTimelineEntries(
+  left: AiTimelineEntryView,
+  right: AiTimelineEntryView
+): number {
+  return left.timestampMs - right.timestampMs || left.key.localeCompare(right.key);
+}
+
+function activityTimestampMs(event: AnalysisAiActivityEvent): number {
+  if (!event.timestamp) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const timestamp = Date.parse(event.timestamp);
+  return Number.isFinite(timestamp) ? timestamp : Number.MAX_SAFE_INTEGER;
+}
+
+function normalizeEventType(type: string | null | undefined): string {
+  return String(type || '').trim().toLowerCase();
+}
+
+function activityDetails(event: AnalysisAiActivityEvent): Record<string, unknown> {
+  return recordFromValue(event.details);
+}
+
+function recordFromValue(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function arrayFromRecord(record: Record<string, unknown>, key: string): unknown[] {
+  const value = record[key];
+  return Array.isArray(value) ? value : [];
+}
+
+function stringFromRecord(record: Record<string, unknown>, key: string): string {
+  return stringFromValue(record[key]);
+}
+
+function stringFromValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function numberFromRecord(record: Record<string, unknown>, key: string): number | null {
+  const value = record[key];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function booleanFromRecord(record: Record<string, unknown>, key: string): boolean | null {
+  const value = record[key];
+  return typeof value === 'boolean' ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function formatDuration(durationMs: number): string {
+  if (durationMs >= 1000) {
+    return `${formatMetricNumber(durationMs / 1000)} s`;
+  }
+
+  return `${formatMetricNumber(durationMs)} ms`;
 }
 
 function formatAiActivityType(type: string): string {

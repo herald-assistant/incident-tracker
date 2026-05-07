@@ -198,7 +198,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(tooltip).toContain('Model zgłoszony przez SDK: gpt-5.4');
   });
 
-  it('should render Copilot turn activity with technical JSON tooltips', async () => {
+  it('should render Copilot activity and tool evidence in one timeline', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
     fixture.componentRef.setInput('aiActivityEvents', buildAiActivityEvents());
@@ -208,16 +208,19 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const activityEvents = Array.from(compiled.querySelectorAll('.ai-activity-event'));
-    const technicalTooltip = activityEvents[1]
-      ?.querySelector('.technical-tooltip__trigger')
+    const timelineEntries = Array.from(compiled.querySelectorAll('.ai-timeline-entry'));
+    const technicalTooltip = compiled
+      .querySelector('.ai-timeline-entry--runtime .ai-timeline-entry__debug-trigger')
       ?.getAttribute('data-technical-tooltip') ?? '';
+    const pendingTool = compiled.querySelector('.ai-timeline-entry__status--pending');
 
-    expect(compiled.textContent).toContain('Turny i kontekst Copilota');
-    expect(compiled.textContent).toContain('Turn AI rozpoczęty');
+    expect(compiled.textContent).toContain('Przebieg pracy Copilota');
+    expect(compiled.textContent).toContain('AI wybiera następne sprawdzenia');
     expect(compiled.textContent).toContain('Kontekst sesji');
-    expect(compiled.textContent).toContain('Tool start: db_count_rows');
-    expect(activityEvents).toHaveLength(4);
+    expect(compiled.textContent).toContain('Sprawdzam liczbę rekordów dla correlationId.');
+    expect(compiled.textContent).toContain('cache 1');
+    expect(timelineEntries.length).toBeGreaterThanOrEqual(3);
+    expect(pendingTool).not.toBeNull();
     expect(technicalTooltip).toContain('"currentTokens": 9200');
     expect(technicalTooltip).toContain('"messagesLength": 6');
   });
@@ -249,17 +252,16 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const panel = compiled.querySelector('.tool-evidence-panel') as HTMLElement | null;
-    const reason = compiled.querySelector('.tool-evidence-panel__reason') as HTMLElement | null;
-    const icon = compiled.querySelector('.tool-evidence-panel__source-icon') as HTMLElement | null;
+    const panel = compiled.querySelector('.ai-timeline-entry--tool') as HTMLElement | null;
+    const reason = panel?.querySelector('.ai-timeline-entry__summary') as HTMLElement | null;
+    const icon = panel?.querySelector('.ai-timeline-entry__debug-trigger mat-icon') as HTMLElement | null;
+    const status = panel?.querySelector('.ai-timeline-entry__status--done') as HTMLElement | null;
 
     expect(panel).not.toBeNull();
-    expect(panel?.classList.contains('mat-expanded')).toBeFalsy();
     expect(reason?.textContent?.trim()).toBe('Sprawdzam fragment klienta z timeoutem.');
     expect(icon?.textContent?.trim()).toBe('code');
-    expect(icon?.getAttribute('aria-label')).toBe('GitLab');
+    expect(status).not.toBeNull();
     expect(compiled.textContent).toContain('CatalogGatewayClient');
-    expect(compiled.textContent).toContain('GitLab');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
     expect(compiled.textContent).not.toContain('Powód pobrania');
   });
@@ -274,13 +276,13 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const reason = compiled.querySelector('.tool-evidence-panel__reason') as HTMLElement | null;
-    const icon = compiled.querySelector('.tool-evidence-panel__source-icon') as HTMLElement | null;
+    const panel = compiled.querySelector('.ai-timeline-entry--tool') as HTMLElement | null;
+    const reason = panel?.querySelector('.ai-timeline-entry__summary') as HTMLElement | null;
+    const icon = panel?.querySelector('.ai-timeline-entry__debug-trigger mat-icon') as HTMLElement | null;
     const content = compiled.textContent || '';
 
     expect(reason?.textContent?.trim()).toBe('Szukam kontekstu przepływu wokół repozytorium.');
     expect(icon?.textContent?.trim()).toBe('manage_search');
-    expect(icon?.getAttribute('aria-label')).toBe('GitLab');
     expect(content).toContain('Kontekst przepływu');
     expect(content).toContain('AI zebrało 1 kandydata w 1 grupie kontekstu przepływu.');
     expect(content).toContain('repository');
@@ -289,7 +291,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).toContain('orders-api:src/main/java/com/example/orders/OrderRepository.java');
   });
 
-  it('should render AI tool evidence as one chronological accordion', async () => {
+  it('should render AI tool evidence chronologically in the unified timeline', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
     fixture.componentRef.setInput('toolEvidenceSections', [
@@ -302,12 +304,16 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const reasons = Array.from(compiled.querySelectorAll('.tool-evidence-panel__reason')).map(
-      (element) => element.textContent?.trim()
-    );
-    const icons = Array.from(compiled.querySelectorAll('.tool-evidence-panel__source-icon')).map(
-      (element) => element.textContent?.trim()
-    );
+    const reasons = Array.from(
+      compiled.querySelectorAll(
+        '.ai-timeline-entry--tool > .ai-timeline-entry__body > .ai-timeline-entry__summary'
+      )
+    ).map((element) => element.textContent?.trim());
+    const icons = Array.from(
+      compiled.querySelectorAll(
+        '.ai-timeline-entry--tool > .ai-timeline-entry__debug-trigger mat-icon'
+      )
+    ).map((element) => element.textContent?.trim());
     const content = compiled.textContent || '';
 
     expect(reasons).toEqual([
@@ -322,7 +328,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).not.toContain('Powód sprawdzenia');
 
     const toolTooltip = compiled
-      .querySelector('.technical-tooltip__trigger--tool')
+      .querySelector('.ai-timeline-entry--tool .ai-timeline-entry__debug-trigger')
       ?.getAttribute('data-technical-tooltip') ?? '';
     expect(toolTooltip).toContain('"toolArguments"');
     expect(toolTooltip).toContain('"tableName": "ORDER_EVENT"');
@@ -746,6 +752,55 @@ function buildAiActivityEvents(): AnalysisAiActivityEvent[] {
       toolName: '',
       timestamp: '2026-04-14T12:00:13Z',
       details: { tokenLimit: 128000, currentTokens: 9200, messagesLength: 6 }
+    },
+    {
+      eventId: 'event-usage-1',
+      parentEventId: '',
+      type: 'assistant.usage',
+      category: 'USAGE',
+      status: 'INFO',
+      title: 'Zużycie modelu',
+      summary: 'Model: gpt-5.4, input 12000, cache 1200, output 300 tokenów.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-04-14T12:00:13.500Z',
+      details: {
+        model: 'gpt-5.4',
+        inputTokens: 12000,
+        cacheReadTokens: 1200,
+        outputTokens: 300,
+        durationMs: 2400
+      }
+    },
+    {
+      eventId: 'event-message-1',
+      parentEventId: '',
+      type: 'assistant.message',
+      category: 'MESSAGE',
+      status: 'COMPLETED',
+      title: 'Wiadomość AI',
+      summary: 'Copilot poprosił o 1 wywołanie narzędzia.',
+      turnId: '',
+      interactionId: 'interaction-1',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-04-14T12:00:13.800Z',
+      details: {
+        contentPreview: '',
+        toolRequestCount: 1,
+        toolRequests: [
+          {
+            toolCallId: 'tool-call-db-1',
+            name: 'db_count_rows',
+            arguments: {
+              tableName: 'ORDER_EVENT',
+              reason: 'Sprawdzam liczbę rekordów dla correlationId.'
+            }
+          }
+        ]
+      }
     },
     {
       eventId: 'event-tool-1',
