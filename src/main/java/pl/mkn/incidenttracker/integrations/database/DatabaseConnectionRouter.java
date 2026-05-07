@@ -45,7 +45,7 @@ public class DatabaseConnectionRouter implements AutoCloseable {
     }
 
     DatabaseEnvironmentProperties requiredEnvironmentProperties(String environment) {
-        var environmentProperties = properties.getEnvironments().get(environment);
+        var environmentProperties = properties.resolveEnvironment(environment);
         if (environmentProperties == null) {
             throw new IllegalStateException(
                     "No database environment configuration found for '%s'."
@@ -148,9 +148,9 @@ public class DatabaseConnectionRouter implements AutoCloseable {
         return """
                 Failed to initialize database pool for environment '%s' using jdbcUrl '%s'%s.
                 Ensure the JDBC driver is present on the runtime classpath and the JDBC URL is valid.%s
-                You can also configure analysis.database.environments.%s.driver-class-name explicitly.
+                You can also configure analysis.database.connections.<connection>.driver-class-name explicitly.
                 """
-                .formatted(environment, jdbcUrl, driverDetail, oracleHint, environment)
+                .formatted(environment, jdbcUrl, driverDetail, oracleHint)
                 .replace('\n', ' ')
                 .trim();
     }

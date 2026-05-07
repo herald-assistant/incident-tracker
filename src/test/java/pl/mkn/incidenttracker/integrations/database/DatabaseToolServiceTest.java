@@ -31,7 +31,7 @@ class DatabaseToolServiceTest {
                 "orders-service",
                 List.of("ORDERS_APP"),
                 List.of(),
-                List.of("applicationNamePattern matched orders-service -> ORDERS_APP"),
+                List.of("applicationPattern matched orders-service -> ORDERS_APP"),
                 List.of()
         );
         var tableMetadata = mock(DatabaseMetadataClient.class);
@@ -67,7 +67,7 @@ class DatabaseToolServiceTest {
         );
 
         assertEquals("ORDER_EVENT", result.candidates().get(0).tableName());
-        assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("applicationNamePattern matched")));
+        assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("applicationPattern matched")));
         assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("table name matched ORDER")));
         assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("entityOrKeywordHint matched")));
         assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("column CORRELATION_ID exists")));
@@ -89,7 +89,7 @@ class DatabaseToolServiceTest {
                 "orders-service",
                 List.of("ORDERS_APP"),
                 List.of(),
-                List.of("applicationNamePattern matched orders-service -> ORDERS_APP"),
+                List.of("applicationPattern matched orders-service -> ORDERS_APP"),
                 List.of()
         ));
         when(resolver.requiredEnvironment("zt01")).thenReturn(environment("oracle"));

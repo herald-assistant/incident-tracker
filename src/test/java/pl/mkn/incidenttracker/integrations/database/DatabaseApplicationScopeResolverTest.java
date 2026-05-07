@@ -1,10 +1,15 @@
 package pl.mkn.incidenttracker.integrations.database;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.bind.BindException;
+import org.springframework.mock.env.MockEnvironment;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DatabaseApplicationScopeResolverTest {
@@ -22,7 +27,7 @@ class DatabaseApplicationScopeResolverTest {
     }
 
     @Test
-    void shouldMatchByApplicationNamePatternCaseInsensitive() {
+    void shouldMatchByApplicationPatternCaseInsensitive() {
         var scope = resolver.resolveDiscoveryScope("zt01", "Orders API");
 
         assertEquals("orders-service", scope.applicationAlias());
@@ -30,7 +35,7 @@ class DatabaseApplicationScopeResolverTest {
     }
 
     @Test
-    void shouldMatchByDeploymentContainerAndProjectPatterns() {
+    void shouldMatchByApplicationPatternsFromDeploymentContainerAndProjectHints() {
         var deploymentScope = resolver.resolveDiscoveryScope("zt01", "orders-worker");
         var containerScope = resolver.resolveDiscoveryScope("zt01", "orders-pod");
         var projectScope = resolver.resolveDiscoveryScope("zt01", "orders-gitlab");
@@ -41,12 +46,12 @@ class DatabaseApplicationScopeResolverTest {
     }
 
     @Test
-    void shouldFallbackToAllowedSchemasWhenApplicationNamePatternIsMissing() {
+    void shouldFallbackToAllowedSchemasWhenApplicationPatternIsMissing() {
         var scope = resolver.resolveDiscoveryScope("zt01", null);
 
         assertEquals(null, scope.applicationAlias());
         assertEquals(List.of("COMMON_DICT", "ORDERS_APP", "ORDERS_REP"), scope.resolvedSchemas());
-        assertTrue(scope.warnings().stream().anyMatch(warning -> warning.contains("applicationNamePattern was not provided")));
+        assertTrue(scope.warnings().stream().anyMatch(warning -> warning.contains("applicationPattern was not provided")));
     }
 
     @Test
@@ -79,6 +84,106 @@ class DatabaseApplicationScopeResolverTest {
         assertEquals(List.of("COMMON_DICT"), scope.relatedSchemas());
     }
 
+    @Test
+    void shouldResolveCatalogApplicationWithEnvironmentUserSuffixAndSharedConnection() {
+        var databaseProperties = new DatabaseToolProperties();
+        var connectionDefaults = new DatabaseConnectionProperties();
+        connectionDefaults.setDriverClassName("oracle.jdbc.OracleDriver");
+        connectionDefaults.setUsername("INCIDENT_TRACKER_RO");
+        connectionDefaults.setPassword("secret");
+        databaseProperties.setConnectionDefaults(connectionDefaults);
+
+        var sharedDevConnection = new DatabaseConnectionProperties();
+        sharedDevConnection.setJdbcUrl("jdbc:oracle:thin:@//dev-host:1521/dev");
+        sharedDevConnection.setDescription("Shared dev host");
+        databaseProperties.getConnections().put("dev-host", sharedDevConnection);
+
+        var agreementProcess = new DatabaseApplicationProperties();
+        agreementProcess.setDatabaseUser("AGREEMENT_PROCESS");
+        agreementProcess.setApplicationPatterns(List.of("agreement-process", "agreement-process-api"));
+        databaseProperties.getApplications().put("agreement-process", agreementProcess);
+
+        var dev2 = new DatabaseEnvironmentProperties();
+        dev2.setConnection("dev-host");
+        dev2.setApplicationUserSuffix("_2");
+        databaseProperties.getEnvironments().put("dev2", dev2);
+
+        var effectiveEnvironment = databaseProperties.resolveEnvironment("dev2");
+        assertEquals("jdbc:oracle:thin:@//dev-host:1521/dev", effectiveEnvironment.getJdbcUrl());
+        assertEquals("INCIDENT_TRACKER_RO", effectiveEnvironment.getUsername());
+        assertEquals(
+                "AGREEMENT_PROCESS_2",
+                effectiveEnvironment.getApplications().get("agreement-process").getSchema()
+        );
+
+        var scope = new DatabaseApplicationScopeResolver(databaseProperties)
+                .resolveDiscoveryScope("dev2", "agreement-process-api");
+
+        assertEquals("agreement-process", scope.applicationAlias());
+        assertEquals(List.of("AGREEMENT_PROCESS_2"), scope.resolvedSchemas());
+    }
+
+    @Test
+    void shouldPreferExactCatalogSchemaOverUserSuffix() {
+        var databaseProperties = new DatabaseToolProperties();
+
+        var clauseCheck = new DatabaseApplicationProperties();
+        clauseCheck.setDatabaseUser("CLAUSE_CHECK");
+        clauseCheck.setSchema("CLAUSE_CHECK_SPECIAL");
+        clauseCheck.setApplicationPatterns(List.of("clause-check", "clause-check-dev-special"));
+        databaseProperties.getApplications().put("clause-check", clauseCheck);
+
+        var dev1 = new DatabaseEnvironmentProperties();
+        dev1.setApplicationUserSuffix("_1");
+        databaseProperties.getEnvironments().put("dev1", dev1);
+
+        var scope = new DatabaseApplicationScopeResolver(databaseProperties)
+                .resolveDiscoveryScope("dev1", "clause-check-dev-special");
+
+        assertEquals("clause-check", scope.applicationAlias());
+        assertEquals(List.of("CLAUSE_CHECK_SPECIAL"), scope.resolvedSchemas());
+    }
+
+    @Test
+    void shouldBindCurrentConnectionAndApplicationCatalogModel() {
+        var environment = new MockEnvironment()
+                .withProperty("analysis.database.connection-defaults.username", "INCIDENT_TRACKER_RO")
+                .withProperty("analysis.database.connection-defaults.password", "secret")
+                .withProperty("analysis.database.connections.dev.jdbc-url", "jdbc:oracle:thin:@//dev-host:1521/dev")
+                .withProperty("analysis.database.applications.agreement-process.database-user", "AGREEMENT_PROCESS")
+                .withProperty("analysis.database.applications.agreement-process.application-patterns", "agreement-process")
+                .withProperty("analysis.database.environments.dev1.connection", "dev")
+                .withProperty("analysis.database.environments.dev1.application-user-suffix", "_1");
+
+        var databaseProperties = new DatabaseToolProperties();
+        Binder.get(environment).bind("analysis.database", Bindable.ofInstance(databaseProperties));
+
+        var effectiveEnvironment = databaseProperties.resolveEnvironment("dev1");
+
+        assertEquals("jdbc:oracle:thin:@//dev-host:1521/dev", effectiveEnvironment.getJdbcUrl());
+        assertEquals(List.of("agreement-process"), effectiveEnvironment.getApplications().keySet().stream().toList());
+        assertEquals(
+                List.of("AGREEMENT_PROCESS_1"),
+                new DatabaseApplicationScopeResolver(databaseProperties)
+                        .resolveDiscoveryScope("dev1", "agreement-process")
+                        .resolvedSchemas()
+        );
+    }
+
+    @Test
+    void shouldRejectRemovedEnvironmentLevelConnectionAndApplicationMappings() {
+        var environment = new MockEnvironment()
+                .withProperty("analysis.database.environments.dev1.jdbc-url", "jdbc:oracle:thin:@//legacy-host:1521/legacy")
+                .withProperty("analysis.database.environments.dev1.applications.legacy.schema", "LEGACY_SCHEMA");
+
+        var databaseProperties = new DatabaseToolProperties();
+
+        assertThrows(
+                BindException.class,
+                () -> Binder.get(environment).bind("analysis.database", Bindable.ofInstance(databaseProperties))
+        );
+    }
+
     private DatabaseToolProperties sampleProperties() {
         var databaseProperties = new DatabaseToolProperties();
         var environmentProperties = new DatabaseEnvironmentProperties();
@@ -87,20 +192,21 @@ class DatabaseApplicationScopeResolverTest {
 
         var ordersService = new DatabaseApplicationProperties();
         ordersService.setSchema("orders_app");
-        ordersService.setApplicationNamePatterns(List.of("orders-api", "orders service"));
-        ordersService.setDeploymentNamePatterns(List.of("orders-worker"));
-        ordersService.setContainerNamePatterns(List.of("orders-pod"));
-        ordersService.setProjectNamePatterns(List.of("orders-gitlab"));
+        ordersService.setApplicationPatterns(List.of(
+                "orders-api",
+                "orders service",
+                "orders-worker",
+                "orders-pod",
+                "orders-gitlab"
+        ));
 
         var ordersReporting = new DatabaseApplicationProperties();
         ordersReporting.setSchema("orders_rep");
-        ordersReporting.setApplicationNamePatterns(List.of("orders-reporting"));
+        ordersReporting.setApplicationPatterns(List.of("orders-reporting"));
         ordersReporting.setRelatedSchemas(List.of("common_dict"));
 
-        var applications = new java.util.LinkedHashMap<String, DatabaseApplicationProperties>();
-        applications.put("orders-service", ordersService);
-        applications.put("orders-reporting", ordersReporting);
-        environmentProperties.setApplications(applications);
+        databaseProperties.getApplications().put("orders-service", ordersService);
+        databaseProperties.getApplications().put("orders-reporting", ordersReporting);
 
         databaseProperties.getEnvironments().put("zt01", environmentProperties);
         return databaseProperties;

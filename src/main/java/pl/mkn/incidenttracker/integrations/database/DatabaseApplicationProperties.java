@@ -10,11 +10,9 @@ import java.util.List;
 @Setter
 public class DatabaseApplicationProperties {
 
+    private String databaseUser;
     private String schema;
     private String description;
-    private List<String> applicationNamePatterns = new ArrayList<>();
-    private List<String> deploymentNamePatterns = new ArrayList<>();
-    private List<String> containerNamePatterns = new ArrayList<>();
-    private List<String> projectNamePatterns = new ArrayList<>();
+    private List<String> applicationPatterns = new ArrayList<>();
     private List<String> relatedSchemas = new ArrayList<>();
 }

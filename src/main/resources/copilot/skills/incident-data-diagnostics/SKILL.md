@@ -80,7 +80,7 @@ Infer the application/deployment name from logs, deployment evidence, determinis
 
 When calling DB discovery tools, pass the application/deployment/service/container/project name that is already visible in evidence.
 
-Good examples of `applicationNamePattern`:
+Good examples of `applicationPattern`:
 
 ```text
 orders-service
@@ -126,7 +126,7 @@ Prefer this sequence:
    - explicit `@Query`,
    - business keys, tenant/status/deleted/validity filters.
 4. Use those code-derived hints to narrow:
-   - `applicationNamePattern`,
+   - `applicationPattern`,
    - `tableNamePattern`,
    - `entityOrKeywordHint`,
    - expected columns,
@@ -178,12 +178,12 @@ Use this order unless evidence clearly justifies a different path:
 
 2. `db_find_tables`
    - use when the exact table is unknown;
-   - pass `applicationNamePattern` from evidence whenever possible;
+   - pass `applicationPattern` from evidence whenever possible;
    - use `tableNamePattern` and `entityOrKeywordHint` to get ranked candidates instead of dumping all application tables.
 
 3. `db_find_columns`
    - use when key/filter columns are unknown;
-   - pass `applicationNamePattern` from evidence whenever possible;
+   - pass `applicationPattern` from evidence whenever possible;
    - use this to locate ID, business key, tenant, status, state, soft-delete, validity, event, or correlation columns.
 
 4. `db_describe_table`
@@ -234,24 +234,24 @@ Use this order unless evidence clearly justifies a different path:
 For `db_find_tables`, prefer a request shaped conceptually like:
 
 ```text
-db_find_tables(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit, reason)
+db_find_tables(applicationPattern, tableNamePattern, entityOrKeywordHint, limit, reason)
 ```
 
 For `db_find_columns`, prefer a request shaped conceptually like:
 
 ```text
-db_find_columns(applicationNamePattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit, reason)
+db_find_columns(applicationPattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit, reason)
 ```
 
 The backend resolves:
 
 ```text
-session environment + applicationNamePattern -> configured Oracle owner/schema
+session environment + applicationPattern -> configured Oracle owner/schema
 ```
 
 Then it searches Oracle metadata for that resolved owner/schema.
 
-Use `applicationNamePattern` from:
+Use `applicationPattern` from:
 
 - deployment name,
 - container name,
@@ -362,7 +362,7 @@ Procedure:
 
    - use GitLab evidence or GitLab tools to map entity/repository,
    - use entity annotations, relation annotations and repository method names as hints for the likely table and links,
-   - use `db_find_tables` with `applicationNamePattern`,
+   - use `db_find_tables` with `applicationPattern`,
    - use `entityOrKeywordHint` with entity, repository, key, or domain terms,
    - then use `db_describe_table` for the best candidate.
 
@@ -424,7 +424,7 @@ Procedure:
    - ownership/context,
    - joins and relation paths implied by entity annotations or repository method structure.
 
-3. Locate the relevant table using `db_find_tables` with `applicationNamePattern` if needed.
+3. Locate the relevant table using `db_find_tables` with `applicationPattern` if needed.
 4. Use `db_count_rows` by key only.
 5. Use `db_count_rows` by full predicate.
 6. Use `db_group_count` by status/tenant/deleted/state if full predicate returns zero.
@@ -599,7 +599,7 @@ Procedure:
 
 2. Locate table:
 
-   - use `db_find_tables` with `applicationNamePattern`,
+   - use `db_find_tables` with `applicationPattern`,
    - use hints such as `OUTBOX`, `EVENT`, `MESSAGE`, `PROCESS`, `JOB`, `TASK`.
 
 3. Locate columns:

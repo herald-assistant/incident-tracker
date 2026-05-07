@@ -520,6 +520,15 @@ ma dostepnych effortow w SDK, UI nie wysyla `reasoningEffort`.
 ## 16. Najwazniejsze properties
 
 ```properties
+analysis.database.enabled=false
+analysis.database.connection-defaults.username=INCIDENT_TRACKER_RO
+analysis.database.connection-defaults.password=${INCIDENT_TRACKER_DB_PASSWORD}
+analysis.database.connections.dev.jdbc-url=jdbc:oracle:thin:@//dev-host:1521/service
+analysis.database.applications.agreement-process.database-user=AGREEMENT_PROCESS
+analysis.database.applications.agreement-process.application-patterns=agreement-process,AGREEMENT_PROCESS
+analysis.database.environments.dev1.connection=dev
+analysis.database.environments.dev1.application-user-suffix=_1
+
 analysis.ai.copilot.working-directory=${user.dir}
 analysis.ai.copilot.permission-mode=approve-all
 analysis.ai.copilot.send-and-wait-timeout=5m
@@ -541,6 +550,11 @@ analysis.ai.copilot.tool-budget.max-db-calls=8
 analysis.ai.copilot.tool-budget.max-db-raw-sql-calls=0
 analysis.ai.copilot.tool-budget.max-db-returned-characters=64000
 ```
+
+Database config uzywa shared connections + globalnego katalogu aplikacji z
+`database-user`, jednym `application-patterns` i per-environment
+`application-user-suffix`. Per-environment application mappings nie sa juz
+osobnym kontraktem konfiguracji.
 
 Nie ma runtime flagi wybierajacej legacy response labels. Aktualny kontrakt
 Copilota jest JSON-only.

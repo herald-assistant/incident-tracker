@@ -117,7 +117,7 @@ public final class DatabaseCapabilityDtos {
     }
 
     public record DbFindColumnsRequest(
-            String applicationNamePattern,
+            String applicationPattern,
             String tableNamePattern,
             String columnNamePattern,
             String javaFieldNameHint,
@@ -133,7 +133,7 @@ public final class DatabaseCapabilityDtos {
     }
 
     public record DbFindTablesRequest(
-            String applicationNamePattern,
+            String applicationPattern,
             String tableNamePattern,
             String entityOrKeywordHint,
             Integer limit

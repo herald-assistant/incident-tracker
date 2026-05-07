@@ -58,7 +58,7 @@ public class DatabaseToolService {
     }
 
     public DbTableSearchResult findTables(DbCapabilityScope scope, DbFindTablesRequest request) {
-        var resolvedScope = scopeResolver.resolveDiscoveryScope(scope.environment(), request.applicationNamePattern());
+        var resolvedScope = scopeResolver.resolveDiscoveryScope(scope.environment(), request.applicationPattern());
         var effectiveLimit = normalizeDiscoveryLimit(request.limit(), properties.getMaxTablesPerSearch());
         var fetchLimit = effectiveLimit + 1;
         var tables = metadataClient.findTables(
@@ -89,7 +89,7 @@ public class DatabaseToolService {
     }
 
     public DbColumnSearchResult findColumns(DbCapabilityScope scope, DbFindColumnsRequest request) {
-        var resolvedScope = scopeResolver.resolveDiscoveryScope(scope.environment(), request.applicationNamePattern());
+        var resolvedScope = scopeResolver.resolveDiscoveryScope(scope.environment(), request.applicationPattern());
         var effectiveLimit = normalizeDiscoveryLimit(request.limit(), properties.getMaxColumnsPerSearch());
         var fetchLimit = effectiveLimit + 1;
         var requestedColumnPattern = firstNonBlank(

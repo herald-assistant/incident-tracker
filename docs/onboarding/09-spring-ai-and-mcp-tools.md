@@ -39,6 +39,26 @@ do toola. Traktuj to jako znany drift wzgledem docelowego invariantu MCP: przy
 najblizszej zmianie kontraktu Elastic tool powinien przejsc na `ToolContext`,
 a model-facing schema nie powinna wymagac `correlationId`.
 
+## Konfiguracja DB scope
+
+Database capability bierze polaczenie, liste srodowisk i mape
+aplikacja -> Oracle owner/schema z `analysis.database.*`. Model konfiguracji
+jest celowo scentralizowany:
+
+- `analysis.database.connection-defaults.*` dla wspolnego readonly usera,
+- `analysis.database.connections.*` dla wspoldzielonych hostow/URL-i,
+- `analysis.database.applications.*.database-user` dla katalogu komponentow,
+- `analysis.database.applications.*.application-patterns` dla aliasow
+  aplikacji, deploymentu, kontenera, projektu i runtime componentu,
+- `analysis.database.environments.<env>.connection` oraz opcjonalny
+  `application-user-suffix`, np. `_1` dla `dev1`.
+
+Dzieki temu zt moze uzywac bazowego usera komponentu, np.
+`AGREEMENT_PROCESS`, a dev moze materializowac go jako
+`AGREEMENT_PROCESS_1`, `AGREEMENT_PROCESS_2` itd. Per-environment aplikacje
+nie sa osobnym kontraktem konfiguracji; jesli aplikacja ma nietypowego ownera, ustaw
+jej dokladne `schema` w globalnym katalogu aplikacji.
+
 ## Coverage-aware allowlista
 
 `CopilotIncidentToolAccessPolicy` nie wlacza tools tylko dlatego, ze sa

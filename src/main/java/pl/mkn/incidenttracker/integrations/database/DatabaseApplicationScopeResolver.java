@@ -20,7 +20,7 @@ public class DatabaseApplicationScopeResolver {
 
     private final DatabaseToolProperties properties;
 
-    public ResolvedDatabaseApplicationScope resolveDiscoveryScope(String environment, String applicationNamePattern) {
+    public ResolvedDatabaseApplicationScope resolveDiscoveryScope(String environment, String applicationPattern) {
         var environmentProperties = requiredEnvironment(environment);
         var warnings = new ArrayList<String>();
         var matchedBecause = new ArrayList<String>();
@@ -33,8 +33,8 @@ public class DatabaseApplicationScopeResolver {
             );
         }
 
-        if (!StringUtils.hasText(applicationNamePattern)) {
-            warnings.add("applicationNamePattern was not provided; searched across allowed schemas with strict limit.");
+        if (!StringUtils.hasText(applicationPattern)) {
+            warnings.add("applicationPattern was not provided; searched across allowed schemas with strict limit.");
             return new ResolvedDatabaseApplicationScope(
                     environment,
                     environmentProperties.getDatabaseAlias(),
@@ -46,13 +46,13 @@ public class DatabaseApplicationScopeResolver {
             );
         }
 
-        var normalizedPattern = normalizePattern(applicationNamePattern);
+        var normalizedPattern = normalizePattern(applicationPattern);
         var matches = new ArrayList<ApplicationMatch>();
 
         for (var entry : environmentProperties.getApplications().entrySet()) {
             var applicationAlias = entry.getKey();
             var applicationProperties = entry.getValue();
-            var reasons = matchReasons(applicationAlias, applicationProperties, applicationNamePattern, normalizedPattern);
+            var reasons = matchReasons(applicationAlias, applicationProperties, applicationPattern, normalizedPattern);
 
             if (!reasons.isEmpty()) {
                 matches.add(new ApplicationMatch(applicationAlias, applicationProperties, reasons));
@@ -62,7 +62,7 @@ public class DatabaseApplicationScopeResolver {
         if (matches.isEmpty()) {
             warnings.add(
                     "No configured application mapping matched '%s'; searched across allowed schemas with strict limit."
-                            .formatted(applicationNamePattern)
+                            .formatted(applicationPattern)
             );
             return new ResolvedDatabaseApplicationScope(
                     environment,
@@ -78,9 +78,9 @@ public class DatabaseApplicationScopeResolver {
         var selectedMatches = matches.size() <= 3 ? matches : matches.subList(0, 3);
         if (matches.size() > 1) {
             warnings.add(
-                    "applicationNamePattern '%s' matched multiple configured applications: %s"
+                    "applicationPattern '%s' matched multiple configured applications: %s"
                             .formatted(
-                                    applicationNamePattern,
+                                    applicationPattern,
                                     matches.stream().map(ApplicationMatch::applicationAlias).toList()
                             )
             );
@@ -110,7 +110,7 @@ public class DatabaseApplicationScopeResolver {
     }
 
     public DatabaseEnvironmentProperties requiredEnvironment(String environment) {
-        var environmentProperties = properties.getEnvironments().get(environment);
+        var environmentProperties = properties.resolveEnvironment(environment);
         if (environmentProperties == null) {
             throw new IllegalStateException(
                     "No database environment configuration found for '%s'."
@@ -143,10 +143,7 @@ public class DatabaseApplicationScopeResolver {
             var application = entry.getValue();
             var patterns = new ArrayList<String>();
             patterns.add(entry.getKey());
-            patterns.addAll(safeList(application.getApplicationNamePatterns()));
-            patterns.addAll(safeList(application.getDeploymentNamePatterns()));
-            patterns.addAll(safeList(application.getContainerNamePatterns()));
-            patterns.addAll(safeList(application.getProjectNamePatterns()));
+            patterns.addAll(safeList(application.getApplicationPatterns()));
 
             applications.add(new DbApplicationScopeInfo(
                     entry.getKey(),
@@ -169,16 +166,13 @@ public class DatabaseApplicationScopeResolver {
         var reasons = new ArrayList<String>();
 
         if (normalizedPattern.equals(normalizePattern(applicationAlias))) {
-            reasons.add("applicationNamePattern matched %s -> %s".formatted(
+            reasons.add("applicationPattern matched %s -> %s".formatted(
                     applicationAlias,
                     normalizeSchema(applicationProperties.getSchema())
             ));
         }
 
-        addMatchedReason(reasons, originalPattern, normalizedPattern, applicationProperties.getApplicationNamePatterns(), "applicationNamePatterns");
-        addMatchedReason(reasons, originalPattern, normalizedPattern, applicationProperties.getDeploymentNamePatterns(), "deploymentNamePatterns");
-        addMatchedReason(reasons, originalPattern, normalizedPattern, applicationProperties.getContainerNamePatterns(), "containerNamePatterns");
-        addMatchedReason(reasons, originalPattern, normalizedPattern, applicationProperties.getProjectNamePatterns(), "projectNamePatterns");
+        addMatchedReason(reasons, originalPattern, normalizedPattern, applicationProperties.getApplicationPatterns(), "applicationPatterns");
 
         return List.copyOf(reasons);
     }

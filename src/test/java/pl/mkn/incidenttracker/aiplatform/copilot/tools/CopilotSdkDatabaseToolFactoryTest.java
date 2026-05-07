@@ -51,12 +51,12 @@ class CopilotSdkDatabaseToolFactoryTest {
 
         assertSchemaProperties(
                 toolsByName.get("db_find_tables"),
-                Set.of("applicationNamePattern", "tableNamePattern", "entityOrKeywordHint", "limit", "reason"),
+                Set.of("applicationPattern", "tableNamePattern", "entityOrKeywordHint", "limit", "reason"),
                 Set.of("environment", "schemaPattern", "toolContext", "request")
         );
         assertSchemaProperties(
                 toolsByName.get("db_find_columns"),
-                Set.of("applicationNamePattern", "tableNamePattern", "columnNamePattern", "javaFieldNameHint", "limit", "reason"),
+                Set.of("applicationPattern", "tableNamePattern", "columnNamePattern", "javaFieldNameHint", "limit", "reason"),
                 Set.of("environment", "schemaPattern", "toolContext", "request")
         );
         assertSchemaProperties(

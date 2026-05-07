@@ -52,7 +52,7 @@ public class DatabaseMcpTools {
             name = FIND_TABLES,
             description = """
                     Finds ranked Oracle table/view candidates for an application on the current incident environment.
-                    The environment is taken from hidden ToolContext. applicationNamePattern should be an application,
+                    The environment is taken from hidden ToolContext. applicationPattern should be an application,
                     deployment, container, service or GitLab project name inferred from incident evidence. The backend
                     resolves it to a configured Oracle owner/schema and searches allowed tables/views. Returns lightweight
                     candidates only, not full schemas. For JPA/repository symptoms, first try to ground the entity/table
@@ -62,7 +62,7 @@ public class DatabaseMcpTools {
     )
     public DbTableSearchResult findTables(
             @ToolParam(required = false, description = "Application, deployment, container, service or GitLab project name inferred from incident evidence.")
-            String applicationNamePattern,
+            String applicationPattern,
             @ToolParam(required = false, description = "Optional table/view name fragment.")
             String tableNamePattern,
             @ToolParam(required = false, description = "Optional entity, keyword or domain hint used for ranking.")
@@ -74,13 +74,13 @@ public class DatabaseMcpTools {
             ToolContext toolContext
     ) {
         var scope = DatabaseMcpToolScopeResolver.from(toolContext);
-        var request = new DbFindTablesRequest(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit);
+        var request = new DbFindTablesRequest(applicationPattern, tableNamePattern, entityOrKeywordHint, limit);
         var startedAt = System.nanoTime();
         logRequest(
                 FIND_TABLES,
                 scope,
-                "applicationNamePattern=%s tableNamePattern=%s entityOrKeywordHint=%s limit=%s"
-                        .formatted(applicationNamePattern, tableNamePattern, entityOrKeywordHint, limit)
+                "applicationPattern=%s tableNamePattern=%s entityOrKeywordHint=%s limit=%s"
+                        .formatted(applicationPattern, tableNamePattern, entityOrKeywordHint, limit)
         );
         var result = databaseToolService.findTables(scope, request);
         logResult(
@@ -97,14 +97,14 @@ public class DatabaseMcpTools {
             name = FIND_COLUMNS,
             description = """
                     Finds ranked Oracle column candidates for an application on the current incident environment.
-                    Use applicationNamePattern from evidence and optional table/column/Java field hints to locate ID,
+                    Use applicationPattern from evidence and optional table/column/Java field hints to locate ID,
                     business key, tenant, status, state, soft-delete, validity, event or correlation columns. Prefer
                     Java field hints and relation hints from entity/repository code over guessed column names.
                     """
     )
     public DbColumnSearchResult findColumns(
             @ToolParam(required = false, description = "Application, deployment, container, service or GitLab project name inferred from incident evidence.")
-            String applicationNamePattern,
+            String applicationPattern,
             @ToolParam(required = false, description = "Optional table/view name fragment.")
             String tableNamePattern,
             @ToolParam(required = false, description = "Optional column name fragment.")
@@ -119,7 +119,7 @@ public class DatabaseMcpTools {
     ) {
         var scope = DatabaseMcpToolScopeResolver.from(toolContext);
         var request = new DbFindColumnsRequest(
-                applicationNamePattern,
+                applicationPattern,
                 tableNamePattern,
                 columnNamePattern,
                 javaFieldNameHint,
@@ -129,8 +129,8 @@ public class DatabaseMcpTools {
         logRequest(
                 FIND_COLUMNS,
                 scope,
-                "applicationNamePattern=%s tableNamePattern=%s columnNamePattern=%s javaFieldNameHint=%s limit=%s"
-                        .formatted(applicationNamePattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit)
+                "applicationPattern=%s tableNamePattern=%s columnNamePattern=%s javaFieldNameHint=%s limit=%s"
+                        .formatted(applicationPattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit)
         );
         var result = databaseToolService.findColumns(scope, request);
         logResult(

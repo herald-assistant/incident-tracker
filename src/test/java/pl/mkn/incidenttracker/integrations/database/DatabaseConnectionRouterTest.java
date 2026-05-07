@@ -33,11 +33,15 @@ class DatabaseConnectionRouterTest {
     @Test
     void shouldWrapDriverInitializationFailureWithHelpfulMessage() {
         var properties = new DatabaseToolProperties();
+        var connectionProperties = new DatabaseConnectionProperties();
+        connectionProperties.setJdbcUrl("jdbc:example:thin:@10.151.102.109:1551:CLP");
+        connectionProperties.setDriverClassName("missing.Driver");
+        connectionProperties.setUsername("CLP");
+        connectionProperties.setPassword("secret");
+        properties.getConnections().put("zt002-db", connectionProperties);
+
         var environmentProperties = new DatabaseEnvironmentProperties();
-        environmentProperties.setJdbcUrl("jdbc:example:thin:@10.151.102.109:1551:CLP");
-        environmentProperties.setDriverClassName("missing.Driver");
-        environmentProperties.setUsername("CLP");
-        environmentProperties.setPassword("secret");
+        environmentProperties.setConnection("zt002-db");
         properties.getEnvironments().put("zt002", environmentProperties);
 
         var router = new DatabaseConnectionRouter(properties);
@@ -47,6 +51,6 @@ class DatabaseConnectionRouterTest {
         assertTrue(exception.getMessage().contains("environment 'zt002'"));
         assertTrue(exception.getMessage().contains("missing.Driver"));
         assertTrue(exception.getMessage().contains("runtime classpath"));
-        assertTrue(exception.getMessage().contains("analysis.database.environments.zt002.driver-class-name"));
+        assertTrue(exception.getMessage().contains("analysis.database.connections.<connection>.driver-class-name"));
     }
 }

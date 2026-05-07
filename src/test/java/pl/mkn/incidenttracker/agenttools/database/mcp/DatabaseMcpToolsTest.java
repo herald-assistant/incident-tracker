@@ -34,7 +34,7 @@ class DatabaseMcpToolsTest {
     }
 
     @Test
-    void shouldDelegateFindTablesWithApplicationNamePattern() {
+    void shouldDelegateFindTablesWithApplicationPattern() {
         when(databaseToolService.findTables(argThat(this::scopeMatches), eq(new DbFindTablesRequest("orders-service", "ORDER", "OrderEntity", 10))))
                 .thenReturn(tableSearchResult());
 
@@ -47,7 +47,7 @@ class DatabaseMcpToolsTest {
     }
 
     @Test
-    void shouldDelegateFindColumnsWithApplicationNamePattern() {
+    void shouldDelegateFindColumnsWithApplicationPattern() {
         when(databaseToolService.findColumns(argThat(this::scopeMatches), eq(new DbFindColumnsRequest("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10))))
                 .thenReturn(columnSearchResult());
 
