@@ -241,6 +241,40 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(runtimePayload).toContain('"messagesLength": 6');
   });
 
+  it('should filter Copilot workflow items by selected event kind', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('aiActivityEvents', buildAiActivityEvents());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    let compiled = fixture.nativeElement as HTMLElement;
+    const usageFilter = compiled.querySelector(
+      '.ai-workflow-filter input[value="usage"]'
+    ) as HTMLInputElement | null;
+
+    expect(usageFilter).not.toBeNull();
+    expect(usageFilter?.checked).toBe(true);
+    expect(compiled.querySelector('.ai-work-item--usage')).not.toBeNull();
+
+    usageFilter?.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    compiled = fixture.nativeElement as HTMLElement;
+    const usageFilterAfterChange = compiled.querySelector(
+      '.ai-workflow-filter input[value="usage"]'
+    ) as HTMLInputElement | null;
+
+    expect(usageFilterAfterChange?.checked).toBe(false);
+    expect(compiled.querySelector('.ai-work-item--usage')).toBeNull();
+    expect(compiled.querySelector('.ai-work-item--runtime')).not.toBeNull();
+    expect(compiled.querySelector('.ai-work-item--tool')).not.toBeNull();
+  });
+
   it('should use the event summary in the assistant header and full markdown in details', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);

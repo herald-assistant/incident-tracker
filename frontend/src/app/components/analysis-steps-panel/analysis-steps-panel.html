@@ -1426,91 +1426,122 @@
     </summary>
 
     <div class="ai-workflow collapsible-panel__body">
-      <mat-accordion class="ai-work-list" multi>
-        @for (item of copilotWorkItems(); track item.key) {
-          <mat-expansion-panel
-            class="ai-work-item"
-            [class.ai-work-item--message]="item.kind === 'message'"
-            [class.ai-work-item--runtime]="item.kind === 'runtime'"
-            [class.ai-work-item--tool]="item.kind === 'tool'"
-            [class.ai-work-item--usage]="item.kind === 'usage'"
-            [class.ai-work-item--failed]="item.displayStatus === 'FAILED'"
-            hideToggle
+      <div class="ai-workflow__filters" aria-label="Filtry typów zdarzeń Copilota">
+        @for (filter of copilotWorkKindFilters; track filter.kind) {
+          <label
+            class="ai-workflow-filter"
+            [class.ai-workflow-filter--active]="isCopilotWorkKindSelected(filter.kind)"
+            [class.ai-workflow-filter--message]="filter.kind === 'message'"
+            [class.ai-workflow-filter--tool]="filter.kind === 'tool'"
+            [class.ai-workflow-filter--runtime]="filter.kind === 'runtime'"
+            [class.ai-workflow-filter--usage]="filter.kind === 'usage'"
           >
-            <mat-expansion-panel-header class="ai-work-item__header">
-              <mat-icon
-                class="ai-work-item__icon"
-                fontSet="material-symbols-outlined"
-                [attr.aria-label]="item.title"
-              >
-                {{ item.iconName }}
-              </mat-icon>
-
-              @if (item.previewMarkdown) {
-                <app-markdown-content
-                  class="ai-work-item__markdown-preview"
-                  [content]="item.previewMarkdown"
-                  [compact]="true"
-                ></app-markdown-content>
-              } @else {
-                <span class="ai-work-item__text">{{ item.summary }}</span>
-              }
-
-              <span
-                class="ai-work-item__status"
-                [class.ai-work-item__status--pending]="item.displayStatus === 'PENDING'"
-                [class.ai-work-item__status--done]="item.displayStatus === 'COMPLETED'"
-                [class.ai-work-item__status--failed]="item.displayStatus === 'FAILED'"
-                [class.ai-work-item__status--info]="item.displayStatus === 'INFO'"
-                [attr.aria-label]="item.displayStatusLabel"
-                [matTooltip]="item.displayStatusTooltip"
-                matTooltipPosition="above"
-                matTooltipClass="analysis-log-tooltip"
-                [matTooltipShowDelay]="100"
-              >
-                @if (item.displayStatus === 'PENDING') {
-                  <span class="ai-work-item__spinner" aria-hidden="true"></span>
-                } @else {
-                  <mat-icon fontSet="material-symbols-outlined">
-                    {{ item.displayStatusIcon }}
-                  </mat-icon>
-                }
-                <span>{{ item.displayStatusLabel }}</span>
-              </span>
-
-              <mat-icon class="ai-work-item__expand-icon" fontSet="material-symbols-outlined">
-                expand_more
-              </mat-icon>
-            </mat-expansion-panel-header>
-
-            <div class="ai-work-item__details">
-              <div class="ai-work-item__details-header">
-                <h6 class="ai-work-item__details-title">{{ item.title }}</h6>
-              </div>
-
-              @if (item.markdownContent) {
-                <app-markdown-content
-                  class="ai-work-item__markdown-full"
-                  [content]="item.markdownContent"
-                  [compact]="true"
-                ></app-markdown-content>
-              }
-
-              @if (item.toolEvidence; as toolEvidence) {
-                <ng-container
-                  [ngTemplateOutlet]="toolEvidenceResult"
-                  [ngTemplateOutletContext]="{ $implicit: toolEvidence }"
-                ></ng-container>
-              }
-
-              <details class="ai-work-item__technical">
-                <summary>Payload zdarzenia</summary>
-                <pre>{{ item.technicalTooltip }}</pre>
-              </details>
-            </div>
-          </mat-expansion-panel>
+            <input
+              type="checkbox"
+              [value]="filter.kind"
+              [checked]="isCopilotWorkKindSelected(filter.kind)"
+              (change)="toggleCopilotWorkKind(filter.kind)"
+            />
+            <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">
+              {{ filter.iconName }}
+            </mat-icon>
+            <span>{{ filter.label }}</span>
+            <span class="ai-workflow-filter__count">
+              {{ copilotWorkKindCounts()[filter.kind] }}
+            </span>
+          </label>
         }
-      </mat-accordion>
+      </div>
+
+      @if (filteredCopilotWorkItems().length > 0) {
+        <mat-accordion class="ai-work-list" multi>
+          @for (item of filteredCopilotWorkItems(); track item.key) {
+            <mat-expansion-panel
+              class="ai-work-item"
+              [class.ai-work-item--message]="item.kind === 'message'"
+              [class.ai-work-item--runtime]="item.kind === 'runtime'"
+              [class.ai-work-item--tool]="item.kind === 'tool'"
+              [class.ai-work-item--usage]="item.kind === 'usage'"
+              [class.ai-work-item--failed]="item.displayStatus === 'FAILED'"
+              hideToggle
+            >
+              <mat-expansion-panel-header class="ai-work-item__header">
+                <mat-icon
+                  class="ai-work-item__icon"
+                  fontSet="material-symbols-outlined"
+                  [attr.aria-label]="item.title"
+                >
+                  {{ item.iconName }}
+                </mat-icon>
+
+                @if (item.previewMarkdown) {
+                  <app-markdown-content
+                    class="ai-work-item__markdown-preview"
+                    [content]="item.previewMarkdown"
+                    [compact]="true"
+                  ></app-markdown-content>
+                } @else {
+                  <span class="ai-work-item__text">{{ item.summary }}</span>
+                }
+
+                <span
+                  class="ai-work-item__status"
+                  [class.ai-work-item__status--pending]="item.displayStatus === 'PENDING'"
+                  [class.ai-work-item__status--done]="item.displayStatus === 'COMPLETED'"
+                  [class.ai-work-item__status--failed]="item.displayStatus === 'FAILED'"
+                  [class.ai-work-item__status--info]="item.displayStatus === 'INFO'"
+                  [attr.aria-label]="item.displayStatusLabel"
+                  [matTooltip]="item.displayStatusTooltip"
+                  matTooltipPosition="above"
+                  matTooltipClass="analysis-log-tooltip"
+                  [matTooltipShowDelay]="100"
+                >
+                  @if (item.displayStatus === 'PENDING') {
+                    <span class="ai-work-item__spinner" aria-hidden="true"></span>
+                  } @else {
+                    <mat-icon fontSet="material-symbols-outlined">
+                      {{ item.displayStatusIcon }}
+                    </mat-icon>
+                  }
+                  <span>{{ item.displayStatusLabel }}</span>
+                </span>
+
+                <mat-icon class="ai-work-item__expand-icon" fontSet="material-symbols-outlined">
+                  expand_more
+                </mat-icon>
+              </mat-expansion-panel-header>
+
+              <div class="ai-work-item__details">
+                <div class="ai-work-item__details-header">
+                  <h6 class="ai-work-item__details-title">{{ item.title }}</h6>
+                </div>
+
+                @if (item.markdownContent) {
+                  <app-markdown-content
+                    class="ai-work-item__markdown-full"
+                    [content]="item.markdownContent"
+                    [compact]="true"
+                  ></app-markdown-content>
+                }
+
+                @if (item.toolEvidence; as toolEvidence) {
+                  <ng-container
+                    [ngTemplateOutlet]="toolEvidenceResult"
+                    [ngTemplateOutletContext]="{ $implicit: toolEvidence }"
+                  ></ng-container>
+                }
+
+                <details class="ai-work-item__technical">
+                  <summary>Payload zdarzenia</summary>
+                  <pre>{{ item.technicalTooltip }}</pre>
+                </details>
+              </div>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+      } @else {
+        <p class="ai-workflow__empty">Brak zdarzeń dla wybranych typów.</p>
+      }
     </div>
   </details>
 }

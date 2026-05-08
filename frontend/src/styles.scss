@@ -1862,6 +1862,114 @@ body.is-column-resizing {
   gap: 12px;
 }
 
+.ai-workflow__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ai-workflow-filter {
+  --filter-color: var(--primary-dark);
+  --filter-bg: #f7fbff;
+  --filter-border: rgba(12, 102, 228, 0.18);
+  position: relative;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 5px;
+  border: 1px solid #e6edf5;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.ai-workflow-filter input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ai-workflow-filter mat-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: #f4f7fb;
+  color: currentColor;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.ai-workflow-filter--message {
+  --filter-color: var(--primary-dark);
+  --filter-bg: #f1f7ff;
+  --filter-border: rgba(12, 102, 228, 0.28);
+}
+
+.ai-workflow-filter--tool {
+  --filter-color: #0b593d;
+  --filter-bg: #f8fffb;
+  --filter-border: rgba(11, 89, 61, 0.22);
+}
+
+.ai-workflow-filter--runtime,
+.ai-workflow-filter--usage {
+  --filter-color: #403294;
+  --filter-bg: #f5f3ff;
+  --filter-border: rgba(101, 84, 192, 0.22);
+}
+
+.ai-workflow-filter--active {
+  border-color: var(--filter-border);
+  background: var(--filter-bg);
+  color: var(--filter-color);
+}
+
+.ai-workflow-filter--active mat-icon {
+  border-color: var(--filter-border);
+  background: #fff;
+}
+
+.ai-workflow-filter:focus-within {
+  outline: 2px solid rgba(12, 102, 228, 0.22);
+  outline-offset: 2px;
+}
+
+.ai-workflow-filter__count {
+  min-width: 18px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(9, 30, 66, 0.06);
+  color: inherit;
+  text-align: center;
+}
+
+.ai-workflow__empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed #d8e0eb;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: var(--text-soft);
+  font-size: 0.86rem;
+}
+
 .ai-workflow-panel {
   display: grid;
 }
@@ -1993,12 +2101,6 @@ body.is-column-resizing {
   border-color: rgba(101, 84, 192, 0.2);
   background: #f5f3ff;
   color: #403294;
-}
-
-.ai-work-item--failed .ai-work-item__icon {
-  border-color: rgba(222, 53, 11, 0.22);
-  background: var(--danger-soft);
-  color: var(--danger-text);
 }
 
 .ai-work-item__text {

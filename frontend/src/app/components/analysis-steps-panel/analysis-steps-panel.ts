@@ -260,6 +260,12 @@ interface ToolEvidenceTimelineItemView {
 type AiWorkItemKind = 'message' | 'runtime' | 'tool' | 'usage';
 type AiWorkItemStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'INFO';
 
+interface AiWorkKindFilterOption {
+  kind: AiWorkItemKind;
+  label: string;
+  iconName: string;
+}
+
 interface AiWorkItemView {
   key: string;
   kind: AiWorkItemKind;
@@ -330,6 +336,14 @@ interface UsageStatView {
 }
 
 type StepIndicatorState = 'number' | 'running' | 'done' | 'error' | 'skipped';
+
+const COPILOT_WORK_KIND_FILTERS: readonly AiWorkKindFilterOption[] = [
+  { kind: 'message', label: 'AI', iconName: 'psychology' },
+  { kind: 'tool', label: 'Tools', iconName: 'build' },
+  { kind: 'runtime', label: 'Runtime', iconName: 'settings_suggest' },
+  { kind: 'usage', label: 'Usage', iconName: 'query_stats' }
+] as const;
+const COPILOT_WORK_ITEM_KINDS = COPILOT_WORK_KIND_FILTERS.map((option) => option.kind);
 
 const STEP_EVIDENCE_LINKS: Record<string, readonly StepEvidenceLink[]> = {
   ELASTICSEARCH_LOGS: [{ provider: 'elasticsearch', category: 'logs' }],
@@ -512,11 +526,23 @@ export class AnalysisStepsPanelComponent {
   private readonly selectedStepKey = signal<string | null>(null);
   private readonly copiedLogRowKey = signal<string | null>(null);
   private readonly copiedPromptStepKey = signal<string | null>(null);
+  private readonly selectedCopilotWorkKinds = signal<ReadonlySet<AiWorkItemKind>>(
+    new Set(COPILOT_WORK_ITEM_KINDS)
+  );
   private logCopyFeedbackHandle: number | null = null;
   private promptCopyFeedbackHandle: number | null = null;
 
+  protected readonly copilotWorkKindFilters = COPILOT_WORK_KIND_FILTERS;
+
   protected readonly copilotWorkItems = computed<AiWorkItemView[]>(() =>
     prepareAiWorkItems(this.aiActivityEvents(), this.toolEvidenceSections())
+  );
+  protected readonly filteredCopilotWorkItems = computed<AiWorkItemView[]>(() => {
+    const selectedKinds = this.selectedCopilotWorkKinds();
+    return this.copilotWorkItems().filter((item) => selectedKinds.has(item.kind));
+  });
+  protected readonly copilotWorkKindCounts = computed<Record<AiWorkItemKind, number>>(() =>
+    countCopilotWorkKinds(this.copilotWorkItems())
   );
 
   protected readonly preparedSteps = computed<StepView[]>(() =>
@@ -622,6 +648,20 @@ export class AnalysisStepsPanelComponent {
     if (nextStep.canOpen || !currentStep) {
       this.selectedStepKey.set(nextStep.key);
     }
+  }
+
+  protected isCopilotWorkKindSelected(kind: AiWorkItemKind): boolean {
+    return this.selectedCopilotWorkKinds().has(kind);
+  }
+
+  protected toggleCopilotWorkKind(kind: AiWorkItemKind): void {
+    const selectedKinds = new Set(this.selectedCopilotWorkKinds());
+    if (selectedKinds.has(kind)) {
+      selectedKinds.delete(kind);
+    } else {
+      selectedKinds.add(kind);
+    }
+    this.selectedCopilotWorkKinds.set(selectedKinds);
   }
 
   protected async copyLogDetails(row: ElasticsearchLogRowView): Promise<void> {
@@ -1247,6 +1287,21 @@ function prepareTimelineToolEvidenceItems(
       )
     )
     .sort(compareToolEvidenceTimelineItems);
+}
+
+function countCopilotWorkKinds(items: AiWorkItemView[]): Record<AiWorkItemKind, number> {
+  const counts: Record<AiWorkItemKind, number> = {
+    message: 0,
+    runtime: 0,
+    tool: 0,
+    usage: 0
+  };
+
+  for (const item of items) {
+    counts[item.kind] += 1;
+  }
+
+  return counts;
 }
 
 function buildAssistantMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
