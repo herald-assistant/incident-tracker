@@ -230,10 +230,10 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).toContain('Kontekst sesji');
     expect(compiled.textContent).toContain('Sprawdzam liczbę rekordów dla correlationId.');
     expect(compiled.textContent).toContain('cache 1');
-    expect(visibleTexts.indexOf('Sprawdzam repozytorium przed uruchomieniem toola.')).toBeLessThan(
+    expect(visibleTexts.indexOf('Copilot poprosił o 1 wywołanie narzędzia.')).toBeLessThan(
       visibleTexts.indexOf('Sprawdzam liczbę rekordów dla correlationId.')
     );
-    expect(visibleTexts).not.toContain('Copilot poprosił o 1 wywołanie narzędzia.');
+    expect(visibleTexts).not.toContain('Sprawdzam repozytorium przed uruchomieniem toola.');
     expect(timelineEntries.length).toBeGreaterThanOrEqual(3);
     expect(pendingTool).not.toBeNull();
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
@@ -241,7 +241,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(runtimePayload).toContain('"messagesLength": 6');
   });
 
-  it('should render assistant markdown as a two-line preview and full content in details', async () => {
+  it('should use the event summary in the assistant header and full markdown in details', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
     fixture.componentRef.setInput('aiActivityEvents', [
@@ -281,11 +281,49 @@ describe('AnalysisStepsPanelComponent', () => {
       '.ai-work-item__markdown-full .markdown-content'
     ) as HTMLElement | null;
 
-    expect(preview?.innerHTML).toContain('<strong>główną hipotezę</strong>');
-    expect(preview?.textContent).toContain('pierwszy trop');
-    expect(preview?.textContent).not.toContain('drugi trop');
+    expect(preview?.textContent?.trim()).toBe('AI doprecyzowało hipotezę.');
+    expect(preview?.textContent).not.toContain('pierwszy trop');
     expect(full?.innerHTML).toContain('<strong>główną hipotezę</strong>');
     expect(full?.textContent).toContain('trzeci trop');
+  });
+
+  it('should use the event summary for the user prompt header', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      {
+        eventId: 'event-user-prompt',
+        parentEventId: '',
+        type: 'user.message',
+        category: 'MESSAGE',
+        status: 'STARTED',
+        title: 'Input do Copilota',
+        summary: 'Aplikacja wysłała prompt do sesji Copilota.',
+        turnId: '',
+        interactionId: '',
+        toolCallId: '',
+        toolName: '',
+        timestamp: '2026-04-14T12:00:13.200Z',
+        details: {
+          contentPreview: [
+            'You are helping with an enterprise software incident analysis.',
+            'The result will be read by an operator.'
+          ].join('\n')
+        }
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const preview = compiled.querySelector(
+      '.ai-work-item__markdown-preview .markdown-content'
+    ) as HTMLElement | null;
+
+    expect(preview?.textContent?.trim()).toBe('Aplikacja wysłała prompt do sesji Copilota.');
+    expect(preview?.textContent).not.toContain('You are helping');
   });
 
   it('should hide the prepared prompt on a failed AI step when no result is available', async () => {

@@ -1254,11 +1254,11 @@ function buildAssistantMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkIt
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
   const reasoningTextPreview = stringFromRecord(details, 'reasoningTextPreview');
+  const messageContent = nonEmptyValue(contentPreview) || nonEmptyValue(reasoningTextPreview);
   const summary =
-    nonEmptyValue(contentPreview) ||
-    nonEmptyValue(reasoningTextPreview) ||
-    event.summary ||
+    nonEmptyValue(event.summary) ||
     buildAssistantToolRequestSummary(toolRequests) ||
+    markdownPreview(messageContent) ||
     'Copilot wykonał kolejny krok analizy.';
   const meta = buildTimelineEventMeta(event);
 
@@ -1270,7 +1270,7 @@ function buildAssistantMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkIt
     title: toolRequests.length > 0 ? 'AI wybiera następne sprawdzenia' : event.title || 'Wiadomość AI',
     summary,
     previewMarkdown: markdownPreview(summary),
-    markdownContent: summary,
+    markdownContent: messageContent || summary,
     iconName: 'psychology',
     meta,
     technicalTooltip: stringifyPretty({
@@ -1287,6 +1287,11 @@ function buildAssistantReasoningWorkItem(event: AnalysisAiActivityEvent): AiWork
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
   const reasoningTextPreview = stringFromRecord(details, 'reasoningTextPreview');
+  const reasoningContent = nonEmptyValue(contentPreview) || nonEmptyValue(reasoningTextPreview);
+  const summary =
+    nonEmptyValue(event.summary) ||
+    markdownPreview(reasoningContent) ||
+    'Copilot doprecyzował tok analizy.';
 
   return {
     key: event.eventId || `assistant-reasoning-${activityTimestampMs(event)}`,
@@ -1294,22 +1299,9 @@ function buildAssistantReasoningWorkItem(event: AnalysisAiActivityEvent): AiWork
     category: event.category || 'MESSAGE',
     status: event.status || 'INFO',
     title: event.title || 'Rozumowanie AI',
-    summary:
-      nonEmptyValue(contentPreview) ||
-      nonEmptyValue(reasoningTextPreview) ||
-      event.summary ||
-      'Copilot doprecyzował tok analizy.',
-    previewMarkdown: markdownPreview(
-      nonEmptyValue(contentPreview) ||
-        nonEmptyValue(reasoningTextPreview) ||
-        event.summary ||
-        'Copilot doprecyzował tok analizy.'
-    ),
-    markdownContent:
-      nonEmptyValue(contentPreview) ||
-      nonEmptyValue(reasoningTextPreview) ||
-      event.summary ||
-      'Copilot doprecyzował tok analizy.',
+    summary,
+    previewMarkdown: markdownPreview(summary),
+    markdownContent: reasoningContent || summary,
     iconName: 'psychology',
     meta: buildTimelineEventMeta(event),
     technicalTooltip: buildAiActivityTooltip(event),
@@ -1322,6 +1314,10 @@ function buildAssistantReasoningWorkItem(event: AnalysisAiActivityEvent): AiWork
 function buildUserMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
+  const summary =
+    nonEmptyValue(event.summary) ||
+    markdownPreview(nonEmptyValue(contentPreview)) ||
+    'Aplikacja wysłała prompt i kontekst evidence do sesji Copilota.';
 
   return {
     key: event.eventId || `user-message-${activityTimestampMs(event)}`,
@@ -1329,15 +1325,8 @@ function buildUserMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemVie
     category: event.category || 'MESSAGE',
     status: event.status || 'INFO',
     title: event.title || 'Input do Copilota',
-    summary:
-      nonEmptyValue(contentPreview) ||
-      event.summary ||
-      'Aplikacja wysłała prompt i kontekst evidence do sesji Copilota.',
-    previewMarkdown: markdownPreview(
-      nonEmptyValue(contentPreview) ||
-        event.summary ||
-        'Aplikacja wysłała prompt i kontekst evidence do sesji Copilota.'
-    ),
+    summary,
+    previewMarkdown: markdownPreview(summary),
     markdownContent: '',
     iconName: 'person',
     meta: buildTimelineEventMeta(event),
@@ -1587,7 +1576,7 @@ function isDuplicateAssistantText(
   item: AiWorkItemView,
   renderedTexts: RenderedAssistantText[]
 ): boolean {
-  const text = normalizeAssistantText(item.summary);
+  const text = normalizeAssistantText(item.markdownContent || item.summary);
   if (!text) {
     return false;
   }
@@ -1603,7 +1592,7 @@ function rememberAssistantText(
   item: AiWorkItemView,
   renderedTexts: RenderedAssistantText[]
 ): void {
-  const text = normalizeAssistantText(item.summary);
+  const text = normalizeAssistantText(item.markdownContent || item.summary);
   if (!text) {
     return;
   }
