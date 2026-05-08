@@ -36,6 +36,8 @@ Na dzisiaj projekt ma:
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
 - ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
   GitLaba,
+- ekran `GET /database` do recznego testowania shared/operator endpointow nad
+  `DatabaseToolService` z jawnym operatorskim `environment`,
 - glowne job-based API: `POST /analysis/jobs` i
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
@@ -68,6 +70,9 @@ Na dzisiaj projekt ma:
 - `GET /evidence`
   Angularowy ekran pomocniczy do recznego testowania helper endpointow
   Elastica i GitLaba oraz podgladu odpowiedzi JSON.
+- `GET /database`
+  Angularowy ekran pomocniczy do recznego testowania Database tools przez
+  shared/operator endpointy `/api/database/*`.
 - `POST /analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
@@ -105,6 +110,11 @@ Na dzisiaj projekt ma:
 - `POST /api/elasticsearch/logs/search`
   Narzedzie pomocnicze do wyszukiwania logow z Kibana proxy po `correlationId`.
   To jest jedyny endpoint testowy Elastica. Nie ma juz wariantu `preview`.
+- `POST /api/database/*`
+  Narzedzia pomocnicze do recznego testowania capability udostepnianych przez
+  `DatabaseToolService`: scope, discovery tabel/kolumn, opis tabel, typed
+  count/sample/group, relacje, joiny, porownanie mappingu i opcjonalny
+  readonly SQL. Publiczny job flow nadal nie przyjmuje recznego scope DB.
 
 ## Glowny podzial pakietow
 
@@ -247,6 +257,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.api.gitlab.source`
   Shared/operator endpointy source resolve GitLaba:
   `POST /api/gitlab/source/resolve` i wariant preview.
+- `pl.mkn.incidenttracker.api.database`
+  Shared/operator endpointy testowe nad `integrations.database.DatabaseToolService`.
+  Controller buduje manualny `DbCapabilityScope` z operatorskiego
+  `environment` i deleguje do typed DB capability.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.agenttools.gitlab.mcp`
@@ -406,3 +420,17 @@ To jest osobny, pomocniczy flow do recznego testowania mapowania repozytorium:
 Ten endpoint nie jest czescia glownego job flow analizy, ale pomaga recznie
 zweryfikowac te sama logike mapowania, z ktorej korzysta deterministic
 provider i AI-guided exploration przez tools.
+
+## Dodatkowy use case Database tool console
+
+To jest osobny, pomocniczy flow diagnostyczno-testowy:
+
+1. klient podaje operatorski `environment` oraz opcjonalny `correlationId`,
+2. endpoint `/api/database/*` buduje manualny `DbCapabilityScope`,
+3. request narzedzia jest przekazywany bezposrednio do `DatabaseToolService`,
+4. integracja DB nadal egzekwuje configured environment, allowliste schematow,
+   typed filters, masking/limiting i blokade raw SQL,
+5. frontend `/database` pokazuje payload requestu, status HTTP i odpowiedz JSON.
+
+Ten endpoint nie zmienia glownego job flow analizy i nie przywraca recznego DB
+scope'u do `POST /analysis/jobs`.

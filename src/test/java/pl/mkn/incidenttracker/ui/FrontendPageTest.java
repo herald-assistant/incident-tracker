@@ -43,4 +43,11 @@ class FrontendPageTest {
                 .andExpect(forwardedUrl("/index.html"));
     }
 
+    @Test
+    void shouldServeDatabaseRoute() throws Exception {
+        mockMvc.perform(get("/database"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
 }

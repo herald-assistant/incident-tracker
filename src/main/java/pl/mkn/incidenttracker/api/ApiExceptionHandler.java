@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.api;
 
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
+import pl.mkn.incidenttracker.api.database.DatabaseToolApiException;
 import pl.mkn.incidenttracker.api.operationalcontext.OperationalContextEntityNotFoundException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
@@ -169,6 +170,17 @@ public class ApiExceptionHandler {
             GitLabRepositorySearchException exception
     ) {
         return ResponseEntity.status(exception.getStatus()).body(exception.getResponse());
+    }
+
+    @ExceptionHandler(DatabaseToolApiException.class)
+    public ResponseEntity<ApiErrorResponse> handleDatabaseToolApi(DatabaseToolApiException exception) {
+        var response = new ApiErrorResponse(
+                exception.code(),
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(exception.status()).body(response);
     }
 
 }

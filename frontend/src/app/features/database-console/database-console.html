@@ -1,0 +1,211 @@
+<div class="page-shell database-console">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark">IR</div>
+      <div>
+        <p class="brand-eyebrow">Incident Diagnostics</p>
+        <h1 class="brand-title">Incident Tracker</h1>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <nav class="topbar-nav" aria-label="Widoki aplikacji">
+        <a
+          class="topbar-link"
+          routerLink="/"
+          routerLinkActive="topbar-link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Analysis
+        </a>
+        <a class="topbar-link" routerLink="/evidence" routerLinkActive="topbar-link--active">
+          Evidence
+        </a>
+        <a class="topbar-link" routerLink="/database" routerLinkActive="topbar-link--active">
+          Database
+        </a>
+        <a
+          class="topbar-link"
+          routerLink="/operational-context"
+          routerLinkActive="topbar-link--active"
+        >
+          Operational Context
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="database-workspace">
+    <section class="hero-card database-hero">
+      <div class="hero-main">
+        <div class="hero-copy">
+          <p class="section-eyebrow">Manualne testy Database tools</p>
+          <h2>Uruchamiaj te same capability, z których korzysta DatabaseToolService.</h2>
+          <p class="hero-description">
+            Wspólny scope operatora trafia do cienkich endpointów `/api/database/*`, a payload JSON
+            jest przekazywany dalej do typed DB tools.
+          </p>
+        </div>
+
+        <div class="database-hero__chips">
+          <span class="panel-chip">Discovery</span>
+          <span class="panel-chip">Metadata</span>
+          <span class="panel-chip">Typed filters</span>
+          <span class="panel-chip">Readonly guardrails</span>
+        </div>
+      </div>
+
+      <div class="hero-side-panel">
+        <p class="panel-title">Scope requestu</p>
+        <ul class="mini-list">
+          <li>`environment` wybiera skonfigurowane połączenie i schematy</li>
+          <li>`correlationId` jest opcjonalnym kontekstem audytu</li>
+          <li>raw SQL zadziała tylko przy backendowym `rawSqlEnabled=true`</li>
+        </ul>
+      </div>
+    </section>
+
+    <form class="database-layout" novalidate (submit)="submit($event)">
+      <aside class="analysis-card database-sidebar">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">Scope</p>
+            <h2>Środowisko</h2>
+          </div>
+        </div>
+
+        <div class="database-scope-grid">
+          <label class="form-field">
+            <span class="field-label">Environment</span>
+            <input
+              class="text-input"
+              type="text"
+              placeholder="np. dev1 albo zt01"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.environment"
+            />
+          </label>
+
+          <label class="form-field">
+            <span class="field-label">Correlation ID</span>
+            <input
+              class="text-input"
+              type="text"
+              placeholder="opcjonalnie"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.correlationId"
+            />
+          </label>
+
+          <label class="form-field">
+            <span class="field-label">Analysis Run ID</span>
+            <input
+              class="text-input"
+              type="text"
+              placeholder="opcjonalnie"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.analysisRunId"
+            />
+          </label>
+        </div>
+
+        @if (controlInvalid(scopeForm.controls.environment)) {
+          <p class="form-error">Pole `environment` jest wymagane.</p>
+        }
+
+        <div class="database-tool-picker">
+          <label class="form-field">
+            <span class="field-label">Tool</span>
+            <select class="select-input" [formControl]="toolControl">
+              @for (tool of tools; track tool.key) {
+                <option [value]="tool.key">{{ tool.label }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="database-tool-list" aria-label="Database tools">
+            @for (tool of tools; track tool.key) {
+              <button
+                type="button"
+                [class]="toolButtonClass(tool)"
+                (click)="selectTool(tool.key, true)"
+              >
+                <span>{{ tool.label }}</span>
+                <small>{{ tool.category }}</small>
+              </button>
+            }
+          </div>
+        </div>
+      </aside>
+
+      <section class="analysis-card database-runner">
+        <div class="section-heading database-runner__header">
+          <div>
+            <p class="section-eyebrow">{{ selectedTool().category }}</p>
+            <h2>{{ selectedTool().label }}</h2>
+            <p class="field-hint">{{ selectedTool().summary }}</p>
+          </div>
+          <span class="panel-chip route-chip">POST /api/database/{{ selectedTool().endpoint }}</span>
+        </div>
+
+        @if (selectedTool().payloadRequired) {
+          <label class="form-field" for="databasePayload">
+            <span class="field-label">Request payload JSON</span>
+            <textarea
+              id="databasePayload"
+              class="json-editor"
+              spellcheck="false"
+              [formControl]="payloadControl"
+            ></textarea>
+          </label>
+
+          <div class="database-runner__actions">
+            <button class="secondary-button" type="button" (click)="resetPayload()">
+              Przywróć przykład
+            </button>
+            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
+              <span class="button-label">Uruchom tool</span>
+            </button>
+          </div>
+        } @else {
+          <div class="empty-state">
+            Ten tool używa tylko scope requestu. Kliknij uruchomienie, żeby pobrać konfigurację DB.
+          </div>
+
+          <div class="database-runner__actions">
+            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
+              <span class="button-label">Pobierz scope</span>
+            </button>
+          </div>
+        }
+
+        <div class="tool-status" [attr.data-status]="state().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ state().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (state().statusCode !== null) {
+              <span class="tool-status__code">HTTP {{ state().statusCode }}</span>
+            }
+            <span [class]="statusPillClass(state().status)">
+              {{ statusLabel(state().status) }}
+            </span>
+          </div>
+        </div>
+
+        <label class="field-label" for="databaseJsonResponse">JSON response</label>
+        <textarea
+          id="databaseJsonResponse"
+          class="json-output"
+          readonly
+          spellcheck="false"
+          [value]="state().responseJson"
+        ></textarea>
+      </section>
+    </form>
+  </main>
+</div>

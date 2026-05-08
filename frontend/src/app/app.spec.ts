@@ -54,6 +54,19 @@ describe('App', () => {
     expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
   });
 
+  it('should render the database console shell on the database route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/database');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-database-console')).not.toBeNull();
+  });
+
   it('should render the operational context shell on the operational context route', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);

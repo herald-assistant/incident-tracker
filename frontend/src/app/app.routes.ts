@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AnalysisConsoleComponent } from './features/analysis-console/analysis-console';
+import { DatabaseConsoleComponent } from './features/database-console/database-console';
 import { EvidenceConsoleComponent } from './features/evidence-console/evidence-console';
 
 export const routes: Routes = [
@@ -11,6 +12,10 @@ export const routes: Routes = [
   {
     path: 'evidence',
     component: EvidenceConsoleComponent
+  },
+  {
+    path: 'database',
+    component: DatabaseConsoleComponent
   },
   {
     path: 'operational-context',

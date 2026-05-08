@@ -241,8 +241,10 @@ tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.
 Follow-up chat dziala tylko dla live joba w pamieci backendu; importowany
 zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
-a route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
-GitLaba. Takie endpointy traktuj jako shared/operator API nad adapterami:
+route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
+GitLaba, a route `/database` sluzy do recznego testowania endpointow nad
+`DatabaseToolService` z jawnym operatorskim `environment`. Takie endpointy
+traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
 
@@ -300,6 +302,15 @@ Elastic ma dzisiaj jeden helper endpoint i jeden MCP tool:
 Oba przyjmuja tylko `correlationId`.
 `base-url`, auth, Kibana space, index pattern i limity odpowiedzi pochodza z
 `analysis.elasticsearch.*`.
+
+### Database helper flow
+
+Database ma shared/operator console endpointy pod `/api/database/*`, ktore
+deleguja do `integrations.database.DatabaseToolService`. Request helpera niesie
+manualny scope operatora (`environment`, opcjonalnie `correlationId`), ale
+glowny publiczny start analizy nadal nie przyjmuje DB scope'u. DB service nadal
+egzekwuje configured environments, allowliste schematow, typed filters,
+masking/limiting i blokade raw SQL.
 
 ### Pipeline metadata
 
