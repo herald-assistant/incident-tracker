@@ -163,8 +163,10 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));
             assertTrue(prompt.contains("Return only valid JSON."));
+            assertTrue(prompt.contains("The final answer must start with `{` and end with `}`."));
             assertTrue(prompt.contains("Do not wrap it in Markdown."));
             assertTrue(prompt.contains("Do not add prose before or after JSON."));
+            assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before the JSON."));
             assertTrue(prompt.contains("Use concise professional Markdown in string values where the schema says markdown string."));
             assertTrue(prompt.contains("Use `code spans` for technical identifiers"));
             assertTrue(prompt.contains("Never join multiple points with pipe separators like \"|\"."));

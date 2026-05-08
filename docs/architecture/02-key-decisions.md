@@ -188,6 +188,9 @@ JSON. Parser obsluguje:
 
 - caly content jako JSON,
 - fenced JSON block jako tolerancje dla modelu,
+- pierwszy kompletny obiekt JSON osadzony w tresci jako tolerancje dla krotkiej
+  prozy przed JSON-em; jesli nie ma kompletnego obiektu, pierwszy parsowalny
+  obiekt nadal moze posluzyc do fallbacku czesciowo sparsowanych pol,
 - fallback strukturalny, gdy wymaganych pol nie da sie sparsowac.
 
 Legacy labeled response parser zostal usuniety. Brak wymaganych pol powoduje

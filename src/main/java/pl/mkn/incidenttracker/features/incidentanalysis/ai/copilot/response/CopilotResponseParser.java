@@ -53,6 +53,11 @@ public class CopilotResponseParser {
             }
         }
 
+        var embeddedJsonResult = resultFromEmbeddedJsonObject(assistantContent);
+        if (embeddedJsonResult != null) {
+            return embeddedJsonResult;
+        }
+
         return fallbackResult(null, assistantContent, List.of());
     }
 
@@ -138,8 +143,10 @@ public class CopilotResponseParser {
         }
 
         try {
-            var node = objectMapper.readTree(candidate.trim());
-            return node != null && node.isObject() ? node : null;
+            try (var parser = objectMapper.createParser(candidate.trim())) {
+                var node = objectMapper.readValue(parser, JsonNode.class);
+                return node != null && node.isObject() && parser.nextToken() == null ? node : null;
+            }
         }
         catch (IOException exception) {
             return null;
@@ -153,6 +160,81 @@ public class CopilotResponseParser {
 
         var matcher = FENCED_JSON_PATTERN.matcher(assistantContent);
         return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private ParseResult resultFromEmbeddedJsonObject(String assistantContent) {
+        if (!StringUtils.hasText(assistantContent)) {
+            return null;
+        }
+
+        StructuredAnalysisResponse firstParsedResponse = null;
+        List<String> firstParsedFields = List.of();
+
+        for (var start = assistantContent.indexOf('{'); start >= 0; start = assistantContent.indexOf('{', start + 1)) {
+            var end = findJsonObjectEnd(assistantContent, start);
+            if (end < 0) {
+                continue;
+            }
+
+            var candidate = assistantContent.substring(start, end + 1);
+            var node = parseJsonNode(candidate);
+            if (node == null) {
+                continue;
+            }
+
+            var response = responseFromJson(node);
+            var parsedFields = parsedJsonFields(node);
+            if (hasRequiredFields(response)) {
+                return resultFromResponse(response, assistantContent, parsedFields);
+            }
+
+            if (firstParsedResponse == null) {
+                firstParsedResponse = response;
+                firstParsedFields = parsedFields;
+            }
+        }
+
+        return firstParsedResponse != null
+                ? resultFromResponse(firstParsedResponse, assistantContent, firstParsedFields)
+                : null;
+    }
+
+    private int findJsonObjectEnd(String content, int start) {
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+
+        for (var index = start; index < content.length(); index++) {
+            var character = content.charAt(index);
+
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                }
+                else if (character == '\\') {
+                    escaped = true;
+                }
+                else if (character == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (character == '"') {
+                inString = true;
+            }
+            else if (character == '{') {
+                depth++;
+            }
+            else if (character == '}') {
+                depth--;
+                if (depth == 0) {
+                    return index;
+                }
+            }
+        }
+
+        return -1;
     }
 
     private StructuredAnalysisResponse responseFromJson(JsonNode node) {

@@ -82,6 +82,81 @@ class CopilotResponseParserTest {
     }
 
     @Test
+    void shouldParseJsonObjectEmbeddedAfterProse() {
+        var result = parser.parse("""
+                I have all the evidence needed. Let me compose the final analysis.
+
+                {
+                  "detectedProblem": "CLASS_CAST_EXCEPTION",
+                  "summary": "Widoczny `ClassCastException` przy mapowaniu daty.",
+                  "recommendedAction": "- Obsluz `LocalDateTime` w mapperze.",
+                  "rationale": "- Stacktrace wskazuje metode mapujaca date.",
+                  "affectedFunction": "Pobieranie biezacych produktow klienta.",
+                  "affectedProcess": "credit-decision-process",
+                  "affectedBoundedContext": "product-configuration",
+                  "affectedTeam": "nieustalone",
+                  "confidence": "high",
+                  "evidenceReferences": [],
+                  "visibilityLimits": []
+                }
+                """);
+
+        assertTrue(result.structuredResponse());
+        assertFalse(result.fallbackResponseUsed());
+        assertEquals("CLASS_CAST_EXCEPTION", result.response().detectedProblem());
+        assertEquals("high", result.response().confidence());
+    }
+
+    @Test
+    void shouldIgnoreNonJsonBracesBeforeEmbeddedJsonObject() {
+        var result = parser.parse("""
+                Note {not json} before the final result.
+
+                {
+                  "detectedProblem": "DOWNSTREAM_TIMEOUT",
+                  "summary": "Timeout w kliencie HTTP.",
+                  "recommendedAction": "- Sprawdz downstream.",
+                  "rationale": "- Log wskazuje timeout.",
+                  "affectedFunction": "Pobranie katalogu dla procesu zamowienia.",
+                  "affectedProcess": "nieustalone",
+                  "affectedBoundedContext": "nieustalone",
+                  "affectedTeam": "nieustalone",
+                  "confidence": "medium",
+                  "evidenceReferences": [],
+                  "visibilityLimits": []
+                }
+                """);
+
+        assertTrue(result.structuredResponse());
+        assertEquals("DOWNSTREAM_TIMEOUT", result.response().detectedProblem());
+    }
+
+    @Test
+    void shouldPreferLaterCompleteEmbeddedJsonOverEarlierPartialJsonObject() {
+        var result = parser.parse("""
+                {"status": "ready"}
+
+                {
+                  "detectedProblem": "DATA_NOT_FOUND",
+                  "summary": "Brak danych dla `caseId`.",
+                  "recommendedAction": "- Sprawdz rekord w DB.",
+                  "rationale": "- Repozytorium zwrocilo pusty wynik.",
+                  "affectedFunction": "Odczyt aktywnej sprawy.",
+                  "affectedProcess": "nieustalone",
+                  "affectedBoundedContext": "nieustalone",
+                  "affectedTeam": "nieustalone",
+                  "confidence": "medium",
+                  "evidenceReferences": [],
+                  "visibilityLimits": []
+                }
+                """);
+
+        assertTrue(result.structuredResponse());
+        assertFalse(result.fallbackResponseUsed());
+        assertEquals("DATA_NOT_FOUND", result.response().detectedProblem());
+    }
+
+    @Test
     void shouldParseJsonWithMarkdownStrings() {
         var result = parser.parse("""
                 {

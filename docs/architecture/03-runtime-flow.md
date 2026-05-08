@@ -469,10 +469,13 @@ do obecnych pol, ale JSON AI zawiera bogatszy kontrakt:
 }
 ```
 
-Parser probuje caly content jako JSON, potem fenced JSON block. Legacy
-labeled parser nie istnieje. Jesli brakuje wymaganych pol, fallback zachowuje
-czesciowo sparsowane pola i ustawia `AI_UNSTRUCTURED_RESPONSE` tylko wtedy,
-gdy brakuje `detectedProblem`.
+Parser probuje caly content jako JSON, potem fenced JSON block, a potem
+kompletny obiekt JSON osadzony w tresci. Ta ostatnia tolerancja obsluguje
+przypadki, gdy model doda krotkie zdanie przed finalnym JSON-em. Jesli nie ma
+kompletnego osadzonego obiektu, pierwszy parsowalny obiekt nadal moze posluzyc
+do fallbacku czesciowo sparsowanych pol. Legacy labeled parser nie istnieje.
+Jesli brakuje wymaganych pol, fallback zachowuje czesciowo sparsowane pola i
+ustawia `AI_UNSTRUCTURED_RESPONSE` tylko wtedy, gdy brakuje `detectedProblem`.
 
 ## 13. Response quality
 

@@ -64,6 +64,8 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("- gitLabBranch: main"));
         assertTrue(prompt.contains("- gitLabGroup: sample/runtime"));
         assertTrue(prompt.contains("Return only valid JSON."));
+        assertTrue(prompt.contains("The final answer must start with `{` and end with `}`."));
+        assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before the JSON."));
         assertTrue(prompt.contains("\"evidenceReferences\": ["));
         assertTrue(prompt.contains("- `00-incident-manifest.json`: Artifact index and analysis context"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 00-incident-manifest.json | mimeType=application/json>>>"));

@@ -86,8 +86,10 @@ public class CopilotIncidentPromptRenderer {
         return """
                 Return the analysis in Polish.
                 Return only valid JSON.
+                The final answer must start with `{` and end with `}`.
                 Do not wrap it in Markdown.
                 Do not add prose before or after JSON.
+                Do not add status text such as "I have all the evidence needed" before the JSON.
                 Use concise professional Markdown in string values where the schema says markdown string.
                 Use `code spans` for technical identifiers such as classes, methods, exceptions, IDs, branches, files, queues, endpoints, or DB objects.
                 Use real markdown bullets separated by newline characters inside markdown string values when listing multiple points.
