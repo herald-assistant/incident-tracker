@@ -230,10 +230,11 @@ Krok `AI_ANALYSIS` moze tez zawierac `usage`: sumaryczne tokeny oraz szczegoly
 input/output/cache/context zebrane z eventow Copilot SDK i zmapowane na
 generyczny kontrakt aplikacji.
 Ten sam krok moze zawierac `aiActivityEvents`, czyli widoczny dla operatora
-runtime trace turnow, context/cache snapshots, lifecycle tools i bledow sesji.
-UI merge'uje `aiActivityEvents` z `toolEvidenceSections` w jeden timeline:
-`assistant.message` opisuje logiczny krok AI, pod nim sa powiazane wywolania
-tools z loaderem/OK/error, a debug JSON jest dostepny na lewej ikonie wpisu.
+runtime trace komunikatow/rozumowania AI, usage/context/cache snapshots,
+lifecycle tools i bledow sesji. UI merge'uje `aiActivityEvents` z
+`toolEvidenceSections` w jedna plaska liste pracy: message/reasoning opisuje
+tok AI, powiazane tools sa kolejnymi wierszami z loaderem/OK/error, a JSON
+debug jest dostepny po rozwinieciu danego wiersza.
 Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
 `POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
 tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.

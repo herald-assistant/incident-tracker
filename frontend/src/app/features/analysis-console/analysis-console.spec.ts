@@ -166,7 +166,13 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     const copyButtons = fixture.nativeElement.querySelectorAll('.chat-message__copy-button');
+    const chatPanel = fixture.nativeElement.querySelector(
+      'details.analysis-chat'
+    ) as HTMLDetailsElement | null;
 
+    expect(chatPanel).not.toBeNull();
+    expect(chatPanel?.open).toBe(true);
+    expect(chatPanel?.querySelector('summary')?.textContent).toContain('Kontynuacja analizy');
     expect(copyButtons).toHaveLength(2);
     expect(copyButtons[0].textContent).toContain('Kopiuj');
     expect(copyButtons[1].textContent).toContain('Kopiuj');

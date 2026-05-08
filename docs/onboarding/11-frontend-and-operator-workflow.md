@@ -61,6 +61,9 @@ Aktualny frontend ma dwa route'y Angulara:
   nowszych pol nadal dzialaly,
 - widok krokow ma specjalne rendery dla logow Elasticsearch, code evidence i
   discovery evidence z GitLaba, runtime signals Dynatrace i wynikow DB tools,
+- finalny krok AI merge'uje `aiActivityEvents` i `toolEvidenceSections` w
+  plaska liste pracy Copilota: message/reasoning, usage/runtime i tools sa
+  osobnymi wierszami z ikona, tekstem, statusem oraz rozwijanymi szczegolami,
 - GitLab tool evidence pokazuje `reason` jako naglowek wpisu; dla pobranego
   kodu pokazuje nazwe/sciezke pliku i kod, a dla discovery tools pokazuje
   kandydatow, grupy flow/class references, outline i rekomendowane dalsze

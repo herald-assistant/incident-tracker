@@ -27,10 +27,10 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
   dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
   pollingiem joba,
-- w ekranie `GET /` ostatni krok AI pokazuje jeden timeline aktywnosci
-  Copilota i user-facing tool evidence: `assistant.message` jako logiczny opis
-  turna, pod nim powiazane tools z loaderem/OK/error oraz technicznym JSON
-  tooltipem na lewej ikonie,
+- w ekranie `GET /` ostatni krok AI pokazuje plaska liste aktywnosci Copilota
+  i user-facing tool evidence: komunikaty/rozumowanie AI, usage/runtime oraz
+  wywolania tools sa laczone w jeden tok wedlug zdarzen z pollingu, a kazdy
+  wiersz ma ikone, prosty tekst, status i rozwijane szczegoly,
 - w ekranie `GET /` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,

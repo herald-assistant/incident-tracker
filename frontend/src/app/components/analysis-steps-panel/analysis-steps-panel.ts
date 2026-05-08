@@ -257,30 +257,27 @@ interface ToolEvidenceTimelineItemView {
   defaultItem: StepEvidenceItemView | null;
 }
 
-interface AiTimelineTurnView {
-  key: string;
-  title: string;
-  meta: string[];
-  entries: AiTimelineEntryView[];
-}
+type AiWorkItemKind = 'message' | 'runtime' | 'tool' | 'usage';
+type AiWorkItemStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'INFO';
 
-interface AiTimelineEntryView {
+interface AiWorkItemView {
   key: string;
-  kind: 'message' | 'runtime' | 'tool';
+  kind: AiWorkItemKind;
   category: string;
   status: string;
   title: string;
   summary: string;
+  previewMarkdown: string;
+  markdownContent: string;
   iconName: string;
   meta: string[];
   technicalTooltip: string;
   timestampMs: number;
-  toolStatus: 'PENDING' | 'COMPLETED' | 'FAILED' | null;
-  toolStatusIcon: string;
-  toolStatusLabel: string;
-  toolStatusTooltip: string;
+  displayStatus: AiWorkItemStatus;
+  displayStatusIcon: string;
+  displayStatusLabel: string;
+  displayStatusTooltip: string;
   toolEvidence: ToolEvidenceTimelineItemView | null;
-  childTools: AiTimelineEntryView[];
 }
 
 interface StepEvidenceSectionView {
@@ -324,7 +321,6 @@ interface StepView {
   showUsage: boolean;
   usageStats: UsageStatView[];
   usageTooltip: string;
-  aiTimelineTurns: AiTimelineTurnView[];
   emptyStateMessage: string;
 }
 
@@ -519,12 +515,15 @@ export class AnalysisStepsPanelComponent {
   private logCopyFeedbackHandle: number | null = null;
   private promptCopyFeedbackHandle: number | null = null;
 
+  protected readonly copilotWorkItems = computed<AiWorkItemView[]>(() =>
+    prepareAiWorkItems(this.aiActivityEvents(), this.toolEvidenceSections())
+  );
+
   protected readonly preparedSteps = computed<StepView[]>(() =>
     this.steps().map((step, index) => {
       const detailSections = prepareStepDetailSections(
         step,
-        this.evidenceSections(),
-        this.toolEvidenceSections()
+        this.evidenceSections()
       );
       const showResultPreview = step.code === 'AI_ANALYSIS' && this.result() !== null;
       const stepPreparedPrompt = resolvePreparedPrompt(
@@ -536,10 +535,6 @@ export class AnalysisStepsPanelComponent {
       const key = buildStepKey(step, index);
       const usageEstimate = estimateAnalysisAiCost(step.usage ?? null);
       const usageStats = buildUsageStats(step.usage ?? null, usageEstimate);
-      const aiTimelineTurns =
-        step.code === 'AI_ANALYSIS'
-          ? prepareAiTimelineTurns(this.aiActivityEvents(), this.toolEvidenceSections())
-          : [];
 
       return {
         key,
@@ -562,10 +557,9 @@ export class AnalysisStepsPanelComponent {
         showUsage: usageStats.length > 0,
         usageStats,
         usageTooltip: buildUsageTooltip(step.usage ?? null, usageEstimate),
-        aiTimelineTurns,
         emptyStateMessage: buildEmptyStateMessage(
           step,
-          detailSections.length + aiTimelineTurns.length,
+          detailSections.length,
           showResultPreview,
           showPreparedPromptView
         )
@@ -964,48 +958,13 @@ function buildPreparedPromptDescription(stepCode: string | null | undefined): st
 
 function prepareStepDetailSections(
   step: AnalysisJobStepResponse,
-  evidenceSections: AnalysisEvidenceSection[],
-  toolEvidenceSections: AnalysisEvidenceSection[]
+  evidenceSections: AnalysisEvidenceSection[]
 ): StepEvidenceSectionView[] {
   if (step.code === 'AI_ANALYSIS') {
     return [];
   }
 
   return prepareEvidenceSections(resolveStepSections(step, evidenceSections));
-}
-
-function prepareToolEvidenceTimelineSections(
-  sections: AnalysisEvidenceSection[]
-): StepEvidenceSectionView[] {
-  const toolEvents = sections
-    .flatMap((section, sectionIndex) =>
-      (section.items || []).map((item, itemIndex) =>
-        prepareToolEvidenceTimelineItem(section, item, itemIndex, sectionIndex)
-      )
-    )
-    .sort(compareToolEvidenceTimelineItems);
-
-  if (toolEvents.length === 0) {
-    return [];
-  }
-
-  return [
-    {
-      key: 'ai-tool-evidence-timeline',
-      title: 'Historia pobrań przez AI',
-      itemCount: toolEvents.length,
-      variant: 'tool-evidence-timeline',
-      items: [],
-      logRows: [],
-      codePanels: [],
-      dynatraceRuntime: null,
-      databaseTools: [],
-      databaseToolTypeCount: new Set(
-        toolEvents.map((event) => event.databaseTool?.toolName).filter(Boolean)
-      ).size,
-      toolEvents
-    }
-  ];
 }
 
 function prepareToolEvidenceTimelineItem(
@@ -1144,14 +1103,6 @@ function buildAiActivityTooltip(event: AnalysisAiActivityEvent): string {
   });
 }
 
-interface AiTimelineTurnBuilder {
-  key: string;
-  turnId: string;
-  interactionId: string;
-  startedAtMs: number;
-  entries: AiTimelineEntryView[];
-}
-
 interface ToolActivityBundle {
   start: AnalysisAiActivityEvent | null;
   complete: AnalysisAiActivityEvent | null;
@@ -1165,39 +1116,28 @@ interface ToolRequestInfo {
   sourceEvent: AnalysisAiActivityEvent;
 }
 
-function prepareAiTimelineTurns(
+function prepareAiWorkItems(
   events: AnalysisAiActivityEvent[],
   toolEvidenceSections: AnalysisEvidenceSection[]
-): AiTimelineTurnView[] {
+): AiWorkItemView[] {
   const sortedEvents = [...(events || [])].sort(compareAiEventsByTimestamp);
   const toolEvidenceItems = prepareTimelineToolEvidenceItems(toolEvidenceSections);
   const toolEvidenceByCallId = mapToolEvidenceByCallId(toolEvidenceItems);
   const toolActivitiesByCallId = mapToolActivitiesByCallId(sortedEvents);
   const toolRequestsByCallId = new Map<string, ToolRequestInfo>();
   const consumedToolCallIds = new Set<string>();
-  const turns: AiTimelineTurnBuilder[] = [];
-  let currentTurn = ensureTimelineTurn(turns, '', '', null);
-  let pendingUsageEvent: AnalysisAiActivityEvent | null = null;
+  const items: AiWorkItemView[] = [];
+  const renderedAssistantTexts: RenderedAssistantText[] = [];
 
   for (const event of sortedEvents) {
     const type = normalizeEventType(event.type);
 
-    if (type === 'assistant.turn_start') {
-      currentTurn = ensureTimelineTurn(
-        turns,
-        event.turnId,
-        event.interactionId,
-        activityTimestampMs(event)
-      );
-      continue;
-    }
-
-    if (type === 'assistant.turn_end') {
+    if (type === 'assistant.turn_start' || type === 'assistant.turn_end') {
       continue;
     }
 
     if (type === 'assistant.usage') {
-      pendingUsageEvent = event;
+      items.push(buildUsageWorkItem(event));
       continue;
     }
 
@@ -1206,8 +1146,15 @@ function prepareAiTimelineTurns(
     }
 
     if (type === 'assistant.message') {
-      const messageEntry = buildAssistantMessageTimelineEntry(event, pendingUsageEvent);
+      const messageEntry = buildAssistantMessageWorkItem(event);
       const toolRequests = extractToolRequests(event);
+      if (
+        shouldRenderAssistantMessageWorkItem(event, toolRequests) &&
+        !isDuplicateAssistantText(messageEntry, renderedAssistantTexts)
+      ) {
+        rememberAssistantText(messageEntry, renderedAssistantTexts);
+        items.push(messageEntry);
+      }
 
       for (const request of toolRequests) {
         if (request.toolCallId) {
@@ -1220,43 +1167,45 @@ function prepareAiTimelineTurns(
         const toolActivity = request.toolCallId
           ? toolActivitiesByCallId.get(request.toolCallId) ?? emptyToolActivityBundle()
           : emptyToolActivityBundle();
-        const toolEntry = buildToolTimelineEntry(
+        const toolEntry = buildToolWorkItem(
           toolEvidence,
           request,
           toolActivity,
-          messageEntry.childTools.length
+          items.length
         );
 
-        messageEntry.childTools.push(toolEntry);
+        items.push(toolEntry);
         if (request.toolCallId) {
           consumedToolCallIds.add(request.toolCallId);
         }
       }
 
-      currentTurn.entries.push(messageEntry);
-      pendingUsageEvent = null;
       continue;
     }
 
     if (type === 'assistant.reasoning') {
-      currentTurn.entries.push(buildAssistantReasoningTimelineEntry(event));
+      const reasoningEntry = buildAssistantReasoningWorkItem(event);
+      if (!isDuplicateAssistantText(reasoningEntry, renderedAssistantTexts)) {
+        rememberAssistantText(reasoningEntry, renderedAssistantTexts);
+        items.push(reasoningEntry);
+      }
       continue;
     }
 
     if (type === 'user.message') {
-      currentTurn.entries.push(buildUserMessageTimelineEntry(event));
+      items.push(buildUserMessageWorkItem(event));
       continue;
     }
 
     if (shouldRenderRuntimeEvent(type)) {
-      currentTurn.entries.push(buildRuntimeTimelineEntry(event));
+      items.push(buildRuntimeWorkItem(event));
     }
   }
 
   const orphanEvidenceToolEntries = toolEvidenceItems
     .filter((toolEvidence) => !toolEvidence.toolCallId || !consumedToolCallIds.has(toolEvidence.toolCallId))
     .map((toolEvidence, index) =>
-      buildToolTimelineEntry(
+      buildToolWorkItem(
         toolEvidence,
         toolEvidence.toolCallId ? toolRequestsByCallId.get(toolEvidence.toolCallId) ?? null : null,
         toolEvidence.toolCallId
@@ -1270,7 +1219,7 @@ function prepareAiTimelineTurns(
       ([toolCallId]) => !consumedToolCallIds.has(toolCallId) && !toolEvidenceByCallId.has(toolCallId)
     )
     .map(([toolCallId, activity], index) =>
-      buildToolTimelineEntry(
+      buildToolWorkItem(
         null,
         toolRequestsByCallId.get(toolCallId) ?? null,
         activity,
@@ -1278,29 +1227,14 @@ function prepareAiTimelineTurns(
       )
     );
   const orphanToolEntries = [...orphanEvidenceToolEntries, ...orphanActivityToolEntries].sort(
-    compareAiTimelineEntries
+    compareAiWorkItems
   );
 
   if (orphanToolEntries.length > 0) {
-    const fallbackTurn = lastTimelineTurnWithEntries(turns) ?? currentTurn;
-    fallbackTurn.entries.push(...orphanToolEntries);
+    items.push(...orphanToolEntries);
   }
 
-  return turns
-    .map((turn, index) => buildTimelineTurnView(turn, index))
-    .filter((turn) => turn.entries.length > 0);
-}
-
-function lastTimelineTurnWithEntries(
-  turns: AiTimelineTurnBuilder[]
-): AiTimelineTurnBuilder | null {
-  for (let index = turns.length - 1; index >= 0; index -= 1) {
-    if (turns[index].entries.length > 0) {
-      return turns[index];
-    }
-  }
-
-  return null;
+  return items.sort(compareAiWorkItems);
 }
 
 function prepareTimelineToolEvidenceItems(
@@ -1315,68 +1249,7 @@ function prepareTimelineToolEvidenceItems(
     .sort(compareToolEvidenceTimelineItems);
 }
 
-function ensureTimelineTurn(
-  turns: AiTimelineTurnBuilder[],
-  turnId: string,
-  interactionId: string,
-  startedAtMs: number | null
-): AiTimelineTurnBuilder {
-  const normalizedTurnId = turnId || '';
-  const normalizedInteractionId = interactionId || '';
-  const existing = turns.find(
-    (turn) =>
-      (normalizedTurnId && turn.turnId === normalizedTurnId) ||
-      (!normalizedTurnId && normalizedInteractionId && turn.interactionId === normalizedInteractionId)
-  );
-
-  if (existing) {
-    return existing;
-  }
-
-  const turn: AiTimelineTurnBuilder = {
-    key: normalizedTurnId || normalizedInteractionId || `implicit-turn-${turns.length}`,
-    turnId: normalizedTurnId,
-    interactionId: normalizedInteractionId,
-    startedAtMs: startedAtMs ?? Number.MAX_SAFE_INTEGER,
-    entries: []
-  };
-
-  turns.push(turn);
-  return turn;
-}
-
-function buildTimelineTurnView(
-  turn: AiTimelineTurnBuilder,
-  index: number
-): AiTimelineTurnView {
-  const sortedEntries = [...turn.entries].sort(compareAiTimelineEntries);
-  const title = turn.turnId ? `Turn ${turn.turnId}` : index === 0 ? 'Input do Copilota' : `Turn ${index + 1}`;
-  const meta: string[] = [];
-
-  if (turn.startedAtMs !== Number.MAX_SAFE_INTEGER) {
-    const startedAt = new Date(turn.startedAtMs).toISOString();
-    const formattedStartedAt = formatDateTime(startedAt);
-    if (formattedStartedAt) {
-      meta.push(formattedStartedAt);
-    }
-  }
-
-  if (turn.interactionId) {
-    meta.push(`interaction ${turn.interactionId}`);
-  }
-
-  return {
-    key: turn.key || `turn-${index}`,
-    title,
-    meta,
-    entries: sortedEntries
-  };
-}
-
-function buildAssistantMessageTimelineEntry(
-  event: AnalysisAiActivityEvent,
-  usageEvent: AnalysisAiActivityEvent | null
-): AiTimelineEntryView {
+function buildAssistantMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
   const toolRequests = extractToolRequests(event);
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
@@ -1384,14 +1257,10 @@ function buildAssistantMessageTimelineEntry(
   const summary =
     nonEmptyValue(contentPreview) ||
     nonEmptyValue(reasoningTextPreview) ||
-    buildAssistantToolRequestSummary(toolRequests) ||
     event.summary ||
+    buildAssistantToolRequestSummary(toolRequests) ||
     'Copilot wykonał kolejny krok analizy.';
   const meta = buildTimelineEventMeta(event);
-
-  if (usageEvent) {
-    meta.push(...buildUsageMeta(usageEvent));
-  }
 
   return {
     key: event.eventId || `assistant-message-${activityTimestampMs(event)}`,
@@ -1400,24 +1269,21 @@ function buildAssistantMessageTimelineEntry(
     status: event.status || 'COMPLETED',
     title: toolRequests.length > 0 ? 'AI wybiera następne sprawdzenia' : event.title || 'Wiadomość AI',
     summary,
+    previewMarkdown: markdownPreview(summary),
+    markdownContent: summary,
     iconName: 'psychology',
     meta,
     technicalTooltip: stringifyPretty({
       event,
-      usage: usageEvent ?? null,
       toolRequests
     }),
     timestampMs: activityTimestampMs(event),
-    toolStatus: null,
-    toolStatusIcon: '',
-    toolStatusLabel: '',
-    toolStatusTooltip: '',
-    toolEvidence: null,
-    childTools: []
+    ...buildDisplayStatus(event.status || 'COMPLETED', event.summary),
+    toolEvidence: null
   };
 }
 
-function buildAssistantReasoningTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEntryView {
+function buildAssistantReasoningWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
   const reasoningTextPreview = stringFromRecord(details, 'reasoningTextPreview');
@@ -1433,20 +1299,27 @@ function buildAssistantReasoningTimelineEntry(event: AnalysisAiActivityEvent): A
       nonEmptyValue(reasoningTextPreview) ||
       event.summary ||
       'Copilot doprecyzował tok analizy.',
+    previewMarkdown: markdownPreview(
+      nonEmptyValue(contentPreview) ||
+        nonEmptyValue(reasoningTextPreview) ||
+        event.summary ||
+        'Copilot doprecyzował tok analizy.'
+    ),
+    markdownContent:
+      nonEmptyValue(contentPreview) ||
+      nonEmptyValue(reasoningTextPreview) ||
+      event.summary ||
+      'Copilot doprecyzował tok analizy.',
     iconName: 'psychology',
     meta: buildTimelineEventMeta(event),
     technicalTooltip: buildAiActivityTooltip(event),
     timestampMs: activityTimestampMs(event),
-    toolStatus: null,
-    toolStatusIcon: '',
-    toolStatusLabel: '',
-    toolStatusTooltip: '',
-    toolEvidence: null,
-    childTools: []
+    ...buildDisplayStatus(event.status || 'INFO', event.summary),
+    toolEvidence: null
   };
 }
 
-function buildUserMessageTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEntryView {
+function buildUserMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
 
@@ -1460,20 +1333,22 @@ function buildUserMessageTimelineEntry(event: AnalysisAiActivityEvent): AiTimeli
       nonEmptyValue(contentPreview) ||
       event.summary ||
       'Aplikacja wysłała prompt i kontekst evidence do sesji Copilota.',
+    previewMarkdown: markdownPreview(
+      nonEmptyValue(contentPreview) ||
+        event.summary ||
+        'Aplikacja wysłała prompt i kontekst evidence do sesji Copilota.'
+    ),
+    markdownContent: '',
     iconName: 'person',
     meta: buildTimelineEventMeta(event),
     technicalTooltip: buildAiActivityTooltip(event),
     timestampMs: activityTimestampMs(event),
-    toolStatus: null,
-    toolStatusIcon: '',
-    toolStatusLabel: '',
-    toolStatusTooltip: '',
-    toolEvidence: null,
-    childTools: []
+    ...buildDisplayStatus(event.status || 'INFO', event.summary),
+    toolEvidence: null
   };
 }
 
-function buildRuntimeTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEntryView {
+function buildRuntimeWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
   const type = normalizeEventType(event.type);
   const status = String(event.status || '').toUpperCase();
   const failed = status === 'FAILED' || type === 'session.error';
@@ -1485,32 +1360,44 @@ function buildRuntimeTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEn
     status: failed ? 'FAILED' : event.status || 'INFO',
     title: event.title || formatAiActivityType(event.type),
     summary: event.summary || buildRuntimeSummary(event),
+    previewMarkdown: '',
+    markdownContent: '',
     iconName: failed ? 'error' : runtimeEventIcon(type),
     meta: buildTimelineEventMeta(event),
     technicalTooltip: buildAiActivityTooltip(event),
     timestampMs: activityTimestampMs(event),
-    toolStatus: null,
-    toolStatusIcon: '',
-    toolStatusLabel: '',
-    toolStatusTooltip: '',
-    toolEvidence: null,
-    childTools: []
+    ...buildDisplayStatus(failed ? 'FAILED' : event.status || 'INFO', event.summary),
+    toolEvidence: null
   };
 }
 
-function buildToolTimelineEntry(
+function buildUsageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
+  return {
+    key: event.eventId || `assistant-usage-${activityTimestampMs(event)}`,
+    kind: 'usage',
+    category: event.category || 'USAGE',
+    status: event.status || 'INFO',
+    title: event.title || 'Zużycie modelu',
+    summary: event.summary || buildUsageSummary(event),
+    previewMarkdown: '',
+    markdownContent: '',
+    iconName: 'query_stats',
+    meta: [...buildTimelineEventMeta(event), ...buildUsageMeta(event)],
+    technicalTooltip: buildAiActivityTooltip(event),
+    timestampMs: activityTimestampMs(event),
+    ...buildDisplayStatus(event.status || 'INFO', event.summary),
+    toolEvidence: null
+  };
+}
+
+function buildToolWorkItem(
   toolEvidence: ToolEvidenceTimelineItemView | null,
   request: ToolRequestInfo | null,
   activity: ToolActivityBundle,
   index: number
-): AiTimelineEntryView {
+): AiWorkItemView {
   const status = resolveToolTimelineStatus(toolEvidence, activity);
-  const timestampMs =
-    activity.start
-      ? activityTimestampMs(activity.start)
-      : activity.complete
-        ? activityTimestampMs(activity.complete)
-        : Number.MAX_SAFE_INTEGER - 100_000 + (toolEvidence?.captureOrder ?? index);
+  const timestampMs = resolveToolWorkItemTimestamp(toolEvidence, request, activity, index);
   const toolName =
     toolEvidence?.toolName ||
     request?.toolName ||
@@ -1534,17 +1421,36 @@ function buildToolTimelineEntry(
     status,
     title: formatToolTimelineTitle(toolEvidence, toolName),
     summary: reason,
+    previewMarkdown: '',
+    markdownContent: '',
     iconName: toolEvidence?.iconName || toolIconByName(toolName),
     meta,
     technicalTooltip: buildMergedToolTooltip(toolEvidence, request, activity),
     timestampMs,
-    toolStatus: status as 'PENDING' | 'COMPLETED' | 'FAILED',
-    toolStatusIcon: toolStatusIcon(status),
-    toolStatusLabel: toolStatusLabel(status),
-    toolStatusTooltip: toolStatusTooltip(status, activity.complete),
-    toolEvidence,
-    childTools: []
+    ...buildDisplayStatus(status, toolStatusTooltip(status, activity.complete)),
+    toolEvidence
   };
+}
+
+function resolveToolWorkItemTimestamp(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  request: ToolRequestInfo | null,
+  activity: ToolActivityBundle,
+  index: number
+): number {
+  if (activity.start) {
+    return activityTimestampMs(activity.start);
+  }
+
+  if (request) {
+    return activityTimestampMs(request.sourceEvent) + Math.min(index + 1, 999) / 1000;
+  }
+
+  if (activity.complete) {
+    return activityTimestampMs(activity.complete);
+  }
+
+  return Number.MAX_SAFE_INTEGER - 100_000 + (toolEvidence?.captureOrder ?? index);
 }
 
 function mapToolEvidenceByCallId(
@@ -1643,6 +1549,72 @@ function buildAssistantToolRequestSummary(toolRequests: ToolRequestInfo[]): stri
     : `AI zaplanowało ${toolRequests.length} wywołania tools: ${toolNames.join(', ')}.`;
 }
 
+function markdownPreview(content: string): string {
+  const lines = nonEmptyValue(content)
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.slice(0, 2).join('\n');
+}
+
+interface RenderedAssistantText {
+  text: string;
+  timestampMs: number;
+}
+
+const ASSISTANT_TEXT_DEDUPE_WINDOW_MS = 2_000;
+
+function shouldRenderAssistantMessageWorkItem(
+  event: AnalysisAiActivityEvent,
+  toolRequests: ToolRequestInfo[]
+): boolean {
+  const details = activityDetails(event);
+  const hasVisibleAiText = Boolean(
+    nonEmptyValue(stringFromRecord(details, 'contentPreview')) ||
+      nonEmptyValue(stringFromRecord(details, 'reasoningTextPreview'))
+  );
+
+  if (hasVisibleAiText) {
+    return true;
+  }
+
+  return toolRequests.length === 0 && Boolean(nonEmptyValue(event.summary));
+}
+
+function isDuplicateAssistantText(
+  item: AiWorkItemView,
+  renderedTexts: RenderedAssistantText[]
+): boolean {
+  const text = normalizeAssistantText(item.summary);
+  if (!text) {
+    return false;
+  }
+
+  return renderedTexts.some(
+    (rendered) =>
+      rendered.text === text &&
+      Math.abs(rendered.timestampMs - item.timestampMs) <= ASSISTANT_TEXT_DEDUPE_WINDOW_MS
+  );
+}
+
+function rememberAssistantText(
+  item: AiWorkItemView,
+  renderedTexts: RenderedAssistantText[]
+): void {
+  const text = normalizeAssistantText(item.summary);
+  if (!text) {
+    return;
+  }
+
+  renderedTexts.push({ text, timestampMs: item.timestampMs });
+}
+
+function normalizeAssistantText(value: string): string {
+  return nonEmptyValue(value).replace(/\s+/g, ' ').toLowerCase();
+}
+
 function buildRuntimeSummary(event: AnalysisAiActivityEvent): string {
   const type = normalizeEventType(event.type);
   const details = activityDetails(event);
@@ -1667,6 +1639,23 @@ function buildRuntimeSummary(event: AnalysisAiActivityEvent): string {
   return 'Copilot zgłosił zdarzenie runtime.';
 }
 
+function buildUsageSummary(event: AnalysisAiActivityEvent): string {
+  const details = activityDetails(event);
+  const inputTokens = numberFromRecord(details, 'inputTokens');
+  const outputTokens = numberFromRecord(details, 'outputTokens');
+  const cacheReadTokens = numberFromRecord(details, 'cacheReadTokens');
+  const model = stringFromRecord(details, 'model');
+
+  return [
+    model ? `Model ${model}` : '',
+    inputTokens !== null ? `input ${formatCompactTokenCount(inputTokens)}` : '',
+    cacheReadTokens !== null ? `cache ${formatCompactTokenCount(cacheReadTokens)}` : '',
+    outputTokens !== null ? `output ${formatCompactTokenCount(outputTokens)}` : ''
+  ]
+    .filter(Boolean)
+    .join(', ') || 'Copilot zgłosił zużycie tokenów dla tego kroku.';
+}
+
 function buildTimelineEventMeta(event: AnalysisAiActivityEvent): string[] {
   const meta: string[] = [];
   const formattedTimestamp = formatDateTime(event.timestamp);
@@ -1679,6 +1668,69 @@ function buildTimelineEventMeta(event: AnalysisAiActivityEvent): string[] {
   }
 
   return meta;
+}
+
+function buildDisplayStatus(
+  rawStatus: string,
+  tooltip: string | null | undefined = null
+): Pick<
+  AiWorkItemView,
+  'displayStatus' | 'displayStatusIcon' | 'displayStatusLabel' | 'displayStatusTooltip'
+> {
+  const normalizedStatus = normalizeWorkItemStatus(rawStatus);
+
+  return {
+    displayStatus: normalizedStatus,
+    displayStatusIcon: workItemStatusIcon(normalizedStatus),
+    displayStatusLabel: workItemStatusLabel(normalizedStatus),
+    displayStatusTooltip: tooltip || workItemStatusLabel(normalizedStatus)
+  };
+}
+
+function normalizeWorkItemStatus(status: string): AiWorkItemStatus {
+  const normalized = String(status || '').toUpperCase();
+
+  if (normalized === 'FAILED' || normalized === 'ERROR') {
+    return 'FAILED';
+  }
+
+  if (normalized === 'COMPLETED' || normalized === 'DONE' || normalized === 'OK') {
+    return 'COMPLETED';
+  }
+
+  if (normalized === 'STARTED' || normalized === 'PENDING' || normalized === 'IN_PROGRESS') {
+    return 'PENDING';
+  }
+
+  return 'INFO';
+}
+
+function workItemStatusIcon(status: AiWorkItemStatus): string {
+  if (status === 'FAILED') {
+    return 'error';
+  }
+
+  if (status === 'COMPLETED') {
+    return 'check_circle';
+  }
+
+  return 'info';
+}
+
+function workItemStatusLabel(status: AiWorkItemStatus): string {
+  if (status === 'FAILED') {
+    return 'Błąd';
+  }
+
+  if (status === 'COMPLETED') {
+    return 'OK';
+  }
+
+  if (status === 'PENDING') {
+    return 'W toku';
+  }
+
+  return 'Info';
 }
 
 function buildUsageMeta(event: AnalysisAiActivityEvent): string[] {
@@ -1895,11 +1947,31 @@ function compareAiEventsByTimestamp(
   return activityTimestampMs(left) - activityTimestampMs(right);
 }
 
-function compareAiTimelineEntries(
-  left: AiTimelineEntryView,
-  right: AiTimelineEntryView
+function compareAiWorkItems(
+  left: AiWorkItemView,
+  right: AiWorkItemView
 ): number {
-  return left.timestampMs - right.timestampMs || left.key.localeCompare(right.key);
+  return (
+    left.timestampMs - right.timestampMs ||
+    aiWorkItemSortRank(left) - aiWorkItemSortRank(right) ||
+    left.key.localeCompare(right.key)
+  );
+}
+
+function aiWorkItemSortRank(item: AiWorkItemView): number {
+  if (item.kind === 'message') {
+    return 0;
+  }
+
+  if (item.kind === 'tool') {
+    return 1;
+  }
+
+  if (item.kind === 'usage') {
+    return 2;
+  }
+
+  return 3;
 }
 
 function activityTimestampMs(event: AnalysisAiActivityEvent): number {

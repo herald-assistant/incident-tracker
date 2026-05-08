@@ -497,11 +497,11 @@ jako zuzycie tokenow/kosztu. Dane, ktorych operator nie widzi, nie sa obecnie
 utrzymywane jako osobny feature runtime.
 
 Oprocz agregowanego usage runtime publikuje `AnalysisAiActivityEvent`. To jest
-jawny productized trace dla operatora: pokazuje turny wykonywane pomiedzy
-wywolaniami tools, lifecycle tools, context/cache snapshots i bledy sesji.
-UI nie pokazuje tych eventow jako osobnej listy technicznej; merge'uje je z
-`toolEvidenceSections` w jeden timeline analizy. `details` pozostaje JSON-ready
-payloadem dla debug tooltipa na lewej ikonie wpisu.
+jawny productized trace dla operatora: pokazuje komunikaty/rozumowanie AI,
+lifecycle tools, context/cache snapshots i bledy sesji. UI nie pokazuje tych
+eventow jako osobnej listy technicznej; merge'uje je z `toolEvidenceSections`
+w jeden tok pracy analizy. `details` pozostaje JSON-ready payloadem w
+rozwijanych szczegolach wpisu.
 
 ## 15. Job state i UI
 
@@ -510,22 +510,23 @@ jest dostepny nawet wtedy, gdy execution failuje.
 
 `toolEvidenceSections` oraz `aiActivityEvents` sa osobnymi polami job response
 i moga byc aktualizowane podczas sesji AI przez listenery. Sa jednak jednym
-mechanizmem prezentacji w UI: frontend buduje z nich merged timeline
+mechanizmem prezentacji w UI: frontend buduje z nich plaska liste pracy
 `AI_ANALYSIS`. UI nie zalezy od typow Copilot SDK.
 
 Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
 `shared.ai.AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
 szczegolami zebranymi z eventow Copilota.
 
-Timeline AI grupuje wpisy per turn. `assistant.message` jest wpisem opisujacym
-logiczny krok AI, a powiazane wywolania tools sa renderowane pod nim z tym samym
-stylem timeline. Pending tool pokazuje loader, success ikone OK, a failure ikone
-bledu z tooltipem komunikatu. `session.usage_info`,
-`session.truncation`, `session.compaction_complete`, `session.context_changed`
-i `session.error` sa wstawiane w timeline zgodnie z timestampem. Techniczne
-wejscie toola (`toolArguments`, `toolCallId`, `toolName`) oraz raw event details
-trafiaja do JSON tooltipa na lewej ikonie. Follow-up chat moze miec wlasne
-`toolEvidenceSections` i `aiActivityEvents` przypisane do wiadomosci asystenta.
+Lista pracy AI nie zagniezdza turnow. `assistant.message` i
+`assistant.reasoning` sa wpisami opisujacymi tok myslenia AI, a powiazane
+wywolania tools sa renderowane jako kolejne, rownorzedne wiersze z tym samym
+statusem wykonania: loader, OK, blad albo info. `assistant.usage`,
+`session.usage_info`, `session.truncation`, `session.compaction_complete`,
+`session.context_changed` i `session.error` sa wstawiane zgodnie z timestampem.
+Techniczne wejscie toola (`toolArguments`, `toolCallId`, `toolName`) oraz raw
+event details trafiaja do rozwijanych szczegolow wiersza. Follow-up chat moze
+miec wlasne `toolEvidenceSections` i `aiActivityEvents` przypisane do
+wiadomosci asystenta.
 
 Job request UI zawiera `correlationId` oraz opcjonalne preferencje AI
 (`model`, `reasoningEffort`). `gitLabGroup` pochodzi z konfiguracji, a

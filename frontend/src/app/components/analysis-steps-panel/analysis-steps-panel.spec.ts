@@ -208,23 +208,84 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const timelineEntries = Array.from(compiled.querySelectorAll('.ai-timeline-entry'));
-    const technicalTooltip = compiled
-      .querySelector('.ai-timeline-entry--runtime .ai-timeline-entry__debug-trigger')
-      ?.getAttribute('data-technical-tooltip') ?? '';
-    const pendingTool = compiled.querySelector('.ai-timeline-entry__status--pending');
+    const progressPanel = compiled.querySelector('details.panel-card--progress');
+    const copilotPanel = compiled.querySelector('details.ai-workflow-panel');
+    const timelineEntries = Array.from(compiled.querySelectorAll('.ai-work-item'));
+    const runtimePayload =
+      compiled.querySelector('.ai-work-item--runtime .ai-work-item__technical pre')
+        ?.textContent ?? '';
+    const pendingTool = compiled.querySelector('.ai-work-item__status--pending');
+    const visibleTexts = Array.from(
+      compiled.querySelectorAll(
+        '.ai-work-item__text, .ai-work-item__markdown-preview .markdown-content'
+      )
+    ).map((element) => element.textContent?.trim() ?? '');
 
+    expect(progressPanel).not.toBeNull();
+    expect(copilotPanel).not.toBeNull();
     expect(compiled.textContent).toContain('Przebieg pracy Copilota');
-    expect(compiled.textContent).toContain('AI wybiera następne sprawdzenia');
+    expect(compiled.textContent).toContain('Tok działania AI');
     expect(compiled.textContent).toContain('Najpierw analizuję stack trace i brakujący kontekst kodu.');
     expect(compiled.textContent).toContain('Sprawdzam repozytorium przed uruchomieniem toola.');
     expect(compiled.textContent).toContain('Kontekst sesji');
     expect(compiled.textContent).toContain('Sprawdzam liczbę rekordów dla correlationId.');
     expect(compiled.textContent).toContain('cache 1');
+    expect(visibleTexts.indexOf('Sprawdzam repozytorium przed uruchomieniem toola.')).toBeLessThan(
+      visibleTexts.indexOf('Sprawdzam liczbę rekordów dla correlationId.')
+    );
+    expect(visibleTexts).not.toContain('Copilot poprosił o 1 wywołanie narzędzia.');
     expect(timelineEntries.length).toBeGreaterThanOrEqual(3);
     expect(pendingTool).not.toBeNull();
-    expect(technicalTooltip).toContain('"currentTokens": 9200');
-    expect(technicalTooltip).toContain('"messagesLength": 6');
+    expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
+    expect(runtimePayload).toContain('"currentTokens": 9200');
+    expect(runtimePayload).toContain('"messagesLength": 6');
+  });
+
+  it('should render assistant markdown as a two-line preview and full content in details', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      {
+        eventId: 'event-message-markdown',
+        parentEventId: '',
+        type: 'assistant.message',
+        category: 'MESSAGE',
+        status: 'COMPLETED',
+        title: 'Wiadomość AI',
+        summary: 'AI doprecyzowało hipotezę.',
+        turnId: '',
+        interactionId: 'interaction-1',
+        toolCallId: '',
+        toolName: '',
+        timestamp: '2026-04-14T12:00:13.800Z',
+        details: {
+          contentPreview: [
+            'Widzę **główną hipotezę** w kodzie.',
+            '- pierwszy trop',
+            '- drugi trop',
+            '- trzeci trop'
+          ].join('\n')
+        }
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const preview = compiled.querySelector(
+      '.ai-work-item__markdown-preview .markdown-content'
+    ) as HTMLElement | null;
+    const full = compiled.querySelector(
+      '.ai-work-item__markdown-full .markdown-content'
+    ) as HTMLElement | null;
+
+    expect(preview?.innerHTML).toContain('<strong>główną hipotezę</strong>');
+    expect(preview?.textContent).toContain('pierwszy trop');
+    expect(preview?.textContent).not.toContain('drugi trop');
+    expect(full?.innerHTML).toContain('<strong>główną hipotezę</strong>');
+    expect(full?.textContent).toContain('trzeci trop');
   });
 
   it('should hide the prepared prompt on a failed AI step when no result is available', async () => {
@@ -254,10 +315,10 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const panel = compiled.querySelector('.ai-timeline-entry--tool') as HTMLElement | null;
-    const reason = panel?.querySelector('.ai-timeline-entry__summary') as HTMLElement | null;
-    const icon = panel?.querySelector('.ai-timeline-entry__debug-trigger mat-icon') as HTMLElement | null;
-    const status = panel?.querySelector('.ai-timeline-entry__status--done') as HTMLElement | null;
+    const panel = compiled.querySelector('.ai-work-item--tool') as HTMLElement | null;
+    const reason = panel?.querySelector('.ai-work-item__text') as HTMLElement | null;
+    const icon = panel?.querySelector('.ai-work-item__icon') as HTMLElement | null;
+    const status = panel?.querySelector('.ai-work-item__status--done') as HTMLElement | null;
 
     expect(panel).not.toBeNull();
     expect(reason?.textContent?.trim()).toBe('Sprawdzam fragment klienta z timeoutem.');
@@ -266,6 +327,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).toContain('CatalogGatewayClient');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
     expect(compiled.textContent).not.toContain('Powód pobrania');
+    expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
   });
 
   it('should render GitLab discovery tool details on the final analysis step', async () => {
@@ -278,9 +340,9 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const panel = compiled.querySelector('.ai-timeline-entry--tool') as HTMLElement | null;
-    const reason = panel?.querySelector('.ai-timeline-entry__summary') as HTMLElement | null;
-    const icon = panel?.querySelector('.ai-timeline-entry__debug-trigger mat-icon') as HTMLElement | null;
+    const panel = compiled.querySelector('.ai-work-item--tool') as HTMLElement | null;
+    const reason = panel?.querySelector('.ai-work-item__text') as HTMLElement | null;
+    const icon = panel?.querySelector('.ai-work-item__icon') as HTMLElement | null;
     const content = compiled.textContent || '';
 
     expect(reason?.textContent?.trim()).toBe('Szukam kontekstu przepływu wokół repozytorium.');
@@ -291,6 +353,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).toContain('OrderRepository.java');
     expect(content).toContain('orders-api · src/main/java/com/example/orders/OrderRepository.java · release/2026.04');
     expect(content).toContain('orders-api:src/main/java/com/example/orders/OrderRepository.java');
+    expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
   });
 
   it('should render AI tool evidence chronologically in the unified timeline', async () => {
@@ -308,12 +371,12 @@ describe('AnalysisStepsPanelComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const reasons = Array.from(
       compiled.querySelectorAll(
-        '.ai-timeline-entry--tool > .ai-timeline-entry__body > .ai-timeline-entry__summary'
+        '.ai-work-item--tool .ai-work-item__text'
       )
     ).map((element) => element.textContent?.trim());
     const icons = Array.from(
       compiled.querySelectorAll(
-        '.ai-timeline-entry--tool > .ai-timeline-entry__debug-trigger mat-icon'
+        '.ai-work-item--tool .ai-work-item__icon'
       )
     ).map((element) => element.textContent?.trim());
     const content = compiled.textContent || '';
@@ -328,10 +391,11 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).toContain('"tableName": "ORDER_EVENT"');
     expect(content).toContain('"count": 3');
     expect(content).not.toContain('Powód sprawdzenia');
+    expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
 
     const toolTooltip = compiled
-      .querySelector('.ai-timeline-entry--tool .ai-timeline-entry__debug-trigger')
-      ?.getAttribute('data-technical-tooltip') ?? '';
+      .querySelector('.ai-work-item--tool .ai-work-item__technical pre')
+      ?.textContent ?? '';
     expect(toolTooltip).toContain('"toolArguments"');
     expect(toolTooltip).toContain('"tableName": "ORDER_EVENT"');
   });
