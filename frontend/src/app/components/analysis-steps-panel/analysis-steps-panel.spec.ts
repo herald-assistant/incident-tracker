@@ -216,6 +216,8 @@ describe('AnalysisStepsPanelComponent', () => {
 
     expect(compiled.textContent).toContain('Przebieg pracy Copilota');
     expect(compiled.textContent).toContain('AI wybiera następne sprawdzenia');
+    expect(compiled.textContent).toContain('Najpierw analizuję stack trace i brakujący kontekst kodu.');
+    expect(compiled.textContent).toContain('Sprawdzam repozytorium przed uruchomieniem toola.');
     expect(compiled.textContent).toContain('Kontekst sesji');
     expect(compiled.textContent).toContain('Sprawdzam liczbę rekordów dla correlationId.');
     expect(compiled.textContent).toContain('cache 1');
@@ -775,6 +777,24 @@ function buildAiActivityEvents(): AnalysisAiActivityEvent[] {
       }
     },
     {
+      eventId: 'event-reasoning-1',
+      parentEventId: '',
+      type: 'assistant.reasoning',
+      category: 'MESSAGE',
+      status: 'INFO',
+      title: 'Rozumowanie AI',
+      summary: 'Najpierw analizuję stack trace i brakujący kontekst kodu.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-04-14T12:00:13.600Z',
+      details: {
+        reasoningId: 'reasoning-1',
+        contentPreview: 'Najpierw analizuję stack trace i brakujący kontekst kodu.'
+      }
+    },
+    {
       eventId: 'event-message-1',
       parentEventId: '',
       type: 'assistant.message',
@@ -789,6 +809,7 @@ function buildAiActivityEvents(): AnalysisAiActivityEvent[] {
       timestamp: '2026-04-14T12:00:13.800Z',
       details: {
         contentPreview: '',
+        reasoningTextPreview: 'Sprawdzam repozytorium przed uruchomieniem toola.',
         toolRequestCount: 1,
         toolRequests: [
           {

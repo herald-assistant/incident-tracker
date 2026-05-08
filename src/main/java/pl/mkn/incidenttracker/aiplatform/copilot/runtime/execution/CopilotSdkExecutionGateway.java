@@ -262,6 +262,28 @@ public class CopilotSdkExecutionGateway {
             );
         }
 
+        if (event instanceof AssistantReasoningEvent assistantReasoningEvent) {
+            var data = assistantReasoningEvent.getData();
+            if (data == null) {
+                return activity(event, "MESSAGE", "INFO", "Rozumowanie AI", "Copilot doprecyzował tok analizy.", null, null, null, null, details);
+            }
+            put(details, "reasoningId", data.reasoningId());
+            put(details, "contentPreview", abbreviate(data.content(), 1_200));
+            put(details, "contentLength", data.content() != null ? data.content().length() : 0);
+            return activity(
+                    event,
+                    "MESSAGE",
+                    "INFO",
+                    "Rozumowanie AI",
+                    firstSentence(data.content(), "Copilot doprecyzował tok analizy."),
+                    null,
+                    null,
+                    null,
+                    null,
+                    details
+            );
+        }
+
         if (event instanceof AssistantMessageEvent assistantMessageEvent) {
             var data = assistantMessageEvent.getData();
             if (data == null) {
@@ -275,6 +297,8 @@ public class CopilotSdkExecutionGateway {
             put(details, "contentLength", data.content() != null ? data.content().length() : 0);
             put(details, "toolRequestCount", toolRequestCount);
             put(details, "toolRequests", data.toolRequests());
+            put(details, "reasoningTextPreview", abbreviate(data.reasoningText(), 1_200));
+            put(details, "reasoningTextLength", data.reasoningText() != null ? data.reasoningText().length() : 0);
             put(details, "hasReasoningText", StringUtils.hasText(data.reasoningText()));
             put(details, "hasReasoningOpaque", StringUtils.hasText(data.reasoningOpaque()));
             put(details, "hasEncryptedContent", StringUtils.hasText(data.encryptedContent()));
@@ -283,9 +307,7 @@ public class CopilotSdkExecutionGateway {
                     "MESSAGE",
                     "COMPLETED",
                     "Wiadomość AI",
-                    toolRequestCount > 0
-                            ? "Copilot poprosił o " + toolRequestCount + " wywołań narzędzi."
-                            : firstSentence(data.content(), "Copilot zwrócił wiadomość bez kolejnego tool calla."),
+                    assistantMessageSummary(data.content(), data.reasoningText(), toolRequestCount),
                     null,
                     data.interactionId(),
                     null,
@@ -630,6 +652,22 @@ public class CopilotSdkExecutionGateway {
                 + ", input " + inputTokens
                 + ", cache " + cacheReadTokens
                 + ", output " + outputTokens + " tokenów.";
+    }
+
+    private String assistantMessageSummary(String content, String reasoningText, int toolRequestCount) {
+        if (StringUtils.hasText(content)) {
+            return firstSentence(content, "Copilot zwrócił wiadomość.");
+        }
+
+        if (StringUtils.hasText(reasoningText)) {
+            return firstSentence(reasoningText, "Copilot uzasadnił kolejny krok analizy.");
+        }
+
+        if (toolRequestCount > 0) {
+            return "Copilot poprosił o " + toolRequestCount + " wywołań narzędzi.";
+        }
+
+        return "Copilot zwrócił wiadomość bez kolejnego tool calla.";
     }
 
     private String firstSentence(String value, String fallback) {

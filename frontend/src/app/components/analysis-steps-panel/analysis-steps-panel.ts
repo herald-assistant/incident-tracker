@@ -1238,6 +1238,11 @@ function prepareAiTimelineTurns(
       continue;
     }
 
+    if (type === 'assistant.reasoning') {
+      currentTurn.entries.push(buildAssistantReasoningTimelineEntry(event));
+      continue;
+    }
+
     if (type === 'user.message') {
       currentTurn.entries.push(buildUserMessageTimelineEntry(event));
       continue;
@@ -1375,8 +1380,10 @@ function buildAssistantMessageTimelineEntry(
   const toolRequests = extractToolRequests(event);
   const details = activityDetails(event);
   const contentPreview = stringFromRecord(details, 'contentPreview');
+  const reasoningTextPreview = stringFromRecord(details, 'reasoningTextPreview');
   const summary =
     nonEmptyValue(contentPreview) ||
+    nonEmptyValue(reasoningTextPreview) ||
     buildAssistantToolRequestSummary(toolRequests) ||
     event.summary ||
     'Copilot wykonał kolejny krok analizy.';
@@ -1400,6 +1407,35 @@ function buildAssistantMessageTimelineEntry(
       usage: usageEvent ?? null,
       toolRequests
     }),
+    timestampMs: activityTimestampMs(event),
+    toolStatus: null,
+    toolStatusIcon: '',
+    toolStatusLabel: '',
+    toolStatusTooltip: '',
+    toolEvidence: null,
+    childTools: []
+  };
+}
+
+function buildAssistantReasoningTimelineEntry(event: AnalysisAiActivityEvent): AiTimelineEntryView {
+  const details = activityDetails(event);
+  const contentPreview = stringFromRecord(details, 'contentPreview');
+  const reasoningTextPreview = stringFromRecord(details, 'reasoningTextPreview');
+
+  return {
+    key: event.eventId || `assistant-reasoning-${activityTimestampMs(event)}`,
+    kind: 'message',
+    category: event.category || 'MESSAGE',
+    status: event.status || 'INFO',
+    title: event.title || 'Rozumowanie AI',
+    summary:
+      nonEmptyValue(contentPreview) ||
+      nonEmptyValue(reasoningTextPreview) ||
+      event.summary ||
+      'Copilot doprecyzował tok analizy.',
+    iconName: 'psychology',
+    meta: buildTimelineEventMeta(event),
+    technicalTooltip: buildAiActivityTooltip(event),
     timestampMs: activityTimestampMs(event),
     toolStatus: null,
     toolStatusIcon: '',

@@ -5,6 +5,7 @@ import com.github.copilot.sdk.CopilotClient;
 import com.github.copilot.sdk.CopilotSession;
 import com.github.copilot.sdk.events.AbstractSessionEvent;
 import com.github.copilot.sdk.events.AssistantMessageEvent;
+import com.github.copilot.sdk.events.AssistantReasoningEvent;
 import com.github.copilot.sdk.events.AssistantUsageEvent;
 import com.github.copilot.sdk.events.SessionUsageInfoEvent;
 import com.github.copilot.sdk.json.CopilotClientOptions;
@@ -14,9 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 
-import java.time.Duration;
 import java.io.Closeable;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -27,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
@@ -203,6 +206,83 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
+    void shouldPublishReasoningTextInActivityEvents() {
+        var properties = new CopilotSdkProperties();
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
+        var sessionId = "analysis-reasoning";
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var preparedRequest = new CopilotPreparedSession(
+                "corr-reasoning",
+                new CopilotClientOptions(),
+                new SessionConfig().setSessionId(sessionId),
+                new MessageOptions().setPrompt("Diagnose incident"),
+                "Diagnose incident",
+                Map.of()
+        ).withActivitySink(activities::add);
+        var eventHandler = new AtomicReference<Consumer<AbstractSessionEvent>>();
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(any(SessionConfig.class))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn(sessionId);
+            when(session.on(isA(Consumer.class))).thenAnswer(invocation -> {
+                @SuppressWarnings("unchecked")
+                var handler = (Consumer<AbstractSessionEvent>) invocation.getArgument(0);
+                eventHandler.set(handler);
+                return (Closeable) () -> {
+                };
+            });
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenAnswer(invocation -> {
+                        var reasoningText = "Analizuję stack trace przed wywołaniem toola. Potem sprawdzę repozytorium.";
+                        eventHandler.get().accept(assistantReasoning("reasoning-1", reasoningText));
+                        eventHandler.get().accept(assistantMessageWithReasoning(
+                                "",
+                                reasoningText,
+                                List.of(new AssistantMessageEvent.AssistantMessageData.ToolRequest(
+                                        "tool-call-1",
+                                        "gitlab_find_class_references",
+                                        Map.of("reason", "Sprawdzam klasę z stack trace.")
+                                ))
+                        ));
+                        return CompletableFuture.completedFuture(assistantMessage("Structured answer"));
+                    });
+        })) {
+            var response = gateway.execute(preparedRequest);
+
+            assertEquals("Structured answer", response.content());
+            var reasoningActivity = activities.stream()
+                    .filter(activity -> "assistant.reasoning".equals(activity.type()))
+                    .findFirst()
+                    .orElseThrow();
+            var messageActivity = activities.stream()
+                    .filter(activity -> "assistant.message".equals(activity.type()))
+                    .findFirst()
+                    .orElseThrow();
+
+            assertEquals("Rozumowanie AI", reasoningActivity.title());
+            assertEquals("Analizuję stack trace przed wywołaniem toola.", reasoningActivity.summary());
+            assertEquals(
+                    "Analizuję stack trace przed wywołaniem toola. Potem sprawdzę repozytorium.",
+                    reasoningActivity.details().get("contentPreview")
+            );
+            assertEquals("Analizuję stack trace przed wywołaniem toola.", messageActivity.summary());
+            assertEquals(
+                    "Analizuję stack trace przed wywołaniem toola. Potem sprawdzę repozytorium.",
+                    messageActivity.details().get("reasoningTextPreview")
+            );
+            assertEquals(1, messageActivity.details().get("toolRequestCount"));
+        }
+    }
+
+    @Test
     void shouldNotClosePreparedRequestAfterExecution() {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
@@ -245,6 +325,34 @@ class CopilotSdkExecutionGatewayTest {
                 null,
                 null,
                 null
+        ));
+        return event;
+    }
+
+    private AssistantMessageEvent assistantMessageWithReasoning(
+            String content,
+            String reasoningText,
+            List<AssistantMessageEvent.AssistantMessageData.ToolRequest> toolRequests
+    ) {
+        var event = new AssistantMessageEvent();
+        event.setData(new AssistantMessageEvent.AssistantMessageData(
+                "message-reasoning",
+                content,
+                toolRequests,
+                null,
+                "interaction-reasoning",
+                "reasoning-1",
+                reasoningText,
+                null
+        ));
+        return event;
+    }
+
+    private AssistantReasoningEvent assistantReasoning(String reasoningId, String content) {
+        var event = new AssistantReasoningEvent();
+        event.setData(new AssistantReasoningEvent.AssistantReasoningData(
+                reasoningId,
+                content
         ));
         return event;
     }
