@@ -88,6 +88,27 @@ class CopilotToolBudgetPolicyTest {
         assertTrue(denied.reason().contains("GitLab returned character budget already exhausted"));
     }
 
+    @Test
+    void shouldApplyOperationalContextCallAndReturnedCharacterLimits() {
+        var properties = properties(BudgetMode.HARD);
+        properties.setMaxOperationalContextCalls(1);
+        properties.setMaxOperationalContextReturnedCharacters(5);
+        var registry = registerBudget(properties);
+        var guard = new CopilotToolBudgetPolicy(registry);
+
+        assertFalse(guard.beforeInvocation("analysis-run-1", "opctx_search", "{}").denied());
+        var postCall = guard.afterInvocation("analysis-run-1", "opctx_search", "123456");
+        assertTrue(postCall.softLimitExceeded());
+
+        var denied = guard.beforeInvocation("analysis-run-1", "opctx_get_entity", "{}");
+
+        assertTrue(denied.denied());
+        assertTrue(denied.reason().contains("Operational context tool call budget exceeded"));
+        var snapshot = registry.state("analysis-run-1").orElseThrow().snapshot();
+        assertEquals(1, snapshot.operationalContextCalls());
+        assertEquals(6, snapshot.operationalContextReturnedCharacters());
+    }
+
     private CopilotToolBudgetPolicy guard(CopilotToolBudgetProperties properties) {
         return new CopilotToolBudgetPolicy(registerBudget(properties));
     }

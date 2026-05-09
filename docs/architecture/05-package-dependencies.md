@@ -56,7 +56,9 @@ ponizszych zasad:
   nie do historycznych pakietow `analysis.*`.
 - `agenttools` to reusable ekspozycja capability nad adapterami. Nie powinno
   zalezec od dedykowanej analizy incydentow ani od szczegolow providera
-  Copilot SDK.
+  Copilot SDK. Operational context tools sa takim neutralnym wrapperem:
+  `opctx_*` wystawia katalogowy scope/list/search/detail, a znaczenie
+  diagnostyczne dostaje dopiero w skillu i policy konkretnego feature'a.
 - `aiplatform.copilot` to docelowa platforma AI runtime. Moze znac Copilot SDK,
   session lifecycle, allowliste, hidden context, eventy invocation i techniczna
   obsluge wynikow, ale dostaje prompt, skille, dostepne tools, evidence sink i
@@ -178,20 +180,22 @@ flowchart LR
 
 | Krawedz importow | Liczba | Status | Co oznacza |
 | --- | ---: | --- | --- |
-| `features.incidentanalysis.evidence -> integrations` | 41 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
+| `features.incidentanalysis.evidence -> integrations` | 56 | oczekiwane | Providerzy Elasticsearch, Dynatrace, GitLab deterministic i operational context deleguja do docelowych reusable integracji. |
 | `features.incidentanalysis.evidence -> shared` | 26 | oczekiwane | Evidence publikuje neutralne `AnalysisEvidenceSection` z `shared.evidence`. |
-| `features (bez evidence) -> aiplatform` | 43 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract i uzywa platformowego session-bound evidence store. |
-| `features (bez evidence) -> agenttools` | 21 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability. |
+| `features (bez evidence) -> aiplatform` | 35 | oczekiwane przejsciowo | Incident Copilot preparation/provider sklada platformowy `CopilotRunRequest`, hidden session context, runtime types, execution gateway, factory tools, description customizer contract i uzywa platformowego session-bound evidence store. |
+| `features (bez evidence) -> agenttools` | 25 | oczekiwane przejsciowo | Incident tool policy, GitLab/DB evidence capture i guidance opisow tools uzywaja neutralnych nazw tools oraz DTO capability, w tym `opctx_*`. |
 | `features (bez evidence) -> features.incidentanalysis.evidence` | 23 | oczekiwane | Incident job/flow uruchamia collector i pokazuje kroki pipeline, a coverage/artifacts czytaja typed evidence view helpers. |
 | `features (bez evidence) -> common` | 2 | oczekiwane | Incident tool evidence mappers uzywaja wspolnego `JsonPayloadReader`. |
 | `features (bez evidence) -> integrations` | 1 | oczekiwane | Incident flow czyta `GitLabProperties` dla configured `gitLabGroup`; pozostale importy integracji w feature sa w wydzielonym podgrafie evidence. |
-| `features (bez evidence) -> shared` | 42 | oczekiwane | Incident job/flow, initial/chat, artifacts, coverage, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
-| `aiplatform -> agenttools` | 8 | oczekiwane | Platformowy hidden `ToolContext` i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
-| `aiplatform -> shared` | 8 | oczekiwane | Platformowy run request, prepared session, user-visible usage i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
-| `agenttools -> integrations` | 9 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab i Database MCP deleguja do `integrations`. |
-| `api -> aiplatform` | 3 | oczekiwane | `api.aioptions` mapuje platformowy katalog modeli Copilota na kontrakt endpointu `GET /analysis/ai/options`. |
-| `api -> integrations` | 15 | oczekiwane | Shared/operator endpointy Elasticsearch/GitLab deleguja do `integrations`, a globalny handler HTTP mapuje wyniki/wyjatki helper endpointow. |
+| `features (bez evidence) -> shared` | 53 | oczekiwane | Incident job/flow, initial/chat, artifacts, coverage, usage mapping, AI options i tool evidence capture czytaja neutralne DTO shared. |
+| `aiplatform -> agenttools` | 6 | oczekiwane | Platformowy hidden `ToolContext` i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
+| `aiplatform -> shared` | 11 | oczekiwane | Platformowy run request, prepared session, user-visible usage i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
+| `agenttools -> integrations` | 20 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab, Database i Operational Context MCP deleguja do `integrations`. |
+| `api -> agenttools` | 1 | oczekiwane | Shared/operator helper API moze importowac neutralne nazwy/kontrakty tool capability bez zaleznosci od feature'a. |
+| `api -> aiplatform` | 16 | oczekiwane | `api.aioptions` mapuje platformowy katalog modeli Copilota na kontrakt endpointu `GET /analysis/ai/options`; shared/operator API moze korzystac z platformowych fasad. |
+| `api -> integrations` | 60 | oczekiwane | Shared/operator endpointy Elasticsearch/GitLab deleguja do `integrations`, a globalny handler HTTP mapuje wyniki/wyjatki helper endpointow. |
 | `api -> features` | 3 | oczekiwane technicznie | Globalny handler HTTP mapuje wyjatki incident job API i `AnalysisDataNotFoundException` z incident flow. Nie traktowac tego jako wzorca dla shared/operator API, ktore nie powinno orkiestrowac feature'ow. |
+| `api -> shared` | 3 | oczekiwane | Shared/operator HTTP kontrakty moga uzywac neutralnych DTO wspolnych dla UI i runtime. |
 
 ## Cykle Do Pilnowania
 
@@ -324,7 +328,7 @@ Zamkniete krawedzie, ktorych nie przywracac:
   `features.incidentanalysis.ai.copilot.tools`; platformowe runtime tools
   publikuja tylko neutralne eventy i session-bound evidence store.
 - `runtime tools description -> incident guidance`: Copilot-facing guidance
-  opisow GitLab/DB tools mieszka teraz w
+  opisow GitLab/DB/Operational Context tools mieszka teraz w
   `features.incidentanalysis.ai.copilot.tools.description`, a runtime factory
   widzi tylko platformowy kontrakt `CopilotToolDescriptionCustomizer`.
 - Dawne `factory/handler/context/events/policy/session/logging/budget/evidence store`

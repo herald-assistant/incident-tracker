@@ -46,6 +46,9 @@ Przed wieksza zmiana zacznij od:
   Dane deployment/runtime/service names sa wlasciwosciami i sygnalami systemu,
   a nie osobnym bytem referencyjnym. Nie przywracaj relacji ani DTO typu
   osobny komponent uruchomieniowy.
+- Operational context tools sa neutralna capability pod prefixem `opctx_`.
+  Definicje tooli nie moga niesc semantyki incident trackera; incidentowe
+  zasady uzycia mieszkaja w feature policy/guidance oraz skillu Copilota.
 
 ## Turbo wazne: docelowy model rozszerzalnosci
 
@@ -121,6 +124,10 @@ Zasady granic:
   dla tych ukrytych scope'ow. Elasticsearch nadal ma zastany jawny
   `correlationId` w model-facing schema; traktuj to jako drift do migracji, a
   nie wzorzec dla nowych tools.
+- Operational context tools nie przyjmuja `correlationId`, `environment`,
+  `gitLabGroup` ani `gitLabBranch` jako model-facing input. Moga miec tylko
+  prosty operator-facing `reason`; scope katalogu pochodzi z konfiguracji
+  aplikacji i adaptera `integrations.operationalcontext`.
 - GitLab i Database tools moga miec tylko prosty operator-facing `reason` jako
   powod wywolania. Nie przywracaj dodatkowych model-facing parametrow
   eksploracyjnych, pytan diagnostycznych ani technicznych pseudo-heurystyk do
@@ -166,7 +173,9 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/agenttools`
   Reusable tools/capability wspolne dla MCP wrappers i platform AI, np. hidden
   tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
-  integracjami. Adaptery nie powinny importowac `agenttools`.
+  integracjami. Operational context tools mieszkaja tu jako neutralne
+  `agenttools.operationalcontext` / `agenttools.operationalcontext.mcp`.
+  Adaptery nie powinny importowac `agenttools`.
 - `src/main/java/pl/mkn/incidenttracker/aiplatform`
   Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y to
   `aiplatform.copilot.runtime` oraz `aiplatform.copilot.tools` z
@@ -198,7 +207,8 @@ Zasady granic:
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 - `src/main/resources/copilot/skills`
-  Skille Copilota pakowane do runtime.
+  Skille Copilota pakowane do runtime. Incidentowe playbooki uzycia tools, np.
+  operational context, sa zasobami tutaj, a nie logika neutralnych tooli.
 - `src/main/resources/operational-context`
   Runtime catalog systemow, procesow, repozytoriow i regul handoffu. System
   jest tu kanonicznym targetem relacji i code-search scope'ow.

@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,15 @@ public class CopilotIncidentToolGuidanceCatalog {
     private static final List<String> DATABASE_REASON_GUIDANCE = List.of(
             "For JPA, repository or data-access symptoms, first ground the entity/repository/table mapping from deterministic GitLab evidence or an enabled GitLab tool call; use DB discovery as fallback only when code grounding is unavailable.",
             "Use code-derived table, column and relation hints instead of guessing names from the exception label.",
+            "Always provide reason as one short Polish sentence for the operator."
+    );
+
+    private static final List<String> OPERATIONAL_CONTEXT_REASON_GUIDANCE = List.of(
+            "Use operational context as catalog grounding and scope guidance; do not treat it as standalone proof of the incident root cause.",
+            "Use %s at most once when you need to discover available catalog types.".formatted(OperationalContextToolNames.GET_SCOPE),
+            "Use %s for a table-of-contents style browse when you do not know the catalog term yet; browse one type at a time.".formatted(OperationalContextToolNames.LIST_ENTITIES),
+            "Use %s when you have a concrete signal from logs, code, tool results or the user question.".formatted(OperationalContextToolNames.SEARCH),
+            "Use %s before relying on ownership, handoff, process, bounded-context or code-search scope details.".formatted(OperationalContextToolNames.GET_ENTITY),
             "Always provide reason as one short Polish sentence for the operator."
     );
 
@@ -117,6 +127,33 @@ public class CopilotIncidentToolGuidanceCatalog {
                             "Use typed DB tools first.",
                             "May be disabled by runtime policy and budget."
                     )
+            ),
+            Map.entry(
+                    OperationalContextToolNames.GET_SCOPE,
+                    List.of(
+                            "Use to discover which neutral operational context entity types are available; do not repeat in the same investigation."
+                    )
+            ),
+            Map.entry(
+                    OperationalContextToolNames.LIST_ENTITIES,
+                    List.of(
+                            "Use when the model does not yet know the relevant catalog term, process, bounded context, integration or glossary term.",
+                            "Prefer a filter when any clue is available and avoid paging through the whole catalog."
+                    )
+            ),
+            Map.entry(
+                    OperationalContextToolNames.SEARCH,
+                    List.of(
+                            "Use for grounded signals such as system names, endpoints, queues, repositories, classes, domain terms or handoff clues.",
+                            "Follow promising search results with opctx_get_entity before making final claims."
+                    )
+            ),
+            Map.entry(
+                    OperationalContextToolNames.GET_ENTITY,
+                    List.of(
+                            "Use after list or search results to confirm relations, recognition signals, code-search hints, handoff hints and source limitations.",
+                            "Do not name affectedProcess, affectedBoundedContext or affectedTeam unless the entity also fits incident evidence."
+                    )
             )
     );
 
@@ -128,6 +165,11 @@ public class CopilotIncidentToolGuidanceCatalog {
         var normalizedToolName = toolName.trim();
         var guidance = GUIDANCE_BY_TOOL_NAME.getOrDefault(normalizedToolName, List.of());
         if (!normalizedToolName.startsWith(DatabaseToolNames.PREFIX)) {
+            if (normalizedToolName.startsWith(OperationalContextToolNames.PREFIX)) {
+                var operationalContextGuidance = new ArrayList<>(guidance);
+                operationalContextGuidance.addAll(OPERATIONAL_CONTEXT_REASON_GUIDANCE);
+                return List.copyOf(operationalContextGuidance);
+            }
             return guidance;
         }
 

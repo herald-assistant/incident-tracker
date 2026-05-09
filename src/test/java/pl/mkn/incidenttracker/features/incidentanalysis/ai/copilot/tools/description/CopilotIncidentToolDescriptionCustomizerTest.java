@@ -50,6 +50,15 @@ class CopilotIncidentToolDescriptionCustomizerTest {
     }
 
     @Test
+    void shouldAppendOperationalContextGuidance() {
+        var description = customizer.customize("opctx_get_entity", "Gets operational context entity.");
+
+        assertTrue(description.contains("Use operational context as catalog grounding and scope guidance"));
+        assertTrue(description.contains("Use opctx_get_entity before relying on ownership"));
+        assertTrue(description.contains("Always provide reason as one short Polish sentence"));
+    }
+
+    @Test
     void shouldLeaveUnknownToolDescriptionUntouched() {
         var description = customizer.customize("custom_tool", "  Custom description.  ");
 

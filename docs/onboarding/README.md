@@ -42,6 +42,7 @@ Te dokumenty sa nadal source of truth dla architektury:
 Przy pracy runtime warto miec obok jeszcze:
 
 - `../../src/main/resources/copilot/skills`
+- `../../src/main/resources/copilot/skills/incident-operational-context-tools`
 - `../../src/main/resources/operational-context`
 
 ## Minimalny tryb startowy
@@ -76,5 +77,6 @@ Po przejsciu calej sciezki powinienes umiec:
 - odroznic adapter, provider evidence, tool i provider AI,
 - odroznic finalna analize od follow-up chatu po zakonczonym jobie,
 - zrozumiec, jak Copilot reuse'uje Spring tools,
+- zrozumiec roznice miedzy neutralnymi `opctx_*` tools a incidentowym skill/policy,
 - bezpiecznie dodac nowy krok evidence, nowy adapter albo nowy tool,
 - ocenic, w ktorym module zmiana powinna wyladowac.

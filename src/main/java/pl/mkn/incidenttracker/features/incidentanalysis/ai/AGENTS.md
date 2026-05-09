@@ -16,7 +16,8 @@ Obejmuje:
   turny i snapshot poczatkowej analizy,
 - `copilot/`
   incidentowe providery Copilota, preparation, prompt/artifacts, coverage,
-  response parser oraz GitLab/DB tool evidence capture.
+  response parser, incident tool policy/guidance oraz GitLab/DB tool evidence
+  capture.
 
 Neutralne mechanizmy runtime Copilota mieszkaja w `aiplatform.copilot`, a
 neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
@@ -31,6 +32,12 @@ neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
   `integrations`, `shared` ani `common`.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
   evidence trzymaj w skillu albo incident preparation.
+- Operational context tools sa neutralne i mieszkaja w `agenttools`. Tutaj
+  moze mieszkac tylko incidentowa semantyka ich uzycia: coverage-aware policy,
+  prompt/guidance i skill `incident-operational-context-tools`.
+- Incident guidance dla `opctx_*` ma traktowac operational context jako
+  kontekst katalogowy do ownershipu, scope GitLaba/DB i handoffu, a nie jako
+  samodzielny dowod root cause.
 - Follow-up chat ma reuse'owac snapshot poczatkowej analizy, historie rozmowy,
   hidden tool context i proste user-facing tool evidence.
 
@@ -39,5 +46,5 @@ neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
 - Zmiany w `initial/` i `chat/` powinny sprawdzac flow/job oraz follow-up
   request mapping.
 - Zmiany w `copilot/preparation` powinny miec testy promptu, incident run
-  assembly i ladowania skilli.
+  assembly, policy tools i ladowania skilli.
 - Zmiany w `copilot/response` powinny miec testy parsowania odpowiedzi modelu.

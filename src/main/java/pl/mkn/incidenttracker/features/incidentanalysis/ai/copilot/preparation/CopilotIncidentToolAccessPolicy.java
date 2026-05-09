@@ -6,6 +6,8 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.Inci
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.IncidentOperationalContextCoverage;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -20,6 +22,7 @@ public record CopilotIncidentToolAccessPolicy(
         boolean elasticToolsRegistered,
         boolean gitLabToolsRegistered,
         boolean databaseToolsRegistered,
+        boolean operationalContextToolsRegistered,
         CopilotIncidentEvidenceCoverageReport evidenceCoverage
 ) {
 
@@ -46,11 +49,33 @@ public record CopilotIncidentToolAccessPolicy(
         evidenceCoverage = evidenceCoverage != null ? evidenceCoverage : CopilotIncidentEvidenceCoverageReport.empty();
     }
 
+    public CopilotIncidentToolAccessPolicy(
+            List<ToolDefinition> enabledTools,
+            List<String> availableToolNames,
+            boolean localWorkspaceAccessBlocked,
+            boolean elasticToolsRegistered,
+            boolean gitLabToolsRegistered,
+            boolean databaseToolsRegistered,
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage
+    ) {
+        this(
+                enabledTools,
+                availableToolNames,
+                localWorkspaceAccessBlocked,
+                elasticToolsRegistered,
+                gitLabToolsRegistered,
+                databaseToolsRegistered,
+                false,
+                evidenceCoverage
+        );
+    }
+
     public static CopilotIncidentToolAccessPolicy empty() {
         return new CopilotIncidentToolAccessPolicy(
                 List.of(),
                 List.of(),
                 true,
+                false,
                 false,
                 false,
                 false,
@@ -67,6 +92,7 @@ public record CopilotIncidentToolAccessPolicy(
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
         var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
         var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
+        var operationalContextToolsRegistered = hasToolPrefix(tools, OperationalContextToolNames.PREFIX);
         var enabledTools = tools.stream()
                 .filter(tool -> isEnabled(tool.name(), coverage))
                 .toList();
@@ -81,6 +107,7 @@ public record CopilotIncidentToolAccessPolicy(
                 elasticToolsRegistered,
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
+                operationalContextToolsRegistered,
                 coverage
         );
     }
@@ -94,6 +121,7 @@ public record CopilotIncidentToolAccessPolicy(
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
         var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
         var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
+        var operationalContextToolsRegistered = hasToolPrefix(tools, OperationalContextToolNames.PREFIX);
         var enabledTools = tools.stream()
                 .filter(tool -> isFollowUpEnabled(tool.name(), environmentResolved, gitLabScopeResolved))
                 .toList();
@@ -108,6 +136,7 @@ public record CopilotIncidentToolAccessPolicy(
                 elasticToolsRegistered,
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
+                operationalContextToolsRegistered,
                 CopilotIncidentEvidenceCoverageReport.empty()
         );
     }
@@ -122,6 +151,9 @@ public record CopilotIncidentToolAccessPolicy(
         }
         if (databaseToolsEnabled()) {
             groups.add("database");
+        }
+        if (operationalContextToolsEnabled()) {
+            groups.add("operational-context");
         }
         return List.copyOf(groups);
     }
@@ -147,6 +179,12 @@ public record CopilotIncidentToolAccessPolicy(
                     "reason", databaseDisabledReason()
             ));
         }
+        if (operationalContextToolsRegistered && !operationalContextToolsEnabled()) {
+            groups.add(Map.of(
+                    "name", "operational-context",
+                    "reason", operationalContextDisabledReason()
+            ));
+        }
         return List.copyOf(groups);
     }
 
@@ -160,6 +198,10 @@ public record CopilotIncidentToolAccessPolicy(
 
     public boolean databaseToolsEnabled() {
         return hasAvailableToolPrefix(DatabaseToolNames.PREFIX);
+    }
+
+    public boolean operationalContextToolsEnabled() {
+        return hasAvailableToolPrefix(OperationalContextToolNames.PREFIX);
     }
 
     private boolean hasAvailableToolPrefix(String prefix) {
@@ -189,6 +231,11 @@ public record CopilotIncidentToolAccessPolicy(
                 .formatted(evidenceCoverage.gitLab());
     }
 
+    private String operationalContextDisabledReason() {
+        return "Operational context coverage is %s and no context, flow, affected-function or DB code-grounding gap requires catalog tools."
+                .formatted(evidenceCoverage.operationalContext());
+    }
+
     private static boolean isEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
         if (toolName == null || toolName.isBlank()) {
             return false;
@@ -201,6 +248,9 @@ public record CopilotIncidentToolAccessPolicy(
         }
         if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
             return databaseToolEnabled(toolName, evidenceCoverage);
+        }
+        if (toolName.startsWith(OperationalContextToolNames.PREFIX)) {
+            return operationalContextToolEnabled(evidenceCoverage);
         }
         return true;
     }
@@ -228,6 +278,14 @@ public record CopilotIncidentToolAccessPolicy(
         return evidenceCoverage.databaseDiscoveryOnly() && DB_DISCOVERY_TOOLS.contains(toolName);
     }
 
+    private static boolean operationalContextToolEnabled(CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
+        return evidenceCoverage.operationalContext() == IncidentOperationalContextCoverage.NONE
+                || evidenceCoverage.operationalContext() == IncidentOperationalContextCoverage.PARTIAL
+                || evidenceCoverage.hasGap("MISSING_FLOW_CONTEXT")
+                || evidenceCoverage.hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED")
+                || evidenceCoverage.hasGap("DB_CODE_GROUNDING_NEEDED");
+    }
+
     private static boolean isFollowUpEnabled(
             String toolName,
             boolean environmentResolved,
@@ -244,6 +302,9 @@ public record CopilotIncidentToolAccessPolicy(
         }
         if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
             return environmentResolved && !DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName);
+        }
+        if (toolName.startsWith(OperationalContextToolNames.PREFIX)) {
+            return true;
         }
         return true;
     }

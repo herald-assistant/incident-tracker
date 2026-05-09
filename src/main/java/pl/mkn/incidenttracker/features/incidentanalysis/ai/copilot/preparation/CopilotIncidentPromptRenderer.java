@@ -41,11 +41,12 @@ public class CopilotIncidentPromptRenderer {
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
                 - Do not assume facts unsupported by the incident artifacts or tool results.
-                - Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality.
+                - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and handoff quality.
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
                 - Use tools only for evidence gaps listed in `evidenceCoverage.gaps` in `00-incident-manifest.json`.
                 - Do not use tools just because they are available.
-                - GitLab, Elasticsearch and Database tools are coverage-aware and may be enabled for targeted gap filling even when some related evidence is already attached.
+                - GitLab, Elasticsearch, Operational Context and Database tools are coverage-aware and may be enabled for targeted gap filling even when some related evidence is already attached.
+                - Operational Context tools provide catalog context for systems, processes, bounded contexts, repositories, integrations, teams, glossary terms and handoff rules. Treat catalog context as grounding and scope guidance, not as standalone proof of incident root cause.
                 - Treat `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` as a targeted gap: when GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer to ground `affectedFunction`.
                 - If GitLab tools are not enabled or the GitLab attempt cannot find useful flow context, use the attached artifacts and state the visibility limit instead of guessing.
                 - If the incident artifacts already contain enough evidence but GitLab tools are enabled, still use a focused GitLab search/read to improve `affectedFunction`; if GitLab tools are not enabled, answer directly from artifacts.
@@ -138,6 +139,10 @@ public class CopilotIncidentPromptRenderer {
 
         if (toolAccessPolicy.databaseToolsEnabled()) {
             rendered.append("- Database diagnostics: before table/column discovery, ground table and relation hints from deterministic GitLab evidence or enabled GitLab tools when `DB_CODE_GROUNDING_NEEDED` is listed; use DB discovery as fallback if code grounding is unavailable. Include a short Polish `reason` in every Database tool call.\n");
+        }
+
+        if (toolAccessPolicy.operationalContextToolsEnabled()) {
+            rendered.append("- Operational context catalog: browse or search systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules only to fill context, ownership, code-scope, DB-targeting or handoff gaps. Include a short Polish `reason` in every Operational Context tool call.\n");
         }
 
         return rendered.length() > 0

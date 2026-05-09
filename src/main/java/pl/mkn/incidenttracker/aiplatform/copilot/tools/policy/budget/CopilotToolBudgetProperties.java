@@ -23,6 +23,8 @@ public class CopilotToolBudgetProperties {
     private int maxDbCalls = 8;
     private int maxDbRawSqlCalls = 0;
     private long maxDbReturnedCharacters = 64_000L;
+    private int maxOperationalContextCalls = 4;
+    private long maxOperationalContextReturnedCharacters = 32_000L;
 
     public boolean active() {
         return enabled && mode != BudgetMode.OFF;

@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -22,6 +23,8 @@ public class CopilotToolBudgetState {
     private int dbCalls;
     private int dbRawSqlCalls;
     private long dbReturnedCharacters;
+    private int operationalContextCalls;
+    private long operationalContextReturnedCharacters;
     private int softLimitExceededCount;
     private int deniedToolCalls;
     private int rawSqlAttempts;
@@ -79,6 +82,10 @@ public class CopilotToolBudgetState {
                 dbCalls++;
                 dbReturnedCharacters += rawResultCharacters;
             }
+            case "operational-context" -> {
+                operationalContextCalls++;
+                operationalContextReturnedCharacters += rawResultCharacters;
+            }
             default -> {
             }
         }
@@ -119,6 +126,8 @@ public class CopilotToolBudgetState {
                 dbCalls,
                 dbRawSqlCalls,
                 dbReturnedCharacters,
+                operationalContextCalls,
+                operationalContextReturnedCharacters,
                 softLimitExceededCount,
                 deniedToolCalls,
                 rawSqlAttempts,
@@ -187,6 +196,20 @@ public class CopilotToolBudgetState {
                         properties.getMaxDbReturnedCharacters()
                 );
             }
+            case "operational-context" -> {
+                addIfLimitExceeded(
+                        exceeded,
+                        "Operational context tool call budget exceeded",
+                        operationalContextCalls + 1,
+                        properties.getMaxOperationalContextCalls()
+                );
+                addIfLimitExceeded(
+                        exceeded,
+                        "Operational context returned character budget already exhausted",
+                        operationalContextReturnedCharacters,
+                        properties.getMaxOperationalContextReturnedCharacters()
+                );
+            }
             default -> {
             }
         }
@@ -210,6 +233,14 @@ public class CopilotToolBudgetState {
                     "Database returned character budget exceeded",
                     dbReturnedCharacters,
                     properties.getMaxDbReturnedCharacters()
+            );
+        }
+        if (toolGroup(toolName).equals("operational-context")) {
+            addIfLimitExceeded(
+                    exceeded,
+                    "Operational context returned character budget exceeded",
+                    operationalContextReturnedCharacters,
+                    properties.getMaxOperationalContextReturnedCharacters()
             );
         }
         return exceeded;
@@ -250,6 +281,9 @@ public class CopilotToolBudgetState {
         if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
             return "database";
         }
+        if (toolName.startsWith(OperationalContextToolNames.PREFIX)) {
+            return "operational-context";
+        }
         return "other";
     }
 
@@ -265,6 +299,8 @@ public class CopilotToolBudgetState {
             int dbCalls,
             int dbRawSqlCalls,
             long dbReturnedCharacters,
+            int operationalContextCalls,
+            long operationalContextReturnedCharacters,
             int softLimitExceededCount,
             int deniedToolCalls,
             int rawSqlAttempts,

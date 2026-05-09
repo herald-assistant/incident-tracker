@@ -41,9 +41,11 @@ Przy nowej sesji najlepiej zaczac od:
 - `features.incidentanalysis.ai.chat`
 - `agenttools.context`
 - `agenttools.database`, `agenttools.elasticsearch`, `agenttools.gitlab`
+- `agenttools.operationalcontext`
 - `agenttools.elasticsearch.mcp`
 - `agenttools.gitlab.mcp`
 - `agenttools.database.mcp`
+- `agenttools.operationalcontext.mcp`
 - `aiplatform.copilot.runtime`
 - `aiplatform.copilot.tools`
 - `integrations.elasticsearch`
@@ -115,7 +117,10 @@ Przy nowej sesji najlepiej zaczac od:
 ### Za operational context odpowiadaja glownie
 
 - `integrations.operationalcontext`
+- `agenttools.operationalcontext`
+- `agenttools.operationalcontext.mcp`
 - `features.incidentanalysis.evidence.provider.operationalcontext`
+- `src/main/resources/copilot/skills/incident-operational-context-tools`
 
 ## Jak rozwijac projekt bez psucia kierunku
 
@@ -132,10 +137,12 @@ Zasada:
 
 Zasada:
 
-1. capability trzymamy blisko adaptera,
+1. capability trzymamy w `integrations.*`, a ekspozycje tools w
+   `agenttools.<capability>` / `agenttools.<capability>.mcp`,
 2. tool powinien miec jasny, konkretny kontrakt,
-3. jesli capability ma strategie uzycia, rozwaz dedykowany skill,
-4. skill trzymaj jako resource runtime, nie w `.github`.
+3. tool description ma byc reusable i bez semantyki jednego feature'a,
+4. jesli capability ma strategie uzycia, rozwaz dedykowany skill,
+5. skill trzymaj jako resource runtime, nie w `.github`.
 
 ### Gdy dodajesz nowa integracje z zewnetrznym API
 
@@ -258,8 +265,10 @@ Kontynuacja po wyniku poczatkowej analizy ma osobny kontrakt AI:
 
 Nie doklejaj tresci rozmowy ani dodatkowego scope'u do startu joba. Chat ma
 reuse'owac scope zakonczonego joba oraz hidden `ToolContext` dla GitLaba,
-Elastica i Database. Kazda wiadomosc tworzy nowa sesje Copilota, zeby nie
-utrzymywac sesji SDK po zakonczeniu poczatkowej analizy.
+Elastica i Database. Operational Context tools nie potrzebuja incident scope'u
+w inputach; follow-up wystawia je zawsze, jesli capability jest zarejestrowana.
+Kazda wiadomosc tworzy nowa sesje Copilota, zeby nie utrzymywac sesji SDK po
+zakonczeniu poczatkowej analizy.
 
 Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
 chatu, a nie mieszane z deterministycznym pipeline evidence.
@@ -288,6 +297,13 @@ description customization mieszkaja w `aiplatform.copilot.tools`, budget w
 oraz mappery evidence capture w feature. Przy kolejnych toolach unikaj dopisywania
 specjalnych przypadkow do handlera; dodaj policy albo listener eventu w
 odpowiednim pakiecie.
+
+Operational Context tools sa katalogowym browse/search/detail nad
+`integrations.operationalcontext`: `opctx_get_scope`, `opctx_list_entities`,
+`opctx_search`, `opctx_get_entity`. Incidentowe zasady korzystania z nich sa w
+`incident-operational-context-tools` i w
+`features.incidentanalysis.ai.copilot` policy/guidance, a nie w neutralnym
+MCP mapperze.
 
 Generyczne helpery JSON nie naleza do root `tools`. Wspolny reader payloadow to
 `pl.mkn.incidenttracker.common.JsonPayloadReader`.
@@ -332,6 +348,11 @@ resources, tylko korzysta z query-based adaptera i wystawia typed
 `codeSearchScopeIds`, `codeSearchProjects` i role repozytoriow, czyli projekty
 GitLaba skladajace sie na kod dopasowanego komponentu, lacznie z bibliotekami
 i shared modules.
+
+Operational context tools korzystaja z tego samego adaptera katalogu, ale nie
+sa kolejnym deterministic evidence providerem. Daja agentowi paginowany index,
+search ranking i kompaktowy detail encji wtedy, gdy prompt/evidence ma waski
+input, a feature policy pozwala na dociagniecie szerszego kontekstu.
 
 ## Najbardziej naturalne kolejne kierunki
 

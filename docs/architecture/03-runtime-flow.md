@@ -20,6 +20,11 @@ AI: `model` i `reasoningEffort`. Pozostale scope'y sa ustalane przez backend:
 - `gitLabGroup` z konfiguracji,
 - DB scope z resolved environment i konfiguracji database tools.
 
+Operational context tools nie dostaja `correlationId`, `environment`,
+`gitLabGroup` ani `gitLabBranch` jako model-facing input. Czytaja neutralny
+katalog z `integrations.operationalcontext`; jedynym argumentem operatorskim
+poza parametrami browse/search/detail jest opcjonalny `reason`.
+
 Wybor modelu i `reasoningEffort` trafia tylko do konfiguracji sesji AI. Nie
 jest evidence, nie zmienia `environment`, `gitLabBranch`, `gitLabGroup` ani
 hidden `ToolContext`.
@@ -110,7 +115,8 @@ Preparation obejmuje:
 - dekorowanie opisow tools,
 - wyrenderowanie manifestu, digestu i evidence artifacts,
 - osadzenie artifact contents inline w promptcie,
-- zaladowanie runtime skills,
+- zaladowanie runtime skills, w tym incidentowego playbooka operational
+  context tools,
 - zbudowanie platformowego requestu sesji,
 - dolaczenie platformowego `CopilotRunAuth` z non-secret auth reference,
 - zastosowanie requestowych preferencji AI (`model`, `reasoningEffort`) albo
@@ -181,6 +187,7 @@ Follow-up runtime:
    - Elasticsearch po aktualnym `correlationId`,
    - GitLab gdy jest `gitLabGroup` i `gitLabBranch`,
    - Database gdy jest resolved `environment`,
+   - Operational Context zawsze, jesli capability jest zarejestrowana,
 6. publikuje GitLab/DB tool evidence do aktualnej odpowiedzi chatu,
 7. zapisuje odpowiedz albo blad w `chatMessages` joba.
 
@@ -297,13 +304,27 @@ DB tools:
 - wylaczone przy braku resolved environment,
 - `db_execute_readonly_sql` pozostaje domyslnie disabled.
 
+Operational Context tools:
+
+- neutralna capability `opctx_` z katalogowym browse/search/detail:
+  `opctx_get_scope`, `opctx_list_entities`, `opctx_search`,
+  `opctx_get_entity`,
+- wlaczone w initial session, gdy operational context evidence jest
+  `NONE`/`PARTIAL` albo coverage ma luki `MISSING_FLOW_CONTEXT`,
+  `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` lub `DB_CODE_GROUNDING_NEEDED`,
+- wlaczone w follow-up session zawsze, jesli Spring tool callbacki sa
+  zarejestrowane,
+- sluza do kontekstu, ownershipu, scope GitLaba/DB i handoffu; prompt i skill
+  zabraniaja traktowania samego katalogu jako dowodu root cause.
+
 Prompt instruuje model, zeby uzywal tools tylko dla luk z
 `evidenceCoverage.gaps`. Dla `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` model ma
 wykonac mala, focused probe GitLab tools przed finalna odpowiedzia, jesli
 GitLab tools sa wlaczone. Dla `DB_CODE_GROUNDING_NEEDED` model ma przed
-pierwsza proba DB table/column/schema-table query uzyc deterministic GitLab
-evidence albo wykonac focused GitLab tool call; gdy to niemozliwe, DB discovery
-jest jawnym fallbackiem z limitation w `reason`.
+pierwsza proba DB table/column/schema-table query uzyc operational context do
+targetowania systemu/repozytorium oraz deterministic GitLab evidence albo
+wykonac focused GitLab tool call; gdy to niemozliwe, DB discovery jest jawnym
+fallbackiem z limitation w `reason`.
 
 ## 8. Session config i blokady lokalne
 
@@ -327,7 +348,9 @@ Model nie powinien podawac jawnie scope'ow takich jak `correlationId`,
 `gitLabGroup`, `gitLabBranch` czy `environment`. Aktualnie GitLab i DB tools
 spelniaja to przez hidden `ToolContext`; Elastic MCP tool nadal ma jawny
 parametr `correlationId` i powinien byc traktowany jako znany drift do
-migracji, a nie wzorzec dla nowych tools.
+migracji, a nie wzorzec dla nowych tools. Operational context tools sa nowym
+wzorcem neutralnym: nie przyjmuja incident scope'u jako input, tylko katalogowe
+parametry typu `type`, `query`, `id`, `include` i prosty `reason`.
 
 ## 9. Tool factory
 
@@ -406,6 +429,10 @@ zwraca:
 `Finished(REJECTED)` jest traktowany jako odmowa przed faktycznym wykonaniem
 toola. Budget state nadal zachowuje informacje o denialu do konca sesji.
 
+Budzet ma osobne liczniki capability dla Elasticsearch, GitLaba, Database i
+Operational Context. Domyslny Operational Context limit to 4 wywolania i
+32 000 zwroconych znakow na sesje.
+
 ## 11. Tool evidence capture
 
 `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` zarzadza
@@ -426,6 +453,11 @@ Kategorie:
 - `gitlab/tool-discovery` dla available repositories, search candidates, file
   outline, flow context i class references,
 - `database/tool-results` dla DB tools.
+
+Operational Context tools w V1 nie maja osobnej user-facing evidence capture
+category. Sa widoczne w runtime activity trace jako tool calls, ale ich wynik
+jest traktowany jako katalogowy grounding/scope guidance, nie jako dowod root
+cause.
 
 GitLab capture jest celowo prosty: user-facing evidence trzyma `reason` podany
 przez model jako naglowek wpisu. Dla code reads zawiera plik/chunk, sciezke
@@ -580,6 +612,8 @@ analysis.ai.copilot.tool-budget.max-gitlab-returned-characters=80000
 analysis.ai.copilot.tool-budget.max-db-calls=8
 analysis.ai.copilot.tool-budget.max-db-raw-sql-calls=0
 analysis.ai.copilot.tool-budget.max-db-returned-characters=64000
+analysis.ai.copilot.tool-budget.max-operational-context-calls=4
+analysis.ai.copilot.tool-budget.max-operational-context-returned-characters=32000
 ```
 
 Database config uzywa shared connections + globalnego katalogu aplikacji z

@@ -232,6 +232,54 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
+    void shouldEnableOperationalContextToolsWhenOperationalContextEvidenceIsMissing() {
+        var policy = policy(
+                request("dev3", List.of(sufficientElasticSection())),
+                tools("opctx_get_scope", "opctx_search", "opctx_get_entity")
+        );
+
+        assertTrue(policy.availableToolNames().contains("opctx_get_scope"));
+        assertTrue(policy.availableToolNames().contains("opctx_search"));
+        assertTrue(policy.availableToolNames().contains("opctx_get_entity"));
+        assertTrue(policy.enabledCapabilityGroups().contains("operational-context"));
+    }
+
+    @Test
+    void shouldDisableOperationalContextToolsWhenMatchedContextHasNoContextGap() {
+        var policy = policy(
+                requestWithoutGitLabScope("dev3", List.of(sufficientElasticSection(), matchedOperationalContextSection())),
+                tools("opctx_get_scope", "opctx_search")
+        );
+
+        assertEquals(List.of(), policy.availableToolNames());
+        assertTrue(policy.disabledCapabilityGroups().stream()
+                .anyMatch(group -> "operational-context".equals(group.get("name"))));
+    }
+
+    @Test
+    void shouldKeepOperationalContextToolsForFlowGapEvenWhenContextIsMatched() {
+        var policy = policy(
+                request("dev3", List.of(
+                        matchedOperationalContextSection(),
+                        gitLabSection(
+                                "CheckoutService.java around failing method",
+                                """
+                                        class CheckoutService {
+                                            Order submit(CheckoutCommand command) {
+                                                return command.toOrder();
+                                            }
+                                        }
+                                        """
+                        )
+                )),
+                tools("opctx_search", "opctx_get_entity")
+        );
+
+        assertTrue(policy.evidenceCoverage().hasGap("MISSING_FLOW_CONTEXT"));
+        assertEquals(Set.of("opctx_search", "opctx_get_entity"), Set.copyOf(policy.availableToolNames()));
+    }
+
+    @Test
     void shouldCreateFollowUpPolicyFromResolvedChatScope() {
         var policy = policyFactory.createForFollowUp(
                 chatRequest("dev3", "sample/runtime", "release/2026.04"),
@@ -239,7 +287,8 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "elastic_search_logs_by_correlation_id",
                         "gitlab_find_flow_context",
                         "db_find_tables",
-                        "db_execute_readonly_sql"
+                        "db_execute_readonly_sql",
+                        "opctx_search"
                 )
         );
 
@@ -247,6 +296,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
         assertTrue(policy.availableToolNames().contains("db_find_tables"));
         assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
+        assertTrue(policy.availableToolNames().contains("opctx_search"));
     }
 
     @Test
@@ -256,11 +306,15 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 tools(
                         "elastic_search_logs_by_correlation_id",
                         "gitlab_find_flow_context",
-                        "db_find_tables"
+                        "db_find_tables",
+                        "opctx_search"
                 )
         );
 
-        assertEquals(List.of("elastic_search_logs_by_correlation_id"), policy.availableToolNames());
+        assertEquals(
+                Set.of("elastic_search_logs_by_correlation_id", "opctx_search"),
+                Set.copyOf(policy.availableToolNames())
+        );
     }
 
     private CopilotIncidentToolAccessPolicy policy(
@@ -276,6 +330,16 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 environment,
                 "release/2026.04",
                 "sample/runtime",
+                sections
+        );
+    }
+
+    private InitialAnalysisRequest requestWithoutGitLabScope(String environment, List<AnalysisEvidenceSection> sections) {
+        return new InitialAnalysisRequest(
+                "corr-123",
+                environment,
+                null,
+                null,
                 sections
         );
     }
@@ -337,6 +401,18 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "repository error",
                         attr("serviceName", "billing-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
+                ))
+        );
+    }
+
+    private AnalysisEvidenceSection matchedOperationalContextSection() {
+        return new AnalysisEvidenceSection(
+                "operational-context",
+                "matched-context",
+                List.of(item(
+                        "Payments system",
+                        attr("systemId", "payments"),
+                        attr("name", "Payments")
                 ))
         );
     }

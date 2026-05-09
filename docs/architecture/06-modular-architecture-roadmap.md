@@ -278,8 +278,9 @@ usuniety, bo operator nie mial dostepu do jego findings.
 Database tool evidence capture: listenery eventow invocation oraz mappery
 wynikow tools na operator-facing `AnalysisEvidenceSection`. Podpakiet
 `features.incidentanalysis.ai.copilot.tools.description` zawiera
-incident-specific guidance doklejane do opisow GitLab/DB tools przez
-platformowy `CopilotToolDescriptionCustomizer`.
+incident-specific guidance doklejane do opisow GitLab/DB/Operational Context
+tools przez platformowy `CopilotToolDescriptionCustomizer`. Sama implementacja
+Operational Context tools pozostaje neutralna w `agenttools.operationalcontext`.
 
 Platform-owned runtime jest juz poza `preparation`, w
 `aiplatform.copilot.runtime` i `aiplatform.copilot.tools`:
@@ -344,6 +345,7 @@ Feature analizy incydentow posiada:
 - incident prompt, digest i response contract,
 - incident skill resources i zasady ich doboru,
 - incident tool access policy oraz hidden tool context dla GitLab/DB/Elastic,
+  plus incidentowe zasady uzycia neutralnych `opctx_*`,
 - mapowanie tool evidence na operator-facing evidence konkretnej analizy,
 - mapowanie wyniku na UI/operator API.
 
@@ -505,9 +507,10 @@ Cel: oddzielic reusable tools od incident analysis i Copilot SDK.
 Kroki:
 
 1. Przeniesc tool contracts i names do `agenttools.<capability>`.
-   Stan obecny: tool names/prefixy dla Elasticsearch, GitLab i Database
-   mieszkaja w `agenttools.<capability>`. Elasticsearch, GitLab i Database
-   wrappery `@Tool` mieszkaja juz w `agenttools.<capability>.mcp`.
+   Stan obecny: tool names/prefixy dla Elasticsearch, GitLab, Database i
+   Operational Context mieszkaja w `agenttools.<capability>`. Elasticsearch,
+   GitLab, Database i Operational Context wrappery `@Tool` mieszkaja juz w
+   `agenttools.<capability>.mcp`.
 2. Przeniesc Spring AI/MCP wrappers do `agenttools.mcp.<capability>` albo
    `agenttools.<capability>.mcp`.
    Stan obecny: wybrany kierunek to `agenttools.<capability>.mcp`; pierwszy
@@ -697,7 +700,8 @@ Kryterium done:
 13. PR: przeniesc neutralne tool names/prefixy do `agenttools.<capability>`
     [done].
 14. PR: przenosic MCP wrappers capability po capability do docelowej warstwy
-    tools; Elasticsearch [done], GitLab [done], Database [done].
+    tools; Elasticsearch [done], GitLab [done], Database [done],
+    Operational Context [done].
 15. PR: wydzielic generic Copilot runtime od incident prompt/digest [in
     progress: runtime, incident preparation, coverage i GitLab/DB tool evidence
     capture przeniesione; platformowe tool
