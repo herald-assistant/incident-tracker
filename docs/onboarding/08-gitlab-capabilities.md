@@ -71,15 +71,14 @@ sygnaly dopasowania takie jak aliases, systems, boundedContexts, package
 prefixes, endpoint prefixes i module paths.
 
 Ten tool zwraca tez `codeSearchScopes` z `repo-map.yml`. Scope pokazuje, ktore
-repozytoria trzeba przeszukiwac razem dla jednego komponentu wdrozeniowego,
-jakie maja role i priorytety oraz jakie `projectName` przekazac wspolnie do
+repozytoria trzeba przeszukiwac razem dla jednego systemu, jakie maja role i
+priorytety oraz jakie `projectName` przekazac wspolnie do
 search/flow/class-reference tools.
 
-Operational context moze wskazac kilka repozytoriow dla jednego komponentu
-wdrozeniowego. Dla GitLab tools oznacza to jeden code search scope:
-repo glowne, biblioteki, shared modules i wygenerowane klienty powinny byc
-przeszukiwane razem, jesli klasa albo collaborator nie znajduje sie w main
-repo.
+Operational context moze wskazac kilka repozytoriow dla jednego systemu. Dla
+GitLab tools oznacza to jeden code search scope: repo glowne, biblioteki,
+shared modules i wygenerowane klienty powinny byc przeszukiwane razem, jesli
+klasa albo collaborator nie znajduje sie w main repo.
 
 User-facing capture z GitLaba pozostaje maksymalnie prosty. Do UI trafia
 `reason` jako naglowek wpisu. File/chunk/chunks pokazuja nazwe/sciezke pliku,

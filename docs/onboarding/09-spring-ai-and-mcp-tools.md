@@ -49,7 +49,7 @@ jest celowo scentralizowany:
 - `analysis.database.connections.*` dla wspoldzielonych hostow/URL-i,
 - `analysis.database.applications.*.database-user` dla katalogu komponentow,
 - `analysis.database.applications.*.application-patterns` dla aliasow
-  aplikacji, deploymentu, kontenera, projektu i runtime componentu,
+  aplikacji, systemu, deploymentu, kontenera i projektu,
 - `analysis.database.environments.<env>.connection` oraz opcjonalny
   `application-user-suffix`, np. `_1` dla `sandbox-1`.
 

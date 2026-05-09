@@ -66,13 +66,13 @@ Hard rules:
 - Use `type` to distinguish systems, for example `internal` vs `external`.
 - Do not invent ownership.
 - Do not invent repositories for external systems.
-- For internal systems, `repos` is the deployed component code scope, not only
-  the main service repo. Include internal library, shared module, generated
-  client, or integration-library repo ids when classes from those repos can
-  appear in stacktraces or decide incident behavior.
+- For internal systems, `repos` is the system code scope, not only the main
+  service repo. Include internal library, shared module, generated client, or
+  integration-library repo ids when classes from those repos can appear in
+  stacktraces or decide incident behavior.
 - Do not create separate system entries for the same system just because incidents show different environments, branches, pods, namespaces, host variants, or deployment versions.
 - Do not model individual interfaces or single endpoints as separate systems; those belong in `integrations.yml`.
-- Keep one system entry per meaningful operational runtime component or external dependency.
+- Keep one system entry per meaningful operational system or external dependency.
 - Prefer stable runtime recognition signals over prose.
 - Prefer short, reusable signals over copied log bodies.
 - Do not paste full stacktraces, long exception bodies, tokens, or transient URLs into signals.
@@ -83,7 +83,7 @@ Hard rules:
 What matters most:
 - each system must be recognizable from runtime evidence
 - `ownerTeamId`, `partnerTeamIds`, `processes`, `contexts`, and `repos` must stay consistent with the other attached operational-context files
-- `repos` should help later GitLab investigation search all repositories that compose the deployed component, including libraries and shared modules
+- `repos` should help later GitLab investigation search all repositories that compose the system runtime behavior, including libraries and shared modules
 - internal and external systems may coexist in this file
 - `integrations.yml` describes contracts between systems, while `systems.yml` describes the systems themselves
 
@@ -135,7 +135,7 @@ Then a valid system entry could look like this fragment:
     requiredEvidence: [correlationId, environment, serviceName, className, endpoint, exception]
 
 Reason:
-- one stable runtime component
+- one stable operational system
 - ownership is explicit
 - signals are short and reusable
 

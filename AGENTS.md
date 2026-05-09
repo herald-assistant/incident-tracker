@@ -42,6 +42,10 @@ Przed wieksza zmiana zacznij od:
     provider,
   - AI-guided fetching przez tools.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
+- Operational context uzywa `system` jako kanonicznego bytu katalogowego.
+  Dane deployment/runtime/service names sa wlasciwosciami i sygnalami systemu,
+  a nie osobnym bytem referencyjnym. Nie przywracaj relacji ani DTO typu
+  osobny komponent uruchomieniowy.
 
 ## Turbo wazne: docelowy model rozszerzalnosci
 
@@ -196,7 +200,8 @@ Zasady granic:
 - `src/main/resources/copilot/skills`
   Skille Copilota pakowane do runtime.
 - `src/main/resources/operational-context`
-  Runtime catalog systemow, procesow, repozytoriow i regul handoffu.
+  Runtime catalog systemow, procesow, repozytoriow i regul handoffu. System
+  jest tu kanonicznym targetem relacji i code-search scope'ow.
 
 ## Zasady rozwoju
 

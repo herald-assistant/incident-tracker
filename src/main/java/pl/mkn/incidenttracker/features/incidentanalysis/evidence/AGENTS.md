@@ -35,6 +35,10 @@ Nie obejmuje:
   `consumedEvidence` i `producedEvidence`.
 - Downstream providery powinny czytac dane przez typowane widoki lub helpery
   blisko capability, a nie przez stringowe odczyty atrybutow rozsiane po kodzie.
+- Operational context evidence matchuje i publikuje code-search scope dla
+  dopasowanego `system`. Nie przywracaj posredniego targetowania po
+  osobnym bycie runtime; deployment/runtime nazwy traktuj jako sygnaly
+  rozpoznania systemu.
 - Nie mieszaj tu logiki MCP, kontrolerow HTTP ani prompt buildera AI.
 - Przy dodaniu nowego providera dopisz go explicite w collectorze i zaktualizuj
   testy kolejnosci oraz descriptorow.

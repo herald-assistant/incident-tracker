@@ -310,8 +310,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   bezposrednio przez sam provider enrichmentu.
 - Operational context publikuje dla dopasowanego systemu jawny code search
   scope: repozytoria/projekty, pakiety i class hints, zeby Copilot traktowal
-  repo glowne, biblioteki i shared modules jako kod jednego komponentu
-  wdrozeniowego.
+  repo glowne, biblioteki i shared modules jako wspolny scope kodu tego
+  systemu.
 - Job flow reuse'uje orchestration warstwe `AnalysisOrchestrator`.
 - Job flow moze przekazac do generycznego requestu AI opcjonalny wybor
   modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,

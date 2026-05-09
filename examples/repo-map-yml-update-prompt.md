@@ -57,8 +57,8 @@ Use it to capture:
   coordinates, package prefixes, source roots, endpoints, queue/topic names,
   datasource/schema/table/entity names, class hints and stacktrace hotspots;
 - modules or subareas inside that same GitLab repository;
-- relationships to systems, runtime components, processes, bounded contexts,
-  integrations, terms, teams and other repositories;
+- relationships to systems, processes, bounded contexts, integrations, terms,
+  teams and other repositories;
 - repository-local hints about how this repo participates in broader
   code-search scopes.
 
@@ -69,8 +69,7 @@ Use `modules[]` for meaningful subareas inside one repository.
 ### `codeSearchScopes[]`
 
 Top-level `codeSearchScopes` are first-class. They describe which repositories
-must be searched together for one runtime component, system, process or bounded
-context.
+must be searched together for one system, process or bounded context.
 
 Use them whenever a runtime/code investigation may span more than one source
 area, for example:
@@ -108,12 +107,11 @@ GitLab repository:
    class hints and stacktrace hotspots.
 4. Add repository-local `codeSearch` hints when useful, such as
    `scopeRole: shared-library`, `searchTogetherWith`, `consumedBySystems`,
-   `consumedByRuntimeComponents`, `consumedByRepositories`,
-   `dependencyCoordinates`, `generatedClientCoordinates` or
-   `schemaCoordinates`.
+   `consumedByRepositories`, `dependencyCoordinates`,
+   `generatedClientCoordinates` or `schemaCoordinates`.
 5. Add it to every relevant top-level `codeSearchScopes[].repositories` entry
-   for consuming systems/runtime components where evidence shows it is part of
-   the code search scope.
+   for consuming systems where evidence shows it is part of the code search
+   scope.
 
 When a shared library is a module inside a monorepo, do not create a separate
 repository entry. Model it under the owning repository's `modules[]`, and refer
@@ -160,7 +158,7 @@ in top-level `codeSearchScopes`.
    paths.
 6. Decide whether observed source areas are separate repositories or modules
    inside one repository.
-7. Build or update `codeSearchScopes` for runtime components and systems:
+7. Build or update `codeSearchScopes` for systems:
    start with the primary service repo, then add supported shared libraries,
    generated clients, integration libraries and config/schema repos with roles,
    priorities, module ids and reasons.
@@ -192,7 +190,6 @@ Prefer this field order when creating or normalizing repository entries:
   responsibilities: []
   references:
     systems: []
-    runtimeComponents: []
     deploymentComponents: []
     repositories: []
     processes: []
@@ -222,7 +219,6 @@ Prefer this field order when creating or normalizing repository entries:
     scopeRole: null
     searchTogetherWith: []
     consumedBySystems: []
-    consumedByRuntimeComponents: []
     consumedByRepositories: []
     consumesRepositories: []
     exportedPackages: []
@@ -263,7 +259,6 @@ Use this shape for top-level `codeSearchScopes[]`:
   lifecycleStatus: active
   target:
     systems: []
-    runtimeComponents: []
     deploymentComponents: []
     processes: []
     boundedContexts: []
@@ -434,8 +429,6 @@ repositories:
     references:
       systems:
         - payments-api
-      runtimeComponents:
-        - payments-api-runtime
       deploymentComponents: []
       repositories:
         - payments-shared-kernel-repo
@@ -474,7 +467,6 @@ repositories:
       searchTogetherWith:
         - payments-shared-kernel-repo
       consumedBySystems: []
-      consumedByRuntimeComponents: []
       consumedByRepositories: []
       consumesRepositories:
         - payments-shared-kernel-repo
@@ -550,8 +542,6 @@ repositories:
     references:
       systems:
         - payments-api
-      runtimeComponents:
-        - payments-api-runtime
       deploymentComponents: []
       repositories:
         - payments-api-repo
@@ -589,8 +579,6 @@ repositories:
         - payments-api-repo
       consumedBySystems:
         - payments-api
-      consumedByRuntimeComponents:
-        - payments-api-runtime
       consumedByRepositories:
         - payments-api-repo
       consumesRepositories: []
@@ -647,14 +635,12 @@ repositories:
     gaps: []
 
 codeSearchScopes:
-  - id: payments-api-runtime-code
-    name: Payments API Runtime Code Search Scope
+  - id: payments-api-code-search
+    name: Payments API Code Search Scope
     lifecycleStatus: active
     target:
       systems:
         - payments-api
-      runtimeComponents:
-        - payments-api-runtime
       deploymentComponents: []
       processes:
         - payment-capture

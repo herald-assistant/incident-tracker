@@ -90,7 +90,6 @@ final class GitLabAvailableRepositoryMapper {
         var repositoryId = repository.id();
         var name = firstNonBlank(repository.name(), repositoryId, projectName);
         var systems = repository.references().systems();
-        var runtimeComponents = repository.references().runtimeComponents();
         var boundedContexts = repository.references().boundedContexts();
         var processes = repository.references().processes();
         var integrations = repository.references().integrations();
@@ -105,7 +104,6 @@ final class GitLabAvailableRepositoryMapper {
                 repository.repositoryType(),
                 repository.lifecycleStatus(),
                 systems,
-                runtimeComponents,
                 boundedContexts,
                 processes,
                 integrations,
@@ -133,7 +131,6 @@ final class GitLabAvailableRepositoryMapper {
                 firstNonBlank(scope.name(), scope.id()),
                 scope.lifecycleStatus(),
                 scope.target().systems(),
-                scope.target().runtimeComponents(),
                 scope.target().processes(),
                 scope.target().boundedContexts(),
                 scope.useFor(),

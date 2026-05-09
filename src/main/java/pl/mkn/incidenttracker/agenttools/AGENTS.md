@@ -34,6 +34,10 @@ Nie obejmuje:
   contractu i wymaga testow MCP, tool factory/policy oraz dokumentacji.
 - Implementacje tooli sa w `agenttools.<capability>.mcp`. Nie przywracaj ich do
   historycznego `analysis.mcp.*`.
+- GitLab tools korzystajace z operational context maja wystawiac systemy jako
+  kanoniczny target repozytoriow i `codeSearchScopes`. Nie dodawaj model-facing
+  pol ani odpowiedzi dla osobnego targetu runtime; runtime/deployment names
+  moga byc tylko sygnalami dopasowania albo opisem.
 
 ## Weryfikacja
 

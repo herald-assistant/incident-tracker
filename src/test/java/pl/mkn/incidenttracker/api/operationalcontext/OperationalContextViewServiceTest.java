@@ -72,7 +72,7 @@ class OperationalContextViewServiceTest {
         var codeSearchScope = service.codeSearchScopes().get(0);
         assertEquals("New Scope", codeSearchScope.name());
         assertEquals(1, codeSearchScope.repositories().count());
-        assertEquals(4, codeSearchScope.targets().count());
+        assertEquals(3, codeSearchScope.targets().count());
 
         var process = service.processes().get(0);
         assertEquals("Current process summary", process.purpose());
@@ -312,7 +312,6 @@ class OperationalContextViewServiceTest {
                         "lifecycleStatus", "active",
                         "target", map(
                                 "systems", List.of("new-system"),
-                                "runtimeComponents", List.of("new-service"),
                                 "processes", List.of("new-process"),
                                 "boundedContexts", List.of("new-context")
                         ),

@@ -105,7 +105,6 @@ public final class GitLabToolDtos {
             String repositoryType,
             String lifecycleStatus,
             List<String> systems,
-            List<String> runtimeComponents,
             List<String> boundedContexts,
             List<String> processes,
             List<String> integrations,
@@ -117,7 +116,6 @@ public final class GitLabToolDtos {
         public GitLabAvailableRepository {
             aliases = aliases != null ? List.copyOf(aliases) : List.of();
             systems = systems != null ? List.copyOf(systems) : List.of();
-            runtimeComponents = runtimeComponents != null ? List.copyOf(runtimeComponents) : List.of();
             boundedContexts = boundedContexts != null ? List.copyOf(boundedContexts) : List.of();
             processes = processes != null ? List.copyOf(processes) : List.of();
             integrations = integrations != null ? List.copyOf(integrations) : List.of();
@@ -133,7 +131,6 @@ public final class GitLabToolDtos {
             String name,
             String lifecycleStatus,
             List<String> targetSystems,
-            List<String> targetRuntimeComponents,
             List<String> targetProcesses,
             List<String> targetBoundedContexts,
             List<String> useFor,
@@ -147,7 +144,6 @@ public final class GitLabToolDtos {
     ) {
         public GitLabAvailableCodeSearchScope {
             targetSystems = targetSystems != null ? List.copyOf(targetSystems) : List.of();
-            targetRuntimeComponents = targetRuntimeComponents != null ? List.copyOf(targetRuntimeComponents) : List.of();
             targetProcesses = targetProcesses != null ? List.copyOf(targetProcesses) : List.of();
             targetBoundedContexts = targetBoundedContexts != null ? List.copyOf(targetBoundedContexts) : List.of();
             useFor = useFor != null ? List.copyOf(useFor) : List.of();

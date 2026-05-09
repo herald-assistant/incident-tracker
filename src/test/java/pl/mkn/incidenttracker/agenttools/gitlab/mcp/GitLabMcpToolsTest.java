@@ -42,7 +42,6 @@ class GitLabMcpToolsTest {
                         List.of(codeSearchScope(
                                 "backend-component-code-search",
                                 List.of("backend"),
-                                List.of("backend-runtime"),
                                 List.of("decision-process"),
                                 List.of("decision", "limit"),
                                 List.of(
@@ -62,7 +61,6 @@ class GitLabMcpToolsTest {
                                 "backend",
                                 List.of("backend", "CLP/backend"),
                                 List.of("backend"),
-                                List.of("backend-runtime"),
                                 List.of("decision", "limit"),
                                 List.of("decision-process"),
                                 List.of("cbp"),
@@ -81,7 +79,6 @@ class GitLabMcpToolsTest {
                                 "CLP_AGREEMENT_PROCESS",
                                 List.of("agreement-process"),
                                 List.of("agreement"),
-                                List.of("agreement-runtime"),
                                 List.of("agreement"),
                                 List.of("agreement-process"),
                                 List.of(),
@@ -100,7 +97,6 @@ class GitLabMcpToolsTest {
                                 "outside",
                                 List.of("outside"),
                                 List.of("outside"),
-                                List.of(),
                                 List.of(),
                                 List.of(),
                                 List.of(),
@@ -133,7 +129,6 @@ class GitLabMcpToolsTest {
         assertEquals("service", backend.repositoryType());
         assertEquals("active", backend.lifecycleStatus());
         assertIterableEquals(List.of("backend"), backend.systems());
-        assertIterableEquals(List.of("backend-runtime"), backend.runtimeComponents());
         assertIterableEquals(List.of("decision", "limit"), backend.boundedContexts());
         assertIterableEquals(List.of("decision-process"), backend.processes());
         assertIterableEquals(List.of("cbp"), backend.integrations());
@@ -776,7 +771,6 @@ class GitLabMcpToolsTest {
     private Map<String, Object> codeSearchScope(
             String id,
             List<String> systems,
-            List<String> runtimeComponents,
             List<String> processes,
             List<String> boundedContexts,
             List<Map<String, Object>> repositories,
@@ -789,7 +783,6 @@ class GitLabMcpToolsTest {
         scope.put("lifecycleStatus", "active");
         scope.put("target", Map.of(
                 "systems", systems,
-                "runtimeComponents", runtimeComponents,
                 "processes", processes,
                 "boundedContexts", boundedContexts
         ));
@@ -832,7 +825,6 @@ class GitLabMcpToolsTest {
             String project,
             List<String> aliases,
             List<String> systems,
-            List<String> runtimeComponents,
             List<String> boundedContexts,
             List<String> processes,
             List<String> integrations,
@@ -856,7 +848,6 @@ class GitLabMcpToolsTest {
         repository.put("purpose", "%s repository represented in operational context.".formatted(name));
         repository.put("references", Map.of(
                 "systems", systems,
-                "runtimeComponents", runtimeComponents,
                 "boundedContexts", boundedContexts,
                 "processes", processes,
                 "integrations", integrations,

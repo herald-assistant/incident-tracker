@@ -18,6 +18,10 @@ Obecnie obejmuje m.in.:
 Operational context jest tutaj query-based capability katalogu operacyjnego.
 Incident-specific matching i mapowanie na evidence pozostaja w
 `features.incidentanalysis.evidence.provider.operationalcontext`.
+W modelu operational context `system` jest kanonicznym bytem dla aplikacji lub
+uslugi. Nazwy deploymentu, kontenera, aplikacji i serwisu sa sygnalami albo
+metadata systemu; nie dodawaj osobnych kontraktow referencyjnych
+dla komponentu uruchomieniowego.
 
 Database jest tutaj readonly capability diagnostyki danych: routing DataSource
 per environment, metadata, SQL guard, masking/limiting wynikow oraz typed
@@ -38,6 +42,9 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 - Dla Database capability nie wprowadzaj globalnego `spring.datasource`, nie
   zgaduj schematow domenowo w kodzie i trzymaj mapping application-to-schema w
   konfiguracji.
+- Dla Operational Context nie rozbijaj relacji katalogowych na system i osobny
+  byt runtime. Repozytoria, procesy, bounded contexts, integracje i code-search
+  scopes powinny odnosic sie do `systems`.
 - Jesli capability potrzebuje neutralnego kontraktu wspolnego z innym
   feature'em, preferuj maly typ w `shared` albo `common`, ale dopiero gdy realnie
   usuwa zaleznosc.

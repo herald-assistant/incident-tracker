@@ -490,7 +490,6 @@ public final class OperationalContextDtos {
 
     public record OperationalContextReferences(
             List<String> systems,
-            List<String> runtimeComponents,
             List<String> deploymentComponents,
             List<String> repositories,
             List<String> modules,
@@ -506,7 +505,6 @@ public final class OperationalContextDtos {
 
         public OperationalContextReferences {
             systems = copyList(systems);
-            runtimeComponents = copyList(runtimeComponents);
             deploymentComponents = copyList(deploymentComponents);
             repositories = copyList(repositories);
             modules = copyList(modules);
@@ -522,7 +520,6 @@ public final class OperationalContextDtos {
 
         public static OperationalContextReferences empty() {
             return new OperationalContextReferences(
-                    List.of(),
                     List.of(),
                     List.of(),
                     List.of(),
@@ -980,7 +977,6 @@ public final class OperationalContextDtos {
 
     public record OperationalContextIntegrationParticipant(
             String system,
-            String runtimeComponent,
             String boundedContext,
             List<String> repositories,
             List<String> modules,
@@ -997,7 +993,6 @@ public final class OperationalContextDtos {
 
         public static OperationalContextIntegrationParticipant empty() {
             return new OperationalContextIntegrationParticipant(
-                    null,
                     null,
                     null,
                     List.of(),
@@ -1389,7 +1384,7 @@ public final class OperationalContextDtos {
             List<String> configPrefixes,
             List<String> generatedClients,
             List<String> sharedLibraries,
-            List<String> searchTogetherWithRuntimeComponents,
+            List<String> searchTogetherWithSystems,
             List<String> searchNotes
     ) {
 
@@ -1400,7 +1395,7 @@ public final class OperationalContextDtos {
             configPrefixes = copyList(configPrefixes);
             generatedClients = copyList(generatedClients);
             sharedLibraries = copyList(sharedLibraries);
-            searchTogetherWithRuntimeComponents = copyList(searchTogetherWithRuntimeComponents);
+            searchTogetherWithSystems = copyList(searchTogetherWithSystems);
             searchNotes = copyList(searchNotes);
         }
 
@@ -1460,7 +1455,6 @@ public final class OperationalContextDtos {
 
     public record OperationalContextRepositorySearchTarget(
             List<String> systems,
-            List<String> runtimeComponents,
             List<String> deploymentComponents,
             List<String> processes,
             List<String> boundedContexts,
@@ -1470,7 +1464,6 @@ public final class OperationalContextDtos {
 
         public OperationalContextRepositorySearchTarget {
             systems = copyList(systems);
-            runtimeComponents = copyList(runtimeComponents);
             deploymentComponents = copyList(deploymentComponents);
             processes = copyList(processes);
             boundedContexts = copyList(boundedContexts);
@@ -1480,7 +1473,6 @@ public final class OperationalContextDtos {
 
         public static OperationalContextRepositorySearchTarget empty() {
             return new OperationalContextRepositorySearchTarget(
-                    List.of(),
                     List.of(),
                     List.of(),
                     List.of(),
@@ -1924,7 +1916,6 @@ public final class OperationalContextDtos {
         var source = map(value);
         return new OperationalContextReferences(
                 textList(source, "systems"),
-                textList(source, "runtimeComponents"),
                 textList(source, "deploymentComponents"),
                 textList(source, "repositories"),
                 textList(source, "modules"),
@@ -2092,7 +2083,6 @@ public final class OperationalContextDtos {
         var source = map(value);
         return new OperationalContextIntegrationParticipant(
                 text(source, "system"),
-                text(source, "runtimeComponent"),
                 text(source, "boundedContext"),
                 textList(source, "repositories"),
                 textList(source, "modules"),
@@ -2240,7 +2230,7 @@ public final class OperationalContextDtos {
                 textList(source, "configPrefixes"),
                 textList(source, "generatedClients"),
                 textList(source, "sharedLibraries"),
-                textList(source, "searchTogetherWithRuntimeComponents"),
+                textList(source, "searchTogetherWithSystems"),
                 textList(source, "searchNotes")
         );
     }
@@ -2249,7 +2239,6 @@ public final class OperationalContextDtos {
         var source = map(value);
         return new OperationalContextRepositorySearchTarget(
                 textList(source, "systems"),
-                textList(source, "runtimeComponents"),
                 textList(source, "deploymentComponents"),
                 textList(source, "processes"),
                 textList(source, "boundedContexts"),

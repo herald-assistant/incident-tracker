@@ -349,7 +349,6 @@ public class OperationalContextEvidenceMapper {
     ) {
         var target = scope.target();
         return containsNormalized(target.systems(), system.id())
-                || intersectsNormalized(target.runtimeComponents(), system.references().runtimeComponents())
                 || intersectsNormalized(target.processes(), system.references().processes())
                 || intersectsNormalized(target.boundedContexts(), system.references().boundedContexts())
                 || intersectsNormalized(primaryScopeRepositoryIds(scope), seedRepoIds);

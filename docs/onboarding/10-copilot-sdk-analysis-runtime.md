@@ -196,7 +196,7 @@ szczegolowe i opisane jezykiem techniczno-funkcjonalnym, nie jako lista klas.
 
 Jesli operational context wskazuje `codeSearchScopes` albo kilka
 `codeSearchProjects` dla tego samego systemu, GitLab skill i tool descriptions
-kaza traktowac je jako jeden scope kodu komponentu: main repo plus
+kaza traktowac je jako jeden scope kodu systemu: main repo plus
 biblioteki/shared modules. Model nie powinien uznawac klasy za niedostepna po
 jednym nietrafionym lookupie w main repo.
 

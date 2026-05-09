@@ -472,7 +472,6 @@ public class OperationalContextViewService {
                         )),
                         new OperationalContextDetailSectionDto("Targets", orderedMap(
                                 "systems", scope.target().systems(),
-                                "runtimeComponents", scope.target().runtimeComponents(),
                                 "deploymentComponents", scope.target().deploymentComponents(),
                                 "processes", scope.target().processes(),
                                 "boundedContexts", scope.target().boundedContexts(),
@@ -713,7 +712,7 @@ public class OperationalContextViewService {
                 addFinding(findings, "error", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no included repositories.", "AI cannot perform a multi-repository lookup without at least one included repository.", "Add codeSearchScopes.repositories with include=true.", "GitLab tool guidance may be incomplete.");
             }
             if (codeSearchScopeTargetValues(scope).isEmpty()) {
-                addFinding(findings, "warning", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no operational target.", "Scope is not anchored to systems, runtime components, processes, bounded contexts or integrations.", "Fill codeSearchScopes.target.", "Operators may not know when to use this scope.");
+                addFinding(findings, "warning", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no operational target.", "Scope is not anchored to systems, processes, bounded contexts or integrations.", "Fill codeSearchScopes.target.", "Operators may not know when to use this scope.");
             }
         }
     }
@@ -1093,7 +1092,6 @@ public class OperationalContextViewService {
     ) {
         var groups = new ArrayList<ExplainableBreakdownGroupDto>();
         addTargetGroup(groups, "Systems", SYSTEM, scope.target().systems(), view.systemsById(), "Scope targets these runtime systems.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
-        addValueGroup(groups, "Runtime components", scope.target().runtimeComponents(), "runtime-component", "Scope targets these runtime component names.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
         addValueGroup(groups, "Deployment components", scope.target().deploymentComponents(), "deployment-component", "Scope targets these deployment component names.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
         addTargetGroup(groups, "Processes", PROCESS, scope.target().processes(), view.processesById(), "Scope targets these operational processes.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
         addTargetGroup(groups, "Bounded contexts", BOUNDED_CONTEXT, scope.target().boundedContexts(), view.contextsById(), "Scope targets these bounded contexts.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
@@ -1105,7 +1103,7 @@ public class OperationalContextViewService {
                 count,
                 count == 0 ? "unknown" : "ok",
                 count == 0 ? "low" : "high",
-                count == 0 ? "No target systems/processes/contexts are declared." : "Runtime, process and domain targets for this multi-repo search scope.",
+                count == 0 ? "No target systems/processes/contexts are declared." : "System, process and domain targets for this multi-repo search scope.",
                 groups,
                 List.of(reason("codeSearchScopes.target", "Targets are parsed from repo-map.yml codeSearchScopes.target.", "strong")),
                 count == 0 ? List.of("Scope is not anchored to operational entities.") : List.of(),
@@ -1606,7 +1604,6 @@ public class OperationalContextViewService {
                     "name", scope.name(),
                     "lifecycleStatus", scope.lifecycleStatus(),
                     "systems", scope.target().systems(),
-                    "runtimeComponents", scope.target().runtimeComponents(),
                     "deploymentComponents", scope.target().deploymentComponents(),
                     "processes", scope.target().processes(),
                     "boundedContexts", scope.target().boundedContexts(),
@@ -1922,7 +1919,6 @@ public class OperationalContextViewService {
     private List<String> codeSearchScopeTargetValues(OperationalContextRepositorySearchScope scope) {
         return distinct(combineValues(
                 scope.target().systems(),
-                scope.target().runtimeComponents(),
                 scope.target().deploymentComponents(),
                 scope.target().processes(),
                 scope.target().boundedContexts(),
@@ -2116,7 +2112,6 @@ public class OperationalContextViewService {
 
     private List<String> runtimeMappings(OperationalContextRepository repository) {
         var values = new LinkedHashSet<String>();
-        values.addAll(repository.references().runtimeComponents());
         values.addAll(repository.matchSignals().valuesForKeys("serviceNames", "containerNames", "projectNames", "hosts", "applicationNames"));
         return List.copyOf(values);
     }
