@@ -13,10 +13,10 @@ class DatabaseMcpToolScopeResolverTest {
 
     @Test
     void shouldCreateScopeFromToolContext() {
-        var scope = DatabaseMcpToolScopeResolver.from(toolContext("zt01", "corr-123"));
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext("sandbox-a", "corr-123"));
 
         assertEquals("corr-123", scope.correlationId());
-        assertEquals("zt01", scope.environment());
+        assertEquals("sandbox-a", scope.environment());
         assertEquals("run-1", scope.analysisRunId());
         assertEquals("analysis-run-1", scope.copilotSessionId());
         assertEquals("tool-call-1", scope.toolCallId());
@@ -40,7 +40,7 @@ class DatabaseMcpToolScopeResolverTest {
     void shouldFailWhenCorrelationIdIsMissing() {
         var exception = assertThrows(
                 IllegalStateException.class,
-                () -> DatabaseMcpToolScopeResolver.from(toolContext("zt01", null))
+                () -> DatabaseMcpToolScopeResolver.from(toolContext("sandbox-a", null))
         );
 
         assertEquals(

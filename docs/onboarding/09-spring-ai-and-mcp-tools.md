@@ -51,11 +51,11 @@ jest celowo scentralizowany:
 - `analysis.database.applications.*.application-patterns` dla aliasow
   aplikacji, deploymentu, kontenera, projektu i runtime componentu,
 - `analysis.database.environments.<env>.connection` oraz opcjonalny
-  `application-user-suffix`, np. `_1` dla `dev1`.
+  `application-user-suffix`, np. `_1` dla `sandbox-1`.
 
-Dzieki temu zt moze uzywac bazowego usera komponentu, np.
-`AGREEMENT_PROCESS`, a dev moze materializowac go jako
-`AGREEMENT_PROCESS_1`, `AGREEMENT_PROCESS_2` itd. Per-environment aplikacje
+Dzieki temu sandbox moze uzywac bazowego usera komponentu, np.
+`CRM_APP`, a dev moze materializowac go jako
+`CRM_APP_1`, `CRM_APP_2` itd. Per-environment aplikacje
 nie sa osobnym kontraktem konfiguracji; jesli aplikacja ma nietypowego ownera, ustaw
 jej dokladne `schema` w globalnym katalogu aplikacji.
 

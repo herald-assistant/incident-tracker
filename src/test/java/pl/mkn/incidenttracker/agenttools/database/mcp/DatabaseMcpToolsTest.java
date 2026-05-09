@@ -35,33 +35,33 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateFindTablesWithApplicationPattern() {
-        when(databaseToolService.findTables(argThat(this::scopeMatches), eq(new DbFindTablesRequest("orders-service", "ORDER", "OrderEntity", 10))))
+        when(databaseToolService.findTables(argThat(this::scopeMatches), eq(new DbFindTablesRequest("crm-service", "CUSTOMER_PROFILE", "CustomerProfileEntity", 10))))
                 .thenReturn(tableSearchResult());
 
-        tools.findTables("orders-service", "ORDER", "OrderEntity", 10, "Szukam tabeli zamowien.", toolContext());
+        tools.findTables("crm-service", "CUSTOMER_PROFILE", "CustomerProfileEntity", 10, "Szukam tabeli klientow.", toolContext());
 
         verify(databaseToolService).findTables(
                 argThat(this::scopeMatches),
-                eq(new DbFindTablesRequest("orders-service", "ORDER", "OrderEntity", 10))
+                eq(new DbFindTablesRequest("crm-service", "CUSTOMER_PROFILE", "CustomerProfileEntity", 10))
         );
     }
 
     @Test
     void shouldDelegateFindColumnsWithApplicationPattern() {
-        when(databaseToolService.findColumns(argThat(this::scopeMatches), eq(new DbFindColumnsRequest("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10))))
+        when(databaseToolService.findColumns(argThat(this::scopeMatches), eq(new DbFindColumnsRequest("crm-service", "CUSTOMER_INTERACTION", "STATUS", "statusCode", 10))))
                 .thenReturn(columnSearchResult());
 
-        tools.findColumns("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10, "Szukam kolumny statusu.", toolContext());
+        tools.findColumns("crm-service", "CUSTOMER_INTERACTION", "STATUS", "statusCode", 10, "Szukam kolumny statusu.", toolContext());
 
         verify(databaseToolService).findColumns(
                 argThat(this::scopeMatches),
-                eq(new DbFindColumnsRequest("orders-service", "ORDER_EVENT", "STATUS", "statusCode", 10))
+                eq(new DbFindColumnsRequest("crm-service", "CUSTOMER_INTERACTION", "STATUS", "statusCode", 10))
         );
     }
 
     @Test
     void shouldDelegateDescribeTable() {
-        var table = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
+        var table = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
         when(databaseToolService.describeTable(argThat(this::scopeMatches), eq(new DbDescribeTableRequest(table))))
                 .thenReturn(tableDescription());
 
@@ -75,7 +75,7 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateExistsByKey() {
-        var table = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
+        var table = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
         var keyValues = List.of(new DbKeyValue("ID", "123"));
         var projectionColumns = List.of("ID", "STATUS");
         when(databaseToolService.existsByKey(argThat(this::scopeMatches), eq(new DbExistsByKeyRequest(table, keyValues, projectionColumns))))
@@ -91,7 +91,7 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateCountRows() {
-        var table = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
+        var table = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
         var filters = List.of(new DbFilter("STATUS", DbOperator.EQ, List.of("ACTIVE")));
         when(databaseToolService.countRows(argThat(this::scopeMatches), eq(new DbCountRowsRequest(table, filters))))
                 .thenReturn(countResult());
@@ -106,7 +106,7 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateGroupCount() {
-        var table = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
+        var table = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
         var filters = List.of(new DbFilter("TENANT_ID", DbOperator.EQ, List.of("TENANT_A")));
         when(databaseToolService.groupCount(argThat(this::scopeMatches), eq(new DbGroupCountRequest(table, List.of("STATUS"), filters, 5))))
                 .thenReturn(groupCountResult());
@@ -121,7 +121,7 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateSampleRows() {
-        var table = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
+        var table = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
         var filters = List.of(new DbFilter("STATUS", DbOperator.EQ, List.of("ACTIVE")));
         var orderBy = List.of(new DbOrderBy("UPDATED_AT", SortDirection.DESC));
         when(databaseToolService.sampleRows(argThat(this::scopeMatches), eq(new DbSampleRowsRequest(table, List.of("ID"), filters, orderBy, 5))))
@@ -137,25 +137,25 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateCheckOrphans() {
-        var childTable = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
-        var parentTable = new DbTableRef("ORDERS_APP", "ORDER");
+        var childTable = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
+        var parentTable = new DbTableRef("CRM_APP", "CUSTOMER_PROFILE");
         var filters = List.of(new DbFilter("STATUS", DbOperator.EQ, List.of("FAILED")));
         when(databaseToolService.checkOrphans(
                 argThat(this::scopeMatches),
-                eq(new DbCheckOrphansRequest(childTable, "ORDER_ID", parentTable, "ID", filters, 5))
+                eq(new DbCheckOrphansRequest(childTable, "CUSTOMER_ID", parentTable, "ID", filters, 5))
         )).thenReturn(orphanCheckResult());
 
-        tools.checkOrphans(childTable, "ORDER_ID", parentTable, "ID", filters, 5, "Sprawdzam osierocone relacje.", toolContext());
+        tools.checkOrphans(childTable, "CUSTOMER_ID", parentTable, "ID", filters, 5, "Sprawdzam osierocone relacje.", toolContext());
 
         verify(databaseToolService).checkOrphans(
                 argThat(this::scopeMatches),
-                eq(new DbCheckOrphansRequest(childTable, "ORDER_ID", parentTable, "ID", filters, 5))
+                eq(new DbCheckOrphansRequest(childTable, "CUSTOMER_ID", parentTable, "ID", filters, 5))
         );
     }
 
     @Test
     void shouldDelegateFindRelationships() {
-        var tables = List.of(new DbTableRef("ORDERS_APP", "ORDER_EVENT"));
+        var tables = List.of(new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"));
         when(databaseToolService.findRelationships(argThat(this::scopeMatches), eq(new DbFindRelationshipsRequest(tables, 2, true))))
                 .thenReturn(relationshipsResult());
 
@@ -170,16 +170,16 @@ class DatabaseMcpToolsTest {
     @Test
     void shouldDelegateJoinCount() {
         var tables = List.of(
-                new DbTableRef("ORDERS_APP", "ORDER_EVENT"),
-                new DbTableRef("COMMON_DICT", "ORDER_STATUS")
+                new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"),
+                new DbTableRef("COMMON_DICT", "CUSTOMER_STATUS")
         );
         var joins = List.of(new DbJoinCondition(
-                new DbColumnRef(new DbTableRef("ORDERS_APP", "ORDER_EVENT"), "STATUS_ID"),
-                new DbColumnRef(new DbTableRef("COMMON_DICT", "ORDER_STATUS"), "ID"),
+                new DbColumnRef(new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), "STATUS_ID"),
+                new DbColumnRef(new DbTableRef("COMMON_DICT", "CUSTOMER_STATUS"), "ID"),
                 JoinType.INNER
         ));
         var filters = List.of(new DbQualifiedFilter(
-                new DbColumnRef(new DbTableRef("COMMON_DICT", "ORDER_STATUS"), "STATUS"),
+                new DbColumnRef(new DbTableRef("COMMON_DICT", "CUSTOMER_STATUS"), "STATUS"),
                 DbOperator.EQ,
                 List.of("ACTIVE")
         ));
@@ -197,20 +197,20 @@ class DatabaseMcpToolsTest {
     @Test
     void shouldDelegateJoinSample() {
         var tables = List.of(
-                new DbTableRef("ORDERS_APP", "ORDER_EVENT"),
-                new DbTableRef("COMMON_DICT", "ORDER_STATUS")
+                new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"),
+                new DbTableRef("COMMON_DICT", "CUSTOMER_STATUS")
         );
         var joins = List.of(new DbJoinCondition(
-                new DbColumnRef(new DbTableRef("ORDERS_APP", "ORDER_EVENT"), "STATUS_ID"),
-                new DbColumnRef(new DbTableRef("COMMON_DICT", "ORDER_STATUS"), "ID"),
+                new DbColumnRef(new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), "STATUS_ID"),
+                new DbColumnRef(new DbTableRef("COMMON_DICT", "CUSTOMER_STATUS"), "ID"),
                 JoinType.INNER
         ));
         var columns = List.of(new DbProjectedColumn(
-                new DbColumnRef(new DbTableRef("ORDERS_APP", "ORDER_EVENT"), "ID"),
-                "ORDER_ID"
+                new DbColumnRef(new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), "ID"),
+                "CUSTOMER_ID"
         ));
         var filters = List.of(new DbQualifiedFilter(
-                new DbColumnRef(new DbTableRef("COMMON_DICT", "ORDER_STATUS"), "STATUS"),
+                new DbColumnRef(new DbTableRef("COMMON_DICT", "CUSTOMER_STATUS"), "STATUS"),
                 DbOperator.EQ,
                 List.of("ACTIVE")
         ));
@@ -227,9 +227,9 @@ class DatabaseMcpToolsTest {
 
     @Test
     void shouldDelegateCompareTableToExpectedMapping() {
-        var table = new DbTableRef("ORDERS_APP", "ORDER_EVENT");
+        var table = new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION");
         var expectedColumns = List.of(new ExpectedColumn("id", "ID", "NUMBER", false, true));
-        var expectedRelationships = List.of(new ExpectedRelationship("order", "ORDER_ID", "ORDER", "ID"));
+        var expectedRelationships = List.of(new ExpectedRelationship("customer_profile", "CUSTOMER_ID", "CUSTOMER_PROFILE", "ID"));
         when(databaseToolService.compareTableToExpectedMapping(
                 argThat(this::scopeMatches),
                 eq(new DbMappingComparisonRequest(table, expectedColumns, expectedRelationships))
@@ -261,7 +261,7 @@ class DatabaseMcpToolsTest {
     private boolean scopeMatches(DbCapabilityScope scope) {
         return scope != null
                 && "corr-123".equals(scope.correlationId())
-                && "zt01".equals(scope.environment())
+                && "sandbox-a".equals(scope.environment())
                 && "run-1".equals(scope.analysisRunId())
                 && "analysis-run-1".equals(scope.copilotSessionId())
                 && "tool-call-1".equals(scope.toolCallId())
@@ -271,7 +271,7 @@ class DatabaseMcpToolsTest {
     private ToolContext toolContext() {
         var context = new LinkedHashMap<String, Object>();
         context.put(AgentToolContextKeys.CORRELATION_ID, "corr-123");
-        context.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
+        context.put(AgentToolContextKeys.ENVIRONMENT, "sandbox-a");
         context.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "run-1");
         context.put(AgentToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
         context.put(AgentToolContextKeys.TOOL_CALL_ID, "tool-call-1");
@@ -280,58 +280,58 @@ class DatabaseMcpToolsTest {
     }
 
     private DbScopeResult scopeResult() {
-        return new DbScopeResult("zt01", "oracle", "desc", List.of(), List.of("ORDERS_APP"), List.of(), List.of());
+        return new DbScopeResult("sandbox-a", "oracle", "desc", List.of(), List.of("CRM_APP"), List.of(), List.of());
     }
 
     private DbTableSearchResult tableSearchResult() {
-        return new DbTableSearchResult("zt01", "oracle", "orders-service", List.of("ORDERS_APP"), List.of(), false, List.of());
+        return new DbTableSearchResult("sandbox-a", "oracle", "crm-service", List.of("CRM_APP"), List.of(), false, List.of());
     }
 
     private DbColumnSearchResult columnSearchResult() {
-        return new DbColumnSearchResult("zt01", "oracle", "orders-service", List.of("ORDERS_APP"), List.of(), false, List.of());
+        return new DbColumnSearchResult("sandbox-a", "oracle", "crm-service", List.of("CRM_APP"), List.of(), false, List.of());
     }
 
     private DbTableDescription tableDescription() {
-        return new DbTableDescription("zt01", "oracle", "ORDERS_APP", "ORDER_EVENT", "TABLE", null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+        return new DbTableDescription("sandbox-a", "oracle", "CRM_APP", "CUSTOMER_INTERACTION", "TABLE", null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
     private DbExistsResult existsResult() {
-        return new DbExistsResult("zt01", "oracle", new DbTableRef("ORDERS_APP", "ORDER_EVENT"), true, 1, List.of(), List.of());
+        return new DbExistsResult("sandbox-a", "oracle", new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), true, 1, List.of(), List.of());
     }
 
     private DbCountResult countResult() {
-        return new DbCountResult("zt01", "oracle", new DbTableRef("ORDERS_APP", "ORDER_EVENT"), 1, List.of(), List.of());
+        return new DbCountResult("sandbox-a", "oracle", new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), 1, List.of(), List.of());
     }
 
     private DbGroupCountResult groupCountResult() {
-        return new DbGroupCountResult("zt01", "oracle", new DbTableRef("ORDERS_APP", "ORDER_EVENT"), List.of(), false, List.of());
+        return new DbGroupCountResult("sandbox-a", "oracle", new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), List.of(), false, List.of());
     }
 
     private DbSampleRowsResult sampleRowsResult() {
-        return new DbSampleRowsResult("zt01", "oracle", new DbTableRef("ORDERS_APP", "ORDER_EVENT"), List.of("ID"), List.of(), false, List.of());
+        return new DbSampleRowsResult("sandbox-a", "oracle", new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), List.of("ID"), List.of(), false, List.of());
     }
 
     private DbOrphanCheckResult orphanCheckResult() {
-        return new DbOrphanCheckResult("zt01", "oracle", new DbTableRef("ORDERS_APP", "ORDER_EVENT"), "ORDER_ID", new DbTableRef("ORDERS_APP", "ORDER"), "ID", 1, List.of(), false, List.of());
+        return new DbOrphanCheckResult("sandbox-a", "oracle", new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), "CUSTOMER_ID", new DbTableRef("CRM_APP", "CUSTOMER_PROFILE"), "ID", 1, List.of(), false, List.of());
     }
 
     private DbRelationshipsResult relationshipsResult() {
-        return new DbRelationshipsResult("zt01", "oracle", List.of(), List.of());
+        return new DbRelationshipsResult("sandbox-a", "oracle", List.of(), List.of());
     }
 
     private DbJoinCountResult joinCountResult() {
-        return new DbJoinCountResult("zt01", "oracle", 1, List.of());
+        return new DbJoinCountResult("sandbox-a", "oracle", 1, List.of());
     }
 
     private DbJoinSampleResult joinSampleResult() {
-        return new DbJoinSampleResult("zt01", "oracle", List.of(), false, List.of());
+        return new DbJoinSampleResult("sandbox-a", "oracle", List.of(), false, List.of());
     }
 
     private DbMappingComparisonResult mappingComparisonResult() {
-        return new DbMappingComparisonResult("zt01", "oracle", new DbTableRef("ORDERS_APP", "ORDER_EVENT"), List.of(), List.of(), List.of());
+        return new DbMappingComparisonResult("sandbox-a", "oracle", new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"), List.of(), List.of(), List.of());
     }
 
     private DbReadonlySqlResult readonlySqlResult() {
-        return new DbReadonlySqlResult("zt01", "oracle", "Sprawdzam wynik prostego SELECT.", List.of(Map.of("VALUE", 1)), false, List.of());
+        return new DbReadonlySqlResult("sandbox-a", "oracle", "Sprawdzam wynik prostego SELECT.", List.of(Map.of("VALUE", 1)), false, List.of());
     }
 }

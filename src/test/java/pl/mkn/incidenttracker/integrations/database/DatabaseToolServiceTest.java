@@ -26,30 +26,30 @@ class DatabaseToolServiceTest {
     void shouldRankTableCandidatesAndPopulateMatchedBecause() {
         var service = service();
         var resolvedScope = new ResolvedDatabaseApplicationScope(
-                "zt01",
+                "sandbox-a",
                 "oracle",
-                "orders-service",
-                List.of("ORDERS_APP"),
+                "crm-service",
+                List.of("CRM_APP"),
                 List.of(),
-                List.of("applicationPattern matched orders-service -> ORDERS_APP"),
+                List.of("applicationPattern matched crm-service -> CRM_APP"),
                 List.of()
         );
         var tableMetadata = mock(DatabaseMetadataClient.class);
-        when(tableMetadata.camelToSnakeUpper("OrderCorrelationId")).thenReturn("ORDER_CORRELATION_ID");
-        when(tableMetadata.findTables("zt01", List.of("ORDERS_APP"), "order", 31)).thenReturn(List.of(
-                new TableMetadata("ORDERS_APP", "CUSTOMER", "TABLE", "Customer entity", 5, List.of("ID"), 0, 0, List.of("ID", "CUSTOMER_ID")),
-                new TableMetadata("ORDERS_APP", "ORDER_EVENT", "TABLE", "Order entity outbox", 8, List.of("ID"), 1, 0, List.of("ID", "ORDER_ID", "CORRELATION_ID"))
+        when(tableMetadata.camelToSnakeUpper("CustomerCorrelationId")).thenReturn("CUSTOMER_CORRELATION_ID");
+        when(tableMetadata.findTables("sandbox-a", List.of("CRM_APP"), "customer", 31)).thenReturn(List.of(
+                new TableMetadata("CRM_APP", "CUSTOMER", "TABLE", "Customer entity", 5, List.of("ID"), 0, 0, List.of("ID", "CUSTOMER_ID")),
+                new TableMetadata("CRM_APP", "CUSTOMER_INTERACTION", "TABLE", "Customer interaction outbox", 8, List.of("ID"), 1, 0, List.of("ID", "CUSTOMER_ID", "CORRELATION_ID"))
         ));
         when(tableMetadata.inferLikelyKeyColumns(any())).thenAnswer(invocation -> {
             var table = invocation.getArgument(0, TableMetadata.class);
-            return "ORDER_EVENT".equals(table.tableName())
-                    ? List.of("ID", "ORDER_ID", "CORRELATION_ID")
+            return "CUSTOMER_INTERACTION".equals(table.tableName())
+                    ? List.of("ID", "CUSTOMER_ID", "CORRELATION_ID")
                     : List.of("ID", "CUSTOMER_ID");
         });
 
         var resolver = mock(DatabaseApplicationScopeResolver.class);
-        when(resolver.resolveDiscoveryScope("zt01", "orders-service")).thenReturn(resolvedScope);
-        when(resolver.requiredEnvironment("zt01")).thenReturn(environment("oracle"));
+        when(resolver.resolveDiscoveryScope("sandbox-a", "crm-service")).thenReturn(resolvedScope);
+        when(resolver.requiredEnvironment("sandbox-a")).thenReturn(environment("oracle"));
 
         service = new DatabaseToolService(
                 properties(),
@@ -63,12 +63,12 @@ class DatabaseToolServiceTest {
 
         var result = service.findTables(
                 scope(),
-                new DbFindTablesRequest("orders-service", "order", "OrderCorrelationId", 30)
+                new DbFindTablesRequest("crm-service", "customer", "CustomerCorrelationId", 30)
         );
 
-        assertEquals("ORDER_EVENT", result.candidates().get(0).tableName());
+        assertEquals("CUSTOMER_INTERACTION", result.candidates().get(0).tableName());
         assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("applicationPattern matched")));
-        assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("table name matched ORDER")));
+        assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("table name matched CUSTOMER")));
         assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("entityOrKeywordHint matched")));
         assertTrue(result.candidates().get(0).matchedBecause().stream().anyMatch(reason -> reason.contains("column CORRELATION_ID exists")));
     }
@@ -77,22 +77,22 @@ class DatabaseToolServiceTest {
     void shouldUseCamelCaseHintWhenRankingColumns() {
         var metadata = mock(DatabaseMetadataClient.class);
         when(metadata.camelToSnakeUpper("correlationId")).thenReturn("CORRELATION_ID");
-        when(metadata.findColumns("zt01", List.of("ORDERS_APP"), "order_event", "CORRELATION_ID", 51)).thenReturn(List.of(
-                new ColumnMetadata("ORDERS_APP", "ORDER_EVENT", "STATUS", "VARCHAR2", 32, null, null, false, "state"),
-                new ColumnMetadata("ORDERS_APP", "ORDER_EVENT", "CORRELATION_ID", "VARCHAR2", 64, null, null, false, "incident correlation id")
+        when(metadata.findColumns("sandbox-a", List.of("CRM_APP"), "customer_interaction", "CORRELATION_ID", 51)).thenReturn(List.of(
+                new ColumnMetadata("CRM_APP", "CUSTOMER_INTERACTION", "STATUS", "VARCHAR2", 32, null, null, false, "state"),
+                new ColumnMetadata("CRM_APP", "CUSTOMER_INTERACTION", "CORRELATION_ID", "VARCHAR2", 64, null, null, false, "incident correlation id")
         ));
 
         var resolver = mock(DatabaseApplicationScopeResolver.class);
-        when(resolver.resolveDiscoveryScope("zt01", "orders-service")).thenReturn(new ResolvedDatabaseApplicationScope(
-                "zt01",
+        when(resolver.resolveDiscoveryScope("sandbox-a", "crm-service")).thenReturn(new ResolvedDatabaseApplicationScope(
+                "sandbox-a",
                 "oracle",
-                "orders-service",
-                List.of("ORDERS_APP"),
+                "crm-service",
+                List.of("CRM_APP"),
                 List.of(),
-                List.of("applicationPattern matched orders-service -> ORDERS_APP"),
+                List.of("applicationPattern matched crm-service -> CRM_APP"),
                 List.of()
         ));
-        when(resolver.requiredEnvironment("zt01")).thenReturn(environment("oracle"));
+        when(resolver.requiredEnvironment("sandbox-a")).thenReturn(environment("oracle"));
 
         var service = new DatabaseToolService(
                 properties(),
@@ -106,7 +106,7 @@ class DatabaseToolServiceTest {
 
         var result = service.findColumns(
                 scope(),
-                new DbFindColumnsRequest("orders-service", "order_event", null, "correlationId", 50)
+                new DbFindColumnsRequest("crm-service", "customer_interaction", null, "correlationId", 50)
         );
 
         assertEquals("CORRELATION_ID", result.candidates().get(0).columnName());
@@ -132,7 +132,7 @@ class DatabaseToolServiceTest {
         var result = service.countRows(
                 scope(),
                 new DbCountRowsRequest(
-                        new DbTableRef("orders_app", "order_event"),
+                        new DbTableRef("crm_app", "customer_interaction"),
                         List.of(
                                 new DbFilter("correlation_id", DbOperator.EQ, List.of("corr-123")),
                                 new DbFilter("status", DbOperator.STARTS_WITH, List.of("ACT"))
@@ -144,7 +144,7 @@ class DatabaseToolServiceTest {
         var paramsCaptor = ArgumentCaptor.forClass(Map.class);
         verify(queryClient).queryForCount(any(), sqlCaptor.capture(), paramsCaptor.capture());
 
-        assertTrue(sqlCaptor.getValue().contains("SELECT COUNT(*) FROM ORDERS_APP.ORDER_EVENT t WHERE t.CORRELATION_ID = :p0 AND UPPER(t.STATUS) LIKE UPPER(:p1)"));
+        assertTrue(sqlCaptor.getValue().contains("SELECT COUNT(*) FROM CRM_APP.CUSTOMER_INTERACTION t WHERE t.CORRELATION_ID = :p0 AND UPPER(t.STATUS) LIKE UPPER(:p1)"));
         assertEquals("corr-123", paramsCaptor.getValue().get("p0"));
         assertEquals("ACT%", paramsCaptor.getValue().get("p1"));
         assertEquals(3L, result.count());
@@ -169,7 +169,7 @@ class DatabaseToolServiceTest {
         var result = service.groupCount(
                 scope(),
                 new DbGroupCountRequest(
-                        new DbTableRef("orders_app", "order_event"),
+                        new DbTableRef("crm_app", "customer_interaction"),
                         List.of("status"),
                         List.of(new DbFilter("tenant_id", DbOperator.EQ, List.of("TENANT_A"))),
                         5
@@ -189,11 +189,11 @@ class DatabaseToolServiceTest {
     @Test
     void shouldBuildOrphanQueryShape() {
         var metadata = mock(DatabaseMetadataClient.class);
-        when(metadata.describeTable("zt01", "ORDERS_APP", "ORDER_EVENT")).thenReturn(new TableDescriptionMetadata(
-                "ORDERS_APP",
-                "ORDER_EVENT",
+        when(metadata.describeTable("sandbox-a", "CRM_APP", "CUSTOMER_INTERACTION")).thenReturn(new TableDescriptionMetadata(
+                "CRM_APP",
+                "CUSTOMER_INTERACTION",
                 "TABLE",
-                "order event",
+                "customer interaction",
                 List.of(new ColumnDefinition("ID", "NUMBER", null, 19, 0, false, null, null)),
                 List.of("ID"),
                 List.of(),
@@ -205,7 +205,7 @@ class DatabaseToolServiceTest {
         var queryClient = mock(DatabaseReadOnlyQueryClient.class);
         when(queryClient.queryForCount(any(), anyString(), anyMap())).thenReturn(2L);
         var row = new LinkedHashMap<String, Object>();
-        row.put("ORDER_ID", "ORD-1");
+        row.put("CUSTOMER_ID", "CUST-1");
         row.put("ID", 10);
         when(queryClient.queryForRows(any(), anyString(), anyMap())).thenReturn(List.of(row));
 
@@ -222,16 +222,16 @@ class DatabaseToolServiceTest {
         var result = service.checkOrphans(
                 scope(),
                 new DbCheckOrphansRequest(
-                        new DbTableRef("orders_app", "order_event"),
-                        "order_id",
-                        new DbTableRef("orders_app", "order"),
+                        new DbTableRef("crm_app", "customer_interaction"),
+                        "customer_id",
+                        new DbTableRef("crm_app", "customer_profile"),
                         "id",
                         List.of(new DbFilter("tenant_id", DbOperator.EQ, List.of("TENANT_A"))),
                         5
                 )
         );
 
-        verify(queryClient).queryForCount(any(), org.mockito.ArgumentMatchers.contains("LEFT JOIN ORDERS_APP.ORDER p"), anyMap());
+        verify(queryClient).queryForCount(any(), org.mockito.ArgumentMatchers.contains("LEFT JOIN CRM_APP.CUSTOMER_PROFILE p"), anyMap());
         verify(queryClient).queryForRows(any(), org.mockito.ArgumentMatchers.contains("FETCH FIRST 5 ROWS ONLY"), anyMap());
         assertEquals(2L, result.orphanCount());
         assertEquals(1, result.sampleRows().size());
@@ -256,16 +256,16 @@ class DatabaseToolServiceTest {
                 scope(),
                 new DbJoinCountRequest(
                         List.of(
-                                new DbTableRef("orders_app", "order_event"),
-                                new DbTableRef("common_dict", "order_status")
+                                new DbTableRef("crm_app", "customer_interaction"),
+                                new DbTableRef("common_dict", "customer_status")
                         ),
                         List.of(new DbJoinCondition(
-                                new DbColumnRef(new DbTableRef("orders_app", "order_event"), "status_id"),
-                                new DbColumnRef(new DbTableRef("common_dict", "order_status"), "id"),
+                                new DbColumnRef(new DbTableRef("crm_app", "customer_interaction"), "status_id"),
+                                new DbColumnRef(new DbTableRef("common_dict", "customer_status"), "id"),
                                 JoinType.INNER
                         )),
                         List.of(new DbQualifiedFilter(
-                                new DbColumnRef(new DbTableRef("common_dict", "order_status"), "status"),
+                                new DbColumnRef(new DbTableRef("common_dict", "customer_status"), "status"),
                                 DbOperator.EQ,
                                 List.of("ACTIVE")
                         ))
@@ -275,7 +275,7 @@ class DatabaseToolServiceTest {
         var sqlCaptor = ArgumentCaptor.forClass(String.class);
         verify(queryClient).queryForCount(any(), sqlCaptor.capture(), anyMap());
 
-        assertTrue(sqlCaptor.getValue().contains("FROM ORDERS_APP.ORDER_EVENT t0 INNER JOIN COMMON_DICT.ORDER_STATUS t1 ON t0.STATUS_ID = t1.ID"));
+        assertTrue(sqlCaptor.getValue().contains("FROM CRM_APP.CUSTOMER_INTERACTION t0 INNER JOIN COMMON_DICT.CUSTOMER_STATUS t1 ON t0.STATUS_ID = t1.ID"));
         assertTrue(sqlCaptor.getValue().contains("WHERE t1.STATUS = :p0"));
         assertEquals(7L, result.count());
     }
@@ -310,7 +310,7 @@ class DatabaseToolServiceTest {
 
     private DatabaseApplicationScopeResolver baseResolver() {
         var resolver = mock(DatabaseApplicationScopeResolver.class);
-        when(resolver.requiredEnvironment("zt01")).thenReturn(environment("oracle"));
+        when(resolver.requiredEnvironment("sandbox-a")).thenReturn(environment("oracle"));
         return resolver;
     }
 
@@ -331,6 +331,6 @@ class DatabaseToolServiceTest {
     }
 
     private DbCapabilityScope scope() {
-        return new DbCapabilityScope("corr-123", "zt01", "run-1", "analysis-run-1", "tool-call-1", "db_test_tool");
+        return new DbCapabilityScope("corr-123", "sandbox-a", "run-1", "analysis-run-1", "tool-call-1", "db_test_tool");
     }
 }

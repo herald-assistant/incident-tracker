@@ -19,67 +19,67 @@ class DatabaseApplicationScopeResolverTest {
 
     @Test
     void shouldMatchExactApplicationAlias() {
-        var scope = resolver.resolveDiscoveryScope("zt01", "orders-service");
+        var scope = resolver.resolveDiscoveryScope("sandbox-a", "crm-service");
 
-        assertEquals("orders-service", scope.applicationAlias());
-        assertEquals(List.of("ORDERS_APP"), scope.resolvedSchemas());
-        assertTrue(scope.matchedBecause().stream().anyMatch(reason -> reason.contains("orders-service")));
+        assertEquals("crm-service", scope.applicationAlias());
+        assertEquals(List.of("CRM_APP"), scope.resolvedSchemas());
+        assertTrue(scope.matchedBecause().stream().anyMatch(reason -> reason.contains("crm-service")));
     }
 
     @Test
     void shouldMatchByApplicationPatternCaseInsensitive() {
-        var scope = resolver.resolveDiscoveryScope("zt01", "Orders API");
+        var scope = resolver.resolveDiscoveryScope("sandbox-a", "CRM API");
 
-        assertEquals("orders-service", scope.applicationAlias());
-        assertEquals(List.of("ORDERS_APP"), scope.resolvedSchemas());
+        assertEquals("crm-service", scope.applicationAlias());
+        assertEquals(List.of("CRM_APP"), scope.resolvedSchemas());
     }
 
     @Test
     void shouldMatchByApplicationPatternsFromDeploymentContainerAndProjectHints() {
-        var deploymentScope = resolver.resolveDiscoveryScope("zt01", "orders-worker");
-        var containerScope = resolver.resolveDiscoveryScope("zt01", "orders-pod");
-        var projectScope = resolver.resolveDiscoveryScope("zt01", "orders-gitlab");
+        var deploymentScope = resolver.resolveDiscoveryScope("sandbox-a", "crm-worker");
+        var containerScope = resolver.resolveDiscoveryScope("sandbox-a", "crm-pod");
+        var projectScope = resolver.resolveDiscoveryScope("sandbox-a", "crm-gitlab");
 
-        assertEquals("orders-service", deploymentScope.applicationAlias());
-        assertEquals("orders-service", containerScope.applicationAlias());
-        assertEquals("orders-service", projectScope.applicationAlias());
+        assertEquals("crm-service", deploymentScope.applicationAlias());
+        assertEquals("crm-service", containerScope.applicationAlias());
+        assertEquals("crm-service", projectScope.applicationAlias());
     }
 
     @Test
     void shouldFallbackToAllowedSchemasWhenApplicationPatternIsMissing() {
-        var scope = resolver.resolveDiscoveryScope("zt01", null);
+        var scope = resolver.resolveDiscoveryScope("sandbox-a", null);
 
         assertEquals(null, scope.applicationAlias());
-        assertEquals(List.of("COMMON_DICT", "ORDERS_APP", "ORDERS_REP"), scope.resolvedSchemas());
+        assertEquals(List.of("COMMON_DICT", "CRM_APP", "CRM_REPORTING"), scope.resolvedSchemas());
         assertTrue(scope.warnings().stream().anyMatch(warning -> warning.contains("applicationPattern was not provided")));
     }
 
     @Test
     void shouldFallbackToAllowedSchemasWhenNoApplicationMatchExists() {
-        var scope = resolver.resolveDiscoveryScope("zt01", "missing-app");
+        var scope = resolver.resolveDiscoveryScope("sandbox-a", "missing-app");
 
         assertEquals(null, scope.applicationAlias());
-        assertEquals(List.of("COMMON_DICT", "ORDERS_APP", "ORDERS_REP"), scope.resolvedSchemas());
+        assertEquals(List.of("COMMON_DICT", "CRM_APP", "CRM_REPORTING"), scope.resolvedSchemas());
         assertTrue(scope.warnings().stream().anyMatch(warning -> warning.contains("No configured application mapping matched")));
     }
 
     @Test
     void shouldWarnAndRestrictWhenMultipleMatchesExist() {
-        var scope = resolver.resolveDiscoveryScope("zt01", "orders");
+        var scope = resolver.resolveDiscoveryScope("sandbox-a", "crm");
 
-        assertEquals("orders-service, orders-reporting", scope.applicationAlias());
-        assertEquals(List.of("ORDERS_APP", "ORDERS_REP"), scope.resolvedSchemas());
+        assertEquals("crm-service, crm-reporting", scope.applicationAlias());
+        assertEquals(List.of("CRM_APP", "CRM_REPORTING"), scope.resolvedSchemas());
         assertTrue(scope.warnings().stream().anyMatch(warning -> warning.contains("matched multiple configured applications")));
     }
 
     @Test
     void shouldNormalizeSchemasAndRelatedSchemasToUppercase() {
-        var scope = resolver.resolveDiscoveryScope("zt01", "orders-reporting");
+        var scope = resolver.resolveDiscoveryScope("sandbox-a", "crm-reporting");
 
-        assertEquals(List.of("ORDERS_REP"), scope.resolvedSchemas());
-        assertEquals(List.of("common_dict"), resolver.requiredEnvironment("zt01")
+        assertEquals(List.of("CRM_REPORTING"), scope.resolvedSchemas());
+        assertEquals(List.of("common_dict"), resolver.requiredEnvironment("sandbox-a")
                 .getApplications()
-                .get("orders-reporting")
+                .get("crm-reporting")
                 .getRelatedSchemas());
         assertEquals(List.of("COMMON_DICT"), scope.relatedSchemas());
     }
@@ -94,54 +94,54 @@ class DatabaseApplicationScopeResolverTest {
         databaseProperties.setConnectionDefaults(connectionDefaults);
 
         var sharedDevConnection = new DatabaseConnectionProperties();
-        sharedDevConnection.setJdbcUrl("jdbc:oracle:thin:@//dev-host:1521/dev");
+        sharedDevConnection.setJdbcUrl("jdbc:oracle:thin:@//db-dev.example.internal:1521/dev");
         sharedDevConnection.setDescription("Shared dev host");
-        databaseProperties.getConnections().put("dev-host", sharedDevConnection);
+        databaseProperties.getConnections().put("db-dev.example.internal", sharedDevConnection);
 
-        var agreementProcess = new DatabaseApplicationProperties();
-        agreementProcess.setDatabaseUser("AGREEMENT_PROCESS");
-        agreementProcess.setApplicationPatterns(List.of("agreement-process", "agreement-process-api"));
-        databaseProperties.getApplications().put("agreement-process", agreementProcess);
+        var crmServiceCatalog = new DatabaseApplicationProperties();
+        crmServiceCatalog.setDatabaseUser("CRM_APP");
+        crmServiceCatalog.setApplicationPatterns(List.of("crm-service", "crm-service-api"));
+        databaseProperties.getApplications().put("crm-service", crmServiceCatalog);
 
-        var dev2 = new DatabaseEnvironmentProperties();
-        dev2.setConnection("dev-host");
-        dev2.setApplicationUserSuffix("_2");
-        databaseProperties.getEnvironments().put("dev2", dev2);
+        var sandbox2 = new DatabaseEnvironmentProperties();
+        sandbox2.setConnection("db-dev.example.internal");
+        sandbox2.setApplicationUserSuffix("_2");
+        databaseProperties.getEnvironments().put("sandbox-2", sandbox2);
 
-        var effectiveEnvironment = databaseProperties.resolveEnvironment("dev2");
-        assertEquals("jdbc:oracle:thin:@//dev-host:1521/dev", effectiveEnvironment.getJdbcUrl());
+        var effectiveEnvironment = databaseProperties.resolveEnvironment("sandbox-2");
+        assertEquals("jdbc:oracle:thin:@//db-dev.example.internal:1521/dev", effectiveEnvironment.getJdbcUrl());
         assertEquals("INCIDENT_TRACKER_RO", effectiveEnvironment.getUsername());
         assertEquals(
-                "AGREEMENT_PROCESS_2",
-                effectiveEnvironment.getApplications().get("agreement-process").getSchema()
+                "CRM_APP_2",
+                effectiveEnvironment.getApplications().get("crm-service").getSchema()
         );
 
         var scope = new DatabaseApplicationScopeResolver(databaseProperties)
-                .resolveDiscoveryScope("dev2", "agreement-process-api");
+                .resolveDiscoveryScope("sandbox-2", "crm-service-api");
 
-        assertEquals("agreement-process", scope.applicationAlias());
-        assertEquals(List.of("AGREEMENT_PROCESS_2"), scope.resolvedSchemas());
+        assertEquals("crm-service", scope.applicationAlias());
+        assertEquals(List.of("CRM_APP_2"), scope.resolvedSchemas());
     }
 
     @Test
     void shouldPreferExactCatalogSchemaOverUserSuffix() {
         var databaseProperties = new DatabaseToolProperties();
 
-        var clauseCheck = new DatabaseApplicationProperties();
-        clauseCheck.setDatabaseUser("CLAUSE_CHECK");
-        clauseCheck.setSchema("CLAUSE_CHECK_SPECIAL");
-        clauseCheck.setApplicationPatterns(List.of("clause-check", "clause-check-dev-special"));
-        databaseProperties.getApplications().put("clause-check", clauseCheck);
+        var taskCheck = new DatabaseApplicationProperties();
+        taskCheck.setDatabaseUser("CRM_TASKS");
+        taskCheck.setSchema("CRM_TASKS_SPECIAL");
+        taskCheck.setApplicationPatterns(List.of("crm-tasks", "crm-tasks-dev-special"));
+        databaseProperties.getApplications().put("crm-tasks", taskCheck);
 
-        var dev1 = new DatabaseEnvironmentProperties();
-        dev1.setApplicationUserSuffix("_1");
-        databaseProperties.getEnvironments().put("dev1", dev1);
+        var sandbox1 = new DatabaseEnvironmentProperties();
+        sandbox1.setApplicationUserSuffix("_1");
+        databaseProperties.getEnvironments().put("sandbox-1", sandbox1);
 
         var scope = new DatabaseApplicationScopeResolver(databaseProperties)
-                .resolveDiscoveryScope("dev1", "clause-check-dev-special");
+                .resolveDiscoveryScope("sandbox-1", "crm-tasks-dev-special");
 
-        assertEquals("clause-check", scope.applicationAlias());
-        assertEquals(List.of("CLAUSE_CHECK_SPECIAL"), scope.resolvedSchemas());
+        assertEquals("crm-tasks", scope.applicationAlias());
+        assertEquals(List.of("CRM_TASKS_SPECIAL"), scope.resolvedSchemas());
     }
 
     @Test
@@ -149,23 +149,23 @@ class DatabaseApplicationScopeResolverTest {
         var environment = new MockEnvironment()
                 .withProperty("analysis.database.connection-defaults.username", "INCIDENT_TRACKER_RO")
                 .withProperty("analysis.database.connection-defaults.password", "secret")
-                .withProperty("analysis.database.connections.dev.jdbc-url", "jdbc:oracle:thin:@//dev-host:1521/dev")
-                .withProperty("analysis.database.applications.agreement-process.database-user", "AGREEMENT_PROCESS")
-                .withProperty("analysis.database.applications.agreement-process.application-patterns", "agreement-process")
-                .withProperty("analysis.database.environments.dev1.connection", "dev")
-                .withProperty("analysis.database.environments.dev1.application-user-suffix", "_1");
+                .withProperty("analysis.database.connections.dev.jdbc-url", "jdbc:oracle:thin:@//db-dev.example.internal:1521/dev")
+                .withProperty("analysis.database.applications.crm-service.database-user", "CRM_APP")
+                .withProperty("analysis.database.applications.crm-service.application-patterns", "crm-service")
+                .withProperty("analysis.database.environments.sandbox-1.connection", "dev")
+                .withProperty("analysis.database.environments.sandbox-1.application-user-suffix", "_1");
 
         var databaseProperties = new DatabaseToolProperties();
         Binder.get(environment).bind("analysis.database", Bindable.ofInstance(databaseProperties));
 
-        var effectiveEnvironment = databaseProperties.resolveEnvironment("dev1");
+        var effectiveEnvironment = databaseProperties.resolveEnvironment("sandbox-1");
 
-        assertEquals("jdbc:oracle:thin:@//dev-host:1521/dev", effectiveEnvironment.getJdbcUrl());
-        assertEquals(List.of("agreement-process"), effectiveEnvironment.getApplications().keySet().stream().toList());
+        assertEquals("jdbc:oracle:thin:@//db-dev.example.internal:1521/dev", effectiveEnvironment.getJdbcUrl());
+        assertEquals(List.of("crm-service"), effectiveEnvironment.getApplications().keySet().stream().toList());
         assertEquals(
-                List.of("AGREEMENT_PROCESS_1"),
+                List.of("CRM_APP_1"),
                 new DatabaseApplicationScopeResolver(databaseProperties)
-                        .resolveDiscoveryScope("dev1", "agreement-process")
+                        .resolveDiscoveryScope("sandbox-1", "crm-service")
                         .resolvedSchemas()
         );
     }
@@ -173,8 +173,8 @@ class DatabaseApplicationScopeResolverTest {
     @Test
     void shouldRejectRemovedEnvironmentLevelConnectionAndApplicationMappings() {
         var environment = new MockEnvironment()
-                .withProperty("analysis.database.environments.dev1.jdbc-url", "jdbc:oracle:thin:@//legacy-host:1521/legacy")
-                .withProperty("analysis.database.environments.dev1.applications.legacy.schema", "LEGACY_SCHEMA");
+                .withProperty("analysis.database.environments.sandbox-1.jdbc-url", "jdbc:oracle:thin:@//legacy-host:1521/legacy")
+                .withProperty("analysis.database.environments.sandbox-1.applications.legacy.schema", "LEGACY_SCHEMA");
 
         var databaseProperties = new DatabaseToolProperties();
 
@@ -190,25 +190,25 @@ class DatabaseApplicationScopeResolverTest {
         environmentProperties.setDatabaseAlias("oracle");
         environmentProperties.setAllowedSchemas(List.of("common_dict"));
 
-        var ordersService = new DatabaseApplicationProperties();
-        ordersService.setSchema("orders_app");
-        ordersService.setApplicationPatterns(List.of(
-                "orders-api",
-                "orders service",
-                "orders-worker",
-                "orders-pod",
-                "orders-gitlab"
+        var crmService = new DatabaseApplicationProperties();
+        crmService.setSchema("crm_app");
+        crmService.setApplicationPatterns(List.of(
+                "crm-api",
+                "crm service",
+                "crm-worker",
+                "crm-pod",
+                "crm-gitlab"
         ));
 
-        var ordersReporting = new DatabaseApplicationProperties();
-        ordersReporting.setSchema("orders_rep");
-        ordersReporting.setApplicationPatterns(List.of("orders-reporting"));
-        ordersReporting.setRelatedSchemas(List.of("common_dict"));
+        var crmReporting = new DatabaseApplicationProperties();
+        crmReporting.setSchema("crm_reporting");
+        crmReporting.setApplicationPatterns(List.of("crm-reporting"));
+        crmReporting.setRelatedSchemas(List.of("common_dict"));
 
-        databaseProperties.getApplications().put("orders-service", ordersService);
-        databaseProperties.getApplications().put("orders-reporting", ordersReporting);
+        databaseProperties.getApplications().put("crm-service", crmService);
+        databaseProperties.getApplications().put("crm-reporting", crmReporting);
 
-        databaseProperties.getEnvironments().put("zt01", environmentProperties);
+        databaseProperties.getEnvironments().put("sandbox-a", environmentProperties);
         return databaseProperties;
     }
 }

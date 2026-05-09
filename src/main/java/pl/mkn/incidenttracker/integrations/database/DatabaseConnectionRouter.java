@@ -13,12 +13,17 @@ import pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.DbCap
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "analysis.database", name = "enabled", havingValue = "true")
 public class DatabaseConnectionRouter implements AutoCloseable {
+
+    private static final Pattern ORACLE_THIN_SID_URL = Pattern.compile(
+            "jdbc:oracle:thin:@([^/:]+):(\\d+):([^:]+)"
+    );
 
     private final DatabaseToolProperties properties;
     private final Map<String, HikariDataSource> dataSources = new ConcurrentHashMap<>();
@@ -108,7 +113,7 @@ public class DatabaseConnectionRouter implements AutoCloseable {
         }
         catch (RuntimeException exception) {
             throw new IllegalStateException(
-                    buildDataSourceInitializationMessage(environment, jdbcUrl, driverClassName),
+                    buildDataSourceInitializationMessage(environment, jdbcUrl, driverClassName, exception),
                     exception
             );
         }
@@ -137,7 +142,8 @@ public class DatabaseConnectionRouter implements AutoCloseable {
     private String buildDataSourceInitializationMessage(
             String environment,
             String jdbcUrl,
-            String driverClassName
+            String driverClassName,
+            RuntimeException exception
     ) {
         var driverDetail = StringUtils.hasText(driverClassName)
                 ? " with driverClassName '%s'".formatted(driverClassName)
@@ -145,12 +151,46 @@ public class DatabaseConnectionRouter implements AutoCloseable {
         var oracleHint = jdbcUrl.startsWith("jdbc:oracle:")
                 ? " For Oracle on Java 17 prefer runtime dependency 'com.oracle.database.jdbc:ojdbc17'."
                 : "";
+        var serviceNameHint = oracleServiceNameHint(jdbcUrl);
+        var rootCause = rootCauseMessage(exception);
         return """
                 Failed to initialize database pool for environment '%s' using jdbcUrl '%s'%s.
                 Ensure the JDBC driver is present on the runtime classpath and the JDBC URL is valid.%s
+                %s
+                Root cause: %s.
                 You can also configure analysis.database.connections.<connection>.driver-class-name explicitly.
                 """
-                .formatted(environment, jdbcUrl, driverDetail, oracleHint)
+                .formatted(environment, jdbcUrl, driverDetail, oracleHint, serviceNameHint, rootCause)
+                .replace('\n', ' ')
+                .trim();
+    }
+
+    private String rootCauseMessage(Throwable throwable) {
+        var current = throwable;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+
+        var message = current.getMessage();
+        if (!StringUtils.hasText(message)) {
+            message = throwable.getMessage();
+        }
+        if (!StringUtils.hasText(message)) {
+            return current.getClass().getSimpleName();
+        }
+        return "%s: %s".formatted(current.getClass().getSimpleName(), message.replaceAll("\\s+", " ").trim());
+    }
+
+    private String oracleServiceNameHint(String jdbcUrl) {
+        var matcher = ORACLE_THIN_SID_URL.matcher(jdbcUrl);
+        if (!matcher.matches()) {
+            return "";
+        }
+        return """
+                The URL uses Oracle SID-style syntax. If '%s' is a service name, use
+                'jdbc:oracle:thin:@//%s:%s/%s' instead.
+                """
+                .formatted(matcher.group(3), matcher.group(1), matcher.group(2), matcher.group(3))
                 .replace('\n', ' ')
                 .trim();
     }

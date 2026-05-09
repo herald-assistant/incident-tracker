@@ -18,17 +18,17 @@ class DatabaseSqlGuardTest {
     void shouldNormalizeValidIdentifiersToUppercase() {
         var guard = guard(true);
 
-        assertEquals("ORDER_ID", guard.normalizeIdentifier("order_id"));
+        assertEquals("CUSTOMER_ID", guard.normalizeIdentifier("customer_id"));
     }
 
     @Test
     void shouldRejectInvalidIdentifiers() {
         var guard = guard(true);
 
-        var exception = assertThrows(IllegalArgumentException.class, () -> guard.normalizeIdentifier("order-id"));
+        var exception = assertThrows(IllegalArgumentException.class, () -> guard.normalizeIdentifier("customer-id"));
 
         assertEquals(
-                "Oracle identifier 'order-id' is not allowed. Only simple unquoted identifiers are supported.",
+                "Oracle identifier 'customer-id' is not allowed. Only simple unquoted identifiers are supported.",
                 exception.getMessage()
         );
     }
@@ -38,7 +38,7 @@ class DatabaseSqlGuardTest {
         var guard = guard(true);
 
         var exception = assertThrows(IllegalArgumentException.class, () ->
-                guard.normalizeTableRef(scope(), new DbTableRef("PAYMENTS_APP", "ORDER_EVENT"))
+                guard.normalizeTableRef(scope(), new DbTableRef("CRM_PAYMENTS_APP", "CUSTOMER_INTERACTION"))
         );
 
         assertTrue(exception.getMessage().contains("outside the configured allowlist"));
@@ -48,7 +48,7 @@ class DatabaseSqlGuardTest {
     void shouldAcceptReadonlySelectWhenEnabled() {
         var guard = guard(true);
 
-        assertEquals("SELECT * FROM ORDERS_APP.ORDER_EVENT", guard.validateReadonlySql(scope(), "SELECT * FROM ORDERS_APP.ORDER_EVENT"));
+        assertEquals("SELECT * FROM CRM_APP.CUSTOMER_INTERACTION", guard.validateReadonlySql(scope(), "SELECT * FROM CRM_APP.CUSTOMER_INTERACTION"));
         assertEquals("WITH q AS (SELECT 1 FROM dual) SELECT * FROM q", guard.validateReadonlySql(scope(), "WITH q AS (SELECT 1 FROM dual) SELECT * FROM q"));
     }
 
@@ -69,13 +69,13 @@ class DatabaseSqlGuardTest {
         properties.setRawSqlEnabled(rawSqlEnabled);
 
         var environmentProperties = new DatabaseEnvironmentProperties();
-        environmentProperties.setAllowedSchemas(List.of("ORDERS_APP"));
-        properties.getEnvironments().put("zt01", environmentProperties);
+        environmentProperties.setAllowedSchemas(List.of("CRM_APP"));
+        properties.getEnvironments().put("sandbox-a", environmentProperties);
 
         var resolver = new DatabaseApplicationScopeResolver(properties);
         var metadataClient = mock(DatabaseMetadataClient.class);
         when(metadataClient.tableExists(anyString(), anyString(), anyString())).thenAnswer(invocation ->
-                "ORDERS_APP".equals(invocation.getArgument(1)) && "ORDER_EVENT".equals(invocation.getArgument(2))
+                "CRM_APP".equals(invocation.getArgument(1)) && "CUSTOMER_INTERACTION".equals(invocation.getArgument(2))
         );
         when(metadataClient.columnExists(anyString(), anyString(), anyString(), anyString())).thenReturn(true);
 
@@ -83,7 +83,7 @@ class DatabaseSqlGuardTest {
     }
 
     private DbCapabilityScope scope() {
-        return new DbCapabilityScope("corr-123", "zt01", "run-1", "analysis-run-1", "tool-call-1", "db_count_rows");
+        return new DbCapabilityScope("corr-123", "sandbox-a", "run-1", "analysis-run-1", "tool-call-1", "db_count_rows");
     }
 
     private static void assertTrue(boolean value) {

@@ -70,9 +70,9 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     summary: 'Szuka tabel lub widoków po aplikacji, fragmencie nazwy i hincie domenowym.',
     payloadRequired: true,
     examplePayload: {
-      applicationPattern: 'agreement-process',
-      tableNamePattern: 'AGREEMENT',
-      entityOrKeywordHint: 'AgreementEntity',
+      applicationPattern: 'crm-service',
+      tableNamePattern: 'CUSTOMER_PROFILE',
+      entityOrKeywordHint: 'CustomerProfileEntity',
       limit: 10
     }
   },
@@ -84,8 +84,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     summary: 'Szuka kolumn po aplikacji, tabeli, nazwie kolumny albo hincie pola Javy.',
     payloadRequired: true,
     examplePayload: {
-      applicationPattern: 'agreement-process',
-      tableNamePattern: 'AGREEMENT',
+      applicationPattern: 'crm-service',
+      tableNamePattern: 'CUSTOMER_PROFILE',
       columnNamePattern: 'STATUS',
       javaFieldNameHint: 'statusCode',
       limit: 10
@@ -100,8 +100,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       table: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       }
     }
   },
@@ -114,8 +114,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       table: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       },
       keyValues: [
         {
@@ -135,8 +135,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       table: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       },
       filters: [
         {
@@ -156,8 +156,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       table: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       },
       groupByColumns: ['STATUS'],
       filters: [],
@@ -173,8 +173,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       table: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       },
       columns: ['ID', 'STATUS', 'UPDATED_AT'],
       filters: [
@@ -202,13 +202,13 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       childTable: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT_EVENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_INTERACTION'
       },
-      childColumn: 'AGREEMENT_ID',
+      childColumn: 'CUSTOMER_ID',
       parentTable: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       },
       parentColumn: 'ID',
       childFilters: [],
@@ -225,8 +225,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     examplePayload: {
       tables: [
         {
-          schema: 'AGREEMENT_PROCESS_1',
-          tableName: 'AGREEMENT'
+          schema: 'CRM_APP_1',
+          tableName: 'CUSTOMER_PROFILE'
         }
       ],
       depth: 1,
@@ -243,27 +243,27 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     examplePayload: {
       tables: [
         {
-          schema: 'AGREEMENT_PROCESS_1',
-          tableName: 'AGREEMENT'
+          schema: 'CRM_APP_1',
+          tableName: 'CUSTOMER_PROFILE'
         },
         {
-          schema: 'AGREEMENT_PROCESS_1',
-          tableName: 'AGREEMENT_EVENT'
+          schema: 'CRM_APP_1',
+          tableName: 'CUSTOMER_INTERACTION'
         }
       ],
       joins: [
         {
           left: {
             table: {
-              schema: 'AGREEMENT_PROCESS_1',
-              tableName: 'AGREEMENT_EVENT'
+              schema: 'CRM_APP_1',
+              tableName: 'CUSTOMER_INTERACTION'
             },
-            column: 'AGREEMENT_ID'
+            column: 'CUSTOMER_ID'
           },
           right: {
             table: {
-              schema: 'AGREEMENT_PROCESS_1',
-              tableName: 'AGREEMENT'
+              schema: 'CRM_APP_1',
+              tableName: 'CUSTOMER_PROFILE'
             },
             column: 'ID'
           },
@@ -283,27 +283,27 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     examplePayload: {
       tables: [
         {
-          schema: 'AGREEMENT_PROCESS_1',
-          tableName: 'AGREEMENT'
+          schema: 'CRM_APP_1',
+          tableName: 'CUSTOMER_PROFILE'
         },
         {
-          schema: 'AGREEMENT_PROCESS_1',
-          tableName: 'AGREEMENT_EVENT'
+          schema: 'CRM_APP_1',
+          tableName: 'CUSTOMER_INTERACTION'
         }
       ],
       joins: [
         {
           left: {
             table: {
-              schema: 'AGREEMENT_PROCESS_1',
-              tableName: 'AGREEMENT_EVENT'
+              schema: 'CRM_APP_1',
+              tableName: 'CUSTOMER_INTERACTION'
             },
-            column: 'AGREEMENT_ID'
+            column: 'CUSTOMER_ID'
           },
           right: {
             table: {
-              schema: 'AGREEMENT_PROCESS_1',
-              tableName: 'AGREEMENT'
+              schema: 'CRM_APP_1',
+              tableName: 'CUSTOMER_PROFILE'
             },
             column: 'ID'
           },
@@ -314,12 +314,12 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
         {
           column: {
             table: {
-              schema: 'AGREEMENT_PROCESS_1',
-              tableName: 'AGREEMENT'
+              schema: 'CRM_APP_1',
+              tableName: 'CUSTOMER_PROFILE'
             },
             column: 'ID'
           },
-          alias: 'AGREEMENT_ID'
+          alias: 'CUSTOMER_ID'
         }
       ],
       filters: [],
@@ -335,8 +335,8 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
     payloadRequired: true,
     examplePayload: {
       actualTable: {
-        schema: 'AGREEMENT_PROCESS_1',
-        tableName: 'AGREEMENT'
+        schema: 'CRM_APP_1',
+        tableName: 'CUSTOMER_PROFILE'
       },
       expectedColumns: [
         {

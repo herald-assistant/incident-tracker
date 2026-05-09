@@ -16,43 +16,43 @@ class DatabaseMetadataClientTest {
     @Test
     void shouldConvertCamelCaseToSnakeUpper() {
         assertEquals("CORRELATION_ID", metadataClient.camelToSnakeUpper("correlationId"));
-        assertEquals("ORDER_STATUS_CODE", metadataClient.camelToSnakeUpper("orderStatusCode"));
+        assertEquals("CUSTOMER_STATUS_CODE", metadataClient.camelToSnakeUpper("customerStatusCode"));
     }
 
     @Test
     void shouldInferLikelyKeyColumns() {
         var table = new TableMetadata(
-                "ORDERS_APP",
-                "ORDER_EVENT",
+                "CRM_APP",
+                "CUSTOMER_INTERACTION",
                 "TABLE",
-                "Order event",
+                "Customer interaction",
                 4,
                 List.of("ID"),
                 1,
                 0,
-                List.of("ID", "ORDER_ID", "CORRELATION_ID", "STATUS")
+                List.of("ID", "CUSTOMER_PROFILE_ID", "CORRELATION_ID", "STATUS")
         );
 
-        assertEquals(List.of("ID", "ORDER_ID", "CORRELATION_ID"), metadataClient.inferLikelyKeyColumns(table));
+        assertEquals(List.of("ID", "CUSTOMER_PROFILE_ID", "CORRELATION_ID"), metadataClient.inferLikelyKeyColumns(table));
     }
 
     @Test
     void shouldInferRelationshipsFromIdColumnsWhenTargetTableExists() {
         var relationships = metadataClient.inferRelationships(
-                "ORDERS_APP",
-                "ORDER_EVENT",
+                "CRM_APP",
+                "CUSTOMER_INTERACTION",
                 List.of(
                         new ColumnDefinition("ID", "NUMBER", null, 19, 0, false, null, null),
-                        new ColumnDefinition("ORDER_ID", "NUMBER", null, 19, 0, false, null, null),
+                        new ColumnDefinition("CUSTOMER_PROFILE_ID", "NUMBER", null, 19, 0, false, null, null),
                         new ColumnDefinition("CUSTOMER_ID", "NUMBER", null, 19, 0, false, null, null)
                 ),
-                Set.of("ORDER", "CUSTOMERS")
+                Set.of("CUSTOMER_PROFILE", "CUSTOMERS")
         );
 
         assertEquals(2, relationships.size());
         assertTrue(relationships.stream().anyMatch(relationship ->
-                "ORDER_ID".equals(relationship.sourceColumn())
-                        && "ORDER".equals(relationship.targetTable().tableName())
+                "CUSTOMER_PROFILE_ID".equals(relationship.sourceColumn())
+                        && "CUSTOMER_PROFILE".equals(relationship.targetTable().tableName())
         ));
         assertTrue(relationships.stream().anyMatch(relationship ->
                 "CUSTOMER_ID".equals(relationship.sourceColumn())

@@ -83,10 +83,10 @@ When calling DB discovery tools, pass the application/deployment/service/contain
 Good examples of `applicationPattern`:
 
 ```text
-orders-service
+crm-service
 customer-api
-payment-worker
-credit-agreement-process
+crm-sync-worker
+crm-case-service
 application container name from logs
 GitLab project name from deterministic evidence
 deployment name from runtime evidence
@@ -646,7 +646,7 @@ Procedure:
 Good explanation:
 
 ```text
-Pierwsze sprawdzenie dotyczyło aplikacji `orders-service`, ale referencja wskazuje na dane utrzymywane przez `customer-service`.
+Pierwsze sprawdzenie dotyczyło aplikacji `crm-service`, ale referencja wskazuje na dane utrzymywane przez `customer-service`.
 ```
 
 ---
@@ -704,7 +704,7 @@ COUNT(*) with predicate returned 0.
 When reporting discovery results, mention application-to-schema resolution when it matters:
 
 ```text
-Tabele były szukane w schemacie `ORDERS_APP`, dobranym z aplikacji/deploymentu `orders-service`.
+Tabele były szukane w schemacie `CRM_APP`, dobranym z aplikacji/deploymentu `crm-service`.
 ```
 
 Include technical identifiers where useful, but do not flood the result with raw rows.

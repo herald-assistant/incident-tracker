@@ -412,7 +412,7 @@ To jest osobny, pomocniczy flow do recznego testowania mapowania repozytorium:
    `keywords`,
 2. serwis bierze `analysis.gitlab.group` z konfiguracji,
 3. adapter wyszukuje projekty w tej grupie i podgrupach po znormalizowanych
-   hintach, np. `agreement-process -> agreement_process`,
+   hintach, np. `crm-service -> crm_service`,
 4. jesli request zawiera `operationNames` albo `keywords`, adapter dodatkowo
    szuka kandydatow plikow,
 5. endpoint zwraca rozwiazane repozytoria i opcjonalnie kandydatow plikow.

@@ -44,7 +44,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 "run-1",
                 "analysis-run-1",
                 "corr-123",
-                "zt01",
+                "sandbox-a",
                 "release/2026.04",
                 "sample/runtime"
         )).stream().collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
@@ -70,9 +70,9 @@ class CopilotSdkDatabaseToolFactoryTest {
     void shouldCaptureDatabaseToolArgumentsAndResultAsAiToolEvidence() {
         var databaseToolService = mock(DatabaseToolService.class);
         when(databaseToolService.countRows(any(), any())).thenReturn(new DbCountResult(
-                "zt002",
+                "sandbox-b",
                 "oracle",
-                new DbTableRef("CLP", "ORDER_EVENT"),
+                new DbTableRef("CRM", "CUSTOMER_INTERACTION"),
                 3L,
                 List.of("CORRELATION_ID = corr-123"),
                 List.of()
@@ -97,7 +97,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 .setToolCallId("tool-call-db-1")
                 .setToolName("db_count_rows")
                 .setArguments(objectMapper.valueToTree(Map.of(
-                        "table", Map.of("schema", "CLP", "tableName", "ORDER_EVENT"),
+                        "table", Map.of("schema", "CRM", "tableName", "CUSTOMER_INTERACTION"),
                         "reason", "Sprawdzam liczbe rekordow dla korelacji.",
                         "filters", List.of(Map.of(
                                 "column", "correlation_id",
@@ -123,7 +123,7 @@ class CopilotSdkDatabaseToolFactoryTest {
 
         assertEquals("Sprawdzam liczbe rekordow dla korelacji.", attributes.get("reason"));
         assertTrue(attributes.get("result").contains("\"count\" : 3"));
-        assertTrue(attributes.get("result").contains("\"schema\" : \"CLP\""));
+        assertTrue(attributes.get("result").contains("\"schema\" : \"CRM\""));
     }
 
     private void assertSchemaProperties(
@@ -149,7 +149,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 "run-1",
                 "analysis-run-1",
                 "corr-123",
-                "zt01",
+                "sandbox-a",
                 "release/2026.04",
                 "sample/runtime"
         );

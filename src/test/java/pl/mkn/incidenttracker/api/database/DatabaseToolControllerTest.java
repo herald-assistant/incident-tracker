@@ -36,11 +36,11 @@ class DatabaseToolControllerTest {
         var scope = scope(GET_SCOPE);
         when(databaseToolService.getScope(scope))
                 .thenReturn(new DbScopeResult(
-                        "zt01",
+                        "sandbox-a",
                         "oracle-dev",
                         "Dev database",
                         List.of(),
-                        List.of("ORDERS_APP"),
+                        List.of("CRM_APP"),
                         List.of("Typed tools only."),
                         List.of()
                 ));
@@ -51,38 +51,38 @@ class DatabaseToolControllerTest {
                                 {
                                   "scope": {
                                     "correlationId": "corr-123",
-                                    "environment": "zt01"
+                                    "environment": "sandbox-a"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.environment").value("zt01"))
+                .andExpect(jsonPath("$.environment").value("sandbox-a"))
                 .andExpect(jsonPath("$.databaseAlias").value("oracle-dev"))
-                .andExpect(jsonPath("$.allowedSchemas[0]").value("ORDERS_APP"));
+                .andExpect(jsonPath("$.allowedSchemas[0]").value("CRM_APP"));
 
         verify(databaseToolService).getScope(scope);
     }
 
     @Test
     void shouldDelegateFindTablesWithTypedRequest() throws Exception {
-        var request = new DbFindTablesRequest("orders-service", "ORDER", "OrderEntity", 10);
+        var request = new DbFindTablesRequest("crm-service", "CUSTOMER_PROFILE", "CustomerProfileEntity", 10);
         when(databaseToolService.findTables(scope(FIND_TABLES), request))
                 .thenReturn(new DbTableSearchResult(
-                        "zt01",
+                        "sandbox-a",
                         "oracle-dev",
-                        "orders-service",
-                        List.of("ORDERS_APP"),
+                        "crm-service",
+                        List.of("CRM_APP"),
                         List.of(new DbTableCandidate(
-                                "ORDERS_APP",
-                                "ORDER_EVENT",
+                                "CRM_APP",
+                                "CUSTOMER_INTERACTION",
                                 "TABLE",
-                                "Order events",
+                                "Customer interactions",
                                 8,
                                 List.of("ID"),
-                                List.of("ORDER_ID"),
+                                List.of("CUSTOMER_ID"),
                                 1,
                                 0,
-                                List.of("matched ORDER")
+                                List.of("matched CUSTOMER")
                         )),
                         false,
                         List.of()
@@ -94,20 +94,20 @@ class DatabaseToolControllerTest {
                                 {
                                   "scope": {
                                     "correlationId": "corr-123",
-                                    "environment": "zt01"
+                                    "environment": "sandbox-a"
                                   },
                                   "request": {
-                                    "applicationPattern": "orders-service",
-                                    "tableNamePattern": "ORDER",
-                                    "entityOrKeywordHint": "OrderEntity",
+                                    "applicationPattern": "crm-service",
+                                    "tableNamePattern": "CUSTOMER_PROFILE",
+                                    "entityOrKeywordHint": "CustomerProfileEntity",
                                     "limit": 10
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.resolvedApplication").value("orders-service"))
-                .andExpect(jsonPath("$.candidates[0].schema").value("ORDERS_APP"))
-                .andExpect(jsonPath("$.candidates[0].tableName").value("ORDER_EVENT"));
+                .andExpect(jsonPath("$.resolvedApplication").value("crm-service"))
+                .andExpect(jsonPath("$.candidates[0].schema").value("CRM_APP"))
+                .andExpect(jsonPath("$.candidates[0].tableName").value("CUSTOMER_INTERACTION"));
 
         verify(databaseToolService).findTables(scope(FIND_TABLES), request);
     }
@@ -115,7 +115,7 @@ class DatabaseToolControllerTest {
     @Test
     void shouldMapToolBadRequestToApiErrorResponse() throws Exception {
         var request = new DbCountRowsRequest(
-                new DbTableRef("ORDERS_APP", "ORDER_EVENT"),
+                new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"),
                 List.of(new DbFilter("STATUS", DbOperator.EQ, List.of("ACTIVE")))
         );
         when(databaseToolService.countRows(scope(COUNT_ROWS), request))
@@ -127,12 +127,12 @@ class DatabaseToolControllerTest {
                                 {
                                   "scope": {
                                     "correlationId": "corr-123",
-                                    "environment": "zt01"
+                                    "environment": "sandbox-a"
                                   },
                                   "request": {
                                     "table": {
-                                      "schema": "ORDERS_APP",
-                                      "tableName": "ORDER_EVENT"
+                                      "schema": "CRM_APP",
+                                      "tableName": "CUSTOMER_INTERACTION"
                                     },
                                     "filters": [
                                       {
@@ -171,7 +171,7 @@ class DatabaseToolControllerTest {
     private DbCapabilityScope scope(String toolName) {
         return new DbCapabilityScope(
                 "corr-123",
-                "zt01",
+                "sandbox-a",
                 "database-console",
                 "database-console",
                 null,

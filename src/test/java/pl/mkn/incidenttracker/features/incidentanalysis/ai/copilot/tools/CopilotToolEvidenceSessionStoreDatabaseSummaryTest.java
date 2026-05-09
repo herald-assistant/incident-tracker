@@ -41,7 +41,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
                 "db_count_rows",
                 """
                         {
-                          "table": {"schema": "CLP", "tableName": "ORDER_EVENT"},
+                          "table": {"schema": "CRM", "tableName": "CUSTOMER_INTERACTION"},
                           "filters": [
                             {"column": "correlation_id", "operator": "EQ", "values": ["corr-123"]}
                           ],
@@ -50,9 +50,9 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
                         """,
                 """
                         {
-                          "environment": "zt002",
+                          "environment": "sandbox-b",
                           "databaseAlias": "oracle",
-                          "table": {"schema": "CLP", "tableName": "ORDER_EVENT"},
+                          "table": {"schema": "CRM", "tableName": "CUSTOMER_INTERACTION"},
                           "count": 3,
                           "appliedFilters": ["CORRELATION_ID = corr-123"],
                           "warnings": []
@@ -68,7 +68,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
         var attributes = attributes(capturedSection.get());
         assertEquals("Sprawdzam, czy istnieja rekordy dla correlationId.", attributes.get("reason"));
         assertTrue(attributes.get("result").contains("\"count\" : 3"));
-        assertTrue(attributes.get("result").contains("\"tableName\" : \"ORDER_EVENT\""));
+        assertTrue(attributes.get("result").contains("\"tableName\" : \"CUSTOMER_INTERACTION\""));
     }
 
     @Test
@@ -88,10 +88,10 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
                 """
                         {
                           "group": "sample/runtime",
-                          "projectName": "orders-api",
+                          "projectName": "crm-api",
                           "branch": "main",
-                          "filePath": "src/main/java/pl/mkn/orders/OrderService.java",
-                          "content": "class OrderService {}",
+                          "filePath": "src/main/java/pl/mkn/crm/CustomerService.java",
+                          "content": "class CustomerService {}",
                           "truncated": false
                         }
                         """
@@ -150,7 +150,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
             String rawResult
     ) {
         return new CopilotToolInvocationFinishedEvent(
-                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "sample/runtime"),
+                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "sandbox-a", "main", "sample/runtime"),
                 sessionId,
                 toolCallId,
                 toolName,

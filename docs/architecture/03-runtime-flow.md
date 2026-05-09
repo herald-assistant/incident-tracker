@@ -554,11 +554,11 @@ ma dostepnych effortow w SDK, UI nie wysyla `reasoningEffort`.
 analysis.database.enabled=false
 analysis.database.connection-defaults.username=INCIDENT_TRACKER_RO
 analysis.database.connection-defaults.password=${INCIDENT_TRACKER_DB_PASSWORD}
-analysis.database.connections.dev.jdbc-url=jdbc:oracle:thin:@//dev-host:1521/service
-analysis.database.applications.agreement-process.database-user=AGREEMENT_PROCESS
-analysis.database.applications.agreement-process.application-patterns=agreement-process,AGREEMENT_PROCESS
-analysis.database.environments.dev1.connection=dev
-analysis.database.environments.dev1.application-user-suffix=_1
+analysis.database.connections.dev.jdbc-url=jdbc:oracle:thin:@//db-dev.example.internal:1521/service
+analysis.database.applications.crm-service.database-user=CRM_APP
+analysis.database.applications.crm-service.application-patterns=crm-service,CRM_APP
+analysis.database.environments.sandbox-1.connection=dev
+analysis.database.environments.sandbox-1.application-user-suffix=_1
 
 analysis.ai.copilot.working-directory=${user.dir}
 analysis.ai.copilot.permission-mode=approve-all
