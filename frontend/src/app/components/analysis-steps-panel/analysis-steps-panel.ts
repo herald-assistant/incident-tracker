@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
   AnalysisAiActivityEvent,
+  AnalysisAiToolFeedback,
   AnalysisAiUsage,
   AnalysisEvidenceAttribute,
   AnalysisEvidenceReference,
@@ -336,6 +337,14 @@ interface UsageStatView {
   value: string;
 }
 
+interface ToolFeedbackView {
+  key: string;
+  target: string;
+  meta: string[];
+  summary: string;
+  suggestedImprovement: string;
+}
+
 type StepIndicatorState = 'number' | 'running' | 'done' | 'error' | 'skipped';
 
 const COPILOT_WORK_KIND_FILTERS: readonly AiWorkKindFilterOption[] = [
@@ -521,6 +530,7 @@ export class AnalysisStepsPanelComponent {
   readonly evidenceSections = input<AnalysisEvidenceSection[]>([]);
   readonly toolEvidenceSections = input<AnalysisEvidenceSection[]>([]);
   readonly aiActivityEvents = input<AnalysisAiActivityEvent[]>([]);
+  readonly toolFeedback = input<AnalysisAiToolFeedback[]>([]);
   readonly preparedPrompt = input<string>('');
   readonly result = input<AnalysisResultResponse | null>(null);
 
@@ -544,6 +554,9 @@ export class AnalysisStepsPanelComponent {
   });
   protected readonly copilotWorkKindCounts = computed<Record<AiWorkItemKind, number>>(() =>
     countCopilotWorkKinds(this.copilotWorkItems())
+  );
+  protected readonly toolFeedbackItems = computed<ToolFeedbackView[]>(() =>
+    prepareToolFeedbackItems(this.toolFeedback())
   );
 
   protected readonly preparedSteps = computed<StepView[]>(() =>
@@ -849,6 +862,81 @@ function buildUsageTooltip(
   );
 
   return lines.join('\n');
+}
+
+function prepareToolFeedbackItems(feedback: AnalysisAiToolFeedback[]): ToolFeedbackView[] {
+  return (feedback || []).map((item, index) => ({
+    key: item.feedbackId || `${item.targetToolName}-${item.targetToolCallId}-${index}`,
+    target: item.targetToolCallId
+      ? `${item.targetToolName || 'tool'} (${item.targetToolCallId})`
+      : item.targetToolName || 'tool',
+    meta: [
+      toolFeedbackUsefulnessLabel(item.usefulness),
+      toolFeedbackExpectedDataLabel(item.expectedDataReceived),
+      toolFeedbackIssueLabel(item.issueCategory),
+      toolFeedbackImprovementLabel(item.improvementArea),
+      item.confidence ? `pewność: ${item.confidence}` : ''
+    ].filter(Boolean),
+    summary: item.summaryForOperator,
+    suggestedImprovement: item.suggestedImprovement
+  }));
+}
+
+function toolFeedbackUsefulnessLabel(value: string): string {
+  const labels: Record<string, string> = {
+    useful: 'użyteczne',
+    partial: 'częściowe',
+    not_useful: 'nieprzydatne',
+    invalid: 'niepoprawne',
+    error: 'błąd'
+  };
+  return labels[value] || value || '';
+}
+
+function toolFeedbackExpectedDataLabel(value: string): string {
+  const labels: Record<string, string> = {
+    yes: 'oczekiwane dane: tak',
+    partial: 'oczekiwane dane: częściowo',
+    no: 'oczekiwane dane: nie',
+    unknown: 'oczekiwane dane: nieznane'
+  };
+  return labels[value] || value || '';
+}
+
+function toolFeedbackIssueLabel(value: string): string {
+  const labels: Record<string, string> = {
+    no_issue: 'bez problemu',
+    no_data: 'brak danych',
+    wrong_scope: 'zły zakres',
+    incomplete: 'niepełne',
+    too_much_noise: 'szum',
+    ambiguous_result: 'niejednoznaczne',
+    stale_data: 'nieświeże dane',
+    access_error: 'błąd dostępu',
+    tool_error: 'błąd toola',
+    schema_or_format_issue: 'schema/format',
+    missing_operational_context: 'brak opctx',
+    missing_code_scope: 'brak scope kodu',
+    model_misused_tool: 'złe użycie przez AI',
+    other: 'inne'
+  };
+  return labels[value] || value || '';
+}
+
+function toolFeedbackImprovementLabel(value: string): string {
+  const labels: Record<string, string> = {
+    none: 'bez usprawnień',
+    tool_contract: 'kontrakt toola',
+    tool_description: 'opis toola',
+    tool_policy: 'polityka tooli',
+    adapter_result: 'wynik adaptera',
+    operational_context_data: 'dane opctx',
+    code_search_scope: 'scope kodu',
+    database_mapping: 'mapowanie DB',
+    ui_presentation: 'prezentacja UI',
+    other: 'inne'
+  };
+  return labels[value] || value || '';
 }
 
 function formatTokenCount(value: number | null | undefined): string {

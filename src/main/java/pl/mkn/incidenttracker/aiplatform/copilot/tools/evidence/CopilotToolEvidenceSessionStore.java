@@ -7,7 +7,9 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.function.Consumer;
 public class CopilotToolEvidenceSessionStore {
 
     private static final String TOOL_CAPTURE_ORDER_ATTRIBUTE = "toolCaptureOrder";
+    private static final int MAX_INVOCATION_HISTORY = 40;
     private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
     };
 
@@ -85,15 +88,62 @@ public class CopilotToolEvidenceSessionStore {
             Consumer<AnalysisEvidenceSection> evidenceSink,
             LinkedHashMap<EvidenceSectionKey, LinkedHashMap<String, AnalysisEvidenceItem>> itemsBySection,
             LinkedHashMap<String, Integer> orderByItemKey,
-            AtomicInteger nextOrder
+            AtomicInteger nextOrder,
+            Deque<ToolInvocationSummary> invocationHistory
     ) {
         SessionToolEvidence(Consumer<AnalysisEvidenceSection> evidenceSink) {
             this(
                     evidenceSink,
                     new LinkedHashMap<>(),
                     new LinkedHashMap<>(),
-                    new AtomicInteger(1)
+                    new AtomicInteger(1),
+                    new ArrayDeque<>()
             );
+        }
+
+        public synchronized void recordInvocation(ToolInvocationSummary invocation) {
+            if (invocation == null || !StringUtils.hasText(invocation.toolName())) {
+                return;
+            }
+
+            invocationHistory.addLast(invocation);
+            while (invocationHistory.size() > MAX_INVOCATION_HISTORY) {
+                invocationHistory.removeFirst();
+            }
+        }
+
+        public synchronized Optional<ToolInvocationSummary> findInvocationByCallId(String toolCallId) {
+            if (!StringUtils.hasText(toolCallId)) {
+                return Optional.empty();
+            }
+
+            var iterator = invocationHistory.descendingIterator();
+            while (iterator.hasNext()) {
+                var invocation = iterator.next();
+                if (toolCallId.trim().equals(invocation.toolCallId())) {
+                    return Optional.of(invocation);
+                }
+            }
+            return Optional.empty();
+        }
+
+        public synchronized Optional<ToolInvocationSummary> findLatestInvocationByName(String toolName) {
+            if (!StringUtils.hasText(toolName)) {
+                return Optional.empty();
+            }
+
+            var iterator = invocationHistory.descendingIterator();
+            while (iterator.hasNext()) {
+                var invocation = iterator.next();
+                if (toolName.trim().equals(invocation.toolName())) {
+                    return Optional.of(invocation);
+                }
+            }
+            return Optional.empty();
+        }
+
+        public synchronized Optional<ToolInvocationSummary> findLatestInvocation() {
+            return Optional.ofNullable(invocationHistory.peekLast());
         }
 
         public synchronized AnalysisEvidenceSection upsertItem(
@@ -203,5 +253,15 @@ public class CopilotToolEvidenceSessionStore {
     }
 
     private record EvidenceSectionKey(String provider, String category) {
+    }
+
+    public record ToolInvocationSummary(
+            String toolName,
+            String toolCallId,
+            String outcome,
+            String rawArguments,
+            String rawResult,
+            long latencyMs
+    ) {
     }
 }

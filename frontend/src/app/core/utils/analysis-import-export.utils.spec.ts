@@ -13,15 +13,34 @@ describe('analysis import/export utils', () => {
     expect(serialized).not.toContain('client_secret');
   });
 
-  it('should import older job JSON without aiAccount field', () => {
+  it('should import older job JSON without newer feedback fields', () => {
     const olderJob = completedJob() as unknown as Record<string, unknown>;
     delete olderJob['aiAccount'];
+    delete olderJob['toolFeedback'];
+    olderJob['chatMessages'] = [
+      {
+        id: 'chat-1',
+        role: 'ASSISTANT',
+        status: 'COMPLETED',
+        content: 'Odpowiedź',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-05-02T10:06:00Z',
+        updatedAt: '2026-05-02T10:06:00Z',
+        completedAt: '2026-05-02T10:06:00Z',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        prompt: ''
+      }
+    ];
 
     const imported = parseImportedAnalysis(olderJob);
 
     expect(imported.job.analysisId).toBe('analysis-1');
     expect(imported.job.status).toBe('COMPLETED');
     expect(imported.job.result?.detectedProblem).toBe('DOWNSTREAM_TIMEOUT');
+    expect(imported.job.toolFeedback).toEqual([]);
+    expect(imported.job.chatMessages[0].toolFeedback).toEqual([]);
   });
 });
 
@@ -45,6 +64,7 @@ function completedJob(): AnalysisJobStateSnapshot {
     evidenceSections: [],
     toolEvidenceSections: [],
     aiActivityEvents: [],
+    toolFeedback: [],
     chatMessages: [],
     preparedPrompt: 'Prepared prompt without GitHub tokens.',
     result: {

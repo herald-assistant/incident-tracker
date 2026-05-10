@@ -43,7 +43,12 @@ Obecnie obejmuje:
   feature.
 - `copilot/tools/evidence/`
   session-bound store publikujacy neutralne `AnalysisEvidenceSection` z wynikow
-  tool invocation przez sink przekazany przez feature.
+  tool invocation przez sink przekazany przez feature; przechowuje tez krotka
+  historie invocation uzywana przez feedback capture.
+- `copilot/tools/feedback/`
+  platformowy tool `record_tool_feedback` oraz listener eventow invocation,
+  ktory publikuje feedback jako sekcje `ai/tool-feedback` przez evidence
+  store; nie dodawaj tu osobnego session store ani osobnego sinka runtime.
 
 Nie obejmuje:
 

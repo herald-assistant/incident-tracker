@@ -43,7 +43,9 @@ class CopilotIncidentFollowUpPromptRendererTest {
                 List.of(
                         "elastic_search_logs_by_correlation_id",
                         "gitlab_find_flow_context",
-                        "db_get_scope"
+                        "db_get_scope",
+                        "opctx_search",
+                        "record_tool_feedback"
                 ),
                 true,
                 true,
@@ -75,6 +77,9 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("Co sprawdzic dalej?"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
         assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch."));
+        assertTrue(prompt.contains("- Operational context catalog: browse or search reusable catalog context"));
+        assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));
+        assertTrue(prompt.contains("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals"));
     }
 
     @Test

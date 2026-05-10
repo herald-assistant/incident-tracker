@@ -101,6 +101,38 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(headers[1]?.querySelector('.analysis-stepper__spinner')).not.toBeNull();
   });
 
+  it('should render tool quality feedback panel', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', buildCompletedSteps());
+    fixture.componentRef.setInput('toolFeedback', [
+      {
+        feedbackId: 'feedback-1',
+        targetToolName: 'gitlab_find_flow_context',
+        targetToolCallId: 'tool-call-1',
+        feedbackToolCallId: 'feedback-call-1',
+        usefulness: 'partial',
+        expectedDataReceived: 'partial',
+        issueCategory: 'incomplete',
+        improvementArea: 'tool_description',
+        confidence: 'high',
+        summaryForOperator: 'Wynik był częściowy i wymaga doprecyzowania.',
+        suggestedImprovement: 'Dopisać w opisie toola zakres zwracanego flow.',
+        createdAt: '2026-05-02T10:05:00Z'
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Feedback jakości tooli');
+    expect(compiled.textContent).toContain('gitlab_find_flow_context (tool-call-1)');
+    expect(compiled.textContent).toContain('Wynik był częściowy i wymaga doprecyzowania.');
+    expect(compiled.textContent).toContain('opis toola');
+  });
+
   it('should allow switching between completed steps after the analysis finishes', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', buildCompletedSteps());

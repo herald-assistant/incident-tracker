@@ -97,6 +97,21 @@ export interface AnalysisAiActivityEvent {
   details: Record<string, unknown>;
 }
 
+export interface AnalysisAiToolFeedback {
+  feedbackId: string;
+  targetToolName: string;
+  targetToolCallId: string;
+  feedbackToolCallId: string;
+  usefulness: string;
+  expectedDataReceived: string;
+  issueCategory: string;
+  improvementArea: string;
+  confidence: string;
+  summaryForOperator: string;
+  suggestedImprovement: string;
+  createdAt: string;
+}
+
 export interface AnalysisStartRequest {
   correlationId: string;
   model?: string;
@@ -172,6 +187,7 @@ export interface AnalysisChatMessageResponse {
   completedAt: string;
   toolEvidenceSections: AnalysisEvidenceSection[];
   aiActivityEvents: AnalysisAiActivityEvent[];
+  toolFeedback: AnalysisAiToolFeedback[];
   prompt: string;
 }
 
@@ -194,6 +210,7 @@ export interface AnalysisJobStateSnapshot {
   evidenceSections: AnalysisEvidenceSection[];
   toolEvidenceSections: AnalysisEvidenceSection[];
   aiActivityEvents: AnalysisAiActivityEvent[];
+  toolFeedback: AnalysisAiToolFeedback[];
   chatMessages: AnalysisChatMessageResponse[];
   preparedPrompt: string;
   result: AnalysisResultResponse | null;

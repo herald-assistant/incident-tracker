@@ -53,6 +53,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `agenttools.operationalcontext.mcp`
 - `aiplatform.copilot.runtime`
 - `aiplatform.copilot.tools`
+- `aiplatform.copilot.tools.feedback`
 - `integrations.elasticsearch`
 - `integrations.dynatrace`
 - `integrations.gitlab`
@@ -87,6 +88,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `aiplatform.copilot.tools.logging`
 - `aiplatform.copilot.tools.description`
 - `aiplatform.copilot.tools.evidence`
+- `aiplatform.copilot.tools.feedback`
 - `features.incidentanalysis.ai.copilot`
 - `aiplatform.copilot.runtime.execution`
 - `features.incidentanalysis.ai.copilot.response`
@@ -166,6 +168,16 @@ Zasada:
 3. tool description ma byc reusable i bez semantyki jednego feature'a,
 4. jesli capability ma strategie uzycia, rozwaz dedykowany skill,
 5. skill trzymaj jako resource runtime, nie w `.github`.
+
+Wyjatek od "capability w integrations" dotyczy narzedzi czysto
+platformowych, ktore nie czytaja zewnetrznych systemow. Obecny przyklad to
+`record_tool_feedback` w `aiplatform.copilot.tools.feedback`: zapisuje jawny,
+user-visible feedback modelu o wyniku poprzedniego toola w biezacej sesji.
+Sam callback toola ma pozostac bezstanowy; zapis do analizy powinien isc przez
+listener `CopilotToolInvocationFinishedEvent`, tak jak obecny capture
+GitLab/DB, i przez ten sam `AnalysisAiToolEvidenceListener` jako sekcja
+`ai/tool-feedback`. Nie dopisywac go do kazdego skillu; prompt renderer ma
+dodawac centralna instrukcje tylko wtedy, gdy tool jest dostepny.
 
 ### Gdy dodajesz nowa integracje z zewnetrznym API
 
@@ -256,6 +268,8 @@ statusie auth.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba,
 kontekst lookupow GitLaba i wyniki DB dociagniete przez AI tools podczas kroku
 `AI_ANALYSIS`.
+Jezeli model wywola `record_tool_feedback`, polling zwraca tez `toolFeedback`:
+jawne oceny jakosci wynikow tools zapisane w stanie konkretnej analizy.
 Krok `AI_ANALYSIS` moze tez zawierac `usage`: sumaryczne tokeny oraz szczegoly
 input/output/cache/context zebrane z eventow Copilot SDK i zmapowane na
 generyczny kontrakt aplikacji.
@@ -268,9 +282,13 @@ debug jest dostepny po rozwinieciu danego wiersza.
 Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
 `POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
 tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.
+Follow-up odpowiedz assistant moze miec wlasne `toolFeedback`, pokazywane
+kompaktowo przy tej wiadomosci.
 Follow-up chat dziala tylko dla live joba w pamieci backendu; importowany
 zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
+wlacznie z `toolFeedback`; starsze eksporty bez tego pola sa normalizowane do
+pustych list.
 route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
 GitLaba, route `/database` sluzy do recznego testowania endpointow nad
 `DatabaseToolService` z jawnym operatorskim `environment`, a route
@@ -297,6 +315,9 @@ zakonczeniu poczatkowej analizy.
 
 Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
 chatu, a nie mieszane z deterministycznym pipeline evidence.
+Tool feedback z follow-up powinien byc przypisany do tej samej konkretnej
+odpowiedzi assistant. Nie traktuj go jako deterministic evidence ani inputu do
+root cause diagnosis.
 
 ### Znany drift MCP Elasticsearch
 
@@ -317,11 +338,17 @@ Root `aiplatform.copilot.tools` jest platformowa bramka do runtime tools:
 Logika pomocnicza jest rozdzielona wedlug ownership: platformowy context,
 handler invocation, eventy, policy contracts, session validation, logging i
 description customization mieszkaja w `aiplatform.copilot.tools`, budget w
-`aiplatform.copilot.tools.policy.budget`, a session evidence store w
-`aiplatform.copilot.tools.evidence`. GitLab i Database maja wlasne listenery
+`aiplatform.copilot.tools.policy.budget`, a session evidence/feedback capture
+state w `aiplatform.copilot.tools.evidence`. GitLab i Database maja wlasne listenery
 oraz mappery evidence capture w feature. Przy kolejnych toolach unikaj dopisywania
 specjalnych przypadkow do handlera; dodaj policy albo listener eventu w
 odpowiednim pakiecie.
+
+`record_tool_feedback` korzysta z eventow invocation do zapisu feedbacku i
+rozwiazania targetu poprzedniego tool calla. To nie jest ukryta telemetryka,
+quality gate ani przekrojowa historia jakosci tools. Nie wprowadzaj osobnego
+listener contractu obok `AnalysisAiToolEvidenceListener` ani side effectow
+wewnatrz callbacka toola.
 
 Operational Context tools sa katalogowym browse/search/detail nad
 `integrations.operationalcontext`: `opctx_get_scope`, `opctx_list_entities`,
@@ -417,6 +444,8 @@ Mozliwe kierunki:
   pytan ani technicznych badge'y w glownym widoku; parametry wejscia toola
   zostaja w JSON tooltipie,
 - pinowanie najwazniejszych wynikow AI tool calls,
+- przeglad `toolFeedback` po analizach jako reczny sygnal do poprawy opisow
+  tools, adapter results, policy i operational context,
 - czytelniejsze laczenie promptu, evidence i kodu dociagnietego przez AI,
 - lepsze porownanie "deterministic evidence" kontra "AI-guided reads".
 

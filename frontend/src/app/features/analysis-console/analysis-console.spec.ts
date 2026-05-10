@@ -182,6 +182,37 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.querySelector('.chat-message__copy-loader')).toBeNull();
   });
 
+  it('should render compact tool feedback on chat messages', async () => {
+    const { fixture } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    const job = completedJobWithChat();
+    job.chatMessages[1]!.toolFeedback = [
+      {
+        feedbackId: 'feedback-chat-1',
+        targetToolName: 'db_find_tables',
+        targetToolCallId: 'db-call-1',
+        feedbackToolCallId: 'feedback-call-1',
+        usefulness: 'not_useful',
+        expectedDataReceived: 'no',
+        issueCategory: 'wrong_scope',
+        improvementArea: 'adapter_result',
+        confidence: 'medium',
+        summaryForOperator: 'Tool nie zwrócił tabel pasujących do pytania.',
+        suggestedImprovement: 'Ulepszyć ranking tabel po aliasach aplikacji.',
+        createdAt: '2026-05-02T10:04:00Z'
+      }
+    ];
+    component.job.set(job);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Feedback jakości tooli');
+    expect(fixture.nativeElement.textContent).toContain('db_find_tables (db-call-1)');
+    expect(fixture.nativeElement.textContent).toContain('Tool nie zwrócił tabel pasujących do pytania.');
+  });
+
   it('should show a copy-sized loader instead of a copy action while the last AI message is pending', async () => {
     const { fixture } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
@@ -306,6 +337,7 @@ function queuedJob(): AnalysisJobStateSnapshot {
     evidenceSections: [],
     toolEvidenceSections: [],
     aiActivityEvents: [],
+    toolFeedback: [],
     chatMessages: [],
     preparedPrompt: '',
     result: null
@@ -354,6 +386,7 @@ function completedJobWithChat(): AnalysisJobStateSnapshot {
         completedAt: '2026-05-02T10:02:00Z',
         toolEvidenceSections: [],
         aiActivityEvents: [],
+        toolFeedback: [],
         prompt: ''
       },
       {
@@ -368,6 +401,7 @@ function completedJobWithChat(): AnalysisJobStateSnapshot {
         completedAt: '2026-05-02T10:03:00Z',
         toolEvidenceSections: [],
         aiActivityEvents: [],
+        toolFeedback: [],
         prompt: ''
       }
     ]
@@ -390,6 +424,7 @@ function completedJobWithPendingChat(): AnalysisJobStateSnapshot {
         completedAt: '2026-05-02T10:02:00Z',
         toolEvidenceSections: [],
         aiActivityEvents: [],
+        toolFeedback: [],
         prompt: ''
       },
       {
@@ -404,6 +439,7 @@ function completedJobWithPendingChat(): AnalysisJobStateSnapshot {
         completedAt: '',
         toolEvidenceSections: [],
         aiActivityEvents: [],
+        toolFeedback: [],
         prompt: ''
       }
     ]

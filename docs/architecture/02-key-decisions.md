@@ -425,6 +425,37 @@ Jesli metryki optymalizacyjne wroca, powinny byc zaprojektowane jako jawny
 productized element: z celem widocznym dla zespolu/operacji, testami,
 dokumentacja i decyzja, gdzie uzytkownik lub operator ma do nich dostep.
 
+## 17a. Tool feedback jest jawny i user-visible
+
+Platforma Copilot udostepnia zawsze dostepny tool `record_tool_feedback`.
+Model moze go uzyc, zeby zapisac widoczna dla operatora ocene wyniku
+wczesniejszego toola: szczegolnie uzytecznego, czesciowego, pustego,
+blednego, mylacego, zbyt szumnego albo zle scoped.
+
+Decyzje:
+
+- tool mieszka w `aiplatform.copilot.tools.feedback`, nie w incident feature,
+- feedback nie przyjmuje `analysisId`, `correlationId`, `environment`,
+  `gitLabGroup` ani `gitLabBranch`; scope pochodzi z biezacej sesji,
+- sam callback toola pozostaje zwyklym wywolaniem Spring tool; zapis feedbacku
+  do analizy robi listener zakonczonego invocation, publikujac neutralna
+  sekcje przez ten sam `AnalysisAiToolEvidenceListener`, ktory obsluguje inne
+  wyniki tools,
+- feedback nie zuzywa exploration budgetu i nie jest targetem dla wlasnego
+  feedbacku,
+- wynik trafia do `shared.ai.AnalysisAiToolFeedback`, job state, UI oraz
+  eksportu JSON konkretnej analizy,
+- prompt renderer dodaje jedna centralna instrukcje uzycia feedbacku, gdy tool
+  jest dostepny; nie dopisujemy tej samej wzmianki do kazdego skillu,
+- feedback nie jest deterministic evidence i nie sluzy jako input do root
+  cause diagnosis,
+- feedback nie jest ukryta telemetryka, ukrytym quality gate'em ani
+  automatyczna decyzja runtime.
+
+W V1 feedback jest przechowywany tylko w stanie konkretnej analizy i
+follow-up odpowiedzi chatu. Nie ma jeszcze trwalej historii ani agregacji
+miedzy analizami.
+
 ## 18. Raw SQL jest oddzielnym ryzykiem
 
 `db_execute_readonly_sql` jest traktowany osobno od typed DB tools.

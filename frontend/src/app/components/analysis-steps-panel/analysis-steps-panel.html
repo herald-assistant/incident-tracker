@@ -1547,3 +1547,41 @@
     </div>
   </details>
 }
+
+@if (toolFeedbackItems().length > 0) {
+  <details class="panel-card tool-feedback-panel collapsible-panel" open>
+    <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
+      <div>
+        <p class="section-eyebrow">Feedback jakości tooli</p>
+        <h3>Oceny wyników narzędzi</h3>
+      </div>
+      <p class="tool-feedback-panel__hint collapsible-panel__hint">
+        Sygnały diagnostyczne zapisane przez AI po istotnych wynikach tooli.
+      </p>
+      <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+        expand_more
+      </span>
+    </summary>
+
+    <div class="tool-feedback-list collapsible-panel__body">
+      @for (feedback of toolFeedbackItems(); track feedback.key) {
+        <article class="tool-feedback-card">
+          <div class="tool-feedback-card__header">
+            <div>
+              <h4>{{ feedback.target }}</h4>
+              <div class="tool-feedback-card__meta">
+                @for (meta of feedback.meta; track meta) {
+                  <span>{{ meta }}</span>
+                }
+              </div>
+            </div>
+          </div>
+          <p class="tool-feedback-card__summary">{{ feedback.summary }}</p>
+          @if (feedback.suggestedImprovement) {
+            <p class="tool-feedback-card__suggestion">{{ feedback.suggestedImprovement }}</p>
+          }
+        </article>
+      }
+    </div>
+  </details>
+}

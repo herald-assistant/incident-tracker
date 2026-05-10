@@ -3,6 +3,7 @@ import {
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
   AnalysisAiActivityEvent,
+  AnalysisAiToolFeedback,
   AnalysisChatMessageResponse,
   AnalysisAiUsage,
   AnalysisExportEnvelope,
@@ -13,8 +14,8 @@ import {
 import { isTerminalStatus } from './analysis-display.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
-export const EXPORT_VERSION = 5;
-const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4, 5]);
+export const EXPORT_VERSION = 6;
+const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4, 5, 6]);
 
 export function buildExportEnvelope(
   job: AnalysisJobStateSnapshot,
@@ -109,6 +110,9 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobStateSnapshot {
     aiActivityEvents: Array.isArray(jobObject['aiActivityEvents'])
       ? jobObject['aiActivityEvents'].map(normalizeAiActivityEvent)
       : [],
+    toolFeedback: Array.isArray(jobObject['toolFeedback'])
+      ? jobObject['toolFeedback'].map(normalizeToolFeedback)
+      : [],
     chatMessages: Array.isArray(jobObject['chatMessages'])
       ? jobObject['chatMessages'].map(normalizeChatMessage)
       : [],
@@ -197,7 +201,28 @@ function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
     aiActivityEvents: Array.isArray(messageObject?.['aiActivityEvents'])
       ? messageObject['aiActivityEvents'].map(normalizeAiActivityEvent)
       : [],
+    toolFeedback: Array.isArray(messageObject?.['toolFeedback'])
+      ? messageObject['toolFeedback'].map(normalizeToolFeedback)
+      : [],
     prompt: normalizeString(messageObject?.['prompt'])
+  };
+}
+
+function normalizeToolFeedback(feedback: unknown): AnalysisAiToolFeedback {
+  const feedbackObject = asObject(feedback);
+  return {
+    feedbackId: normalizeString(feedbackObject?.['feedbackId']),
+    targetToolName: normalizeString(feedbackObject?.['targetToolName']),
+    targetToolCallId: normalizeString(feedbackObject?.['targetToolCallId']),
+    feedbackToolCallId: normalizeString(feedbackObject?.['feedbackToolCallId']),
+    usefulness: normalizeString(feedbackObject?.['usefulness']),
+    expectedDataReceived: normalizeString(feedbackObject?.['expectedDataReceived']),
+    issueCategory: normalizeString(feedbackObject?.['issueCategory']),
+    improvementArea: normalizeString(feedbackObject?.['improvementArea']),
+    confidence: normalizeString(feedbackObject?.['confidence']),
+    summaryForOperator: normalizeString(feedbackObject?.['summaryForOperator']),
+    suggestedImprovement: normalizeString(feedbackObject?.['suggestedImprovement']),
+    createdAt: normalizeString(feedbackObject?.['createdAt'])
   };
 }
 

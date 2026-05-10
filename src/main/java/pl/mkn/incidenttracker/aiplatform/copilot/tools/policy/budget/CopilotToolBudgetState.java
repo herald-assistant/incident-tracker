@@ -4,6 +4,7 @@ import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -40,6 +41,10 @@ public class CopilotToolBudgetState {
     }
 
     public synchronized CopilotToolBudgetDecision beforeInvocation(String toolName) {
+        if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
+            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
+        }
+
         if (!properties.active()) {
             return CopilotToolBudgetDecision.allowed(sessionId, toolName);
         }
@@ -65,6 +70,10 @@ public class CopilotToolBudgetState {
     }
 
     public synchronized CopilotToolBudgetDecision afterInvocation(String toolName, String rawResult) {
+        if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
+            return CopilotToolBudgetDecision.allowed(sessionId, toolName);
+        }
+
         if (!properties.active()) {
             return CopilotToolBudgetDecision.allowed(sessionId, toolName);
         }

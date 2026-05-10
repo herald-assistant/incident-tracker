@@ -44,6 +44,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 - If the user asks for a report, generate the report directly in the requested structure in the chat answer.
                 - Do not return a JSON envelope unless the user explicitly asks for JSON.
                 - Do not invent facts unsupported by artifacts, prior tool evidence, chat history or new tool results.
+                %s
 
                 Latest user message:
                 <<<BEGIN LATEST USER MESSAGE>>>
@@ -69,6 +70,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
+                feedbackGuidance(toolAccessPolicy),
                 safeText(request.message()),
                 formatAnalysisResult(request.analysisResult()),
                 formatHistory(request.history()),
@@ -141,9 +143,28 @@ public class CopilotIncidentFollowUpPromptRenderer {
             rendered.append("- Database diagnostics: use typed readonly diagnostics on the resolved environment. Include a short Polish `reason`.\n");
         }
 
+        if (toolAccessPolicy.operationalContextToolsEnabled()) {
+            rendered.append("- Operational context catalog: browse or search reusable catalog context when the latest user request needs ownership, code scope, process, integration, handoff or DB-targeting context. Include a short Polish `reason`.\n");
+        }
+
+        if (toolAccessPolicy.toolFeedbackEnabled()) {
+            rendered.append("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals: especially useful, partial, empty, wrong, misleading, noisy or incorrectly scoped results.\n");
+        }
+
         return rendered.length() > 0
                 ? rendered.toString().trim()
                 : "- none; answer only from existing analysis evidence and chat history.";
+    }
+
+    private String feedbackGuidance(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
+        if (!toolAccessPolicy.toolFeedbackEnabled()) {
+            return "";
+        }
+
+        return """
+                - The platform tool `record_tool_feedback` is available for visible tool-quality feedback. Use it only for significant cases: a tool result was especially useful, partial, empty, wrong, misleading, noisy, stale, incorrectly scoped, or suggests a missing tool/policy/operational-context improvement.
+                - Feedback is diagnostic for human improvement of tools and operational context. It is not evidence for root cause and must not replace the chat answer.
+                """.trim();
     }
 
     private String formatArtifacts(List<CopilotRenderedArtifact> renderedArtifacts) {

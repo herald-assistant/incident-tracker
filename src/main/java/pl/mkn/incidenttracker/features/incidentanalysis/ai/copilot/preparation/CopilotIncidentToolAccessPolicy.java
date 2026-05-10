@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -203,6 +204,10 @@ public record CopilotIncidentToolAccessPolicy(
         return hasAvailableToolPrefix(OperationalContextToolNames.PREFIX);
     }
 
+    public boolean toolFeedbackEnabled() {
+        return availableToolNames.stream().anyMatch(CopilotToolFeedbackToolNames::isFeedbackTool);
+    }
+
     private boolean hasAvailableToolPrefix(String prefix) {
         return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(prefix));
     }
@@ -238,6 +243,9 @@ public record CopilotIncidentToolAccessPolicy(
     private static boolean isEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
         if (toolName == null || toolName.isBlank()) {
             return false;
+        }
+        if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
+            return true;
         }
         if (toolName.startsWith(ElasticToolNames.PREFIX)) {
             return evidenceCoverage.elasticNeedsTooling();
@@ -284,6 +292,9 @@ public record CopilotIncidentToolAccessPolicy(
     ) {
         if (toolName == null || toolName.isBlank()) {
             return false;
+        }
+        if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
+            return true;
         }
         if (toolName.startsWith(ElasticToolNames.PREFIX)) {
             return true;

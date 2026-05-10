@@ -8,6 +8,8 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTu
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
@@ -47,6 +49,7 @@ public final class AnalysisJobState {
     private final List<AnalysisEvidenceSection> evidenceSections;
     private final List<AnalysisEvidenceSection> toolEvidenceSections;
     private final List<AnalysisAiActivityEvent> aiActivityEvents;
+    private final List<AnalysisAiToolFeedback> toolFeedback;
     private final List<ChatMessageState> chatMessages;
 
     private AnalysisJobStatus status;
@@ -80,6 +83,7 @@ public final class AnalysisJobState {
         this.evidenceSections = new ArrayList<>();
         this.toolEvidenceSections = new ArrayList<>();
         this.aiActivityEvents = new ArrayList<>();
+        this.toolFeedback = new ArrayList<>();
         this.chatMessages = new ArrayList<>();
 
         for (var descriptor : providerDescriptors) {
@@ -130,6 +134,11 @@ public final class AnalysisJobState {
 
     synchronized void markAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
         if (section == null || !section.hasItems()) {
+            return;
+        }
+
+        if (appendToolFeedback(toolFeedback, section)) {
+            touch();
             return;
         }
 
@@ -304,6 +313,7 @@ public final class AnalysisJobState {
                 List.copyOf(evidenceSections),
                 List.copyOf(toolEvidenceSections),
                 List.copyOf(aiActivityEvents),
+                List.copyOf(toolFeedback),
                 chatMessages.stream().map(ChatMessageState::snapshot).toList(),
                 preparedPrompt,
                 result
@@ -365,6 +375,22 @@ public final class AnalysisJobState {
         }
 
         sections.add(candidate);
+    }
+
+    private static boolean appendToolFeedback(
+            List<AnalysisAiToolFeedback> feedbackList,
+            AnalysisEvidenceSection section
+    ) {
+        if (!AnalysisAiToolFeedbackEvidenceMapper.isToolFeedbackSection(section)) {
+            return false;
+        }
+
+        for (var feedback : AnalysisAiToolFeedbackEvidenceMapper.fromSection(section)) {
+            if (feedbackList.stream().noneMatch(existing -> existing.feedbackId().equals(feedback.feedbackId()))) {
+                feedbackList.add(feedback);
+            }
+        }
+        return true;
     }
 
     private void updateRuntimeFacts() {
@@ -474,6 +500,7 @@ public final class AnalysisJobState {
         private final Instant createdAt;
         private final List<AnalysisEvidenceSection> toolEvidenceSections;
         private final List<AnalysisAiActivityEvent> aiActivityEvents;
+        private final List<AnalysisAiToolFeedback> toolFeedback;
         private AnalysisChatMessageStatus status;
         private String content;
         private String errorCode;
@@ -498,6 +525,7 @@ public final class AnalysisJobState {
             this.completedAt = status == AnalysisChatMessageStatus.COMPLETED ? createdAt : null;
             this.toolEvidenceSections = new ArrayList<>();
             this.aiActivityEvents = new ArrayList<>();
+            this.toolFeedback = new ArrayList<>();
         }
 
         private static ChatMessageState completed(
@@ -518,6 +546,11 @@ public final class AnalysisJobState {
         }
 
         private void markToolEvidenceUpdated(AnalysisEvidenceSection section) {
+            if (appendToolFeedback(toolFeedback, section)) {
+                updatedAt = Instant.now();
+                return;
+            }
+
             upsertSection(toolEvidenceSections, section);
             updatedAt = Instant.now();
         }
@@ -556,6 +589,7 @@ public final class AnalysisJobState {
                     completedAt,
                     List.copyOf(toolEvidenceSections),
                     List.copyOf(aiActivityEvents),
+                    List.copyOf(toolFeedback),
                     prompt
             );
         }

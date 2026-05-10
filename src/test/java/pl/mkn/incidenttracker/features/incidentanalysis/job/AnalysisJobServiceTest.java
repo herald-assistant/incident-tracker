@@ -22,7 +22,10 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRe
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatResponse;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
+import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisAiToolEvidenceListener;
@@ -283,6 +286,26 @@ class AnalysisJobServiceTest {
     }
 
     @Test
+    void shouldExposeInitialToolFeedbackInJobSnapshot() {
+        var feedbackTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                new FeedbackAwareInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                feedbackTaskExecutor
+        );
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        feedbackTaskExecutor.runNext();
+
+        var completed = service.getAnalysis(started.analysisId());
+
+        assertEquals("COMPLETED", completed.status());
+        assertEquals(1, completed.toolFeedback().size());
+        assertEquals("gitlab_find_flow_context", completed.toolFeedback().get(0).targetToolName());
+        assertEquals("partial", completed.toolFeedback().get(0).usefulness());
+    }
+
+    @Test
     void shouldRunFollowUpChatAfterCompletedAnalysis() {
         var chatProvider = new ToolAwareTestAnalysisChatProvider();
         var chatTaskExecutor = new CapturingTaskExecutor();
@@ -314,6 +337,30 @@ class AnalysisJobServiceTest {
         assertEquals("Synthetic follow-up prompt for timeout-123", assistantMessage.prompt());
         assertEquals(1, assistantMessage.toolEvidenceSections().size());
         assertEquals("gitlab", assistantMessage.toolEvidenceSections().get(0).provider());
+    }
+
+    @Test
+    void shouldAttachToolFeedbackToFollowUpAssistantMessage() {
+        var chatProvider = new FeedbackAwareTestAnalysisChatProvider();
+        var chatTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        chatTaskExecutor.runNext();
+        service.startChatMessage(
+                started.analysisId(),
+                new AnalysisChatMessageRequest("Czy tool zwrocil wystarczajacy wynik?")
+        );
+        chatTaskExecutor.runNext();
+
+        var completed = service.getAnalysis(started.analysisId());
+        var assistantMessage = completed.chatMessages().get(1);
+
+        assertEquals("COMPLETED", assistantMessage.status());
+        assertEquals(0, completed.toolFeedback().size());
+        assertEquals(1, assistantMessage.toolFeedback().size());
+        assertEquals("db_find_tables", assistantMessage.toolFeedback().get(0).targetToolName());
+        assertEquals("adapter_result", assistantMessage.toolFeedback().get(0).improvementArea());
     }
 
     private AnalysisJobService analysisJobService(
@@ -609,6 +656,66 @@ class AnalysisJobServiceTest {
         }
     }
 
+    private static final class FeedbackAwareInitialAnalysisProvider implements InitialAnalysisProvider {
+
+        @Override
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
+            return new TestPreparedAnalysis(
+                    "feedback-aware-ai-provider",
+                    request.correlationId(),
+                    "Prepared prompt with tool feedback correlationId=%s".formatted(request.correlationId()),
+                    request
+            );
+        }
+
+        @Override
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener,
+                AnalysisAiActivityListener activityListener
+        ) {
+            var prepared = testPreparedAnalysis(preparedAnalysis);
+            toolEvidenceListener.onToolEvidenceUpdated(AnalysisAiToolFeedbackEvidenceMapper.toSection(new AnalysisAiToolFeedback(
+                    "feedback-1",
+                    "gitlab_find_flow_context",
+                    "tool-call-1",
+                    "feedback-call-1",
+                    "partial",
+                    "partial",
+                    "incomplete",
+                    "tool_description",
+                    "high",
+                    "Wynik toola byl czesciowy i wymaga doprecyzowania opisu.",
+                    "Dopisać w opisie toola, jaki zakres flow jest zwracany.",
+                    null
+            )));
+            return new InitialAnalysisResponse(
+                    "feedback-aware-ai-provider",
+                    "Structured evidence points to a downstream timeout in the catalog-service call chain.",
+                    "DOWNSTREAM_TIMEOUT",
+                    "Inspect recent HTTP client timeout changes first.",
+                    "Feedback is recorded separately from deterministic evidence.",
+                    "The affected function is the outbound catalog lookup path.",
+                    "Billing catalog lookup",
+                    "Billing Context",
+                    "Core Integration Team",
+                    prepared.prompt()
+            );
+        }
+
+        @Override
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            return analyze(
+                    preparedAnalysis,
+                    toolEvidenceListener,
+                    AnalysisAiActivityListener.NO_OP
+            );
+        }
+    }
+
     private static final class TestAnalysisChatProvider implements AnalysisAiChatProvider {
 
         @Override
@@ -657,6 +764,49 @@ class AnalysisJobServiceTest {
                     "test-chat-provider",
                     "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie katalogu.",
                     "Synthetic follow-up prompt for " + request.correlationId()
+            );
+        }
+    }
+
+    private static final class FeedbackAwareTestAnalysisChatProvider implements AnalysisAiChatProvider {
+
+        @Override
+        public AnalysisAiChatResponse chat(
+                AnalysisAiChatRequest request,
+                AnalysisAiToolEvidenceListener toolEvidenceListener,
+                AnalysisAiActivityListener activityListener
+        ) {
+            toolEvidenceListener.onToolEvidenceUpdated(AnalysisAiToolFeedbackEvidenceMapper.toSection(new AnalysisAiToolFeedback(
+                    "feedback-chat-1",
+                    "db_find_tables",
+                    "db-call-1",
+                    "feedback-call-chat-1",
+                    "not_useful",
+                    "no",
+                    "wrong_scope",
+                    "adapter_result",
+                    "medium",
+                    "DB tool nie zwrocil tabel pasujacych do pytania operatora.",
+                    "Ulepszyć ranking tabel dla aliasow aplikacji.",
+                    null
+            )));
+
+            return new AnalysisAiChatResponse(
+                    "test-chat-provider",
+                    "Zapisalem feedback do wyniku toola.",
+                    "Synthetic follow-up prompt for " + request.correlationId()
+            );
+        }
+
+        @Override
+        public AnalysisAiChatResponse chat(
+                AnalysisAiChatRequest request,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            return chat(
+                    request,
+                    toolEvidenceListener,
+                    AnalysisAiActivityListener.NO_OP
             );
         }
     }

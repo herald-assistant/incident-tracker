@@ -280,6 +280,17 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
+    void shouldAlwaysEnableToolFeedbackForInitialAnalysisWhenRegistered() {
+        var policy = policy(
+                request("dev3", List.of(sufficientElasticSection())),
+                tools("record_tool_feedback", "db_find_tables")
+        );
+
+        assertEquals(Set.of("record_tool_feedback"), Set.copyOf(policy.availableToolNames()));
+        assertTrue(policy.toolFeedbackEnabled());
+    }
+
+    @Test
     void shouldCreateFollowUpPolicyFromResolvedChatScope() {
         var policy = policyFactory.createForFollowUp(
                 chatRequest("dev3", "sample/runtime", "release/2026.04"),
@@ -315,6 +326,17 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 Set.of("elastic_search_logs_by_correlation_id", "opctx_search"),
                 Set.copyOf(policy.availableToolNames())
         );
+    }
+
+    @Test
+    void shouldAlwaysEnableToolFeedbackForFollowUpWhenRegistered() {
+        var policy = policyFactory.createForFollowUp(
+                chatRequest(null, null, null),
+                tools("record_tool_feedback", "gitlab_find_flow_context", "db_find_tables")
+        );
+
+        assertEquals(Set.of("record_tool_feedback"), Set.copyOf(policy.availableToolNames()));
+        assertTrue(policy.toolFeedbackEnabled());
     }
 
     private CopilotIncidentToolAccessPolicy policy(

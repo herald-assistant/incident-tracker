@@ -15,6 +15,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import {
   AnalysisAiModelOptionsResponse,
+  AnalysisAiToolFeedback,
   ApiErrorResponse,
   AnalysisChatMessageResponse,
   AnalysisEvidenceSection,
@@ -532,6 +533,23 @@ export class AnalysisConsoleComponent {
     return formatEvidenceSectionTitle(section);
   }
 
+  protected toolFeedbackTarget(feedback: AnalysisAiToolFeedback): string {
+    return feedback.targetToolCallId
+      ? `${feedback.targetToolName || 'tool'} (${feedback.targetToolCallId})`
+      : feedback.targetToolName || 'tool';
+  }
+
+  protected toolFeedbackMeta(feedback: AnalysisAiToolFeedback): string {
+    return [
+      toolFeedbackUsefulnessLabel(feedback.usefulness),
+      toolFeedbackIssueLabel(feedback.issueCategory),
+      toolFeedbackImprovementLabel(feedback.improvementArea),
+      feedback.confidence ? `pewność: ${feedback.confidence}` : ''
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
   protected async copyChatMessage(
     messageElement: HTMLElement,
     message: AnalysisChatMessageResponse
@@ -888,4 +906,51 @@ export class AnalysisConsoleComponent {
       block: 'start'
     });
   }
+}
+
+function toolFeedbackUsefulnessLabel(value: string): string {
+  const labels: Record<string, string> = {
+    useful: 'użyteczne',
+    partial: 'częściowe',
+    not_useful: 'nieprzydatne',
+    invalid: 'niepoprawne',
+    error: 'błąd'
+  };
+  return labels[value] || value || '';
+}
+
+function toolFeedbackIssueLabel(value: string): string {
+  const labels: Record<string, string> = {
+    no_issue: 'bez problemu',
+    no_data: 'brak danych',
+    wrong_scope: 'zły zakres',
+    incomplete: 'niepełne',
+    too_much_noise: 'szum',
+    ambiguous_result: 'niejednoznaczne',
+    stale_data: 'nieświeże dane',
+    access_error: 'błąd dostępu',
+    tool_error: 'błąd toola',
+    schema_or_format_issue: 'schema/format',
+    missing_operational_context: 'brak opctx',
+    missing_code_scope: 'brak scope kodu',
+    model_misused_tool: 'złe użycie przez AI',
+    other: 'inne'
+  };
+  return labels[value] || value || '';
+}
+
+function toolFeedbackImprovementLabel(value: string): string {
+  const labels: Record<string, string> = {
+    none: 'bez usprawnień',
+    tool_contract: 'kontrakt toola',
+    tool_description: 'opis toola',
+    tool_policy: 'polityka tooli',
+    adapter_result: 'wynik adaptera',
+    operational_context_data: 'dane opctx',
+    code_search_scope: 'scope kodu',
+    database_mapping: 'mapowanie DB',
+    ui_presentation: 'prezentacja UI',
+    other: 'inne'
+  };
+  return labels[value] || value || '';
 }

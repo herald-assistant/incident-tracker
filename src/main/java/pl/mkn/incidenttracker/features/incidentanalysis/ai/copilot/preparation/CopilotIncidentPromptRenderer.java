@@ -60,6 +60,7 @@ public class CopilotIncidentPromptRenderer {
                 - Every Database tool call must include `reason`: one short Polish sentence that explains why this DB result is useful for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
                 - When possible, include evidenceReferences with artifactId and itemId for important claims.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
+                %s
 
                 %s
 
@@ -76,6 +77,7 @@ public class CopilotIncidentPromptRenderer {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
+                feedbackGuidance(toolAccessPolicy),
                 jsonResponseContract(),
                 formatArtifacts(renderedArtifacts),
                 formatEmbeddedArtifacts(renderedArtifacts),
@@ -145,9 +147,24 @@ public class CopilotIncidentPromptRenderer {
             rendered.append("- Operational context catalog: browse or search systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules only to fill context, ownership, code-scope, DB-targeting or handoff gaps. Include a short Polish `reason` in every Operational Context tool call.\n");
         }
 
+        if (toolAccessPolicy.toolFeedbackEnabled()) {
+            rendered.append("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals: especially useful, partial, empty, wrong, misleading, noisy or incorrectly scoped results.\n");
+        }
+
         return rendered.length() > 0
                 ? rendered.toString().trim()
                 : "- none; rely on the incident artifacts for this session.";
+    }
+
+    private String feedbackGuidance(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
+        if (!toolAccessPolicy.toolFeedbackEnabled()) {
+            return "";
+        }
+
+        return """
+                - The platform tool `record_tool_feedback` is available for visible tool-quality feedback. Use it only for significant cases: a tool result was especially useful, partial, empty, wrong, misleading, noisy, stale, incorrectly scoped, or suggests a missing tool/policy/operational-context improvement.
+                - Feedback is diagnostic for human improvement of tools and operational context. It is not evidence for root cause and must not replace the final analysis.
+                """.trim();
     }
 
     private String renderGitLabGroup(String gitLabGroup) {

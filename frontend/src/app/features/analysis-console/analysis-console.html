@@ -238,6 +238,7 @@
             [evidenceSections]="currentJob.evidenceSections"
             [toolEvidenceSections]="currentJob.toolEvidenceSections"
             [aiActivityEvents]="currentJob.aiActivityEvents"
+            [toolFeedback]="currentJob.toolFeedback"
             [preparedPrompt]="currentJob.preparedPrompt"
             [result]="currentJob.result"
           ></app-analysis-steps-panel>
@@ -334,6 +335,28 @@
                                   </details>
                                 }
                               </section>
+                            }
+                          </div>
+                        </details>
+                      }
+
+                      @if (message.toolFeedback.length > 0) {
+                        <details class="chat-message__tool-feedback">
+                          <summary>Feedback jakości tooli</summary>
+                          <div class="chat-tool-feedback-list">
+                            @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
+                              <article class="chat-tool-feedback">
+                                <div class="chat-tool-feedback__header">
+                                  <strong>{{ toolFeedbackTarget(feedback) }}</strong>
+                                  <span>{{ toolFeedbackMeta(feedback) }}</span>
+                                </div>
+                                <p>{{ feedback.summaryForOperator }}</p>
+                                @if (feedback.suggestedImprovement) {
+                                  <p class="chat-tool-feedback__suggestion">
+                                    {{ feedback.suggestedImprovement }}
+                                  </p>
+                                }
+                              </article>
                             }
                           </div>
                         </details>

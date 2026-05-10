@@ -109,6 +109,24 @@ class CopilotToolBudgetPolicyTest {
         assertEquals(6, snapshot.operationalContextReturnedCharacters());
     }
 
+    @Test
+    void shouldNotCountToolFeedbackAgainstExplorationBudget() {
+        var properties = properties(BudgetMode.HARD);
+        properties.setMaxTotalCalls(0);
+        var registry = registerBudget(properties);
+        var guard = new CopilotToolBudgetPolicy(registry);
+
+        var before = guard.beforeInvocation("analysis-run-1", "record_tool_feedback", "{}");
+        var after = guard.afterInvocation("analysis-run-1", "record_tool_feedback", "{\"status\":\"recorded\"}");
+
+        assertFalse(before.denied());
+        assertFalse(after.denied());
+        var snapshot = registry.state("analysis-run-1").orElseThrow().snapshot();
+        assertEquals(0, snapshot.totalCalls());
+        assertEquals(0, snapshot.deniedToolCalls());
+        assertEquals(0, snapshot.softLimitExceededCount());
+    }
+
     private CopilotToolBudgetPolicy guard(CopilotToolBudgetProperties properties) {
         return new CopilotToolBudgetPolicy(registerBudget(properties));
     }

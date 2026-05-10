@@ -84,7 +84,8 @@ utrzymaniowe dla operatora.
 4. wywoluje `InitialAnalysisProvider.prepare(request)`,
 5. zapisuje `prepared.prompt()` w stanie joba,
 6. uruchamia `InitialAnalysisProvider.analyze(prepared, listener)`,
-7. mapuje odpowiedz AI, tool evidence i activity trace do response/job state,
+7. mapuje odpowiedz AI, tool evidence, tool feedback i activity trace do
+   response/job state,
 8. zamyka prepared analysis.
 
 Prepared analysis gwarantuje, ze prompt widoczny w UI/debug jest tym samym
@@ -143,7 +144,8 @@ renderingu i konfiguracji SDK:
   follow-up policy ze scope'u zakonczonej analizy,
 - `CopilotIncidentPromptRenderer` i `CopilotIncidentFollowUpPromptRenderer`
   renderuja incident prompt initial/follow-up, JSON-only response contract dla
-  initial, available capability groups i embedded artifacts,
+  initial, available capability groups, centralna instrukcje uzycia feedbacku
+  tooli, gdy `record_tool_feedback` jest dostepny, i embedded artifacts,
 - `CopilotIncidentToolSessionContextFactory` tworzy incidentowy
   `CopilotToolSessionContext`: run id, session id i hidden tool context dla
   initial/follow-up,
@@ -201,7 +203,10 @@ Follow-up runtime:
    - GitLab gdy jest `gitLabGroup` i `gitLabBranch`,
    - Database gdy jest resolved `environment`,
    - Operational Context zawsze, jesli capability jest zarejestrowana,
-6. publikuje GitLab/DB tool evidence do aktualnej odpowiedzi chatu,
+   - Tool quality feedback zawsze, jesli platformowy callback jest
+     zarejestrowany,
+6. publikuje GitLab/DB tool evidence i tool feedback do aktualnej odpowiedzi
+   chatu,
 7. zapisuje odpowiedz albo blad w `chatMessages` joba.
 
 Chat nie dodaje nowego providerowego kroku evidence i nie uruchamia ponownie
@@ -330,6 +335,18 @@ Operational Context tools:
 - sluza do kontekstu, ownershipu, scope GitLaba/DB i handoffu; prompt i skill
   zabraniaja traktowania samego katalogu jako dowodu root cause.
 
+Tool quality feedback:
+
+- platformowy tool `record_tool_feedback` mieszka w
+  `aiplatform.copilot.tools.feedback`,
+- jest wlaczany w initial i follow-up niezaleznie od GitLab/DB/Elastic/opctx
+  policy, jesli callback jest zarejestrowany w runtime,
+- nie przyjmuje `analysisId`, `correlationId`, `environment`, `gitLabGroup`
+  ani `gitLabBranch`; scope sesji pochodzi z hidden `ToolContext`,
+- nie zuzywa exploration budgetu i nie jest targetem feedbacku dla samego
+  siebie,
+- nie jest deterministic evidence, root-cause inputem ani quality gate'em.
+
 Prompt instruuje model, zeby uzywal tools tylko dla luk z
 `evidenceCoverage.gaps`. Dla `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` model ma
 wykonac mala, focused probe GitLab tools przed finalna odpowiedzia, jesli
@@ -365,6 +382,10 @@ migracji, a nie wzorzec dla nowych tools. Operational context tools sa nowym
 wzorcem neutralnym: nie przyjmuja incident scope'u jako input, tylko katalogowe
 parametry typu `type`, `query`, `id`, `include` i prosty `reason`.
 
+`record_tool_feedback` jest podobnym session-bound narzedziem platformowym:
+model nie podaje publicznego scope'u analizy, tylko wskazuje target tool/call i
+jawna ocene wyniku dla operatora.
+
 ## 9. Tool factory
 
 `aiplatform.copilot.tools.CopilotSdkToolFactory` konwertuje Spring tools na
@@ -397,6 +418,10 @@ Side-effecty tool invocation sa subskrybowane przez Spring event listeners:
 
 - `aiplatform.copilot.tools.logging.CopilotToolInvocationLoggingListener`
   loguje request/result preview,
+- `aiplatform.copilot.tools.feedback.CopilotToolFeedbackInvocationListener`
+  utrzymuje krotka historie zakonczonych wywolan i przechwytuje zakonczone
+  wywolania `record_tool_feedback`, zeby zapis feedbacku szedl przez ten sam
+  lifecycle eventow co capture GitLab/DB,
 - `tools.gitlab.GitLabToolEvidenceCaptureListener` mapuje wyniki GitLaba do
   tool evidence,
 - `tools.database.DatabaseToolEvidenceCaptureListener` mapuje wyniki DB do
@@ -446,6 +471,9 @@ Budzet ma osobne liczniki capability dla Elasticsearch, GitLaba, Database i
 Operational Context. Domyslny Operational Context limit to 4 wywolania i
 32 000 zwroconych znakow na sesje.
 
+`record_tool_feedback` jest zwolniony z budzetu exploration, bo sluzy
+operator-facing ocenie wyniku tools, a nie dociaganiu kolejnych danych.
+
 ## 11. Tool evidence capture
 
 `aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` zarzadza
@@ -485,6 +513,36 @@ podany przez model oraz wynik toola jako `result`. Techniczne pola toola sa
 widoczne w JSON tooltipie, a nie jako osobne badge'e/operator-facing pola. Nie
 publikujemy juz osobnych pytan diagnostycznych, srodowiska, aliasu bazy ani
 streszczen wyniku jako pol dla operatora.
+
+## 11a. Tool quality feedback
+
+`aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore` zarzadza
+session-bound evidence capture oraz krotka historia zakonczonych tool
+invocation potrzebna do rozwiazania targetu feedbacku. Gateway rejestruje ten
+store raz z sinkiem z `CopilotPreparedSession`, razem z budget store, a usuwa
+go w `finally` po zakonczeniu sesji.
+
+Sam Spring tool `record_tool_feedback` jest zwyklym callbackiem bez zapisu do
+job state. Zwraca zaakceptowany kontrakt wyniku, a listener po
+`CopilotToolInvocationFinishedEvent` publikuje neutralna sekcje
+`ai/tool-feedback` przez ten sam `AnalysisAiToolEvidenceListener`, ktory
+obsluguje GitLab/DB tool evidence. `AnalysisJobState` rozpoznaje ta sekcje i
+projektuje ja do `shared.ai.AnalysisAiToolFeedback` dla API/UI. Model moze
+wskazac `targetToolCallId`, `targetToolName` albo pominac target; store wtedy
+probuje rozwiazac target z krotkiej historii zakonczonych non-feedback
+invocation w biezacej sesji.
+
+Feedback trafia do:
+
+- `toolFeedback` snapshotu joba dla initial analysis,
+- `toolFeedback` konkretnej odpowiedzi assistant w follow-up chat,
+- eksportu JSON analizy.
+
+Nie ma w V1 trwalej historii ani automatycznej agregacji miedzy analizami.
+Prompt renderer dodaje centralna instrukcje tylko wtedy, gdy feedback tool jest
+dostepny. Nie duplikujemy tej wzmianki w kazdym skillu, bo tool moze byc
+zarejestrowany platformowo i powinien dzialac niezaleznie od incidentowych
+playbookow.
 
 ## 12. Response contract
 
@@ -560,6 +618,12 @@ jest dostepny nawet wtedy, gdy execution failuje.
 i moga byc aktualizowane podczas sesji AI przez listenery. Sa jednak jednym
 mechanizmem prezentacji w UI: frontend buduje z nich plaska liste pracy
 `AI_ANALYSIS`. UI nie zalezy od typow Copilot SDK.
+
+`toolFeedback` jest osobnym user-visible polem job response. Dla initial
+analysis UI pokazuje panel "Feedback jakosci tooli" po analizie, a dla
+follow-up chat kompaktowy blok przy konkretnej odpowiedzi assistant.
+Import/export analizy zachowuje te dane; starsze eksporty bez `toolFeedback`
+sa normalizowane do pustych list.
 
 Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
 `shared.ai.AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze

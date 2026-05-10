@@ -13,7 +13,10 @@ Obecnie obejmuje:
 - `AnalysisAiAuthRef` i `AnalysisAiAuthRefResolver` jako non-secret kontrakt
   przekazywania odniesienia do auth bez tokenow w publicznych payloadach,
 - `AnalysisAiActivityEvent` i `AnalysisAiActivityListener` jako neutralny,
-  user-visible trace aktywnosci AI bez typow Copilot SDK.
+  user-visible trace aktywnosci AI bez typow Copilot SDK,
+- `AnalysisAiToolFeedback` oraz mapper `AnalysisAiToolFeedbackEvidenceMapper`
+  jako user-visible kontrakt feedbacku tooli, transportowany przez neutralne
+  `AnalysisEvidenceSection`.
 
 ## Zasady
 
