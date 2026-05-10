@@ -22,9 +22,10 @@ importow.
 ## Turbo Wazne: Model Rozszerzalnosci
 
 Compile-time graph ma wspierac docelowy model produktu, a nie tylko wygladac
-ladnie w diagramie. Incident analysis jest pierwszym dedykowanym feature'em,
-ale adaptery, tools/MCP i runtime AI maja pozostac reusable dla kolejnych
-analiz oraz innych sposobow ekspozycji capability.
+ladnie w diagramie. Produkt jest platforma AI-augmented system analysis.
+Incident analysis jest pierwszym dedykowanym feature'em, ale adaptery,
+tools/MCP, shared/operator API i runtime AI maja pozostac reusable dla
+kolejnych analiz oraz innych sposobow ekspozycji capability.
 
 Szczegolowy plan dojscia do tego modelu jest w
 `06-modular-architecture-roadmap.md`.
@@ -80,7 +81,8 @@ ponizszych zasad:
 - Historyczne `analysis.options` jest zamkniete. Neutralne preferencje
   wykonania AI mieszkaja w `shared.ai`, a endpoint
   `GET /analysis/ai/options` w `api.aioptions`.
-- Przyszle feature'y, np. analiza dokumentacji, chatboty albo generowanie
+- Przyszle feature'y, np. flow explorer, functional logic explorer,
+  natural-language data diagnostics, analiza dokumentacji albo generowanie
   scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
   skille, hidden context, policy uzycia capability i kontrakt odpowiedzi,
   zamiast reuse'owac incidentowy flow jako generyczny core.

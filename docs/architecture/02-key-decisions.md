@@ -1,7 +1,29 @@
 # Key Decisions
 
-Ten dokument zbiera decyzje architektoniczne, ktore sa wazne przy
-utrzymaniu flow analizy incydentu i integracji AI.
+Ten dokument zbiera decyzje architektoniczne, ktore sa wazne przy utrzymaniu
+platformy AI-augmented system analysis oraz pierwszego feature'a, czyli
+analizy incydentu.
+
+## 0. Produkt jest platforma, incident analysis jest pierwszym feature'em
+
+Repo wystartowalo jako incident tracker, ale docelowy produkt jest szerszy:
+ma byc platforma do AI-augmented system analysis. Incydent po `correlationId`
+jest pierwszym pionowym feature'em, ktory dowodzi integracji, tools, Copilot
+runtime i operator workflow.
+
+Konsekwencje:
+
+- `features.incidentanalysis` nie jest generycznym core dla kolejnych analiz,
+- `aiplatform`, `agenttools`, `integrations`, `shared`, `common` i
+  shared/operator `api.*` musza pozostac reusable poza incydentami,
+- kolejne feature'y, np. flow explorer, functional logic explorer albo
+  natural-language data diagnostics, maja dostarczac wlasny request/result,
+  prompt, skille, tool policy, hidden context i UI/API,
+- publiczne URL-e moga historycznie zawierac `analysis`, ale pakiety Javy
+  maja odzwierciedlac ownership warstw,
+- gdy nowa potrzeba wyglada "wspolnie", najpierw trzeba ustalic, czy to
+  naprawde platform mechanics, reusable capability, shared/operator API czy
+  tylko logika konkretnego feature'a.
 
 ## 1. Publiczny request analizy pozostaje minimalny
 
@@ -506,6 +528,12 @@ Platforma nie powinna sama wybierac incident promptu, incident skilli,
 GitLab/DB/Elastic tool policy ani JSON response contractu incydentu. Nie
 powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
 `gitLabBranch` albo `gitLabGroup`.
+
+To jest warunek dla kolejnych feature'ow. Flow explorer moze potrzebowac
+requestu opisowego zamiast `correlationId`, functional logic explorer moze
+budowac wynik o regulach i wariantach use case'u, a natural-language data
+diagnostics moze miec kontrakt nad readonly DB queries. Te roznice musza
+zostac w `features.<feature>`, nie w `aiplatform.copilot`.
 
 Stan obecny jest przejsciowy: `features.incidentanalysis.ai.copilot` zawiera
 incident-specific prompt, coverage, policy i GitLab/DB capture evidence, a

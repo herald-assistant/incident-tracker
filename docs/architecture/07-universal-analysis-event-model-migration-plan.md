@@ -6,10 +6,15 @@ Ten dokument opisuje plan migracji obecnego incident analysis do uniwersalnego
 modelu `run -> events -> artifacts/result/chat`, ktory bedzie mogl obslugiwac
 wiele feature'ow analitycznych.
 
-Najblizszy drugi feature to analiza flow/use case'u z kodu: analityk podaje
-zadanie w initial input, a Copilot ma odkryc i opisac end-to-end flow,
-mikroserwisy, endpointy, reguly funkcjonalne, obiekty danych i integracje
-wynikajace z implementacji.
+Najblizszy drugi feature to prawdopodobnie analiza flow/use case'u z kodu:
+analityk podaje zadanie w initial input, a Copilot ma odkryc i opisac
+end-to-end flow, mikroserwisy, endpointy, reguly funkcjonalne, obiekty danych
+i integracje wynikajace z implementacji.
+
+Ten sam model run/event ma jednak posluzyc takze innym feature'om platformy,
+np. pytaniom o logike funkcjonalna use case'ow albo natural-language data
+diagnostics nad readonly DB capability. Dlatego event model nie moze zakladac
+`correlationId`, incident evidence ani incident result DTO.
 
 Nie utrzymujemy kompatybilnosci wstecznej publicznego kontraktu job API ani
 eksportu JSON podczas tej migracji. Mozemy jednak robic kroki wewnetrzne tak,
@@ -586,6 +591,15 @@ Weryfikacja:
 - test follow-up chat eventow,
 - test prompt/result parsera nowego feature'a.
 
+Alternatywne drugie feature'y, jesli beda pilniejsze produktowo:
+
+- `features.functionallogic` dla pytan o reguly i warianty use case'u,
+- `features.datadiagnostics` dla natural-language readonly DB diagnostics.
+
+Kryterium architektoniczne pozostaje takie samo: feature ma uzyc wspolnego
+event modelu, platformy i reusable capability bez zaleznosci od
+`features.incidentanalysis`.
+
 ### Faza 10: Usuniecie legacy mechanizmow
 
 Cel:
@@ -601,7 +615,7 @@ Zakres:
 - uproscic `AnalysisExecutionListener` albo zastapic go event sinkiem tam,
   gdzie nie jest potrzebny feature-specific callback,
 - usunac `toolCaptureOrder` jako publiczny/FE-visible kontrakt,
-- zaktualizowac docs architecture/onboarding.
+- zaktualizowac dokumentacje architektury.
 
 Oczekiwany rezultat:
 
@@ -655,5 +669,4 @@ Migracje uznajemy za zakonczona, gdy:
 6. PR: przepisac frontend timeline na `events`.
 7. PR: usunac legacy `aiActivityEvents/toolEvidenceSections` z kontraktu.
 8. PR: dodac minimalny `features.flowdiscovery` jako proof of architecture.
-9. PR: zaktualizowac dokumentacje runtime/onboarding i guard tests.
-
+9. PR: zaktualizowac dokumentacje runtime i guard tests.

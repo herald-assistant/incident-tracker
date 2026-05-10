@@ -23,7 +23,6 @@ Ten pakiet zostal zlozony na podstawie:
 - `docs/architecture/02-key-decisions.md`
 - `docs/architecture/03-runtime-flow.md`
 - `docs/architecture/04-codex-continuation-guide.md`
-- `docs/onboarding/*`
 - kluczowych klas z `src/main/java/pl/mkn/incidenttracker/analysis/*`
 - `src/main/resources/application.properties`
 - `src/main/resources/copilot/skills/incident-analysis-core/SKILL.md`

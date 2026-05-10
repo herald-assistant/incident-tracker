@@ -1,7 +1,14 @@
 # Runtime Flow
 
-Ten dokument opisuje aktualny przeplyw analizy incydentu dla job API, evidence
-pipeline i providera AI opartego o Copilot SDK.
+Ten dokument opisuje aktualny przeplyw pierwszego feature'a platformy:
+analizy incydentu dla job API, evidence pipeline i providera AI opartego o
+Copilot SDK.
+
+Nie opisuje calego docelowego produktu. Platforma ma obslugiwac takze kolejne
+feature'y, np. flow explorer, pytania o logike funkcjonalna use case'ow oraz
+natural-language data diagnostics. Te feature'y powinny reuse'owac
+`aiplatform`, `agenttools`, `integrations` i shared/operator API, ale miec
+wlasny runtime flow i result contract.
 
 ## 1. Publiczne wejscia
 
@@ -60,6 +67,12 @@ Frontend nigdy nie dostaje tokena, OAuth code ani SDK-specific typu.
 `AnalysisAiAuthRef` dla aktualnego requestu i sprawdza, czy token da sie
 uzyskac. Do background flow trafia tylko ta referencja, nie token. Follow-up
 chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
+
+Pozostale shared/operator wejscia, np. `/api/database/*`,
+`/api/operational-context/*`, GitLab/Elasticsearch helper endpoints i route'y
+`/database`, `/operational-context`, `/evidence`, nie sa krokami incident
+runtime flow. To osobne fasady nad reusable capability albo widoki
+utrzymaniowe dla operatora.
 
 ## 2. Orkiestracja wysokiego poziomu
 

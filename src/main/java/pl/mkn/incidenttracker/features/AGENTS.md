@@ -5,7 +5,9 @@
 Ten katalog zawiera dedykowane feature'y analityczne zbudowane na reusable
 warstwach: `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
 
-Obecnie pierwszy feature to `incidentanalysis`.
+Obecnie pierwszy feature to `incidentanalysis`. Docelowo obok niego moga
+powstac kolejne analizy systemowe, np. flow explorer, functional logic
+explorer albo natural-language data diagnostics.
 
 ## Zasady
 
@@ -20,6 +22,8 @@ Obecnie pierwszy feature to `incidentanalysis`.
 - Nie traktuj `features.incidentanalysis` jako generycznego core dla kolejnych
   analiz. Nowy feature powinien dostarczyc wlasny prompt, skille, policy,
   hidden context i kontrakt odpowiedzi.
+- Nowy feature nie powinien importowac `features.incidentanalysis`; reuse ma
+  isc przez `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
 - URL-e publiczne moga nadal uzywac product-facing nazwy `analysis`, nawet gdy
   implementacja Javy mieszka pod `features.incidentanalysis`.
 

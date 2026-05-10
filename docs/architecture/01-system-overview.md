@@ -2,17 +2,40 @@
 
 ## Cel projektu
 
-Projekt buduje aplikacje Spring Boot do analizy incydentow na podstawie
-`correlationId`.
+Projekt rozwija platforme do AI-augmented system analysis. Aplikacja ma
+laczyc deterministic context gathering, curated operational context, reusable
+agent tools i sesje AI, zeby pomagac operatorom, analitykom i developerom
+rozumiec systemy.
 
-Docelowy flow jest nastepujacy:
+Pierwszym produkcyjnym feature'em jest analiza incydentu na podstawie
+`correlationId`. Historyczna nazwa repo i publiczne URL-e `/analysis/*`
+pochodza z tego startu, ale docelowo nie ograniczaja produktu do incident
+trackingu.
 
-1. uzytkownik wysyla zadanie analizy,
+Docelowy kierunek platformy:
+
+1. dedykowany feature definiuje publiczny request, evidence/source gathering,
+   prompt, tools policy i result contract,
+2. reusable integracje zbieraja dane z systemow zewnetrznych,
+3. reusable tools udostepniaja kontrolowana eksploracje kodu, logow,
+   operational context i danych,
+4. platforma AI uruchamia sesje z allowlista tools, hidden contextem,
+   budgetami, usage i eventami runtime,
+5. feature zwraca wynik zrozumialy dla operatora/analityka oraz jawne
+   ograniczenia widocznosci.
+
+Obecny incident flow jest pierwsza realizacja tego modelu:
+
+1. operator wysyla `correlationId`,
 2. aplikacja zbiera evidence z systemow zewnetrznych,
 3. AI interpretuje evidence,
 4. AI moze dociagac dodatkowy kod z GitLaba i opcjonalnie zweryfikowac
    hipotezy danych przez Database tools,
 5. aplikacja zwraca diagnoze i rekomendowany kolejny krok lub kierunek poprawki.
+
+Planowane kolejne rodziny feature'ow to m.in. flow explorer, pytania o logike
+funkcjonalna use case'ow oraz natural-language data diagnostics. Szczegolowy
+kierunek produktu jest opisany w `00-product-direction.md`.
 
 ## Aktualny stan
 
@@ -38,6 +61,9 @@ Na dzisiaj projekt ma:
   GitLaba,
 - ekran `GET /database` do recznego testowania shared/operator endpointow nad
   `DatabaseToolService` z jawnym operatorskim `environment`,
+- ekran `GET /operational-context` do utrzymania katalogu systemow, repozytoriow,
+  procesow, integracji, bounded contexts, zespolow, glossary, handoff rules,
+  validation findings i open questions,
 - glowne job-based API: `POST /analysis/jobs` i
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
@@ -51,6 +77,8 @@ Na dzisiaj projekt ma:
   `GET /api/auth/github/start`, `GET /api/auth/github/callback` i
   `POST /api/auth/github/logout` dla autoryzacji Copilot SDK w trybach
   `LOCAL_TOKEN` oraz `GITHUB_APP`,
+- shared/operator API `/api/operational-context/*` dla operator-facing widoku
+  curated operational context,
 - AI-first flow oparty o `AnalysisEvidenceProvider`, `InitialAnalysisProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
@@ -73,6 +101,11 @@ Na dzisiaj projekt ma:
 - `GET /database`
   Angularowy ekran pomocniczy do recznego testowania Database tools przez
   shared/operator endpointy `/api/database/*`.
+- `GET /operational-context`
+  Angularowy ekran utrzymaniowy dla curated operational context: katalogu
+  systemow, repozytoriow, code-search scopes, procesow, integracji,
+  bounded contexts, zespolow, glossary, handoff rules, validation findings i
+  open questions.
 - `POST /analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
@@ -115,6 +148,10 @@ Na dzisiaj projekt ma:
   `DatabaseToolService`: scope, discovery tabel/kolumn, opis tabel, typed
   count/sample/group, relacje, joiny, porownanie mappingu i opcjonalny
   readonly SQL. Publiczny job flow nadal nie przyjmuje recznego scope DB.
+- `GET /api/operational-context/*`
+  Shared/operator API dla katalogu operational context: summary, listy encji,
+  search, szczegoly encji, validation i open questions. To jest fasada nad
+  `integrations.operationalcontext`, a nie incident job flow.
 
 ## Glowny podzial pakietow
 
@@ -261,6 +298,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Shared/operator endpointy testowe nad `integrations.database.DatabaseToolService`.
   Controller buduje manualny `DbCapabilityScope` z operatorskiego
   `environment` i deleguje do typed DB capability.
+- `pl.mkn.incidenttracker.api.operationalcontext`
+  Shared/operator endpointy i view service dla katalogu operational context.
+  Pakiet mapuje reusable `integrations.operationalcontext` na DTO dla UI
+  `/operational-context`, bez importowania incident flow.
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.incidenttracker.agenttools.gitlab.mcp`
@@ -434,3 +475,19 @@ To jest osobny, pomocniczy flow diagnostyczno-testowy:
 
 Ten endpoint nie zmienia glownego job flow analizy i nie przywraca recznego DB
 scope'u do `POST /analysis/jobs`.
+
+## Dodatkowy use case Operational Context console
+
+To jest operator-facing flow utrzymaniowy dla reusable katalogu systemow:
+
+1. frontend route `/operational-context` pobiera dane z
+   `/api/operational-context/*`,
+2. backendowa fasada w `api.operationalcontext` deleguje do
+   `integrations.operationalcontext`,
+3. UI pokazuje summary, signal resolver, listy encji, validation findings,
+   open questions i szczegoly encji,
+4. ten sam katalog jest reuse'owany przez incident evidence provider,
+   `opctx_*` tools, GitLab repository discovery i przyszle feature'y.
+
+To nie jest osobny krok incident job flow. To shared/operator powierzchnia do
+utrzymania jakosci katalogu, ktory ma byc reusable poza analiza incydentow.

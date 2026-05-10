@@ -1,12 +1,10 @@
 # Dokumentacja Projektu
 
-Ten katalog ma trzy glowne obszary:
+Ten katalog ma dwa glowne obszary:
 
-1. `onboarding/`
-   sciezka nauki aktualnego systemu krok po kroku,
-2. `architecture/`
+1. `architecture/`
    stabilny opis architektury, decyzji i runtime flow,
-3. `operational-context/`
+2. `operational-context/`
    materialy pomocnicze do utrzymania katalogu operacyjnego.
 
 Dookola tej dokumentacji sa jeszcze dwa istotne runtime obszary:
@@ -20,7 +18,7 @@ Dookola tej dokumentacji sa jeszcze dwa istotne runtime obszary:
 
 Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 
-1. `onboarding/README.md`
+1. `architecture/00-product-direction.md`
 2. `architecture/01-system-overview.md`
 3. `architecture/02-key-decisions.md`
 4. `architecture/03-runtime-flow.md`
@@ -30,9 +28,6 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 
 ## Co jest gdzie
 
-- `onboarding/`
-  aktualna sciezka nauki dla mid developera, ktory zna Spring Boot, ale nie zna
-  jeszcze Spring AI i Copilot SDK.
 - `architecture/`
   source of truth dla architektury i zasad dalszego rozwoju.
 - `operational-context/`
@@ -60,6 +55,5 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 
 ## Jak czytac te dokumenty
 
-- `onboarding/` odpowiada na pytanie: "jak dziala system teraz i jak sie go nauczyc?"
 - `architecture/` odpowiada na pytanie: "jakie sa stale decyzje i granice odpowiedzialnosci?"
 - `operational-context/` odpowiada na pytanie: "jak utrzymywac katalog operacyjny uzywany przez analize?"

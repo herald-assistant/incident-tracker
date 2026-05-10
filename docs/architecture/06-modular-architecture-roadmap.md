@@ -3,14 +3,16 @@
 ## Cel
 
 Ten dokument opisuje, jak projekt przeszedl z historycznego ukladu
-`analysis.*` do docelowego modelu, w ktorym incident analysis jest jednym z
-feature'ow zbudowanych na reusable capability, tools i platformie AI.
+`analysis.*` do docelowego modelu platformy AI-augmented system analysis, w
+ktorym incident analysis jest jednym z feature'ow zbudowanych na reusable
+capability, tools i platformie AI.
 
 To nie byl plan "big bang rename". Kolejnosc prac najpierw wygaszala zle
 zaleznosci i stabilizowala kontrakty, a dopiero pozniej przenosila wieksze
 pakiety do docelowych nazw. Obecny stan: produkcyjny i testowy root
 `analysis.*` sa zamkniete; kolejny dowod architektury to drugi feature albo
-spike reuse'u platformy/tools.
+spike reuse'u platformy/tools, najlepiej flow explorer, functional logic
+explorer albo natural-language data diagnostics.
 
 ## Docelowy Model
 
@@ -22,7 +24,7 @@ agent-tools / mcp            <- reusable tools nad adapterami
 ai-platform/copilot          <- platforma uruchamiania modelu + tools
 api/shared-operator          <- cross-screen API dla FE/operatora nad platforma i integracjami
 features/incident-analysis   <- konkretna analiza incydentow
-features/...                 <- przyszle dedykowane analizy
+features/...                 <- przyszle dedykowane analizy systemow
 common/shared                <- male neutralne helpery i kontrakty
 ```
 
@@ -354,7 +356,8 @@ warstw nie moze importowac feature'a incydentowego.
 
 ### `features.*`
 
-Kolejne feature'y, np. analiza dokumentacji, chatbot albo generowanie
+Kolejne feature'y, np. flow explorer, functional logic explorer,
+natural-language data diagnostics, analiza dokumentacji albo generowanie
 scenariuszy, powinny dostarczyc wlasne:
 
 - publiczne entrypointy albo command API,
@@ -364,7 +367,8 @@ scenariuszy, powinny dostarczyc wlasne:
 - mapping wyniku na swoj UI albo API.
 
 Nie powinny reuse'owac incidentowego `flow/job/evidence` jako generycznego
-core. Reuse dotyczy platformy, tools, adapterow i malych shared kontraktow.
+core. Reuse dotyczy platformy, tools, adapterow, operational context,
+shared/operator API i malych shared kontraktow.
 
 ## Zasady Migracji
 
@@ -659,10 +663,15 @@ Cel: upewnic sie, ze target nie jest tylko przemalowana analiza incydentow.
 
 Dobry maly drugi feature:
 
+- flow explorer dla requestu albo use case'u,
+- functional logic explorer dla reguly biznesowej albo procesu,
+- natural-language data diagnostics nad readonly DB capability,
 - analiza dokumentacji,
-- chatbot nad operational context,
-- generator scenariuszy testowych,
-- maly flow "explain repository area" oparty o GitLab tools.
+- generator scenariuszy testowych.
+
+Preferowany pierwszy dowod to flow explorer, bo najostrzej testuje granice:
+GitLab tools, operational context, DB hints, result contract i UI timeline
+powinny byc reusable bez importu incident analysis.
 
 Minimalny dowod:
 
@@ -727,8 +736,8 @@ Kryterium done:
 23. PR: zamknac testowy root `analysis.*` i przeniesc testy do pakietow
     aktualnych wlascicieli: `features`, `aiplatform`, `integrations` oraz
     `testsupport` [done].
-24. PR: dodac minimalny drugi feature albo spike, ktory weryfikuje reuse
-    platformy i tools.
+24. PR: dodac minimalny drugi feature albo spike, najlepiej flow explorer,
+    ktory weryfikuje reuse platformy, tools, integracji i operational contextu.
 
 ## Decyzje Do Podjecia W Trakcie
 

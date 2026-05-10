@@ -62,7 +62,7 @@ Flow:
 
 Docs:
 
-- architecture, onboarding and `/pro` context updated for current runtime.
+- architecture docs and `/pro` context updated for current runtime.
 
 ## P0 - Evaluation and regressions
 

@@ -2,28 +2,41 @@
 
 ## Cel repo
 
-To repo buduje aplikacje Spring Boot do analizy incydentow na podstawie
-`correlationId`.
+To repo rozwija aplikacje Spring Boot jako platforme do AI-augmented system
+analysis. Incident tracker po `correlationId` jest pierwszym dedykowanym
+feature'em, ale nie docelowa granica produktu.
 
-Glowne zalozenie:
+Glowne zalozenie platformy:
 
-1. aplikacja zbiera evidence z systemow zewnetrznych,
-2. AI interpretuje evidence,
-3. AI moze dociagac dodatkowy kod z GitLaba przez tools,
-4. AI moze opcjonalnie zweryfikowac hipotezy danych przez DB tools,
-5. aplikacja zwraca diagnoze i rekomendowany kolejny krok.
+1. feature zbiera albo przygotowuje kontekst z systemow zewnetrznych,
+2. AI interpretuje ten kontekst w swoim kontrakcie odpowiedzi,
+3. AI moze dociagac dodatkowy kod, operational context, logi albo dane przez
+   reusable tools,
+4. aplikacja zwraca wynik zrozumialy dla operatora/analityka oraz jawne
+   ograniczenia widocznosci,
+5. kolejne feature'y korzystaja z tych samych warstw platformy, tools i
+   integracji bez zaleznosci od incident analysis.
+
+Przyklady docelowych feature'ow poza incident analysis:
+
+- flow explorer: jak request/use case przechodzi przez system, komponenty,
+  endpointy, kolejki, bazy danych i integracje,
+- functional logic explorer: pytania o logike funkcjonalna konkretnego use
+  case'u,
+- natural-language data diagnostics: bezpieczne pytania o dane systemu w DB
+  jezykiem naturalnym.
 
 ## Najpierw przeczytaj
 
 Przed wieksza zmiana zacznij od:
 
-1. `docs/architecture/01-system-overview.md`
-2. `docs/architecture/02-key-decisions.md`
-3. `docs/architecture/03-runtime-flow.md`
-4. `docs/architecture/04-codex-continuation-guide.md`
-5. `docs/architecture/05-package-dependencies.md`
-6. `docs/architecture/06-modular-architecture-roadmap.md`
-7. `docs/onboarding/README.md`
+1. `docs/architecture/00-product-direction.md`
+2. `docs/architecture/01-system-overview.md`
+3. `docs/architecture/02-key-decisions.md`
+4. `docs/architecture/03-runtime-flow.md`
+5. `docs/architecture/04-codex-continuation-guide.md`
+6. `docs/architecture/05-package-dependencies.md`
+7. `docs/architecture/06-modular-architecture-roadmap.md`
 
 ## Najwazniejsze niezmienniki
 
@@ -62,9 +75,10 @@ Docelowy kierunek warstw:
 2. tools/MCP sa reusable warstwa narzedzi nad adapterami,
 3. Copilot SDK jest aktualna platforma uruchamiania AI, ktora korzysta z tools,
 4. analiza incydentow jest dedykowanym feature'em skonfigurowanym na platformie,
-5. kolejne analizy, np. dokumentacji, chatboty albo generowanie scenariuszy,
-   maja korzystac z tej samej platformy i shared capability bez zaleznosci od
-   feature'u incydentowego.
+5. kolejne analizy, np. flow explorer, functional logic explorer,
+   natural-language data diagnostics, dokumentacja albo generowanie
+   scenariuszy, maja korzystac z tej samej platformy i shared capability bez
+   zaleznosci od feature'u incydentowego.
 
 Zasady granic:
 
@@ -161,6 +175,9 @@ Zasady granic:
   Shared/operator API dla katalogu modeli i endpointu
   `GET /analysis/ai/options`, mapujace platformowy katalog Copilota na kontrakt
   HTTP dla UI.
+- `src/main/java/pl/mkn/incidenttracker/api/operationalcontext`
+  Shared/operator API dla katalogu operational context uzywanego przez UI,
+  tools, GitLab repository discovery i feature'y.
 - `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
   Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
   krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -203,7 +220,8 @@ Zasady granic:
 - `src/main/java/pl/mkn/incidenttracker/common`
   Male helpery wspolne dla calej aplikacji.
 - `frontend`
-  Zrodlowy workspace Angular dla operatora i helper widoku `/evidence`.
+  Zrodlowy workspace Angular dla operatora: glowny incident analysis console
+  oraz widoki pomocnicze `/evidence`, `/database` i `/operational-context`.
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 - `src/main/resources/copilot/skills`
@@ -224,9 +242,18 @@ Zasady granic:
 
 ### Gdy dodajesz nowe capability AI
 
-- Rozdziel strategię od danych konkretnej analizy.
-- Prompt ma niesc dane incydentu.
+- Rozdziel strategie od danych konkretnego feature'a.
+- Prompt ma niesc dane danego feature'a, a nie zalozenia platformy.
 - Skill ma niesc stale zasady pracy z tools i evidence.
+
+### Gdy dodajesz nowy feature analityczny
+
+- Utworz dedykowany pakiet `features.<feature>`.
+- Nie reuse'uj `features.incidentanalysis.flow/job/evidence` jako generycznego
+  core.
+- Dostarcz wlasny request/response, prompt, skille, tool policy, hidden
+  context i result contract.
+- Reuse'uj `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
 
 ### Gdy dodajesz nowe integracje zewnetrzne
 

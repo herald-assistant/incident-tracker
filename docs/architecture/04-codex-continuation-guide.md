@@ -9,17 +9,20 @@ kontekstu z rozmow.
 
 Przy nowej sesji najlepiej zaczac od:
 
-1. `docs/architecture/01-system-overview.md`
-2. `docs/architecture/02-key-decisions.md`
-3. `docs/architecture/03-runtime-flow.md`
-4. `docs/architecture/05-package-dependencies.md`
-5. `docs/architecture/06-modular-architecture-roadmap.md`
-6. `docs/onboarding/README.md`
+1. `docs/architecture/00-product-direction.md`
+2. `docs/architecture/01-system-overview.md`
+3. `docs/architecture/02-key-decisions.md`
+4. `docs/architecture/03-runtime-flow.md`
+5. `docs/architecture/05-package-dependencies.md`
+6. `docs/architecture/06-modular-architecture-roadmap.md`
 
 ## Co jest "source of truth"
 
 ### Za architekture odpowiadaja glownie
 
+- `docs/architecture/00-product-direction.md` jako source of truth dla
+  kierunku: platforma AI-augmented system analysis, a nie tylko incident
+  tracker,
 - `features.incidentanalysis.flow`
 - `features.incidentanalysis.job`
 - `AnalysisEvidenceCollector`
@@ -30,6 +33,8 @@ Przy nowej sesji najlepiej zaczac od:
   opcji AI
 - `api.githubauth` jako shared/operator fasada GitHub App OAuth i statusu
   autoryzacji Copilota
+- `api.operationalcontext` jako shared/operator fasada katalogu operational
+  context dla UI i utrzymania jakosci katalogu
 - `api.elasticsearch`, `api.gitlab`, `api.gitlab.source` jako shared/operator
   fasady helper endpointow nad integracjami
 - `aiplatform.copilot.runtime.options`
@@ -123,6 +128,24 @@ Przy nowej sesji najlepiej zaczac od:
 - `src/main/resources/copilot/skills/incident-operational-context-tools`
 
 ## Jak rozwijac projekt bez psucia kierunku
+
+### Najpierw rozstrzygnij ownership zmiany
+
+Projekt nie jest juz tylko incident trackerem. Przy kazdej wiekszej zmianie
+najpierw nazwij, gdzie ona nalezy:
+
+- reusable capability w `integrations`,
+- reusable tool/MCP w `agenttools`,
+- platform mechanics w `aiplatform`,
+- shared/operator API w `api`,
+- neutralny kontrakt w `shared` albo maly helper w `common`,
+- dedykowany workflow w `features.<feature>`.
+
+Jesli zmiana dotyczy flow explorera, logiki funkcjonalnej use case'u albo
+natural-language data diagnostics, nie doklejaj jej do
+`features.incidentanalysis` tylko dlatego, ze to obecnie jedyny feature. Nowy
+feature ma miec wlasny prompt, policy, hidden context, result contract i
+entrypointy, a reuse dotyczy platformy, tools i integracji.
 
 ### Gdy dodajesz nowe zrodlo evidence
 
@@ -249,9 +272,11 @@ Follow-up chat dziala tylko dla live joba w pamieci backendu; importowany
 zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
 route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
-GitLaba, a route `/database` sluzy do recznego testowania endpointow nad
-`DatabaseToolService` z jawnym operatorskim `environment`. Takie endpointy
-traktuj jako shared/operator API nad adapterami:
+GitLaba, route `/database` sluzy do recznego testowania endpointow nad
+`DatabaseToolService` z jawnym operatorskim `environment`, a route
+`/operational-context` sluzy do utrzymania katalogu systemow, repozytoriow,
+procesow, integracji i handoffu. Takie endpointy traktuj jako shared/operator
+API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
 
@@ -356,6 +381,22 @@ input, a feature policy pozwala na dociagniecie szerszego kontekstu.
 
 ## Najbardziej naturalne kolejne kierunki
 
+### 0. Drugi feature jako dowod platformy
+
+Najwazniejszy produktowo-architektoniczny krok to feature, ktory nie jest
+incydentem. Najbardziej naturalne kandydaty:
+
+- flow explorer: opis end-to-end requestu/use case'u przez komponenty,
+  endpointy, kolejki, integracje, bazy danych i kod,
+- functional logic explorer: pytania o reguly, warianty i implementacje
+  konkretnego use case'u,
+- natural-language data diagnostics: readonly pytania o dane systemu jezykiem
+  naturalnym z typed DB tools, limitami i audytem.
+
+Taki feature powinien uzyc `aiplatform`, `agenttools`, `integrations`,
+`shared.ai` i operational context, ale nie powinien importowac
+`features.incidentanalysis`.
+
 ### 1. Dalsze dopracowanie code-to-DB grounding
 
 Policy zostawia focused GitLab tools przy luce `DB_CODE_GROUNDING_NEEDED`, zeby
@@ -426,6 +467,4 @@ Te dokumenty warto aktualizowac wtedy, gdy zmienia sie jedno z ponizszych:
 - podstawowe decyzje architektoniczne,
 - preferowany sposob rozbudowy capability.
 
-Dokumenty onboardingowe aktualizuj wtedy, gdy zmienia sie model systemu,
-odpowiedzialnosc pakietow albo preferowany sposob rozwijania feature'ow.
 Dokumenty architektoniczne powinny pozostawac aktualne.

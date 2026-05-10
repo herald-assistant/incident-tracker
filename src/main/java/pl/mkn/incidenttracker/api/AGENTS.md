@@ -12,7 +12,8 @@ Obecnie obejmuje:
 - wspolny kontrakt walidacji,
 - katalog opcji AI nad `aiplatform.copilot.runtime.options`,
 - stabilne fasady nad integracjami uzywane przez wiele ekranow, np.
-  Elasticsearch log search i GitLab repository/source search.
+  Elasticsearch log search, GitLab repository/source search, Database console
+  i Operational Context catalog UI.
 
 ## Zasady
 
