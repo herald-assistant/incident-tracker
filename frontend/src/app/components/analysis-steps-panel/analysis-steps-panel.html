@@ -1484,27 +1484,29 @@
                   <span class="ai-work-item__text">{{ item.summary }}</span>
                 }
 
-                <span
-                  class="ai-work-item__status"
-                  [class.ai-work-item__status--pending]="item.displayStatus === 'PENDING'"
-                  [class.ai-work-item__status--done]="item.displayStatus === 'COMPLETED'"
-                  [class.ai-work-item__status--failed]="item.displayStatus === 'FAILED'"
-                  [class.ai-work-item__status--info]="item.displayStatus === 'INFO'"
-                  [attr.aria-label]="item.displayStatusLabel"
-                  [matTooltip]="item.displayStatusTooltip"
-                  matTooltipPosition="above"
-                  matTooltipClass="analysis-log-tooltip"
-                  [matTooltipShowDelay]="100"
-                >
-                  @if (item.displayStatus === 'PENDING') {
-                    <span class="ai-work-item__spinner" aria-hidden="true"></span>
-                  } @else {
-                    <mat-icon fontSet="material-symbols-outlined">
-                      {{ item.displayStatusIcon }}
-                    </mat-icon>
-                  }
-                  <span>{{ item.displayStatusLabel }}</span>
-                </span>
+                @if (item.showDisplayStatus) {
+                  <span
+                    class="ai-work-item__status"
+                    [class.ai-work-item__status--pending]="item.displayStatus === 'PENDING'"
+                    [class.ai-work-item__status--done]="item.displayStatus === 'COMPLETED'"
+                    [class.ai-work-item__status--failed]="item.displayStatus === 'FAILED'"
+                    [class.ai-work-item__status--info]="item.displayStatus === 'INFO'"
+                    [attr.aria-label]="item.displayStatusLabel"
+                    [matTooltip]="item.displayStatusTooltip"
+                    matTooltipPosition="above"
+                    matTooltipClass="analysis-log-tooltip"
+                    [matTooltipShowDelay]="100"
+                  >
+                    @if (item.displayStatus === 'PENDING') {
+                      <span class="ai-work-item__spinner" aria-hidden="true"></span>
+                    } @else {
+                      <mat-icon fontSet="material-symbols-outlined">
+                        {{ item.displayStatusIcon }}
+                      </mat-icon>
+                    }
+                    <span>{{ item.displayStatusLabel }}</span>
+                  </span>
+                }
 
                 <mat-icon class="ai-work-item__expand-icon" fontSet="material-symbols-outlined">
                   expand_more

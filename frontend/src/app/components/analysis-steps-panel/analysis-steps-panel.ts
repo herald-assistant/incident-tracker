@@ -283,6 +283,7 @@ interface AiWorkItemView {
   displayStatusIcon: string;
   displayStatusLabel: string;
   displayStatusTooltip: string;
+  showDisplayStatus: boolean;
   toolEvidence: ToolEvidenceTimelineItemView | null;
 }
 
@@ -1321,7 +1322,7 @@ function buildAssistantMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkIt
     key: event.eventId || `assistant-message-${activityTimestampMs(event)}`,
     kind: 'message',
     category: event.category || 'MESSAGE',
-    status: event.status || 'COMPLETED',
+    status: 'INFO',
     title: toolRequests.length > 0 ? 'AI wybiera następne sprawdzenia' : event.title || 'Wiadomość AI',
     summary,
     previewMarkdown: markdownPreview(summary),
@@ -1333,7 +1334,8 @@ function buildAssistantMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkIt
       toolRequests
     }),
     timestampMs: activityTimestampMs(event),
-    ...buildDisplayStatus(event.status || 'COMPLETED', event.summary),
+    ...buildDisplayStatus('INFO', event.summary),
+    showDisplayStatus: false,
     toolEvidence: null
   };
 }
@@ -1378,7 +1380,7 @@ function buildUserMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemVie
     key: event.eventId || `user-message-${activityTimestampMs(event)}`,
     kind: 'message',
     category: event.category || 'MESSAGE',
-    status: event.status || 'INFO',
+    status: 'INFO',
     title: event.title || 'Input do Copilota',
     summary,
     previewMarkdown: markdownPreview(summary),
@@ -1387,7 +1389,8 @@ function buildUserMessageWorkItem(event: AnalysisAiActivityEvent): AiWorkItemVie
     meta: buildTimelineEventMeta(event),
     technicalTooltip: buildAiActivityTooltip(event),
     timestampMs: activityTimestampMs(event),
-    ...buildDisplayStatus(event.status || 'INFO', event.summary),
+    ...buildDisplayStatus('INFO', event.summary),
+    showDisplayStatus: false,
     toolEvidence: null
   };
 }
@@ -1719,7 +1722,11 @@ function buildDisplayStatus(
   tooltip: string | null | undefined = null
 ): Pick<
   AiWorkItemView,
-  'displayStatus' | 'displayStatusIcon' | 'displayStatusLabel' | 'displayStatusTooltip'
+  | 'displayStatus'
+  | 'displayStatusIcon'
+  | 'displayStatusLabel'
+  | 'displayStatusTooltip'
+  | 'showDisplayStatus'
 > {
   const normalizedStatus = normalizeWorkItemStatus(rawStatus);
 
@@ -1727,7 +1734,8 @@ function buildDisplayStatus(
     displayStatus: normalizedStatus,
     displayStatusIcon: workItemStatusIcon(normalizedStatus),
     displayStatusLabel: workItemStatusLabel(normalizedStatus),
-    displayStatusTooltip: tooltip || workItemStatusLabel(normalizedStatus)
+    displayStatusTooltip: tooltip || workItemStatusLabel(normalizedStatus),
+    showDisplayStatus: true
   };
 }
 

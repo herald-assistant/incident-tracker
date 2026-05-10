@@ -512,6 +512,22 @@ export class AnalysisConsoleComponent {
     return [status, timestamp].filter(Boolean).join(' · ');
   }
 
+  protected canCopyChatMessage(message: AnalysisChatMessageResponse): boolean {
+    return message.status !== 'IN_PROGRESS';
+  }
+
+  protected isLastPendingAssistantMessage(
+    message: AnalysisChatMessageResponse,
+    messages: AnalysisChatMessageResponse[]
+  ): boolean {
+    return (
+      message.role === 'ASSISTANT' &&
+      message.status === 'IN_PROGRESS' &&
+      messages.length > 0 &&
+      messages[messages.length - 1]?.id === message.id
+    );
+  }
+
   protected evidenceSectionTitle(section: AnalysisEvidenceSection): string {
     return formatEvidenceSectionTitle(section);
   }

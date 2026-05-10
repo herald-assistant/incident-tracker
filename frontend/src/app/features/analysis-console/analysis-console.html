@@ -274,19 +274,27 @@
                           <strong>{{ chatMessageTitle(message) }}</strong>
                           <span>{{ chatMessageMeta(message) }}</span>
                         </div>
-                        <button
-                          class="chat-message__copy-button"
-                          type="button"
-                          data-clipboard-exclude
-                          [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
-                          [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
-                          (click)="copyChatMessage(chatMessageElement, message)"
-                        >
-                          <span class="material-symbols-outlined" aria-hidden="true">
-                            {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
-                          </span>
-                          <span>{{ copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj' }}</span>
-                        </button>
+                        @if (canCopyChatMessage(message)) {
+                          <button
+                            class="chat-message__copy-button"
+                            type="button"
+                            data-clipboard-exclude
+                            [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
+                            [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
+                            (click)="copyChatMessage(chatMessageElement, message)"
+                          >
+                            <span class="material-symbols-outlined" aria-hidden="true">
+                              {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
+                            </span>
+                          </button>
+                        } @else if (isLastPendingAssistantMessage(message, currentJob.chatMessages)) {
+                          <span
+                            class="chat-message__copy-loader"
+                            data-clipboard-exclude
+                            aria-label="AI przygotowuje odpowiedź"
+                            title="AI przygotowuje odpowiedź"
+                          ></span>
+                        }
                       </div>
 
                       <div class="chat-message__body">

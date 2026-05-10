@@ -156,7 +156,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     );
   });
 
-  it('should expose copy actions for every chat message', async () => {
+  it('should expose icon-only copy actions for completed chat messages', async () => {
     const { fixture } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
     component.job.set(completedJobWithChat());
@@ -174,8 +174,33 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(chatPanel?.open).toBe(true);
     expect(chatPanel?.querySelector('summary')?.textContent).toContain('Kontynuacja analizy');
     expect(copyButtons).toHaveLength(2);
-    expect(copyButtons[0].textContent).toContain('Kopiuj');
-    expect(copyButtons[1].textContent).toContain('Kopiuj');
+    expect(copyButtons[0].textContent).toContain('content_copy');
+    expect(copyButtons[1].textContent).toContain('content_copy');
+    expect(copyButtons[0].textContent).not.toContain('Kopiuj');
+    expect(copyButtons[1].textContent).not.toContain('Kopiuj');
+    expect(copyButtons[0].getAttribute('aria-label')).toContain('Kopiuj wiadomość');
+    expect(fixture.nativeElement.querySelector('.chat-message__copy-loader')).toBeNull();
+  });
+
+  it('should show a copy-sized loader instead of a copy action while the last AI message is pending', async () => {
+    const { fixture } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    component.job.set(completedJobWithPendingChat());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const copyButtons = fixture.nativeElement.querySelectorAll('.chat-message__copy-button');
+    const pendingAssistant = fixture.nativeElement.querySelector(
+      '.chat-message--assistant'
+    ) as HTMLElement | null;
+    const loader = pendingAssistant?.querySelector('.chat-message__copy-loader') as HTMLElement | null;
+
+    expect(copyButtons).toHaveLength(1);
+    expect(pendingAssistant?.textContent).toContain('AI analizuje polecenie');
+    expect(loader).not.toBeNull();
+    expect(loader?.getAttribute('aria-label')).toBe('AI przygotowuje odpowiedź');
   });
 
   async function createComponent(
@@ -341,6 +366,42 @@ function completedJobWithChat(): AnalysisJobStateSnapshot {
         createdAt: '2026-05-02T10:03:00Z',
         updatedAt: '2026-05-02T10:03:00Z',
         completedAt: '2026-05-02T10:03:00Z',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        prompt: ''
+      }
+    ]
+  };
+}
+
+function completedJobWithPendingChat(): AnalysisJobStateSnapshot {
+  return {
+    ...completedJob(),
+    chatMessages: [
+      {
+        id: 'chat-user-1',
+        role: 'USER',
+        status: 'COMPLETED',
+        content: 'Przygotuj opis do Jiry.',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-05-02T10:02:00Z',
+        updatedAt: '2026-05-02T10:02:00Z',
+        completedAt: '2026-05-02T10:02:00Z',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        prompt: ''
+      },
+      {
+        id: 'chat-assistant-1',
+        role: 'ASSISTANT',
+        status: 'IN_PROGRESS',
+        content: '',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-05-02T10:03:00Z',
+        updatedAt: '2026-05-02T10:03:00Z',
+        completedAt: '',
         toolEvidenceSections: [],
         aiActivityEvents: [],
         prompt: ''

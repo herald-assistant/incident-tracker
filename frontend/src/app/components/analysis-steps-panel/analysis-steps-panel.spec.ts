@@ -319,6 +319,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(preview?.textContent).not.toContain('pierwszy trop');
     expect(full?.innerHTML).toContain('<strong>główną hipotezę</strong>');
     expect(full?.textContent).toContain('trzeci trop');
+    expect(compiled.querySelector('.ai-work-item__status')).toBeNull();
   });
 
   it('should use the event summary for the user prompt header', async () => {
@@ -358,6 +359,7 @@ describe('AnalysisStepsPanelComponent', () => {
 
     expect(preview?.textContent?.trim()).toBe('Aplikacja wysłała prompt do sesji Copilota.');
     expect(preview?.textContent).not.toContain('You are helping');
+    expect(compiled.querySelector('.ai-work-item__status')).toBeNull();
   });
 
   it('should hide the prepared prompt on a failed AI step when no result is available', async () => {
