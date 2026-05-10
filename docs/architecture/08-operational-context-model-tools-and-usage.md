@@ -493,17 +493,11 @@ pierwszego repozytorium jako pelnego zakresu systemu.
 
 ### Tool access policy
 
-`CopilotIncidentToolAccessPolicy` wlacza `opctx_*` w initial session, gdy:
-
-- operational context coverage jest `NONE` albo `PARTIAL`,
-- albo istnieje luka `MISSING_FLOW_CONTEXT`,
-- albo istnieje luka `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`,
-- albo istnieje luka `DB_CODE_GROUNDING_NEEDED`.
-
-W follow-up chat operational context tools sa wlaczone zawsze, jesli callbacki
-sa zarejestrowane. Powod: pytania follow-up czesto dotycza ownershipu,
-procesu, znaczenia biznesowego, handoffu lub szerszego katalogu, a nie tylko
-pierwotnego incident evidence.
+`CopilotIncidentToolAccessPolicy` wlacza `opctx_*` w initial session i
+follow-up chat zawsze, jesli callbacki sa zarejestrowane. Powod: model powinien
+miec staly dostep do katalogu ownershipu, procesu, scope'u repozytoriow,
+znaczenia biznesowego i handoffu, a nie tylko wtedy, gdy coverage heurystyka
+wykryje luke w pierwotnym incident evidence.
 
 ### Prompt guidance
 
@@ -682,7 +676,7 @@ W trybie `soft` przekroczenia sa logowane i widoczne w budget snapshot, ale nie
 blokuja wywolania. W trybie `hard` policy moze zwrocic kontrolowany rejection
 z instrukcja zakonczenia eksploracji.
 
-Operational Context tools w V1 nie publikuja osobnej user-facing evidence
+Operational Context tools nie publikuja osobnej user-facing evidence
 category. Sa widoczne w `aiActivityEvents` jako tool calls. Ich wynik jest
 traktowany jako katalogowe grounding/scope guidance, a nie jako dowod root
 cause.

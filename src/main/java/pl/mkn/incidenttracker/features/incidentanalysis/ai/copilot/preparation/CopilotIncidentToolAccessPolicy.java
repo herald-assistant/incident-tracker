@@ -7,7 +7,6 @@ import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
 import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.IncidentOperationalContextCoverage;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -250,7 +249,7 @@ public record CopilotIncidentToolAccessPolicy(
             return databaseToolEnabled(toolName, evidenceCoverage);
         }
         if (toolName.startsWith(OperationalContextToolNames.PREFIX)) {
-            return operationalContextToolEnabled(evidenceCoverage);
+            return true;
         }
         return true;
     }
@@ -276,14 +275,6 @@ public record CopilotIncidentToolAccessPolicy(
             return true;
         }
         return evidenceCoverage.databaseDiscoveryOnly() && DB_DISCOVERY_TOOLS.contains(toolName);
-    }
-
-    private static boolean operationalContextToolEnabled(CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
-        return evidenceCoverage.operationalContext() == IncidentOperationalContextCoverage.NONE
-                || evidenceCoverage.operationalContext() == IncidentOperationalContextCoverage.PARTIAL
-                || evidenceCoverage.hasGap("MISSING_FLOW_CONTEXT")
-                || evidenceCoverage.hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED")
-                || evidenceCoverage.hasGap("DB_CODE_GROUNDING_NEEDED");
     }
 
     private static boolean isFollowUpEnabled(

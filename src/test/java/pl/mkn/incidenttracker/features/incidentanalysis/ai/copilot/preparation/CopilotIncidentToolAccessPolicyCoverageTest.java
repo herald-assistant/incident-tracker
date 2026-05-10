@@ -245,15 +245,15 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
-    void shouldDisableOperationalContextToolsWhenMatchedContextHasNoContextGap() {
+    void shouldKeepOperationalContextToolsForIncidentSessionsEvenWhenContextIsMatched() {
         var policy = policy(
                 requestWithoutGitLabScope("dev3", List.of(sufficientElasticSection(), matchedOperationalContextSection())),
                 tools("opctx_get_scope", "opctx_search")
         );
 
-        assertEquals(List.of(), policy.availableToolNames());
+        assertEquals(Set.of("opctx_get_scope", "opctx_search"), Set.copyOf(policy.availableToolNames()));
         assertTrue(policy.disabledCapabilityGroups().stream()
-                .anyMatch(group -> "operational-context".equals(group.get("name"))));
+                .noneMatch(group -> "operational-context".equals(group.get("name"))));
     }
 
     @Test
