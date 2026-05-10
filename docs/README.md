@@ -1,11 +1,10 @@
 # Dokumentacja Projektu
 
-Ten katalog ma dwa glowne obszary:
+Ten katalog ma jeden glowny obszar:
 
 1. `architecture/`
-   stabilny opis architektury, decyzji i runtime flow,
-2. `operational-context/`
-   materialy pomocnicze do utrzymania katalogu operacyjnego.
+   stabilny opis kierunku produktu, architektury, decyzji, runtime flow i
+   zasad dalszego rozwoju.
 
 Dookola tej dokumentacji sa jeszcze dwa istotne runtime obszary:
 
@@ -25,16 +24,14 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 5. `architecture/04-codex-continuation-guide.md`
 6. `architecture/05-package-dependencies.md`
 7. `architecture/06-modular-architecture-roadmap.md`
+8. `architecture/08-operational-context-model-tools-and-usage.md`
 
 ## Co jest gdzie
 
 - `architecture/`
   source of truth dla architektury i zasad dalszego rozwoju.
-- `operational-context/`
-  prompty i instrukcje utrzymania katalogu operacyjnego.
-- `../examples`
-  bardziej rozbudowane przyklady promptow i preferowanej kolejnosci
-  uzupelniania operational context.
+- `../operational-context-maintenance`
+  prompty i procedury utrzymania katalogu operational context.
 - `../frontend`
   zrodlowy workspace Angular dla ekranu operacyjnego.
 - `../src/main/resources/static`
@@ -56,4 +53,5 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 ## Jak czytac te dokumenty
 
 - `architecture/` odpowiada na pytanie: "jakie sa stale decyzje i granice odpowiedzialnosci?"
-- `operational-context/` odpowiada na pytanie: "jak utrzymywac katalog operacyjny uzywany przez analize?"
+- `architecture/08-operational-context-model-tools-and-usage.md` odpowiada na
+  pytanie: "jak utrzymywac katalog operacyjny uzywany przez analizy i tools?"

@@ -9,8 +9,10 @@ Obecnie obejmuje:
 
 - `ai/`
   neutralne preferencje wykonania AI oraz generyczny kontrakt token/cost/usage
-  dla flow, job UI, telemetryki i feature'ow: `AnalysisAiOptions`,
-  `AnalysisAiUsage`.
+  dla flow, job UI i feature'ow: `AnalysisAiOptions`, `AnalysisAiUsage`;
+  non-secret referencje auth (`AnalysisAiAuthRef`,
+  `AnalysisAiAuthRefResolver`) oraz user-visible activity trace
+  (`AnalysisAiActivityEvent`, `AnalysisAiActivityListener`).
 - `evidence/`
   generyczny model evidence wspolny dla evidence pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
@@ -20,8 +22,7 @@ Obecnie obejmuje:
 ## Zasady modyfikacji
 
 - `shared` nie moze importowac warstw aplikacyjnych: `analysis.*`,
-  `agenttools.*`, `api.*`, przyszlych `integrations.*`, `aiplatform.*` ani
-  `features.*`.
+  `agenttools.*`, `api.*`, `integrations.*`, `aiplatform.*` ani `features.*`.
 - Dodawaj tu tylko stabilne kontrakty wspolne dla kilku warstw albo feature'ow.
   Nie przenos tu klas tylko po to, zeby ukryc zla zaleznosc.
 - Modele w `shared.evidence` maja pozostac neutralne wzgledem konkretnego

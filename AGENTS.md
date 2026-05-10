@@ -37,6 +37,7 @@ Przed wieksza zmiana zacznij od:
 5. `docs/architecture/04-codex-continuation-guide.md`
 6. `docs/architecture/05-package-dependencies.md`
 7. `docs/architecture/06-modular-architecture-roadmap.md`
+8. `docs/architecture/08-operational-context-model-tools-and-usage.md`
 
 ## Najwazniejsze niezmienniki
 

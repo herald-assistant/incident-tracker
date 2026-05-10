@@ -61,3 +61,4 @@ Nie obejmuje:
 - `docs/architecture/02-key-decisions.md`
 - `docs/architecture/03-runtime-flow.md`
 - `docs/architecture/04-codex-continuation-guide.md`
+- `docs/architecture/08-operational-context-model-tools-and-usage.md`

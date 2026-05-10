@@ -12,23 +12,30 @@ Ma sluzyc do:
 - planowania optymalizacji funkcjonalnych i technicznych,
 - szczegolnie: optymalizacji wykorzystania GitHub Copilot Java SDK.
 
-Stan opisany w tym katalogu odpowiada repo na dzien `2026-04-22`.
+Stan opisany w tym katalogu jest historyczna paczka kontekstowa. Aktualnym
+source of truth dla repo pozostaja `AGENTS.md` oraz dokumenty w
+`docs/architecture`.
 
 ## Source of truth
 
 Ten pakiet zostal zlozony na podstawie:
 
 - `AGENTS.md`
+- `docs/architecture/00-product-direction.md`
 - `docs/architecture/01-system-overview.md`
 - `docs/architecture/02-key-decisions.md`
 - `docs/architecture/03-runtime-flow.md`
 - `docs/architecture/04-codex-continuation-guide.md`
-- kluczowych klas z `src/main/java/pl/mkn/incidenttracker/analysis/*`
+- `docs/architecture/05-package-dependencies.md`
+- `docs/architecture/06-modular-architecture-roadmap.md`
+- kluczowych klas z `src/main/java/pl/mkn/incidenttracker/features`,
+  `aiplatform`, `agenttools`, `integrations`, `api` i `shared`
 - `src/main/resources/application.properties`
 - `src/main/resources/copilot/skills/incident-analysis-core/SKILL.md`
 - `src/main/resources/copilot/skills/incident-analysis-gitlab-tools/SKILL.md`
 - `src/main/resources/copilot/skills/incident-data-diagnostics/SKILL.md`
-- wybranych testow w `src/test/java/pl/mkn/incidenttracker/analysis/*`
+- wybranych testow w aktualnych pakietach `features`, `aiplatform`,
+  `agenttools`, `integrations`, `api` i `architecture`
 
 ## Jak czytac
 
@@ -45,15 +52,21 @@ Najlepsza kolejnosc:
 
 ## Najwazniejsze stale zasady
 
-- `POST /analysis` przyjmuje tylko `correlationId`.
+- `POST /analysis/jobs` przyjmuje `correlationId` oraz opcjonalne preferencje
+  AI (`model`, `reasoningEffort`).
 - `gitLabBranch` i `environment` sa wyprowadzane z evidence, glownie z logow.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji.
 - Glowny flow jest `AI-first`, nie `rule-based`.
-- Evidence providers sa sekwencyjne i pracuja na wspolnym `AnalysisContext`.
+- Evidence pipeline pracuje deterministycznie na `AnalysisContext`; po
+  deployment context Dynatrace i GitLab deterministic moga dzialac rownolegle.
 - GitLab deterministic evidence, GitLab MCP tools i Database MCP tools sa
   osobnymi capability.
 - GitLab i Database tools sa session-bound przez hidden `ToolContext`, a nie
   przez model-facing `group`, `branch`, `environment` albo `correlationId`.
+- Operational context tools sa neutralna capability `opctx_*`, a incidentowe
+  zasady ich uzycia mieszkaja w feature policy/guidance i skillu.
+- Incident analysis jest pierwszym feature'em platformy AI-augmented system
+  analysis, a nie generycznym core dla kolejnych analiz.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
 - Nie wolno mieszac klas adapter-specific bezposrednio do kontraktu AI.
 - Nie wolno robic globalnego "trust all SSL" dla calej aplikacji.

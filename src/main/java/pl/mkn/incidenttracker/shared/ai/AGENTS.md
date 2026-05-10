@@ -9,7 +9,11 @@ Obecnie obejmuje:
 
 - `AnalysisAiOptions` jako preferencje wykonania AI z requestow/operatora,
 - `AnalysisAiUsage` jako generyczny usage/token/cost contract dla UI,
-  telemetryki i feature'ow.
+  runtime i feature'ow,
+- `AnalysisAiAuthRef` i `AnalysisAiAuthRefResolver` jako non-secret kontrakt
+  przekazywania odniesienia do auth bez tokenow w publicznych payloadach,
+- `AnalysisAiActivityEvent` i `AnalysisAiActivityListener` jako neutralny,
+  user-visible trace aktywnosci AI bez typow Copilot SDK.
 
 ## Zasady
 
