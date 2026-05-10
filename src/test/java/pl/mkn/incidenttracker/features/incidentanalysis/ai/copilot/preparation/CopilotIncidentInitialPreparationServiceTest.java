@@ -147,10 +147,10 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Only the explicitly listed capability groups are enabled for this session."));
             assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
-            assertTrue(prompt.contains("Follow loaded skills for incident analysis, GitLab exploration, DB/data diagnostics and handoff quality."));
+            assertTrue(prompt.contains("Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and handoff quality."));
             assertTrue(prompt.contains("Use tools only for evidence gaps listed in `evidenceCoverage.gaps`"));
             assertTrue(prompt.contains("Do not use tools just because they are available."));
-            assertTrue(prompt.contains("GitLab, Elasticsearch and Database tools are coverage-aware"));
+            assertTrue(prompt.contains("GitLab, Elasticsearch, Operational Context and Database tools are coverage-aware"));
             assertTrue(prompt.contains("If the incident artifacts already contain enough evidence but GitLab tools are enabled, still use a focused GitLab search/read to improve `affectedFunction`; if GitLab tools are not enabled, answer directly from artifacts."));
             assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
             assertTrue(prompt.contains("Write `affectedFunction` in non-code, operator-friendly technical/functional language"));
