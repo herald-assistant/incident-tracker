@@ -41,6 +41,9 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 - Every Database tool call must include `reason`: one short Polish sentence for the operator.
                 - Prefer typed Database tools. Raw SQL is unavailable unless explicitly listed in available tools.
                 - If a requested capability is not available because scope was not resolved or the backend did not register it, say that directly and give the best grounded answer from existing evidence.
+                - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
+                - If the latest user message asks for a handoff, zgloszenie, raport for a developer, QA, DevOps, DBA, data owner, partner system or another team, use the loaded `incident-technical-handoff` skill and answer directly in Markdown using `Technical Handoff v1`.
+                - A technical handoff must keep the required section order, distinguish confirmed facts from hypotheses, and use `Nie ustalono`, `Nie dotyczy`, or `Brak danych w evidence` instead of dropping missing fields.
                 - If the user asks for a report, generate the report directly in the requested structure in the chat answer.
                 - Do not return a JSON envelope unless the user explicitly asks for JSON.
                 - Do not invent facts unsupported by artifacts, prior tool evidence, chat history or new tool results.

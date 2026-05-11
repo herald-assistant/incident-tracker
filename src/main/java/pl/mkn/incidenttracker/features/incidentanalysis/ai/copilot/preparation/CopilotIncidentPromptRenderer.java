@@ -41,7 +41,7 @@ public class CopilotIncidentPromptRenderer {
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
                 - Do not assume facts unsupported by the incident artifacts or tool results.
-                - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and handoff quality.
+                - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
                 - Use tools only for evidence gaps listed in `evidenceCoverage.gaps` in `00-incident-manifest.json`.
                 - Do not use tools just because they are available.

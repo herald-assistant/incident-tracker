@@ -80,6 +80,7 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));
         assertTrue(prompt.contains("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals"));
         assertTrue(prompt.contains("Operational Context tools provide catalog context"));
+        assertTrue(prompt.contains("Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
         assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
         assertTrue(prompt.contains("Write `affectedFunction` in non-code, operator-friendly technical/functional language"));
     }

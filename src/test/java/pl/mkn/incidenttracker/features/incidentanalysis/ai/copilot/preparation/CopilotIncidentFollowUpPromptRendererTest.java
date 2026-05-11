@@ -76,6 +76,9 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("### user"));
         assertTrue(prompt.contains("Co sprawdzic dalej?"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
+        assertTrue(prompt.contains("Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
+        assertTrue(prompt.contains("use the loaded `incident-technical-handoff` skill and answer directly in Markdown using `Technical Handoff v1`"));
+        assertTrue(prompt.contains("A technical handoff must keep the required section order"));
         assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch."));
         assertTrue(prompt.contains("- Operational context catalog: browse or search reusable catalog context"));
         assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));
