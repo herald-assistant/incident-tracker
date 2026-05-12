@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -156,6 +157,140 @@ class ElasticLogSearchServiceTest {
                 "Elasticsearch/Kibana endpoint not found for space default at https://openshift-test.example.internal",
                 exception.getResponse().message()
         );
+
+        serviceFixture.server.verify();
+    }
+
+    @Test
+    void shouldSummarizeHttpCallsByPathPattern() {
+        var serviceFixture = newServiceFixture();
+
+        serviceFixture.server.expect(requestTo(
+                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(containsString("now-7d")))
+                .andExpect(content().string(containsString("*/external/path/*")))
+                .andRespond(withSuccess("""
+                        {
+                          "took": 22,
+                          "timed_out": false,
+                          "hits": {
+                            "total": {
+                              "value": 3,
+                              "relation": "eq"
+                            },
+                            "hits": [
+                              {
+                                "_index": "logs-2026",
+                                "_id": "ok-1",
+                                "_source": {
+                                  "@timestamp": "2026-05-11T10:00:00Z",
+                                  "fields": {
+                                    "method": "GET",
+                                    "path": "/external/path/122",
+                                    "status": "200",
+                                    "correlationId": "corr-ok",
+                                    "microservice": "backend",
+                                    "class": "HttpLogger",
+                                    "message": "GET /external/path/122 status: 200"
+                                  }
+                                }
+                              },
+                              {
+                                "_index": "logs-2026",
+                                "_id": "bad-1",
+                                "_source": {
+                                  "@timestamp": "2026-05-11T10:01:00Z",
+                                  "fields": {
+                                    "method": "GET",
+                                    "path": "/external/path/123",
+                                    "status": "400",
+                                    "correlationId": "corr-bad",
+                                    "microservice": "backend",
+                                    "class": "HttpLogger",
+                                    "message": "GET /external/path/123 status: 400"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        var response = serviceFixture.service.summarizeHttpCalls(new ElasticHttpCallSummaryRequest(
+                "/external/path/",
+                "GET",
+                "backend",
+                7,
+                20
+        ));
+
+        assertEquals("/external/path/", response.pathPattern());
+        assertEquals(3, response.totalHits());
+        assertEquals(2, response.returnedHits());
+        assertEquals("200", response.statusBuckets().get(0).status());
+        assertEquals(1, response.statusBuckets().get(0).returnedCount());
+        assertEquals("/external/path/122", response.samples().get(0).path());
+        assertEquals(200, response.samples().get(0).status());
+
+        serviceFixture.server.verify();
+    }
+
+    @Test
+    void shouldFetchHttpCallLogsByPathAndDetailLevel() {
+        var serviceFixture = newServiceFixture();
+
+        serviceFixture.server.expect(requestTo(
+                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(containsString("*/external/path/125*")))
+                .andExpect(content().string(containsString("now-7d")))
+                .andRespond(withSuccess("""
+                        {
+                          "took": 31,
+                          "timed_out": false,
+                          "hits": {
+                            "total": {
+                              "value": 1,
+                              "relation": "eq"
+                            },
+                            "hits": [
+                              {
+                                "_index": "logs-2026",
+                                "_id": "ok-125",
+                                "_source": {
+                                  "@timestamp": "2026-05-11T10:02:00Z",
+                                  "fields": {
+                                    "class": "HttpLogger",
+                                    "correlationId": "corr-125",
+                                    "exception": "",
+                                    "message": "GET /external/path/125 status: 200 response body with useful details",
+                                    "microservice": "backend",
+                                    "spanId": "span-1",
+                                    "thread": "http-nio-1",
+                                    "type": "INFO"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        var response = serviceFixture.service.fetchHttpCallLogs(new ElasticHttpCallLogsRequest(
+                null,
+                "/external/path/125",
+                200,
+                "GET",
+                7,
+                10,
+                ElasticLogDetailLevel.FULL
+        ));
+
+        assertEquals("/external/path/125", response.path());
+        assertEquals(ElasticLogDetailLevel.FULL, response.detailLevel());
+        assertEquals(1, response.returnedHits());
+        assertEquals("GET /external/path/125 status: 200 response body with useful details", response.entries().get(0).message());
 
         serviceFixture.server.verify();
     }

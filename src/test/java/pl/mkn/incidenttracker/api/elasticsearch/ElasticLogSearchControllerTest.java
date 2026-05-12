@@ -7,6 +7,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallLogsRequest;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallLogsResult;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallSample;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallSummaryRequest;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallSummaryResult;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpStatusBucket;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogDetailLevel;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchRequest;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchService;
@@ -96,5 +103,141 @@ class ElasticLogSearchControllerTest {
                 .andExpect(jsonPath("$.fieldErrors[*].field").isArray());
 
         verifyNoInteractions(elasticLogSearchService);
+    }
+
+    @Test
+    void shouldSummarizeHttpCallsForValidRequest() throws Exception {
+        when(elasticLogSearchService.summarizeHttpCalls(any(ElasticHttpCallSummaryRequest.class)))
+                .thenReturn(new ElasticHttpCallSummaryResult(
+                        "/external/path/",
+                        "GET",
+                        "backend",
+                        7,
+                        "logs-*",
+                        300,
+                        12,
+                        2,
+                        20,
+                        false,
+                        List.of(new ElasticHttpStatusBucket("200", 1)),
+                        List.of(new ElasticHttpCallSample(
+                                "2026-05-11T10:00:00Z",
+                                "GET",
+                                "/external/path/122",
+                                200,
+                                "corr-ok",
+                                "backend",
+                                "HttpLogger",
+                                "GET /external/path/122 status: 200",
+                                "logs-2026",
+                                "ok-1"
+                        )),
+                        "OK"
+                ));
+
+        mockMvc.perform(post("/api/elasticsearch/logs/http-calls/summary")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "pathPattern": "/external/path/",
+                                  "method": "GET",
+                                  "serviceName": "backend",
+                                  "timeWindowDays": 7,
+                                  "sampleSize": 300
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pathPattern").value("/external/path/"))
+                .andExpect(jsonPath("$.statusBuckets[0].status").value("200"))
+                .andExpect(jsonPath("$.samples[0].correlationId").value("corr-ok"))
+                .andExpect(jsonPath("$.message").value("OK"));
+
+        verify(elasticLogSearchService).summarizeHttpCalls(new ElasticHttpCallSummaryRequest(
+                "/external/path/",
+                "GET",
+                "backend",
+                7,
+                300
+        ));
+    }
+
+    @Test
+    void shouldFetchHttpCallLogsForValidRequest() throws Exception {
+        when(elasticLogSearchService.fetchHttpCallLogs(any(ElasticHttpCallLogsRequest.class)))
+                .thenReturn(new ElasticHttpCallLogsResult(
+                        "corr-ok",
+                        "/external/path/122",
+                        200,
+                        "GET",
+                        7,
+                        ElasticLogDetailLevel.COMPACT,
+                        "logs-*",
+                        50,
+                        1,
+                        1,
+                        18,
+                        false,
+                        List.of(new ElasticLogEntry(
+                                "2026-05-11T10:00:00Z",
+                                "INFO",
+                                "backend",
+                                "HttpLogger",
+                                "GET /external/path/122 status: 200",
+                                "",
+                                "http-nio-1",
+                                "span-1",
+                                "namespace",
+                                "pod",
+                                "backend",
+                                null,
+                                "logs-2026",
+                                "ok-1",
+                                false,
+                                false
+                        )),
+                        "OK"
+                ));
+
+        mockMvc.perform(post("/api/elasticsearch/logs/http-calls/fetch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "correlationId": "corr-ok",
+                                  "path": "/external/path/122",
+                                  "status": 200,
+                                  "method": "GET",
+                                  "timeWindowDays": 7,
+                                  "size": 50,
+                                  "detailLevel": "COMPACT"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.correlationId").value("corr-ok"))
+                .andExpect(jsonPath("$.detailLevel").value("COMPACT"))
+                .andExpect(jsonPath("$.entries[0].message").value("GET /external/path/122 status: 200"))
+                .andExpect(jsonPath("$.message").value("OK"));
+
+        verify(elasticLogSearchService).fetchHttpCallLogs(new ElasticHttpCallLogsRequest(
+                "corr-ok",
+                "/external/path/122",
+                200,
+                "GET",
+                7,
+                50,
+                ElasticLogDetailLevel.COMPACT
+        ));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenHttpFetchHasNoCorrelationIdOrPath() throws Exception {
+        mockMvc.perform(post("/api/elasticsearch/logs/http-calls/fetch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "detailLevel": "COMPACT"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 }

@@ -6,6 +6,8 @@ import pl.mkn.incidenttracker.api.operationalcontext.OperationalContextEntityNot
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallDiagnosticError;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallSearchException;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchException;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
 import pl.mkn.incidenttracker.integrations.github.auth.GitHubOAuthExchangeException;
@@ -162,6 +164,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ElasticLogSearchException.class)
     public ResponseEntity<ElasticLogSearchResult> handleElasticLogSearch(ElasticLogSearchException exception) {
+        return ResponseEntity.status(exception.getStatus()).body(exception.getResponse());
+    }
+
+    @ExceptionHandler(ElasticHttpCallSearchException.class)
+    public ResponseEntity<ElasticHttpCallDiagnosticError> handleElasticHttpCallSearch(
+            ElasticHttpCallSearchException exception
+    ) {
         return ResponseEntity.status(exception.getStatus()).body(exception.getResponse());
     }
 

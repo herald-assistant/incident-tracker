@@ -6,6 +6,26 @@ export interface ElasticLogSearchPayload {
   correlationId: string;
 }
 
+export interface ElasticHttpCallSummaryPayload {
+  pathPattern: string;
+  method?: string;
+  serviceName?: string;
+  timeWindowDays?: number;
+  sampleSize?: number;
+}
+
+export type ElasticLogDetailLevel = 'SUMMARY' | 'COMPACT' | 'FULL';
+
+export interface ElasticHttpCallLogsPayload {
+  correlationId?: string;
+  path?: string;
+  status?: number;
+  method?: string;
+  timeWindowDays?: number;
+  size?: number;
+  detailLevel?: ElasticLogDetailLevel;
+}
+
 export interface GitLabRepositorySearchPayload {
   correlationId?: string;
   branch?: string;
@@ -30,6 +50,14 @@ export class EvidenceApiService {
 
   searchElasticLogs(payload: ElasticLogSearchPayload): Observable<unknown> {
     return this.http.post('/api/elasticsearch/logs/search', payload);
+  }
+
+  summarizeElasticHttpCalls(payload: ElasticHttpCallSummaryPayload): Observable<unknown> {
+    return this.http.post('/api/elasticsearch/logs/http-calls/summary', payload);
+  }
+
+  fetchElasticHttpCallLogs(payload: ElasticHttpCallLogsPayload): Observable<unknown> {
+    return this.http.post('/api/elasticsearch/logs/http-calls/fetch', payload);
   }
 
   searchGitLabRepository(payload: GitLabRepositorySearchPayload): Observable<unknown> {

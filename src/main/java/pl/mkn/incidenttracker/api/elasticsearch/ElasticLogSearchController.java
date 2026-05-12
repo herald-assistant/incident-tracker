@@ -6,6 +6,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallLogsRequest;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallLogsResult;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallSummaryRequest;
+import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticHttpCallSummaryResult;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchRequest;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchResult;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogSearchService;
@@ -20,5 +24,15 @@ public class ElasticLogSearchController {
     @PostMapping("/search")
     public ElasticLogSearchResult search(@Valid @RequestBody ElasticLogSearchRequest request) {
         return elasticLogSearchService.search(request);
+    }
+
+    @PostMapping("/http-calls/summary")
+    public ElasticHttpCallSummaryResult summarizeHttpCalls(@Valid @RequestBody ElasticHttpCallSummaryRequest request) {
+        return elasticLogSearchService.summarizeHttpCalls(request);
+    }
+
+    @PostMapping("/http-calls/fetch")
+    public ElasticHttpCallLogsResult fetchHttpCallLogs(@Valid @RequestBody ElasticHttpCallLogsRequest request) {
+        return elasticLogSearchService.fetchHttpCallLogs(request);
     }
 }

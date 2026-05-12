@@ -13,6 +13,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
+  ElasticHttpCallLogsPayload,
+  ElasticHttpCallSummaryPayload,
+  ElasticLogDetailLevel,
   ElasticLogSearchPayload,
   EvidenceApiService,
   GitLabRepositorySearchPayload,
@@ -43,6 +46,27 @@ export class EvidenceConsoleComponent {
       nonNullable: true,
       validators: [Validators.required]
     })
+  });
+
+  readonly elasticHttpSummaryForm = new FormGroup({
+    pathPattern: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    method: new FormControl('', { nonNullable: true }),
+    serviceName: new FormControl('', { nonNullable: true }),
+    timeWindowDays: new FormControl('7', { nonNullable: true }),
+    sampleSize: new FormControl('300', { nonNullable: true })
+  });
+
+  readonly elasticHttpLogsForm = new FormGroup({
+    correlationId: new FormControl('', { nonNullable: true }),
+    path: new FormControl('', { nonNullable: true }),
+    status: new FormControl('', { nonNullable: true }),
+    method: new FormControl('', { nonNullable: true }),
+    timeWindowDays: new FormControl('7', { nonNullable: true }),
+    size: new FormControl('50', { nonNullable: true }),
+    detailLevel: new FormControl<ElasticLogDetailLevel>('COMPACT', { nonNullable: true })
   });
 
   readonly gitLabRepositoryForm = new FormGroup({
@@ -80,6 +104,12 @@ export class EvidenceConsoleComponent {
   readonly elasticState = signal<ToolState>(
     this.idleState('Podaj correlationId i uruchom helper Elastica.')
   );
+  readonly elasticHttpSummaryState = signal<ToolState>(
+    this.idleState('Podaj path prefix, aby porównać podobne wywołania HTTP w Elasticu.')
+  );
+  readonly elasticHttpLogsState = signal<ToolState>(
+    this.idleState('Podaj correlationId albo konkretny path, aby pobrać logi wywołania HTTP.')
+  );
   readonly gitLabRepositoryState = signal<ToolState>(
     this.idleState('Wpisz hinty projektu, aby przetestować mapowanie component -> repo.')
   );
@@ -110,6 +140,71 @@ export class EvidenceConsoleComponent {
       this.evidenceApi.searchElasticLogs(payload),
       payload,
       'Wysyłamy request do /api/elasticsearch/logs/search...'
+    );
+  }
+
+  submitElasticHttpSummary(event: Event): void {
+    event.preventDefault();
+
+    if (this.elasticHttpSummaryForm.invalid) {
+      this.elasticHttpSummaryForm.markAllAsTouched();
+      this.elasticHttpSummaryState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj path prefix dla porównania wywołań HTTP.'
+        })
+      );
+      return;
+    }
+
+    const payload: ElasticHttpCallSummaryPayload = {
+      pathPattern: this.elasticHttpSummaryForm.controls.pathPattern.value.trim(),
+      method: this.optionalValue(this.elasticHttpSummaryForm.controls.method.value),
+      serviceName: this.optionalValue(this.elasticHttpSummaryForm.controls.serviceName.value),
+      timeWindowDays: this.optionalNumber(this.elasticHttpSummaryForm.controls.timeWindowDays.value),
+      sampleSize: this.optionalNumber(this.elasticHttpSummaryForm.controls.sampleSize.value)
+    };
+
+    this.runRequest(
+      this.elasticHttpSummaryState,
+      this.evidenceApi.summarizeElasticHttpCalls(payload),
+      payload,
+      'Wysyłamy request do /api/elasticsearch/logs/http-calls/summary...'
+    );
+  }
+
+  submitElasticHttpLogs(event: Event): void {
+    event.preventDefault();
+
+    const correlationId = this.optionalValue(this.elasticHttpLogsForm.controls.correlationId.value);
+    const path = this.optionalValue(this.elasticHttpLogsForm.controls.path.value);
+
+    if (!correlationId && !path) {
+      this.elasticHttpLogsForm.markAllAsTouched();
+      this.elasticHttpLogsState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj correlationId albo path, aby pobrać logi wywołania HTTP.'
+        })
+      );
+      return;
+    }
+
+    const payload: ElasticHttpCallLogsPayload = {
+      correlationId,
+      path,
+      status: this.optionalNumber(this.elasticHttpLogsForm.controls.status.value),
+      method: this.optionalValue(this.elasticHttpLogsForm.controls.method.value),
+      timeWindowDays: this.optionalNumber(this.elasticHttpLogsForm.controls.timeWindowDays.value),
+      size: this.optionalNumber(this.elasticHttpLogsForm.controls.size.value),
+      detailLevel: this.elasticHttpLogsForm.controls.detailLevel.value
+    };
+
+    this.runRequest(
+      this.elasticHttpLogsState,
+      this.evidenceApi.fetchElasticHttpCallLogs(payload),
+      payload,
+      'Wysyłamy request do /api/elasticsearch/logs/http-calls/fetch...'
     );
   }
 
@@ -355,6 +450,15 @@ export class EvidenceConsoleComponent {
   private optionalValue(raw: string): string | undefined {
     const value = raw.trim();
     return value.length > 0 ? value : undefined;
+  }
+
+  private optionalNumber(raw: string): number | undefined {
+    const value = raw.trim();
+    if (value.length === 0) {
+      return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   }
 
   private toFormattedJson(value: unknown): string {
