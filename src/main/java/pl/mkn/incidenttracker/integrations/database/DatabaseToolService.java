@@ -787,11 +787,18 @@ public class DatabaseToolService {
             if (keyValue == null) {
                 continue;
             }
-            var column = sqlGuard.validateColumn(scope, table, keyValue.column());
-            var parameterName = "p" + index++;
-            conditions.add("%s.%s = :%s".formatted(alias, column, parameterName));
-            parameters.put(parameterName, keyValue.value());
-            appliedFilters.add("%s = ?".formatted(column));
+            var column = sqlGuard.validateColumnDefinition(scope, table, keyValue.column());
+            var fragment = filterClause(
+                    "%s.%s".formatted(alias, column.name()),
+                    DbOperator.EQ,
+                    java.util.Collections.singletonList(keyValue.value()),
+                    index,
+                    column
+            );
+            conditions.add(fragment.sql());
+            parameters.putAll(fragment.parameters());
+            appliedFilters.add("%s = ?".formatted(column.name()));
+            index = fragment.nextIndex();
         }
 
         return new WhereClause(
@@ -817,11 +824,11 @@ public class DatabaseToolService {
                 continue;
             }
 
-            var column = sqlGuard.validateColumn(scope, table, filter.column());
-            var fragment = filterClause("%s.%s".formatted(alias, column), filter.operator(), filter.values(), index);
+            var column = sqlGuard.validateColumnDefinition(scope, table, filter.column());
+            var fragment = filterClause("%s.%s".formatted(alias, column.name()), filter.operator(), filter.values(), index, column);
             conditions.add(fragment.sql());
             parameters.putAll(fragment.parameters());
-            appliedFilters.add(column + " " + filter.operator());
+            appliedFilters.add(column.name() + " " + filter.operator());
             index = fragment.nextIndex();
         }
 
@@ -853,11 +860,11 @@ public class DatabaseToolService {
                 throw new IllegalArgumentException("Qualified filter references a table outside the selected join scope.");
             }
 
-            var column = sqlGuard.validateColumn(scope, normalizedTable, filter.column().column());
-            var fragment = filterClause("%s.%s".formatted(alias, column), filter.operator(), filter.values(), index);
+            var column = sqlGuard.validateColumnDefinition(scope, normalizedTable, filter.column().column());
+            var fragment = filterClause("%s.%s".formatted(alias, column.name()), filter.operator(), filter.values(), index, column);
             conditions.add(fragment.sql());
             parameters.putAll(fragment.parameters());
-            appliedFilters.add(normalizedTable.tableName() + "." + column + " " + filter.operator());
+            appliedFilters.add(normalizedTable.tableName() + "." + column.name() + " " + filter.operator());
             index = fragment.nextIndex();
         }
 
@@ -869,6 +876,26 @@ public class DatabaseToolService {
     }
 
     SqlFragment filterClause(String qualifiedColumn, DbOperator operator, List<String> values, int startIndex) {
+        return filterClause(qualifiedColumn, operator, values, startIndex, null);
+    }
+
+    private SqlFragment filterClause(
+            String qualifiedColumn,
+            DbOperator operator,
+            List<String> values,
+            int startIndex,
+            ColumnDefinition column
+    ) {
+        if (isCharacterLob(column)) {
+            return characterLobFilterClause(qualifiedColumn, operator, values, startIndex);
+        }
+        if (isLob(column) && operator != DbOperator.IS_NULL && operator != DbOperator.IS_NOT_NULL) {
+            throw unsupportedLobFilter(column, operator);
+        }
+        return standardFilterClause(qualifiedColumn, operator, values, startIndex);
+    }
+
+    private SqlFragment standardFilterClause(String qualifiedColumn, DbOperator operator, List<String> values, int startIndex) {
         var parameters = new LinkedHashMap<String, Object>();
         var safeValues = safeList(values);
         var nextIndex = startIndex;
@@ -951,6 +978,110 @@ public class DatabaseToolService {
                 );
             }
         };
+    }
+
+    private SqlFragment characterLobFilterClause(String qualifiedColumn, DbOperator operator, List<String> values, int startIndex) {
+        return switch (operator) {
+            case EQ -> characterLobSingleComparison(qualifiedColumn, operator, values, startIndex, true);
+            case NE -> characterLobSingleComparison(qualifiedColumn, operator, values, startIndex, false);
+            case IN, NOT_IN -> characterLobListComparison(qualifiedColumn, operator, values, startIndex);
+            case GT, GTE, LT, LTE, BETWEEN -> throw unsupportedLobFilter(qualifiedColumn, operator);
+            default -> standardFilterClause(qualifiedColumn, operator, values, startIndex);
+        };
+    }
+
+    private SqlFragment characterLobSingleComparison(
+            String qualifiedColumn,
+            DbOperator operator,
+            List<String> values,
+            int startIndex,
+            boolean equal
+    ) {
+        var value = singleValue(operator, safeList(values));
+        if (value != null && value.isEmpty()) {
+            return new SqlFragment(
+                    "DBMS_LOB.GETLENGTH(%s) %s 0".formatted(qualifiedColumn, equal ? "=" : ">"),
+                    Map.of(),
+                    startIndex
+            );
+        }
+
+        var parameters = new LinkedHashMap<String, Object>();
+        var parameterName = "p" + startIndex;
+        parameters.put(parameterName, value);
+        return new SqlFragment(
+                "DBMS_LOB.COMPARE(%s, TO_CLOB(:%s)) %s 0".formatted(
+                        qualifiedColumn,
+                        parameterName,
+                        equal ? "=" : "<>"
+                ),
+                parameters,
+                startIndex + 1
+        );
+    }
+
+    private SqlFragment characterLobListComparison(
+            String qualifiedColumn,
+            DbOperator operator,
+            List<String> values,
+            int startIndex
+    ) {
+        var safeValues = safeList(values);
+        if (safeValues.isEmpty()) {
+            throw new IllegalArgumentException(operator + " filter requires at least one value.");
+        }
+
+        var parameters = new LinkedHashMap<String, Object>();
+        var conditions = new ArrayList<String>();
+        var nextIndex = startIndex;
+        var equal = operator == DbOperator.IN;
+        for (var value : safeValues) {
+            if (value != null && value.isEmpty()) {
+                conditions.add("DBMS_LOB.GETLENGTH(%s) %s 0".formatted(qualifiedColumn, equal ? "=" : ">"));
+                continue;
+            }
+
+            var parameterName = "p" + nextIndex++;
+            parameters.put(parameterName, value);
+            conditions.add("DBMS_LOB.COMPARE(%s, TO_CLOB(:%s)) %s 0".formatted(
+                    qualifiedColumn,
+                    parameterName,
+                    equal ? "=" : "<>"
+            ));
+        }
+
+        return new SqlFragment(
+                "(" + String.join(equal ? " OR " : " AND ", conditions) + ")",
+                parameters,
+                nextIndex
+        );
+    }
+
+    private boolean isCharacterLob(ColumnDefinition column) {
+        var dataType = normalizedDataType(column);
+        return "CLOB".equals(dataType) || "NCLOB".equals(dataType);
+    }
+
+    private boolean isLob(ColumnDefinition column) {
+        var dataType = normalizedDataType(column);
+        return dataType.endsWith("LOB") || "BFILE".equals(dataType);
+    }
+
+    private String normalizedDataType(ColumnDefinition column) {
+        return column != null && column.dataType() != null
+                ? column.dataType().toUpperCase(Locale.ROOT)
+                : "";
+    }
+
+    private IllegalArgumentException unsupportedLobFilter(ColumnDefinition column, DbOperator operator) {
+        return unsupportedLobFilter(column.name(), operator);
+    }
+
+    private IllegalArgumentException unsupportedLobFilter(String columnName, DbOperator operator) {
+        return new IllegalArgumentException(
+                "Oracle LOB column %s does not support %s typed filters; use IS_NULL/IS_NOT_NULL or exact text checks."
+                        .formatted(columnName, operator)
+        );
     }
 
     private String buildOrderByClause(

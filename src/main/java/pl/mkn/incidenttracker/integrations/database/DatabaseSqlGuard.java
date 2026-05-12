@@ -92,6 +92,39 @@ public class DatabaseSqlGuard {
         return normalizedColumn;
     }
 
+    ColumnDefinition validateColumnDefinition(DbCapabilityScope scope, DbTableRef table, String column) {
+        if (table == null) {
+            throw new IllegalArgumentException("DbTableRef must not be null.");
+        }
+
+        var normalizedSchema = normalizeIdentifier(table.schema());
+        var normalizedTableName = normalizeIdentifier(table.tableName());
+        var normalizedColumn = normalizeIdentifier(column);
+        assertSchemaAllowed(scope, normalizedSchema);
+
+        var description = tryDescribeTable(scope, normalizedSchema, normalizedTableName);
+        return description.columns().stream()
+                .filter(candidate -> candidate.name().equals(normalizedColumn))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Oracle column %s.%s.%s does not exist or is not visible in the configured scope."
+                                .formatted(normalizedSchema, normalizedTableName, normalizedColumn)
+                ));
+    }
+
+    private TableDescriptionMetadata tryDescribeTable(DbCapabilityScope scope, String schema, String tableName) {
+        try {
+            return metadataClient.describeTable(scope.environment(), schema, tableName);
+        }
+        catch (IllegalStateException exception) {
+            throw new IllegalArgumentException(
+                    "Oracle table/view %s.%s does not exist or is not visible in the configured scope."
+                            .formatted(schema, tableName),
+                    exception
+            );
+        }
+    }
+
     public List<String> validateColumns(DbCapabilityScope scope, DbTableRef table, List<String> columns) {
         var validated = new LinkedHashSet<String>();
         for (var column : columns != null ? columns : List.<String>of()) {

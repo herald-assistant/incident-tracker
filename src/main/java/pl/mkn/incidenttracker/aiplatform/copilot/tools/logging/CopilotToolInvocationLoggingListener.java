@@ -61,11 +61,12 @@ public class CopilotToolInvocationLoggingListener {
 
         var exception = event.exception();
         log.error(
-                "Copilot tool invocation failed sessionId={} toolCallId={} toolName={} error={}",
+                "Copilot tool invocation failed sessionId={} toolCallId={} toolName={} error={} resultPreview={}",
                 event.sessionId(),
                 event.toolCallId(),
                 event.toolName(),
                 exception != null ? exception.getMessage() : null,
+                abbreviate(serializeResultPreview(parseToolResult(event.rawResult())), 500),
                 exception
         );
     }

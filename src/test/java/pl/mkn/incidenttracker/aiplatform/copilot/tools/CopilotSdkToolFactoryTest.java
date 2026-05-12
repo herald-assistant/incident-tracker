@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames.COUNT_ROWS;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
@@ -118,7 +119,7 @@ class CopilotSdkToolFactoryTest {
     }
 
     @Test
-    void shouldReturnFailedFutureWhenSpringToolCallbackFails() {
+    void shouldReturnStructuredToolErrorWhenSpringToolCallbackFails() {
         var factory = factory(List.of(failingToolProvider()));
         var sessionContext = gitLabSessionContext();
         var tool = factory.createToolDefinitions(sessionContext).stream()
@@ -131,9 +132,45 @@ class CopilotSdkToolFactoryTest {
                 .setToolName("failing_tool")
                 .setArguments(objectMapper.valueToTree(Map.of()));
 
-        var exception = assertThrows(CompletionException.class, () -> tool.handler().invoke(invocation).join());
+        var result = tool.handler().invoke(invocation).join();
 
-        assertTrue(exception.getCause().getMessage().contains("boom"));
+        assertInstanceOf(Map.class, result);
+
+        @SuppressWarnings("unchecked")
+        var payload = (Map<String, Object>) result;
+
+        assertEquals("tool_error", payload.get("status"));
+        assertEquals("failing_tool", payload.get("toolName"));
+        assertEquals("tool-call-failing-1", payload.get("toolCallId"));
+        assertTrue(payload.get("rootCauseMessage").toString().contains("boom"));
+        assertTrue(payload.get("recommendation").toString().contains("Zmien argumenty toola"));
+    }
+
+    @Test
+    void shouldReturnDatabaseRetryRecommendationWhenDatabaseToolCallbackFails() {
+        var factory = factory(List.of(failingDbToolProvider()));
+        var sessionContext = gitLabSessionContext();
+        var tool = factory.createToolDefinitions(sessionContext).stream()
+                .filter(candidate -> candidate.name().equals(COUNT_ROWS))
+                .findFirst()
+                .orElseThrow();
+        var invocation = new ToolInvocation()
+                .setSessionId(sessionContext.copilotSessionId())
+                .setToolCallId("tool-call-db-failing-1")
+                .setToolName(COUNT_ROWS)
+                .setArguments(objectMapper.valueToTree(Map.of()));
+
+        var result = tool.handler().invoke(invocation).join();
+
+        assertInstanceOf(Map.class, result);
+
+        @SuppressWarnings("unchecked")
+        var payload = (Map<String, Object>) result;
+
+        assertEquals("tool_error", payload.get("status"));
+        assertEquals(COUNT_ROWS, payload.get("toolName"));
+        assertTrue(payload.get("rootCauseMessage").toString().contains("ORA-00932"));
+        assertTrue(payload.get("recommendation").toString().contains("db_describe_table"));
     }
 
     @Test
@@ -338,6 +375,12 @@ class CopilotSdkToolFactoryTest {
                 .build();
     }
 
+    private ToolCallbackProvider failingDbToolProvider() {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(new FailingDbTools())
+                .build();
+    }
+
     private CopilotSdkToolFactory factory(List<ToolCallbackProvider> providers) {
         return factory(providers, toolEvidenceSessionStore(objectMapper));
     }
@@ -382,6 +425,14 @@ class CopilotSdkToolFactoryTest {
         @Tool(name = "failing_tool", description = "Throws for failed future testing.")
         public Map<String, Object> failingTool() {
             throw new IllegalStateException("boom");
+        }
+    }
+
+    static class FailingDbTools {
+
+        @Tool(name = COUNT_ROWS, description = "Throws a database-style failure for retry guidance testing.")
+        public Map<String, Object> failingDbTool() {
+            throw new IllegalArgumentException("ORA-00932: inconsistent datatypes: expected - got CLOB");
         }
     }
 }

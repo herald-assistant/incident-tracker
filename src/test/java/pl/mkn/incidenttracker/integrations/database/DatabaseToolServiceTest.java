@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -148,6 +149,98 @@ class DatabaseToolServiceTest {
         assertEquals("corr-123", paramsCaptor.getValue().get("p0"));
         assertEquals("ACT%", paramsCaptor.getValue().get("p1"));
         assertEquals(3L, result.count());
+    }
+
+    @Test
+    void shouldBuildCountRowsSqlForClobNotEqualFilter() {
+        var guard = guardWithColumnTypes(Map.of("RELATED_CUSTOMERS", "CLOB"));
+        var queryClient = mock(DatabaseReadOnlyQueryClient.class);
+        when(queryClient.queryForCount(any(), anyString(), anyMap())).thenReturn(3L);
+
+        var service = new DatabaseToolService(
+                properties(),
+                baseResolver(),
+                mock(DatabaseMetadataClient.class),
+                queryClient,
+                guard,
+                new DatabaseResultMasker(),
+                new DatabaseResultLimiter(properties())
+        );
+
+        service.countRows(
+                scope(),
+                new DbCountRowsRequest(
+                        new DbTableRef("crm_app", "customer_entity"),
+                        List.of(
+                                new DbFilter("related_customers", DbOperator.NE, List.of("[]")),
+                                new DbFilter("related_customers", DbOperator.IS_NOT_NULL, List.of())
+                        )
+                )
+        );
+
+        var sqlCaptor = ArgumentCaptor.forClass(String.class);
+        var paramsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(queryClient).queryForCount(any(), sqlCaptor.capture(), paramsCaptor.capture());
+
+        assertTrue(sqlCaptor.getValue().contains(
+                "DBMS_LOB.COMPARE(t.RELATED_CUSTOMERS, TO_CLOB(:p0)) <> 0 AND t.RELATED_CUSTOMERS IS NOT NULL"
+        ));
+        assertEquals("[]", paramsCaptor.getValue().get("p0"));
+    }
+
+    @Test
+    void shouldUseLengthCheckForClobNotEmptyFilter() {
+        var guard = guardWithColumnTypes(Map.of("RELATED_CUSTOMERS", "CLOB"));
+        var queryClient = mock(DatabaseReadOnlyQueryClient.class);
+        when(queryClient.queryForCount(any(), anyString(), anyMap())).thenReturn(3L);
+
+        var service = new DatabaseToolService(
+                properties(),
+                baseResolver(),
+                mock(DatabaseMetadataClient.class),
+                queryClient,
+                guard,
+                new DatabaseResultMasker(),
+                new DatabaseResultLimiter(properties())
+        );
+
+        service.countRows(
+                scope(),
+                new DbCountRowsRequest(
+                        new DbTableRef("crm_app", "customer_entity"),
+                        List.of(new DbFilter("related_customers", DbOperator.NE, List.of("")))
+                )
+        );
+
+        var sqlCaptor = ArgumentCaptor.forClass(String.class);
+        var paramsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(queryClient).queryForCount(any(), sqlCaptor.capture(), paramsCaptor.capture());
+
+        assertTrue(sqlCaptor.getValue().contains("DBMS_LOB.GETLENGTH(t.RELATED_CUSTOMERS) > 0"));
+        assertTrue(paramsCaptor.getValue().isEmpty());
+    }
+
+    @Test
+    void shouldRejectRangeComparisonOnClobFilter() {
+        var service = new DatabaseToolService(
+                properties(),
+                baseResolver(),
+                mock(DatabaseMetadataClient.class),
+                mock(DatabaseReadOnlyQueryClient.class),
+                guardWithColumnTypes(Map.of("RELATED_CUSTOMERS", "CLOB")),
+                new DatabaseResultMasker(),
+                new DatabaseResultLimiter(properties())
+        );
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> service.countRows(
+                scope(),
+                new DbCountRowsRequest(
+                        new DbTableRef("crm_app", "customer_entity"),
+                        List.of(new DbFilter("related_customers", DbOperator.GT, List.of("[]")))
+                )
+        ));
+
+        assertTrue(exception.getMessage().contains("does not support GT typed filters"));
     }
 
     @Test
@@ -326,7 +419,21 @@ class DatabaseToolServiceTest {
             var columns = (List<String>) invocation.getArgument(2, List.class);
             return columns.stream().map(String::toUpperCase).toList();
         });
+        when(guard.validateColumnDefinition(any(), any(), anyString())).thenAnswer(invocation -> {
+            var column = invocation.getArgument(2, String.class).toUpperCase();
+            return new ColumnDefinition(column, "VARCHAR2", 128, null, null, true, null, null);
+        });
         when(guard.normalizeIdentifier(anyString())).thenAnswer(invocation -> invocation.getArgument(0, String.class).toUpperCase());
+        return guard;
+    }
+
+    private DatabaseSqlGuard guardWithColumnTypes(Map<String, String> dataTypes) {
+        var guard = baseGuard();
+        when(guard.validateColumnDefinition(any(), any(), anyString())).thenAnswer(invocation -> {
+            var column = invocation.getArgument(2, String.class).toUpperCase();
+            var dataType = dataTypes.getOrDefault(column, "VARCHAR2");
+            return new ColumnDefinition(column, dataType, 128, null, null, true, null, null);
+        });
         return guard;
     }
 
