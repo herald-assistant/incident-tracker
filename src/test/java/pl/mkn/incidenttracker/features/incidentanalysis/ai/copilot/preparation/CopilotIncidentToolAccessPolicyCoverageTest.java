@@ -191,10 +191,21 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                                 attr("messageTruncated", "true")
                         ))
                 ))),
-                tools("elastic_search_logs_by_correlation_id")
+                tools(
+                        "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs"
+                )
         );
 
-        assertEquals(List.of("elastic_search_logs_by_correlation_id"), policy.availableToolNames());
+        assertEquals(
+                Set.of(
+                        "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs"
+                ),
+                Set.copyOf(policy.availableToolNames())
+        );
     }
 
     @Test
@@ -296,6 +307,8 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 chatRequest("dev3", "sample/runtime", "release/2026.04"),
                 tools(
                         "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs",
                         "gitlab_find_flow_context",
                         "db_find_tables",
                         "db_execute_readonly_sql",
@@ -304,6 +317,8 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         );
 
         assertTrue(policy.availableToolNames().contains("elastic_search_logs_by_correlation_id"));
+        assertTrue(policy.availableToolNames().contains("elastic_summarize_http_calls_by_path"));
+        assertTrue(policy.availableToolNames().contains("elastic_fetch_http_call_logs"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
         assertTrue(policy.availableToolNames().contains("db_find_tables"));
         assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
@@ -316,6 +331,8 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 chatRequest(null, null, null),
                 tools(
                         "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs",
                         "gitlab_find_flow_context",
                         "db_find_tables",
                         "opctx_search"
@@ -323,7 +340,12 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         );
 
         assertEquals(
-                Set.of("elastic_search_logs_by_correlation_id", "opctx_search"),
+                Set.of(
+                        "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs",
+                        "opctx_search"
+                ),
                 Set.copyOf(policy.availableToolNames())
         );
     }

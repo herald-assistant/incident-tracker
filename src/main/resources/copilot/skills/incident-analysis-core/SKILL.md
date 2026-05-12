@@ -187,6 +187,17 @@ The incident may be caused by something outside the directly visible evidence:
 If the evidence points outside our system, say that directly.
 Do not force a code-level root cause when the code only shows where the error surfaced.
 
+When the local logs or code only show an opaque HTTP failure from another system and Elasticsearch tools are enabled:
+
+- use `elastic_summarize_http_calls_by_path` with a grounded path or stable path prefix from logs, the user request, or prior evidence,
+- compare recent samples and status distribution for the same endpoint family,
+- then use `elastic_fetch_http_call_logs` for one or a few concrete comparison calls only when the summary reveals useful candidate paths or statuses,
+- check whether successful and failing calls differ by path variant, HTTP status, method, caller service, timestamp cluster, message hints, null/empty values, constraint-like wording, or request/response format clues,
+- treat the result as supporting evidence, not proof, unless the logs explicitly contain the accepted/rejected value or downstream reason.
+
+Do not invent endpoint paths. If only the failing path is known, search that stable prefix first.
+If a comparison path is provided to `elastic_fetch_http_call_logs`, it searches by that path instead of the current incident correlationId; if `path` is omitted, it uses the current hidden correlationId.
+
 ## Stop conditions
 
 Stop fetching more evidence when:

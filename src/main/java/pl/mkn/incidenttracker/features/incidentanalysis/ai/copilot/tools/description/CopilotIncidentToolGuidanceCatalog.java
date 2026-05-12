@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.descri
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;
+import pl.mkn.incidenttracker.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
 
@@ -29,6 +30,25 @@ public class CopilotIncidentToolGuidanceCatalog {
     );
 
     private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.ofEntries(
+            Map.entry(
+                    ElasticToolNames.SUMMARIZE_HTTP_CALLS_BY_PATH,
+                    List.of(
+                            "Use for opaque downstream/external HTTP failures when a grounded path or stable path prefix is known.",
+                            "Use before fetching comparison logs; let the returned status buckets and samples decide which concrete calls are worth inspecting.",
+                            "Do not invent paths. Use paths from logs, user input, artifacts or prior tool results.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
+            Map.entry(
+                    ElasticToolNames.FETCH_HTTP_CALL_LOGS,
+                    List.of(
+                            "Use after path summary or when the user asks for current incident log details.",
+                            "If path is omitted, the current hidden incident correlationId is used.",
+                            "If path is provided, the tool searches by that path without forcing the current incident correlationId; this is intended for comparison calls.",
+                            "Prefer SUMMARY or COMPACT first; use FULL only when truncated log details block the diagnosis.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
             Map.entry(
                     GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
                     List.of(

@@ -37,8 +37,10 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 - Treat environment, gitLabBranch and gitLabGroup as fixed hidden session scope.
                 - GitLab, Elasticsearch and Database tools receive hidden scope from the backend. Do not ask the user to provide correlationId, gitLabGroup, gitLabBranch or environment as tool arguments.
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
-                - Every GitLab tool call must include `reason`: one short Polish sentence for the operator.
-                - Every Database tool call must include `reason`: one short Polish sentence for the operator.
+                - Every Elasticsearch HTTP diagnostic tool call, GitLab tool call, Database tool call and Operational Context tool call must include `reason`: one short Polish sentence for the operator.
+                - When the user asks to compare HTTP calls or inspect opaque downstream/external HTTP failures, use Elasticsearch path summary first, then fetch concrete path/status examples only when they help explain the incident.
+                - For Elasticsearch HTTP diagnostics, use grounded paths from logs, user input, or prior tool results. Do not invent endpoint paths.
+                - `elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted. When a comparison path is provided, it searches by that path without forcing the current incident correlationId.
                 - Prefer typed Database tools. Raw SQL is unavailable unless explicitly listed in available tools.
                 - If a requested capability is not available because scope was not resolved or the backend did not register it, say that directly and give the best grounded answer from existing evidence.
                 - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
@@ -135,7 +137,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
         var rendered = new StringBuilder();
 
         if (toolAccessPolicy.elasticToolsEnabled()) {
-            rendered.append("- Elasticsearch logs: fetch additional logs for the current incident correlationId when the user asks to verify logs or timing.\n");
+            rendered.append("- Elasticsearch logs: fetch additional logs for the current incident correlationId when the user asks to verify logs or timing; compare recent HTTP calls by grounded path prefix and fetch concrete sample calls when the user asks about opaque downstream/external failures. Include a short Polish `reason` in every Elasticsearch HTTP diagnostic tool call.\n");
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {

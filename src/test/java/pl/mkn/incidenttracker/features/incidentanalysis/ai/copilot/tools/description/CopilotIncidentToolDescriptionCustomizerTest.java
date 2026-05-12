@@ -59,6 +59,18 @@ class CopilotIncidentToolDescriptionCustomizerTest {
     }
 
     @Test
+    void shouldAppendElasticHttpDiagnosticGuidance() {
+        var description = customizer.customize(
+                "elastic_fetch_http_call_logs",
+                "Fetches HTTP call logs."
+        );
+
+        assertTrue(description.contains("If path is omitted, the current hidden incident correlationId is used."));
+        assertTrue(description.contains("comparison calls"));
+        assertTrue(description.contains("Always provide reason as one short Polish sentence"));
+    }
+
+    @Test
     void shouldLeaveUnknownToolDescriptionUntouched() {
         var description = customizer.customize("custom_tool", "  Custom description.  ");
 

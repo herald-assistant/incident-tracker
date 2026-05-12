@@ -56,8 +56,10 @@ public class CopilotIncidentPromptRenderer {
                 - Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom, you must either cite deterministic GitLab evidence that already identifies the entity/repository mapping, call an enabled GitLab tool to try to find that mapping, or state that GitLab grounding is unavailable and use DB discovery as a fallback.
                 - Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
                 - If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab class-reference or flow tools with grounded class names and focused keywords before broad DB discovery when that can narrow the affected flow or target tables.
-                - Every GitLab tool call must include `reason`: one short Polish sentence that explains the practical purpose of this read/search for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
-                - Every Database tool call must include `reason`: one short Polish sentence that explains why this DB result is useful for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
+                - Every Elasticsearch HTTP diagnostic tool call, GitLab tool call, Database tool call and Operational Context tool call must include `reason`: one short Polish sentence that explains the practical purpose of this call for the operator. Do not put hidden reasoning or step-by-step chain-of-thought in `reason`.
+                - When Elasticsearch HTTP diagnostic tools are enabled and the evidence points to an opaque external/downstream HTTP failure, use path summary first, then fetch one or a few concrete comparison calls only if the summary provides useful candidate paths/statuses.
+                - For Elasticsearch HTTP diagnostic tools, prefer grounded path prefixes from logs or user input; do not invent endpoint paths.
+                - `elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted. When a comparison path is provided, it searches by that path without forcing the current incident correlationId.
                 - When possible, include evidenceReferences with artifactId and itemId for important claims.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
                 %s
@@ -132,7 +134,7 @@ public class CopilotIncidentPromptRenderer {
         var rendered = new StringBuilder();
 
         if (toolAccessPolicy.elasticToolsEnabled()) {
-            rendered.append("- Elasticsearch logs: fetch additional logs only for listed log coverage gaps for the current incident correlationId.\n");
+            rendered.append("- Elasticsearch logs: fetch additional logs only for listed log coverage gaps for the current incident correlationId. For opaque HTTP/downstream failures, compare recent calls by grounded path prefix and fetch concrete sample calls only when that can confirm data, status or request-shape differences. Include a short Polish `reason` in every Elasticsearch HTTP diagnostic tool call.\n");
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {

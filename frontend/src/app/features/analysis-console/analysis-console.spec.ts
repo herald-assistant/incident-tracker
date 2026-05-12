@@ -97,6 +97,53 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(JSON.stringify(startAnalysisCalls[0][0])).not.toContain('githubAuthCode');
   });
 
+  it('should hide form header after starting analysis', async () => {
+    const { fixture } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.analysis-form__header')).not.toBeNull();
+
+    component.correlationIdControl.setValue('corr-123');
+    component.submit(new Event('submit'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.analysis-form__header')).toBeNull();
+  });
+
+  it('should hide form header after importing analysis', async () => {
+    const { fixture } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [
+        {
+          name: 'analysis.json',
+          text: () => Promise.resolve(JSON.stringify(completedJob()))
+        }
+      ]
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.analysis-form__header')).not.toBeNull();
+
+    await component.importAnalysis({ target: input } as unknown as Event);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.analysis-form__header')).toBeNull();
+  });
+
   it('should show auth CTA after auth-required job error', async () => {
     const { fixture, analysisApi } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;

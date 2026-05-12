@@ -48,17 +48,19 @@
         </div>
 
         <form class="analysis-form analysis-form--inline" novalidate (submit)="submit($event)">
-          <div class="analysis-form__header">
-            <div>
-              <label class="field-label" for="correlationId">Correlation ID</label>
-              <p class="field-hint">
-                Postęp, zebrane dane i wynik końcowy pojawią się poniżej zaraz po starcie analizy.
+          @if (!hasActiveState()) {
+            <div class="analysis-form__header">
+              <div>
+                <label class="field-label" for="correlationId">Correlation ID</label>
+                <p class="field-hint">
+                  Postęp, zebrane dane i wynik końcowy pojawią się poniżej zaraz po starcie analizy.
+                </p>
+              </div>
+              <p class="analysis-actions__hint">
+                {{ analysisActionsHint() }}
               </p>
             </div>
-            <p class="analysis-actions__hint">
-              {{ analysisActionsHint() }}
-            </p>
-          </div>
+          }
 
           <div class="analysis-settings">
             <label class="field-control" for="aiModel">

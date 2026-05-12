@@ -13,11 +13,13 @@
 .evidence-intro {
   display: grid;
   gap: 12px;
+  align-content: start;
 }
 
 .evidence-intro__chip-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 10px;
 }
 

@@ -157,8 +157,9 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
             assertTrue(prompt.contains("Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
             assertTrue(prompt.contains("If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab class-reference or flow tools with grounded class names and focused keywords before broad DB discovery"));
-            assertTrue(prompt.contains("Every GitLab tool call must include `reason`: one short Polish sentence"));
-            assertTrue(prompt.contains("Every Database tool call must include `reason`: one short Polish sentence"));
+            assertTrue(prompt.contains("Every Elasticsearch HTTP diagnostic tool call, GitLab tool call, Database tool call and Operational Context tool call must include `reason`: one short Polish sentence"));
+            assertTrue(prompt.contains("When Elasticsearch HTTP diagnostic tools are enabled and the evidence points to an opaque external/downstream HTTP failure"));
+            assertTrue(prompt.contains("`elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted"));
             assertTrue(prompt.contains("When possible, include evidenceReferences with artifactId and itemId for important claims."));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));

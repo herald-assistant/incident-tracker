@@ -197,6 +197,13 @@ app-root {
   font-weight: 700;
 }
 
+.panel-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  line-height: 1.2;
+}
+
 .workspace {
   display: grid;
   gap: 16px;
