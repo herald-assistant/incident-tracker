@@ -244,6 +244,8 @@ class ElasticLogSearchServiceTest {
                         "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(containsString("*/external/path/125*")))
+                .andExpect(content().string(containsString("\"query_string\"")))
+                .andExpect(content().string(containsString("\\\"/external/path/125\\\"")))
                 .andExpect(content().string(containsString("now-7d")))
                 .andRespond(withSuccess("""
                         {

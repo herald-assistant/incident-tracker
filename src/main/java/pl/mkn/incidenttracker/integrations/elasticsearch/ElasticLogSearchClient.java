@@ -312,7 +312,10 @@ public class ElasticLogSearchClient {
         for (var field : PATH_FIELDS) {
             should.add(Map.of("wildcard", Map.of(field, value)));
         }
-        should.add(Map.of("wildcard", Map.of("fields.message", value)));
+        should.add(Map.of("query_string", Map.of(
+                "fields", List.of("fields.message"),
+                "query", quotedQueryString(pathPattern)
+        )));
 
         return Map.of(
                 "bool", Map.of(
@@ -320,6 +323,13 @@ public class ElasticLogSearchClient {
                         "minimum_should_match", 1
                 )
         );
+    }
+
+    private String quotedQueryString(String value) {
+        var escaped = value.trim()
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
+        return "\"" + escaped + "\"";
     }
 
     private Object methodFilter(String method) {
