@@ -17,8 +17,8 @@ describe('ContextCatalogTableComponent', () => {
     fixture.componentInstance.openRow.subscribe(openRow);
     fixture.componentInstance.openAggregateDetails.subscribe(openAggregateDetails);
     fixture.componentRef.setInput('columns', [
-      { key: 'project', label: 'Repository' },
-      { key: 'repositories', label: 'Repositories', type: 'aggregate' }
+      { key: 'project', label: 'Repository', tooltip: 'Repository column.' },
+      { key: 'repositories', label: 'Repositories', tooltip: 'Repositories column.', type: 'aggregate' }
     ]);
     fixture.componentRef.setInput('rows', [
       {

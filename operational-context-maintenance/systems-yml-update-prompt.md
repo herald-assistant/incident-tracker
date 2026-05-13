@@ -1,160 +1,108 @@
-Update only `systems.yml` and return the full ready-to-save YAML document only.
+# systems.yml update prompt
 
-You are building the operational system catalog for this repository. Read all attached sources and produce the final content of `src/main/resources/operational-context/systems.yml`.
+You maintain `src/main/resources/operational-context/systems.yml`.
 
-Important repository-specific constraints:
-- Preserve the top-level shape:
-  - `schemaVersion: 1`
-  - `systems: [...]`
-  - `openQuestions: [...]`
-- Each system entry should use this minimal structure:
-  - `id`
-  - `name`
-  - `type`
-  - `ownerTeamId`
-  - `partnerTeamIds`
-  - `externalOwner`
-  - `purpose`
-  - `processes`
-  - `contexts`
-  - `repos`
-  - `dependsOn`
-  - `signals.serviceNames`
-  - `signals.containerNames`
-  - `signals.projectNames`
-  - `signals.packagePrefixes`
-  - `signals.endpoints`
-  - `signals.hosts`
-  - `signals.queues`
-  - `signals.topics`
-  - `signals.schemas`
-  - `signals.spans`
-  - `signals.markers`
-  - `handoff.target`
-  - `handoff.requiredEvidence`
+Treat the attached operational-context YAML files as the catalog model.
+Use only the documented structure below plus useful fields already present in
+this catalog.
 
-How to derive systems:
-1. Start from the current `systems.yml`.
-2. Use `teams.yml`, `processes.yml`, `repo-map.yml`, `bounded-contexts.yml`, and `integrations.yml` as the primary source of truth for ids, ownership, scope, and dependencies.
-3. Use attached incident analysis exports only to identify recurring runtime fingerprints such as service names, container names, project names, package prefixes, endpoint paths, hosts, queue/topic names, spans, and markers.
-4. Use `handoff-rules.md` to align handoff targets and required evidence.
-5. Merge duplicate observations into one stable system entry.
+## Target file contract
 
-YAML syntax safety rules:
-- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
-- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpoints: ["/api/resource/{id}/details"]` - never `endpoints: [/api/resource/{id}/details]`.
-- For lists of endpoint paths, hosts, or any values that may contain URL path-template placeholders like `{id}`, `{customerId}`, etc., prefer YAML block sequences over flow sequences:
+Keep this top-level structure:
 
 ```yaml
-# correct - block sequence, no quoting needed
-endpoints:
-  - /api/resource/{id}/details
-  - /api/resource/{id}/summary
-
-# correct - flow sequence with quotes
-endpoints: ["/api/resource/{id}/details"]
-
-# WRONG - unquoted curly braces in flow sequence break YAML parsing
-endpoints: [/api/resource/{id}/details]
+schemaVersion: 1
+catalogKind: operational-context-system-map
+systems: []
+gaps: []
 ```
 
-- When in doubt, quote the value. Plain unquoted strings in flow sequences are fragile.
+Each `systems[]` entry describes a stable system as the canonical catalog
+entity. Deployment names, service names, runtime aliases, repositories,
+queues, endpoints, and database objects are properties or recognition signals
+for a system. They are not separate catalog entities.
 
-Hard rules:
-- Reuse ids from attached files exactly as they appear. Do not rename team, process, context, repository, or integration ids.
-- `systems.yml` is the map of runtime systems as a whole, not only external systems.
-- Use `type` to distinguish systems, for example `internal` vs `external`.
-- Do not invent ownership.
-- Do not invent repositories for external systems.
-- For internal systems, `repos` is the system code scope, not only the main
-  service repo. Include internal library, shared module, generated client, or
-  integration-library repo ids when classes from those repos can appear in
-  stacktraces or decide incident behavior.
-- Do not create separate system entries for the same system just because incidents show different environments, branches, pods, namespaces, host variants, or deployment versions.
-- Do not model individual interfaces or single endpoints as separate systems; those belong in `integrations.yml`.
-- Keep one system entry per meaningful operational system or external dependency.
-- Prefer stable runtime recognition signals over prose.
-- Prefer short, reusable signals over copied log bodies.
-- Do not paste full stacktraces, long exception bodies, tokens, or transient URLs into signals.
-- `dependsOn` should reference system ids when that dependency is clearly supported by attached sources.
-- If a dependency is visible only once or weakly inferred, prefer an `openQuestions` entry instead of guessing.
-- Do not output explanations, markdown fences, comments, or anything except the final YAML.
+Preferred entry fields:
 
-What matters most:
-- each system must be recognizable from runtime evidence
-- `ownerTeamId`, `partnerTeamIds`, `processes`, `contexts`, and `repos` must stay consistent with the other attached operational-context files
-- `repos` should help later GitLab investigation search all repositories that compose the system runtime behavior, including libraries and shared modules
-- internal and external systems may coexist in this file
-- `integrations.yml` describes contracts between systems, while `systems.yml` describes the systems themselves
-
-Repository-specific guidance:
-- This repo enriches incidents from Elasticsearch, Dynatrace, and deterministic GitLab code resolution, so system recognition often comes from both runtime evidence and code references.
-- Internal systems are often identified by service names, container names, project names, package prefixes, classes, or GitLab-resolved repositories.
-- External systems are often identified by stable hosts, endpoint families, queue/topic names, schemas, or repeated error markers seen in incidents and referenced integrations.
-- If an incident shows an external host or endpoint but not enough evidence for a stable system identity, add an `openQuestions` entry instead of fabricating a system.
-
-Universal examples below are illustrative only.
-Do not copy ids, names, or values from the examples unless they are supported by the attached sources.
-
-Example 1: internal system with clear ownership
-
-If the attached files say:
-- `teams.yml` contains `payments-team`
-- `repo-map.yml` contains repository `payments-api-repo`
-- `processes.yml` contains process `payment-capture`
-- `bounded-contexts.yml` contains context `payments`
-- incidents repeatedly show service `payments-api`, container `payments-api`, package prefix `com.example.payments`
-
-Then a valid system entry could look like this fragment:
-
-- id: payments-api
-  name: Payments API
-  type: internal
-  ownerTeamId: payments-team
-  partnerTeamIds: []
-  externalOwner: null
-  purpose: Executes payment capture and settlement flow.
-  processes: [payment-capture]
-  contexts: [payments]
-  repos: [payments-api-repo]
-  dependsOn: [ledger-service]
-  signals:
-    serviceNames: [payments-api]
-    containerNames: [payments-api]
-    projectNames: [payments-api-repo]
-    packagePrefixes: [com.example.payments]
-    endpoints: [/api/payments, /api/settlements]
+```yaml
+- id: stable-kebab-case-id
+  name: Human readable name
+  type: internal-service | external-system | platform-service | database | library | operator-tool
+  lifecycleStatus: active | inactive | unknown | planned | deprecated
+  aliases: []
+  summary: One or two factual sentences.
+  systemType: business-service | process-service | integration-service | shared-library | datastore | external-dependency | platform-capability
+  criticality: critical | high | medium | low | unknown
+  match:
+    serviceNames: []
+    containerNames: []
+    projectNames: []
+    packagePrefixes: []
+    endpoints: []
     hosts: []
     queues: []
-    topics: [payments.events]
+    topics: []
     schemas: []
-    spans: [PaymentService.capture]
-    markers: [PAYMENTS]
-  handoff:
-    target: payments-oncall
-    requiredEvidence: [correlationId, environment, serviceName, className, endpoint, exception]
+    spans: []
+    markers: []
+  references:
+    repositories: []
+    processes: []
+    boundedContexts: []
+    integrations: []
+    teams: []
+    terms: []
+    handoffRules: []
+  dependencies:
+    upstream: []
+    downstream: []
+    platformServices: []
+  deployment:
+    environments: []
+    runtimeNames: []
+  responsibilities: []
+  handoffHints: []
+  notes: []
+```
 
-Reason:
-- one stable operational system
-- ownership is explicit
-- signals are short and reusable
+Preserve additional existing fields only when they already follow the current
+catalog style and carry useful evidence. Remove duplicate, empty, speculative,
+or shape-conflicting fields.
 
-Example 2: external system with weak evidence
+## Update rules
 
-If the attached sources show only:
-- one incident mentions host `crm.partner.local`
-- one log line contains endpoint `/crm/customers`
-- no explicit owner or stable system identity in `teams.yml`, `repo-map.yml`, `processes.yml`, `bounded-contexts.yml`, or current `systems.yml`
+- Prefer editing an existing system when the evidence matches an existing `id`,
+  alias, repository, package prefix, endpoint, host, queue, or integration.
+- Add a new system only when the evidence identifies a durable runtime or
+  external dependency boundary that operators will need to recognize again.
+- Keep `id` stable once created. Use kebab-case and avoid environment-specific
+  suffixes unless the system identity itself contains them.
+- Keep summaries short and factual. Do not paste stack traces, full URLs with
+  transient query parameters, tokens, or large log fragments into the catalog.
+- Put ownership and routing facts in `responsibilities`, `references.teams`,
+  and `handoffHints` when evidence supports them.
+- Put unresolved durable questions in top-level or entry-level `gaps`; each gap
+  must include enough evidence context to be actionable.
+- Keep references aligned with the attached `repo-map.yml`, `processes.yml`,
+  `bounded-contexts.yml`, `integrations.yml`, `teams.yml`,
+  `glossary.md`, and `handoff-rules.md`.
 
-Then do not invent a fully modeled system entry.
-Add an open question such as:
+## Matching guidance
 
-openQuestions:
-  - "Is `crm.partner.local` a stable external system that should be modeled in `systems.yml`, and if so what is its canonical id and owner?"
+Use `match` for recurring signals that help AI and operators recognize the
+system during analysis:
 
-Reason:
-- one host and one endpoint are not enough to define a stable system entry confidently
+- service, pod, container, artifact, and project names
+- package prefixes and class families
+- endpoint prefixes and stable API paths
+- messaging destinations and stable database/schema names
+- log markers, span names, error codes, and business identifiers
 
-If the attached evidence is too weak to create a confident system entry, keep that area out of `systems` and add a precise item to `openQuestions`.
+Do not create a system from a single weak signal. If a host, endpoint, queue,
+or package prefix appears without a stable system identity, record a precise
+`gaps` item instead.
 
-Return the full updated YAML only.
+## Output rules
+
+Return the complete updated `systems.yml` content only.
+Do not include commentary, markdown fences, diffs, or explanations.

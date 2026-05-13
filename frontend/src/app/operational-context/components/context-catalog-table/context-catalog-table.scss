@@ -19,6 +19,20 @@
   font-weight: 700;
 }
 
+.catalog-table__header-cell {
+  width: fit-content;
+  min-width: 0;
+  cursor: help;
+  text-decoration: underline dotted rgba(94, 108, 132, 0.62);
+  text-underline-offset: 4px;
+}
+
+.catalog-table__header-cell:focus-visible {
+  outline: 3px solid rgba(12, 102, 228, 0.16);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .catalog-table__row {
   min-height: 68px;
   padding: 10px;

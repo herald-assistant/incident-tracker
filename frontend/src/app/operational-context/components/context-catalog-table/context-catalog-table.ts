@@ -13,6 +13,7 @@ export interface ContextCatalogColumn {
   key: string;
   label: string;
   type?: 'text' | 'aggregate' | 'owner';
+  tooltip: string;
 }
 
 @Component({

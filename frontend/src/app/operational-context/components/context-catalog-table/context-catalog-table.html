@@ -1,7 +1,16 @@
 <div class="catalog-table" role="table">
   <div class="catalog-table__header" role="row">
     @for (column of columns(); track column.key) {
-      <span role="columnheader">{{ column.label }}</span>
+      <span
+        class="catalog-table__header-cell"
+        role="columnheader"
+        tabindex="0"
+        [matTooltip]="column.tooltip"
+        matTooltipClass="analysis-log-tooltip"
+        [matTooltipShowDelay]="150"
+      >
+        {{ column.label }}
+      </span>
     }
   </div>
 

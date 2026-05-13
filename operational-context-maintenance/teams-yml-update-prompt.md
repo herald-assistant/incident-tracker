@@ -1,138 +1,95 @@
-Update only `teams.yml` and return the full ready-to-save YAML document only.
+# teams.yml update prompt
 
-You are building the operational ownership map for this repository. Read all attached sources and produce the final content of `src/main/resources/operational-context/teams.yml`.
+You maintain `src/main/resources/operational-context/teams.yml`.
 
-Important repository-specific constraints:
-- Preserve the top-level shape:
-  - `schemaVersion: 1`
-  - `tribe: { id: ..., name: ... }`
-  - `teams: [...]`
-  - `openQuestions: [...]`
-- Each team entry should use this minimal structure:
-  - `id`
-  - `name`
-  - `purpose`
-  - `owns.systems`
-  - `owns.repos`
-  - `owns.processes`
-  - `owns.contexts`
-  - `owns.integrations`
-  - `signals.serviceNames`
-  - `signals.containerNames`
-  - `signals.projectNames`
-  - `signals.packagePrefixes`
-  - `signals.endpoints`
-  - `signals.hosts`
-  - `signals.queues`
-  - `signals.topics`
-  - `handoff.target`
-  - `handoff.requiredEvidence`
+Treat the attached operational-context YAML files as the catalog model.
+Use only the documented structure below plus useful fields already present in
+this catalog.
 
-How to derive teams:
-1. Start from the current `teams.yml`.
-2. Use `systems.yml`, `repo-map.yml`, `processes.yml`, `integrations.yml`, and `bounded-contexts.yml` as the primary source of truth for ownership and ids.
-3. Use `handoff-rules.md` to align likely routing targets and required evidence.
-4. Use attached incident analysis exports only to enrich short runtime signals and to confirm recurring routing patterns.
-5. Do not use architecture docs or incident logs to invent ownership that is not supported by the operational-context sources.
+## Target file contract
 
-YAML syntax safety rules:
-- Never use TAB characters for indentation. YAML forbids TABs entirely. Use only spaces (2 spaces per level).
-- Inside YAML flow sequences (`[value1, value2]`), always double-quote any value that contains curly braces `{}`, colons `:`, hash `#`, square brackets `[]`, or commas. Example: `endpoints: ["/api/resource/{id}/details"]` - never `endpoints: [/api/resource/{id}/details]`.
-- For lists of endpoint paths, hosts, or any values that may contain URL path-template placeholders like `{id}`, `{customerId}`, etc., prefer YAML block sequences over flow sequences:
+Keep this top-level structure:
 
 ```yaml
-# correct - block sequence, no quoting needed
-endpoints:
-  - /api/resource/{id}/details
-  - /api/resource/{id}/summary
-
-# correct - flow sequence with quotes
-endpoints: ["/api/resource/{id}/details"]
-
-# WRONG - unquoted curly braces in flow sequence break YAML parsing
-endpoints: [/api/resource/{id}/details]
+schemaVersion: 1
+catalogKind: operational-context-team-map
+teams: []
+externalParties: []
+gaps: []
 ```
 
-- When in doubt, quote the value. Plain unquoted strings in flow sequences are fragile.
+Each `teams[]` entry describes an internal operational or delivery team. Each
+`externalParties[]` entry describes a party outside the internal team catalog
+that can own, support, or participate in a system, process, integration, or
+handoff.
 
-Hard rules:
-- Reuse ids from attached files exactly as they appear. Do not rename system, repo, process, context, or integration ids.
-- Do not invent ownership.
-- Prefer explicit owner fields from attached sources over inference from incidents.
-- If evidence is not strong enough, keep the current value or add an `openQuestions` entry.
-- If a team id is clearly implied by attached sources but the display name is not explicit, derive a readable title-cased name from the id and add an `openQuestions` note to confirm it.
-- If `tribe` is not clearly evidenced, keep:
-  - `id: null`
-  - `name: null`
-- Keep lists short and operational.
-- Prefer stable identifiers over prose.
-- Do not duplicate teams or create aliases for the same team.
-- Do not treat GitLab group or environment as a team.
-- Do not output explanations, markdown fences, comments, or anything except the final YAML.
+Preferred team entry fields:
 
-What matters most:
-- `owns.*` must be consistent with the ids used in the other attached operational-context files.
-- `signals.*` are secondary and should only contain recurring, incident-useful fingerprints.
-- `handoff.target` and `handoff.requiredEvidence` should be short and practical.
+```yaml
+- id: stable-kebab-case-id
+  name: Human readable team name
+  type: engineering | operations | business | support | platform | unknown
+  lifecycleStatus: active | inactive | unknown | planned | deprecated
+  aliases: []
+  summary: One or two factual sentences.
+  responsibilityEvidenceType: confirmed | inferred | unknown | mixed
+  matchSignals: []
+  responsibilities:
+    - targetType: system | repository | process | boundedContext | integration | handoffRule | term
+      targetId: referenced-catalog-id
+      role: owner | primary-support | contributor | consumer | approver | escalation | observer
+      scope: []
+      side: source | target | shared | none
+      status: confirmed | inferred | unknown
+      confidence: high | medium | low | unknown
+      evidence: []
+  routingHints: []
+  handoffHints: []
+  collaboration: []
+  analysisHints: []
+  gaps: []
+```
 
-Universal examples below are illustrative only.
-Do not copy ids, names, or values from the examples unless they are supported by the attached sources.
+Preferred external party entry fields:
 
-Example 1: clear ownership across sources
+```yaml
+- id: stable-kebab-case-id
+  name: Human readable party name
+  type: vendor | bank-unit | regulator | customer | partner | unknown
+  lifecycleStatus: active | inactive | unknown | planned | deprecated
+  aliases: []
+  summary: One or two factual sentences.
+  matchSignals: []
+  responsibilities: []
+  routingHints: []
+  handoffHints: []
+  analysisHints: []
+  gaps: []
+```
 
-If the attached files say:
-- `systems.yml` contains system `payments-api` with `ownerTeamId: payments-team`
-- `repo-map.yml` contains repository `payments-api-repo` with `ownerTeamId: payments-team`
-- `processes.yml` contains process `payment-capture` with `ownerTeamId: payments-team`
-- `bounded-contexts.yml` contains context `payments` with `ownerTeamId: payments-team`
-- `integrations.yml` contains integration `payments-to-ledger-sync` with `ownerTeamId: payments-team`
+Preserve additional existing fields only when they follow the current catalog
+style and carry useful evidence. Remove duplicate, empty, speculative, or
+shape-conflicting fields.
 
-Then a valid team entry could look like this fragment:
+## Update rules
 
-- id: payments-team
-  name: Payments Team
-  purpose: Owns payment capture and settlement flow.
-  owns:
-    systems: [payments-api]
-    repos: [payments-api-repo]
-    processes: [payment-capture]
-    contexts: [payments]
-    integrations: [payments-to-ledger-sync]
-  signals:
-    serviceNames: [payments-api]
-    containerNames: [payments-api]
-    projectNames: [payments-api-repo]
-    packagePrefixes: [com.example.payments]
-    endpoints: [/api/payments, /api/settlements]
-    hosts: []
-    queues: []
-    topics: [payments.events]
-  handoff:
-    target: payments-oncall
-    requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+- Prefer editing an existing team or external party when evidence matches a
+  known name, alias, routing hint, support cue, ownership record, or handoff.
+- Add a new team only when evidence identifies a durable group that operators
+  can route to again.
+- Add an external party when the evidence identifies a durable non-team
+  participant, vendor, banking unit, partner, customer group, or regulator.
+- Keep `id` stable once created. Use kebab-case and readable domain language.
+- Express ownership through `responsibilities[]`, using `targetType` and
+  `targetId` to point to the catalog entity.
+- Use `handoffHints` for practical routing and escalation guidance.
+- Put unresolved durable questions in top-level or entry-level `gaps`; each gap
+  must include enough evidence context to be actionable.
+- Keep references aligned with the attached `systems.yml`, `repo-map.yml`,
+  `processes.yml`, `bounded-contexts.yml`, `integrations.yml`,
+  `glossary.md`, and `handoff-rules.md`.
 
-Reason:
-- ownership is explicit in attached sources
-- ids are reused exactly
-- signals stay short and operational
+## Output rules
 
-Example 2: runtime signals exist but ownership is unclear
-
-If the attached files show only:
-- incidents mention host `crm.partner.local` and endpoint `/crm/customers`
-- no `ownerTeamId` for that area in `systems.yml`, `repo-map.yml`, `processes.yml`, `integrations.yml`, or `bounded-contexts.yml`
-- no such team already exists in current `teams.yml`
-
-Then do not invent a new team.
-Keep ownership unchanged and add an open question such as:
-
-openQuestions:
-  - "Who owns the CRM customer integration exposed via host `crm.partner.local` and endpoint `/crm/customers`?"
-
-Reason:
-- runtime evidence alone is not enough to assign ownership
-- open question is better than fabricated routing
-
-If the attached evidence is too weak to create a confident team entry, keep `teams: []` for that area and add a precise item to `openQuestions`.
-
-Return the full updated YAML only.
+Return the complete updated `teams.yml` content only.
+Do not include commentary, markdown fences, diffs, or explanations.
