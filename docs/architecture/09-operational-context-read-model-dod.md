@@ -635,25 +635,287 @@ Implementacja jest gotowa, gdy:
 12. Migracja istnieje jako seria malych krokow, a nie jednorazowy rewrite
     katalogu.
 
-## Rekomendowana kolejnosc prac
+## Plan krokow milowych
 
-1. Zdefiniowac kontrakty DTO read modelu bez migracji YAML.
-2. Dodac relation/index builder nad obecnym katalogiem.
-3. Dodac provenance i deduplikacje relacji.
-4. Dodac walidator redundancji jako warning-only.
-5. Dodac `implementation-map.yml` albo rownowazna sekcje.
-6. Dodac `flows.yml` albo rownowazna sekcje.
-7. Podpiac code-search read model do GitLab tools.
-8. Podpiac entity/flow/blast-radius read models do operator API.
-9. Zaktualizowac maintenance prompts.
-10. Migrowac YAML partiami:
-    - `integrations.yml`,
-    - `systems.yml`,
-    - `bounded-contexts.yml`,
-    - `processes.yml`,
-    - `repo-map.yml`,
-    - `teams.yml`.
-11. Zaostrzyc walidator redundancji z warning na error dla nowych wpisow.
+Kolejnosc prac jest celowo ustawiona tak, zeby najpierw zbudowac wartosc
+analityczna nad obecnym katalogiem, a dopiero potem odchudzac YAML. Nie
+nalezy migrowac YAML przed zbudowaniem read modelu, relation/index buildera i
+provenance. Najpierw powstaje kompilator grafu, potem porzadkowane sa zrodla.
+
+### 1. Baseline i audyt obecnego katalogu
+
+Cel:
+
+- ustalic obecny stan grafu operational context,
+- policzyc miejsca redundancji i relacji zwrotnych,
+- wskazac, ktore powtorzenia sa tymczasowo akceptowane, a ktore maja zniknac.
+
+Rezultat:
+
+- raport self-reference,
+- raport backlinkow,
+- raport duplikacji `participants` vs `references`,
+- raport relacji cross-file,
+- lista typow encji i typow relacji obecnych w katalogu,
+- lista najwiekszych miejsc kosztu maintenance.
+
+DoD:
+
+- sa liczby i konkretne przyklady z plikow,
+- raport nie wymaga jeszcze migracji YAML,
+- wiadomo, ktore ostrzezenia powinny stac sie pozniej regulem walidatora.
+
+### 2. Kontrakty read modelu
+
+Cel:
+
+- zdefiniowac payloady potrzebne FE, LLM i tools bez zmiany YAML.
+
+Rezultat:
+
+- kontrakt `EntityEnvelope`,
+- kontrakt `FlowReadModel`,
+- kontrakt `CodeSearchReadModel`,
+- kontrakt `BlastRadiusReadModel`,
+- kontrakt `OnboardingReadModel`,
+- przykladowe JSON-y dla systemu, bounded contextu, integracji, procesu,
+  endpointu i klasy.
+
+DoD:
+
+- wiadomo, jaki payload ma dostac FE,
+- wiadomo, jaki payload ma dostac LLM,
+- wiadomo, jaki payload ma dostac GitLab/code-search tool,
+- kazdy model przewiduje `provenance`,
+- kontrakty sa niezalezne od incident analysis.
+
+### 3. Relation/index builder nad obecnym katalogiem
+
+Cel:
+
+- zbudowac graf relacji w kodzie z aktualnych YAML/MD,
+- wygenerowac sasiedztwo i backlinki bez recznego utrzymywania ich w YAML.
+
+Rezultat:
+
+- indeks `entity -> neighbors`,
+- indeks `entity -> incomingRelations`,
+- indeks `entity -> outgoingRelations`,
+- deduplikacja relacji,
+- provenance dla kazdej relacji,
+- rozroznienie relacji kanonicznych i pochodnych.
+
+DoD:
+
+- mozna zapytac o `system:clp-agreement-process` i dostac powiazane integracje,
+  procesy, repozytoria, bounded contexty i teams,
+- relacje zwrotne sa wyliczone, a nie wymagaja recznych backlinkow,
+- builder dziala nad obecnym katalogiem bez wymagania jednorazowego rewrite.
+
+### 4. Code search read model
+
+Cel:
+
+- usunac zalozenie, ze LLM wie, czy klasa jest w glownym repozytorium,
+  bibliotece, module monolitu albo wygenerowanym kliencie.
+
+Rezultat:
+
+- read model z primary repository,
+- shared/imported libraries,
+- priorytety repozytoriow i modulow,
+- include/exclude roots,
+- package prefixes,
+- class hints,
+- endpoint hints,
+- queue/topic hints,
+- database/entity hints,
+- role repozytoriow w scope,
+- reason, dlaczego dane repo albo biblioteka sa czescia scope.
+
+DoD:
+
+- dla systemu, procesu albo bounded contextu GitLab tool dostaje komplet
+  repozytoriow do przeszukania,
+- LLM nie musi zgadywac, w ktorym repo jest klasa,
+- payload code-search ma provenance i limity rozmiaru.
+
+### 5. Walidator redundancji jako warning-only
+
+Cel:
+
+- zaczac pilnowac zasad modelu bez blokowania dalszego zasilania katalogu.
+
+Rezultat:
+
+- warningi dla self-reference,
+- warningi dla tej samej relacji utrzymywanej w wielu miejscach,
+- warningi dla `participants` i `references` powtarzajacych te same systemy
+  albo bounded contexty,
+- warningi dla relacji zwrotnych bez osobnego znaczenia,
+- warningi dla code-search scope bez jasnego repozytorium podstawowego,
+- warningi dla relacji bez provenance w read modelu.
+
+DoD:
+
+- warningi sa widoczne w testach, logach albo operator API,
+- build jeszcze nie musi failowac,
+- nowe ostrzezenia mozna powiazac z konkretnym plikiem i polem.
+
+### 6. Implementation map
+
+Cel:
+
+- jawnie opisac, gdzie bounded context jest zaimplementowany i w jakiej roli
+  lifecycle.
+
+Rezultat:
+
+- `implementation-map.yml` albo rownowazna sekcja,
+- relacja bounded context -> system -> repository -> module -> package,
+- relacja implementation -> code-search scope,
+- lifecycle roles: `primary`, `source-implementation`,
+  `target-implementation`, `parallel`, `fallback`, `deprecated`,
+  `being-replaced`,
+- migration status i relacje `replacedBy`/`dependsOn` tam, gdzie system jest w
+  refaktorze.
+
+DoD:
+
+- mozna opisac stara i nowa implementacje tego samego bounded contextu,
+- mozna wskazac implementacje w monolicie i mikroserwisie docelowym,
+- read model potrafi pokazac implementacje dla systemu, bounded contextu,
+  procesu i flow step,
+- ownership moze odnosic sie do implementacji, a nie tylko calego systemu albo
+  calego bounded contextu.
+
+### 7. Flow model
+
+Cel:
+
+- umozliwic analizy typu FE -> endpoint -> bounded context -> DB ->
+  notifications -> external system.
+
+Rezultat:
+
+- `flows.yml` albo rownowazna sekcja,
+- trigger flow,
+- ordered steps,
+- endpointy,
+- DB reads/writes,
+- calls do support capabilities,
+- integracje zewnetrzne,
+- async events,
+- schedulery,
+- outcome,
+- failure modes,
+- powiazanie krokow z implementation i code-search scope.
+
+DoD:
+
+- read model potrafi wygenerowac upstream/downstream z flow,
+- flow explorer moze pokazac przebieg requestu albo use case'u,
+- blast-radius analysis moze wystartowac z endpointu, kolejki, tabeli,
+  integracji albo klasy,
+- dokumentacja systemu moze byc generowana z flow read modelu.
+
+### 8. FE/API projekcje read modelu
+
+Cel:
+
+- sprawic, zeby FE i LLM korzystaly z projekcji read modelu, nie z recznie
+  zdenormalizowanych YAML.
+
+Rezultat:
+
+- operator API dla entity envelope,
+- operator API dla flow read model,
+- operator API dla code-search read model,
+- operator API dla blast-radius read model,
+- FE pokazuje relacje jako canonical albo derived,
+- FE pokazuje provenance i gaps.
+
+DoD:
+
+- uzytkownik moze wejsc od systemu, bounded contextu, integracji, procesu,
+  endpointu albo klasy,
+- UI pokazuje pelny kontekst mimo trzymania faktu w jednym miejscu w YAML,
+- payloady sa limitowane i nadaja sie do wykorzystania przez LLM.
+
+### 9. Aktualizacja maintenance prompts
+
+Cel:
+
+- nauczyc AI zasilajace katalog wpisywania faktow do wlasciwego miejsca.
+
+Rezultat:
+
+- prompty maja macierz wlascicieli faktow,
+- prompty zakazuja recznych backlinkow,
+- prompty oddzielaja write model od read modelu,
+- prompty wymagaja `gaps`, gdy nie wiadomo, gdzie fakt nalezy,
+- prompty wskazuja, ze kompletne widoki FE/LLM sa generowane przez kod.
+
+DoD:
+
+- nowo generowane YAML nie zwiekszaja redundancji,
+- AI nie probuje dopelniac read modelu recznie w YAML,
+- reviewer widzi, gdzie powinien trafic kazdy typ faktu.
+
+### 10. Migracja YAML partiami
+
+Cel:
+
+- uproscic write model dopiero po tym, jak read model odtwarza pelny kontekst.
+
+Kolejnosc:
+
+1. `integrations.yml`:
+   - zostawic `participants` jako kanoniczne miejsce source/target,
+   - usuwac dublujace `references.systems` i `references.boundedContexts`.
+2. `systems.yml`:
+   - usuwac self-reference,
+   - usuwac dependency wynikajace z integracji albo flows,
+   - zostawic fakty runtime i deployment.
+3. `bounded-contexts.yml`:
+   - usuwac reczne backlinki do integracji i systemow,
+   - zostawic semantyke i granice domeny.
+4. `processes.yml`:
+   - usuwac symetryczne relacje process-process bez osobnego znaczenia,
+   - zostawic proces, kroki i outcome.
+5. `repo-map.yml`:
+   - odchudzic `codeSearchScopes.target`,
+   - zostawic fakty code-search, repozytoria, moduly i biblioteki.
+6. `teams.yml`:
+   - przeniesc ownership na najprecyzyjniejszy target, np. implementation albo
+     flow step, gdy caly system albo caly bounded context jest zbyt szeroki.
+
+DoD:
+
+- po kazdej partii read model pozostaje kompletny,
+- liczba warningow walidatora spada,
+- nie ma utraty informacji potrzebnej FE, LLM ani GitLab tools,
+- migracje sa male i reviewowalne.
+
+### 11. Zaostrzenie walidacji
+
+Cel:
+
+- utrwalic reguly i zablokowac powrot recznej redundancji.
+
+Rezultat:
+
+- warning-only przechodzi stopniowo w error dla nowych wpisow,
+- testy kontraktowe read modelu,
+- snapshoty typowych payloadow,
+- testy walidatora na przykladowych naruszeniach.
+
+DoD:
+
+- nie da sie przypadkiem dodac self-reference,
+- nie da sie dodac recznego backlinku bez uzasadnionego wyjatku,
+- nie da sie powtorzyc tego samego faktu w `participants` i `references`,
+- read model ma stabilny kontrakt dla FE, LLM i tools.
 
 ## Ostateczny rezultat
 
