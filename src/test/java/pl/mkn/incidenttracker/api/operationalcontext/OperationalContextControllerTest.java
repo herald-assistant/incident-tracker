@@ -62,10 +62,7 @@ class OperationalContextControllerTest {
                 "internal",
                 null,
                 "Runs core flow",
-                emptyAggregate("Repositories"),
-                emptyAggregate("Processes"),
-                emptyAggregate("Contexts"),
-                emptyAggregate("Integrations"),
+                emptyAggregate("Relations"),
                 emptyAggregate("Signals"),
                 emptyAggregate("Handoff"),
                 emptyAggregate("Validation"),
@@ -75,7 +72,7 @@ class OperationalContextControllerTest {
         mockMvc.perform(get("/api/operational-context/systems"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("app-core"))
-                .andExpect(jsonPath("$[0].repositories.count").value(0));
+                .andExpect(jsonPath("$[0].relations.count").value(0));
     }
 
     @Test

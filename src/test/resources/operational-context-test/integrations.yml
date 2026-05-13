@@ -10,7 +10,9 @@ integrations:
         system: app-core
       targets:
         - system: partner-service
-      finalTargets: [partner-service]
+      finalTargets:
+        - system: partner-service
+          role: server
     transport:
       protocols: [SOAP]
       http:

@@ -52,9 +52,7 @@ class OperationalContextViewServiceTest {
         assertEquals("new-system", system.id());
         assertEquals("internal-application", system.kind());
         assertEquals("team-a", system.owner().value());
-        assertEquals(1, system.repositories().count());
-        assertEquals(1, system.processes().count());
-        assertEquals(1, system.contexts().count());
+        assertEquals(1, system.relations().count());
         assertEquals(1, system.signals().count());
 
         var repository = service.repositories().get(0);
@@ -62,7 +60,6 @@ class OperationalContextViewServiceTest {
         assertEquals("Group", repository.group());
         assertEquals("team-a", repository.owner().value());
         assertEquals(1, repository.systems().count());
-        assertEquals(1, repository.processes().count());
         assertEquals(1, repository.contexts().count());
         assertFalse(repository.packageRoots().detailsIds().isEmpty());
         assertFalse(repository.entrypoints().detailsIds().isEmpty());
@@ -73,6 +70,8 @@ class OperationalContextViewServiceTest {
         assertEquals("New Scope", codeSearchScope.name());
         assertEquals(1, codeSearchScope.repositories().count());
         assertEquals(3, codeSearchScope.targets().count());
+        assertEquals(3, codeSearchScope.dataHints().count());
+        assertTrue(codeSearchScope.dataHints().detailsIds().contains("Migrations:src/main/resources/db/changelog"));
 
         var process = service.processes().get(0);
         assertEquals("Current process summary", process.purpose());
@@ -94,8 +93,6 @@ class OperationalContextViewServiceTest {
         var context = service.boundedContexts().get(0);
         assertEquals("Current bounded context summary", context.purpose());
         assertEquals(1, context.systems().count());
-        assertEquals(1, context.repositories().count());
-        assertEquals(1, context.processes().count());
         assertEquals(1, context.terms().count());
 
         var team = service.teams().get(0);
@@ -107,25 +104,25 @@ class OperationalContextViewServiceTest {
 
         assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
         assertTrue(service.search("primary-application").stream().anyMatch(result -> result.type().equals("code-search-scope")));
+        assertTrue(service.search("db/changelog").stream().anyMatch(result -> result.type().equals("code-search-scope")));
         assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
     }
 
     @Test
-    void shouldValidateBrokenReferencesDuplicateSignalsAndOwnerConsistency() {
+    void shouldValidateBrokenOwnerSideReferencesAndDuplicateSignals() {
         var service = new OperationalContextViewService(port(brokenCatalog()));
 
         var findings = service.validation();
 
         assertTrue(findings.stream().anyMatch(finding ->
                 finding.category().equals("reference-integrity")
-                        && finding.entityType().equals("system")
-                        && finding.detail().contains("missing-repo")));
+                        && finding.entityType().equals("repository")
+                        && finding.detail().contains("missing-system")));
         assertTrue(findings.stream().anyMatch(finding ->
                 finding.category().equals("signal-quality")
-                        && finding.title().contains("Duplicate serviceName")));
-        assertTrue(findings.stream().anyMatch(finding ->
-                finding.category().equals("ownership-consistency")
-                        && finding.title().contains("Owner team does not list")));
+                && finding.title().contains("Duplicate serviceName")));
+        assertFalse(findings.stream().anyMatch(finding -> finding.title().contains("Duplicate endpointPrefix")));
+        assertFalse(findings.stream().anyMatch(finding -> finding.category().equals("ownership-consistency")));
     }
 
     @Test
@@ -196,7 +193,12 @@ class OperationalContextViewServiceTest {
                         )
                 ),
                 List.of(),
-                List.of(),
+                List.of(map(
+                        "id", "broken-repo",
+                        "name", "Broken Repo",
+                        "git", map("group", "Group", "project", "broken", "projectPath", "Group/broken"),
+                        "references", map("systems", List.of("missing-system"))
+                )),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -261,7 +263,8 @@ class OperationalContextViewServiceTest {
                                         "teams", List.of("team-a")
                                 ),
                                 "responsibilities", List.of(map("teamId", "team-a")),
-                                "matchSignals", map("exact", map("serviceNames", List.of("new-service"))),
+                                "match", map("serviceNames", List.of("new-service")),
+                                "dependencies", map("downstream", List.of("partner-system")),
                                 "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("correlationId"))
                         ),
                         map(
@@ -301,7 +304,10 @@ class OperationalContextViewServiceTest {
                                 "processes", List.of("new-process"),
                                 "boundedContexts", List.of("new-context")
                         ),
-                        "sourceLayout", map("sourceRoots", List.of("src/main/java/com/example/newservice")),
+                        "sourceLayout", map(
+                                "sourceRoots", List.of("src/main/java/com/example/newservice"),
+                                "databaseMigrationPaths", List.of("src/main/resources/db/changelog")
+                        ),
                         "matchSignals", map("strong", map("packagePrefixes", List.of("com.example.newservice"), "classHints", List.of("NewController"))),
                         "modules", List.of(map("moduleId", "api", "sourceRoots", List.of("src/main/java"), "matchSignals", map("strong", map("classHints", List.of("NewController"))))),
                         "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("projectPath"))

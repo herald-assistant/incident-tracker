@@ -259,6 +259,11 @@ Procesy pomagaja tlumaczyc techniczny blad na funkcje operacyjna i routing.
 
 - category, integration style, flow direction, criticality,
 - `participants`: source, targets, intermediaries, finalTargets,
+  gdzie kazdy participant ma ten sam ksztalt: `system`, opcjonalne `role`,
+  `boundedContext`, `repositories`, `modules`, `externalOwner` i `notes`.
+  `finalTargets` nie jest osobnym typem referencji; to docelowy participant
+  koncowego systemu za gatewayem/mediatorem, a plaskie system id sa wyliczane
+  z pola `system`,
 - `transport`: HTTP, messaging i database signals,
 - `channels`: typ, nazwa, kierunek i sygnaly,
 - `implementation`: local side, client/controller/listener/publisher classes,

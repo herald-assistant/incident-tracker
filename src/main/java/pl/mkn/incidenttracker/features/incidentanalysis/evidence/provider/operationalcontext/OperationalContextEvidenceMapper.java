@@ -76,11 +76,9 @@ public class OperationalContextEvidenceMapper {
             var codeSearchRepositories = codeSearch.repositories();
             var sourcePackages = new ArrayList<String>();
             sourcePackages.addAll(repositoryPackages(codeSearchRepositories));
-            sourcePackages.addAll(system.codeSearchScope().packagePrefixes());
             sourcePackages.addAll(codeSearch.packagePrefixes());
             var classHints = new ArrayList<String>();
             classHints.addAll(repositoryClassHints(codeSearchRepositories));
-            classHints.addAll(system.codeSearchScope().classHints());
             classHints.addAll(codeSearch.classHints());
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_ID, systemId);
@@ -290,7 +288,6 @@ public class OperationalContextEvidenceMapper {
         var classHints = new ArrayList<String>();
         var seedRepoIds = new ArrayList<String>();
         seedRepoIds.addAll(repoIds);
-        seedRepoIds.addAll(system.codeSearchScope().repositories());
         var matchedScopes = matchingCodeSearchScopes(catalog, system, seedRepoIds);
 
         for (var scope : matchedScopes) {
@@ -486,6 +483,9 @@ public class OperationalContextEvidenceMapper {
         var owners = new ArrayList<String>();
         owners.add(integration.participants().source().externalOwner());
         for (var target : integration.participants().targets()) {
+            owners.add(target.externalOwner());
+        }
+        for (var target : integration.participants().finalTargets()) {
             owners.add(target.externalOwner());
         }
         return joined(deduplicate(owners));

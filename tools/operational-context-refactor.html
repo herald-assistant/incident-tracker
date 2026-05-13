@@ -128,7 +128,7 @@
 
     .options {
       display: grid;
-      grid-template-columns: repeat(3, minmax(190px, 1fr));
+      grid-template-columns: repeat(4, minmax(190px, 1fr));
       gap: 8px;
       margin-top: 12px;
     }
@@ -307,6 +307,10 @@
         <input id="removeEmptyReferenceFields" type="checkbox" checked>
         <span>Usun puste pola w <code>references</code> po migracji, zeby zmniejszyc katalog.</span>
       </label>
+      <label class="check">
+        <input id="removeSystemCodeSignals" type="checkbox" checked>
+        <span>Usun z <code>systems.yml</code> sygnaly kodu i transportu: endpointy, kolejki, klasy oraz package hints.</span>
+      </label>
     </div>
 
     <div id="status" class="status"></div>
@@ -373,7 +377,6 @@
     rule('repository', 'integrations', 'integration', 'integration', 'repositories'),
     rule('repository', 'teams', 'team', 'team', 'repositories'),
 
-    rule('process', 'repositories', 'repository', 'repository', 'processes'),
     rule('process', 'integrations', 'integration', 'integration', 'processes'),
     rule('process', 'teams', 'team', 'team', 'processes'),
 
@@ -385,6 +388,29 @@
     rule('boundedContext', 'integrations', 'integration', 'integration', 'boundedContexts'),
     rule('boundedContext', 'teams', 'team', 'team', 'boundedContexts')
   ];
+
+  const systemCodeSignalFields = new Set([
+    'endpointPrefixes',
+    'endpointTemplates',
+    'operationNames',
+    'queueNames',
+    'queues',
+    'topics',
+    'routingKeys',
+    'packagePrefixes',
+    'classHints',
+    'entrypoints'
+  ]);
+
+  const systemCodeSearchFields = new Set([
+    'packagePrefixes',
+    'classHints',
+    'configPrefixes',
+    'generatedClients',
+    'sharedLibraries',
+    'searchTogetherWithSystems',
+    'searchNotes'
+  ]);
 
   let loadedFiles = new Map();
   let outputFiles = new Map();
@@ -618,7 +644,7 @@
         const values = owner.references[ruleDef.canonicalField] || [];
         for (const targetId of values) {
           if (targetId) {
-            edges.add(edgeKey(ruleDef.canonicalOwnerType, owner.id, ruleDef.targetType, targetId));
+            edges.add(edgeKey(ruleDef.canonicalOwnerType, owner.id, ruleDef.removeFromType, targetId));
           }
         }
       }
@@ -652,7 +678,8 @@
     const options = {
       removeConfirmedDuplicates: document.getElementById('removeConfirmedDuplicates').checked,
       dedupeReferenceLists: document.getElementById('dedupeReferenceLists').checked,
-      removeEmptyReferenceFields: document.getElementById('removeEmptyReferenceFields').checked
+      removeEmptyReferenceFields: document.getElementById('removeEmptyReferenceFields').checked,
+      removeSystemCodeSignals: document.getElementById('removeSystemCodeSignals').checked
     };
 
     const logs = [];
@@ -662,7 +689,9 @@
       removedCanonicalDuplicates: 0,
       removedInListDuplicates: 0,
       removedEmptyFields: 0,
-      removedEmptyReferenceSections: 0
+      removedEmptyReferenceSections: 0,
+      removedSystemSignalFields: 0,
+      removedSystemSignalValues: 0
     };
 
     const canonicalEdges = buildCanonicalEdges();
@@ -747,6 +776,16 @@
         }
       }
 
+      if (options.removeSystemCodeSignals && item.name === 'systems.yml') {
+        const signalCleanup = removeSystemCodeSignals(item);
+        stats.removedSystemSignalFields += signalCleanup.fields;
+        stats.removedSystemSignalValues += signalCleanup.values;
+        for (const change of signalCleanup.changes) {
+          logs.push(`${item.name} ${change.entry.type}:${change.entry.id} ${change.path}`);
+          logs.push(`  system-owned signal removed: ${change.values.join(', ')}`);
+        }
+      }
+
       if (options.removeEmptyReferenceFields) {
         const cleanupStats = cleanupEmptyReferences(item);
         stats.removedEmptyFields += cleanupStats.fields;
@@ -776,6 +815,8 @@
       `Repeated list items removed: ${stats.removedInListDuplicates}`,
       `Empty reference fields removed: ${stats.removedEmptyFields}`,
       `Empty references sections removed: ${stats.removedEmptyReferenceSections}`,
+      `System code/transport signal fields removed: ${stats.removedSystemSignalFields}`,
+      `System code/transport signal values removed: ${stats.removedSystemSignalValues}`,
       ''
     );
 
@@ -787,6 +828,119 @@
       ? `Gotowe. Zmienione pliki: ${stats.changedFiles}.`
       : 'Gotowe. Nie wykryto zmian do pobrania.'
     );
+  }
+
+  function removeSystemCodeSignals(item) {
+    const removals = [];
+    const changes = [];
+
+    for (const entry of parseEntries(item.name, item.model.lines).filter(candidate => candidate.type === 'system')) {
+      const match = findKeyBlock(item.model.lines, entry.start + 1, entry.end, 4, 'match');
+      collectNestedFieldRemovals(item.model.lines, entry, match, 6, systemCodeSignalFields, 'match', removals, changes);
+
+      const matchSignals = findKeyBlock(item.model.lines, entry.start + 1, entry.end, 4, 'matchSignals');
+      if (matchSignals) {
+        for (const strength of ['exact', 'strong', 'medium', 'weak']) {
+          const strengthBlock = findKeyBlock(item.model.lines, matchSignals.start + 1, matchSignals.end, 6, strength);
+          collectNestedFieldRemovals(item.model.lines, entry, strengthBlock, 8, systemCodeSignalFields, `matchSignals.${strength}`, removals, changes);
+        }
+      }
+
+      const codeSearchScope = findKeyBlock(item.model.lines, entry.start + 1, entry.end, 4, 'codeSearchScope');
+      collectNestedFieldRemovals(item.model.lines, entry, codeSearchScope, 6, systemCodeSearchFields, 'codeSearchScope', removals, changes);
+    }
+
+    removals.sort((a, b) => b.block.start - a.block.start);
+    for (const removal of removals) {
+      item.model.lines.splice(removal.block.start, removal.block.end - removal.block.start);
+    }
+
+    const emptyBlocks = cleanupEmptySystemSignalBlocks(item);
+
+    return {
+      fields: removals.length + emptyBlocks,
+      values: removals.reduce((sum, removal) => sum + removal.values.length, 0),
+      changes
+    };
+  }
+
+  function collectNestedFieldRemovals(lines, entry, parentBlock, childIndent, fields, pathPrefix, removals, changes) {
+    if (!parentBlock) {
+      return;
+    }
+
+    for (const field of fields) {
+      const block = findKeyBlock(lines, parentBlock.start + 1, parentBlock.end, childIndent, field);
+      if (!block) {
+        continue;
+      }
+      const values = blockValues(lines, block);
+      removals.push({ block, values });
+      changes.push({ entry, path: `${pathPrefix}.${field}`, values });
+    }
+  }
+
+  function blockValues(lines, block) {
+    const inline = parseInlineList(block.inline);
+    if (inline) {
+      return inline;
+    }
+    const values = [];
+    for (let i = block.start + 1; i < block.end; i += 1) {
+      const itemMatch = /^\s*-\s*(.+?)\s*$/.exec(lines[i]);
+      if (itemMatch) {
+        values.push(normalizeId(itemMatch[1]));
+      }
+    }
+    return values.filter(Boolean);
+  }
+
+  function cleanupEmptySystemSignalBlocks(item) {
+    let removed = 0;
+    let removals = [];
+
+    for (const entry of parseEntries(item.name, item.model.lines).filter(candidate => candidate.type === 'system')) {
+      const matchSignals = findKeyBlock(item.model.lines, entry.start + 1, entry.end, 4, 'matchSignals');
+      if (!matchSignals) {
+        continue;
+      }
+      for (const strength of ['exact', 'strong', 'medium', 'weak']) {
+        const block = findKeyBlock(item.model.lines, matchSignals.start + 1, matchSignals.end, 6, strength);
+        if (block && !blockHasChildren(item.model.lines, block)) {
+          removals.push(block);
+        }
+      }
+    }
+
+    removals.sort((a, b) => b.start - a.start);
+    for (const block of removals) {
+      item.model.lines.splice(block.start, block.end - block.start);
+      removed += 1;
+    }
+
+    removals = [];
+    for (const entry of parseEntries(item.name, item.model.lines).filter(candidate => candidate.type === 'system')) {
+      for (const key of ['match', 'matchSignals', 'codeSearchScope']) {
+        const block = findKeyBlock(item.model.lines, entry.start + 1, entry.end, 4, key);
+        if (block && !blockHasChildren(item.model.lines, block)) {
+          removals.push(block);
+        }
+      }
+    }
+
+    removals.sort((a, b) => b.start - a.start);
+    for (const block of removals) {
+      item.model.lines.splice(block.start, block.end - block.start);
+      removed += 1;
+    }
+
+    return removed;
+  }
+
+  function blockHasChildren(lines, block) {
+    return lines
+      .slice(block.start + 1, block.end)
+      .some(line => line.trim() && leadingSpaces(line) > block.indent);
   }
 
   function rewriteReferenceField(lines, block, field, values, removeEmpty) {

@@ -16,6 +16,17 @@ import static pl.mkn.incidenttracker.integrations.operationalcontext.Operational
 
 public final class OperationalContextDtos {
 
+    private static final List<String> SYSTEM_RUNTIME_SIGNAL_KEYS = List.of(
+            "serviceNames",
+            "applicationNames",
+            "containerNames",
+            "deploymentNames",
+            "namespaceNames",
+            "imageNames",
+            "artifactNames",
+            "artifactIds"
+    );
+
     private OperationalContextDtos() {
     }
 
@@ -202,6 +213,21 @@ public final class OperationalContextDtos {
             deployment = deployment != null ? deployment : OperationalContextDeployment.empty();
             codeSearchScope = codeSearchScope != null ? codeSearchScope : OperationalContextCodeSearchScope.empty();
             payload = copyMap(payload);
+        }
+
+        @Override
+        public List<String> genericSignals() {
+            var values = new LinkedHashSet<String>();
+            values.addAll(aliases);
+            values.addAll(useFor);
+            values.addAll(runtimeMatchSignals().allValues());
+            values.addAll(deployment.allValues());
+            values.addAll(handoffHints.routeSignals());
+            return copyTextList(values);
+        }
+
+        public OperationalContextMatchSignals runtimeMatchSignals() {
+            return matchSignals.onlyKeys(SYSTEM_RUNTIME_SIGNAL_KEYS);
         }
     }
 
@@ -600,6 +626,15 @@ public final class OperationalContextDtos {
             }
             return copyTextList(values);
         }
+
+        public OperationalContextMatchSignals onlyKeys(Collection<String> keys) {
+            return new OperationalContextMatchSignals(
+                    exact.onlyKeys(keys),
+                    strong.onlyKeys(keys),
+                    medium.onlyKeys(keys),
+                    weak.onlyKeys(keys)
+            );
+        }
     }
 
     public record OperationalContextSignalSet(Map<String, List<String>> valuesByKey) {
@@ -622,6 +657,20 @@ public final class OperationalContextDtos {
                     .filter(StringUtils::hasText)
                     .distinct()
                     .toList();
+        }
+
+        public OperationalContextSignalSet onlyKeys(Collection<String> keys) {
+            if (keys == null || keys.isEmpty()) {
+                return empty();
+            }
+            var allowed = new LinkedHashSet<>(keys);
+            var filtered = new LinkedHashMap<String, List<String>>();
+            valuesByKey.forEach((key, values) -> {
+                if (allowed.contains(key)) {
+                    filtered.put(key, values);
+                }
+            });
+            return new OperationalContextSignalSet(filtered);
         }
 
         public List<String> serviceNames() {
@@ -932,7 +981,7 @@ public final class OperationalContextDtos {
             OperationalContextIntegrationParticipant source,
             List<OperationalContextIntegrationParticipant> targets,
             List<OperationalContextIntegrationParticipant> intermediaries,
-            List<String> finalTargets
+            List<OperationalContextIntegrationParticipant> finalTargets
     ) {
 
         public OperationalContextIntegrationParticipants {
@@ -956,15 +1005,22 @@ public final class OperationalContextDtos {
             values.add(source.system());
             targets.forEach(target -> values.add(target.system()));
             intermediaries.forEach(intermediary -> values.add(intermediary.system()));
-            values.addAll(finalTargets);
+            finalTargets.forEach(target -> values.add(target.system()));
             return copyTextList(values);
         }
 
         public List<String> targetSystems() {
             var values = new LinkedHashSet<String>();
             targets.forEach(target -> values.add(target.system()));
-            values.addAll(finalTargets);
+            values.addAll(finalTargetSystems());
             return copyTextList(values);
+        }
+
+        public List<String> finalTargetSystems() {
+            return finalTargets.stream()
+                    .map(OperationalContextIntegrationParticipant::system)
+                    .filter(StringUtils::hasText)
+                    .toList();
         }
 
         public List<String> intermediarySystems() {
@@ -1375,6 +1431,18 @@ public final class OperationalContextDtos {
                     List.of()
             );
         }
+
+        public List<String> allValues() {
+            return copyTextList(
+                    serviceNames,
+                    applicationNames,
+                    containerNames,
+                    deploymentNames,
+                    namespaceNames,
+                    imageNames,
+                    artifactNames
+            );
+        }
     }
 
     public record OperationalContextCodeSearchScope(
@@ -1746,7 +1814,7 @@ public final class OperationalContextDtos {
                 text(source, "id"),
                 text(source, "name"),
                 text(source, "shortName"),
-                text(source, "kind"),
+                firstNonBlank(text(source, "kind"), text(source, "type"), text(source, "systemType")),
                 text(source, "lifecycleStatus"),
                 text(source, "operationalStatus"),
                 text(source, "criticality"),
@@ -1757,7 +1825,7 @@ public final class OperationalContextDtos {
                 systemParticipants(source.get("participants")),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 deployment(source.get("deployment")),
@@ -1783,7 +1851,7 @@ public final class OperationalContextDtos {
                 responsibilities(source.get("responsibilities")),
                 sourceLayout(source.get("sourceLayout")),
                 mapList(source, "modules").stream().map(OperationalContextDtos::repositoryModule).toList(),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 textList(source, "classHints"),
@@ -1836,7 +1904,7 @@ public final class OperationalContextDtos {
                 processOutcomes(source.get("outcomes")),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 steps,
@@ -1865,7 +1933,7 @@ public final class OperationalContextDtos {
                 implementation(source.get("implementation")),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 textList(source, "failureModes"),
@@ -1885,7 +1953,7 @@ public final class OperationalContextDtos {
                 textList(source, "useFor"),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 operationalSignals(source.get("operationalSignals")),
@@ -1905,7 +1973,7 @@ public final class OperationalContextDtos {
                 textList(source, "useFor"),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 source
@@ -1957,6 +2025,17 @@ public final class OperationalContextDtos {
 
     private static OperationalContextMatchSignals matchSignals(Object value) {
         var source = map(value);
+        if (!source.containsKey("exact")
+                && !source.containsKey("strong")
+                && !source.containsKey("medium")
+                && !source.containsKey("weak")) {
+            return new OperationalContextMatchSignals(
+                    OperationalContextSignalSet.empty(),
+                    signalSet(source),
+                    OperationalContextSignalSet.empty(),
+                    OperationalContextSignalSet.empty()
+            );
+        }
         return new OperationalContextMatchSignals(
                 signalSet(source.get("exact")),
                 signalSet(source.get("strong")),
@@ -2018,7 +2097,7 @@ public final class OperationalContextDtos {
                 source(source.get("source")),
                 textList(source, "sourceRoots"),
                 textList(source, "importantPaths"),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 source
         );
     }
@@ -2064,7 +2143,7 @@ public final class OperationalContextDtos {
                 text(source, "type"),
                 text(source, "summary"),
                 references(source.get("references")),
-                matchSignals(source.get("matchSignals")),
+                matchSignals(firstValue(source, "matchSignals", "match")),
                 source
         );
     }
@@ -2073,13 +2152,48 @@ public final class OperationalContextDtos {
         var source = map(value);
         return new OperationalContextIntegrationParticipants(
                 integrationParticipant(source.get("source")),
-                mapList(source, "targets").stream().map(OperationalContextDtos::integrationParticipant).toList(),
-                mapList(source, "intermediaries").stream().map(OperationalContextDtos::integrationParticipant).toList(),
-                textList(source, "finalTargets")
+                integrationParticipantList(source.get("targets")),
+                integrationParticipantList(source.get("intermediaries")),
+                integrationParticipantList(source.get("finalTargets"))
         );
     }
 
+    private static List<OperationalContextIntegrationParticipant> integrationParticipantList(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+
+        var participants = new ArrayList<OperationalContextIntegrationParticipant>();
+        if (value instanceof Iterable<?> iterable) {
+            iterable.forEach(item -> addIntegrationParticipant(participants, item));
+        } else {
+            addIntegrationParticipant(participants, value);
+        }
+        return List.copyOf(participants);
+    }
+
+    private static void addIntegrationParticipant(
+            List<OperationalContextIntegrationParticipant> participants,
+            Object value
+    ) {
+        var participant = integrationParticipant(value);
+        if (StringUtils.hasText(participant.system())) {
+            participants.add(participant);
+        }
+    }
+
     private static OperationalContextIntegrationParticipant integrationParticipant(Object value) {
+        if (!(value instanceof Map<?, ?>)) {
+            return new OperationalContextIntegrationParticipant(
+                    text(value),
+                    null,
+                    List.of(),
+                    List.of(),
+                    null,
+                    null,
+                    List.of()
+            );
+        }
         var source = map(value);
         return new OperationalContextIntegrationParticipant(
                 text(source, "system"),
@@ -2323,6 +2437,22 @@ public final class OperationalContextDtos {
             }
         }
         return List.of();
+    }
+
+    private static Object firstValue(Map<String, Object> source, String... paths) {
+        for (var path : paths) {
+            var value = source.get(path);
+            if (value instanceof Collection<?> collection && collection.isEmpty()) {
+                continue;
+            }
+            if (value instanceof Map<?, ?> map && map.isEmpty()) {
+                continue;
+            }
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private static String firstText(Map<String, Object> source, String path) {

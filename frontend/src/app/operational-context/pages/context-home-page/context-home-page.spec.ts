@@ -239,10 +239,7 @@ function systemRow(): OperationalContextSystemRowDto {
       sourceRefs: []
     },
     purpose: 'Runs the core flow.',
-    repositories: aggregate('Repositories', 1),
-    processes: aggregate('Processes', 0),
-    contexts: aggregate('Contexts', 0),
-    integrations: aggregate('Integrations', 0),
+    relations: aggregate('Relations', 0),
     signals: aggregate('Signals', 1),
     handoffReadiness: aggregate('Handoff', 1),
     validation: aggregate('Status', 0),

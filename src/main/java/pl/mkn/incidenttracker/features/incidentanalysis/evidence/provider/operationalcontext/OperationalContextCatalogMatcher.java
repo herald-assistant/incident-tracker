@@ -190,11 +190,8 @@ public class OperationalContextCatalogMatcher {
         addSignalMatches(score, signals, integration.transport().protocols(), 4, 2, "protocol");
 
         var matchedSystemIds = matchedIds(systemMatches);
-        if (containsAnyId(
-                matchedSystemIds,
-                integration.participants().source().system(),
-                firstOf(integration.participants().finalTargets())
-        )) {
+        if (containsAnyId(matchedSystemIds, integration.participants().source().system())
+                || anyOverlap(integration.participants().targetSystems(), matchedSystemIds)) {
             score.add(10, "sourceOrTargetSystemMatches");
         }
         if (anyOverlap(integration.participants().intermediarySystems(), matchedSystemIds)) {
@@ -421,13 +418,6 @@ public class OperationalContextCatalogMatcher {
                 .filter(StringUtils::hasText)
                 .map(value -> normalize(value))
                 .toList();
-    }
-
-    private String firstOf(List<String> values) {
-        return values.stream()
-                .filter(StringUtils::hasText)
-                .findFirst()
-                .orElse(null);
     }
 
     private void addSignalMatches(

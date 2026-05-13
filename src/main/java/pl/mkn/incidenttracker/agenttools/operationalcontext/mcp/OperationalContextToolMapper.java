@@ -210,7 +210,7 @@ public class OperationalContextToolMapper {
                 .toList();
         var facets = facets(
                 "ownerTeamIds", teamIds(system.responsibilities(), system.references()),
-                "repositoryIds", join(system.references().repositories(), system.codeSearchScope().repositories()),
+                "repositoryIds", system.references().repositories(),
                 "processIds", system.references().processes(),
                 "boundedContextIds", system.references().boundedContexts(),
                 "integrationIds", system.references().integrations(),
@@ -231,11 +231,10 @@ public class OperationalContextToolMapper {
                 "externalOwner", system.participants().externalOwner()
         );
         var signals = values(
-                "matchSignals", matchSignals(system.matchSignals()),
+                "matchSignals", matchSignals(system.runtimeMatchSignals()),
                 "deployment", deployment(system.deployment())
         );
         var codeSearch = values(
-                "localCodeSearchScope", localCodeSearch(system.codeSearchScope()),
                 "codeSearchScopes", codeSearchScopes.stream()
                         .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
                         .toList()
@@ -463,7 +462,7 @@ public class OperationalContextToolMapper {
                 "sourceSystem", List.of(integration.participants().source().system()),
                 "targetSystems", integration.participants().targetSystems(),
                 "intermediarySystems", integration.participants().intermediarySystems(),
-                "finalTargets", integration.participants().finalTargets(),
+                "finalTargets", integration.participants().finalTargetSystems(),
                 "protocols", integration.transport().protocols(),
                 "endpointPrefixes", integration.transport().http().endpointPrefixes(),
                 "queues", integration.transport().messaging().queues(),
@@ -484,7 +483,7 @@ public class OperationalContextToolMapper {
                         "source", integrationParticipant(integration.participants().source()),
                         "targets", integration.participants().targets().stream().map(this::integrationParticipant).toList(),
                         "intermediaries", integration.participants().intermediaries().stream().map(this::integrationParticipant).toList(),
-                        "finalTargets", integration.participants().finalTargets()
+                        "finalTargets", integration.participants().finalTargets().stream().map(this::integrationParticipant).toList()
                 ),
                 "references", references(integration.references()),
                 "responsibilities", responsibilities(integration.responsibilities()),
@@ -1033,19 +1032,6 @@ public class OperationalContextToolMapper {
                 "namespaceNames", deployment.namespaceNames(),
                 "imageNames", deployment.imageNames(),
                 "artifactNames", deployment.artifactNames()
-        );
-    }
-
-    private Map<String, Object> localCodeSearch(OperationalContextCodeSearchScope scope) {
-        return values(
-                "repositories", scope.repositories(),
-                "packagePrefixes", scope.packagePrefixes(),
-                "classHints", scope.classHints(),
-                "configPrefixes", scope.configPrefixes(),
-                "generatedClients", scope.generatedClients(),
-                "sharedLibraries", scope.sharedLibraries(),
-                "searchTogetherWithSystems", scope.searchTogetherWithSystems(),
-                "searchNotes", scope.searchNotes()
         );
     }
 

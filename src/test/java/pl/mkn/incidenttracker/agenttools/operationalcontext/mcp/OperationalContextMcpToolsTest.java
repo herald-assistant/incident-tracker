@@ -99,7 +99,10 @@ class OperationalContextMcpToolsTest {
         assertEquals("high", result.overview().get("criticality"));
         assertTrue(result.relations().containsKey("references"));
         assertTrue(result.signals().containsKey("deployment"));
+        assertFalse(result.signals().toString().contains("endpointPrefixes"));
+        assertFalse(result.signals().toString().contains("/payments"));
         assertTrue(result.codeSearch().containsKey("codeSearchScopes"));
+        assertFalse(result.codeSearch().containsKey("localCodeSearchScope"));
         assertTrue(result.handoff().containsKey("requiredEvidence"));
         assertEquals(1, result.openQuestions().size());
         assertTrue(result.sourceRefs().contains("systems.yml#payments"));
@@ -143,6 +146,16 @@ class OperationalContextMcpToolsTest {
         assertTrue(codeSearchScope.codeSearch().containsKey("databaseHints"));
         assertTrue(codeSearchScope.sourceCoverage().containsKey("limitations"));
         assertFalse(codeSearchScope.codeSearch().containsKey("payload"));
+
+        var integration = tools.getEntity(
+                "integration",
+                "payment-provider-api",
+                List.of("relations"),
+                "Sprawdzam role uczestnikow integracji.",
+                null
+        );
+        var participants = (Map<?, ?>) integration.relations().get("participants");
+        assertTrue(participants.get("finalTargets").toString().contains("role=server"));
     }
 
     private int count(
@@ -244,7 +257,8 @@ class OperationalContextMcpToolsTest {
                 "summary", "External payment authorization provider.",
                 "participants", map(
                         "source", map("system", "payments"),
-                        "targets", List.of(map("system", "payment-provider", "externalOwner", "Provider"))
+                        "targets", List.of(map("system", "payment-provider", "externalOwner", "Provider")),
+                        "finalTargets", List.of(map("system", "payment-provider", "role", "server"))
                 ),
                 "transport", map("http", map("endpointPrefixes", List.of("/authorize"))),
                 "implementation", map("classHints", List.of("PaymentProviderClient"))

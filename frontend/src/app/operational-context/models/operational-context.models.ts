@@ -93,10 +93,7 @@ export interface OperationalContextSystemRowDto {
   kind: string;
   owner: ExplainableValueDto<string>;
   purpose: string;
-  repositories: ExplainableAggregateDto;
-  processes: ExplainableAggregateDto;
-  contexts: ExplainableAggregateDto;
-  integrations: ExplainableAggregateDto;
+  relations: ExplainableAggregateDto;
   signals: ExplainableAggregateDto;
   handoffReadiness: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
@@ -109,7 +106,6 @@ export interface OperationalContextRepositoryRowDto {
   group: string;
   owner: ExplainableValueDto<string>;
   systems: ExplainableAggregateDto;
-  processes: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
   packageRoots: ExplainableAggregateDto;
   entrypoints: ExplainableAggregateDto;
@@ -172,8 +168,6 @@ export interface OperationalContextBoundedContextRowDto {
   owner: ExplainableValueDto<string>;
   purpose: string;
   systems: ExplainableAggregateDto;
-  repositories: ExplainableAggregateDto;
-  processes: ExplainableAggregateDto;
   terms: ExplainableAggregateDto;
   relations: ExplainableAggregateDto;
   runtimeSignals: ExplainableAggregateDto;
