@@ -4,11 +4,16 @@ import { Observable } from 'rxjs';
 
 import {
   OpenQuestionDto,
+  OperationalContextBlastRadiusReadModel,
   OperationalContextBoundedContextRowDto,
+  OperationalContextCodeSearchReadModel,
   OperationalContextCodeSearchScopeRowDto,
   OperationalContextEntityDetailDto,
+  OperationalContextEntityRelationsReadModelDto,
+  OperationalContextFlowReadModel,
   OperationalContextGlossaryRowDto,
   OperationalContextHandoffRuleRowDto,
+  OperationalContextImplementationReadModel,
   OperationalContextIntegrationRowDto,
   OperationalContextProcessRowDto,
   OperationalContextRepositoryRowDto,
@@ -93,5 +98,56 @@ export class OperationalContextApiService {
       `${this.baseUrl}/entities/${encodeURIComponent(type)}`,
       { params }
     );
+  }
+
+  getEntityRelationsReadModel(
+    type: string,
+    id: string
+  ): Observable<OperationalContextEntityRelationsReadModelDto> {
+    return this.http.get<OperationalContextEntityRelationsReadModelDto>(
+      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/relations`,
+      { params: this.entityIdParams(id) }
+    );
+  }
+
+  getCodeSearchReadModel(
+    type: string,
+    id: string
+  ): Observable<OperationalContextCodeSearchReadModel> {
+    return this.http.get<OperationalContextCodeSearchReadModel>(
+      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/code-search`,
+      { params: this.entityIdParams(id) }
+    );
+  }
+
+  getImplementationReadModel(
+    type: string,
+    id: string
+  ): Observable<OperationalContextImplementationReadModel> {
+    return this.http.get<OperationalContextImplementationReadModel>(
+      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/implementations`,
+      { params: this.entityIdParams(id) }
+    );
+  }
+
+  getFlowReadModel(type: string, id: string): Observable<OperationalContextFlowReadModel> {
+    return this.http.get<OperationalContextFlowReadModel>(
+      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/flow`,
+      { params: this.entityIdParams(id) }
+    );
+  }
+
+  getBlastRadiusReadModel(
+    type: string,
+    id: string
+  ): Observable<OperationalContextBlastRadiusReadModel> {
+    return this.http.get<OperationalContextBlastRadiusReadModel>(
+      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/blast-radius`,
+      { params: this.entityIdParams(id) }
+    );
+  }
+
+  private entityIdParams(id: string): HttpParams {
+    return new HttpParams().set('id', id);
   }
 }

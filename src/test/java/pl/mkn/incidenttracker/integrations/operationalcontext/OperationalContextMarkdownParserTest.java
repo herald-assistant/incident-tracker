@@ -160,6 +160,7 @@ class OperationalContextMarkdownParserTest {
         assertTrue(term.matchSignals().contains("TTY"));
         assertFalse(term.matchSignals().contains("Exact:"));
         assertFalse(term.matchSignals().contains("None"));
+        assertFalse(term.canonicalReferences().contains("None"));
     }
 
     @Test
@@ -187,6 +188,12 @@ class OperationalContextMarkdownParserTest {
                 **Expected first actions**
 
                 - Verify external call
+
+                **Operational context links**
+
+                - `integration:app-core-to-partner-sync`
+                - `system:app-core`
+                - `process:core-process` (primary impact)
                 """;
 
         var rules = parser.parseHandoffRules(markdown);
@@ -199,6 +206,9 @@ class OperationalContextMarkdownParserTest {
         assertEquals("endpoint", rules.get(0).requiredEvidence().get(0));
         assertEquals("Verify external call", rules.get(0).expectedFirstAction().get(0));
         assertEquals("Core Team", rules.get(0).partnerTeams().get(0));
+        assertEquals("app-core", rules.get(0).references().systems().get(0));
+        assertEquals("app-core-to-partner-sync", rules.get(0).references().integrations().get(0));
+        assertEquals("core-process", rules.get(0).references().processes().get(0));
     }
 
     @Test
@@ -211,8 +221,9 @@ class OperationalContextMarkdownParserTest {
 
             assertTrue(rules.size() > 20);
             assertTrue(rules.stream().anyMatch(rule ->
-                    rule.title().equals("Backend service error (decision/limit flow)")
-                            && rule.routeTo().equals("Owner of backend")));
+                    rule.id().equals("tty-decision-not-received")
+                            && rule.references().systems().contains("clp-agreement-process")
+                            && rule.references().integrations().contains("tty-to-clp-agreement-decision")));
         }
     }
 
@@ -226,7 +237,7 @@ class OperationalContextMarkdownParserTest {
 
             assertTrue(terms.stream().anyMatch(term ->
                     term.id().equals("tty")
-                && term.matchSignals().contains("clp.tty.decision.made")));
+                && term.matchSignals().contains("exchange:clp.local.tty.decision.made")));
         assertTrue(terms.stream().anyMatch(term -> !term.matchSignals().isEmpty()));
         }
     }

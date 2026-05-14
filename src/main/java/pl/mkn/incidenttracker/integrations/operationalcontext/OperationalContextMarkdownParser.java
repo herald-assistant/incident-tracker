@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.integrations.operationalcontext;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -70,6 +71,7 @@ final class OperationalContextMarkdownParser {
                     valuesFor(entry, "required evidence"),
                     valuesFor(entry, "expected first actions", "expected first action", "recommended first actions"),
                     partnerTeams(entry),
+                    operationalContextLinks(entry),
                     valuesFor(entry, "notes", "llm tool hints", "limitations")
             ));
         }
@@ -362,7 +364,106 @@ final class OperationalContextMarkdownParser {
         for (var field : REFERENCE_FIELDS) {
             values.addAll(entry.listFields().getOrDefault(field, List.of()));
         }
-        return distinct(values);
+        return distinct(values).stream()
+                .filter(value -> !isNone(value))
+                .toList();
+    }
+
+    private OperationalContextReferences operationalContextLinks(MarkdownEntry entry) {
+        var systems = new ArrayList<String>();
+        var repositories = new ArrayList<String>();
+        var modules = new ArrayList<String>();
+        var processes = new ArrayList<String>();
+        var boundedContexts = new ArrayList<String>();
+        var integrations = new ArrayList<String>();
+        var terms = new ArrayList<String>();
+        var teams = new ArrayList<String>();
+        var externalParties = new ArrayList<String>();
+        var dataStores = new ArrayList<String>();
+        var handoffRules = new ArrayList<String>();
+
+        for (var value : valuesFor(entry, "operational context links", "context links")) {
+            var reference = typedReference(value);
+            if (reference == null) {
+                continue;
+            }
+            switch (reference.type()) {
+                case "system" -> systems.add(reference.id());
+                case "repository" -> repositories.add(reference.id());
+                case "module" -> modules.add(reference.id());
+                case "process" -> processes.add(reference.id());
+                case "bounded-context" -> boundedContexts.add(reference.id());
+                case "integration" -> integrations.add(reference.id());
+                case "term" -> terms.add(reference.id());
+                case "team" -> teams.add(reference.id());
+                case "external-party" -> externalParties.add(reference.id());
+                case "datastore" -> dataStores.add(reference.id());
+                case "handoff-rule" -> handoffRules.add(reference.id());
+                default -> {
+                }
+            }
+        }
+
+        return new OperationalContextReferences(
+                distinct(systems),
+                List.of(),
+                distinct(repositories),
+                distinct(modules),
+                distinct(processes),
+                distinct(boundedContexts),
+                distinct(integrations),
+                distinct(terms),
+                distinct(teams),
+                distinct(externalParties),
+                distinct(dataStores),
+                distinct(handoffRules)
+        );
+    }
+
+    private TypedReference typedReference(String value) {
+        if (!StringUtils.hasText(value) || isNone(value)) {
+            return null;
+        }
+
+        var normalized = stripMarkdown(value).trim();
+        var separator = normalized.indexOf(':');
+        if (separator < 1) {
+            return null;
+        }
+
+        var type = normalizeReferenceType(normalized.substring(0, separator));
+        if (!StringUtils.hasText(type)) {
+            return null;
+        }
+
+        var id = normalized.substring(separator + 1).trim()
+                .replaceFirst("\\s+.*$", "")
+                .replaceAll("[,.;]+$", "");
+        if (!StringUtils.hasText(id)) {
+            return null;
+        }
+
+        return new TypedReference(type, id);
+    }
+
+    private String normalizeReferenceType(String value) {
+        var normalized = normalizeFieldLabel(value)
+                .replace("_", "-")
+                .replace(" ", "-");
+        return switch (normalized) {
+            case "system", "systems" -> "system";
+            case "repository", "repositories", "repo", "repos" -> "repository";
+            case "module", "modules" -> "module";
+            case "process", "processes" -> "process";
+            case "bounded-context", "bounded-contexts", "boundedcontext", "boundedcontexts" -> "bounded-context";
+            case "integration", "integrations" -> "integration";
+            case "term", "terms", "glossary-term", "glossary-terms" -> "term";
+            case "team", "teams" -> "team";
+            case "external-party", "external-parties", "externalparty", "externalparties" -> "external-party";
+            case "datastore", "datastores", "data-store", "data-stores" -> "datastore";
+            case "handoff-rule", "handoff-rules", "handoffrule", "handoffrules" -> "handoff-rule";
+            default -> null;
+        };
     }
 
     private List<String> noteValues(MarkdownEntry entry) {
@@ -489,6 +590,12 @@ final class OperationalContextMarkdownParser {
     private record ScalarField(
             String label,
             String value
+    ) {
+    }
+
+    private record TypedReference(
+            String type,
+            String id
     ) {
     }
 

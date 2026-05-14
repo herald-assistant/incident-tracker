@@ -143,7 +143,9 @@ class GitLabMcpToolsTest {
 
         var scope = response.codeSearchScopes().get(0);
         assertEquals("backend-component-code-search", scope.scopeId());
-        assertIterableEquals(List.of("backend"), scope.targetSystems());
+        assertIterableEquals(List.of("backend", "agreement"), scope.targetSystems());
+        assertIterableEquals(List.of("decision-process", "agreement-process"), scope.targetProcesses());
+        assertIterableEquals(List.of("decision", "limit", "agreement"), scope.targetBoundedContexts());
         assertIterableEquals(
                 List.of("backend", "PROCESSES/CLP_AGREEMENT_PROCESS"),
                 scope.projectNames()

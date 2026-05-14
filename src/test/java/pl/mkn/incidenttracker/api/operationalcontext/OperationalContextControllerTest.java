@@ -8,8 +8,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.ExplainableAggregateDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityRelationsReadModelDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextBlastRadiusReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextFlowReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextImplementationReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
 
 import java.util.List;
 import java.util.Map;
@@ -119,6 +125,76 @@ class OperationalContextControllerTest {
                 .andExpect(jsonPath("$.id").value("[CLP/backend]"));
     }
 
+    @Test
+    void shouldExposeReadModelProjectionEndpoints() throws Exception {
+        var target = entityRef("process", "new-process");
+        when(viewService.entityRelationsReadModel("process", "new-process"))
+                .thenReturn(new OperationalContextEntityRelationsReadModelDto(
+                        "operational-context.entity-relations",
+                        1,
+                        target,
+                        List.of(),
+                        List.of(),
+                        List.of(entityRef("system", "new-system")),
+                        List.of()
+                ));
+        when(viewService.codeSearchReadModel("process", "new-process"))
+                .thenReturn(OperationalContextCodeSearchReadModel.empty(target, List.of()));
+        when(viewService.implementationReadModel("process", "new-process"))
+                .thenReturn(OperationalContextImplementationReadModel.empty(target, List.of()));
+        when(viewService.flowReadModel("process", "new-process"))
+                .thenReturn(OperationalContextFlowReadModel.empty(target, List.of()));
+        when(viewService.blastRadiusReadModel("process", "new-process"))
+                .thenReturn(emptyBlastRadius(target));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/relations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.entity-relations"))
+                .andExpect(jsonPath("$.neighbors[0].id").value("new-system"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/code-search"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.code-search"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/implementations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.implementation-map"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/flow"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.flow"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/blast-radius"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.blast-radius"));
+    }
+
+    @Test
+    void shouldExposeReadModelProjectionEndpointsWithQueryId() throws Exception {
+        var target = entityRef("repository", "[CLP/backend]");
+        when(viewService.codeSearchReadModel("repository", "[CLP/backend]"))
+                .thenReturn(OperationalContextCodeSearchReadModel.empty(target, List.of()));
+        when(viewService.blastRadiusReadModel("repository", "[CLP/backend]"))
+                .thenReturn(emptyBlastRadius(target));
+        when(viewService.blastRadiusReadModel("endpoint", "/new/api"))
+                .thenReturn(emptyBlastRadius(entityRef("endpoint", "/new/api")));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/repository/code-search")
+                        .param("id", "[CLP/backend]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisTarget.id").value("[CLP/backend]"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/repository/blast-radius")
+                        .param("id", "[CLP/backend]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.blast-radius"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/blast-radius")
+                        .param("type", "endpoint")
+                        .param("id", "/new/api"))
+                .andExpect(status().isOk());
+    }
+
     private static ExplainableAggregateDto emptyAggregate(String label) {
         return new ExplainableAggregateDto(
                 label,
@@ -149,6 +225,28 @@ class OperationalContextControllerTest {
                 List.of(),
                 List.of(),
                 ""
+        );
+    }
+
+    private static EntityRef entityRef(String type, String id) {
+        return new EntityRef(type, id, id, null, null);
+    }
+
+    private static OperationalContextBlastRadiusReadModel emptyBlastRadius(EntityRef target) {
+        return new OperationalContextBlastRadiusReadModel(
+                "operational-context.blast-radius",
+                1,
+                OperationalContextCodeSearchReadModel.ReadModelProfile.defaultProfile(),
+                target,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
         );
     }
 }

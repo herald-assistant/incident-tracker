@@ -4,13 +4,14 @@ import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, Observable, of } from 'rxjs';
 
 import {
   ExplainableAggregateDto,
   OpenQuestionDto,
   OperationalContextCatalogRow,
   OperationalContextEntityDetailDto,
+  OperationalContextReadModelBundle,
   OperationalContextSearchResultDto,
   OperationalContextSummaryDto,
   ValidationFindingDto
@@ -684,6 +685,8 @@ export class ContextHomePageComponent {
   readonly errorMessage = signal('');
   readonly detail = signal<OperationalContextEntityDetailDto | null>(null);
   readonly detailError = signal('');
+  readonly readModels = signal<OperationalContextReadModelBundle | null>(null);
+  readonly readModelError = signal('');
   readonly searchResults = signal<OperationalContextSearchResultDto[]>([]);
 
   readonly searchControl = new FormControl('', { nonNullable: true });
@@ -781,11 +784,18 @@ export class ContextHomePageComponent {
     }
 
     this.detailError.set('');
-    this.api
-      .getEntity(target.type, target.id)
+    this.readModelError.set('');
+    this.readModels.set(null);
+    forkJoin({
+      detail: this.api.getEntity(target.type, target.id),
+      readModels: this.readModelsFor(target)
+    })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (detail) => this.detail.set(detail),
+        next: ({ detail, readModels }) => {
+          this.detail.set(detail);
+          this.readModels.set(readModels);
+        },
         error: () => this.detailError.set(`Could not load ${target.type}/${target.id}.`)
       });
   }
@@ -797,6 +807,8 @@ export class ContextHomePageComponent {
   closeDrawer(): void {
     this.detail.set(null);
     this.detailError.set('');
+    this.readModels.set(null);
+    this.readModelError.set('');
   }
 
   protected validationRows(): ValidationFindingDto[] {
@@ -913,6 +925,48 @@ export class ContextHomePageComponent {
           this.isLoading.set(false);
         }
       });
+  }
+
+  private readModelsFor(target: { type: string; id: string }): Observable<OperationalContextReadModelBundle> {
+    if (!this.supportsReadModels(target.type)) {
+      return of({});
+    }
+
+    return forkJoin({
+      relations: this.readModelOrNull(
+        this.api.getEntityRelationsReadModel(target.type, target.id)
+      ),
+      codeSearch: this.readModelOrNull(
+        this.api.getCodeSearchReadModel(target.type, target.id)
+      ),
+      implementations: this.readModelOrNull(
+        this.api.getImplementationReadModel(target.type, target.id)
+      ),
+      flow: this.readModelOrNull(this.api.getFlowReadModel(target.type, target.id)),
+      blastRadius: this.readModelOrNull(
+        this.api.getBlastRadiusReadModel(target.type, target.id)
+      )
+    });
+  }
+
+  private readModelOrNull<T>(request: Observable<T>): Observable<T | null> {
+    return request.pipe(
+      catchError(() => {
+        this.readModelError.set('Could not load all read-model projections for this entity.');
+        return of(null);
+      })
+    );
+  }
+
+  private supportsReadModels(type: string): boolean {
+    return [
+      'system',
+      'repository',
+      'code-search-scope',
+      'process',
+      'integration',
+      'bounded-context'
+    ].includes(type);
   }
 
   private filteredRows(tab: ContextTab): Array<Record<string, unknown>> {

@@ -109,6 +109,36 @@ class OperationalContextViewServiceTest {
     }
 
     @Test
+    void shouldExposeReadModelProjectionsForOperatorApi() {
+        var service = new OperationalContextViewService(port(currentContractCatalog()));
+
+        var relations = service.entityRelationsReadModel("system", "new-system");
+        assertEquals("operational-context.entity-relations", relations.contract());
+        assertEquals("new-system", relations.analysisTarget().id());
+        assertFalse(relations.outgoingRelations().isEmpty());
+
+        var codeSearch = service.codeSearchReadModel("system", "new-system");
+        assertEquals("operational-context.code-search", codeSearch.contract());
+        assertEquals("new-scope", codeSearch.scopes().get(0).scope().id());
+        assertEquals("new-repo", codeSearch.repositories().get(0).repository().id());
+
+        var implementations = service.implementationReadModel("process", "new-process");
+        assertEquals("operational-context.implementation-map", implementations.contract());
+        assertEquals("new-scope::new-repo::api", implementations.implementations().get(0).id());
+
+        var flow = service.flowReadModel("process", "new-process");
+        assertEquals("operational-context.flow", flow.contract());
+        assertEquals(1, flow.steps().size());
+        assertEquals("step-1", flow.steps().get(0).id());
+        assertFalse(flow.steps().get(0).implementations().isEmpty());
+
+        var blastRadius = service.blastRadiusReadModel("process", "new-process");
+        assertEquals("operational-context.blast-radius", blastRadius.contract());
+        assertEquals("new-process", blastRadius.analysisTarget().id());
+        assertEquals(1, blastRadius.impactedFlows().size());
+    }
+
+    @Test
     void shouldValidateBrokenOwnerSideReferencesAndDuplicateSignals() {
         var service = new OperationalContextViewService(port(brokenCatalog()));
 

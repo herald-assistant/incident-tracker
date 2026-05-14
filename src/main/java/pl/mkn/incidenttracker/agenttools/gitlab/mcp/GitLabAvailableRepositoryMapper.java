@@ -118,21 +118,38 @@ final class GitLabAvailableRepositoryMapper {
             OperationalContextRepositorySearchScope scope,
             Map<String, GitLabAvailableRepository> repositoriesById
     ) {
-        var repositories = sortedIncludedScopeRepositories(scope).stream()
+        var includedScopeRepositories = sortedIncludedScopeRepositories(scope);
+        var repositories = includedScopeRepositories.stream()
                 .map(repository -> toCodeSearchRepository(repository, repositoriesById))
+                .filter(repository -> repository != null)
+                .toList();
+        var referencedRepositories = includedScopeRepositories.stream()
+                .map(repository -> repositoriesById.get(normalizeId(repository.repoId())))
                 .filter(repository -> repository != null)
                 .toList();
         var projectNames = distinctLimited(repositories.stream()
                 .flatMap(repository -> repository.projectNames().stream())
                 .toList(), MAX_MODULE_PATHS);
+        var targetSystems = distinctLimited(combineScopeTargets(
+                scope.target().systems(),
+                referencedRepositories.stream().flatMap(repository -> repository.systems().stream()).toList()
+        ), MAX_ALIASES);
+        var targetProcesses = distinctLimited(combineScopeTargets(
+                scope.target().processes(),
+                referencedRepositories.stream().flatMap(repository -> repository.processes().stream()).toList()
+        ), MAX_ALIASES);
+        var targetBoundedContexts = distinctLimited(combineScopeTargets(
+                scope.target().boundedContexts(),
+                referencedRepositories.stream().flatMap(repository -> repository.boundedContexts().stream()).toList()
+        ), MAX_ALIASES);
 
         return new GitLabAvailableCodeSearchScope(
                 scope.id(),
                 firstNonBlank(scope.name(), scope.id()),
                 scope.lifecycleStatus(),
-                scope.target().systems(),
-                scope.target().processes(),
-                scope.target().boundedContexts(),
+                targetSystems,
+                targetProcesses,
+                targetBoundedContexts,
                 scope.useFor(),
                 repositories,
                 projectNames,
@@ -149,6 +166,19 @@ final class GitLabAvailableRepositoryMapper {
                         scope.searchStrategy().notes()
                 )
         );
+    }
+
+    private static List<String> combineScopeTargets(List<String> directTargets, List<String> repositoryTargets) {
+        var result = new LinkedHashSet<String>();
+        directTargets.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(result::add);
+        repositoryTargets.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(result::add);
+        return List.copyOf(result);
     }
 
     private static GitLabAvailableCodeSearchRepository toCodeSearchRepository(

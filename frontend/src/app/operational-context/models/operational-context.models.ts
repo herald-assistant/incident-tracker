@@ -247,6 +247,143 @@ export interface OperationalContextEntityDetailDto {
   rawSourcePreview: string;
 }
 
+export interface ReadModelEntityRef {
+  type: string;
+  id: string;
+  label?: string | null;
+  lifecycleStatus?: string | null;
+  summary?: string | null;
+}
+
+export interface ReadModelEntityKey {
+  type: string;
+  id: string;
+}
+
+export interface ReadModelSourceRef {
+  file: string;
+  entityType: string;
+  entityId: string;
+  fieldPath: string;
+  relationRole?: string | null;
+}
+
+export interface ReadModelProvenance {
+  canonical: boolean;
+  derivation: string;
+  confidence: string;
+  sourceRefs: ReadModelSourceRef[];
+  warnings: string[];
+}
+
+export interface ReadModelValidationFinding {
+  severity: string;
+  code: string;
+  message: string;
+  sourceRefs: ReadModelSourceRef[];
+}
+
+export interface ReadModelRelation {
+  relationType: string;
+  direction: string;
+  source: ReadModelEntityKey;
+  target: ReadModelEntityKey;
+  role?: string | null;
+  canonicalOwner?: ReadModelEntityKey | null;
+  derived: boolean;
+  provenance: ReadModelProvenance;
+}
+
+export interface OperationalContextEntityRelationsReadModelDto {
+  contract: string;
+  contractVersion: number;
+  analysisTarget: ReadModelEntityRef;
+  outgoingRelations: ReadModelRelation[];
+  incomingRelations: ReadModelRelation[];
+  neighbors: ReadModelEntityRef[];
+  validationFindings: ReadModelValidationFinding[];
+}
+
+export interface OperationalContextCodeSearchReadModel {
+  contract: string;
+  contractVersion: number;
+  analysisTarget: ReadModelEntityRef;
+  scopes: Array<Record<string, unknown>>;
+  repositories: Array<Record<string, unknown>>;
+  aggregatedHints?: Record<string, unknown>;
+  limitations: string[];
+  validationFindings: ReadModelValidationFinding[];
+}
+
+export interface OperationalContextImplementationReadModel {
+  contract: string;
+  contractVersion: number;
+  analysisTarget: ReadModelEntityRef;
+  implementations: Array<{
+    id: string;
+    implementationKind?: string;
+    lifecycleRole?: string;
+    migrationStatus?: string;
+    repository?: ReadModelEntityRef | null;
+    codeSearchScope?: ReadModelEntityRef | null;
+  }>;
+  limitations: string[];
+  validationFindings: ReadModelValidationFinding[];
+}
+
+export interface OperationalContextFlowReadModel {
+  contract: string;
+  contractVersion: number;
+  analysisTarget: ReadModelEntityRef;
+  trigger?: Record<string, unknown>;
+  steps: Array<{
+    id: string;
+    order: number;
+    name: string;
+    kind: string;
+    systems: ReadModelEntityRef[];
+    boundedContexts: ReadModelEntityRef[];
+    integrations: ReadModelEntityRef[];
+    dataStores: ReadModelEntityRef[];
+    implementations: Array<{ id: string; lifecycleRole?: string; migrationStatus?: string }>;
+  }>;
+  edges: Array<Record<string, unknown>>;
+  involvedSystems: ReadModelEntityRef[];
+  involvedBoundedContexts: ReadModelEntityRef[];
+  involvedIntegrations: ReadModelEntityRef[];
+  involvedDataStores: ReadModelEntityRef[];
+  limitations: string[];
+  validationFindings: ReadModelValidationFinding[];
+}
+
+export interface OperationalContextBlastRadiusReadModel {
+  contract: string;
+  contractVersion: number;
+  analysisTarget: ReadModelEntityRef;
+  impactedFlows: Array<{
+    flow: ReadModelEntityRef;
+    impactedSteps: Array<{ stepId: string; order: number; name: string; impactType: string }>;
+    confidence: string;
+    reasons: string[];
+  }>;
+  impactedSystems: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
+  impactedBoundedContexts: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
+  impactedIntegrations: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
+  impactedDataStores: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
+  impactedImplementations: Array<{ implementation: { id: string }; impactType: string; confidence: string }>;
+  suggestedNextEvidence: string[];
+  limitations: string[];
+  validationFindings: ReadModelValidationFinding[];
+}
+
+export interface OperationalContextReadModelBundle {
+  relations?: OperationalContextEntityRelationsReadModelDto | null;
+  codeSearch?: OperationalContextCodeSearchReadModel | null;
+  implementations?: OperationalContextImplementationReadModel | null;
+  flow?: OperationalContextFlowReadModel | null;
+  blastRadius?: OperationalContextBlastRadiusReadModel | null;
+}
+
 export type OperationalContextCatalogRow =
   | OperationalContextSystemRowDto
   | OperationalContextRepositoryRowDto

@@ -4,12 +4,6 @@ teams:
   - id: core-team
     name: Core Team
     purpose: Owns the main application flow.
-    references:
-      systems: [app-core]
-      repositories: [app-core-repo]
-      processes: [main-process]
-      boundedContexts: [core-context]
-      integrations: []
     responsibilities:
       - targetType: system
         targetId: app-core
@@ -39,12 +33,6 @@ teams:
   - id: integration-team
     name: Integration Team
     purpose: Owns cross-system contracts.
-    references:
-      systems: [partner-service]
-      repositories: []
-      processes: [main-process]
-      boundedContexts: []
-      integrations: [app-core-to-partner-sync]
     responsibilities:
       - targetType: integration
         targetId: app-core-to-partner-sync

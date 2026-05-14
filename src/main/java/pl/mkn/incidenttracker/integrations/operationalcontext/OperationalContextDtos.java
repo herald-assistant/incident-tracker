@@ -1705,8 +1705,34 @@ public final class OperationalContextDtos {
             List<String> requiredEvidence,
             List<String> expectedFirstAction,
             List<String> partnerTeams,
+            OperationalContextReferences references,
             List<String> notes
     ) {
+
+        public OperationalContextHandoffRule(
+                String id,
+                String title,
+                String routeTo,
+                List<String> useWhen,
+                List<String> doNotUseWhen,
+                List<String> requiredEvidence,
+                List<String> expectedFirstAction,
+                List<String> partnerTeams,
+                List<String> notes
+        ) {
+            this(
+                    id,
+                    title,
+                    routeTo,
+                    useWhen,
+                    doNotUseWhen,
+                    requiredEvidence,
+                    expectedFirstAction,
+                    partnerTeams,
+                    OperationalContextReferences.empty(),
+                    notes
+            );
+        }
 
         public OperationalContextHandoffRule {
             useWhen = copyList(useWhen);
@@ -1714,6 +1740,7 @@ public final class OperationalContextDtos {
             requiredEvidence = copyList(requiredEvidence);
             expectedFirstAction = copyList(expectedFirstAction);
             partnerTeams = copyList(partnerTeams);
+            references = defaultReferences(references);
             notes = copyList(notes);
         }
     }

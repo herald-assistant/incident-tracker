@@ -13,6 +13,7 @@ import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextDetailSectionDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityRelationsReadModelDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextExplainabilitySectionDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextGlossaryRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextHandoffRuleRowDto;
@@ -46,8 +47,17 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSignalSet;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextBlastRadiusReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextBlastRadiusReadModelBuilder;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextFlowReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextFlowReadModelBuilder;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextImplementationReadModel;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextImplementationReadModelBuilder;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndexBuilder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,6 +83,7 @@ public class OperationalContextViewService {
     private static final String TEAM = "team";
     private static final String GLOSSARY_TERM = "glossary-term";
     private static final String HANDOFF_RULE = "handoff-rule";
+    private static final String DATASTORE = "datastore";
 
     private static final Map<String, String> SOURCE_FILES = Map.of(
             SYSTEM, "systems.yml",
@@ -91,6 +102,16 @@ public class OperationalContextViewService {
     );
 
     private final OperationalContextPort operationalContextPort;
+    private final OperationalContextRelationIndexBuilder relationIndexBuilder =
+            new OperationalContextRelationIndexBuilder();
+    private final OperationalContextCodeSearchReadModelBuilder codeSearchReadModelBuilder =
+            new OperationalContextCodeSearchReadModelBuilder(relationIndexBuilder);
+    private final OperationalContextImplementationReadModelBuilder implementationReadModelBuilder =
+            new OperationalContextImplementationReadModelBuilder(relationIndexBuilder);
+    private final OperationalContextFlowReadModelBuilder flowReadModelBuilder =
+            new OperationalContextFlowReadModelBuilder(relationIndexBuilder);
+    private final OperationalContextBlastRadiusReadModelBuilder blastRadiusReadModelBuilder =
+            new OperationalContextBlastRadiusReadModelBuilder(relationIndexBuilder);
 
     public OperationalContextSummaryDto summary() {
         var view = view();
@@ -264,6 +285,53 @@ public class OperationalContextViewService {
             case HANDOFF_RULE -> handoffRuleDetail(view, id);
             default -> throw new OperationalContextEntityNotFoundException(type, id);
         };
+    }
+
+    public OperationalContextEntityRelationsReadModelDto entityRelationsReadModel(String type, String id) {
+        var view = view();
+        var entityType = normalizeReadModelType(type);
+        requireReadModelEntity(view, entityType, id);
+        var index = relationIndexBuilder.build(view.catalog());
+        var relations = index.entityRelations(entityType, id);
+        return new OperationalContextEntityRelationsReadModelDto(
+                "operational-context.entity-relations",
+                1,
+                relations.entity(),
+                relations.outgoingRelations(),
+                relations.incomingRelations(),
+                relations.neighbors(),
+                index.validationFindings()
+        );
+    }
+
+    public OperationalContextCodeSearchReadModel codeSearchReadModel(String type, String id) {
+        var view = view();
+        var entityType = normalizeReadModelType(type);
+        requireReadModelEntity(view, entityType, id);
+        return codeSearchReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
+    }
+
+    public OperationalContextImplementationReadModel implementationReadModel(String type, String id) {
+        var view = view();
+        var entityType = normalizeReadModelType(type);
+        requireReadModelEntity(view, entityType, id);
+        return implementationReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
+    }
+
+    public OperationalContextFlowReadModel flowReadModel(String type, String id) {
+        var view = view();
+        var entityType = normalizeReadModelType(type);
+        requireReadModelEntity(view, entityType, id);
+        return flowReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
+    }
+
+    public OperationalContextBlastRadiusReadModel blastRadiusReadModel(String type, String id) {
+        var view = view();
+        var entityType = normalizeReadModelType(type);
+        if (requiresCatalogEntity(entityType)) {
+            requireReadModelEntity(view, entityType, id);
+        }
+        return blastRadiusReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
     }
 
     private OperationalContextSystemRowDto systemRow(CatalogView view, OperationalContextSystem system) {
@@ -1939,8 +2007,49 @@ public class OperationalContextViewService {
         return entity;
     }
 
+    private void requireReadModelEntity(
+            CatalogView view,
+            String type,
+            String id
+    ) {
+        var exists = switch (type) {
+            case SYSTEM -> view.systemsById().containsKey(id);
+            case REPOSITORY -> view.repositoriesById().containsKey(id);
+            case PROCESS -> view.processesById().containsKey(id);
+            case INTEGRATION -> view.integrationsById().containsKey(id);
+            case BOUNDED_CONTEXT -> view.contextsById().containsKey(id);
+            case TEAM -> view.teamsById().containsKey(id);
+            case CODE_SEARCH_SCOPE -> view.catalog().codeSearchScopes().stream()
+                    .anyMatch(scope -> Objects.equals(scope.id(), id));
+            default -> false;
+        };
+
+        if (!exists) {
+            throw new OperationalContextEntityNotFoundException(type, id);
+        }
+    }
+
+    private boolean requiresCatalogEntity(String type) {
+        return !Set.of("endpoint", "class", "table", "queue", "topic").contains(type);
+    }
+
     private String normalizeType(String type) {
         return normalize(type).replace("_", "-");
+    }
+
+    private String normalizeReadModelType(String type) {
+        var normalized = normalizeType(type);
+        return switch (normalized) {
+            case "systems" -> SYSTEM;
+            case "repositories", "repo", "repos" -> REPOSITORY;
+            case "code-search-scopes", "codesearchscope", "codesearchscopes" -> CODE_SEARCH_SCOPE;
+            case "processes" -> PROCESS;
+            case "integrations" -> INTEGRATION;
+            case "boundedcontext", "boundedcontexts", "bounded-contexts", "context", "contexts" -> BOUNDED_CONTEXT;
+            case "teams" -> TEAM;
+            case "datastores", "data-stores" -> DATASTORE;
+            default -> normalized;
+        };
     }
 
     private String name(OperationalContextEntry entry) {

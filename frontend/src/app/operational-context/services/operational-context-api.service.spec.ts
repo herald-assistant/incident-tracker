@@ -45,4 +45,14 @@ describe('OperationalContextApiService', () => {
     expect(request.request.method).toBe('GET');
     request.flush({});
   });
+
+  it('should pass read model entity id as a query parameter', () => {
+    service.getBlastRadiusReadModel('bounded-context', 'core/context').subscribe();
+
+    const request = http.expectOne(
+      '/api/operational-context/read-model/entities/bounded-context/blast-radius?id=core/context'
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush({});
+  });
 });

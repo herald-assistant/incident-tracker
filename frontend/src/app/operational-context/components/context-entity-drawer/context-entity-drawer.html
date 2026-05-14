@@ -28,6 +28,80 @@
     }
 
     <section class="entity-drawer__section">
+      <h3>Read model projections</h3>
+      @if (readModelError()) {
+        <p class="muted-text">{{ readModelError() }}</p>
+      }
+      @if (!hasReadModels(readModels())) {
+        <p class="muted-text">No read model projections available for this entity.</p>
+      } @else {
+        <div class="read-model-grid">
+          @if (readModels()?.relations; as relations) {
+            <article class="read-model-card">
+              <span>Relations</span>
+              <strong>{{ relationCount(readModels()) }}</strong>
+              <small>{{ derivedRelationCount(readModels()) }} derived</small>
+              @if (relations.neighbors.length) {
+                <p>{{ entityLabels(relations.neighbors) }}</p>
+              }
+            </article>
+          }
+
+          @if (readModels()?.codeSearch) {
+            <article class="read-model-card">
+              <span>Code search</span>
+              <strong>{{ scopeCount(readModels()) }} scopes</strong>
+              <small>{{ repositoryCount(readModels()) }} repositories</small>
+            </article>
+          }
+
+          @if (readModels()?.implementations; as implementations) {
+            <article class="read-model-card">
+              <span>Implementations</span>
+              <strong>{{ implementations.implementations.length }}</strong>
+              @if (implementations.implementations.length) {
+                <p>{{ implementationIds(readModels()) }}</p>
+              }
+            </article>
+          }
+
+          @if (readModels()?.flow; as flow) {
+            <article class="read-model-card">
+              <span>Flow</span>
+              <strong>{{ flowSummary(readModels()) }}</strong>
+              @if (flow.involvedSystems.length) {
+                <small>{{ entityLabels(flow.involvedSystems) }}</small>
+              }
+            </article>
+          }
+
+          @if (readModels()?.blastRadius; as blastRadius) {
+            <article class="read-model-card">
+              <span>Blast radius</span>
+              <strong>{{ blastRadius.impactedFlows.length }} flows</strong>
+              <small>{{ totalBlastRadiusNodes(readModels()) }} impacted nodes</small>
+              @if (blastRadius.impactedSystems.length) {
+                <p>{{ impactedEntityLabels(blastRadius.impactedSystems) }}</p>
+              }
+              @if (impactedImplementationIds(readModels())) {
+                <p>{{ impactedImplementationIds(readModels()) }}</p>
+              }
+            </article>
+          }
+        </div>
+
+        @if (readModels()?.blastRadius?.suggestedNextEvidence?.length) {
+          <div class="drawer-group">
+            <strong>Next evidence</strong>
+            @for (suggestion of readModels()?.blastRadius?.suggestedNextEvidence || []; track suggestion) {
+              <span>{{ suggestion }}</span>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section class="entity-drawer__section">
       <h3>Recognition signals</h3>
       @if (!entity.recognitionSignals.length) {
         <p class="muted-text">No signals documented.</p>

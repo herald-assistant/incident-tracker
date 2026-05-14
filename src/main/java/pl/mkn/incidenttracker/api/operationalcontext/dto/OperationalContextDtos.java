@@ -1,5 +1,9 @@
 package pl.mkn.incidenttracker.api.operationalcontext.dto;
 
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.ReadModelRelation;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
+
 import java.util.List;
 import java.util.Map;
 
@@ -260,6 +264,17 @@ public final class OperationalContextDtos {
             List<OpenQuestionDto> openQuestions,
             List<SourceReferenceDto> sourceReferences,
             String rawSourcePreview
+    ) {
+    }
+
+    public record OperationalContextEntityRelationsReadModelDto(
+            String contract,
+            int contractVersion,
+            EntityRef analysisTarget,
+            List<ReadModelRelation> outgoingRelations,
+            List<ReadModelRelation> incomingRelations,
+            List<EntityRef> neighbors,
+            List<ValidationFinding> validationFindings
     ) {
     }
 

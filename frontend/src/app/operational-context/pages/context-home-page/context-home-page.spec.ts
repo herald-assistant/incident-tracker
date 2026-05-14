@@ -59,7 +59,10 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
+    expect(api.getBlastRadiusReadModel).toHaveBeenCalledWith('system', 'app-core');
     expect(fixture.nativeElement.textContent).toContain('Core detail');
+    expect(fixture.nativeElement.textContent).toContain('Read model projections');
+    expect(fixture.nativeElement.textContent).toContain('core-process');
   });
 
   it('should keep search only in the signal resolver tab', async () => {
@@ -156,7 +159,12 @@ async function createComponent(
     getValidation: vi.fn(() => of([])),
     getOpenQuestions: vi.fn(() => of(openQuestions)),
     search: vi.fn(() => of([])),
-    getEntity: vi.fn(() => of(entityDetail()))
+    getEntity: vi.fn(() => of(entityDetail())),
+    getEntityRelationsReadModel: vi.fn(() => of(relationsReadModel())),
+    getCodeSearchReadModel: vi.fn(() => of(codeSearchReadModel())),
+    getImplementationReadModel: vi.fn(() => of(implementationReadModel())),
+    getFlowReadModel: vi.fn(() => of(flowReadModel())),
+    getBlastRadiusReadModel: vi.fn(() => of(blastRadiusReadModel()))
   };
 
   await TestBed.configureTestingModule({
@@ -277,5 +285,73 @@ function entityDetail(): OperationalContextEntityDetailDto {
     openQuestions: [],
     sourceReferences: [],
     rawSourcePreview: ''
+  };
+}
+
+function relationsReadModel() {
+  return {
+    contract: 'operational-context.entity-relations',
+    contractVersion: 1,
+    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    outgoingRelations: [{ derived: true }],
+    incomingRelations: [],
+    neighbors: [{ type: 'process', id: 'core-process', label: 'core-process' }],
+    validationFindings: []
+  };
+}
+
+function codeSearchReadModel() {
+  return {
+    contract: 'operational-context.code-search',
+    contractVersion: 1,
+    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    scopes: [{}],
+    repositories: [{}],
+    limitations: [],
+    validationFindings: []
+  };
+}
+
+function implementationReadModel() {
+  return {
+    contract: 'operational-context.implementation-map',
+    contractVersion: 1,
+    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    implementations: [{ id: 'core-scope::core-repo::api' }],
+    limitations: [],
+    validationFindings: []
+  };
+}
+
+function flowReadModel() {
+  return {
+    contract: 'operational-context.flow',
+    contractVersion: 1,
+    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    steps: [{ id: 'receive', order: 1, name: 'Receive', kind: 'http', systems: [], boundedContexts: [], integrations: [], dataStores: [], implementations: [] }],
+    edges: [],
+    involvedSystems: [{ type: 'system', id: 'app-core', label: 'App Core' }],
+    involvedBoundedContexts: [],
+    involvedIntegrations: [],
+    involvedDataStores: [],
+    limitations: [],
+    validationFindings: []
+  };
+}
+
+function blastRadiusReadModel() {
+  return {
+    contract: 'operational-context.blast-radius',
+    contractVersion: 1,
+    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    impactedFlows: [{ flow: { type: 'process', id: 'core-process', label: 'core-process' }, impactedSteps: [], confidence: 'medium', reasons: [] }],
+    impactedSystems: [{ entity: { type: 'system', id: 'app-core', label: 'App Core' }, impactType: 'downstream', confidence: 'medium' }],
+    impactedBoundedContexts: [],
+    impactedIntegrations: [],
+    impactedDataStores: [],
+    impactedImplementations: [{ implementation: { id: 'core-scope::core-repo::api' }, impactType: 'downstream-code', confidence: 'medium' }],
+    suggestedNextEvidence: ['Use code-search scopes from impacted implementations to fetch targeted source code.'],
+    limitations: [],
+    validationFindings: []
   };
 }
