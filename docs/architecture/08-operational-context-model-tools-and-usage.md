@@ -586,6 +586,93 @@ Zasady:
 - Dane powtarzalne w YAML nie powinny byc utrzymywane recznie; powtarzalnosc w
   read modelu jest akceptowalna, jezeli obniza koszt reasoning modelu.
 
+### Kontrakt utrzymaniowy profili
+
+Brak parametru `profile` w REST pozostaje kompatybilny z FE i zwraca widok
+expanded. Profile `default`, `summary` i `index` sa kontraktem dla LLM, tools i
+oszczednego REST. Nowe pola albo read modele powinny najpierw okreslic, w
+ktorym profilu maja wartosc.
+
+`default` powinien zawierac tylko dane, ktore pomagaja podjac kolejna decyzje:
+
+- wybrac repozytorium, modul, shared library albo generated client,
+- rozroznic `primary`, `target`, `parallel`, `legacy`, `fallback` albo
+  `support` implementation,
+- zrozumiec flow, upstream/downstream albo blast radius,
+- pokazac confidence, limitations, validation summary i provenance,
+- wskazac najmniejszy sensowny next read albo tool.
+
+`expanded` przechowuje kosztowne dane potrzebne UI, diagnostyce albo
+exhaustive analysis:
+
+- raw source preview,
+- pelne explainability groups,
+- pelne validation findings,
+- pelne sourceRef repetition,
+- wszystkie hinty code-search,
+- kompletne implementation refs per flow/blast step,
+- dlugie inventories i health cards.
+
+Nie nalezy przenosic pola do `default` tylko dlatego, ze jest dostepne w
+builderze. Pole trafia do `default`, jezeli zmienia wybor kolejnego kroku albo
+ogranicza zakres eksploracji. Jezeli pole tylko potwierdza UI table/detail
+view, zostaje w no-profile/expanded.
+
+### Affordances dla LLM
+
+Default payload ma byc samonawigowalny. To nie jest klasyczne HATEOAS dla REST,
+tylko praktyczna instrukcja dla agenta, jak doczytywac kontekst stopniowo.
+
+W default/read-model responses utrzymuj:
+
+- `links` do self, expanded i sibling read models,
+- `availableExpansions` z nazwami ciezszych widokow,
+- `suggestedNextReads` jako konkretne, male nastepne REST/tool reads,
+- `suggestedTools` jako neutralne capability names,
+- `reasonToExpand` tylko wtedy, gdy expanded ma realna wartosc,
+- `omittedBecause` i `truncation`, gdy default ucina dane,
+- `relevanceScore` i `reasonToRead` na elementach top-N,
+- `confidence`, `limitations`, `provenance` i compact `sourceRefs`.
+
+`suggestedNextReads` powinny zawierac kolejny najmniejszy read, nie liste
+wszystkiego. Dla relacji preferuj peer entity lub sibling read model
+(`code-search`, `flow`, `blast-radius`) zgodny z typem encji. Dla blast-radius
+najpierw wskaz impacted flow/implementation/code-search, a dopiero potem
+GitLab/DB exploration.
+
+### Provenance i sourceRefs
+
+Default provenance ma dawac mozliwosc sprawdzenia faktu bez powielania
+dlugiego katalogowego payloadu:
+
+- top-level `provenance.sourceRefs` powinno streszczac liczbe i rozklad refs,
+- top-level `sourceRefs` powinny byc deduplikowane i stabilne,
+- compact sourceRef powinien miec `refId`, `file`, `path`, `target`, `role`,
+- elementy list powinny zwykle niesc `sourceRefCount`, a nie pelne source refs,
+- pelne source refs i raw preview zostaja w expanded/diagnostic.
+
+Nested refs w default powinny byc lekkie. Uzywaj `type`, `id`, opcjonalnie
+`label` i `lifecycleStatus`. Nie powtarzaj `summary` w kazdym nested ref,
+jezeli summary nie zmienia next read albo blast-radius decision.
+
+### Scoring i truncation
+
+Top-N w default musi byc deterministyczny i uzasadniony. Sortuj po kombinacji:
+
+- confidence,
+- canonical/direct provenance,
+- lifecycle role i migration status,
+- relation/impact type,
+- target type przydatny dla dalszej eksploracji,
+- criticality,
+- sourceRef coverage.
+
+Kazdy scoring jest heuristic read-model logic, nie faktem write modelu. Nie
+zapisuj scoringu w YAML/MD. Szerokie sygnaly runtime (`class`, `table`,
+`queue`, `topic`) powinny miec guard i nizszy `relevanceScore`, gdy lapia zbyt
+duzo implementacji. Wtedy default powinien sugerowac doprecyzowanie sygnalu
+przed kosztownym czytaniem kodu.
+
 ## Selekcja kontekstu dla LLM
 
 Minimalne profile:

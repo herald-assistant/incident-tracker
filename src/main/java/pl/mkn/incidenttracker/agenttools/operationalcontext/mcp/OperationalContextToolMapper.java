@@ -37,6 +37,19 @@ public class OperationalContextToolMapper {
     private static final int MAX_PAGE_SIZE = 50;
     private static final int DEFAULT_SEARCH_LIMIT = 8;
     private static final int MAX_SEARCH_LIMIT = 20;
+    private static final int DEFAULT_SECTION_LIST_LIMIT = 8;
+    private static final int DEFAULT_SECTION_MAP_LIMIT = 12;
+    private static final int DEFAULT_SOURCE_REF_LIMIT = 8;
+    private static final int DEFAULT_OPEN_QUESTION_LIMIT = 5;
+    private static final List<String> DETAIL_SECTION_ORDER = List.of(
+            "overview",
+            "relations",
+            "signals",
+            "codeSearch",
+            "handoff",
+            "sourceCoverage",
+            "openQuestions"
+    );
     private static final Set<String> DEFAULT_DETAIL_INCLUDES = Set.of(
             "overview",
             "relations",
@@ -60,7 +73,8 @@ public class OperationalContextToolMapper {
                                 true,
                                 true
                         ))
-                        .toList()
+                        .toList(),
+                scopeAffordances()
         );
     }
 
@@ -93,7 +107,8 @@ public class OperationalContextToolMapper {
                 toIndex < totalItems,
                 entities.subList(fromIndex, toIndex).stream()
                         .map(this::toIndexItem)
-                        .toList()
+                        .toList(),
+                listAffordances(normalizedType, requestedPage, effectivePageSize, totalItems, toIndex < totalItems, entities)
         );
     }
 
@@ -106,7 +121,7 @@ public class OperationalContextToolMapper {
         var effectiveLimit = Math.min(MAX_SEARCH_LIMIT, normalizePositive(limit, DEFAULT_SEARCH_LIMIT));
         var normalizedTypes = normalizeTypes(types);
         if (!StringUtils.hasText(query)) {
-            return new OpctxSearchResult(query, normalizedTypes, effectiveLimit, false, List.of());
+            return new OpctxSearchResult(query, normalizedTypes, effectiveLimit, false, List.of(), searchAffordances(query, List.of(), false));
         }
 
         var queryText = query.trim();
@@ -120,15 +135,17 @@ public class OperationalContextToolMapper {
                         .thenComparing(result -> result.entity().label(), String.CASE_INSENSITIVE_ORDER))
                 .toList();
 
+        var items = results.stream()
+                .limit(effectiveLimit)
+                .map(this::toSearchItem)
+                .toList();
         return new OpctxSearchResult(
                 queryText,
                 normalizedTypes,
                 effectiveLimit,
                 results.size() > effectiveLimit,
-                results.stream()
-                        .limit(effectiveLimit)
-                        .map(this::toSearchItem)
-                        .toList()
+                items,
+                searchAffordances(queryText, items, results.size() > effectiveLimit)
         );
     }
 
@@ -148,9 +165,20 @@ public class OperationalContextToolMapper {
                 .filter(candidate -> normalize(candidate.id()).equals(normalizedId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Unknown operational context entity %s:%s.".formatted(normalizedType, id)
+                "Unknown operational context entity %s:%s.".formatted(normalizedType, id)
                 ));
         var includes = normalizeIncludes(include);
+        var overview = included(includes, "overview", entity.overview());
+        var relations = included(includes, "relations", entity.relations());
+        var signals = included(includes, "signals", entity.signals());
+        var codeSearch = included(includes, "codeSearch", entity.codeSearch());
+        var handoff = included(includes, "handoff", entity.handoff());
+        var sourceCoverage = included(includes, "sourceCoverage", entity.sourceCoverage());
+        var openQuestions = includes.contains("openQuestions")
+                ? limitList(entity.openQuestions(), DEFAULT_OPEN_QUESTION_LIMIT)
+                : List.<OpctxOpenQuestion>of();
+        var sourceRefs = limitText(entity.sourceRefs(), DEFAULT_SOURCE_REF_LIMIT);
+        var truncation = entityTruncation(entity, overview, relations, signals, codeSearch, handoff, sourceCoverage, openQuestions, sourceRefs);
 
         return new OpctxEntityDetailResult(
                 entity.type(),
@@ -158,14 +186,15 @@ public class OperationalContextToolMapper {
                 entity.label(),
                 entity.summary(),
                 entity.purpose(),
-                included(includes, "overview", entity.overview()),
-                included(includes, "relations", entity.relations()),
-                included(includes, "signals", entity.signals()),
-                included(includes, "codeSearch", entity.codeSearch()),
-                included(includes, "handoff", entity.handoff()),
-                included(includes, "sourceCoverage", entity.sourceCoverage()),
-                includes.contains("openQuestions") ? entity.openQuestions() : List.of(),
-                entity.sourceRefs()
+                overview,
+                relations,
+                signals,
+                codeSearch,
+                handoff,
+                sourceCoverage,
+                openQuestions,
+                sourceRefs,
+                entityAffordances(entity, includes, truncation)
         );
     }
 
@@ -736,8 +765,8 @@ public class OperationalContextToolMapper {
                 entity.id(),
                 entity.label(),
                 entity.summary(),
-                entity.facets(),
-                entity.sourceRefs()
+                compactFacets(entity.facets()),
+                limitText(entity.sourceRefs(), DEFAULT_SOURCE_REF_LIMIT)
         );
     }
 
@@ -874,7 +903,310 @@ public class OperationalContextToolMapper {
     }
 
     private Map<String, Object> included(Set<String> includes, String include, Map<String, Object> value) {
-        return includes.contains(include) ? value : Map.of();
+        return includes.contains(include) ? compactMap(value) : Map.of();
+    }
+
+    private OpctxToolAffordances scopeAffordances() {
+        return new OpctxToolAffordances(
+                "default",
+                List.of(
+                        toolLink("list-systems", "opctx_list_entities", values("type", TYPE_SYSTEM), "Browse canonical systems first."),
+                        toolLink("search", "opctx_search", values("query", "<term-or-signal>"), "Search by endpoint, class, service, repository or domain term.")
+                ),
+                List.of("opctx_list_entities(type=<type>)", "opctx_search(query=<term-or-signal>)"),
+                List.of(
+                        "Use opctx_search when you have a concrete signal.",
+                        "Use opctx_list_entities when you need a table-of-contents style browse."
+                ),
+                List.of("opctx_search", "opctx_list_entities", "opctx_get_entity"),
+                "Scope has no expanded payload; follow list/search links to read specific entities.",
+                List.of("Entity details are intentionally omitted from scope."),
+                OpctxTruncation.none(),
+                List.of()
+        );
+    }
+
+    private OpctxToolAffordances listAffordances(
+            String type,
+            int page,
+            int pageSize,
+            int totalItems,
+            boolean truncated,
+            List<OpctxCatalogEntity> entities
+    ) {
+        var pageItems = entities.stream()
+                .skip((long) Math.max(0, page - 1) * pageSize)
+                .limit(pageSize)
+                .toList();
+        var links = new ArrayList<OpctxToolLink>();
+        if (!pageItems.isEmpty()) {
+            var first = pageItems.get(0);
+            links.add(toolLink(
+                    "first-entity",
+                    "opctx_get_entity",
+                    values("type", first.type(), "id", first.id()),
+                    "Open the first listed entity before following related repositories or flows."
+            ));
+        }
+        if (truncated) {
+            links.add(toolLink(
+                    "next-page",
+                    "opctx_list_entities",
+                    values("type", type, "page", page + 1, "pageSize", pageSize),
+                    "Continue browsing this entity type."
+            ));
+        }
+        return new OpctxToolAffordances(
+                "default",
+                links,
+                List.of("opctx_get_entity(type=<type>, id=<id>)", "opctx_search(query=<term-or-signal>)"),
+                pageItems.isEmpty()
+                        ? List.of("Try opctx_search with a concrete signal if this list is empty.")
+                        : List.of("Open the most relevant listed entity with opctx_get_entity before reading code."),
+                List.of("opctx_get_entity", "opctx_search"),
+                "Use opctx_get_entity with a focused include list when a listed item is relevant.",
+                List.of("List output keeps only index cards and compact facets."),
+                truncation(
+                        "entity list paginated",
+                        counts("items", pageItems.size()),
+                        counts("items", totalItems)
+                ),
+                List.of()
+        );
+    }
+
+    private OpctxToolAffordances searchAffordances(
+            String query,
+            List<OpctxSearchItem> items,
+            boolean truncated
+    ) {
+        var links = new ArrayList<OpctxToolLink>();
+        if (!items.isEmpty()) {
+            var top = items.get(0);
+            links.add(toolLink(
+                    "top-result",
+                    "opctx_get_entity",
+                    values("type", top.type(), "id", top.id()),
+                    "Read compact entity detail for the top ranked match."
+            ));
+        }
+        return new OpctxToolAffordances(
+                "default",
+                links,
+                List.of("opctx_get_entity(type=<type>, id=<id>)", "opctx_search(query=<more-specific-signal>)"),
+                items.isEmpty()
+                        ? List.of("Search again with a system, endpoint, class, queue, table, repository or local-language term.")
+                        : List.of("Read top result details before choosing repositories or handoff route."),
+                List.of("opctx_get_entity", "opctx_search"),
+                "Increase limit only when recall matters more than a short ranked candidate set.",
+                List.of("Search returns compact ranked candidates, not full entity details."),
+                truncation(
+                        "search results limited",
+                        counts("results", items.size()),
+                        counts("results", truncated ? Math.max(items.size() + 1, items.size()) : items.size())
+                ),
+                List.of()
+        );
+    }
+
+    private OpctxToolAffordances entityAffordances(
+            OpctxCatalogEntity entity,
+            Set<String> includes,
+            OpctxTruncation truncation
+    ) {
+        var links = new ArrayList<OpctxToolLink>();
+        links.add(toolLink(
+                "self",
+                "opctx_get_entity",
+                values("type", entity.type(), "id", entity.id()),
+                "Read compact default entity detail."
+        ));
+        for (var section : DETAIL_SECTION_ORDER) {
+            links.add(toolLink(
+                    "include-" + section,
+                    "opctx_get_entity",
+                    values("type", entity.type(), "id", entity.id(), "include", List.of(section)),
+                    "Read only the " + section + " section for this entity."
+            ));
+        }
+
+        var omitted = new ArrayList<String>();
+        for (var section : DETAIL_SECTION_ORDER) {
+            if (!includes.contains(section)) {
+                omitted.add(section + " omitted by include filter.");
+            }
+        }
+        if (truncation.truncated()) {
+            omitted.add("Large maps/lists were compacted for the default tool profile.");
+        }
+
+        var suggestedReads = new ArrayList<String>();
+        if (!entity.codeSearch().isEmpty()) {
+            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[codeSearch]) to narrow repositories/modules.".formatted(entity.type(), entity.id()));
+        }
+        if (!entity.relations().isEmpty()) {
+            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[relations]) to inspect upstream/downstream references.".formatted(entity.type(), entity.id()));
+        }
+        if (!entity.signals().isEmpty()) {
+            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[signals]) to verify runtime/code matching signals.".formatted(entity.type(), entity.id()));
+        }
+        suggestedReads.add("opctx_search(query=<more-specific-signal>) if this entity is too broad.");
+
+        return new OpctxToolAffordances(
+                "default",
+                links,
+                DETAIL_SECTION_ORDER.stream()
+                        .map(section -> "include=" + section)
+                        .toList(),
+                suggestedReads,
+                List.of("opctx_get_entity", "opctx_search"),
+                "Call opctx_get_entity again with a focused include section when omitted/truncated data is needed.",
+                omitted,
+                truncation,
+                limitationsFromSourceCoverage(entity.sourceCoverage())
+        );
+    }
+
+    private OpctxTruncation entityTruncation(
+            OpctxCatalogEntity entity,
+            Map<String, Object> overview,
+            Map<String, Object> relations,
+            Map<String, Object> signals,
+            Map<String, Object> codeSearch,
+            Map<String, Object> handoff,
+            Map<String, Object> sourceCoverage,
+            List<OpctxOpenQuestion> openQuestions,
+            List<String> sourceRefs
+    ) {
+        var returned = counts(
+                "overviewValues", leafCount(overview),
+                "relationValues", leafCount(relations),
+                "signalValues", leafCount(signals),
+                "codeSearchValues", leafCount(codeSearch),
+                "handoffValues", leafCount(handoff),
+                "sourceCoverageValues", leafCount(sourceCoverage),
+                "openQuestions", openQuestions.size(),
+                "sourceRefs", sourceRefs.size()
+        );
+        var total = counts(
+                "overviewValues", leafCount(entity.overview()),
+                "relationValues", leafCount(entity.relations()),
+                "signalValues", leafCount(entity.signals()),
+                "codeSearchValues", leafCount(entity.codeSearch()),
+                "handoffValues", leafCount(entity.handoff()),
+                "sourceCoverageValues", leafCount(entity.sourceCoverage()),
+                "openQuestions", entity.openQuestions().size(),
+                "sourceRefs", entity.sourceRefs().size()
+        );
+        return truncation("entity detail compacted for default tool profile", returned, total);
+    }
+
+    private OpctxTruncation truncation(
+            String reason,
+            Map<String, Integer> returnedCounts,
+            Map<String, Integer> totalCounts
+    ) {
+        var omitted = new LinkedHashMap<String, Integer>();
+        totalCounts.forEach((key, total) -> {
+            var returned = returnedCounts.getOrDefault(key, 0);
+            var omittedCount = Math.max(0, total - returned);
+            if (omittedCount > 0) {
+                omitted.put(key, omittedCount);
+            }
+        });
+        return new OpctxTruncation(!omitted.isEmpty(), omitted.isEmpty() ? null : reason, returnedCounts, omitted);
+    }
+
+    private OpctxToolLink toolLink(String rel, String tool, Map<String, Object> arguments, String reason) {
+        return new OpctxToolLink(rel, tool, arguments, reason);
+    }
+
+    private Map<String, Integer> counts(Object... keysAndValues) {
+        var counts = new LinkedHashMap<String, Integer>();
+        for (var index = 0; index + 1 < keysAndValues.length; index += 2) {
+            var key = keysAndValues[index];
+            var value = keysAndValues[index + 1];
+            if (key != null && value instanceof Number number) {
+                counts.put(key.toString(), number.intValue());
+            }
+        }
+        return Map.copyOf(counts);
+    }
+
+    private Map<String, List<String>> compactFacets(Map<String, List<String>> facets) {
+        if (facets == null || facets.isEmpty()) {
+            return Map.of();
+        }
+        var compacted = new LinkedHashMap<String, List<String>>();
+        facets.entrySet().stream()
+                .limit(DEFAULT_SECTION_MAP_LIMIT)
+                .forEach(entry -> compacted.put(entry.getKey(), limitText(entry.getValue(), DEFAULT_SECTION_LIST_LIMIT)));
+        return Map.copyOf(compacted);
+    }
+
+    private Map<String, Object> compactMap(Map<String, Object> value) {
+        if (value == null || value.isEmpty()) {
+            return Map.of();
+        }
+        return compactMap(value, 0);
+    }
+
+    private Map<String, Object> compactMap(Map<String, Object> value, int depth) {
+        var compacted = new LinkedHashMap<String, Object>();
+        value.entrySet().stream()
+                .limit(DEFAULT_SECTION_MAP_LIMIT)
+                .forEach(entry -> {
+                    var compactValue = compactValue(entry.getValue(), depth + 1);
+                    if (compactValue != null) {
+                        compacted.put(entry.getKey(), compactValue);
+                    }
+                });
+        return Map.copyOf(compacted);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object compactValue(Object value, int depth) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Map<?, ?> map) {
+            if (depth > 4) {
+                return Map.of("omittedBecause", "nested data compacted");
+            }
+            var typed = new LinkedHashMap<String, Object>();
+            map.forEach((key, item) -> {
+                if (key != null) {
+                    typed.put(key.toString(), item);
+                }
+            });
+            return compactMap(typed, depth);
+        }
+        if (value instanceof List<?> list) {
+            return list.stream()
+                    .limit(DEFAULT_SECTION_LIST_LIMIT)
+                    .map(item -> compactValue(item, depth + 1))
+                    .filter(item -> item != null)
+                    .toList();
+        }
+        return value;
+    }
+
+    private int leafCount(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Map<?, ?> map) {
+            return map.values().stream().mapToInt(this::leafCount).sum();
+        }
+        if (value instanceof List<?> list) {
+            return list.stream().mapToInt(this::leafCount).sum();
+        }
+        return 1;
+    }
+
+    private List<String> limitationsFromSourceCoverage(Map<String, Object> sourceCoverage) {
+        var limitations = sourceCoverage.get("limitations");
+        return limitText(textValues(limitations), DEFAULT_SECTION_LIST_LIMIT);
     }
 
     private String labelForType(String type) {
@@ -1360,6 +1692,25 @@ public class OperationalContextToolMapper {
     }
 
     private List<String> limit(Set<String> values, int maxItems) {
+        return values.stream().limit(maxItems).toList();
+    }
+
+    private List<String> limitText(List<String> values, int maxItems) {
+        if (values == null || values.isEmpty() || maxItems <= 0) {
+            return List.of();
+        }
+        return values.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .limit(maxItems)
+                .toList();
+    }
+
+    private <T> List<T> limitList(List<T> values, int maxItems) {
+        if (values == null || values.isEmpty() || maxItems <= 0) {
+            return List.of();
+        }
         return values.stream().limit(maxItems).toList();
     }
 

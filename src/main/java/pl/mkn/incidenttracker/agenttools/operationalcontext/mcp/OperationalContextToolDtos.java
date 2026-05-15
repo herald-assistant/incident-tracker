@@ -10,10 +10,12 @@ public final class OperationalContextToolDtos {
 
     public record OpctxScopeResult(
             boolean enabled,
-            List<OpctxEntityTypeSummary> entityTypes
+            List<OpctxEntityTypeSummary> entityTypes,
+            OpctxToolAffordances affordances
     ) {
         public OpctxScopeResult {
             entityTypes = entityTypes != null ? List.copyOf(entityTypes) : List.of();
+            affordances = affordances != null ? affordances : OpctxToolAffordances.defaultProfile();
         }
     }
 
@@ -34,10 +36,12 @@ public final class OperationalContextToolDtos {
             int totalItems,
             int totalPages,
             boolean truncated,
-            List<OpctxEntityIndexItem> items
+            List<OpctxEntityIndexItem> items,
+            OpctxToolAffordances affordances
     ) {
         public OpctxListEntitiesResult {
             items = items != null ? List.copyOf(items) : List.of();
+            affordances = affordances != null ? affordances : OpctxToolAffordances.defaultProfile();
         }
     }
 
@@ -60,11 +64,13 @@ public final class OperationalContextToolDtos {
             List<String> types,
             int limit,
             boolean truncated,
-            List<OpctxSearchItem> results
+            List<OpctxSearchItem> results,
+            OpctxToolAffordances affordances
     ) {
         public OpctxSearchResult {
             types = types != null ? List.copyOf(types) : List.of();
             results = results != null ? List.copyOf(results) : List.of();
+            affordances = affordances != null ? affordances : OpctxToolAffordances.defaultProfile();
         }
     }
 
@@ -99,7 +105,8 @@ public final class OperationalContextToolDtos {
             Map<String, Object> handoff,
             Map<String, Object> sourceCoverage,
             List<OpctxOpenQuestion> openQuestions,
-            List<String> sourceRefs
+            List<String> sourceRefs,
+            OpctxToolAffordances affordances
     ) {
         public OpctxEntityDetailResult {
             overview = overview != null ? Map.copyOf(overview) : Map.of();
@@ -110,6 +117,71 @@ public final class OperationalContextToolDtos {
             sourceCoverage = sourceCoverage != null ? Map.copyOf(sourceCoverage) : Map.of();
             openQuestions = openQuestions != null ? List.copyOf(openQuestions) : List.of();
             sourceRefs = sourceRefs != null ? List.copyOf(sourceRefs) : List.of();
+            affordances = affordances != null ? affordances : OpctxToolAffordances.defaultProfile();
+        }
+    }
+
+    public record OpctxToolAffordances(
+            String profile,
+            List<OpctxToolLink> links,
+            List<String> availableExpansions,
+            List<String> suggestedNextReads,
+            List<String> suggestedTools,
+            String reasonToExpand,
+            List<String> omittedBecause,
+            OpctxTruncation truncation,
+            List<String> limitations
+    ) {
+        public OpctxToolAffordances {
+            profile = profile != null ? profile : "default";
+            links = links != null ? List.copyOf(links) : List.of();
+            availableExpansions = availableExpansions != null ? List.copyOf(availableExpansions) : List.of();
+            suggestedNextReads = suggestedNextReads != null ? List.copyOf(suggestedNextReads) : List.of();
+            suggestedTools = suggestedTools != null ? List.copyOf(suggestedTools) : List.of();
+            omittedBecause = omittedBecause != null ? List.copyOf(omittedBecause) : List.of();
+            truncation = truncation != null ? truncation : OpctxTruncation.none();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
+
+        public static OpctxToolAffordances defaultProfile() {
+            return new OpctxToolAffordances(
+                    "default",
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    null,
+                    List.of(),
+                    OpctxTruncation.none(),
+                    List.of()
+            );
+        }
+    }
+
+    public record OpctxToolLink(
+            String rel,
+            String tool,
+            Map<String, Object> arguments,
+            String reason
+    ) {
+        public OpctxToolLink {
+            arguments = arguments != null ? Map.copyOf(arguments) : Map.of();
+        }
+    }
+
+    public record OpctxTruncation(
+            boolean truncated,
+            String reason,
+            Map<String, Integer> returnedCounts,
+            Map<String, Integer> omittedCounts
+    ) {
+        public OpctxTruncation {
+            returnedCounts = returnedCounts != null ? Map.copyOf(returnedCounts) : Map.of();
+            omittedCounts = omittedCounts != null ? Map.copyOf(omittedCounts) : Map.of();
+        }
+
+        public static OpctxTruncation none() {
+            return new OpctxTruncation(false, null, Map.of(), Map.of());
         }
     }
 

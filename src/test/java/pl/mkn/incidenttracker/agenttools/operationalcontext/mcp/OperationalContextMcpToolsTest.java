@@ -1,11 +1,14 @@
 package pl.mkn.incidenttracker.agenttools.operationalcontext.mcp;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OperationalContextMcpToolsTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final OperationalContextMcpTools tools = new OperationalContextMcpTools(
             ignored -> catalog(),
             new OperationalContextToolMapper()
@@ -27,6 +31,8 @@ class OperationalContextMcpToolsTest {
         var result = tools.getScope("Sprawdzam zakres katalogu.", null);
 
         assertTrue(result.enabled());
+        assertEquals("default", result.affordances().profile());
+        assertTrue(result.affordances().suggestedTools().contains("opctx_search"));
         assertEquals(9, result.entityTypes().size());
         assertEquals(2, count(result, "system"));
         assertEquals(1, count(result, "repository"));
@@ -50,6 +56,9 @@ class OperationalContextMcpToolsTest {
         assertEquals(2, firstPage.totalItems());
         assertEquals(2, firstPage.totalPages());
         assertTrue(firstPage.truncated());
+        assertEquals("default", firstPage.affordances().profile());
+        assertTrue(firstPage.affordances().links().stream()
+                .anyMatch(link -> link.rel().equals("first-entity") && link.tool().equals("opctx_get_entity")));
         assertEquals("billing", firstPage.items().get(0).id());
 
         var filtered = tools.listEntities(
@@ -83,6 +92,9 @@ class OperationalContextMcpToolsTest {
         assertTrue(result.results().get(0).matchedFields().contains("identity"));
         assertTrue(result.results().get(0).matchedSignals().contains("payments-api"));
         assertTrue(result.results().get(0).why().contains("system:payments"));
+        assertEquals("default", result.affordances().profile());
+        assertTrue(result.affordances().links().stream()
+                .anyMatch(link -> link.rel().equals("top-result") && link.tool().equals("opctx_get_entity")));
     }
 
     @Test
@@ -96,6 +108,10 @@ class OperationalContextMcpToolsTest {
         );
 
         assertEquals("Payments", result.label());
+        assertEquals("default", result.affordances().profile());
+        assertTrue(result.affordances().availableExpansions().contains("include=codeSearch"));
+        assertTrue(result.affordances().suggestedNextReads().stream()
+                .anyMatch(read -> read.contains("include=[codeSearch]")));
         assertEquals("high", result.overview().get("criticality"));
         assertTrue(result.relations().containsKey("references"));
         assertTrue(result.signals().containsKey("deployment"));
@@ -108,6 +124,51 @@ class OperationalContextMcpToolsTest {
         assertTrue(result.sourceRefs().contains("systems.yml#payments"));
         assertFalse(result.overview().containsKey("payload"));
         assertFalse(result.relations().containsKey("rawSourcePreview"));
+        assertFalse(result.toString().contains("rawSourcePreview"));
+    }
+
+    @Test
+    void shouldCompactDefaultEntityToolPayloadAndExposeTruncation() {
+        var result = tools.getEntity(
+                "repository",
+                "payments-service",
+                null,
+                "Pobieram domyslny kompaktowy opis repozytorium.",
+                null
+        );
+
+        assertEquals("default", result.affordances().profile());
+        assertTrue(result.affordances().truncation().truncated());
+        assertTrue(result.affordances().omittedBecause().stream()
+                .anyMatch(reason -> reason.contains("compacted")));
+        assertTrue(result.affordances().suggestedTools().contains("opctx_search"));
+        assertFalse(result.toString().contains("rawSourcePreview"));
+        assertFalse(result.toString().contains("payload"));
+    }
+
+    @Test
+    void shouldKeepRuntimeToolEntityPayloadCompactForLargeCodeSearchScope() throws Exception {
+        var runtimeTools = new OperationalContextMcpTools(
+                new OperationalContextAdapter(new OperationalContextProperties()),
+                new OperationalContextToolMapper()
+        );
+
+        var result = runtimeTools.getEntity(
+                "codeSearchScope",
+                "clp-collateral-full-scope",
+                null,
+                "Sprawdzam kompaktowy payload narzedzia dla duzego scope.",
+                null
+        );
+        var json = objectMapper.writeValueAsString(result);
+
+        assertEquals("default", result.affordances().profile());
+        assertTrue(result.affordances().truncation().truncated());
+        assertTrue(json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 100_000);
+        assertFalse(json.contains("rawSourcePreview"));
+        assertFalse(json.contains("\"payload\""));
+        assertTrue(result.affordances().suggestedNextReads().stream()
+                .anyMatch(read -> read.contains("include=[codeSearch]")));
     }
 
     @Test
@@ -287,7 +348,18 @@ class OperationalContextMcpToolsTest {
                 "matchSignals", map(
                         "strong", map(
                                 "packagePrefixes", List.of("pl.example.payments"),
-                                "classHints", List.of("PaymentController")
+                                "classHints", List.of(
+                                        "PaymentController",
+                                        "PaymentService",
+                                        "PaymentRepository",
+                                        "PaymentProviderClient",
+                                        "PaymentEventPublisher",
+                                        "PaymentConfiguration",
+                                        "PaymentScheduler",
+                                        "PaymentEntity",
+                                        "PaymentCommandHandler",
+                                        "PaymentQueryHandler"
+                                )
                         )
                 )
         );

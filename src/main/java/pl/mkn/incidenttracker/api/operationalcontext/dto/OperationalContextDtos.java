@@ -278,6 +278,59 @@ public final class OperationalContextDtos {
     ) {
     }
 
+    public record OperationalContextProfiledReadModelDto(
+            String contract,
+            int contractVersion,
+            String profile,
+            Object analysisTarget,
+            Map<String, Object> data,
+            List<OperationalContextReadModelLinkDto> links,
+            List<String> availableExpansions,
+            List<String> suggestedNextReads,
+            List<String> suggestedTools,
+            String reasonToExpand,
+            List<String> omittedBecause,
+            OperationalContextReadModelTruncationDto truncation,
+            Double relevanceScore,
+            String confidence,
+            List<String> limitations,
+            Object provenance,
+            List<Object> sourceRefs,
+            List<Object> validationFindings
+    ) {
+        public OperationalContextProfiledReadModelDto {
+            data = data != null ? Map.copyOf(data) : Map.of();
+            links = links != null ? List.copyOf(links) : List.of();
+            availableExpansions = availableExpansions != null ? List.copyOf(availableExpansions) : List.of();
+            suggestedNextReads = suggestedNextReads != null ? List.copyOf(suggestedNextReads) : List.of();
+            suggestedTools = suggestedTools != null ? List.copyOf(suggestedTools) : List.of();
+            omittedBecause = omittedBecause != null ? List.copyOf(omittedBecause) : List.of();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+            sourceRefs = sourceRefs != null ? List.copyOf(sourceRefs) : List.of();
+            validationFindings = validationFindings != null ? List.copyOf(validationFindings) : List.of();
+        }
+    }
+
+    public record OperationalContextReadModelLinkDto(
+            String rel,
+            String href,
+            String profile,
+            String reason
+    ) {
+    }
+
+    public record OperationalContextReadModelTruncationDto(
+            boolean truncated,
+            String reason,
+            Map<String, Integer> returnedCounts,
+            Map<String, Integer> omittedCounts
+    ) {
+        public OperationalContextReadModelTruncationDto {
+            returnedCounts = returnedCounts != null ? Map.copyOf(returnedCounts) : Map.of();
+            omittedCounts = omittedCounts != null ? Map.copyOf(omittedCounts) : Map.of();
+        }
+    }
+
     public record OperationalContextDetailSectionDto(
             String title,
             Map<String, Object> fields

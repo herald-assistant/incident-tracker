@@ -9,6 +9,9 @@ import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityRelationsReadModelDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelLinkDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelTruncationDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextBlastRadiusReadModel;
@@ -58,6 +61,19 @@ class OperationalContextControllerTest {
                 .andExpect(jsonPath("$.codeSearchScopes").value(1))
                 .andExpect(jsonPath("$.catalogStatus").value("ready"))
                 .andExpect(jsonPath("$.validationFindings.error").value(0));
+    }
+
+    @Test
+    void shouldRouteProfiledSummaryToCompactEnvelope() throws Exception {
+        when(viewService.summary("default")).thenReturn(profiled("operational-context.summary", null));
+
+        mockMvc.perform(get("/api/operational-context/summary")
+                        .param("profile", "default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.summary"))
+                .andExpect(jsonPath("$.profile").value("default"))
+                .andExpect(jsonPath("$.links[0].rel").value("expanded"))
+                .andExpect(jsonPath("$.availableExpansions[0]").value("profile=expanded"));
     }
 
     @Test
@@ -195,6 +211,28 @@ class OperationalContextControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void shouldRouteProfiledReadModelProjectionEndpoints() throws Exception {
+        when(viewService.flowReadModel("process", "new-process", "default"))
+                .thenReturn(profiled("operational-context.flow", entityRef("process", "new-process")));
+        when(viewService.blastRadiusReadModel("class", "NewLimitOrderController", "default"))
+                .thenReturn(profiled("operational-context.blast-radius", entityRef("class", "NewLimitOrderController")));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/flow")
+                        .param("profile", "default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.flow"))
+                .andExpect(jsonPath("$.profile").value("default"));
+
+        mockMvc.perform(get("/api/operational-context/read-model/blast-radius")
+                        .param("type", "class")
+                        .param("id", "NewLimitOrderController")
+                        .param("profile", "default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contract").value("operational-context.blast-radius"))
+                .andExpect(jsonPath("$.analysisTarget.id").value("NewLimitOrderController"));
+    }
+
     private static ExplainableAggregateDto emptyAggregate(String label) {
         return new ExplainableAggregateDto(
                 label,
@@ -245,6 +283,29 @@ class OperationalContextControllerTest {
                 List.of(),
                 List.of(),
                 List.of(),
+                List.of(),
+                List.of()
+        );
+    }
+
+    private static OperationalContextProfiledReadModelDto profiled(String contract, EntityRef target) {
+        return new OperationalContextProfiledReadModelDto(
+                contract,
+                1,
+                "default",
+                target,
+                Map.of("returned", 1),
+                List.of(new OperationalContextReadModelLinkDto("expanded", "/expanded", "expanded", "Full payload.")),
+                List.of("profile=expanded"),
+                List.of("Read the compact entity before expanding."),
+                List.of("opctx_get_entity"),
+                "Expand only for full diagnostics.",
+                List.of(),
+                new OperationalContextReadModelTruncationDto(false, null, Map.of("returned", 1), Map.of()),
+                1.0,
+                "high",
+                List.of(),
+                null,
                 List.of(),
                 List.of()
         );

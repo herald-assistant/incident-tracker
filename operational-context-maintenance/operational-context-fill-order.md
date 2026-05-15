@@ -194,3 +194,100 @@ guidance.
   stack traces, no transient URLs.
 - Preserve useful existing evidence and source coverage.
 - Return complete file content when using a file-specific update prompt.
+
+## Read-model budget checklist
+
+Use this checklist before adding fields to YAML/MD or before changing read model
+builders/projections.
+
+### Write model
+
+- Put each maintained fact in exactly one owner file from the matrix above.
+- Do not add a fact only because a default REST/tool payload needs it in another
+  shape. Add the fact once, then project it in code.
+- Do not add manual backlinks to make FE, LLM or tools easier to render.
+- Keep uncertainty in `gaps`, `sourceCoverage`, `limitations` or validation
+  findings, not as repeated prose in several entities.
+- Keep hints durable and searchable: stable package prefixes, class names,
+  endpoints, queues/topics, tables, modules, repository paths and domain terms.
+- Do not paste raw payloads, stack traces, generated source blocks, request
+  bodies or transient environment values into the catalog.
+
+### Default read model
+
+Default profile is for LLM/tools and should answer: "what matters now, and what
+is the smallest useful next read?"
+
+Keep in default only fields that help:
+
+- select a repository, module, shared library or generated client,
+- distinguish lifecycle roles such as primary, target, parallel, legacy,
+  fallback or support,
+- understand flow order and upstream/downstream,
+- assess blast radius,
+- show confidence, limitations and provenance,
+- suggest a next read/tool that narrows exploration.
+
+Do not put these in default unless a test or measurement proves value:
+
+- raw source preview,
+- full validation inventory,
+- all health-card rows,
+- full sourceRef repetition,
+- all code-search hints from all modules,
+- long labels/summaries repeated in nested refs,
+- raw explainability groups intended for UI diagnostics.
+
+### Expanded read model
+
+Expanded is the place for exhaustive UI and diagnostic reads:
+
+- full health inventories,
+- full source refs,
+- rawSourcePreview,
+- full per-step implementation refs and hints,
+- all validation findings,
+- complete code-search hint graphs.
+
+No-profile REST remains FE-safe/expanded unless the frontend explicitly opts
+into compact profiles.
+
+### Source refs and provenance
+
+- Default top-level `sourceRefs` should be deduped and compact:
+  `refId`, `file`, `path`, `target`, `role`.
+- Default top-level `provenance.sourceRefs` should summarize sourceRef counts by
+  file and target type.
+- List items should usually expose `sourceRefCount`, not inline source refs.
+- Expanded may keep complete sourceRef repetition.
+
+### Affordances
+
+Every default LLM/tool-oriented response should expose practical next-step
+guidance:
+
+- `links`,
+- `availableExpansions`,
+- `suggestedNextReads`,
+- `suggestedTools`,
+- `reasonToExpand`,
+- `omittedBecause`,
+- `truncation`,
+- `limitations`,
+- `confidence`.
+
+For ranked lists add `relevanceScore` and `reasonToRead` to returned top-N
+items. If the score comes from runtime/read-model heuristics, keep it in code
+only. Do not add scoring fields to YAML/MD.
+
+### Measurement
+
+When changing default projections, update
+`docs/architecture/09-operational-context-read-model-optimization-plan.md` with:
+
+- hypothesis,
+- small change,
+- tests or an explicit docs-only note,
+- REST sampling where behavior changes,
+- before/after payload sizes,
+- quality decision and next smallest step.

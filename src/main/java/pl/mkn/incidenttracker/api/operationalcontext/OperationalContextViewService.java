@@ -112,6 +112,8 @@ public class OperationalContextViewService {
             new OperationalContextFlowReadModelBuilder(relationIndexBuilder);
     private final OperationalContextBlastRadiusReadModelBuilder blastRadiusReadModelBuilder =
             new OperationalContextBlastRadiusReadModelBuilder(relationIndexBuilder);
+    private final OperationalContextProfiledReadModelMapper profiledReadModelMapper =
+            new OperationalContextProfiledReadModelMapper();
 
     public OperationalContextSummaryDto summary() {
         var view = view();
@@ -144,6 +146,14 @@ public class OperationalContextViewService {
                 status,
                 healthCards
         );
+    }
+
+    public Object summary(String profile) {
+        var expanded = summary();
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.summary(expanded, profile);
     }
 
     public List<OperationalContextSystemRowDto> systems() {
@@ -267,8 +277,16 @@ public class OperationalContextViewService {
         return results.stream()
                 .sorted(Comparator
                         .comparingInt((OperationalContextSearchResultDto result) -> confidenceRank(result.confidence()))
-                        .thenComparing(OperationalContextSearchResultDto::label))
+                .thenComparing(OperationalContextSearchResultDto::label))
                 .toList();
+    }
+
+    public Object search(String query, String profile) {
+        var expanded = search(query);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.search(query, expanded, profile);
     }
 
     public OperationalContextEntityDetailDto entity(String type, String id) {
@@ -285,6 +303,14 @@ public class OperationalContextViewService {
             case HANDOFF_RULE -> handoffRuleDetail(view, id);
             default -> throw new OperationalContextEntityNotFoundException(type, id);
         };
+    }
+
+    public Object entity(String type, String id, String profile) {
+        var expanded = entity(type, id);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.entity(expanded, profile);
     }
 
     public OperationalContextEntityRelationsReadModelDto entityRelationsReadModel(String type, String id) {
@@ -304,11 +330,27 @@ public class OperationalContextViewService {
         );
     }
 
+    public Object entityRelationsReadModel(String type, String id, String profile) {
+        var expanded = entityRelationsReadModel(type, id);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.relations(expanded, profile);
+    }
+
     public OperationalContextCodeSearchReadModel codeSearchReadModel(String type, String id) {
         var view = view();
         var entityType = normalizeReadModelType(type);
         requireReadModelEntity(view, entityType, id);
         return codeSearchReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
+    }
+
+    public Object codeSearchReadModel(String type, String id, String profile) {
+        var expanded = codeSearchReadModel(type, id);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.codeSearch(expanded, profile);
     }
 
     public OperationalContextImplementationReadModel implementationReadModel(String type, String id) {
@@ -318,11 +360,27 @@ public class OperationalContextViewService {
         return implementationReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
     }
 
+    public Object implementationReadModel(String type, String id, String profile) {
+        var expanded = implementationReadModel(type, id);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.implementations(expanded, profile);
+    }
+
     public OperationalContextFlowReadModel flowReadModel(String type, String id) {
         var view = view();
         var entityType = normalizeReadModelType(type);
         requireReadModelEntity(view, entityType, id);
         return flowReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
+    }
+
+    public Object flowReadModel(String type, String id, String profile) {
+        var expanded = flowReadModel(type, id);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.flow(expanded, profile);
     }
 
     public OperationalContextBlastRadiusReadModel blastRadiusReadModel(String type, String id) {
@@ -332,6 +390,14 @@ public class OperationalContextViewService {
             requireReadModelEntity(view, entityType, id);
         }
         return blastRadiusReadModelBuilder.buildForEntity(view.catalog(), entityType, id);
+    }
+
+    public Object blastRadiusReadModel(String type, String id, String profile) {
+        var expanded = blastRadiusReadModel(type, id);
+        if (profiledReadModelMapper.expandedProfile(profile)) {
+            return expanded;
+        }
+        return profiledReadModelMapper.blastRadius(expanded, profile);
     }
 
     private OperationalContextSystemRowDto systemRow(CatalogView view, OperationalContextSystem system) {

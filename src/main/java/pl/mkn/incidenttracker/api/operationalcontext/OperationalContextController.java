@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.api.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,22 +10,14 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OpenQuestionDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextBoundedContextRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
-import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
-import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityRelationsReadModelDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextGlossaryRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextHandoffRuleRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextIntegrationRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProcessRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextRepositoryRowDto;
-import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSearchResultDto;
-import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextTeamRowDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.ValidationFindingDto;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextBlastRadiusReadModel;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextFlowReadModel;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextImplementationReadModel;
 
 import java.util.List;
 
@@ -36,8 +29,8 @@ class OperationalContextController {
     private final OperationalContextViewService viewService;
 
     @GetMapping("/summary")
-    OperationalContextSummaryDto summary() {
-        return viewService.summary();
+    Object summary(@RequestParam(name = "profile", required = false) String profile) {
+        return StringUtils.hasText(profile) ? viewService.summary(profile) : viewService.summary();
     }
 
     @GetMapping("/systems")
@@ -96,111 +89,151 @@ class OperationalContextController {
     }
 
     @GetMapping("/search")
-    List<OperationalContextSearchResultDto> search(@RequestParam(name = "q", required = false) String query) {
-        return viewService.search(query);
+    Object search(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "profile", required = false) String profile
+    ) {
+        return StringUtils.hasText(profile) ? viewService.search(query, profile) : viewService.search(query);
     }
 
     @GetMapping("/entities/{type}")
-    OperationalContextEntityDetailDto entityByQuery(
+    Object entityByQuery(
             @PathVariable String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.entity(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.entity(type, id, profile)
+                : viewService.entity(type, id);
     }
 
     @GetMapping("/entities/{type}/{id}")
-    OperationalContextEntityDetailDto entity(
+    Object entity(
             @PathVariable String type,
-            @PathVariable String id
+            @PathVariable String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.entity(type, id);
+        return StringUtils.hasText(profile) ? viewService.entity(type, id, profile) : viewService.entity(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/{id}/relations")
-    OperationalContextEntityRelationsReadModelDto entityRelationsReadModel(
+    Object entityRelationsReadModel(
             @PathVariable String type,
-            @PathVariable String id
+            @PathVariable String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.entityRelationsReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.entityRelationsReadModel(type, id, profile)
+                : viewService.entityRelationsReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/relations")
-    OperationalContextEntityRelationsReadModelDto entityRelationsReadModelByQuery(
+    Object entityRelationsReadModelByQuery(
             @PathVariable String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.entityRelationsReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.entityRelationsReadModel(type, id, profile)
+                : viewService.entityRelationsReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/{id}/code-search")
-    OperationalContextCodeSearchReadModel codeSearchReadModel(
+    Object codeSearchReadModel(
             @PathVariable String type,
-            @PathVariable String id
+            @PathVariable String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.codeSearchReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.codeSearchReadModel(type, id, profile)
+                : viewService.codeSearchReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/code-search")
-    OperationalContextCodeSearchReadModel codeSearchReadModelByQuery(
+    Object codeSearchReadModelByQuery(
             @PathVariable String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.codeSearchReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.codeSearchReadModel(type, id, profile)
+                : viewService.codeSearchReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/{id}/implementations")
-    OperationalContextImplementationReadModel implementationReadModel(
+    Object implementationReadModel(
             @PathVariable String type,
-            @PathVariable String id
+            @PathVariable String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.implementationReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.implementationReadModel(type, id, profile)
+                : viewService.implementationReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/implementations")
-    OperationalContextImplementationReadModel implementationReadModelByQuery(
+    Object implementationReadModelByQuery(
             @PathVariable String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.implementationReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.implementationReadModel(type, id, profile)
+                : viewService.implementationReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/{id}/flow")
-    OperationalContextFlowReadModel flowReadModel(
+    Object flowReadModel(
             @PathVariable String type,
-            @PathVariable String id
+            @PathVariable String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.flowReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.flowReadModel(type, id, profile)
+                : viewService.flowReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/flow")
-    OperationalContextFlowReadModel flowReadModelByQuery(
+    Object flowReadModelByQuery(
             @PathVariable String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.flowReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.flowReadModel(type, id, profile)
+                : viewService.flowReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/{id}/blast-radius")
-    OperationalContextBlastRadiusReadModel blastRadiusReadModel(
+    Object blastRadiusReadModel(
             @PathVariable String type,
-            @PathVariable String id
+            @PathVariable String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.blastRadiusReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.blastRadiusReadModel(type, id, profile)
+                : viewService.blastRadiusReadModel(type, id);
     }
 
     @GetMapping("/read-model/entities/{type}/blast-radius")
-    OperationalContextBlastRadiusReadModel blastRadiusReadModelByQuery(
+    Object blastRadiusReadModelByQuery(
             @PathVariable String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.blastRadiusReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.blastRadiusReadModel(type, id, profile)
+                : viewService.blastRadiusReadModel(type, id);
     }
 
     @GetMapping("/read-model/blast-radius")
-    OperationalContextBlastRadiusReadModel blastRadiusReadModelBySignal(
+    Object blastRadiusReadModelBySignal(
             @RequestParam String type,
-            @RequestParam String id
+            @RequestParam String id,
+            @RequestParam(name = "profile", required = false) String profile
     ) {
-        return viewService.blastRadiusReadModel(type, id);
+        return StringUtils.hasText(profile)
+                ? viewService.blastRadiusReadModel(type, id, profile)
+                : viewService.blastRadiusReadModel(type, id);
     }
 }

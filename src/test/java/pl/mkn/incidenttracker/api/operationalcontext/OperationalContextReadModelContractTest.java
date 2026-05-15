@@ -2,10 +2,13 @@ package pl.mkn.incidenttracker.api.operationalcontext;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.EntityKey;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
@@ -22,6 +25,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OperationalContextReadModelContractTest {
 
@@ -130,6 +135,90 @@ class OperationalContextReadModelContractTest {
         );
 
         assertEquals(objectMapper.readTree(expectedSnapshot()), objectMapper.valueToTree(snapshot));
+    }
+
+    @Test
+    void shouldExposeCompactDefaultProfilesWithoutChangingExpandedPayloads() throws Exception {
+        var catalog = typicalCatalog();
+        var service = new OperationalContextViewService(port(catalog));
+
+        var expandedEntity = service.entity("system", "agreement-service");
+        var compactEntity = (OperationalContextProfiledReadModelDto) service.entity("system", "agreement-service", "default");
+        var expandedFlow = service.flowReadModel("process", "agreement-submit-process");
+        var compactFlow = (OperationalContextProfiledReadModelDto) service.flowReadModel("process", "agreement-submit-process", "default");
+        var compactRelations = (OperationalContextProfiledReadModelDto) service.entityRelationsReadModel("system", "agreement-service", "default");
+        var compactCodeSearch = (OperationalContextProfiledReadModelDto) service.codeSearchReadModel("system", "agreement-service", "default");
+        var compactBlastRadius = (OperationalContextProfiledReadModelDto) service.blastRadiusReadModel("endpoint", "/agreements", "default");
+
+        assertEquals("default", compactEntity.profile());
+        assertEquals("operational-context.entity-detail", compactEntity.contract());
+        assertFalse(objectMapper.writeValueAsString(compactEntity).contains("\"rawSourcePreview\":"));
+        assertFalse(compactEntity.links().isEmpty());
+
+        assertEquals("default", compactFlow.profile());
+        assertTrue(compactFlow.links().stream().anyMatch(link -> link.rel().equals("expanded")));
+        assertTrue(compactFlow.availableExpansions().contains("profile=expanded"));
+        assertFalse(compactFlow.suggestedNextReads().isEmpty());
+        assertTrue(objectMapper.writeValueAsBytes(compactFlow).length < objectMapper.writeValueAsBytes(expandedFlow).length);
+
+        assertEquals("default", compactRelations.profile());
+        var incomingRelations = objectList(compactRelations.data().get("incomingRelations"));
+        assertFalse(incomingRelations.isEmpty());
+        assertScoreOrdering(incomingRelations);
+        assertTrue(incomingRelations.get(0).containsKey("relevanceScore"));
+        assertTrue(String.valueOf(incomingRelations.get(0).get("reasonToRead")).contains("confidence"));
+        assertTrue(String.valueOf(incomingRelations.get(0).get("suggestedNextRead")).contains("/api/operational-context"));
+        assertTrue(compactRelations.suggestedNextReads().stream().anyMatch(read -> read.contains("--")));
+        var relationProvenance = objectMap(compactRelations.provenance());
+        assertTrue(objectMap(relationProvenance.get("sourceRefs")).containsKey("byFile"));
+        var firstSourceRef = objectMap(compactRelations.sourceRefs().get(0));
+        assertTrue(firstSourceRef.containsKey("refId"));
+        assertTrue(firstSourceRef.containsKey("target"));
+        assertFalse(firstSourceRef.containsKey("entityType"));
+        assertFalse(firstSourceRef.containsKey("entityId"));
+        assertFalse(firstSourceRef.containsKey("fieldPath"));
+
+        assertEquals("default", compactCodeSearch.profile());
+        assertTrue(compactCodeSearch.suggestedTools().contains("gitlab_search_repository_candidates"));
+
+        assertEquals("default", compactBlastRadius.profile());
+        var impactedFlows = objectList(compactBlastRadius.data().get("impactedFlows"));
+        assertFalse(impactedFlows.isEmpty());
+        assertTrue(impactedFlows.get(0).containsKey("relevanceScore"));
+        assertTrue(String.valueOf(impactedFlows.get(0).get("reasonToRead")).contains("impacted steps"));
+        var impactedSteps = objectList(impactedFlows.get(0).get("impactedSteps"));
+        assertTrue(impactedSteps.get(0).containsKey("reasonToRead"));
+        var impactedNodes = objectMap(compactBlastRadius.data().get("impactedNodes"));
+        assertScoreOrdering(objectList(impactedNodes.get("systems")));
+        assertTrue(compactBlastRadius.suggestedNextReads().stream().anyMatch(read -> read.contains("/flow")));
+    }
+
+    @Test
+    void shouldKeepNoProfileReadModelsBackwardCompatibleWithExpandedShape() {
+        var catalog = typicalCatalog();
+        var service = new OperationalContextViewService(port(catalog));
+
+        var noProfile = service.flowReadModel("process", "agreement-submit-process");
+        var explicitExpanded = service.flowReadModel("process", "agreement-submit-process", "expanded");
+
+        assertEquals(objectMapper.valueToTree(noProfile), objectMapper.valueToTree(explicitExpanded));
+    }
+
+    @Test
+    void shouldTruncateBroadRuntimeClassBlastRadiusInDefaultProfile() throws Exception {
+        var service = new OperationalContextViewService(new OperationalContextAdapter(new OperationalContextProperties()));
+
+        var expanded = service.blastRadiusReadModel("class", "NewLimitOrderController");
+        var compact = (OperationalContextProfiledReadModelDto) service.blastRadiusReadModel(
+                "class",
+                "NewLimitOrderController",
+                "default"
+        );
+
+        assertEquals("default", compact.profile());
+        assertTrue(compact.truncation().truncated());
+        assertTrue(compact.limitations().stream().anyMatch(limitation -> limitation.contains("Broad non-catalog signal")));
+        assertTrue(objectMapper.writeValueAsBytes(compact).length < objectMapper.writeValueAsBytes(expanded).length / 5);
     }
 
     private String expectedSnapshot() {
@@ -466,6 +555,25 @@ class OperationalContextReadModelContractTest {
 
     private String key(EntityKey key) {
         return key.type() + ":" + key.id();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> objectList(Object value) {
+        return (List<Map<String, Object>>) value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectMap(Object value) {
+        return (Map<String, Object>) value;
+    }
+
+    private void assertScoreOrdering(List<Map<String, Object>> items) {
+        var previous = Double.MAX_VALUE;
+        for (var item : items) {
+            var score = ((Number) item.getOrDefault("relevanceScore", 0.0)).doubleValue();
+            assertTrue(score <= previous, "Expected non-increasing relevance scores");
+            previous = score;
+        }
     }
 
     private static OperationalContextPort port(OperationalContextCatalog catalog) {
