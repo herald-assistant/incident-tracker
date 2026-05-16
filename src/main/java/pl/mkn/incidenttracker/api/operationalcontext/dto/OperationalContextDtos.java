@@ -287,6 +287,7 @@ public final class OperationalContextDtos {
             List<OperationalContextReadModelLinkDto> links,
             List<String> availableExpansions,
             List<String> suggestedNextReads,
+            List<OperationalContextReadModelNextReadDto> nextReads,
             List<String> suggestedTools,
             String reasonToExpand,
             List<String> omittedBecause,
@@ -303,6 +304,7 @@ public final class OperationalContextDtos {
             links = links != null ? List.copyOf(links) : List.of();
             availableExpansions = availableExpansions != null ? List.copyOf(availableExpansions) : List.of();
             suggestedNextReads = suggestedNextReads != null ? List.copyOf(suggestedNextReads) : List.of();
+            nextReads = nextReads != null ? List.copyOf(nextReads) : List.of();
             suggestedTools = suggestedTools != null ? List.copyOf(suggestedTools) : List.of();
             omittedBecause = omittedBecause != null ? List.copyOf(omittedBecause) : List.of();
             limitations = limitations != null ? List.copyOf(limitations) : List.of();
@@ -317,6 +319,20 @@ public final class OperationalContextDtos {
             String profile,
             String reason
     ) {
+    }
+
+    public record OperationalContextReadModelNextReadDto(
+            String label,
+            String rel,
+            String href,
+            String profile,
+            String tool,
+            Map<String, Object> arguments,
+            String reason
+    ) {
+        public OperationalContextReadModelNextReadDto {
+            arguments = arguments != null ? Map.copyOf(arguments) : Map.of();
+        }
     }
 
     public record OperationalContextReadModelTruncationDto(

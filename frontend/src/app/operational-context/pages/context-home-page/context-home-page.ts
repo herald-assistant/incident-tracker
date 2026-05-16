@@ -2,27 +2,34 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { catchError, forkJoin, Observable, of } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 
 import {
   ExplainableAggregateDto,
   OpenQuestionDto,
+  OperationalContextAiApiPreview,
+  OperationalContextAiApiPreviewEndpoint,
+  OperationalContextAiSearchPreview,
   OperationalContextCatalogRow,
   OperationalContextEntityDetailDto,
-  OperationalContextReadModelBundle,
+  OperationalContextReadModelProfile,
   OperationalContextSearchResultDto,
+  SourceReferenceDto,
   OperationalContextSummaryDto,
   ValidationFindingDto
 } from '../../models/operational-context.models';
 import { OperationalContextApiService } from '../../services/operational-context-api.service';
+import { AiApiPreviewPanelComponent } from '../../components/ai-api-preview-panel/ai-api-preview-panel';
 import {
   ContextCatalogColumn,
   ContextCatalogTableComponent
 } from '../../components/context-catalog-table/context-catalog-table';
 import { ContextEntityDrawerComponent } from '../../components/context-entity-drawer/context-entity-drawer';
 import { WhyPopoverComponent } from '../../components/why-popover/why-popover';
+import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
 
 type ContextTab =
   | 'overview'
@@ -626,8 +633,12 @@ const VALIDATION_COLUMNS: ContextTableHeader[] = [
     'Wplyw problemu na analize. Tlumaczy, jaki blad moze popelnic AI, jesli katalog pozostanie niepoprawny: zly handoff, pominiete repozytorium, zbyt szeroki scope albo niepewny context.'
   ),
   header(
-    'Source',
-    'Plik zrodlowy katalogu, w ktorym trzeba poprawic dane. Pozwala szybko przejsc od findingu w UI do utrzymania operational-context jako versioned knowledge index.'
+    'Maintenance target',
+    'Konkretny plik, path i encja do poprawy w katalogu. Pozwala szybko przejsc od findingu w UI do utrzymania operational-context jako versioned knowledge index.'
+  ),
+  header(
+    'Actions',
+    'Szybkie akcje utrzymaniowe: otwarcie encji albo skopiowanie celu poprawki.'
   )
 ];
 
@@ -637,8 +648,8 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
     'Otwarte pytanie opisujace brak lub niepewnosc w katalogu. Dla AI jest to jawne ograniczenie widocznosci, a dla analityka lista faktow, ktore warto doprecyzowac.'
   ),
   header(
-    'Source file',
-    'Plik, z ktorego pochodzi pytanie. Pokazuje, gdzie utrzymywany jest brakujacy fragment wiedzy i gdzie nalezy go dopisac po wyjasnieniu.'
+    'Maintenance target',
+    'Plik i encja zwiazane z pytaniem. Pokazuje, gdzie utrzymywany jest brakujacy fragment wiedzy i gdzie nalezy go dopisac po wyjasnieniu.'
   ),
   header(
     'Entity',
@@ -651,6 +662,10 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
   header(
     'Status',
     'Stan pracy nad pytaniem, na przyklad open lub resolved. Pozwala oddzielic aktywne luki katalogu od spraw juz wyjasnionych, zeby AI i operator nie wracali do nieaktualnych niepewnosci.'
+  ),
+  header(
+    'Actions',
+    'Szybkie akcje utrzymaniowe dla pytania: skopiowanie celu poprawki albo przejscie do zwiazanej encji.'
   )
 ];
 
@@ -659,9 +674,11 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
   imports: [
     ReactiveFormsModule,
     NgTemplateOutlet,
+    MatIconModule,
     MatTooltipModule,
     RouterLink,
     RouterLinkActive,
+    AiApiPreviewPanelComponent,
     ContextCatalogTableComponent,
     ContextEntityDrawerComponent,
     WhyPopoverComponent
@@ -685,23 +702,84 @@ export class ContextHomePageComponent {
   readonly errorMessage = signal('');
   readonly detail = signal<OperationalContextEntityDetailDto | null>(null);
   readonly detailError = signal('');
-  readonly readModels = signal<OperationalContextReadModelBundle | null>(null);
-  readonly readModelError = signal('');
+  readonly aiApiPreview = signal<OperationalContextAiApiPreview | null>(null);
+  readonly aiApiPreviewLoading = signal(false);
+  readonly aiApiPreviewError = signal('');
+  readonly aiApiPreviewProfile = signal<OperationalContextReadModelProfile>('default');
   readonly searchResults = signal<OperationalContextSearchResultDto[]>([]);
+  readonly searchAiApiPreview = signal<OperationalContextAiSearchPreview | null>(null);
+  readonly searchAiApiPreviewLoading = signal(false);
+  readonly searchAiApiPreviewError = signal('');
+  readonly searchAiApiPreviewProfile = signal<OperationalContextReadModelProfile>('default');
+  private readonly searchAiApiPreviewQuery = signal('');
+  private readonly selectedEntityTarget = signal<{ type: string; id: string } | null>(null);
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly localFilterControl = new FormControl('', { nonNullable: true });
   readonly onlyWarningsControl = new FormControl(false, { nonNullable: true });
   readonly onlyMissingOwnerControl = new FormControl(false, { nonNullable: true });
   readonly onlyOpenQuestionsControl = new FormControl(false, { nonNullable: true });
+  readonly validationSeverityControl = new FormControl('', { nonNullable: true });
+  readonly validationCategoryControl = new FormControl('', { nonNullable: true });
+  readonly validationEntityTypeControl = new FormControl('', { nonNullable: true });
+  readonly validationSourceFileControl = new FormControl('', { nonNullable: true });
+  readonly questionSeverityControl = new FormControl('', { nonNullable: true });
+  readonly questionEntityTypeControl = new FormControl('', { nonNullable: true });
+  readonly questionSourceFileControl = new FormControl('', { nonNullable: true });
+  readonly questionStatusControl = new FormControl('', { nonNullable: true });
   readonly localFilter = signal('');
   readonly onlyWarnings = signal(false);
   readonly onlyMissingOwner = signal(false);
   readonly onlyOpenQuestions = signal(false);
+  readonly validationSeverity = signal('');
+  readonly validationCategory = signal('');
+  readonly validationEntityType = signal('');
+  readonly validationSourceFile = signal('');
+  readonly questionSeverity = signal('');
+  readonly questionEntityType = signal('');
+  readonly questionSourceFile = signal('');
+  readonly questionStatus = signal('');
+  readonly copiedMaintenanceTarget = signal('');
 
   readonly currentColumns = computed(() => COLUMNS[this.selectedTab()] ?? []);
   readonly currentRows = computed(() => this.filteredRows(this.selectedTab()));
   readonly tableColumnCount = computed(() => Math.max(this.currentColumns().length, 1));
+  readonly searchAiApiPreviewEndpoints = computed<OperationalContextAiApiPreviewEndpoint[]>(() => {
+    const preview = this.searchAiApiPreview();
+    return preview
+      ? [{
+          key: 'search',
+          label: 'Search',
+          url: preview.url,
+          payload: preview.payload,
+          error: preview.error
+        }]
+      : [];
+  });
+  readonly validationSeverityOptions = computed(() =>
+    this.uniqueValues(this.data().validation.map((finding) => finding.severity))
+  );
+  readonly validationCategoryOptions = computed(() =>
+    this.uniqueValues(this.data().validation.map((finding) => finding.category))
+  );
+  readonly validationEntityTypeOptions = computed(() =>
+    this.uniqueValues(this.data().validation.map((finding) => finding.entityType))
+  );
+  readonly validationSourceFileOptions = computed(() =>
+    this.uniqueValues(this.data().validation.map((finding) => this.firstSourceRef(finding)?.file))
+  );
+  readonly questionSeverityOptions = computed(() =>
+    this.uniqueValues(this.data().openQuestions.map((question) => question.severity))
+  );
+  readonly questionEntityTypeOptions = computed(() =>
+    this.uniqueValues(this.data().openQuestions.map((question) => question.entityType))
+  );
+  readonly questionSourceFileOptions = computed(() =>
+    this.uniqueValues(this.data().openQuestions.map((question) => question.sourceFile))
+  );
+  readonly questionStatusOptions = computed(() =>
+    this.uniqueValues(this.data().openQuestions.map((question) => question.status))
+  );
   readonly statusLabel = computed(() => this.summary()?.catalogStatus || 'loading');
   readonly statusText = computed(() => this.formatStatus(this.statusLabel()));
   readonly isIncomplete = computed(() => {
@@ -722,6 +800,30 @@ export class ContextHomePageComponent {
     this.onlyOpenQuestionsControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.onlyOpenQuestions.set(value));
+    this.validationSeverityControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.validationSeverity.set(value));
+    this.validationCategoryControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.validationCategory.set(value));
+    this.validationEntityTypeControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.validationEntityType.set(value));
+    this.validationSourceFileControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.validationSourceFile.set(value));
+    this.questionSeverityControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.questionSeverity.set(value));
+    this.questionEntityTypeControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.questionEntityType.set(value));
+    this.questionSourceFileControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.questionSourceFile.set(value));
+    this.questionStatusControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.questionStatus.set(value));
     this.loadCatalogue();
   }
 
@@ -734,15 +836,58 @@ export class ContextHomePageComponent {
     const query = this.searchControl.value.trim();
     if (!query) {
       this.searchResults.set([]);
+      this.resetSearchAiApiPreview();
       return;
     }
 
+    this.searchAiApiPreviewProfile.set('default');
+    this.searchAiApiPreviewQuery.set(query);
+    this.loadSearchAiApiPreview('default');
     this.api
       .search(query)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (results) => this.searchResults.set(results),
         error: () => this.errorMessage.set('Could not search operational context.')
+      });
+  }
+
+  loadSearchAiApiPreview(profile: OperationalContextReadModelProfile): void {
+    const query = this.searchAiApiPreviewQuery() || this.searchControl.value.trim();
+    if (!query) {
+      this.resetSearchAiApiPreview();
+      return;
+    }
+
+    this.searchAiApiPreviewQuery.set(query);
+    this.searchAiApiPreviewProfile.set(profile);
+    this.searchAiApiPreviewLoading.set(true);
+    this.searchAiApiPreviewError.set('');
+    this.api
+      .getProfiledSearch(query, profile)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (payload) => {
+          this.searchAiApiPreview.set({
+            query,
+            profile,
+            url: this.api.profiledSearchUrl(query, profile),
+            payload,
+            error: null
+          });
+          this.searchAiApiPreviewLoading.set(false);
+        },
+        error: () => {
+          this.searchAiApiPreview.set({
+            query,
+            profile,
+            url: this.api.profiledSearchUrl(query, profile),
+            payload: null,
+            error: 'Could not load search AI API preview.'
+          });
+          this.searchAiApiPreviewError.set('Could not load search AI API preview.');
+          this.searchAiApiPreviewLoading.set(false);
+        }
       });
   }
 
@@ -784,19 +929,50 @@ export class ContextHomePageComponent {
     }
 
     this.detailError.set('');
-    this.readModelError.set('');
-    this.readModels.set(null);
+    this.aiApiPreview.set(null);
+    this.aiApiPreviewError.set('');
+    this.aiApiPreviewLoading.set(true);
+    this.aiApiPreviewProfile.set('default');
+    this.selectedEntityTarget.set(target);
     forkJoin({
       detail: this.api.getEntity(target.type, target.id),
-      readModels: this.readModelsFor(target)
+      aiApiPreview: this.aiApiPreviewFor(target, 'default')
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ detail, readModels }) => {
+        next: ({ detail, aiApiPreview }) => {
           this.detail.set(detail);
-          this.readModels.set(readModels);
+          this.aiApiPreview.set(aiApiPreview);
+          this.aiApiPreviewLoading.set(false);
         },
-        error: () => this.detailError.set(`Could not load ${target.type}/${target.id}.`)
+        error: () => {
+          this.aiApiPreviewLoading.set(false);
+          this.detailError.set(`Could not load ${target.type}/${target.id}.`);
+        }
+      });
+  }
+
+  loadAiApiPreview(profile: OperationalContextReadModelProfile): void {
+    const target = this.selectedEntityTarget();
+    if (!target) {
+      return;
+    }
+
+    this.aiApiPreviewProfile.set(profile);
+    this.aiApiPreviewLoading.set(true);
+    this.aiApiPreviewError.set('');
+    this.aiApiPreviewFor(target, profile)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (preview) => {
+          this.aiApiPreview.set(preview);
+          this.aiApiPreviewLoading.set(false);
+        },
+        error: () => {
+          this.aiApiPreview.set(null);
+          this.aiApiPreviewError.set('Could not load AI API preview.');
+          this.aiApiPreviewLoading.set(false);
+        }
       });
   }
 
@@ -807,8 +983,11 @@ export class ContextHomePageComponent {
   closeDrawer(): void {
     this.detail.set(null);
     this.detailError.set('');
-    this.readModels.set(null);
-    this.readModelError.set('');
+    this.aiApiPreview.set(null);
+    this.aiApiPreviewLoading.set(false);
+    this.aiApiPreviewError.set('');
+    this.aiApiPreviewProfile.set('default');
+    this.selectedEntityTarget.set(null);
   }
 
   protected validationRows(): ValidationFindingDto[] {
@@ -819,6 +998,21 @@ export class ContextHomePageComponent {
           return false;
         }
         if (this.onlyWarnings() && !this.isWarningSeverity(finding.severity)) {
+          return false;
+        }
+        if (this.validationSeverity() && !this.exactMatch(finding.severity, this.validationSeverity())) {
+          return false;
+        }
+        if (this.validationCategory() && !this.exactMatch(finding.category, this.validationCategory())) {
+          return false;
+        }
+        if (this.validationEntityType() && !this.exactMatch(finding.entityType, this.validationEntityType())) {
+          return false;
+        }
+        if (
+          this.validationSourceFile()
+          && !this.exactMatch(this.firstSourceRef(finding)?.file, this.validationSourceFile())
+        ) {
           return false;
         }
         return true;
@@ -833,6 +1027,18 @@ export class ContextHomePageComponent {
           return false;
         }
         if (this.onlyWarnings() && !this.isWarningSeverity(question.severity)) {
+          return false;
+        }
+        if (this.questionSeverity() && !this.exactMatch(question.severity, this.questionSeverity())) {
+          return false;
+        }
+        if (this.questionEntityType() && !this.exactMatch(question.entityType, this.questionEntityType())) {
+          return false;
+        }
+        if (this.questionSourceFile() && !this.exactMatch(question.sourceFile, this.questionSourceFile())) {
+          return false;
+        }
+        if (this.questionStatus() && !this.exactMatch(question.status, this.questionStatus())) {
           return false;
         }
         return true;
@@ -850,6 +1056,44 @@ export class ContextHomePageComponent {
 
   protected validationStatusClass(severity: string): string {
     return `validation-severity validation-severity--${severity || 'info'}`;
+  }
+
+  protected firstSourceRef(finding: ValidationFindingDto): SourceReferenceDto | null {
+    return finding.sourceRefs?.[0] ?? null;
+  }
+
+  protected validationMaintenanceTarget(finding: ValidationFindingDto): string {
+    const source = this.firstSourceRef(finding);
+    const sourceLabel = [source?.file, source?.path].filter(Boolean).join(' ');
+    return [
+      sourceLabel || 'unknown source',
+      `${finding.entityType}/${finding.entityId}`,
+      finding.category
+    ].join(' | ');
+  }
+
+  protected openQuestionMaintenanceTarget(question: OpenQuestionDto): string {
+    return [
+      question.sourceFile || 'unknown source',
+      this.openQuestionEntityLabel(question),
+      question.status
+    ].filter(Boolean).join(' | ');
+  }
+
+  protected openQuestionEntityLabel(question: OpenQuestionDto): string {
+    return question.entityId
+      ? `${question.entityType}/${question.entityId}`
+      : question.entityType;
+  }
+
+  protected async copyMaintenanceTarget(
+    event: Event,
+    target: string,
+    key: string
+  ): Promise<void> {
+    event.stopPropagation();
+    const copied = await copyTextToClipboard(target);
+    this.copiedMaintenanceTarget.set(copied ? key : '');
   }
 
   protected healthReadinessLabel(severity: string): string {
@@ -927,37 +1171,6 @@ export class ContextHomePageComponent {
       });
   }
 
-  private readModelsFor(target: { type: string; id: string }): Observable<OperationalContextReadModelBundle> {
-    if (!this.supportsReadModels(target.type)) {
-      return of({});
-    }
-
-    return forkJoin({
-      relations: this.readModelOrNull(
-        this.api.getEntityRelationsReadModel(target.type, target.id)
-      ),
-      codeSearch: this.readModelOrNull(
-        this.api.getCodeSearchReadModel(target.type, target.id)
-      ),
-      implementations: this.readModelOrNull(
-        this.api.getImplementationReadModel(target.type, target.id)
-      ),
-      flow: this.readModelOrNull(this.api.getFlowReadModel(target.type, target.id)),
-      blastRadius: this.readModelOrNull(
-        this.api.getBlastRadiusReadModel(target.type, target.id)
-      )
-    });
-  }
-
-  private readModelOrNull<T>(request: Observable<T>): Observable<T | null> {
-    return request.pipe(
-      catchError(() => {
-        this.readModelError.set('Could not load all read-model projections for this entity.');
-        return of(null);
-      })
-    );
-  }
-
   private supportsReadModels(type: string): boolean {
     return [
       'system',
@@ -967,6 +1180,65 @@ export class ContextHomePageComponent {
       'integration',
       'bounded-context'
     ].includes(type);
+  }
+
+  private resetSearchAiApiPreview(): void {
+    this.searchAiApiPreview.set(null);
+    this.searchAiApiPreviewLoading.set(false);
+    this.searchAiApiPreviewError.set('');
+    this.searchAiApiPreviewProfile.set('default');
+    this.searchAiApiPreviewQuery.set('');
+  }
+
+  private uniqueValues(values: Array<string | null | undefined>): string[] {
+    return Array.from(
+      new Set(
+        values
+          .map((value) => String(value || '').trim())
+          .filter(Boolean)
+      )
+    ).sort((left, right) => left.localeCompare(right));
+  }
+
+  private exactMatch(left: string | null | undefined, right: string): boolean {
+    return normalize(left || '') === normalize(right);
+  }
+
+  private aiApiPreviewFor(
+    target: { type: string; id: string },
+    profile: OperationalContextReadModelProfile
+  ): Observable<OperationalContextAiApiPreview> {
+    const requests = this.api.getAiApiPreviewRequests(
+      target.type,
+      target.id,
+      profile,
+      this.supportsReadModels(target.type)
+    );
+
+    return forkJoin(
+      requests.map((request) =>
+        request.request.pipe(
+          map(
+            (payload): OperationalContextAiApiPreviewEndpoint => ({
+              key: request.key,
+              label: request.label,
+              url: request.url,
+              payload,
+              error: null
+            })
+          ),
+          catchError(() =>
+            of({
+              key: request.key,
+              label: request.label,
+              url: request.url,
+              payload: null,
+              error: `Could not load ${request.label}.`
+            } satisfies OperationalContextAiApiPreviewEndpoint)
+          )
+        )
+      )
+    ).pipe(map((endpoints) => ({ profile, endpoints })));
   }
 
   private filteredRows(tab: ContextTab): Array<Record<string, unknown>> {

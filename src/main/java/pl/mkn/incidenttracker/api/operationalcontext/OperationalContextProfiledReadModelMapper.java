@@ -11,6 +11,7 @@ import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextExplainabilitySectionDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelLinkDto;
+import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelNextReadDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelTruncationDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSearchResultDto;
 import pl.mkn.incidenttracker.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
@@ -39,9 +40,11 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
 
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -665,6 +668,7 @@ class OperationalContextProfiledReadModelMapper {
                 links,
                 availableExpansions,
                 suggestedNextReads,
+                nextReadsFrom(links, suggestedNextReads),
                 suggestedTools,
                 reasonToExpand,
                 omittedBecause,
@@ -1374,6 +1378,237 @@ class OperationalContextProfiledReadModelMapper {
             }
         });
         return new OperationalContextReadModelTruncationDto(!omitted.isEmpty(), omitted.isEmpty() ? null : reason, returnedCounts, omitted);
+    }
+
+    private List<OperationalContextReadModelNextReadDto> nextReadsFrom(
+            List<OperationalContextReadModelLinkDto> links,
+            List<String> suggestedNextReads
+    ) {
+        var safeLinks = links != null ? links : List.<OperationalContextReadModelLinkDto>of();
+        var reads = new ArrayList<OperationalContextReadModelNextReadDto>();
+        var keys = new LinkedHashSet<String>();
+
+        for (var suggestion : suggestedNextReads != null ? suggestedNextReads : List.<String>of()) {
+            var href = hrefFromSuggestion(suggestion);
+            var reason = reasonFromSuggestion(suggestion);
+            if (StringUtils.hasText(href)) {
+                var link = safeLinks.stream()
+                        .filter(candidate -> Objects.equals(candidate.href(), href))
+                        .findFirst()
+                        .orElseGet(() -> linkFromHref(href, reason));
+                addNextRead(reads, keys, nextReadFromLink(link, reason));
+            } else if (StringUtils.hasText(suggestion)) {
+                addNextRead(reads, keys, new OperationalContextReadModelNextReadDto(
+                        "Guidance",
+                        "guidance",
+                        null,
+                        null,
+                        null,
+                        Map.of(),
+                        suggestion.trim()
+                ));
+            }
+        }
+
+        if (reads.isEmpty()) {
+            safeLinks.stream()
+                    .filter(link -> !List.of("self").contains(link.rel()))
+                    .limit(6)
+                    .map(link -> nextReadFromLink(link, link.reason()))
+                    .forEach(read -> addNextRead(reads, keys, read));
+        }
+
+        return List.copyOf(reads);
+    }
+
+    private void addNextRead(
+            List<OperationalContextReadModelNextReadDto> reads,
+            LinkedHashSet<String> keys,
+            OperationalContextReadModelNextReadDto read
+    ) {
+        if (read == null) {
+            return;
+        }
+        var key = String.join("|",
+                String.valueOf(read.rel()),
+                String.valueOf(read.href()),
+                String.valueOf(read.tool()),
+                String.valueOf(read.arguments())
+        );
+        if (keys.add(key)) {
+            reads.add(read);
+        }
+    }
+
+    private OperationalContextReadModelNextReadDto nextReadFromLink(
+            OperationalContextReadModelLinkDto link,
+            String reason
+    ) {
+        var tool = toolForLink(link);
+        var effectiveReason = StringUtils.hasText(reason)
+                ? reason
+                : StringUtils.hasText(link.reason()) ? link.reason() : "Follow this focused read.";
+        return new OperationalContextReadModelNextReadDto(
+                labelForRel(link.rel()),
+                link.rel(),
+                link.href(),
+                link.profile(),
+                tool,
+                argumentsForLink(link, tool),
+                effectiveReason
+        );
+    }
+
+    private OperationalContextReadModelLinkDto linkFromHref(String href, String reason) {
+        var rel = relFromHref(href);
+        return new OperationalContextReadModelLinkDto(
+                rel,
+                href,
+                queryParameter(href, "profile"),
+                StringUtils.hasText(reason) ? reason : "Follow this focused REST read."
+        );
+    }
+
+    private String hrefFromSuggestion(String suggestion) {
+        if (!StringUtils.hasText(suggestion)) {
+            return null;
+        }
+        var trimmed = suggestion.trim();
+        if (!trimmed.startsWith("GET ")) {
+            return null;
+        }
+        var withoutMethod = trimmed.substring(4).trim();
+        var reasonSeparator = withoutMethod.indexOf(" -- ");
+        return reasonSeparator >= 0
+                ? withoutMethod.substring(0, reasonSeparator).trim()
+                : withoutMethod;
+    }
+
+    private String reasonFromSuggestion(String suggestion) {
+        if (!StringUtils.hasText(suggestion)) {
+            return null;
+        }
+        var separator = suggestion.indexOf(" -- ");
+        if (separator >= 0 && separator + 4 < suggestion.length()) {
+            return suggestion.substring(separator + 4).trim();
+        }
+        return suggestion.startsWith("GET ") ? null : suggestion.trim();
+    }
+
+    private String relFromHref(String href) {
+        if (!StringUtils.hasText(href)) {
+            return "read";
+        }
+        if (href.contains("/search")) {
+            return "search";
+        }
+        if (href.contains("/entities/") && !href.contains("/read-model/entities/")) {
+            return "entity";
+        }
+        if (href.contains("/read-model/blast-radius")) {
+            return "blast-radius";
+        }
+        var marker = "/read-model/entities/";
+        var markerIndex = href.indexOf(marker);
+        if (markerIndex >= 0) {
+            var afterType = href.indexOf('/', markerIndex + marker.length());
+            if (afterType >= 0) {
+                var query = href.indexOf('?', afterType);
+                return href.substring(afterType + 1, query >= 0 ? query : href.length());
+            }
+        }
+        return "read";
+    }
+
+    private String labelForRel(String rel) {
+        if (!StringUtils.hasText(rel)) {
+            return "Read";
+        }
+        return Arrays.stream(rel.replace('-', ' ').split(" "))
+                .filter(StringUtils::hasText)
+                .map(word -> word.substring(0, 1).toUpperCase(Locale.ROOT) + word.substring(1))
+                .collect(java.util.stream.Collectors.joining(" "));
+    }
+
+    private String toolForLink(OperationalContextReadModelLinkDto link) {
+        if (link == null || !StringUtils.hasText(link.href())) {
+            return null;
+        }
+        if (link.href().contains("/search")) {
+            return "opctx_search";
+        }
+        if (link.href().contains("/entities/") && !link.href().contains("/read-model/entities/")
+                && !PROFILE_EXPANDED.equals(link.profile())) {
+            return "opctx_get_entity";
+        }
+        if (link.href().contains("/read-model/entities/")
+                && List.of("relations", "code-search").contains(link.rel())) {
+            return "opctx_get_entity";
+        }
+        return null;
+    }
+
+    private Map<String, Object> argumentsForLink(OperationalContextReadModelLinkDto link, String tool) {
+        if (!StringUtils.hasText(tool) || link == null || !StringUtils.hasText(link.href())) {
+            return Map.of();
+        }
+        if ("opctx_search".equals(tool)) {
+            return map("query", queryParameter(link.href(), "q"));
+        }
+        if ("opctx_get_entity".equals(tool)) {
+            var type = typeFromHref(link.href());
+            var id = queryParameter(link.href(), "id");
+            var include = includeForRel(link.rel());
+            return include != null
+                    ? map("type", type, "id", id, "include", List.of(include))
+                    : map("type", type, "id", id);
+        }
+        return Map.of();
+    }
+
+    private String includeForRel(String rel) {
+        return switch (rel == null ? "" : rel) {
+            case "relations" -> "relations";
+            case "code-search" -> "codeSearch";
+            default -> null;
+        };
+    }
+
+    private String typeFromHref(String href) {
+        var marker = href.contains("/read-model/entities/")
+                ? "/read-model/entities/"
+                : "/entities/";
+        var markerIndex = href.indexOf(marker);
+        if (markerIndex < 0) {
+            return null;
+        }
+        var start = markerIndex + marker.length();
+        var slash = href.indexOf('/', start);
+        var query = href.indexOf('?', start);
+        var end = slash >= 0 ? slash : query;
+        if (end < 0) {
+            end = href.length();
+        }
+        return decode(href.substring(start, end));
+    }
+
+    private String queryParameter(String href, String name) {
+        if (!StringUtils.hasText(href) || !StringUtils.hasText(name)) {
+            return null;
+        }
+        var queryStart = href.indexOf('?');
+        if (queryStart < 0 || queryStart + 1 >= href.length()) {
+            return null;
+        }
+        var query = href.substring(queryStart + 1);
+        for (var part : query.split("&")) {
+            var separator = part.indexOf('=');
+            var key = separator >= 0 ? part.substring(0, separator) : part;
+            if (Objects.equals(decode(key), name)) {
+                return separator >= 0 ? decode(part.substring(separator + 1)) : "";
+            }
+        }
+        return null;
     }
 
     private List<OperationalContextReadModelLinkDto> summaryLinks() {
@@ -2158,6 +2393,10 @@ class OperationalContextProfiledReadModelMapper {
 
     private String encodePath(String value) {
         return encode(value).replace("+", "%20");
+    }
+
+    private String decode(String value) {
+        return URLDecoder.decode(value != null ? value : "", StandardCharsets.UTF_8);
     }
 
     private record ProfileBudget(

@@ -298,6 +298,7 @@ class OperationalContextControllerTest {
                 List.of(new OperationalContextReadModelLinkDto("expanded", "/expanded", "expanded", "Full payload.")),
                 List.of("profile=expanded"),
                 List.of("Read the compact entity before expanding."),
+                List.of(),
                 List.of("opctx_get_entity"),
                 "Expand only for full diagnostics.",
                 List.of(),

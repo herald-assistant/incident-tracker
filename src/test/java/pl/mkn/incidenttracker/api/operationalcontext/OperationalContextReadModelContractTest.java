@@ -154,6 +154,16 @@ class OperationalContextReadModelContractTest {
         assertEquals("operational-context.entity-detail", compactEntity.contract());
         assertFalse(objectMapper.writeValueAsString(compactEntity).contains("\"rawSourcePreview\":"));
         assertFalse(compactEntity.links().isEmpty());
+        assertFalse(compactEntity.nextReads().isEmpty());
+        var relationNextRead = compactEntity.nextReads().stream()
+                .filter(read -> read.rel().equals("relations"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("opctx_get_entity", relationNextRead.tool());
+        assertEquals("system", relationNextRead.arguments().get("type"));
+        assertEquals("agreement-service", relationNextRead.arguments().get("id"));
+        assertEquals(List.of("relations"), relationNextRead.arguments().get("include"));
+        assertTrue(relationNextRead.href().contains("/read-model/entities/system/relations"));
 
         assertEquals("default", compactFlow.profile());
         assertTrue(compactFlow.links().stream().anyMatch(link -> link.rel().equals("expanded")));
@@ -169,6 +179,7 @@ class OperationalContextReadModelContractTest {
         assertTrue(String.valueOf(incomingRelations.get(0).get("reasonToRead")).contains("confidence"));
         assertTrue(String.valueOf(incomingRelations.get(0).get("suggestedNextRead")).contains("/api/operational-context"));
         assertTrue(compactRelations.suggestedNextReads().stream().anyMatch(read -> read.contains("--")));
+        assertTrue(compactRelations.nextReads().stream().anyMatch(read -> read.reason().contains("confidence")));
         var relationProvenance = objectMap(compactRelations.provenance());
         assertTrue(objectMap(relationProvenance.get("sourceRefs")).containsKey("byFile"));
         var firstSourceRef = objectMap(compactRelations.sourceRefs().get(0));

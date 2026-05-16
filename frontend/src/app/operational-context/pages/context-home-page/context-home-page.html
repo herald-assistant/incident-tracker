@@ -154,6 +154,18 @@
             </button>
           </form>
 
+          @if (searchAiApiPreview() || searchAiApiPreviewLoading() || searchAiApiPreviewError()) {
+            <app-ai-api-preview-panel
+              title="Search payload"
+              [endpoints]="searchAiApiPreviewEndpoints()"
+              [profile]="searchAiApiPreviewProfile()"
+              [loading]="searchAiApiPreviewLoading()"
+              [error]="searchAiApiPreviewError()"
+              emptyText="No search AI API preview loaded."
+              (profileChange)="loadSearchAiApiPreview($event)"
+            ></app-ai-api-preview-panel>
+          }
+
           <div class="resolver-table">
             <div class="resolver-table__header" role="row">
               @for (column of signalResolverColumns; track column.label) {
@@ -202,6 +214,44 @@
             </div>
           </div>
           <ng-container *ngTemplateOutlet="filters"></ng-container>
+          <div class="maintenance-filters" aria-label="Validation maintenance filters">
+            <label>
+              <span>Severity</span>
+              <select [formControl]="validationSeverityControl">
+                <option value="">All severities</option>
+                @for (severity of validationSeverityOptions(); track severity) {
+                  <option [value]="severity">{{ severity }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Category</span>
+              <select [formControl]="validationCategoryControl">
+                <option value="">All categories</option>
+                @for (category of validationCategoryOptions(); track category) {
+                  <option [value]="category">{{ category }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Entity type</span>
+              <select [formControl]="validationEntityTypeControl">
+                <option value="">All types</option>
+                @for (type of validationEntityTypeOptions(); track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Source file</span>
+              <select [formControl]="validationSourceFileControl">
+                <option value="">All files</option>
+                @for (sourceFile of validationSourceFileOptions(); track sourceFile) {
+                  <option [value]="sourceFile">{{ sourceFile }}</option>
+                }
+              </select>
+            </label>
+          </div>
           <div class="validation-table">
             <div class="validation-table__header" role="row">
               @for (column of validationColumns; track column.label) {
@@ -218,10 +268,12 @@
               }
             </div>
             @for (finding of validationRows(); track finding.id) {
-              <button
+              <div
                 class="validation-table__row"
-                type="button"
+                role="button"
+                tabindex="0"
                 (click)="openEntity({ type: finding.entityType, id: finding.entityId })"
+                (keydown.enter)="openEntity({ type: finding.entityType, id: finding.entityId })"
               >
                 <span [class]="validationStatusClass(finding.severity)">{{ finding.severity }}</span>
                 <span>{{ finding.category }}</span>
@@ -229,8 +281,33 @@
                 <strong>{{ finding.title }}</strong>
                 <span>{{ finding.suggestedFix }}</span>
                 <span>{{ finding.impact }}</span>
-                <span>{{ finding.sourceRefs[0]?.file }}</span>
-              </button>
+                <span class="maintenance-target">
+                  <strong>{{ firstSourceRef(finding)?.file || 'unknown source' }}</strong>
+                  @if (firstSourceRef(finding)?.path) {
+                    <small>{{ firstSourceRef(finding)?.path }}</small>
+                  }
+                  <small>{{ finding.entityType }}/{{ finding.entityId }}</small>
+                </span>
+                <span class="maintenance-actions">
+                  <button
+                    type="button"
+                    class="icon-action"
+                    [attr.aria-label]="'Copy maintenance target for ' + finding.id"
+                    (click)="copyMaintenanceTarget($event, validationMaintenanceTarget(finding), 'validation:' + finding.id)"
+                  >
+                    <mat-icon fontSet="material-symbols-outlined">
+                      {{ copiedMaintenanceTarget() === 'validation:' + finding.id ? 'task_alt' : 'content_copy' }}
+                    </mat-icon>
+                  </button>
+                  <button
+                    type="button"
+                    class="secondary-button secondary-button--compact"
+                    (click)="$event.stopPropagation(); openEntity({ type: finding.entityType, id: finding.entityId })"
+                  >
+                    Open
+                  </button>
+                </span>
+              </div>
             }
           </div>
         </section>
@@ -243,6 +320,44 @@
             </div>
           </div>
           <ng-container *ngTemplateOutlet="filters"></ng-container>
+          <div class="maintenance-filters" aria-label="Open questions maintenance filters">
+            <label>
+              <span>Severity</span>
+              <select [formControl]="questionSeverityControl">
+                <option value="">All severities</option>
+                @for (severity of questionSeverityOptions(); track severity) {
+                  <option [value]="severity">{{ severity }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Entity type</span>
+              <select [formControl]="questionEntityTypeControl">
+                <option value="">All types</option>
+                @for (type of questionEntityTypeOptions(); track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Source file</span>
+              <select [formControl]="questionSourceFileControl">
+                <option value="">All files</option>
+                @for (sourceFile of questionSourceFileOptions(); track sourceFile) {
+                  <option [value]="sourceFile">{{ sourceFile }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select [formControl]="questionStatusControl">
+                <option value="">All statuses</option>
+                @for (status of questionStatusOptions(); track status) {
+                  <option [value]="status">{{ status }}</option>
+                }
+              </select>
+            </label>
+          </div>
           <div class="question-table">
             <div class="question-table__header" role="row">
               @for (column of openQuestionColumns; track column.label) {
@@ -264,10 +379,34 @@
               @for (question of openQuestionRows(); track question.id) {
                 <div class="question-table__row">
                   <strong>{{ question.question }}</strong>
-                  <span>{{ question.sourceFile }}</span>
-                  <span>{{ question.entityType }} {{ question.entityId }}</span>
+                  <span class="maintenance-target">
+                    <strong>{{ question.sourceFile || 'unknown source' }}</strong>
+                    <small>{{ openQuestionEntityLabel(question) }}</small>
+                  </span>
+                  <span>{{ openQuestionEntityLabel(question) }}</span>
                   <span [class]="validationStatusClass(question.severity)">{{ question.severity }}</span>
                   <span>{{ question.status }}</span>
+                  <span class="maintenance-actions">
+                    <button
+                      type="button"
+                      class="icon-action"
+                      [attr.aria-label]="'Copy maintenance target for ' + question.id"
+                      (click)="copyMaintenanceTarget($event, openQuestionMaintenanceTarget(question), 'question:' + question.id)"
+                    >
+                      <mat-icon fontSet="material-symbols-outlined">
+                        {{ copiedMaintenanceTarget() === 'question:' + question.id ? 'task_alt' : 'content_copy' }}
+                      </mat-icon>
+                    </button>
+                    @if (question.entityId) {
+                      <button
+                        type="button"
+                        class="secondary-button secondary-button--compact"
+                        (click)="openEntity({ type: question.entityType, id: question.entityId })"
+                      >
+                        Open
+                      </button>
+                    }
+                  </span>
                 </div>
               }
             }
@@ -305,8 +444,11 @@
 
     <app-context-entity-drawer
       [detail]="detail()"
-      [readModels]="readModels()"
-      [readModelError]="readModelError()"
+      [aiApiPreview]="aiApiPreview()"
+      [aiApiPreviewLoading]="aiApiPreviewLoading()"
+      [aiApiPreviewError]="aiApiPreviewError()"
+      [aiApiPreviewProfile]="aiApiPreviewProfile()"
+      (aiApiPreviewProfileChange)="loadAiApiPreview($event)"
       (closeDrawer)="closeDrawer()"
     ></app-context-entity-drawer>
   </main>

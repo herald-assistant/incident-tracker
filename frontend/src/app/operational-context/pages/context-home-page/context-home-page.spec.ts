@@ -9,8 +9,10 @@ import {
   OpenQuestionDto,
   OperationalContextEntityDetailDto,
   OperationalContextHandoffRuleRowDto,
+  OperationalContextReadModelProfile,
   OperationalContextSummaryDto,
-  OperationalContextSystemRowDto
+  OperationalContextSystemRowDto,
+  ValidationFindingDto
 } from '../../models/operational-context.models';
 import { OperationalContextApiService } from '../../services/operational-context-api.service';
 import { ContextHomePageComponent } from './context-home-page';
@@ -59,10 +61,41 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
-    expect(api.getBlastRadiusReadModel).toHaveBeenCalledWith('system', 'app-core');
+    expect(api.getEntityRelationsReadModel).not.toHaveBeenCalled();
+    expect(api.getCodeSearchReadModel).not.toHaveBeenCalled();
+    expect(api.getImplementationReadModel).not.toHaveBeenCalled();
+    expect(api.getFlowReadModel).not.toHaveBeenCalled();
+    expect(api.getBlastRadiusReadModel).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Core detail');
-    expect(fixture.nativeElement.textContent).toContain('Read model projections');
-    expect(fixture.nativeElement.textContent).toContain('core-process');
+    expect(fixture.nativeElement.textContent).not.toContain('Read model projections');
+    expect(fixture.nativeElement.textContent).toContain('AI API Preview');
+    expect(fixture.nativeElement.textContent).toContain('opctx_get_entity');
+    expect(fixture.nativeElement.textContent).toContain('include=[relations]');
+    expect(fixture.nativeElement.textContent).toContain('API links');
+  });
+
+  it('should reload AI API preview when switching profile', async () => {
+    const { fixture, api } = await createComponent(readySummary(), [systemRow()]);
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.openEntity({ type: 'system', id: 'app-core' });
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll(
+      '.ai-api-preview-panel__profile-toggle button'
+    ) as NodeListOf<HTMLButtonElement>;
+    buttons[1].click();
+    fixture.detectChanges();
+
+    expect(api.getAiApiPreviewRequests).toHaveBeenLastCalledWith(
+      'system',
+      'app-core',
+      'expanded',
+      true
+    );
+    expect(fixture.nativeElement.textContent).toContain('expanded');
   });
 
   it('should keep search only in the signal resolver tab', async () => {
@@ -82,8 +115,32 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(api.search).toHaveBeenCalledWith('api-gateway');
+    expect(api.getProfiledSearch).toHaveBeenCalledWith('api-gateway', 'default');
+    expect(fixture.nativeElement.textContent).toContain('Search payload');
+    expect(fixture.nativeElement.textContent).toContain('opctx_search(query=api-gateway)');
     expect(component.selectedTab()).toBe('signal-resolver');
     expect(fixture.nativeElement.textContent).toContain('Resolve runtime or code signals');
+  });
+
+  it('should reload search AI API preview when switching search profile', async () => {
+    const { fixture, api } = await createComponent(readySummary(), [systemRow()]);
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.selectTab('signal-resolver');
+    component.searchControl.setValue('limit');
+    component.runSignalSearch(new Event('submit'));
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll(
+      '.ai-api-preview-panel__profile-toggle button'
+    ) as NodeListOf<HTMLButtonElement>;
+    buttons[1].click();
+    fixture.detectChanges();
+
+    expect(api.getProfiledSearch).toHaveBeenLastCalledWith('limit', 'expanded');
+    expect(fixture.nativeElement.textContent).toContain('expanded');
   });
 
   it('should use relevant filters on open questions', async () => {
@@ -111,6 +168,94 @@ describe('ContextHomePageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Who owns this process?');
     expect(fixture.nativeElement.textContent).not.toContain('Should this context be renamed?');
+  });
+
+  it('should expose maintenance targets and filters for validation findings', async () => {
+    const { fixture } = await createComponent(
+      readySummary(),
+      [],
+      [],
+      [],
+      [
+        validationFinding(
+          'missing-owner',
+          'warning',
+          'ownership',
+          'system',
+          'app-core',
+          'Missing owner',
+          'systems.yml',
+          '$.systems[0].owner'
+        ),
+        validationFinding(
+          'bad-scope',
+          'info',
+          'code-search',
+          'code-search-scope',
+          'core-scope',
+          'Scope can be tighter',
+          'repo-map.yml',
+          '$.codeSearchScopes[0]'
+        )
+      ]
+    );
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.selectTab('validation');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('systems.yml');
+    expect(fixture.nativeElement.textContent).toContain('$.systems[0].owner');
+    expect(fixture.nativeElement.textContent).toContain('system/app-core');
+    expect(fixture.nativeElement.textContent).toContain('repo-map.yml');
+
+    component.validationCategoryControl.setValue('ownership');
+    component.validationSourceFileControl.setValue('systems.yml');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Missing owner');
+    expect(fixture.nativeElement.textContent).not.toContain('Scope can be tighter');
+  });
+
+  it('should expose maintenance filters for open questions', async () => {
+    const { fixture } = await createComponent(readySummary(), [], [
+      openQuestion('question-warning', 'warning', 'Who owns this process?', 'systems.yml', 'system'),
+      openQuestion('question-info', 'info', 'Should this context be renamed?', 'glossary.md', 'glossary-term')
+    ]);
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.selectTab('open-questions');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('systems.yml');
+    expect(fixture.nativeElement.textContent).toContain('system/app-core');
+    expect(fixture.nativeElement.textContent).toContain('glossary.md');
+
+    component.questionSourceFileControl.setValue('systems.yml');
+    component.questionEntityTypeControl.setValue('system');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Who owns this process?');
+    expect(fixture.nativeElement.textContent).not.toContain('Should this context be renamed?');
+  });
+
+  it('should render open question maintenance target without null entity id noise', async () => {
+    const { fixture } = await createComponent(readySummary(), [], [
+      openQuestion('question-without-entity-id', 'info', 'Clarify glossary term?', 'glossary.md', 'glossary-term', null)
+    ]);
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.selectTab('open-questions');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('glossary-term');
+    expect(fixture.nativeElement.textContent).not.toContain('glossary-term/null');
   });
 
   it('should not apply unsupported checkbox filters on handoff rules', async () => {
@@ -143,7 +288,8 @@ async function createComponent(
   summary: OperationalContextSummaryDto,
   systems: OperationalContextSystemRowDto[],
   openQuestions: OpenQuestionDto[] = [],
-  handoffRules: OperationalContextHandoffRuleRowDto[] = []
+  handoffRules: OperationalContextHandoffRuleRowDto[] = [],
+  validation: ValidationFindingDto[] = []
 ) {
   const api = {
     getSummary: vi.fn(() => of(summary)),
@@ -156,15 +302,38 @@ async function createComponent(
     getTeams: vi.fn(() => of([])),
     getGlossary: vi.fn(() => of([])),
     getHandoffRules: vi.fn(() => of(handoffRules)),
-    getValidation: vi.fn(() => of([])),
+    getValidation: vi.fn(() => of(validation)),
     getOpenQuestions: vi.fn(() => of(openQuestions)),
     search: vi.fn(() => of([])),
+    getProfiledSearch: vi.fn((query: string, profile: OperationalContextReadModelProfile) =>
+      of(profiledSearchPayload(query, profile))
+    ),
+    profiledSearchUrl: vi.fn(
+      (query: string, profile: OperationalContextReadModelProfile) =>
+        `/api/operational-context/search?q=${encodeURIComponent(query)}&profile=${profile}`
+    ),
     getEntity: vi.fn(() => of(entityDetail())),
     getEntityRelationsReadModel: vi.fn(() => of(relationsReadModel())),
     getCodeSearchReadModel: vi.fn(() => of(codeSearchReadModel())),
     getImplementationReadModel: vi.fn(() => of(implementationReadModel())),
     getFlowReadModel: vi.fn(() => of(flowReadModel())),
-    getBlastRadiusReadModel: vi.fn(() => of(blastRadiusReadModel()))
+    getBlastRadiusReadModel: vi.fn(() => of(blastRadiusReadModel())),
+    getAiApiPreviewRequests: vi.fn(
+      (
+        type: string,
+        id: string,
+        profile: OperationalContextReadModelProfile,
+        includeReadModels: boolean
+      ) => {
+        const requests = [
+          aiApiPreviewRequest('entity', 'Entity detail', type, id, profile)
+        ];
+        if (includeReadModels) {
+          requests.push(aiApiPreviewRequest('blast-radius', 'Blast radius', type, id, profile));
+        }
+        return requests;
+      }
+    )
   };
 
   await TestBed.configureTestingModule({
@@ -195,15 +364,46 @@ function handoffRule(): OperationalContextHandoffRuleRowDto {
   };
 }
 
-function openQuestion(id: string, severity: string, question: string): OpenQuestionDto {
+function openQuestion(
+  id: string,
+  severity: string,
+  question: string,
+  sourceFile = 'systems.yml',
+  entityType = 'system',
+  entityId: string | null = 'app-core'
+): OpenQuestionDto {
   return {
     id,
-    sourceFile: 'systems.yml',
-    entityType: 'system',
-    entityId: 'app-core',
+    sourceFile,
+    entityType,
+    entityId,
     question,
     severity,
     status: 'open'
+  };
+}
+
+function validationFinding(
+  id: string,
+  severity: string,
+  category: string,
+  entityType: string,
+  entityId: string,
+  title: string,
+  file: string,
+  path: string
+): ValidationFindingDto {
+  return {
+    id,
+    severity,
+    category,
+    entityType,
+    entityId,
+    title,
+    detail: title,
+    sourceRefs: [{ file, path, entityId }],
+    suggestedFix: `Fix ${title}`,
+    impact: `Impact ${title}`
   };
 }
 
@@ -353,5 +553,100 @@ function blastRadiusReadModel() {
     suggestedNextEvidence: ['Use code-search scopes from impacted implementations to fetch targeted source code.'],
     limitations: [],
     validationFindings: []
+  };
+}
+
+function profiledSearchPayload(query: string, profile: OperationalContextReadModelProfile) {
+  return {
+    contract: 'operational-context.search',
+    contractVersion: 1,
+    profile,
+    analysisTarget: { query },
+    data: { results: [{ type: 'system', id: 'app-core', label: 'App Core' }] },
+    links: [{
+      rel: 'entity',
+      href: `/api/operational-context/entities/system?id=app-core&profile=${profile}`,
+      profile,
+      reason: 'Read compact entity detail.'
+    }],
+    availableExpansions: ['profile=expanded'],
+    suggestedNextReads: [`opctx_search(query=${query})`, 'opctx_get_entity(type=system, id=app-core)'],
+    nextReads: [{
+      label: 'Entity',
+      rel: 'entity',
+      href: `/api/operational-context/entities/system?id=app-core&profile=${profile}`,
+      profile,
+      tool: 'opctx_get_entity',
+      arguments: { type: 'system', id: 'app-core' },
+      reason: 'Read top result details before choosing repositories.'
+    }],
+    suggestedTools: ['opctx_search', 'opctx_get_entity'],
+    reasonToExpand: 'Use expanded search only when default ranking is insufficient.',
+    omittedBecause: [],
+    truncation: {
+      truncated: profile === 'default',
+      reason: 'search results limited for default profile',
+      returnedCounts: { results: 1 },
+      omittedCounts: { results: 2 }
+    },
+    relevanceScore: 0.8,
+    confidence: 'high',
+    limitations: ['Search results are lexical/ranked hints.'],
+    provenance: { sourceRefCount: 0 },
+    sourceRefs: [],
+    validationFindings: []
+  };
+}
+
+function aiApiPreviewRequest(
+  key: 'entity' | 'blast-radius',
+  label: string,
+  type: string,
+  id: string,
+  profile: OperationalContextReadModelProfile
+) {
+  return {
+    key,
+    label,
+    url: `/api/operational-context/${key}?id=${id}&profile=${profile}`,
+    request: of({
+      contract: `operational-context.${key}`,
+      contractVersion: 1,
+      profile,
+      analysisTarget: { type, id, label: 'App Core' },
+      data: { id },
+      links: [{
+        rel: 'relations',
+        href: `/api/operational-context/read-model/entities/${type}/relations?id=${id}&profile=${profile}`,
+        profile,
+        reason: 'Read compact relation graph.'
+      }],
+      availableExpansions: ['profile=expanded'],
+      suggestedNextReads: ['opctx_get_entity(type=system, id=app-core)'],
+      nextReads: [{
+        label: 'Relations',
+        rel: 'relations',
+        href: `/api/operational-context/read-model/entities/${type}/relations?id=${id}&profile=${profile}`,
+        profile,
+        tool: 'opctx_get_entity',
+        arguments: { type, id, include: ['relations'] },
+        reason: 'Inspect upstream/downstream references.'
+      }],
+      suggestedTools: ['opctx_get_entity'],
+      reasonToExpand: 'Expand only when compact evidence is not enough.',
+      omittedBecause: [],
+      truncation: {
+        truncated: profile === 'default',
+        reason: 'default compact profile',
+        returnedCounts: { items: 1 },
+        omittedCounts: { items: 2 }
+      },
+      relevanceScore: 0.9,
+      confidence: 'high',
+      limitations: [],
+      provenance: { sourceRefCount: 1 },
+      sourceRefs: [],
+      validationFindings: []
+    })
   };
 }

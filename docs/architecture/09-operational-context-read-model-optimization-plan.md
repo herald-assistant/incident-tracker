@@ -127,6 +127,9 @@ We do not implement classical HATEOAS for REST purity. The contract is practical
 | 9. Relations and blast relevance scoring | Compact default payloads should not only be smaller; top items should explain why they are first and which read narrows scope next. | Added item-level `relevanceScore`, `reasonToRead` and dynamic next reads for relations, blast flows, impacted steps, impacted nodes and impacted implementations. Added stricter broad-signal budgets for class/table/queue/topic blast-radius defaults. | Passed targeted operational-context API/contract tests and package dependency guard. | REST sampling recorded below. | Keep: quality improved; broad class default became smaller after the stricter guard. |
 | 10. SourceRef and label dedupe | Default payloads should preserve provenance without repeating verbose sourceRef and nested entity summary fields. | Added top-level `provenance.sourceRefs` summary, compacted default `sourceRefs` to stable `refId/file/path/target/role`, and removed repeated `summary` from nested entity refs. | Passed targeted operational-context API/contract tests and package dependency guard. | REST sampling recorded below. | Keep: preserves provenance while reducing heavier default read models. |
 | 11. Maintenance guidance | Optimizations will regress unless future catalog/read-model edits know what belongs in default versus expanded. | Documented profile ownership, LLM affordances, provenance/sourceRef rules, scoring/truncation guidance and a maintenance checklist. | Docs-only change; no runtime tests needed. | Not applicable. | Keep: guidance now captures the constraints used in iterations 1-10. |
+| 12. FE read-model presentation cleanup | Operator UI should not render raw read-model summaries that look like context but are unreadable for humans. | Removed the drawer `Read model projections` section and stopped auto-fetching the unprofiled read-model bundle on entity open. Kept `AI API Preview` for deliberate manual inspection of AI-facing default/expanded payloads. | Passed frontend tests and production build. | Not a REST contract change; operational-context lazy chunk dropped from about 122 KB to 116 KB. | Keep BE read-model endpoints; do not present raw projections as default operator UI. |
+| 13. Structured next reads | REST `links` are useful for clients/debugging, but LLM/manual workflows need labeled, structured next actions instead of parsing URLs or free-form strings. | Added additive `nextReads` to profiled REST envelopes with `label`, `rel`, optional `href`, `profile`, optional `tool`, `arguments` and `reason`. FE preview now renders next reads and API links as labeled actions while keeping raw JSON available. | Passed backend contract/controller tests, frontend tests and production build. | Not a payload-reduction change; improves actionability and UI readability of affordances. | Keep `suggestedNextReads` temporarily for compatibility; prefer `nextReads` for new AI/UI consumers. |
+| 14. AI API preview inspector UX | Manual verification should show the AI-facing contract as a readable inspector, not as raw links and pill clusters. | Reworked the preview into collapsible sections: target, next reads, quality and limits, available expansions, REST API links and raw JSON. Raw JSON and REST links remain available but are no longer the first visual focus. | Passed frontend tests and production build. | Not a REST contract change. | Keep: this is clearer for manual API checks while preserving diagnostic access. |
 
 ## REST Results
 
@@ -179,6 +182,13 @@ No-profile REST sampling after implementation matched expanded baseline sizes, c
 | 2026-05-15 | `mvn -q "-Dtest=PackageDependencyGuardTest" test` after sourceRef/label dedupe | Passed |
 | 2026-05-15 | REST sampling on port 18080 with `analysis.operational-context.enabled=true` after sourceRef/label dedupe | Passed; sizes recorded above |
 | 2026-05-15 | Maintenance guidance update in architecture and fill-order docs | Docs-only; runtime tests not needed |
+| 2026-05-16 | `npm test -- --watch=false` after removing drawer raw read-model projections | Passed; 14 files, 69 tests |
+| 2026-05-16 | `npm run build` after removing drawer raw read-model projections | Passed with existing bundle/SCSS budget warnings |
+| 2026-05-16 | `mvn -q "-Dtest=OperationalContextReadModelContractTest,OperationalContextControllerTest" test` after structured `nextReads` | Passed |
+| 2026-05-16 | `npm test -- --watch=false` after structured `nextReads` UI | Passed; 14 files, 69 tests |
+| 2026-05-16 | `npm run build` after structured `nextReads` UI | Passed with existing bundle/SCSS budget warnings |
+| 2026-05-16 | `npm test -- --watch=false` after AI API preview inspector UX cleanup | Passed; 14 files, 69 tests |
+| 2026-05-16 | `npm run build` after AI API preview inspector UX cleanup | Passed with existing bundle/SCSS budget warnings; preview panel stayed under component style budget |
 
 ## Stage Plan
 
@@ -193,3 +203,6 @@ No-profile REST sampling after implementation matched expanded baseline sizes, c
 9. Relevance tuning: add item-level scores, reasons and stricter broad-signal budgets for relation/blast-radius defaults.
 10. SourceRef/label dedupe: compact default source refs and nested entity refs while keeping top-level provenance.
 11. Maintenance guidance: update catalog/read-model guidance after stable iteration results.
+12. FE presentation cleanup: keep raw/projection data behind `AI API Preview`, not as default human-facing drawer content.
+13. Structured next reads: use `nextReads` for LLM/UI actions and keep REST `links` as clickable/debug affordances.
+14. AI API preview inspector UX: present default/expanded payloads through collapsible manual-check sections, with raw JSON collapsed as diagnostics.

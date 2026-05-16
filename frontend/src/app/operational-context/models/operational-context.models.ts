@@ -384,6 +384,84 @@ export interface OperationalContextReadModelBundle {
   blastRadius?: OperationalContextBlastRadiusReadModel | null;
 }
 
+export type OperationalContextReadModelProfile = 'default' | 'expanded';
+
+export type OperationalContextAiApiPreviewEndpointKey =
+  | 'search'
+  | 'entity'
+  | 'relations'
+  | 'code-search'
+  | 'implementations'
+  | 'flow'
+  | 'blast-radius';
+
+export interface OperationalContextReadModelLinkDto {
+  rel: string;
+  href: string;
+  profile: string;
+  reason: string;
+}
+
+export interface OperationalContextReadModelNextReadDto {
+  label: string;
+  rel: string;
+  href: string | null;
+  profile: string | null;
+  tool: string | null;
+  arguments: Record<string, unknown>;
+  reason: string;
+}
+
+export interface OperationalContextReadModelTruncationDto {
+  truncated: boolean;
+  reason: string;
+  returnedCounts: Record<string, number>;
+  omittedCounts: Record<string, number>;
+}
+
+export interface OperationalContextProfiledReadModelDto {
+  contract: string;
+  contractVersion: number;
+  profile: string;
+  analysisTarget: unknown;
+  data: Record<string, unknown>;
+  links: OperationalContextReadModelLinkDto[];
+  availableExpansions: string[];
+  suggestedNextReads: string[];
+  nextReads?: OperationalContextReadModelNextReadDto[];
+  suggestedTools: string[];
+  reasonToExpand: string | null;
+  omittedBecause: string[];
+  truncation: OperationalContextReadModelTruncationDto | null;
+  relevanceScore: number | null;
+  confidence: string | null;
+  limitations: string[];
+  provenance: unknown;
+  sourceRefs: unknown[];
+  validationFindings: unknown[];
+}
+
+export interface OperationalContextAiApiPreviewEndpoint {
+  key: OperationalContextAiApiPreviewEndpointKey;
+  label: string;
+  url: string;
+  payload: OperationalContextProfiledReadModelDto | null;
+  error: string | null;
+}
+
+export interface OperationalContextAiApiPreview {
+  profile: OperationalContextReadModelProfile;
+  endpoints: OperationalContextAiApiPreviewEndpoint[];
+}
+
+export interface OperationalContextAiSearchPreview {
+  query: string;
+  profile: OperationalContextReadModelProfile;
+  url: string;
+  payload: OperationalContextProfiledReadModelDto | null;
+  error: string | null;
+}
+
 export type OperationalContextCatalogRow =
   | OperationalContextSystemRowDto
   | OperationalContextRepositoryRowDto

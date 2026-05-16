@@ -1,0 +1,266 @@
+<section
+  class="ai-api-preview-panel"
+  [class.ai-api-preview-panel--section]="variant() === 'section'"
+>
+  <div class="ai-api-preview-panel__heading">
+    <div>
+      <p class="section-eyebrow">{{ eyebrow() }}</p>
+      <h3>{{ title() }}</h3>
+    </div>
+    <div class="ai-api-preview-panel__profile-toggle" role="group" aria-label="AI API profile">
+      <button
+        type="button"
+        [class.ai-api-preview-panel__profile-button--active]="profile() === 'default'"
+        (click)="selectProfile('default')"
+      >
+        Default
+      </button>
+      <button
+        type="button"
+        [class.ai-api-preview-panel__profile-button--active]="profile() === 'expanded'"
+        (click)="selectProfile('expanded')"
+      >
+        Expanded
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="ai-api-preview-panel__muted">Loading AI API preview...</p>
+  }
+  @if (error()) {
+    <p class="ai-api-preview-panel__muted">{{ error() }}</p>
+  }
+  @if (endpoints().length) {
+    <div class="endpoints">
+      @for (endpoint of endpoints(); track endpoint.key) {
+        <details class="endpoint" [open]="$first">
+          <summary class="endpoint-summary">
+            <span class="endpoint-title">{{ endpoint.label }}</span>
+            <span class="endpoint-target">{{ endpoint.error || targetSummary(endpoint) }}</span>
+            <span class="badges">
+              @for (meta of endpointMeta(endpoint); track meta) {
+                <span>{{ meta }}</span>
+              }
+            </span>
+          </summary>
+
+          <div class="endpoint-body">
+            <div class="actions actions--right">
+              <button
+                type="button"
+                class="preview-button"
+                [attr.aria-label]="'Copy URL for ' + endpoint.label"
+                (click)="copyUrl(endpoint)"
+              >
+                <mat-icon fontSet="material-symbols-outlined">
+                  {{ copiedKey() === endpoint.key + ':url' ? 'task_alt' : 'link' }}
+                </mat-icon>
+                <span>Copy URL</span>
+              </button>
+              <button
+                type="button"
+                class="preview-button"
+                [attr.aria-label]="'Copy JSON for ' + endpoint.label"
+                (click)="copyJson(endpoint)"
+              >
+                <mat-icon fontSet="material-symbols-outlined">
+                  {{ copiedKey() === endpoint.key + ':json' ? 'task_alt' : 'content_copy' }}
+                </mat-icon>
+                <span>Copy JSON</span>
+              </button>
+            </div>
+
+            @if (endpoint.error) {
+              <p class="ai-api-preview-panel__muted">{{ endpoint.error }}</p>
+            } @else if (endpoint.payload; as payload) {
+              @if (targetEntries(endpoint).length) {
+                <details class="preview-section" open>
+                  <summary>
+                    <span>Target</span>
+                    <small>{{ targetSummary(endpoint) }}</small>
+                  </summary>
+                  <dl class="kv">
+                    @for (entry of targetEntries(endpoint); track entry.label) {
+                      <div>
+                        <dt>{{ entry.label }}</dt>
+                        <dd>{{ entry.value }}</dd>
+                      </div>
+                    }
+                    <div>
+                      <dt>Contract</dt>
+                      <dd>{{ payload.contract }}</dd>
+                    </div>
+                  </dl>
+                </details>
+              }
+
+              @if (nextReads(endpoint).length || legacyNextReads(endpoint).length) {
+                <details class="preview-section" open>
+                  <summary>
+                    <span>Next reads</span>
+                    <small>{{ nextReads(endpoint).length || legacyNextReads(endpoint).length }} actions</small>
+                  </summary>
+                  @if (nextReads(endpoint).length) {
+                    <div class="read-list">
+                      @for (read of nextReads(endpoint); track nextReadKey(read)) {
+                        <article class="read">
+                          <div>
+                            <strong>{{ nextReadLabel(read) }}</strong>
+                            @if (read.reason) {
+                              <p>{{ read.reason }}</p>
+                            }
+                            @if (nextReadTool(read)) {
+                              <code>{{ nextReadTool(read) }}</code>
+                            }
+                          </div>
+                          <div class="actions">
+                            @if (read.href) {
+                              <a
+                                class="preview-button"
+                                [href]="read.href"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <mat-icon fontSet="material-symbols-outlined">open_in_new</mat-icon>
+                                <span>Open</span>
+                              </a>
+                            }
+                            <button
+                              type="button"
+                              class="preview-button"
+                              [attr.aria-label]="'Copy next read for ' + nextReadLabel(read)"
+                              (click)="copyNextRead(endpoint, read)"
+                            >
+                              <mat-icon fontSet="material-symbols-outlined">
+                                {{ copiedKey() === endpoint.key + ':next:' + nextReadKey(read) ? 'task_alt' : 'content_copy' }}
+                              </mat-icon>
+                              <span>Copy</span>
+                            </button>
+                          </div>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <ul class="simple-list">
+                      @for (read of legacyNextReads(endpoint); track read) {
+                        <li>{{ read }}</li>
+                      }
+                    </ul>
+                  }
+                </details>
+              }
+
+              @if (hasQuality(endpoint)) {
+                <details class="preview-section" [open]="(payload.truncation?.truncated ?? false) || payload.limitations.length > 0 || payload.omittedBecause.length > 0">
+                  <summary>
+                    <span>Quality & limits</span>
+                    <small>{{ qualitySummary(endpoint) }}</small>
+                  </summary>
+                  @if (qualityEntries(endpoint).length) {
+                    <dl class="kv">
+                      @for (entry of qualityEntries(endpoint); track entry.label) {
+                        <div>
+                          <dt>{{ entry.label }}</dt>
+                          <dd>{{ entry.value }}</dd>
+                        </div>
+                      }
+                    </dl>
+                  }
+                  @if (payload.limitations.length) {
+                    <div class="note-list">
+                      <strong>Limitations</strong>
+                      <ul>
+                        @for (limitation of payload.limitations; track limitation) {
+                          <li>{{ limitation }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                  @if (payload.omittedBecause.length) {
+                    <div class="note-list">
+                      <strong>Omitted</strong>
+                      <ul>
+                        @for (reason of payload.omittedBecause; track reason) {
+                          <li>{{ reason }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </details>
+              }
+
+              @if (payload.availableExpansions.length) {
+                <details class="preview-section">
+                  <summary>
+                    <span>Available expansions</span>
+                    <small>{{ expansionSummary(endpoint) }}</small>
+                  </summary>
+                  <ul class="simple-list">
+                    @for (expansion of payload.availableExpansions; track expansion) {
+                      <li>{{ expansion }}</li>
+                    }
+                  </ul>
+                </details>
+              }
+
+              @if (payload.links.length) {
+                <details class="preview-section">
+                  <summary>
+                    <span>REST API links</span>
+                    <small>{{ restLinkSummary(endpoint) }}</small>
+                  </summary>
+                  <div class="link-list">
+                    @for (link of payload.links; track link.rel + link.href) {
+                      <article class="link-row">
+                        <div>
+                          <strong>{{ linkLabel(link) }}</strong>
+                          @if (link.reason) {
+                            <p>{{ link.reason }}</p>
+                          }
+                          <code>{{ link.href }}</code>
+                        </div>
+                        <div class="actions">
+                          <a
+                            class="preview-button"
+                            [href]="link.href"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <mat-icon fontSet="material-symbols-outlined">open_in_new</mat-icon>
+                            <span>Open</span>
+                          </a>
+                          <button
+                            type="button"
+                            class="preview-button"
+                            [attr.aria-label]="'Copy API link for ' + linkLabel(link)"
+                            (click)="copyLink(endpoint, link)"
+                          >
+                            <mat-icon fontSet="material-symbols-outlined">
+                              {{ copiedKey() === endpoint.key + ':link:' + link.rel ? 'task_alt' : 'link' }}
+                            </mat-icon>
+                            <span>Copy</span>
+                          </button>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                </details>
+              }
+
+              <details class="preview-section">
+                <summary>
+                  <span>Raw JSON</span>
+                  <small>diagnostic payload</small>
+                </summary>
+                <pre>{{ previewJson(endpoint) }}</pre>
+              </details>
+            }
+          </div>
+        </details>
+      }
+    </div>
+  } @else if (!loading()) {
+    <p class="ai-api-preview-panel__muted">{{ emptyText() }}</p>
+  }
+</section>
