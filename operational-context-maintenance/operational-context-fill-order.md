@@ -30,6 +30,40 @@ If the evidence belongs to another owner file, update that file with its
 file-specific prompt. If you cannot safely update the owner file, add a precise
 `gaps` item instead of duplicating the fact in the current file.
 
+## Validation findings checkpoint
+
+Operational-context validation is deterministic. Treat the generated findings
+snapshot as the maintenance quality checkpoint for both humans and LLM-assisted
+catalog updates.
+
+At the start of every maintenance run:
+
+- read `operational-context-maintenance/validation-findings.md` if it
+  exists,
+- prioritize existing `error` and `warning` groups that touch the file you are
+  about to edit,
+- use previous findings as constraints for the LLM prompt so it does not add
+  data that preserves known gaps or inconsistencies,
+- do not silence findings by duplicating facts across YAML/MD owner files.
+
+At the end of every maintenance run:
+
+- run the backend with operational context enabled,
+- execute:
+
+```powershell
+pwsh -File operational-context-maintenance/update-validation-findings.ps1
+```
+
+- review the regenerated
+  `operational-context-maintenance/generated/validation-findings.md`,
+- record whether changed findings improved, stayed intentionally open, or
+  exposed a validator rule that needs refinement.
+
+Generated files live under `operational-context-maintenance/generated/`. They
+are snapshots, not the source of truth. The API endpoint
+`GET /api/operational-context/validation` remains authoritative.
+
 ## Redundancy rules
 
 - Do not add manual backlinks.
