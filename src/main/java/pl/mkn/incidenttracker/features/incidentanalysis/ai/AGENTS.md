@@ -10,7 +10,8 @@ Obejmuje:
 - `initial/`
   kontrakt poczatkowej analizy incydentu: `InitialAnalysisProvider`,
   `InitialAnalysisRequest`, `InitialAnalysisPreparation` i
-  `InitialAnalysisResponse`,
+  `InitialAnalysisResponse` z rozdzielonym `functionalAnalysis` oraz
+  `technicalAnalysis`,
 - `chat/`
   kontrakt follow-up chatu dla zakonczonej analizy: provider, request/response,
   turny i snapshot poczatkowej analizy,
@@ -32,6 +33,12 @@ neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
   `integrations`, `shared` ani `common`.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
   evidence trzymaj w skillu albo incident preparation.
+- Initial response contract nie ma kompatybilnosci wstecznej ze starymi polami:
+  nie dodawaj `summary`, `recommendedAction`, `rationale`, `affectedFunction`
+  ani `evidenceReferences`.
+- `incident-functional-analysis` jest runtime skillem dla sekcji
+  `functionalAnalysis`; `incident-technical-handoff` jest runtime skillem dla
+  `technicalAnalysis`.
 - Operational context tools sa neutralne i mieszkaja w `agenttools`. Tutaj
   moze mieszkac tylko incidentowa semantyka ich uzycia: coverage-aware policy,
   prompt/guidance i skill `incident-operational-context-tools`.

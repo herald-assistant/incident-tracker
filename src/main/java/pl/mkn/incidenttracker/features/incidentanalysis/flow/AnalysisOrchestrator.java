@@ -75,14 +75,14 @@ public class AnalysisOrchestrator {
                     correlationId,
                     aiRequest.environment(),
                     aiRequest.gitLabBranch(),
-                    aiResponse.summary(),
                     aiResponse.detectedProblem(),
-                    aiResponse.recommendedAction(),
-                    aiResponse.rationale(),
-                    aiResponse.affectedFunction(),
                     aiResponse.affectedProcess(),
                     aiResponse.affectedBoundedContext(),
                     aiResponse.affectedTeam(),
+                    aiResponse.functionalAnalysis(),
+                    aiResponse.technicalAnalysis(),
+                    aiResponse.confidence(),
+                    aiResponse.visibilityLimits(),
                     aiResponse.prompt(),
                     aiResponse.usage()
             );

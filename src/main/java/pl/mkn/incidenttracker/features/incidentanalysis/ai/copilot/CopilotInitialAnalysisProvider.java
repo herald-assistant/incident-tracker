@@ -114,14 +114,14 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
     ) {
         return new InitialAnalysisResponse(
                 "copilot-sdk",
-                structuredResponse.summary(),
                 structuredResponse.detectedProblem(),
-                structuredResponse.recommendedAction(),
-                structuredResponse.rationale(),
-                structuredResponse.affectedFunction(),
                 structuredResponse.affectedProcess(),
                 structuredResponse.affectedBoundedContext(),
                 structuredResponse.affectedTeam(),
+                structuredResponse.functionalAnalysis(),
+                structuredResponse.technicalAnalysis(),
+                structuredResponse.confidence(),
+                structuredResponse.visibilityLimits(),
                 prompt,
                 usage
         );

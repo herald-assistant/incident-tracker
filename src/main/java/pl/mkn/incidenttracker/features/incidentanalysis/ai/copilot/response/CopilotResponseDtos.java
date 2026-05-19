@@ -9,20 +9,16 @@ public final class CopilotResponseDtos {
 
     public record StructuredAnalysisResponse(
             String detectedProblem,
-            String summary,
-            String recommendedAction,
-            String rationale,
-            String affectedFunction,
             String affectedProcess,
             String affectedBoundedContext,
             String affectedTeam,
+            String functionalAnalysis,
+            String technicalAnalysis,
             String confidence,
-            List<EvidenceReference> evidenceReferences,
             List<String> visibilityLimits
     ) {
 
         public StructuredAnalysisResponse {
-            evidenceReferences = evidenceReferences != null ? List.copyOf(evidenceReferences) : List.of();
             visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
         }
     }
@@ -39,11 +35,4 @@ public final class CopilotResponseDtos {
         }
     }
 
-    public record EvidenceReference(
-            String field,
-            String artifactId,
-            String itemId,
-            String claim
-    ) {
-    }
 }

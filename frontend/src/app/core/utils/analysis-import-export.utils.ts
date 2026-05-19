@@ -260,14 +260,14 @@ function normalizeResult(result: unknown): AnalysisResultResponse {
     correlationId: normalizeString(resultObject?.['correlationId']),
     environment: normalizeString(resultObject?.['environment']),
     gitLabBranch: normalizeString(resultObject?.['gitLabBranch']),
-    summary: normalizeString(resultObject?.['summary']),
     detectedProblem: normalizeString(resultObject?.['detectedProblem']),
-    recommendedAction: normalizeString(resultObject?.['recommendedAction']),
-    rationale: normalizeString(resultObject?.['rationale']),
-    affectedFunction: normalizeString(resultObject?.['affectedFunction']),
     affectedProcess: normalizeString(resultObject?.['affectedProcess']),
     affectedBoundedContext: normalizeString(resultObject?.['affectedBoundedContext']),
     affectedTeam: normalizeString(resultObject?.['affectedTeam']),
+    functionalAnalysis: normalizeString(resultObject?.['functionalAnalysis']),
+    technicalAnalysis: normalizeString(resultObject?.['technicalAnalysis']),
+    confidence: normalizeString(resultObject?.['confidence']),
+    visibilityLimits: normalizeStringArray(resultObject?.['visibilityLimits']),
     prompt: normalizeString(resultObject?.['prompt']),
     usage: normalizeUsage(resultObject?.['usage'])
   };
@@ -305,6 +305,10 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
 function normalizeNumber(value: unknown): number {

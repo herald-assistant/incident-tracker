@@ -42,7 +42,8 @@ const LARGE_TEXT_ATTRIBUTES = new Set([
   'parametry',
   'result',
   'rezultat',
-  'rationale',
+  'functionalAnalysis',
+  'technicalAnalysis',
   'evidenceSummary'
 ]);
 

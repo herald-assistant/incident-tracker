@@ -225,8 +225,8 @@ public record CopilotIncidentToolAccessPolicy(
     }
 
     private String gitLabDisabledReason() {
-        if (evidenceCoverage.affectedFunctionGitLabRecommended()) {
-            return "GitLab affectedFunction grounding is recommended, but no eligible focused GitLab tools are enabled in this session.";
+        if (evidenceCoverage.technicalAnalysisGitLabRecommended()) {
+            return "GitLab technicalAnalysis grounding is recommended, but no eligible focused GitLab tools are enabled in this session.";
         }
         if (evidenceCoverage.databaseCodeGroundingNeedsTooling()) {
             return "GitLab DB code grounding is recommended, but no eligible focused GitLab tools are enabled in this session.";
@@ -236,7 +236,7 @@ public record CopilotIncidentToolAccessPolicy(
     }
 
     private String operationalContextDisabledReason() {
-        return "Operational context coverage is %s and no context, flow, affected-function or DB code-grounding gap requires catalog tools."
+        return "Operational context coverage is %s and no context, flow, functional-analysis, technical-analysis or DB code-grounding gap requires catalog tools."
                 .formatted(evidenceCoverage.operationalContext());
     }
 

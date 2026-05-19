@@ -31,7 +31,9 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
 3. AI interpretuje evidence,
 4. AI moze dociagac dodatkowy kod z GitLaba i opcjonalnie zweryfikowac
    hipotezy danych przez Database tools,
-5. aplikacja zwraca diagnoze i rekomendowany kolejny krok lub kierunek poprawki.
+5. aplikacja zwraca rozdzielony wynik: `functionalAnalysis` dla analityka
+   biznesowo-systemowego oraz `technicalAnalysis` jako konkretny handoff do
+   naprawy, weryfikacji albo przekazania dalej.
 
 Planowane kolejne rodziny feature'ow to m.in. flow explorer, pytania o logike
 funkcjonalna use case'ow oraz natural-language data diagnostics. Szczegolowy
@@ -193,8 +195,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.initial`
-  Poczatkowa analiza incydentu: provider, request, preparation i response
-  JSON-only diagnozy.
+  Poczatkowa analiza incydentu: provider, request, preparation i JSON-only
+  response z rozdzielonym `functionalAnalysis` oraz `technicalAnalysis`.
 - `pl.mkn.incidenttracker.features.incidentanalysis.ai.chat`
   Follow-up chat po zakonczonej analizie incydentu.
 - `pl.mkn.incidenttracker.shared.ai`

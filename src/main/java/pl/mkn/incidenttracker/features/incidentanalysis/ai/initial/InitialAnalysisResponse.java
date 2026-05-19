@@ -2,42 +2,47 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.initial;
 
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
 
+import java.util.List;
+
 public record InitialAnalysisResponse(
         String providerName,
-        String summary,
         String detectedProblem,
-        String recommendedAction,
-        String rationale,
-        String affectedFunction,
         String affectedProcess,
         String affectedBoundedContext,
         String affectedTeam,
+        String functionalAnalysis,
+        String technicalAnalysis,
+        String confidence,
+        List<String> visibilityLimits,
         String prompt,
         AnalysisAiUsage usage
 ) {
+    public InitialAnalysisResponse {
+        visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
+    }
 
     public InitialAnalysisResponse(
             String providerName,
-            String summary,
             String detectedProblem,
-            String recommendedAction,
-            String rationale,
-            String affectedFunction,
             String affectedProcess,
             String affectedBoundedContext,
             String affectedTeam,
+            String functionalAnalysis,
+            String technicalAnalysis,
+            String confidence,
+            List<String> visibilityLimits,
             String prompt
     ) {
         this(
                 providerName,
-                summary,
                 detectedProblem,
-                recommendedAction,
-                rationale,
-                affectedFunction,
                 affectedProcess,
                 affectedBoundedContext,
                 affectedTeam,
+                functionalAnalysis,
+                technicalAnalysis,
+                confidence,
+                visibilityLimits,
                 prompt,
                 null
         );

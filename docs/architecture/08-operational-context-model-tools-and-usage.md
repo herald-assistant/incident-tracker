@@ -1028,6 +1028,12 @@ Feature powinien:
 - uzyc `aiplatform`, `agenttools`, `integrations`, `shared` i `common`,
 - nie duplikowac logiki grafu operational context.
 
+Incident analysis uzywa operational context przede wszystkim do
+`functionalAnalysis`: sekcja ma osadzac incydent w systemie, procesie, bounded
+context, integracjach, glossary i regule handoffu. Ten sam katalog moze tez
+pomoc w `technicalAnalysis`, ale wtedy sluzy do wskazania scope'u repozytoriow,
+punktow wejscia, wlasciciela i granic przekazania, a nie jako dowod root cause.
+
 Operational context nie powinien zawierac promptow albo zasad specyficznych dla
 feature'u. Daje indeks wiedzy i tools, a feature decyduje, jak ich uzyc.
 

@@ -1,6 +1,6 @@
 ---
 name: incident-analysis-core
-description: Core evidence-first rules for producing an operationally useful incident diagnosis, affected function explanation, and handoff-ready result.
+description: Core evidence-first rules for producing incident functionalAnalysis and technicalAnalysis results.
 ---
 
 # Incident Analysis Core Skill
@@ -9,15 +9,18 @@ Use this skill for every incident analysis.
 
 ## Product goal
 
-The result is for an operator, tester, analyst, or junior/mid developer who may not know the affected system area.
+The result is split by audience:
+
+- `functionalAnalysis` is for a business/system analyst who needs system, process, bounded-context and handoff context.
+- `technicalAnalysis` is for the technical receiver who must fix, verify or route the issue.
 
 Do not only identify the local exception.
-Explain the affected function, the broader technical or business flow, what evidence confirms the diagnosis, what is still uncertain, and what the next concrete action should be.
+Explain where the incident sits in the system and produce a concrete Technical Handoff v1 for the receiver.
 
 A good answer should help the reader:
 
 - understand what likely failed,
-- understand where it failed in the wider flow,
+- understand where it failed in the wider system/process flow,
 - know whether the issue is likely data, code, integration, infrastructure, configuration, or outside current visibility,
 - know who should act next,
 - know what exact verification or fix should be performed.
@@ -30,9 +33,9 @@ A good answer should help the reader:
 4. Treat incident artifacts, or their embedded prompt copies, as the primary source of truth.
 5. Form the initial hypothesis from logs, runtime signals, deterministic code evidence and operational context.
 6. Use tools only when they can materially confirm, reject or refine a concrete hypothesis.
-7. Treat `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` as a concrete hypothesis about the affected flow. If GitLab tools are enabled, make a focused GitLab attempt before the final answer to improve `affectedFunction`.
-8. If existing artifacts are already sufficient but GitLab tools are enabled, still use a small focused GitLab search/read for `affectedFunction`; if GitLab tools are disabled, use those artifacts directly.
-9. If the likely technical error is clear but the broader flow is not understandable for a beginner analyst, prefer focused GitLab reads over a shallow final answer.
+7. Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a concrete gap for the analyst-facing section. Use attached operational context first; if needed and enabled, make a focused Operational Context lookup.
+8. Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a concrete gap for Technical Handoff v1. If GitLab tools are enabled, make a focused GitLab attempt before the final answer.
+9. If existing artifacts are already sufficient but GitLab tools are enabled and `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is listed, still use a small focused GitLab search/read for `technicalAnalysis`; if GitLab tools are disabled, use those artifacts directly.
 10. If a capability group is disabled because equivalent artifacts are already attached, use those artifacts directly instead of complaining about missing tool access.
 11. If visibility is incomplete, explain the limitation and provide the next verification step.
 
@@ -93,26 +96,30 @@ Use strong language only when multiple signals point to the same conclusion, for
 
 If the evidence is weaker, write the conclusion as a supported hypothesis.
 
-## Broader flow explanation
+## Result split
 
-The field `affectedFunction` is not a place for only the exception name.
+The final JSON has two main Markdown fields.
 
-Explain the function in a way that a new analyst can understand:
+`functionalAnalysis` follows Functional Analysis v1. It explains:
 
-- what capability or operation is affected,
+- where we are in the system,
+- what process or bounded context is involved,
+- what business/system capability is affected,
 - what starts the flow,
-- which service/class/repository/integration appears to participate,
+- what business object, status, event, decision or integration participates,
 - where the failure interrupts the flow,
-- whether the failure blocks read, write, validation, async processing, integration call, or handoff,
-- which upstream or downstream collaborator is relevant if supported by evidence.
+- what the analyst should pass to the right owner.
 
-When GitLab tools are enabled, use them to ground `affectedFunction` before the final answer.
-Keep the exploration focused: one flow-context/class-reference search plus outline/chunks is enough unless the result clearly points to a direct collaborator.
+`technicalAnalysis` follows Technical Handoff v1. It explains:
 
-Write `affectedFunction` in non-code but technical/functional language.
-It may mention classes, methods or repositories as evidence, but the main text should describe the capability, business/technical operation, input/object, participating components and interruption point.
+- exact technical location,
+- evidence,
+- root cause or best hypothesis,
+- execution flow,
+- proposed fix or expected receiver action,
+- tests and verification.
 
-When the technical failure is already clear but the broader flow is not clear, use focused GitLab reads to make the final answer useful to a newcomer, not only to a developer who already knows the system.
+Do not mix the two. The functional section should not be noisy with implementation details; the technical section should not be diluted by educational prose.
 
 Good examples:
 
@@ -128,9 +135,9 @@ Bad examples:
 - "Błąd bazy"
 - "Problem w kodzie"
 
-## Recommended action quality
+## Technical action quality
 
-The recommendation must be concrete and actionable.
+The technical handoff recommendation must be concrete and actionable.
 
 Avoid:
 

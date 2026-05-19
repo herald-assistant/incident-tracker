@@ -266,7 +266,8 @@ Przyklady luk:
 - `MISSING_CODE_CONTEXT`,
 - `MISSING_FLOW_CONTEXT`,
 - `DB_ENVIRONMENT_UNRESOLVED`,
-- `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`,
+- `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED`,
+- `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED`,
 - `DB_CODE_GROUNDING_NEEDED`,
 - `DB_DIAGNOSTIC_NEEDED`.
 
@@ -288,9 +289,8 @@ Elasticsearch tools:
 GitLab tools:
 
 - wlaczone, gdy brakuje code evidence albo flow context,
-- wlaczone przy luce `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`, zeby model zrobil
-  focused GitLab lookup i opisal `affectedFunction` szczegolowo, ale jezykiem
-  techniczno-funkcjonalnym zamiast code walkthrough,
+- wlaczone przy luce `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED`, zeby model zrobil
+  focused GitLab lookup i napisal `technicalAnalysis` jako Technical Handoff v1,
 - wlaczone w focused toolset przy luce `DB_CODE_GROUNDING_NEEDED`, zeby model
   sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
   discovery,
@@ -329,7 +329,8 @@ Operational Context tools:
   `opctx_get_entity`,
 - wlaczone w initial session, gdy operational context evidence jest
   `NONE`/`PARTIAL` albo coverage ma luki `MISSING_FLOW_CONTEXT`,
-  `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` lub `DB_CODE_GROUNDING_NEEDED`,
+  `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED`,
+  `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` lub `DB_CODE_GROUNDING_NEEDED`,
 - wlaczone w follow-up session zawsze, jesli Spring tool callbacki sa
   zarejestrowane,
 - sluza do kontekstu, ownershipu, scope GitLaba/DB i handoffu; prompt i skill
@@ -348,7 +349,9 @@ Tool quality feedback:
 - nie jest deterministic evidence, root-cause inputem ani quality gate'em.
 
 Prompt instruuje model, zeby uzywal tools tylko dla luk z
-`evidenceCoverage.gaps`. Dla `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` model ma
+`evidenceCoverage.gaps`. Dla `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` model
+ma oprzec `functionalAnalysis` na dolaczonym operational context albo wykonac
+focused lookup katalogu. Dla `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` model ma
 wykonac mala, focused probe GitLab tools przed finalna odpowiedzia, jesli
 GitLab tools sa wlaczone. Dla `DB_CODE_GROUNDING_NEEDED` model ma przed
 pierwsza proba DB table/column/schema-table query uzyc operational context do
@@ -546,31 +549,29 @@ playbookow.
 
 ## 12. Response contract
 
-Prompt wymaga JSON-only response. Publiczny response aplikacji nadal mapuje
-do obecnych pol, ale JSON AI zawiera bogatszy kontrakt:
+Prompt wymaga JSON-only response. Publiczny response aplikacji nie utrzymuje
+wstecznej kompatybilnosci ze starymi polami wyniku; kontrakt jest rozdzielony
+na wynik funkcjonalny dla analityka oraz techniczny handoff dla wykonawcy:
 
 ```json
 {
   "detectedProblem": "string",
-  "summary": "markdown string in Polish",
-  "recommendedAction": "markdown string in Polish",
-  "rationale": "markdown string in Polish",
-  "affectedFunction": "markdown string in Polish",
   "affectedProcess": "string or nieustalone",
   "affectedBoundedContext": "string or nieustalone",
   "affectedTeam": "string or nieustalone",
+  "functionalAnalysis": "markdown string in Polish, Functional Analysis v1",
+  "technicalAnalysis": "markdown string in Polish, Technical Handoff v1",
   "confidence": "high|medium|low",
-  "evidenceReferences": [
-    {
-      "field": "detectedProblem|summary|recommendedAction|rationale|affectedFunction|affectedProcess|affectedBoundedContext|affectedTeam",
-      "artifactId": "string",
-      "itemId": "string",
-      "claim": "short Polish explanation"
-    }
-  ],
   "visibilityLimits": ["string"]
 }
 ```
+
+`functionalAnalysis` ma tlumaczyc, gdzie incydent dzieje sie od strony systemu,
+procesu, bounded contextu, reguly biznesowej i wysokopoziomowej architektury.
+`technicalAnalysis` ma byc zgodne z runtime skillem
+`incident-technical-handoff` i zawierac konkretne punkty wejscia, flow,
+obserwacje techniczne, rekomendowana poprawke albo material do handoffu poza
+analizowany system.
 
 Parser probuje caly content jako JSON, potem fenced JSON block, a potem
 kompletny obiekt JSON osadzony w tresci. Ta ostatnia tolerancja obsluguje

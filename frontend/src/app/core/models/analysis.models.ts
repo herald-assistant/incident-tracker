@@ -54,14 +54,14 @@ export interface AnalysisResultResponse {
   correlationId: string;
   environment: string;
   gitLabBranch: string;
-  summary: string;
   detectedProblem: string;
-  recommendedAction: string;
-  rationale: string;
-  affectedFunction: string;
   affectedProcess: string;
   affectedBoundedContext: string;
   affectedTeam: string;
+  functionalAnalysis: string;
+  technicalAnalysis: string;
+  confidence: string;
+  visibilityLimits: string[];
   prompt: string;
   usage: AnalysisAiUsage | null;
 }

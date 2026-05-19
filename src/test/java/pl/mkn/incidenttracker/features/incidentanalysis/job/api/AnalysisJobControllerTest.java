@@ -137,14 +137,14 @@ class AnalysisJobControllerTest {
                                 "timeout-123",
                                 "dev3",
                                 "dev/atlas",
-                                "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                                 "DOWNSTREAM_TIMEOUT",
-                                "Inspect recent HTTP client timeout changes first.",
-                                "Timeout signals align across logs and runtime evidence.",
-                                "To jest funkcja odpowiedzialna za pobranie danych katalogowych potrzebnych do dalszego flow.",
                                 "Rozliczenie klienta",
                                 "Billing Context",
                                 "Core Integration Team",
+                                "Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych.",
+                                "Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke.",
+                                "medium",
+                                List.of("Brak potwierdzenia po stronie downstream."),
                                 "Prompt body for timeout-123"
                         )
                 ));
@@ -155,11 +155,13 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.preparedPrompt").value("Prompt body for timeout-123"))
                 .andExpect(jsonPath("$.result.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
-                .andExpect(jsonPath("$.result.rationale").value("Timeout signals align across logs and runtime evidence."))
-                .andExpect(jsonPath("$.result.affectedFunction").value("To jest funkcja odpowiedzialna za pobranie danych katalogowych potrzebnych do dalszego flow."))
                 .andExpect(jsonPath("$.result.affectedProcess").value("Rozliczenie klienta"))
                 .andExpect(jsonPath("$.result.affectedBoundedContext").value("Billing Context"))
                 .andExpect(jsonPath("$.result.affectedTeam").value("Core Integration Team"))
+                .andExpect(jsonPath("$.result.functionalAnalysis").value("Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych."))
+                .andExpect(jsonPath("$.result.technicalAnalysis").value("Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke."))
+                .andExpect(jsonPath("$.result.confidence").value("medium"))
+                .andExpect(jsonPath("$.result.visibilityLimits[0]").value("Brak potwierdzenia po stronie downstream."))
                 .andExpect(jsonPath("$.result.prompt").value("Prompt body for timeout-123"));
 
         verify(analysisJobService).getAnalysis("job-123");

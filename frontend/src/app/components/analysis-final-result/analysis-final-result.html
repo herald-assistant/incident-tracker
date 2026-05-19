@@ -15,32 +15,12 @@
         </div>
       }
 
-      @if (hasMeaningfulValue(analysisResult.rationale)) {
+      @if (hasMeaningfulValue(analysisResult.confidence)) {
         <div class="analysis-highlight">
-          <p class="result-card-label">Dlaczego ta diagnoza pasuje</p>
-          <app-markdown-content
-            [content]="analysisResult.rationale"
-            [compact]="true"
-          ></app-markdown-content>
+          <p class="result-card-label">Confidence</p>
+          <code class="problem-badge">{{ analysisResult.confidence }}</code>
         </div>
       }
-
-      @if (hasMeaningfulValue(analysisResult.recommendedAction)) {
-        <div class="analysis-highlight">
-          <p class="result-card-label">Rekomendowany kolejny krok lub handoff</p>
-          <app-markdown-content
-            [content]="analysisResult.recommendedAction"
-            [compact]="true"
-          ></app-markdown-content>
-        </div>
-      }
-    </div>
-
-    <div class="analysis-summary">
-      <p class="result-card-label">Podsumowanie operacyjne</p>
-      <app-markdown-content
-        [content]="analysisResult.summary || 'Brak podsumowania w odpowiedzi.'"
-      ></app-markdown-content>
     </div>
 
     @if (
@@ -87,12 +67,28 @@
       </div>
     }
 
-    @if (hasMeaningfulValue(analysisResult.affectedFunction)) {
-      <div class="analysis-summary">
-        <p class="result-card-label">Dotknięta funkcja systemu</p>
-        <app-markdown-content
-          [content]="analysisResult.affectedFunction"
-        ></app-markdown-content>
+    <div class="analysis-summary">
+      <p class="result-card-label">Rezultat analizy funkcjonalnej</p>
+      <app-markdown-content
+        [content]="analysisResult.functionalAnalysis || 'Brak wyniku analizy funkcjonalnej.'"
+      ></app-markdown-content>
+    </div>
+
+    <div class="analysis-summary">
+      <p class="result-card-label">Rezultat analizy technicznej</p>
+      <app-markdown-content
+        [content]="analysisResult.technicalAnalysis || 'Brak wyniku analizy technicznej.'"
+      ></app-markdown-content>
+    </div>
+
+    @if (analysisResult.visibilityLimits.length > 0) {
+      <div class="analysis-highlight">
+        <p class="result-card-label">Ograniczenia widoczności</p>
+        <ul>
+          @for (limit of analysisResult.visibilityLimits; track limit) {
+            <li>{{ limit }}</li>
+          }
+        </ul>
       </div>
     }
   </section>

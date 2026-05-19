@@ -92,22 +92,28 @@ public class CopilotIncidentFollowUpPromptRenderer {
 
         return """
                 - detectedProblem: %s
-                - summary: %s
-                - recommendedAction: %s
-                - rationale: %s
-                - affectedFunction: %s
                 - affectedProcess: %s
                 - affectedBoundedContext: %s
                 - affectedTeam: %s
+                - confidence: %s
+                - visibilityLimits: %s
+
+                ## functionalAnalysis
+                %s
+
+                ## technicalAnalysis
+                %s
                 """.formatted(
                 valueOrUnknown(result.detectedProblem()),
-                valueOrUnknown(result.summary()),
-                valueOrUnknown(result.recommendedAction()),
-                valueOrUnknown(result.rationale()),
-                valueOrUnknown(result.affectedFunction()),
                 valueOrUnknown(result.affectedProcess()),
                 valueOrUnknown(result.affectedBoundedContext()),
-                valueOrUnknown(result.affectedTeam())
+                valueOrUnknown(result.affectedTeam()),
+                valueOrUnknown(result.confidence()),
+                result.visibilityLimits() == null || result.visibilityLimits().isEmpty()
+                        ? "Brak"
+                        : String.join("; ", result.visibilityLimits()),
+                valueOrUnknown(result.functionalAnalysis()),
+                valueOrUnknown(result.technicalAnalysis())
         ).trim();
     }
 

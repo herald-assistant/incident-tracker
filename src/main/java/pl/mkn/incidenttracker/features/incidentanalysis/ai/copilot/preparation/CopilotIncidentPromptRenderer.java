@@ -18,10 +18,12 @@ public class CopilotIncidentPromptRenderer {
                 You are helping with an enterprise software incident analysis.
 
                 The result will be read by an operator, tester, analyst, or junior/mid developer.
-                The reader may not know the affected system area.
-                Your job is to explain not only the likely error, but also the affected function,
-                where the incident interrupts the broader flow, what is confirmed, what remains
-                uncertain, and what should be done next.
+                The reader may not know the affected system area. The final result has two
+                separate audiences:
+                - `functionalAnalysis` is for a business/system analyst who needs to understand
+                  where this happens in the system, process and high-level architecture.
+                - `technicalAnalysis` is for the technical receiver who must fix, verify or route
+                  the incident without re-reading the whole analysis.
 
                 Session context:
                 - correlationId: %s
@@ -41,17 +43,17 @@ public class CopilotIncidentPromptRenderer {
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
                 - Do not assume facts unsupported by the incident artifacts or tool results.
-                - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
+                - Follow loaded skills for incident analysis, functional analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
                 - Use tools only for evidence gaps listed in `evidenceCoverage.gaps` in `00-incident-manifest.json`.
                 - Do not use tools just because they are available.
                 - GitLab, Elasticsearch, Operational Context and Database tools are coverage-aware and may be enabled for targeted gap filling even when some related evidence is already attached.
                 - Operational Context tools provide catalog context for systems, processes, bounded contexts, repositories, integrations, teams, glossary terms and handoff rules. Treat catalog context as grounding and scope guidance, not as standalone proof of incident root cause.
-                - Treat `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` as a targeted gap: when GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer to ground `affectedFunction`.
-                - If GitLab tools are not enabled or the GitLab attempt cannot find useful flow context, use the attached artifacts and state the visibility limit instead of guessing.
-                - If the incident artifacts already contain enough evidence but GitLab tools are enabled, still use a focused GitLab search/read to improve `affectedFunction`; if GitLab tools are not enabled, answer directly from artifacts.
-                - If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff.
-                - Write `affectedFunction` in non-code, operator-friendly technical/functional language: explain the capability, trigger, main participants, data/object being handled, and where the incident interrupts the flow.
+                - Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a targeted gap for `functionalAnalysis`: use attached operational context evidence first; if it is not enough and Operational Context tools are enabled, make a focused catalog lookup before the final answer.
+                - Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a targeted gap for `technicalAnalysis`: when GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer to ground the technical handoff.
+                - If GitLab or Operational Context tools are not enabled, use the attached artifacts and state the visibility limit instead of guessing.
+                - `functionalAnalysis` must avoid implementation-first language. Mention code identifiers only when they help anchor the system/process explanation.
+                - `technicalAnalysis` must follow Technical Handoff v1 from the loaded `incident-technical-handoff` skill.
                 - If `DB_CODE_GROUNDING_NEEDED` is listed, do not start broad DB table/column discovery from guesses.
                 - Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom, you must either cite deterministic GitLab evidence that already identifies the entity/repository mapping, call an enabled GitLab tool to try to find that mapping, or state that GitLab grounding is unavailable and use DB discovery as a fallback.
                 - Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
@@ -60,7 +62,6 @@ public class CopilotIncidentPromptRenderer {
                 - When Elasticsearch HTTP diagnostic tools are enabled and the evidence points to an opaque external/downstream HTTP failure, use path summary first, then fetch one or a few concrete comparison calls only if the summary provides useful candidate paths/statuses.
                 - For Elasticsearch HTTP diagnostic tools, prefer grounded path prefixes from logs or user input; do not invent endpoint paths.
                 - `elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted. When a comparison path is provided, it searches by that path without forcing the current incident correlationId.
-                - When possible, include evidenceReferences with artifactId and itemId for important claims.
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
                 %s
 
@@ -103,30 +104,18 @@ public class CopilotIncidentPromptRenderer {
                 Required schema:
                 {
                   "detectedProblem": "string",
-                  "summary": "markdown string in Polish",
-                  "recommendedAction": "markdown string in Polish",
-                  "rationale": "markdown string in Polish",
-                  "affectedFunction": "markdown string in Polish",
                   "affectedProcess": "string or nieustalone",
                   "affectedBoundedContext": "string or nieustalone",
                   "affectedTeam": "string or nieustalone",
+                  "functionalAnalysis": "markdown string in Polish, Functional Analysis v1",
+                  "technicalAnalysis": "markdown string in Polish, Technical Handoff v1",
                   "confidence": "high|medium|low",
-                  "evidenceReferences": [
-                    {
-                      "field": "detectedProblem|summary|recommendedAction|rationale|affectedFunction|affectedProcess|affectedBoundedContext|affectedTeam",
-                      "artifactId": "string",
-                      "itemId": "string",
-                      "claim": "short Polish explanation"
-                    }
-                  ],
                   "visibilityLimits": ["string"]
                 }
 
-                Prefer `evidenceReferences` for important claims and use the artifact display name as `artifactId`.
-                Use stable `itemId` values from the evidence artifacts whenever a claim is grounded in a specific evidence item.
-                `evidenceReferences` may be an empty array only when a claim cannot be tied to a specific artifact item.
-                `affectedFunction` must be detailed, non-code, technical/functional Polish. Mention code identifiers only as supporting details, not as the whole explanation.
-                `visibilityLimits` should list the most important unverified assumptions or missing data.
+                `functionalAnalysis` must follow Functional Analysis v1 from the loaded `incident-functional-analysis` skill.
+                `technicalAnalysis` must follow Technical Handoff v1 from the loaded `incident-technical-handoff` skill.
+                `visibilityLimits` should list the most important unverified assumptions or missing data across both sections.
                 """.trim();
     }
 
@@ -138,7 +127,7 @@ public class CopilotIncidentPromptRenderer {
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps. Include a short Polish `reason` in every GitLab tool call.\n");
+            rendered.append("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps. Include a short Polish `reason` in every GitLab tool call.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {
@@ -146,7 +135,7 @@ public class CopilotIncidentPromptRenderer {
         }
 
         if (toolAccessPolicy.operationalContextToolsEnabled()) {
-            rendered.append("- Operational context catalog: browse or search systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules only to fill context, ownership, code-scope, DB-targeting or handoff gaps. Include a short Polish `reason` in every Operational Context tool call.\n");
+            rendered.append("- Operational context catalog: browse or search systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules only to fill functional-context, ownership, code-scope, DB-targeting or handoff gaps. Include a short Polish `reason` in every Operational Context tool call.\n");
         }
 
         if (toolAccessPolicy.toolFeedbackEnabled()) {

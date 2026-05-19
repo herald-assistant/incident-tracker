@@ -101,8 +101,8 @@ class AnalysisJobServiceTest {
         assertNotNull(completed.result());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
         assertEquals(
-                "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
-                completed.result().affectedFunction()
+                "Analiza funkcjonalna: incydent dotyka procesu billingowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
+                completed.result().functionalAnalysis()
         );
         assertEquals("Billing catalog lookup", completed.result().affectedProcess());
         assertEquals("Billing Context", completed.result().affectedBoundedContext());
@@ -510,14 +510,14 @@ class AnalysisJobServiceTest {
             var prepared = testPreparedAnalysis(preparedAnalysis);
             return new InitialAnalysisResponse(
                     "usage-aware-ai-provider",
-                    "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                     "DOWNSTREAM_TIMEOUT",
-                    "Inspect recent HTTP client timeout changes first.",
-                    "The test provider exposes token usage for UI projection.",
-                    "The affected function is the outbound catalog lookup path.",
                     "Billing catalog lookup",
                     "Billing Context",
                     "Core Integration Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza techniczna: sprawdz konfiguracje klienta HTTP i latency downstream.",
+                    "medium",
+                    List.of(),
                     prepared.prompt(),
                     new AnalysisAiUsage(
                             1200L,
@@ -566,14 +566,14 @@ class AnalysisJobServiceTest {
                     : AnalysisAiOptions.DEFAULT;
             return new InitialAnalysisResponse(
                     "capturing-options-ai-provider",
-                    "Selected model " + options.model(),
                     "OPTIONS_CAPTURED",
-                    "Use selected AI runtime options.",
-                    "The request carried AI runtime options.",
-                    "Selected model analysis path",
                     "Options process",
                     "Options Context",
                     "Options Team",
+                    "Analiza funkcjonalna: request niesie wybrane opcje runtime AI.",
+                    "Analiza techniczna: model " + options.model() + " zostal przekazany do providera.",
+                    "high",
+                    List.of(),
                     prepared.prompt()
             );
         }
@@ -626,14 +626,14 @@ class AnalysisJobServiceTest {
             awaitFinishSignal();
             return new InitialAnalysisResponse(
                     "blocking-tool-ai-provider",
-                    "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                     "DOWNSTREAM_TIMEOUT",
-                    "Inspect recent HTTP client timeout changes first.",
-                    "The tool-fetched GitLab file confirms the timeout configuration.",
-                    "The affected function is the outbound catalog lookup path used while building the billing-side response for the incident flow.",
                     "Billing catalog lookup",
                     "Billing Context",
                     "Core Integration Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza techniczna: plik pobrany przez GitLab potwierdza konfiguracje timeoutu klienta.",
+                    "medium",
+                    List.of(),
                     prepared.prompt()
             );
         }
@@ -691,14 +691,14 @@ class AnalysisJobServiceTest {
             )));
             return new InitialAnalysisResponse(
                     "feedback-aware-ai-provider",
-                    "Structured evidence points to a downstream timeout in the catalog-service call chain.",
                     "DOWNSTREAM_TIMEOUT",
-                    "Inspect recent HTTP client timeout changes first.",
-                    "Feedback is recorded separately from deterministic evidence.",
-                    "The affected function is the outbound catalog lookup path.",
                     "Billing catalog lookup",
                     "Billing Context",
                     "Core Integration Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza techniczna: feedback toola jest zapisany osobno od deterministic evidence.",
+                    "medium",
+                    List.of(),
                     prepared.prompt()
             );
         }

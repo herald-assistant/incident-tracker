@@ -54,15 +54,12 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
                 .thenReturn(executionResult("""
                         {
                           "detectedProblem": "PREPARED_RESPONSE",
-                          "summary": "Prepared request executed.",
-                          "recommendedAction": "Keep using the prepared request.",
-                          "rationale": "The provider received a prepared request directly.",
-                          "affectedFunction": "Execution of the already prepared Copilot analysis request.",
                           "affectedProcess": "Prepared analysis",
                           "affectedBoundedContext": "AI Runtime",
                           "affectedTeam": "AI Platform",
+                          "functionalAnalysis": "Prepared request executed for the AI runtime process.",
+                          "technicalAnalysis": "Keep using the prepared request.",
                           "confidence": "medium",
-                          "evidenceReferences": [],
                           "visibilityLimits": []
                         }
                         """));
@@ -154,15 +151,12 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         return """
                 {
                   "detectedProblem": "%s",
-                  "summary": "Prepared request executed.",
-                  "recommendedAction": "Keep using the prepared request.",
-                  "rationale": "The provider received a prepared request.",
-                  "affectedFunction": "Execution of the already prepared Copilot analysis request.",
                   "affectedProcess": "Prepared analysis",
                   "affectedBoundedContext": "AI Runtime",
                   "affectedTeam": "AI Platform",
+                  "functionalAnalysis": "Prepared request executed for the AI runtime process.",
+                  "technicalAnalysis": "Keep using the prepared request.",
                   "confidence": "medium",
-                  "evidenceReferences": [],
                   "visibilityLimits": []
                 }
                 """.formatted(detectedProblem);

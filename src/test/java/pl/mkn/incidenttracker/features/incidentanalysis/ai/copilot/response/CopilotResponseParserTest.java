@@ -16,22 +16,12 @@ class CopilotResponseParserTest {
         var result = parser.parse("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "summary": "Widoczny timeout w `CatalogClient`.\\n- Log wskazuje `SocketTimeoutException`.",
-                  "recommendedAction": "- Zweryfikuj timeout downstream.",
-                  "rationale": "- Log i kod wskazuja ten sam klient HTTP.",
-                  "affectedFunction": "Pobranie katalogu dla procesu zamowienia.",
                   "affectedProcess": "Obsluga zamowienia",
                   "affectedBoundedContext": "Ordering",
                   "affectedTeam": "Orders Team",
+                  "functionalAnalysis": "Timeout dotyka procesu zamowienia, ktory pobiera katalog przed finalizacja.",
+                  "technicalAnalysis": "Sprawdz `CatalogClient`, latency downstream i konfiguracje timeoutu.",
                   "confidence": "high",
-                  "evidenceReferences": [
-                    {
-                      "field": "detectedProblem",
-                      "artifactId": "01-elasticsearch-logs.md",
-                      "itemId": "log-1",
-                      "claim": "Log pokazuje timeout."
-                    }
-                  ],
                   "visibilityLimits": ["Brak potwierdzenia metryk downstream."]
                 }
                 """);
@@ -39,10 +29,10 @@ class CopilotResponseParserTest {
         assertTrue(result.structuredResponse());
         assertFalse(result.fallbackResponseUsed());
         assertEquals("DOWNSTREAM_TIMEOUT", result.response().detectedProblem());
-        assertTrue(result.response().summary().contains("`CatalogClient`"));
+        assertEquals("Obsluga zamowienia", result.response().affectedProcess());
+        assertTrue(result.response().functionalAnalysis().contains("procesu zamowienia"));
+        assertTrue(result.response().technicalAnalysis().contains("`CatalogClient`"));
         assertEquals("high", result.response().confidence());
-        assertEquals(1, result.response().evidenceReferences().size());
-        assertEquals("01-elasticsearch-logs.md", result.response().evidenceReferences().get(0).artifactId());
         assertEquals(1, result.response().visibilityLimits().size());
     }
 
@@ -54,22 +44,12 @@ class CopilotResponseParserTest {
                 ```json
                 {
                   "detectedProblem": "DATA_NOT_FOUND",
-                  "summary": "Brak danych dla `caseId`.",
-                  "recommendedAction": "- Sprawdz rekord w DB.",
-                  "rationale": "- Repozytorium zwrocilo pusty wynik.",
-                  "affectedFunction": "Odczyt aktywnej sprawy.",
                   "affectedProcess": "nieustalone",
                   "affectedBoundedContext": "nieustalone",
                   "affectedTeam": "nieustalone",
+                  "functionalAnalysis": "Brak danych przerywa odczyt aktywnej sprawy.",
+                  "technicalAnalysis": "Sprawdz repozytorium i rekord w DB.",
                   "confidence": "medium",
-                  "evidenceReferences": [
-                    {
-                      "field": "summary",
-                      "artifactId": "01-elasticsearch-logs.md",
-                      "itemId": "log-2",
-                      "claim": "Log pokazuje brak danych."
-                    }
-                  ],
                   "visibilityLimits": []
                 }
                 ```
@@ -78,7 +58,7 @@ class CopilotResponseParserTest {
         assertTrue(result.structuredResponse());
         assertEquals("DATA_NOT_FOUND", result.response().detectedProblem());
         assertEquals("medium", result.response().confidence());
-        assertEquals(1, result.response().evidenceReferences().size());
+        assertEquals("nieustalone", result.response().affectedTeam());
     }
 
     @Test
@@ -88,15 +68,12 @@ class CopilotResponseParserTest {
 
                 {
                   "detectedProblem": "CLASS_CAST_EXCEPTION",
-                  "summary": "Widoczny `ClassCastException` przy mapowaniu daty.",
-                  "recommendedAction": "- Obsluz `LocalDateTime` w mapperze.",
-                  "rationale": "- Stacktrace wskazuje metode mapujaca date.",
-                  "affectedFunction": "Pobieranie biezacych produktow klienta.",
                   "affectedProcess": "credit-decision-process",
                   "affectedBoundedContext": "product-configuration",
                   "affectedTeam": "nieustalone",
+                  "functionalAnalysis": "Blad mapowania daty dotyka pobierania produktow klienta.",
+                  "technicalAnalysis": "Obsluz `LocalDateTime` w mapperze wskazanym przez stacktrace.",
                   "confidence": "high",
-                  "evidenceReferences": [],
                   "visibilityLimits": []
                 }
                 """);
@@ -114,15 +91,12 @@ class CopilotResponseParserTest {
 
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "summary": "Timeout w kliencie HTTP.",
-                  "recommendedAction": "- Sprawdz downstream.",
-                  "rationale": "- Log wskazuje timeout.",
-                  "affectedFunction": "Pobranie katalogu dla procesu zamowienia.",
                   "affectedProcess": "nieustalone",
                   "affectedBoundedContext": "nieustalone",
                   "affectedTeam": "nieustalone",
+                  "functionalAnalysis": "Timeout dotyka pobrania katalogu.",
+                  "technicalAnalysis": "Sprawdz klienta HTTP i downstream.",
                   "confidence": "medium",
-                  "evidenceReferences": [],
                   "visibilityLimits": []
                 }
                 """);
@@ -138,15 +112,12 @@ class CopilotResponseParserTest {
 
                 {
                   "detectedProblem": "DATA_NOT_FOUND",
-                  "summary": "Brak danych dla `caseId`.",
-                  "recommendedAction": "- Sprawdz rekord w DB.",
-                  "rationale": "- Repozytorium zwrocilo pusty wynik.",
-                  "affectedFunction": "Odczyt aktywnej sprawy.",
                   "affectedProcess": "nieustalone",
                   "affectedBoundedContext": "nieustalone",
                   "affectedTeam": "nieustalone",
+                  "functionalAnalysis": "Brak danych dla caseId przerywa odczyt aktywnej sprawy.",
+                  "technicalAnalysis": "Sprawdz predykat repozytorium i rekord w DB.",
                   "confidence": "medium",
-                  "evidenceReferences": [],
                   "visibilityLimits": []
                 }
                 """);
@@ -161,22 +132,19 @@ class CopilotResponseParserTest {
         var result = parser.parse("""
                 {
                   "detectedProblem": "JPA_QUERY_EMPTY",
-                  "summary": "**Potwierdzone:** `orElseThrow()` nie znalazlo rekordu.\\n- Widoczny `EntityNotFoundException`.",
-                  "recommendedAction": "- Zespol backend: sprawdz predykat repozytorium.",
-                  "rationale": "- Stacktrace i kod sa spojne.",
-                  "affectedFunction": "`ActiveCaseRecordController.getActiveCaseRecordForCaseId` odczytuje aktywna sprawe.",
                   "affectedProcess": "Obsluga sprawy",
                   "affectedBoundedContext": "Case Management",
                   "affectedTeam": "Case API Team",
+                  "functionalAnalysis": "**Potwierdzone:** `caseId` trafia do odczytu aktywnej sprawy.\\n- Incydent przerywa proces w momencie oczekiwanego rekordu.",
+                  "technicalAnalysis": "`ActiveCaseRecordController.getActiveCaseRecordForCaseId` odczytuje aktywna sprawe.\\n- Sprawdz `orElseThrow()` i predykat statusow.",
                   "confidence": "medium",
-                  "evidenceReferences": [],
                   "visibilityLimits": ["Brak weryfikacji DB."]
                 }
                 """);
 
         assertTrue(result.structuredResponse());
-        assertTrue(result.response().summary().contains("**Potwierdzone:**"));
-        assertTrue(result.response().affectedFunction().contains("`ActiveCaseRecordController.getActiveCaseRecordForCaseId`"));
+        assertTrue(result.response().functionalAnalysis().contains("**Potwierdzone:**"));
+        assertTrue(result.response().technicalAnalysis().contains("`ActiveCaseRecordController.getActiveCaseRecordForCaseId`"));
     }
 
     @Test
@@ -188,18 +156,16 @@ class CopilotResponseParserTest {
         assertFalse(result.structuredResponse());
         assertTrue(result.fallbackResponseUsed());
         assertEquals("AI_UNSTRUCTURED_RESPONSE", result.response().detectedProblem());
-        assertEquals(raw, result.response().summary());
-        assertEquals("", result.response().affectedFunction());
+        assertEquals(raw, result.response().functionalAnalysis());
+        assertTrue(result.response().technicalAnalysis().contains("Nie udalo sie sparsowac"));
     }
 
     @Test
     void shouldNotParseLabeledFieldsWhenResponseIsNotJson() {
         var raw = """
                 detectedProblem: DOWNSTREAM_TIMEOUT
-                summary: Timeout w kliencie HTTP.
-                recommendedAction: Sprawdz downstream.
-                rationale: Logi wskazuja timeout.
-                affectedFunction: Pobranie katalogu.
+                functionalAnalysis: Timeout w kliencie HTTP.
+                technicalAnalysis: Sprawdz downstream.
                 """.trim();
 
         var result = parser.parse(raw);
@@ -207,8 +173,8 @@ class CopilotResponseParserTest {
         assertFalse(result.structuredResponse());
         assertTrue(result.fallbackResponseUsed());
         assertEquals("AI_UNSTRUCTURED_RESPONSE", result.response().detectedProblem());
-        assertEquals(raw, result.response().summary());
-        assertEquals("", result.response().affectedFunction());
+        assertEquals(raw, result.response().functionalAnalysis());
+        assertTrue(result.response().technicalAnalysis().contains("Nie udalo sie sparsowac"));
     }
 
     @Test
@@ -216,24 +182,20 @@ class CopilotResponseParserTest {
         var result = parser.parse("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "summary": "Timeout widoczny w logach.",
-                  "recommendedAction": "- Sprawdz klienta HTTP.",
-                  "rationale": "- Log wskazuje downstream.",
                   "affectedProcess": "Zamowienia",
                   "affectedBoundedContext": "Ordering",
                   "affectedTeam": "Orders Team",
+                  "functionalAnalysis": "Timeout widoczny w procesie zamowienia.",
                   "confidence": "medium",
-                  "evidenceReferences": [],
-                  "visibilityLimits": ["Brak affectedFunction."]
+                  "visibilityLimits": ["Brak technicalAnalysis."]
                 }
                 """);
 
         assertFalse(result.structuredResponse());
         assertTrue(result.fallbackResponseUsed());
         assertEquals("DOWNSTREAM_TIMEOUT", result.response().detectedProblem());
-        assertEquals("Timeout widoczny w logach.", result.response().summary());
-        assertEquals("- Sprawdz klienta HTTP.", result.response().recommendedAction());
-        assertEquals("", result.response().affectedFunction());
+        assertEquals("Timeout widoczny w procesie zamowienia.", result.response().functionalAnalysis());
+        assertTrue(result.response().technicalAnalysis().contains("Nie udalo sie sparsowac"));
         assertEquals("Orders Team", result.response().affectedTeam());
         assertEquals("medium", result.response().confidence());
         assertEquals(1, result.response().visibilityLimits().size());

@@ -138,7 +138,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
-            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps."));
+            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
             assertTrue(prompt.contains("operator, tester, analyst, or junior/mid developer"));
             assertTrue(prompt.contains("may not know the affected system area"));
@@ -147,20 +147,20 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Only the explicitly listed capability groups are enabled for this session."));
             assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
-            assertTrue(prompt.contains("Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
+            assertTrue(prompt.contains("Follow loaded skills for incident analysis, functional analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
             assertTrue(prompt.contains("Use tools only for evidence gaps listed in `evidenceCoverage.gaps`"));
             assertTrue(prompt.contains("Do not use tools just because they are available."));
             assertTrue(prompt.contains("GitLab, Elasticsearch, Operational Context and Database tools are coverage-aware"));
-            assertTrue(prompt.contains("If the incident artifacts already contain enough evidence but GitLab tools are enabled, still use a focused GitLab search/read to improve `affectedFunction`; if GitLab tools are not enabled, answer directly from artifacts."));
-            assertTrue(prompt.contains("If the likely technical error is clear but the affected function or broader flow is not understandable for a beginner analyst, use GitLab tools to read enough surrounding code to explain the flow and handoff."));
-            assertTrue(prompt.contains("Write `affectedFunction` in non-code, operator-friendly technical/functional language"));
+            assertTrue(prompt.contains("Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a targeted gap for `functionalAnalysis`"));
+            assertTrue(prompt.contains("Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a targeted gap for `technicalAnalysis`"));
+            assertTrue(prompt.contains("`functionalAnalysis` must avoid implementation-first language."));
+            assertTrue(prompt.contains("`technicalAnalysis` must follow Technical Handoff v1"));
             assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
             assertTrue(prompt.contains("Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics."));
             assertTrue(prompt.contains("If an exception, stacktrace or deterministic code evidence grounds a class name, use GitLab class-reference or flow tools with grounded class names and focused keywords before broad DB discovery"));
             assertTrue(prompt.contains("Every Elasticsearch HTTP diagnostic tool call, GitLab tool call, Database tool call and Operational Context tool call must include `reason`: one short Polish sentence"));
             assertTrue(prompt.contains("When Elasticsearch HTTP diagnostic tools are enabled and the evidence points to an opaque external/downstream HTTP failure"));
             assertTrue(prompt.contains("`elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted"));
-            assertTrue(prompt.contains("When possible, include evidenceReferences with artifactId and itemId for important claims."));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));
             assertTrue(prompt.contains("Return only valid JSON."));
@@ -173,14 +173,12 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Never join multiple points with pipe separators like \"|\"."));
             assertTrue(prompt.contains("Required schema:"));
             assertTrue(prompt.contains("\"detectedProblem\": \"string\""));
-            assertTrue(prompt.contains("\"summary\": \"markdown string in Polish\""));
-            assertTrue(prompt.contains("\"recommendedAction\": \"markdown string in Polish\""));
-            assertTrue(prompt.contains("\"affectedFunction\": \"markdown string in Polish\""));
+            assertTrue(prompt.contains("\"functionalAnalysis\": \"markdown string in Polish, Functional Analysis v1\""));
+            assertTrue(prompt.contains("\"technicalAnalysis\": \"markdown string in Polish, Technical Handoff v1\""));
             assertTrue(prompt.contains("\"confidence\": \"high|medium|low\""));
-            assertTrue(prompt.contains("\"evidenceReferences\": ["));
             assertTrue(prompt.contains("\"visibilityLimits\": [\"string\"]"));
-            assertTrue(prompt.contains("Prefer `evidenceReferences` for important claims"));
-            assertTrue(prompt.contains("Use stable `itemId` values from the evidence artifacts"));
+            assertTrue(prompt.contains("`functionalAnalysis` must follow Functional Analysis v1"));
+            assertTrue(prompt.contains("`technicalAnalysis` must follow Technical Handoff v1"));
             assertFalse(prompt.contains("metricLabel=service.response.time.p95"));
             assertEquals(prompt, prepared.prompt());
 
@@ -204,7 +202,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(manifestContent.contains("\"evidenceCoverage\""));
             assertTrue(manifestContent.contains("\"gitLab\" : \"DIRECT_COLLABORATOR_ATTACHED\""));
             assertTrue(manifestContent.contains("\"code\" : \"MISSING_FLOW_CONTEXT\""));
-            assertTrue(manifestContent.contains("\"code\" : \"AFFECTED_FUNCTION_GITLAB_RECOMMENDED\""));
+            assertTrue(manifestContent.contains("\"code\" : \"TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED\""));
             assertTrue(manifestContent.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(manifestContent.contains("\"artifactsArePrimarySourceOfTruth\" : true"));
 

@@ -222,13 +222,18 @@ sparsowane z JSON sa zachowywane.
 Wymagane pola dla obecnego publicznego response to:
 
 - `detectedProblem`
-- `summary`
-- `recommendedAction`
-- `affectedFunction`
+- `functionalAnalysis`
+- `technicalAnalysis`
 
-JSON niesie tez pola pomocnicze: `rationale`, `affectedProcess`,
-`affectedBoundedContext`, `affectedTeam`, `confidence`,
-`evidenceReferences` i `visibilityLimits`.
+JSON niesie tez pola pomocnicze: `affectedProcess`,
+`affectedBoundedContext`, `affectedTeam`, `confidence` i
+`visibilityLimits`.
+
+`functionalAnalysis` jest pisane dla analityka biznesowo-systemowego i musi
+uzywac operational context do osadzenia incydentu w systemie, procesie,
+bounded context, logice funkcjonalnej i regule handoffu. `technicalAnalysis`
+jest pisane jako Technical Handoff v1 dla osoby lub zespolu, ktory ma problem
+naprawic, zweryfikowac albo przekazac do innego Tribe/administracji/infra.
 
 ## 11. Ukryty quality gate jest usuniety
 
@@ -256,9 +261,13 @@ Polityka:
 - GitLab tools sa wlaczane przy braku code evidence albo gdy jest tylko
   symbol, stack frame, failing method lub brakuje flow context.
 - Przy resolved GitLab scope coverage dodaje luke
-  `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`; wtedy model ma wykonac focused
-  przeszukanie GitLaba przez tools, zeby `affectedFunction` bylo szczegolowe,
-  techniczno-funkcjonalne i napisane jezykiem niekodowym.
+  `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED`; wtedy model ma wykonac focused
+  przeszukanie GitLaba przez tools, zeby `technicalAnalysis` bylo konkretne
+  na poziomie wejscia, przeplywu, miejsca przerwania i rekomendowanej poprawki.
+- Operational Context tools sa wlaczane dla luki
+  `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED`, zeby `functionalAnalysis` nie bylo
+  oderwane od katalogu systemow, procesow, bounded contextow, integracji,
+  glossary i reguly handoffu.
 - Gdy GitLab zna projekt/plik, zostaje ograniczony focused toolset.
 - Przy DB-related symptomach coverage moze dodac luke
   `DB_CODE_GROUNDING_NEEDED`. Wtedy focused GitLab tools pozostaja dostepne do
@@ -340,8 +349,9 @@ guidance do opisow drogich lub ryzykownych tools. Przyklady:
 - full file read jest expensive i preferuje chunks/outline,
 - GitLab search/flow context powinien uzywac konkretnych, ugruntowanych
   keywordow,
-- GitLab flow/search guidance przypomina, ze `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`
-  jest powodem do malego, focused GitLab lookupu pod opis funkcji,
+- GitLab flow/search guidance przypomina, ze
+  `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` jest powodem do malego, focused
+  GitLab lookupu pod Technical Handoff v1,
 - GitLab available-repositories/search/class/flow guidance przypomina, ze
   operational context moze wskazywac kilka repozytoriow jednego systemu;
   biblioteki i shared modules z `codeSearchScopes` oraz kompatybilnych

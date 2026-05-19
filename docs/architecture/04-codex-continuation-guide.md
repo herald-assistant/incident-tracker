@@ -430,11 +430,14 @@ Policy zostawia focused GitLab tools przy luce `DB_CODE_GROUNDING_NEEDED`, zeby
 model sprobowal znalezc encje/repozytorium/tabele/relacje w kodzie przed DB
 discovery.
 Policy zostawia tez focused GitLab tools przy
-`AFFECTED_FUNCTION_GITLAB_RECOMMENDED`, zeby model zrobil maly lookup pod
-szczegolowy, techniczno-funkcjonalny opis `affectedFunction`.
-Naturalnym kolejnym krokiem jest mierzenie, czy to faktycznie zmniejsza liczbe
-zgadywanych tabel, poprawia jakosc `affectedFunction` i czy nie zwieksza
-niepotrzebnie kosztu GitLab calls.
+`TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED`, zeby model zrobil maly lookup pod
+konkretny `technicalAnalysis` zgodny z Technical Handoff v1.
+Operational context powinien byc uzywany przy
+`FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED`, zeby `functionalAnalysis` tlumaczyl
+system, proces, bounded context, reguly i handoff ownera jezykiem zrozumialym
+dla junior analityka. Naturalnym kolejnym krokiem jest mierzenie, czy to
+faktycznie zmniejsza liczbe zgadywanych tabel, poprawia jakosc obu sekcji
+wyniku i czy nie zwieksza niepotrzebnie kosztu GitLab/opctx calls.
 
 ### 2. Utrzymanie prostego widoku AI tool evidence
 

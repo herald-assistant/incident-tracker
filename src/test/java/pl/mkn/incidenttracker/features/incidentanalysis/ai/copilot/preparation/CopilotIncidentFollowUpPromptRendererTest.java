@@ -25,14 +25,14 @@ class CopilotIncidentFollowUpPromptRendererTest {
                 List.of(),
                 List.of(),
                 new AnalysisAiChatAnalysisSnapshot(
-                        "Podsumowanie",
                         "Timeout downstream",
-                        "Sprawdzic integracje",
-                        "Logi potwierdzaja timeout",
                         "Obsluga platnosci",
                         "Payment",
                         "Checkout",
-                        "Team A"
+                        "Analiza funkcjonalna: timeout dotyka obslugi platnosci.",
+                        "Analiza techniczna: sprawdz integracje i logi timeoutu.",
+                        "medium",
+                        List.of("Brak potwierdzenia po stronie downstream.")
                 ),
                 List.of(new AnalysisAiChatTurn("user", "Co sprawdzic dalej?")),
                 "Zweryfikuj kod",

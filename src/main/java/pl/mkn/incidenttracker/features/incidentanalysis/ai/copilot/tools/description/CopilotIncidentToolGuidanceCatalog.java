@@ -77,7 +77,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                             "Use when project or file is unclear.",
                             "When operational context lists codeSearchScopes or multiple codeSearchProjects for the matched component, search them as one component scope, including library/shared repositories.",
                             "Prefer focused terms from stacktrace, exception, class, entity, repository or service names.",
-                            "Use to ground a detailed non-code technical-functional affectedFunction when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed.",
+                            "Use to ground the Technical Handoff v1 location, flow and recommended action when TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED is listed.",
                             "Do not use repeatedly with broad generic terms.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
@@ -110,7 +110,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.FIND_FLOW_CONTEXT,
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
-                            "Use when AFFECTED_FUNCTION_GITLAB_RECOMMENDED is listed to identify the smallest functional flow for affectedFunction.",
+                            "Use when TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED is listed to identify the smallest executable flow for technicalAnalysis.",
                             "If operational context points to a codeSearchScope with library/shared repositories for the component, include those projects when they may contain the collaborator deciding the flow.",
                             "Use focused keywords grounded in logs, stacktrace, code evidence or current tool results.",
                             "Use recommended next reads rather than launching broad searches.",

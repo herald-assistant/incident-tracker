@@ -354,14 +354,14 @@ public final class AnalysisJobState {
 
     private AnalysisAiChatAnalysisSnapshot analysisSnapshot() {
         return new AnalysisAiChatAnalysisSnapshot(
-                result.summary(),
                 result.detectedProblem(),
-                result.recommendedAction(),
-                result.rationale(),
-                result.affectedFunction(),
                 result.affectedProcess(),
                 result.affectedBoundedContext(),
-                result.affectedTeam()
+                result.affectedTeam(),
+                result.functionalAnalysis(),
+                result.technicalAnalysis(),
+                result.confidence(),
+                result.visibilityLimits()
         );
     }
 

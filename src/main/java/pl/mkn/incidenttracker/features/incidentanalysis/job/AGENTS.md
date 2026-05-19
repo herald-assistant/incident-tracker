@@ -38,6 +38,10 @@ Nie obejmuje:
 - Snapshot joba powinien pozostac uzyteczny operacyjnie: status, current step,
   evidence sections, tool evidence, prepared prompt, environment, branch,
   wynik, chat messages i blad.
+- Wynik w snapshotach joba ma aktualny kontrakt initial analysis:
+  `functionalAnalysis` dla analityka oraz `technicalAnalysis` dla handoffu
+  technicznego. Nie utrzymuj tu mapowania starych pol wyniku dla kompatybilnosci
+  wstecznej.
 - Follow-up chat jest dostepny tylko po `COMPLETED`. Nie dodawaj do jego
   requestu recznego `environment`, branch, GitLab group, DB scope'u ani nowego
   `correlationId`; reuse'uj zakonczony request AI i hidden tool context.

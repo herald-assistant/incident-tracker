@@ -26,6 +26,8 @@ import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operat
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextEvidenceMapper;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -158,14 +160,14 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         private InitialAnalysisResponse response(String prompt) {
             return new InitialAnalysisResponse(
                     "prepared-test-provider",
-                    "Prepared flow summary",
                     "PREPARED_FLOW",
-                    "Use the prepared request.",
-                    "The orchestrator reused one prepared request.",
-                    "Prepared request execution path",
                     "Prepared process",
                     "Prepared Context",
                     "Prepared Team",
+                    "Prepared functional analysis",
+                    "Prepared technical analysis",
+                    "high",
+                    List.of(),
                     prompt
             );
         }

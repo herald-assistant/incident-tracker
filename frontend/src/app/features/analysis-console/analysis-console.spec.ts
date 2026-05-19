@@ -403,14 +403,14 @@ function completedJob(): AnalysisJobStateSnapshot {
       correlationId: 'corr-123',
       environment: 'dev3',
       gitLabBranch: 'main',
-      summary: 'Diagnoza testowa.',
       detectedProblem: 'DOWNSTREAM_TIMEOUT',
-      recommendedAction: 'Sprawdź timeout.',
-      rationale: 'Evidence wskazuje na timeout.',
-      affectedFunction: 'Catalog client',
       affectedProcess: 'Billing',
       affectedBoundedContext: 'Billing Context',
       affectedTeam: 'Billing Team',
+      functionalAnalysis: 'Analiza funkcjonalna procesu billingowego.',
+      technicalAnalysis: 'Analiza techniczna timeoutu w kliencie katalogu.',
+      confidence: 'medium',
+      visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
       prompt: 'Prepared prompt without tokens.',
       usage: null
     }

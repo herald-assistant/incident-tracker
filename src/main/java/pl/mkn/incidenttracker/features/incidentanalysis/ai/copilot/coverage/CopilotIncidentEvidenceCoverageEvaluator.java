@@ -57,10 +57,17 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
             ));
         }
 
+        if (operationalContextCoverage != IncidentOperationalContextCoverage.MATCHED) {
+            gaps.add(gap(
+                    "FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED",
+                    "Use attached operational context evidence or enabled Operational Context tools to ground the functional analysis in system, process, bounded context, glossary, integration and handoff context."
+            ));
+        }
+
         if (gitLabScopeResolved(request)) {
             gaps.add(gap(
-                    "AFFECTED_FUNCTION_GITLAB_RECOMMENDED",
-                    "Use enabled GitLab tools to ground a detailed non-code technical-functional affectedFunction description for the operator."
+                    "TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED",
+                    "Use enabled GitLab tools to ground the Technical Handoff v1 location, flow and recommended action."
             ));
         }
 

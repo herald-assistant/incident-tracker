@@ -1082,14 +1082,14 @@ function buildAnalysisResult() {
     correlationId: 'timeout-123',
     environment: 'zt002',
     gitLabBranch: 'release/2026.04',
-    summary: 'Backend zwraca timeout przy obsłudze żądania kredytowego.',
     detectedProblem: 'Gateway timeout on backend',
-    recommendedAction: 'Sprawdź połączenia backendu z bazą danych.',
-    rationale: 'Wzrost czasu odpowiedzi koreluje z błędami połączenia do bazy.',
-    affectedFunction: 'CustomerController',
     affectedProcess: 'Obsługa klienta',
     affectedBoundedContext: 'Customer Context',
     affectedTeam: 'Customer Team',
+    functionalAnalysis: 'Backend zwraca timeout przy obsłudze żądania kredytowego w procesie obsługi klienta.',
+    technicalAnalysis: 'Sprawdź połączenia backendu z bazą danych oraz timeouty w `CustomerController`.',
+    confidence: 'medium',
+    visibilityLimits: ['Brak potwierdzenia po stronie bazy danych.'],
     prompt: buildAiPrompt(),
     usage: null
   };

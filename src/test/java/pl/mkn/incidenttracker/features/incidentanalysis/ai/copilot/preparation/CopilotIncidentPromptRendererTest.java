@@ -68,21 +68,23 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("Return only valid JSON."));
         assertTrue(prompt.contains("The final answer must start with `{` and end with `}`."));
         assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before the JSON."));
-        assertTrue(prompt.contains("\"evidenceReferences\": ["));
+        assertTrue(prompt.contains("\"functionalAnalysis\": \"markdown string in Polish, Functional Analysis v1\""));
+        assertTrue(prompt.contains("\"technicalAnalysis\": \"markdown string in Polish, Technical Handoff v1\""));
         assertTrue(prompt.contains("- `00-incident-manifest.json`: Artifact index and analysis context"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 00-incident-manifest.json | mimeType=application/json>>>"));
         assertTrue(prompt.contains("{\"readFirst\":\"00-incident-manifest.json\"}"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
         assertTrue(prompt.contains("- Elasticsearch logs: fetch additional logs only for listed log coverage gaps for the current incident correlationId."));
-        assertTrue(prompt.contains("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, affected-function or DB code-grounding gaps."));
+        assertTrue(prompt.contains("- GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
         assertTrue(prompt.contains("- Database diagnostics: before table/column discovery, ground table and relation hints from deterministic GitLab evidence or enabled GitLab tools when `DB_CODE_GROUNDING_NEEDED` is listed"));
         assertTrue(prompt.contains("- Operational context catalog: browse or search systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules"));
         assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));
         assertTrue(prompt.contains("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals"));
         assertTrue(prompt.contains("Operational Context tools provide catalog context"));
-        assertTrue(prompt.contains("Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
+        assertTrue(prompt.contains("Follow loaded skills for incident analysis, functional analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
         assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
-        assertTrue(prompt.contains("Write `affectedFunction` in non-code, operator-friendly technical/functional language"));
+        assertTrue(prompt.contains("Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a targeted gap for `functionalAnalysis`"));
+        assertTrue(prompt.contains("Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a targeted gap for `technicalAnalysis`"));
     }
 
     @Test

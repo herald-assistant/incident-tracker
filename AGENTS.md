@@ -56,6 +56,18 @@ Przed wieksza zmiana zacznij od:
     provider,
   - AI-guided fetching przez tools.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
+- Publiczny wynik initial incident analysis ma aktualny kontrakt:
+  `detectedProblem`, `affectedProcess`, `affectedBoundedContext`,
+  `affectedTeam`, `functionalAnalysis`, `technicalAnalysis`, `confidence`,
+  `visibilityLimits`, `prompt`, `usage`. Nie przywracaj starych pol
+  `summary`, `recommendedAction`, `rationale`, `affectedFunction` ani
+  `evidenceReferences`.
+- `functionalAnalysis` ma byc sekcja dla analityka biznesowo-systemowego i ma
+  korzystac z operational context do osadzenia incydentu w systemie, procesie,
+  bounded context, regule biznesowej, integracjach i handoffie.
+- `technicalAnalysis` ma byc zgodne z runtime skillem
+  `incident-technical-handoff` i zawierac konkretny material do naprawy,
+  weryfikacji albo przekazania poza analizowany system.
 - Operational context uzywa `system` jako kanonicznego bytu katalogowego.
   Dane deployment/runtime/service names sa wlasciwosciami i sygnalami systemu,
   a nie osobnym bytem referencyjnym. Nie przywracaj relacji ani DTO typu

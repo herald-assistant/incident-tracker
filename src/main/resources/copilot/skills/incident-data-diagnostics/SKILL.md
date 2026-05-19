@@ -265,7 +265,7 @@ If the application scope is ambiguous:
 
 1. call `db_get_scope`,
 2. choose the best application candidate grounded in evidence,
-3. if still ambiguous, use a small discovery query and state the ambiguity in the final rationale.
+3. if still ambiguous, use a small discovery query and state the ambiguity in the final technical analysis.
 
 Do not ask the user for the application name during normal incident analysis.
 
@@ -641,7 +641,7 @@ Procedure:
 2. Use `db_get_scope` if the related application/schema is unclear.
 3. Use `db_find_tables` with the related application name only when evidence supports it.
 4. Do not broaden to all schemas just because the first application did not contain a table.
-5. State cross-application scope explicitly in the final rationale.
+5. State cross-application scope explicitly in the final technical analysis.
 
 Good explanation:
 

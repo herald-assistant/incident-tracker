@@ -38,15 +38,12 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
         when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "summary": "Timeout w `CatalogClient`.",
-                  "recommendedAction": "- Sprawdz latency downstream.",
-                  "rationale": "- Log i kod wskazuja klient HTTP.",
-                  "affectedFunction": "Pobranie katalogu w flow zamowienia.",
                   "affectedProcess": "Zamowienia",
                   "affectedBoundedContext": "Ordering",
                   "affectedTeam": "Orders Team",
+                  "functionalAnalysis": "Timeout dotyka pobrania katalogu w flow zamowienia.",
+                  "technicalAnalysis": "- Sprawdz `CatalogClient` i latency downstream.",
                   "confidence": "high",
-                  "evidenceReferences": [],
                   "visibilityLimits": []
                 }
                 """));
@@ -55,12 +52,12 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
-        assertEquals("Timeout w `CatalogClient`.", response.summary());
-        assertEquals("- Sprawdz latency downstream.", response.recommendedAction());
-        assertEquals("Pobranie katalogu w flow zamowienia.", response.affectedFunction());
+        assertEquals("Timeout dotyka pobrania katalogu w flow zamowienia.", response.functionalAnalysis());
+        assertEquals("- Sprawdz `CatalogClient` i latency downstream.", response.technicalAnalysis());
         assertEquals("Zamowienia", response.affectedProcess());
         assertEquals("Ordering", response.affectedBoundedContext());
         assertEquals("Orders Team", response.affectedTeam());
+        assertEquals("high", response.confidence());
         assertEquals("Prepared JSON prompt", response.prompt());
     }
 

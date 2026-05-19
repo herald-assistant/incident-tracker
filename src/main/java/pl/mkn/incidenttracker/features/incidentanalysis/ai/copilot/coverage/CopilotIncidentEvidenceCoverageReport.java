@@ -54,7 +54,7 @@ public record CopilotIncidentEvidenceCoverageReport(
                 || gitLab == IncidentGitLabEvidenceCoverage.DIRECT_COLLABORATOR_ATTACHED
                 || hasGap("MISSING_CODE_CONTEXT")
                 || hasGap("MISSING_FLOW_CONTEXT")
-                || affectedFunctionGitLabRecommended();
+                || technicalAnalysisGitLabRecommended();
     }
 
     public boolean databaseNeedsTooling() {
@@ -71,7 +71,7 @@ public record CopilotIncidentEvidenceCoverageReport(
         return hasGap("DB_CODE_GROUNDING_NEEDED");
     }
 
-    public boolean affectedFunctionGitLabRecommended() {
-        return hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED");
+    public boolean technicalAnalysisGitLabRecommended() {
+        return hasGap("TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED");
     }
 }

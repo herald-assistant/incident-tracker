@@ -41,7 +41,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
     Path tempDirectory;
 
     @Test
-    void shouldPromptForDigestVerificationAndEvidenceReferences() {
+    void shouldPromptForDigestVerificationAndSplitResultContract() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
@@ -69,9 +69,9 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
 
         assertTrue(prompt.contains("Read `00-incident-manifest.json` first and use it as the artifact index, then read `01-incident-digest.md`."));
         assertTrue(prompt.contains("Use raw evidence artifacts to verify the digest before making a claim."));
-        assertTrue(prompt.contains("When possible, include evidenceReferences with artifactId and itemId for important claims."));
-        assertTrue(prompt.contains("Prefer `evidenceReferences` for important claims and use the artifact display name as `artifactId`."));
-        assertTrue(prompt.contains("Use stable `itemId` values from the evidence artifacts whenever a claim is grounded in a specific evidence item."));
+        assertTrue(prompt.contains("`functionalAnalysis` must follow Functional Analysis v1"));
+        assertTrue(prompt.contains("`technicalAnalysis` must follow Technical Handoff v1"));
+        assertTrue(prompt.contains("\"visibilityLimits\": [\"string\"]"));
         assertTrue(prompt.contains("01-incident-digest.md"));
         assertTrue(prompt.contains("## itemId: elastic-logs-001"));
     }

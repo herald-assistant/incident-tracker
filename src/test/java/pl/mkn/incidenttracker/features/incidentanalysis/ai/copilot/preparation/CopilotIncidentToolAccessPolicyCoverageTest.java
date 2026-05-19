@@ -73,7 +73,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
-    void shouldKeepFocusedGitLabToolsWhenFlowContextIsAttachedForAffectedFunctionGrounding() {
+    void shouldKeepFocusedGitLabToolsWhenFlowContextIsAttachedForTechnicalAnalysisGrounding() {
         var policy = policy(
                 request("dev3", List.of(gitLabSection(
                         "Flow context upstream and downstream for CheckoutService",
@@ -89,7 +89,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 tools("gitlab_find_flow_context", "gitlab_read_repository_file_chunk")
         );
 
-        assertTrue(policy.evidenceCoverage().hasGap("AFFECTED_FUNCTION_GITLAB_RECOMMENDED"));
+        assertTrue(policy.evidenceCoverage().hasGap("TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED"));
         assertEquals(
                 Set.of("gitlab_find_flow_context", "gitlab_read_repository_file_chunk"),
                 Set.copyOf(policy.availableToolNames())

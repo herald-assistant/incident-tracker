@@ -13,7 +13,7 @@ Use this skill when logs, stack traces, deterministic GitLab evidence, or runtim
 - the integration path,
 - the validation path,
 - the async/event flow,
-- or the affected function for handoff.
+- or the affected operation and flow for handoff.
 
 ## Fixed repository context
 
@@ -83,18 +83,18 @@ Good examples:
 
 ## When not to use GitLab tools
 
-The exception is `AFFECTED_FUNCTION_GITLAB_RECOMMENDED`: when that gap is listed and GitLab tools are enabled, make one focused GitLab attempt to improve `affectedFunction`, even if deterministic code evidence already explains the local failure.
+The exception is `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED`: when that gap is listed and GitLab tools are enabled, make one focused GitLab attempt to improve `technicalAnalysis`, even if deterministic code evidence already explains the local failure.
 
 Do not call GitLab tools when:
 
-- attached deterministic code evidence already contains the relevant stack frame, surrounding method, direct collaborator and enough flow context for a newcomer, and `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` is not listed;
+- attached deterministic code evidence already contains the relevant stack frame, surrounding method, direct collaborator and enough flow context for the technical handoff, and `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is not listed;
 - the logs, runtime signals and attached code evidence already explain both:
     - the likely issue,
-    - and the affected function / broader flow, and `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` is not listed;
+    - and the technical handoff location / broader flow, and `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is not listed;
 - the incident is clearly outside repository visibility;
 - another tool type is more direct for the current hypothesis, for example DB tools for a concrete data check.
 
-If the likely technical error is clear but `affectedFunction` would remain shallow, use GitLab tools to read enough surrounding code to explain the flow and handoff.
+If the likely technical error is clear but `technicalAnalysis` would remain shallow, use GitLab tools to read enough surrounding code to explain the flow and handoff.
 
 ## Exploration goal
 
@@ -111,12 +111,12 @@ The goal is to understand the smallest useful cross-file and, when relevant, cro
 - what a beginner or mid-level analyst should verify next,
 - which team or owner may need to receive the handoff when evidence supports it.
 
-## AffectedFunction grounding
+## Technical analysis grounding
 
-If `AFFECTED_FUNCTION_GITLAB_RECOMMENDED` is listed in the manifest and GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer.
+If `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is listed in the manifest and GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer.
 
-Use the attempt to write `affectedFunction` in non-code, technical/functional language.
-The answer should explain:
+Use the attempt to write a concrete `technicalAnalysis` in Technical Handoff v1.
+The handoff should explain:
 
 - what capability or operation is affected,
 - what starts it,
@@ -125,8 +125,8 @@ The answer should explain:
 - where the incident interrupts the flow,
 - whether the impact is read, write, validation, async processing, integration or handoff.
 
-Do not turn `affectedFunction` into a code walkthrough.
-Mention classes, methods, files or repositories only as supporting evidence.
+Do not turn `technicalAnalysis` into a raw code dump.
+Mention classes, methods, files and repositories as precise handoff evidence.
 
 If the GitLab attempt finds no useful flow context, stop and state that limitation.
 
@@ -291,7 +291,7 @@ Stop reading code when:
 
 - the likely failure point is clear,
 - the repository predicate or integration call is understood,
-- the affected function can be explained to a newcomer,
+- the affected operation and flow can be explained to a newcomer,
 - the direct upstream/downstream collaborator is clear enough for handoff,
 - further reads would be speculative,
 - or the remaining question requires DB/runtime/downstream visibility rather than more code.
@@ -303,7 +303,7 @@ Stop when both the technical failure and the affected flow are clear enough.
 
 Tool call count is less important than context quality.
 
-It is acceptable to perform broader GitLab exploration when it materially improves `affectedFunction`, handoff, or next action.
+It is acceptable to perform broader GitLab exploration when it materially improves `technicalAnalysis`, handoff, or next action.
 
 Prefer:
 

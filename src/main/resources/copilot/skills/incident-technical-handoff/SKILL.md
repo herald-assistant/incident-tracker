@@ -5,7 +5,10 @@ description: Enterprise-ready Markdown contract for generating repeatable, evide
 
 # Incident Technical Handoff Skill
 
-Use this skill when the user asks for a handoff, developer handoff, bug report,
+Use this skill for the `technicalAnalysis` field in every initial incident
+analysis result.
+
+Also use it when the user asks for a handoff, developer handoff, bug report,
 ticket text, przekazanie, zgloszenie, raport dla developera, raport dla QA,
 raport dla DevOps, przekazanie do innego zespolu, or any equivalent request
 whose purpose is to give another technical person or team a ready-to-act result.
