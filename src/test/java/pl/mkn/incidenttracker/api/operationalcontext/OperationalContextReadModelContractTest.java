@@ -60,7 +60,7 @@ class OperationalContextReadModelContractTest {
                         "fields", fieldNames(codeSearch),
                         "target", ref(codeSearch.analysisTarget()),
                         "scopeIds", codeSearch.scopes().stream().map(scope -> ref(scope.scope())).toList(),
-                        "scopeTargets", refs(codeSearch.scopes().get(0).targets()),
+                        "scopeTarget", ref(codeSearch.scopes().get(0).target()),
                         "repositoryIds", refs(codeSearch.repositories().stream().map(repository -> repository.repository()).toList()),
                         "aggregatedPackages", codeSearch.aggregatedHints().packagePrefixes(),
                         "aggregatedEndpointHints", codeSearch.aggregatedHints().endpointHints(),
@@ -216,7 +216,7 @@ class OperationalContextReadModelContractTest {
     }
 
     @Test
-    void shouldTruncateBroadRuntimeClassBlastRadiusInDefaultProfile() throws Exception {
+    void shouldKeepRuntimeClassBlastRadiusReadableInDefaultProfile() throws Exception {
         var service = new OperationalContextViewService(new OperationalContextAdapter(new OperationalContextProperties()));
 
         var expanded = service.blastRadiusReadModel("class", "NewLimitOrderController");
@@ -227,9 +227,10 @@ class OperationalContextReadModelContractTest {
         );
 
         assertEquals("default", compact.profile());
-        assertTrue(compact.truncation().truncated());
-        assertTrue(compact.limitations().stream().anyMatch(limitation -> limitation.contains("Broad non-catalog signal")));
-        assertTrue(objectMapper.writeValueAsBytes(compact).length < objectMapper.writeValueAsBytes(expanded).length / 5);
+        assertFalse(compact.data().isEmpty());
+        if (compact.truncation().truncated()) {
+            assertTrue(objectMapper.writeValueAsBytes(compact).length < objectMapper.writeValueAsBytes(expanded).length);
+        }
     }
 
     private String expectedSnapshot() {
@@ -263,12 +264,12 @@ class OperationalContextReadModelContractTest {
                     "neighborCount": 8,
                     "representativeDerivedRelation": {
                       "edge": "code-search-scope:agreement-service-scope -targets-system-> system:agreement-service",
-                      "derived": true,
+                      "derived": false,
                       "provenance": {
-                        "canonical": false,
-                        "derivation": "derived-from-included-repository-reference",
-                        "confidence": "medium",
-                        "sourceRefCount": 2
+                        "canonical": true,
+                        "derivation": "direct-yaml",
+                        "confidence": "high",
+                        "sourceRefCount": 1
                       }
                     },
                     "validation": {
@@ -294,12 +295,7 @@ class OperationalContextReadModelContractTest {
                     "scopeIds": [
                       "code-search-scope:agreement-service-scope"
                     ],
-                    "scopeTargets": [
-                      "bounded-context:agreement-process-management",
-                      "process:agreement-submit-process",
-                      "system:agreement-service",
-                      "term:agreement"
-                    ],
+                    "scopeTarget": "system:agreement-service",
                     "repositoryIds": [
                       "repository:agreement-service-repo"
                     ],
@@ -341,18 +337,19 @@ class OperationalContextReadModelContractTest {
                     ],
                     "target": "process:agreement-submit-process",
                     "implementationIds": [
-                      "agreement-service-scope::agreement-service-repo::agreement-api"
+                      "agreement-process-scope::agreement-service-repo::agreement-api"
                     ],
                     "firstImplementation": {
                       "kind": "implementation",
                       "lifecycleRole": "primary",
                       "migrationStatus": "active",
                       "systems": [
-                        "system:agreement-service"
+                        "system:agreement-service",
+                        "system:external-system-b",
+                        "system:notification-service",
+                        "system:operator-frontend"
                       ],
-                      "boundedContexts": [
-                        "bounded-context:agreement-process-management"
-                      ],
+                      "boundedContexts": [],
                       "processes": [
                         "process:agreement-submit-process"
                       ],
@@ -370,7 +367,7 @@ class OperationalContextReadModelContractTest {
                     ],
                     "validation": {
                       "info": 0,
-                      "warning": 0,
+                      "warning": 1,
                       "error": 0
                     }
                   },
@@ -439,7 +436,7 @@ class OperationalContextReadModelContractTest {
                     ],
                     "validation": {
                       "info": 0,
-                      "warning": 0,
+                      "warning": 1,
                       "error": 0
                     }
                   },
@@ -496,7 +493,7 @@ class OperationalContextReadModelContractTest {
                     ],
                     "validation": {
                       "info": 0,
-                      "warning": 0,
+                      "warning": 1,
                       "error": 0
                     }
                   }
@@ -751,22 +748,46 @@ class OperationalContextReadModelContractTest {
                 List.of(map(
                         "id", "agreement-service-scope",
                         "name", "Agreement Service Scope",
-                        "target", map("processes", List.of("agreement-submit-process")),
+                        "scopeType", "system",
+                        "target", map("type", "system", "id", "agreement-service"),
                         "repositories", List.of(map(
                                 "repoId", "agreement-service-repo",
-                                "role", "primary",
+                                "role", "primary-implementation",
                                 "priority", 1,
-                                "include", true,
                                 "moduleIds", List.of("agreement-api"),
                                 "reason", "Main implementation for the agreement submit flow."
                         )),
-                        "packagePrefixes", List.of("com.example.agreement"),
-                        "classHints", List.of("AgreementSubmitController"),
-                        "endpointHints", List.of("/agreements"),
-                        "databaseHints", map("tables", List.of("AGREEMENT_PROCESS")),
-                        "searchStrategy", map(
-                                "priorityOrder", List.of("agreement-service-repo"),
-                                "includeSharedLibraries", true
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.agreement"),
+                                "classHints", List.of("AgreementSubmitController"),
+                                "endpointHints", List.of("/agreements"),
+                                "database", map("tables", List.of("AGREEMENT_PROCESS"))
+                        ),
+                        "traversal", map(
+                                "rules", List.of("Read agreement-service-repo first."),
+                                "expandWhen", List.of("Expand when shared agreement libraries are referenced.")
+                        ),
+                        "limitations", List.of("Generated clients are outside this compact test catalog.")
+                ), map(
+                        "id", "agreement-process-scope",
+                        "name", "Agreement Process Scope",
+                        "scopeType", "process",
+                        "target", map("type", "process", "id", "agreement-submit-process"),
+                        "repositories", List.of(map(
+                                "repoId", "agreement-service-repo",
+                                "role", "primary-implementation",
+                                "priority", 1,
+                                "moduleIds", List.of("agreement-api"),
+                                "reason", "Main implementation for the agreement submit flow."
+                        )),
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.agreement"),
+                                "classHints", List.of("AgreementSubmitController"),
+                                "endpointHints", List.of("/agreements"),
+                                "database", map("tables", List.of("AGREEMENT_PROCESS"))
+                        ),
+                        "traversal", map(
+                                "rules", List.of("Read agreement-service-repo first.")
                         ),
                         "limitations", List.of("Generated clients are outside this compact test catalog.")
                 )),

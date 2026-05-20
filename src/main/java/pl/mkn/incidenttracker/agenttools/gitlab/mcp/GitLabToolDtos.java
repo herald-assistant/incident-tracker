@@ -129,10 +129,9 @@ public final class GitLabToolDtos {
     public record GitLabAvailableCodeSearchScope(
             String scopeId,
             String name,
+            String scopeType,
             String lifecycleStatus,
-            List<String> targetSystems,
-            List<String> targetProcesses,
-            List<String> targetBoundedContexts,
+            GitLabAvailableCodeSearchTarget target,
             List<String> useFor,
             List<GitLabAvailableCodeSearchRepository> repositories,
             List<String> projectNames,
@@ -140,12 +139,10 @@ public final class GitLabToolDtos {
             List<String> classHints,
             List<String> endpointHints,
             List<String> queueTopicHints,
-            GitLabAvailableCodeSearchStrategy searchStrategy
+            GitLabAvailableCodeSearchTraversal traversal
     ) {
         public GitLabAvailableCodeSearchScope {
-            targetSystems = targetSystems != null ? List.copyOf(targetSystems) : List.of();
-            targetProcesses = targetProcesses != null ? List.copyOf(targetProcesses) : List.of();
-            targetBoundedContexts = targetBoundedContexts != null ? List.copyOf(targetBoundedContexts) : List.of();
+            target = target != null ? target : GitLabAvailableCodeSearchTarget.empty();
             useFor = useFor != null ? List.copyOf(useFor) : List.of();
             repositories = repositories != null ? List.copyOf(repositories) : List.of();
             projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
@@ -153,7 +150,16 @@ public final class GitLabToolDtos {
             classHints = classHints != null ? List.copyOf(classHints) : List.of();
             endpointHints = endpointHints != null ? List.copyOf(endpointHints) : List.of();
             queueTopicHints = queueTopicHints != null ? List.copyOf(queueTopicHints) : List.of();
-            searchStrategy = searchStrategy != null ? searchStrategy : GitLabAvailableCodeSearchStrategy.empty();
+            traversal = traversal != null ? traversal : GitLabAvailableCodeSearchTraversal.empty();
+        }
+    }
+
+    public record GitLabAvailableCodeSearchTarget(
+            String type,
+            String id
+    ) {
+        public static GitLabAvailableCodeSearchTarget empty() {
+            return new GitLabAvailableCodeSearchTarget(null, null);
         }
     }
 
@@ -163,29 +169,27 @@ public final class GitLabToolDtos {
             Integer priority,
             List<String> projectNames,
             List<String> moduleIds,
-            String reason
+            String reason,
+            List<String> readFor
     ) {
         public GitLabAvailableCodeSearchRepository {
             projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
             moduleIds = moduleIds != null ? List.copyOf(moduleIds) : List.of();
+            readFor = readFor != null ? List.copyOf(readFor) : List.of();
         }
     }
 
-    public record GitLabAvailableCodeSearchStrategy(
-            List<String> priorityOrder,
-            boolean includeGeneratedClients,
-            boolean includeSharedLibraries,
-            boolean includeDeploymentConfig,
-            boolean includeDocumentation,
-            List<String> notes
+    public record GitLabAvailableCodeSearchTraversal(
+            List<String> rules,
+            List<String> expandWhen
     ) {
-        public GitLabAvailableCodeSearchStrategy {
-            priorityOrder = priorityOrder != null ? List.copyOf(priorityOrder) : List.of();
-            notes = notes != null ? List.copyOf(notes) : List.of();
+        public GitLabAvailableCodeSearchTraversal {
+            rules = rules != null ? List.copyOf(rules) : List.of();
+            expandWhen = expandWhen != null ? List.copyOf(expandWhen) : List.of();
         }
 
-        public static GitLabAvailableCodeSearchStrategy empty() {
-            return new GitLabAvailableCodeSearchStrategy(List.of(), false, false, false, false, List.of());
+        public static GitLabAvailableCodeSearchTraversal empty() {
+            return new GitLabAvailableCodeSearchTraversal(List.of(), List.of());
         }
     }
 

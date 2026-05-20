@@ -42,7 +42,7 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchDatabaseHints;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchStrategy;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchTraversal;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchWorkflowHints;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSignalSet;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
@@ -444,14 +444,15 @@ public class OperationalContextViewService {
         return new OperationalContextCodeSearchScopeRowDto(
                 id,
                 codeSearchScopeName(scope),
+                scope.scopeType(),
                 scope.lifecycleStatus(),
-                codeSearchScopeTargetsAggregate(view, scope),
+                codeSearchScopeTargetAggregate(view, scope),
                 codeSearchScopeRepositoriesAggregate(view, scope),
                 valueAggregate("Package hints", CODE_SEARCH_SCOPE, id, scope.packagePrefixes(), "Package prefixes narrow the first code search inside this scope.", "package"),
                 valueAggregate("Entry hints", CODE_SEARCH_SCOPE, id, codeSearchEntryHints(scope), "Class, endpoint, queue and topic hints identify likely entry points.", "entrypoint"),
                 codeSearchDataHintsAggregate(view, scope),
                 codeSearchWorkflowHintsAggregate(id, scope.workflowHints()),
-                codeSearchStrategyAggregate(id, scope.searchStrategy(), scope.limitations()),
+                codeSearchTraversalAggregate(id, scope.traversal(), scope.limitations()),
                 validationAggregate(CODE_SEARCH_SCOPE, id, view.validationFindings())
         );
     }
@@ -577,13 +578,13 @@ public class OperationalContextViewService {
                 .findFirst()
                 .orElseThrow(() -> new OperationalContextEntityNotFoundException(CODE_SEARCH_SCOPE, id));
         var sourceRef = sourceRef(CODE_SEARCH_SCOPE, scope.id());
-        var targets = codeSearchScopeTargetsAggregate(view, scope);
+        var target = codeSearchScopeTargetAggregate(view, scope);
         var repositories = codeSearchScopeRepositoriesAggregate(view, scope);
         var packageHints = valueAggregate("Package hints", CODE_SEARCH_SCOPE, id, scope.packagePrefixes(), "Package prefixes narrow the first code search inside this scope.", "package");
         var entryHints = valueAggregate("Entry hints", CODE_SEARCH_SCOPE, id, codeSearchEntryHints(scope), "Class, endpoint, queue and topic hints identify likely entry points.", "entrypoint");
         var dataHints = codeSearchDataHintsAggregate(view, scope);
         var workflowHints = codeSearchWorkflowHintsAggregate(id, scope.workflowHints());
-        var strategy = codeSearchStrategyAggregate(id, scope.searchStrategy(), scope.limitations());
+        var traversal = codeSearchTraversalAggregate(id, scope.traversal(), scope.limitations());
 
         return new OperationalContextEntityDetailDto(
                 CODE_SEARCH_SCOPE,
@@ -594,17 +595,15 @@ public class OperationalContextViewService {
                         new OperationalContextDetailSectionDto("Overview", orderedMap(
                                 "id", scope.id(),
                                 "name", scope.name(),
+                                "scopeType", scope.scopeType(),
                                 "lifecycleStatus", scope.lifecycleStatus(),
+                                "summary", scope.summary(),
                                 "useFor", scope.useFor(),
                                 "limitations", scope.limitations()
                         )),
-                        new OperationalContextDetailSectionDto("Targets", orderedMap(
-                                "systems", scope.target().systems(),
-                                "deploymentComponents", scope.target().deploymentComponents(),
-                                "processes", scope.target().processes(),
-                                "boundedContexts", scope.target().boundedContexts(),
-                                "integrations", scope.target().integrations(),
-                                "terms", scope.target().terms()
+                        new OperationalContextDetailSectionDto("Target", orderedMap(
+                                "type", scope.target().type(),
+                                "id", scope.target().id()
                         )),
                         new OperationalContextDetailSectionDto("Search hints", orderedMap(
                                 "packagePrefixes", scope.packagePrefixes(),
@@ -613,14 +612,14 @@ public class OperationalContextViewService {
                                 "queueTopicHints", scope.queueTopicHints(),
                                 "databaseHints", codeSearchDataHints(view, scope),
                                 "workflowHints", scope.workflowHints(),
-                                "priorityOrder", scope.searchStrategy().priorityOrder()
+                                "traversal", scope.traversal()
                         ))
                 ),
-                combineGroups(targets.groups(), repositories.groups()),
-                combineGroups(packageHints.groups(), entryHints.groups(), dataHints.groups(), workflowHints.groups(), strategy.groups()),
+                combineGroups(target.groups(), repositories.groups()),
+                combineGroups(packageHints.groups(), entryHints.groups(), dataHints.groups(), workflowHints.groups(), traversal.groups()),
                 List.of(new OperationalContextExplainabilitySectionDto(
-                        "Multi-repository search scope",
-                        "This scope tells operators and AI which repositories must be searched together for a runtime/process/domain target.",
+                        "Semantic implementation search scope",
+                        "This scope tells operators and AI where a semantic target is implemented across repositories and modules.",
                         "high",
                         List.of(reason("repo-map.yml codeSearchScopes", "The scope is parsed from the top-level codeSearchScopes section in repo-map.yml.", "strong")),
                         scope.limitations().isEmpty() ? List.of() : scope.limitations(),
@@ -766,11 +765,7 @@ public class OperationalContextViewService {
         for (var scope : view.catalog().codeSearchScopes()) {
             var id = scope.id();
             requireReferences(findings, CODE_SEARCH_SCOPE, id, "repositories", REPOSITORY, codeSearchRepositoryIds(scope), view.repositoriesById(), "Code search scope references unknown repository.");
-            requireReferences(findings, CODE_SEARCH_SCOPE, id, "target.systems", SYSTEM, scope.target().systems(), view.systemsById(), "Code search scope references unknown system.");
-            requireReferences(findings, CODE_SEARCH_SCOPE, id, "target.processes", PROCESS, scope.target().processes(), view.processesById(), "Code search scope references unknown process.");
-            requireReferences(findings, CODE_SEARCH_SCOPE, id, "target.boundedContexts", BOUNDED_CONTEXT, scope.target().boundedContexts(), view.contextsById(), "Code search scope references unknown bounded context.");
-            requireReferences(findings, CODE_SEARCH_SCOPE, id, "target.integrations", INTEGRATION, scope.target().integrations(), view.integrationsById(), "Code search scope references unknown integration.");
-            requireKnownIds(findings, CODE_SEARCH_SCOPE, id, "target.terms", GLOSSARY_TERM, scope.target().terms(), glossaryIds(view), "Code search scope references unknown glossary term.");
+            requireCodeSearchScopeTarget(findings, view, scope);
         }
         for (var process : view.catalog().processes()) {
             var id = process.id();
@@ -809,7 +804,7 @@ public class OperationalContextViewService {
                 continue;
             }
             if (repositoryScopeIdsForSystem(view, system.id()).isEmpty()) {
-                addFinding(findings, "warning", "completeness", SYSTEM, system.id(), "Internal system has no repository scope.", "No repository or code search scope declares this system.", "Add references.systems on the repository or codeSearchScopes.target.systems.", "AI code lookup may be weaker.");
+                addFinding(findings, "warning", "completeness", SYSTEM, system.id(), "Internal system has no repository scope.", "No repository or semantic code search scope declares this system.", "Add references.systems on the repository or a codeSearchScopes.target for this system.", "AI code lookup may be weaker.");
             }
             if (ownerTeamIds(system).isEmpty() && owningTeamIds(view, SYSTEM, system.id()).isEmpty()) {
                 addFinding(findings, "warning", "completeness", SYSTEM, system.id(), "System owner is missing.", "No owner team is declared or referencing this system.", "Add responsibilities.teamId or team references.", "Handoff recommendation may be weaker.");
@@ -821,11 +816,11 @@ public class OperationalContextViewService {
             }
         }
         for (var scope : view.catalog().codeSearchScopes()) {
-            if (scope.repositories().stream().noneMatch(OperationalContextRepositorySearchRepository::include)) {
-                addFinding(findings, "error", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no included repositories.", "AI cannot perform a multi-repository lookup without at least one included repository.", "Add codeSearchScopes.repositories with include=true.", "GitLab tool guidance may be incomplete.");
+            if (scope.repositories().isEmpty()) {
+                addFinding(findings, "error", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no repositories.", "AI cannot perform a multi-repository lookup without repositories.", "Add codeSearchScopes.repositories.", "GitLab tool guidance may be incomplete.");
             }
             if (codeSearchScopeTargetValues(scope).isEmpty()) {
-                addFinding(findings, "warning", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no operational target.", "Scope is not anchored to systems, processes, bounded contexts or integrations.", "Fill codeSearchScopes.target.", "Operators may not know when to use this scope.");
+                addFinding(findings, "warning", "completeness", CODE_SEARCH_SCOPE, scope.id(), "Code search scope has no semantic target.", "Scope is not anchored to one system, process, bounded context or integration.", "Fill codeSearchScopes.target.type and target.id.", "Operators may not know when to use this scope.");
             }
         }
     }
@@ -895,6 +890,22 @@ public class OperationalContextViewService {
                 .toList();
         for (var targetId : missing) {
             addFinding(findings, "warning", "reference-integrity", sourceType, sourceId, "Unknown " + targetType + " reference in " + field + ".", detail + " Missing id: " + targetId, "Create the target entry or remove the reference.", "Invalid links reduce explainability.");
+        }
+    }
+
+    private void requireCodeSearchScopeTarget(
+            List<ValidationFindingDto> findings,
+            CatalogView view,
+            OperationalContextRepositorySearchScope scope
+    ) {
+        if (!StringUtils.hasText(scope.target().type()) || !StringUtils.hasText(scope.target().id())) {
+            return;
+        }
+        var targetType = normalizeRelationTargetType(scope.target().type(), CODE_SEARCH_SCOPE);
+        var targetId = scope.target().id();
+        var targetIndex = targetIndex(view, targetType);
+        if (!targetIndex.containsKey(targetId)) {
+            addFinding(findings, "error", "reference-integrity", CODE_SEARCH_SCOPE, scope.id(), "Unknown " + targetType + " semantic target.", "Code search scope target points to missing id: " + targetId, "Create the target entry or correct codeSearchScopes.target.", "Invalid code search targets reduce AI guidance quality.");
         }
     }
 
@@ -1169,7 +1180,7 @@ public class OperationalContextViewService {
                 items.isEmpty() ? "low" : "high",
                 items.isEmpty()
                         ? "This repository is not assigned to any codeSearchScopes entry."
-                        : "Top-level codeSearchScopes entries that include this repository.",
+                        : "Semantic codeSearchScopes entries that reference this repository.",
                 List.of(group("Search scopes", items)),
                 List.of(reason("repo-map.yml codeSearchScopes", "Scopes are matched by repository id in repo-map.yml.", "strong")),
                 items.isEmpty() ? List.of("AI may only see this repository as an isolated project in the UI catalogue.") : List.of(),
@@ -1185,7 +1196,6 @@ public class OperationalContextViewService {
     ) {
         var items = scopesForRepository(view, repository.id()).stream()
                 .flatMap(scope -> scope.repositories().stream()
-                        .filter(scopeRepository -> scopeRepository.include())
                         .filter(scopeRepository -> repository.id().equals(scopeRepository.repoId()))
                         .map(scopeRepository -> item(
                                 scope.id(),
@@ -1213,26 +1223,21 @@ public class OperationalContextViewService {
         );
     }
 
-    private ExplainableAggregateDto codeSearchScopeTargetsAggregate(
+    private ExplainableAggregateDto codeSearchScopeTargetAggregate(
             CatalogView view,
             OperationalContextRepositorySearchScope scope
     ) {
         var groups = new ArrayList<ExplainableBreakdownGroupDto>();
-        addTargetGroup(groups, "Systems", SYSTEM, scope.target().systems(), view.systemsById(), "Scope targets these runtime systems.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
-        addValueGroup(groups, "Deployment components", scope.target().deploymentComponents(), "deployment-component", "Scope targets these deployment component names.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
-        addTargetGroup(groups, "Processes", PROCESS, scope.target().processes(), view.processesById(), "Scope targets these operational processes.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
-        addTargetGroup(groups, "Bounded contexts", BOUNDED_CONTEXT, scope.target().boundedContexts(), view.contextsById(), "Scope targets these bounded contexts.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
-        addTargetGroup(groups, "Integrations", INTEGRATION, scope.target().integrations(), view.integrationsById(), "Scope targets these integration contracts.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
-        addValueGroup(groups, "Terms", scope.target().terms(), GLOSSARY_TERM, "Scope targets these glossary terms.", sourceRef(CODE_SEARCH_SCOPE, scope.id()));
+        addCodeSearchSemanticTargetGroup(groups, view, scope);
         var count = groups.stream().mapToInt(ExplainableBreakdownGroupDto::count).sum();
         return aggregate(
-                "Targets",
+                "Target",
                 count,
                 count == 0 ? "unknown" : "ok",
                 count == 0 ? "low" : "high",
-                count == 0 ? "No target systems/processes/contexts are declared." : "System, process and domain targets for this multi-repo search scope.",
+                count == 0 ? "No semantic target is declared." : "Semantic target implemented by this search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.target", "Targets are parsed from repo-map.yml codeSearchScopes.target.", "strong")),
+                List.of(reason("codeSearchScopes.target", "Target is parsed from repo-map.yml codeSearchScopes.target.type/id.", "strong")),
                 count == 0 ? List.of("Scope is not anchored to operational entities.") : List.of(),
                 List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id())),
                 "",
@@ -1250,7 +1255,7 @@ public class OperationalContextViewService {
                         .thenComparing(OperationalContextRepositorySearchRepository::repoId, Comparator.nullsLast(String::compareTo)))
                 .map(scopeRepository -> {
                     var repository = view.repositoriesById().get(scopeRepository.repoId());
-                    var status = repository == null ? "missing" : scopeRepository.include() ? "verified" : "needs-review";
+                    var status = repository == null ? "missing" : "verified";
                     var label = repository == null
                             ? firstDefined(scopeRepository.repoId(), "Missing repository")
                             : displayLabel(REPOSITORY, scopeRepository.repoId(), repository);
@@ -1272,9 +1277,9 @@ public class OperationalContextViewService {
                 hasMissing ? "medium" : "high",
                 items.isEmpty()
                         ? "Scope has no repositories, so GitLab search cannot be planned."
-                        : "Ordered repository set for this code search scope, including shared libraries and generated clients.",
+                        : "Ordered repository set for this semantic implementation scope.",
                 List.of(group("Repositories", items)),
-                List.of(reason("codeSearchScopes.repositories", "Repository roles, priorities and module ids are explicit in repo-map.yml.", "strong")),
+                List.of(reason("codeSearchScopes.repositories", "Repository roles, priorities, module ids and read purpose are explicit in repo-map.yml.", "strong")),
                 hasMissing ? List.of("Some repositories referenced by this scope are missing from repositories[].") : List.of(),
                 List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id())),
                 REPOSITORY,
@@ -1304,7 +1309,7 @@ public class OperationalContextViewService {
                 count == 0 ? "low" : "high",
                 count == 0 ? "No DB/persistence hints are declared." : "DB and persistence hints from the code search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.databaseHints", "Hints come from repo-map.yml databaseHints and included repository source layouts.", "strong")),
+                List.of(reason("codeSearchScopes.databaseHints", "Hints come from repo-map.yml databaseHints and referenced repository source layouts.", "strong")),
                 List.of(),
                 List.of(sourceRef),
                 "",
@@ -1325,7 +1330,7 @@ public class OperationalContextViewService {
         var migrations = new LinkedHashSet<>(explicit.migrations());
 
         for (var scopeRepository : scope.repositories()) {
-            if (!scopeRepository.include() || !StringUtils.hasText(scopeRepository.repoId())) {
+            if (!StringUtils.hasText(scopeRepository.repoId())) {
                 continue;
             }
             var entry = view.repositoriesById().get(scopeRepository.repoId());
@@ -1398,39 +1403,25 @@ public class OperationalContextViewService {
         );
     }
 
-    private ExplainableAggregateDto codeSearchStrategyAggregate(
+    private ExplainableAggregateDto codeSearchTraversalAggregate(
             String scopeId,
-            OperationalContextRepositorySearchStrategy strategy,
+            OperationalContextRepositorySearchTraversal traversal,
             List<String> limitations
     ) {
         var groups = new ArrayList<ExplainableBreakdownGroupDto>();
         var sourceRef = sourceRef(CODE_SEARCH_SCOPE, scopeId);
-        addValueGroup(groups, "Priority order", strategy.priorityOrder(), "code-search-role", "Search should inspect repositories in this role order.", sourceRef);
-        var includes = new ArrayList<String>();
-        if (strategy.includeGeneratedClients()) {
-            includes.add("generated clients");
-        }
-        if (strategy.includeSharedLibraries()) {
-            includes.add("shared libraries");
-        }
-        if (strategy.includeDeploymentConfig()) {
-            includes.add("deployment config");
-        }
-        if (strategy.includeDocumentation()) {
-            includes.add("documentation");
-        }
-        addValueGroup(groups, "Include", includes, "strategy-include", "Search strategy explicitly includes these repository types.", sourceRef);
-        addValueGroup(groups, "Notes", strategy.notes(), "note", "Strategy notes explain how AI should traverse this scope.", sourceRef);
+        addValueGroup(groups, "Rules", traversal.rules(), "traversal-rule", "Rules explain the intended read order and boundaries.", sourceRef);
+        addValueGroup(groups, "Expand when", traversal.expandWhen(), "traversal-expansion", "Expansion conditions explain when to read supporting repositories.", sourceRef);
         addValueGroup(groups, "Limitations", limitations, "limitation", "Known limitations should be visible before trusting the scope.", sourceRef);
         var count = groups.stream().mapToInt(ExplainableBreakdownGroupDto::count).sum();
         return aggregate(
-                "Strategy",
+                "Traversal",
                 count,
                 limitations.isEmpty() ? count == 0 ? "unknown" : "ok" : "warning",
                 count == 0 ? "low" : "high",
-                count == 0 ? "No explicit search strategy is declared." : "How AI should traverse repositories in this code search scope.",
+                count == 0 ? "No explicit traversal guidance is declared." : "How AI should traverse repositories in this semantic search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.searchStrategy", "Strategy comes from repo-map.yml searchStrategy and limitations.", "strong")),
+                List.of(reason("codeSearchScopes.traversal", "Traversal guidance comes from repo-map.yml traversal and limitations.", "strong")),
                 limitations.isEmpty() ? List.of() : List.of("Scope declares limitations that should be considered during analysis."),
                 List.of(sourceRef),
                 "",
@@ -1460,6 +1451,29 @@ public class OperationalContextViewService {
         }
     }
 
+    private void addCodeSearchSemanticTargetGroup(
+            List<ExplainableBreakdownGroupDto> groups,
+            CatalogView view,
+            OperationalContextRepositorySearchScope scope
+    ) {
+        if (!StringUtils.hasText(scope.target().type()) || !StringUtils.hasText(scope.target().id())) {
+            return;
+        }
+        var targetType = normalizeRelationTargetType(scope.target().type(), CODE_SEARCH_SCOPE);
+        var targetId = scope.target().id();
+        var target = targetIndex(view, targetType).get(targetId);
+        var status = target == null ? "missing" : "verified";
+        var label = target == null ? targetId : displayLabel(targetType, targetId, target);
+        groups.add(group("Semantic target", List.of(item(
+                targetType + ":" + targetId,
+                label,
+                targetType,
+                "Scope targets this semantic implementation area.",
+                status,
+                List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id()), sourceRef(targetType, targetId))
+        ))));
+    }
+
     private void addValueGroup(
             List<ExplainableBreakdownGroupDto> groups,
             String label,
@@ -1482,8 +1496,7 @@ public class OperationalContextViewService {
     ) {
         return view.catalog().codeSearchScopes().stream()
                 .filter(scope -> scope.repositories().stream()
-                        .anyMatch(scopeRepository -> scopeRepository.include()
-                                && repositoryId.equals(scopeRepository.repoId())))
+                        .anyMatch(scopeRepository -> repositoryId.equals(scopeRepository.repoId())))
                 .toList();
     }
 
@@ -1494,9 +1507,9 @@ public class OperationalContextViewService {
                 .map(OperationalContextRepository::id)
                 .forEach(ids::add);
         view.catalog().codeSearchScopes().stream()
-                .filter(scope -> scope.target().systems().contains(systemId))
+                .filter(scope -> SYSTEM.equals(normalizeRelationTargetType(scope.target().type(), CODE_SEARCH_SCOPE))
+                        && systemId.equals(scope.target().id()))
                 .flatMap(scope -> scope.repositories().stream())
-                .filter(OperationalContextRepositorySearchRepository::include)
                 .map(OperationalContextRepositorySearchRepository::repoId)
                 .filter(StringUtils::hasText)
                 .forEach(ids::add);
@@ -1514,8 +1527,7 @@ public class OperationalContextViewService {
     private String codeSearchRepositoryRoleLabel(OperationalContextRepositorySearchRepository repository) {
         return String.join(" ", combineValues(
                 firstDefined(repository.role(), "role unknown"),
-                repository.priority() != null ? "priority " + repository.priority() : "",
-                repository.include() ? "" : "excluded"
+                repository.priority() != null ? "priority " + repository.priority() : ""
         ));
     }
 
@@ -1530,8 +1542,8 @@ public class OperationalContextViewService {
         if (!repository.moduleIds().isEmpty()) {
             details.add("modules=" + String.join(", ", repository.moduleIds()));
         }
-        if (!repository.include()) {
-            details.add("include=false");
+        if (!repository.readFor().isEmpty()) {
+            details.add("readFor=" + String.join(", ", repository.readFor()));
         }
         if (StringUtils.hasText(repository.reason())) {
             details.add(repository.reason());
@@ -1845,11 +1857,9 @@ public class OperationalContextViewService {
                     "id", scope.id(),
                     "name", scope.name(),
                     "lifecycleStatus", scope.lifecycleStatus(),
-                    "systems", scope.target().systems(),
-                    "deploymentComponents", scope.target().deploymentComponents(),
-                    "processes", scope.target().processes(),
-                    "boundedContexts", scope.target().boundedContexts(),
-                    "integrations", scope.target().integrations(),
+                    "scopeType", scope.scopeType(),
+                    "targetType", scope.target().type(),
+                    "targetId", scope.target().id(),
                     "repositories", scope.repositories().stream().map(OperationalContextRepositorySearchRepository::repoId).toList(),
                     "roles", scope.repositories().stream().map(OperationalContextRepositorySearchRepository::role).toList(),
                     "packagePrefix", scope.packagePrefixes(),
@@ -1873,7 +1883,6 @@ public class OperationalContextViewService {
                     scope.id(),
                     codeSearchScopeName(scope),
                     "repositories: " + String.join(", ", scope.repositories().stream()
-                            .filter(OperationalContextRepositorySearchRepository::include)
                             .map(OperationalContextRepositorySearchRepository::repoId)
                             .filter(StringUtils::hasText)
                             .distinct()
@@ -2259,14 +2268,10 @@ public class OperationalContextViewService {
     }
 
     private List<String> codeSearchScopeTargetValues(OperationalContextRepositorySearchScope scope) {
-        return distinct(combineValues(
-                scope.target().systems(),
-                scope.target().deploymentComponents(),
-                scope.target().processes(),
-                scope.target().boundedContexts(),
-                scope.target().integrations(),
-                scope.target().terms()
-        ));
+        if (!StringUtils.hasText(scope.target().type()) || !StringUtils.hasText(scope.target().id())) {
+            return List.of();
+        }
+        return List.of(scope.target().value());
     }
 
     private List<String> processIds(OperationalContextEntry entry) {

@@ -25,7 +25,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
         assertEquals("app-core-scope", model.scopes().get(0).scope().id());
         assertEquals(2, model.repositories().size());
         assertEquals("app-repo", model.repositories().get(0).repository().id());
-        assertEquals("primary", model.repositories().get(0).role());
+        assertEquals("primary-implementation", model.repositories().get(0).role());
         assertEquals("Group/app", model.repositories().get(0).git().projectPath());
         assertTrue(model.repositories().get(0).modules().stream()
                 .anyMatch(module -> module.id().equals("app-module")));
@@ -43,12 +43,12 @@ class OperationalContextCodeSearchReadModelBuilderTest {
         var model = builder.buildForEntity(sampleCatalog(), "boundedContext", "core-context");
 
         assertEquals(1, model.scopes().size());
-        assertEquals("app-core-scope", model.scopes().get(0).scope().id());
+        assertEquals("core-context-scope", model.scopes().get(0).scope().id());
         assertFalse(model.repositories().isEmpty());
     }
 
     @Test
-    void shouldDeriveCodeSearchTargetsFromIncludedRepositoryReferences() {
+    void shouldUseOnlySemanticScopeTarget() {
         var catalog = OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(map("id", "core-process")),
@@ -64,12 +64,11 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 )),
                 List.of(map(
                         "id", "repo-derived-scope",
-                        "target", map("processes", List.of("core-process")),
+                        "target", map("type", "process", "id", "core-process"),
                         "repositories", List.of(map(
                                 "repoId", "app-repo",
-                                "role", "primary",
-                                "priority", 1,
-                                "include", true
+                                "role", "primary-implementation",
+                                "priority", 1
                         ))
                 )),
                 List.of(map("id", "core-context")),
@@ -90,15 +89,13 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 "index"
         );
 
+        var processModel = builder.buildForEntity(catalog, "process", "core-process");
         var systemModel = builder.buildForEntity(catalog, "system", "app-core");
-        var boundedContextModel = builder.buildForEntity(catalog, "bounded-context", "core-context");
-        var termModel = builder.buildForEntity(catalog, "term", "core-term");
 
-        assertEquals("repo-derived-scope", systemModel.scopes().get(0).scope().id());
-        assertEquals("repo-derived-scope", boundedContextModel.scopes().get(0).scope().id());
-        assertEquals("repo-derived-scope", termModel.scopes().get(0).scope().id());
-        assertTrue(systemModel.scopes().get(0).targets().stream()
-                .anyMatch(target -> target.type().equals("system") && target.id().equals("app-core")));
+        assertEquals("repo-derived-scope", processModel.scopes().get(0).scope().id());
+        assertEquals("process", processModel.scopes().get(0).target().type());
+        assertEquals("core-process", processModel.scopes().get(0).target().id());
+        assertTrue(systemModel.scopes().isEmpty());
     }
 
     @Test
@@ -129,11 +126,10 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 List.of(),
                 List.of(map(
                         "id", "broken-scope",
-                        "target", map("systems", List.of("app-core")),
+                        "target", map("type", "system", "id", "app-core"),
                         "repositories", List.of(map(
                                 "repoId", "missing-repo",
-                                "role", "primary",
-                                "include", true
+                                "role", "primary-implementation"
                         ))
                 )),
                 List.of(),
@@ -207,46 +203,53 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 List.of(map(
                         "id", "app-core-scope",
                         "name", "App Core Scope",
-                        "target", map(
-                                "systems", List.of("app-core"),
-                                "processes", List.of("core-process"),
-                                "boundedContexts", List.of("core-context"),
-                                "integrations", List.of("partner-sync")
-                        ),
+                        "target", map("type", "system", "id", "app-core"),
                         "repositories", List.of(
                                 map(
                                         "repoId", "app-repo",
-                                        "role", "primary",
+                                        "role", "primary-implementation",
                                         "priority", 1,
-                                        "include", true,
                                         "moduleIds", List.of("app-module"),
                                         "reason", "Main implementation"
                                 ),
                                 map(
                                         "repoId", "shared-repo",
-                                        "role", "library",
+                                        "role", "supporting-library",
                                         "priority", 2,
-                                        "include", true,
                                         "reason", "Shared library"
                                 )
                         ),
-                        "packagePrefixes", List.of("com.example.scope"),
-                        "classHints", List.of("ScopeEntryPoint"),
-                        "endpointHints", List.of("/scope"),
-                        "queueTopicHints", List.of("app.queue"),
-                        "databaseHints", map(
-                                "schemas", List.of("APP_SCHEMA"),
-                                "tables", List.of("APP_TABLE"),
-                                "entities", List.of("AppEntity")
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.scope"),
+                                "classHints", List.of("ScopeEntryPoint"),
+                                "endpointHints", List.of("/scope"),
+                                "queueTopicHints", List.of("app.queue"),
+                                "database", map(
+                                        "schemas", List.of("APP_SCHEMA"),
+                                        "tables", List.of("APP_TABLE"),
+                                        "entities", List.of("AppEntity")
+                                ),
+                                "workflow", map(
+                                        "workflowNames", List.of("AppFlow")
+                                )
                         ),
-                        "workflowHints", map(
-                                "workflowNames", List.of("AppFlow")
-                        ),
-                        "searchStrategy", map(
-                                "priorityOrder", List.of("app-repo", "shared-repo"),
-                                "includeSharedLibraries", true
+                        "traversal", map(
+                                "rules", List.of("Read app-repo before shared-repo."),
+                                "expandWhen", List.of("Expand to shared-repo when shared predicates are referenced.")
                         ),
                         "limitations", List.of("Generated clients not included")
+                ), map(
+                        "id", "core-context-scope",
+                        "name", "Core Context Scope",
+                        "target", map("type", "bounded-context", "id", "core-context"),
+                        "repositories", List.of(map(
+                                "repoId", "app-repo",
+                                "role", "primary-implementation",
+                                "priority", 1
+                        )),
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.app")
+                        )
                 )),
                 List.of(map(
                         "id", "core-context",

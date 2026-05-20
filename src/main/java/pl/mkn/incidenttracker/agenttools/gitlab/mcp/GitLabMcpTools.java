@@ -97,7 +97,7 @@ public class GitLabMcpTools {
                     Lists GitLab repositories registered in operational context and available in the current fixed session group.
                     Use this when projectName or GitLab path is unknown and logs, traces, code, comments, package names,
                     system names, module names, endpoints or bounded contexts mention another application or repository.
-                    Prefer returned codeSearchScopes when a component maps to multiple repositories; use all projectName
+                    Prefer returned codeSearchScopes when a semantic target maps to multiple repositories; use all projectName
                     values from the matching scope as inputs for GitLab search, flow context and read tools.
                     The group and branch are taken from hidden ToolContext.
                     """

@@ -72,7 +72,7 @@ public class OperationalContextRelationIndexBuilder {
             registerEntry(state, REPOSITORY, repository);
             repository.modules().forEach(module -> registerModule(state, repository, module));
         });
-        catalog.codeSearchScopes().forEach(scope -> register(state, CODE_SEARCH_SCOPE, scope.id(), scope.name(), scope.lifecycleStatus(), null));
+        catalog.codeSearchScopes().forEach(scope -> register(state, CODE_SEARCH_SCOPE, scope.id(), scope.name(), scope.lifecycleStatus(), scope.summary()));
         catalog.processes().forEach(process -> {
             registerEntry(state, PROCESS, process);
             process.steps().forEach(step -> registerProcessStep(state, process, step));
@@ -134,19 +134,27 @@ public class OperationalContextRelationIndexBuilder {
             List<OperationalContextRepositorySearchScope> scopes,
             List<OperationalContextRepository> repositories
     ) {
-        var repositoriesById = repositoriesById(repositories);
         for (var scope : scopes) {
             var source = new EntityKey(CODE_SEARCH_SCOPE, scope.id());
-            referenceList(state, source, "targets-system", SYSTEM, scope.target().systems(), "repo-map.yml", scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target.systems", true);
-            referenceList(state, source, "targets-process", PROCESS, scope.target().processes(), "repo-map.yml", scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target.processes", true);
-            referenceList(state, source, "targets-bounded-context", BOUNDED_CONTEXT, scope.target().boundedContexts(), "repo-map.yml", scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target.boundedContexts", true);
-            referenceList(state, source, "targets-integration", INTEGRATION, scope.target().integrations(), "repo-map.yml", scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target.integrations", true);
-            referenceList(state, source, "targets-term", TERM, scope.target().terms(), "repo-map.yml", scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target.terms", true);
-
-            var derivedTargets = new LinkedHashSet<String>();
+            var target = scope.target();
+            if (StringUtils.hasText(target.type()) && StringUtils.hasText(target.id())) {
+                var targetType = normalizeTargetType(target.type());
+                relation(
+                        state,
+                        source,
+                        "targets-" + targetType,
+                        new EntityKey(targetType, target.id()),
+                        firstNonBlank(scope.scopeType(), target.type()),
+                        source,
+                        true,
+                        false,
+                        "direct-yaml",
+                        "high",
+                        sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target", "semantic-target")
+                );
+            }
             for (var repository : scope.repositories()) {
                 codeSearchRepository(state, source, scope, repository);
-                codeSearchRepositoryTargets(state, source, scope, repository, repositoriesById, derivedTargets);
             }
         }
     }
@@ -548,27 +556,27 @@ public class OperationalContextRelationIndexBuilder {
             OperationalContextRepositorySearchScope scope,
             OperationalContextRepositorySearchRepository repository
     ) {
-        if (!repository.include() || !StringUtils.hasText(repository.repoId())) {
+        if (!StringUtils.hasText(repository.repoId())) {
             return;
         }
         relation(
                 state,
                 source,
-                "includes-repository",
+                "references-repository",
                 new EntityKey(REPOSITORY, repository.repoId()),
-                firstNonBlank(repository.role(), "included"),
+                firstNonBlank(repository.role(), "referenced"),
                 source,
                 true,
                 false,
                 "direct-yaml",
                 "high",
-                sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "]", "includes-repository")
+                sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "]", "references-repository")
         );
         for (var moduleId : safeTextList(repository.moduleIds())) {
             relation(
                     state,
                     source,
-                    "includes-module",
+                    "references-module",
                     new EntityKey(MODULE, moduleId),
                     repository.role(),
                     source,
@@ -576,7 +584,7 @@ public class OperationalContextRelationIndexBuilder {
                     false,
                     "direct-yaml",
                     "high",
-                    sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "].moduleIds", "includes-module")
+                    sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "].moduleIds", "references-module")
             );
         }
     }
@@ -589,19 +597,19 @@ public class OperationalContextRelationIndexBuilder {
             Map<String, OperationalContextRepository> repositoriesById,
             LinkedHashSet<String> derivedTargets
     ) {
-        if (!scopeRepository.include() || !StringUtils.hasText(scopeRepository.repoId())) {
+        if (!StringUtils.hasText(scopeRepository.repoId())) {
             return;
         }
         var repository = repositoriesById.get(scopeRepository.repoId());
         if (repository == null) {
             return;
         }
-        var includeRef = sourceRef(
+        var repositoryScopeRef = sourceRef(
                 "repo-map.yml",
                 CODE_SEARCH_SCOPE,
                 scope.id(),
                 "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + scopeRepository.repoId() + "]",
-                "includes-repository"
+                "references-repository"
         );
         repositoryReferenceTargets(
                 state,
@@ -612,7 +620,7 @@ public class OperationalContextRelationIndexBuilder {
                 SYSTEM,
                 "systems",
                 "references-system",
-                includeRef,
+                repositoryScopeRef,
                 derivedTargets
         );
         repositoryReferenceTargets(
@@ -624,7 +632,7 @@ public class OperationalContextRelationIndexBuilder {
                 PROCESS,
                 "processes",
                 "references-process",
-                includeRef,
+                repositoryScopeRef,
                 derivedTargets
         );
         repositoryReferenceTargets(
@@ -636,7 +644,7 @@ public class OperationalContextRelationIndexBuilder {
                 BOUNDED_CONTEXT,
                 "boundedContexts",
                 "references-bounded-context",
-                includeRef,
+                repositoryScopeRef,
                 derivedTargets
         );
         repositoryReferenceTargets(
@@ -648,7 +656,7 @@ public class OperationalContextRelationIndexBuilder {
                 INTEGRATION,
                 "integrations",
                 "references-integration",
-                includeRef,
+                repositoryScopeRef,
                 derivedTargets
         );
         repositoryReferenceTargets(
@@ -660,7 +668,7 @@ public class OperationalContextRelationIndexBuilder {
                 TERM,
                 "terms",
                 "references-term",
-                includeRef,
+                repositoryScopeRef,
                 derivedTargets
         );
     }
@@ -674,7 +682,7 @@ public class OperationalContextRelationIndexBuilder {
             String targetType,
             String referenceField,
             String referenceRole,
-            SourceRef includeRef,
+            SourceRef repositoryScopeRef,
             LinkedHashSet<String> derivedTargets
     ) {
         for (var targetId : safeTextList(targetIds)) {
@@ -690,10 +698,10 @@ public class OperationalContextRelationIndexBuilder {
                     source,
                     false,
                     true,
-                    "derived-from-included-repository-reference",
+                    "derived-from-referenced-repository",
                     "medium",
                     List.of(
-                            includeRef,
+                            repositoryScopeRef,
                             sourceRef(
                                     "repo-map.yml",
                                     REPOSITORY,

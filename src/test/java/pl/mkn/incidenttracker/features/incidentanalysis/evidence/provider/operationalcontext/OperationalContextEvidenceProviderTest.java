@@ -71,7 +71,7 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(view.systems().get(0).codeSearchRepositoryIds().contains("app-shared-lib-repo"));
         assertTrue(view.systems().get(0).codeSearchProjects().contains("libs/app-shared-lib"));
         assertTrue(view.systems().get(0).codeSearchRepositoryRoles().contains(
-                "app-core-code-search:app-shared-lib-repo:shared-library:priority=2"
+                "app-core-code-search:app-shared-lib-repo:supporting-library:priority=2"
         ));
         assertTrue(view.systems().get(0).sourcePackages().contains("com.example.shared"));
         assertTrue(view.systems().get(0).classHints().contains("SharedPredicate"));

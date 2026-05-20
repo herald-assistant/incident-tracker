@@ -68,7 +68,7 @@ public class OperationalContextImplementationReadModelBuilder {
         var limitations = new ArrayList<>(codeSearch.limitations());
 
         for (var scope : codeSearch.scopes()) {
-            var scopeTargets = scopeTargets(relationIndex, scope, target, analysisTarget);
+            var implementationTargets = implementationTargets(relationIndex, scope, target, analysisTarget);
             for (var repositoryRef : scope.repositories()) {
                 var repository = repositoriesById.get(repositoryRef.id());
                 if (repository == null) {
@@ -81,7 +81,7 @@ public class OperationalContextImplementationReadModelBuilder {
                     putImplementation(
                             implementations,
                             findings,
-                            implementationView(scope, scopeTargets, repository, scopedRepository, null)
+                            implementationView(scope, implementationTargets, repository, scopedRepository, null)
                     );
                     continue;
                 }
@@ -89,7 +89,7 @@ public class OperationalContextImplementationReadModelBuilder {
                     putImplementation(
                             implementations,
                             findings,
-                            implementationView(scope, scopeTargets, repository, scopedRepository, module)
+                            implementationView(scope, implementationTargets, repository, scopedRepository, module)
                     );
                 }
             }
@@ -120,7 +120,7 @@ public class OperationalContextImplementationReadModelBuilder {
 
     private ImplementationView implementationView(
             CodeSearchScopeView scope,
-            ScopeTargets targets,
+            ImplementationTargets targets,
             RepositoryView repository,
             OperationalContextRepositorySearchRepository scopedRepository,
             ModuleView module
@@ -168,7 +168,7 @@ public class OperationalContextImplementationReadModelBuilder {
         );
     }
 
-    private ScopeTargets scopeTargets(
+    private ImplementationTargets implementationTargets(
             OperationalContextRelationIndex relationIndex,
             CodeSearchScopeView scope,
             EntityKey target,
@@ -178,9 +178,9 @@ public class OperationalContextImplementationReadModelBuilder {
         var boundedContexts = new LinkedHashMap<String, EntityRef>();
         var processes = new LinkedHashMap<String, EntityRef>();
 
-        addByType(systems, scope.targets(), SYSTEM);
-        addByType(boundedContexts, scope.targets(), BOUNDED_CONTEXT);
-        addByType(processes, scope.targets(), PROCESS);
+        addByType(systems, scopeTargetRefs(scope), SYSTEM);
+        addByType(boundedContexts, scopeTargetRefs(scope), BOUNDED_CONTEXT);
+        addByType(processes, scopeTargetRefs(scope), PROCESS);
 
         if (SYSTEM.equals(target.type())) {
             systems.putIfAbsent(analysisTarget.id(), analysisTarget);
@@ -202,11 +202,15 @@ public class OperationalContextImplementationReadModelBuilder {
             addByType(processes, relationIndex.entityRelations(target.type(), target.id()).neighbors(), PROCESS);
         }
 
-        return new ScopeTargets(
+        return new ImplementationTargets(
                 List.copyOf(boundedContexts.values()),
                 List.copyOf(systems.values()),
                 List.copyOf(processes.values())
         );
+    }
+
+    private List<EntityRef> scopeTargetRefs(CodeSearchScopeView scope) {
+        return scope.target() != null ? List.of(scope.target()) : List.of();
     }
 
     private void putImplementation(
@@ -335,7 +339,7 @@ public class OperationalContextImplementationReadModelBuilder {
             CodeSearchScopeView scope,
             RepositoryView repository,
             String implementationKind,
-            ScopeTargets targets
+            ImplementationTargets targets
     ) {
         var refs = new LinkedHashMap<String, SourceRef>();
         addRefs(refs, scope.provenance().sourceRefs());
@@ -346,7 +350,7 @@ public class OperationalContextImplementationReadModelBuilder {
             warnings.add("No system target could be projected for this implementation.");
         }
         if ("supporting-code".equals(implementationKind)) {
-            warnings.add("Repository is included as supporting code, not canonical bounded-context ownership.");
+            warnings.add("Repository is referenced as supporting code, not canonical bounded-context ownership.");
         }
 
         return new Provenance(
@@ -510,7 +514,7 @@ public class OperationalContextImplementationReadModelBuilder {
             OperationalContextRepositorySearchRepository scopedRepository,
             RepositoryView repository
     ) {
-        return firstNonBlank(scopedRepository != null ? scopedRepository.role() : null, repository.role(), "included");
+        return firstNonBlank(scopedRepository != null ? scopedRepository.role() : null, repository.role(), "referenced");
     }
 
     private Integer implementationPriority(
@@ -603,7 +607,7 @@ public class OperationalContextImplementationReadModelBuilder {
         return StringUtils.hasText(value) ? value.trim().toLowerCase() : "";
     }
 
-    private record ScopeTargets(
+    private record ImplementationTargets(
             List<EntityRef> boundedContexts,
             List<EntityRef> systems,
             List<EntityRef> processes

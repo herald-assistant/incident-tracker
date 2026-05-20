@@ -41,11 +41,10 @@ class GitLabMcpToolsTest {
                 ignored -> operationalContextCatalog(
                         List.of(codeSearchScope(
                                 "backend-component-code-search",
-                                List.of("backend"),
-                                List.of("decision-process"),
-                                List.of("decision", "limit"),
+                                "system",
+                                "backend",
                                 List.of(
-                                        scopeRepository("backend-repo", "primary", 1, List.of("backend-module")),
+                                        scopeRepository("backend-repo", "primary-implementation", 1, List.of("backend-module")),
                                         scopeRepository("agreement-repo", "workflow-collaborator", 2, List.of("agreement-bootstrap"))
                                 ),
                                 List.of("pl.santander.clp.backend"),
@@ -143,17 +142,16 @@ class GitLabMcpToolsTest {
 
         var scope = response.codeSearchScopes().get(0);
         assertEquals("backend-component-code-search", scope.scopeId());
-        assertIterableEquals(List.of("backend", "agreement"), scope.targetSystems());
-        assertIterableEquals(List.of("decision-process", "agreement-process"), scope.targetProcesses());
-        assertIterableEquals(List.of("decision", "limit", "agreement"), scope.targetBoundedContexts());
+        assertEquals("system", scope.target().type());
+        assertEquals("backend", scope.target().id());
         assertIterableEquals(
                 List.of("backend", "PROCESSES/CLP_AGREEMENT_PROCESS"),
                 scope.projectNames()
         );
-        assertEquals("primary", scope.repositories().get(0).role());
+        assertEquals("primary-implementation", scope.repositories().get(0).role());
         assertEquals("workflow-collaborator", scope.repositories().get(1).role());
         assertIterableEquals(List.of("backend-module"), scope.repositories().get(0).moduleIds());
-        assertTrue(scope.searchStrategy().includeSharedLibraries());
+        assertTrue(scope.traversal().expandWhen().contains("Expand when supporting repositories are needed."));
     }
 
     @Test
@@ -772,9 +770,8 @@ class GitLabMcpToolsTest {
 
     private Map<String, Object> codeSearchScope(
             String id,
-            List<String> systems,
-            List<String> processes,
-            List<String> boundedContexts,
+            String targetType,
+            String targetId,
             List<Map<String, Object>> repositories,
             List<String> packagePrefixes,
             List<String> classHints
@@ -784,19 +781,18 @@ class GitLabMcpToolsTest {
         scope.put("name", "Backend component code search scope");
         scope.put("lifecycleStatus", "active");
         scope.put("target", Map.of(
-                "systems", systems,
-                "processes", processes,
-                "boundedContexts", boundedContexts
+                "type", targetType,
+                "id", targetId
         ));
         scope.put("useFor", List.of("code-search", "incident-analysis"));
         scope.put("repositories", repositories);
-        scope.put("packagePrefixes", packagePrefixes);
-        scope.put("classHints", classHints);
-        scope.put("searchStrategy", Map.of(
-                "priorityOrder", repositories.stream()
-                        .map(repository -> repository.get("repoId").toString())
-                        .toList(),
-                "includeSharedLibraries", true
+        scope.put("hints", Map.of(
+                "packagePrefixes", packagePrefixes,
+                "classHints", classHints
+        ));
+        scope.put("traversal", Map.of(
+                "rules", List.of("Read repositories in priority order."),
+                "expandWhen", List.of("Expand when supporting repositories are needed.")
         ));
         return scope;
     }
@@ -811,7 +807,6 @@ class GitLabMcpToolsTest {
                 "repoId", repoId,
                 "role", role,
                 "priority", priority,
-                "include", true,
                 "moduleIds", moduleIds,
                 "reason", "Included in test code-search scope."
         );

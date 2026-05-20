@@ -120,14 +120,15 @@ export interface OperationalContextRepositoryRowDto {
 export interface OperationalContextCodeSearchScopeRowDto {
   id: string;
   name: string;
+  scopeType: string;
   lifecycleStatus: string;
-  targets: ExplainableAggregateDto;
+  target: ExplainableAggregateDto;
   repositories: ExplainableAggregateDto;
   packageHints: ExplainableAggregateDto;
   entryHints: ExplainableAggregateDto;
   dataHints: ExplainableAggregateDto;
   workflowHints: ExplainableAggregateDto;
-  strategy: ExplainableAggregateDto;
+  traversal: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }
 

@@ -66,19 +66,19 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                             {
                               "scopeId": "orders-code-search",
                               "name": "Orders Code Search Scope",
+                              "scopeType": "system",
                               "lifecycleStatus": "active",
-                              "targetSystems": ["orders"],
-                              "targetProcesses": ["order-process"],
-                              "targetBoundedContexts": ["orders"],
+                              "target": {"type": "system", "id": "orders"},
                               "useFor": ["code-search", "incident-analysis"],
                               "repositories": [
                                 {
                                   "repositoryId": "orders-api-repo",
-                                  "role": "primary",
+                                  "role": "primary-implementation",
                                   "priority": 1,
                                   "projectNames": ["orders-api"],
                                   "moduleIds": ["orders-api"],
-                                  "reason": "Main orders API repository."
+                                  "reason": "Main orders API repository.",
+                                  "readFor": ["runtime-entrypoints"]
                                 }
                               ],
                               "projectNames": ["orders-api"],
@@ -86,13 +86,9 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                               "classHints": ["OrderService"],
                               "endpointHints": ["/orders"],
                               "queueTopicHints": [],
-                              "searchStrategy": {
-                                "priorityOrder": ["orders-api-repo"],
-                                "includeGeneratedClients": false,
-                                "includeSharedLibraries": false,
-                                "includeDeploymentConfig": false,
-                                "includeDocumentation": false,
-                                "notes": []
+                              "traversal": {
+                                "rules": ["Read orders-api-repo first."],
+                                "expandWhen": []
                               }
                             }
                           ]

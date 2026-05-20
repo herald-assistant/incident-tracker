@@ -34,7 +34,7 @@ class OperationalContextAdapterTest {
         assertEquals("core-context", catalog.openQuestions().get(0).entityId());
         assertEquals("app-core-code-search", catalog.codeSearchScopes().get(0).id());
         assertEquals(2, catalog.codeSearchScopes().get(0).repositories().size());
-        assertEquals("shared-library", catalog.codeSearchScopes().get(0).repositories().get(1).role());
+        assertEquals("supporting-library", catalog.codeSearchScopes().get(0).repositories().get(1).role());
         assertTrue(catalog.openQuestions().stream()
                 .anyMatch(question -> question.sourceFile().equals("glossary.md")
                         && question.question().equals("Confirm whether SOAP fault terminology needs separate domain-specific subtypes.")));

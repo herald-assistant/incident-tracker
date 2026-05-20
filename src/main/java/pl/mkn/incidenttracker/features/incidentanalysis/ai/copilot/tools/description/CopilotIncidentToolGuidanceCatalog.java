@@ -54,7 +54,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     List.of(
                             "Use before GitLab search/read tools when projectName or GitLab path is not known from evidence.",
                             "Use returned projectName values as inputs for GitLab search, flow context and read tools.",
-                            "When codeSearchScopes are returned, prefer the matching scope and pass all its projectNames together.",
+                            "When codeSearchScopes are returned, prefer the matching semantic target scope and pass all its projectNames together.",
                             "Call once per investigation unless new evidence clearly points to another repository.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
@@ -75,7 +75,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                     List.of(
                             "Use when project or file is unclear.",
-                            "When operational context lists codeSearchScopes or multiple codeSearchProjects for the matched component, search them as one component scope, including library/shared repositories.",
+                            "When operational context lists codeSearchScopes or multiple codeSearchProjects for the matched semantic target, search them as one implementation scope, including supporting repositories.",
                             "Prefer focused terms from stacktrace, exception, class, entity, repository or service names.",
                             "Use to ground the Technical Handoff v1 location, flow and recommended action when TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED is listed.",
                             "Do not use repeatedly with broad generic terms.",
@@ -111,7 +111,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
                             "Use when TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED is listed to identify the smallest executable flow for technicalAnalysis.",
-                            "If operational context points to a codeSearchScope with library/shared repositories for the component, include those projects when they may contain the collaborator deciding the flow.",
+                            "If operational context points to a codeSearchScope with supporting repositories for the semantic target, include those projects when they may contain the collaborator deciding the flow.",
                             "Use focused keywords grounded in logs, stacktrace, code evidence or current tool results.",
                             "Use recommended next reads rather than launching broad searches.",
                             "Always provide reason as one short Polish sentence for the operator."

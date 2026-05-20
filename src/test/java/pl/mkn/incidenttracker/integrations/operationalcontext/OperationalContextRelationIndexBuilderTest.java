@@ -42,11 +42,11 @@ class OperationalContextRelationIndexBuilderTest {
         var scopeRelations = index.entityRelations("code-search-scope", "app-core-scope");
 
         assertTrue(scopeRelations.outgoingRelations().stream()
-                .anyMatch(relation -> relation.relationType().equals("includes-repository")
+                .anyMatch(relation -> relation.relationType().equals("references-repository")
                         && relation.target().id().equals("app-repo")
-                        && relation.role().equals("primary")));
+                        && relation.role().equals("primary-implementation")));
         assertTrue(scopeRelations.outgoingRelations().stream()
-                .anyMatch(relation -> relation.relationType().equals("includes-module")
+                .anyMatch(relation -> relation.relationType().equals("references-module")
                         && relation.target().id().equals("app-module")));
     }
 
@@ -302,16 +302,11 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(map(
                         "id", "app-core-scope",
                         "name", "App Core Scope",
-                        "target", map(
-                                "systems", List.of("app-core"),
-                                "processes", List.of("core-process"),
-                                "boundedContexts", List.of("core-context")
-                        ),
+                        "target", map("type", "system", "id", "app-core"),
                         "repositories", List.of(map(
                                 "repoId", "app-repo",
-                                "role", "primary",
+                                "role", "primary-implementation",
                                 "priority", 1,
-                                "include", true,
                                 "moduleIds", List.of("app-module")
                         ))
                 )),

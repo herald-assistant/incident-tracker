@@ -3,7 +3,8 @@ package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchRepository;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchScope;
-import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchStrategy;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTarget;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTraversal;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableRepository;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
@@ -123,33 +124,16 @@ final class GitLabAvailableRepositoryMapper {
                 .map(repository -> toCodeSearchRepository(repository, repositoriesById))
                 .filter(repository -> repository != null)
                 .toList();
-        var referencedRepositories = includedScopeRepositories.stream()
-                .map(repository -> repositoriesById.get(normalizeId(repository.repoId())))
-                .filter(repository -> repository != null)
-                .toList();
         var projectNames = distinctLimited(repositories.stream()
                 .flatMap(repository -> repository.projectNames().stream())
                 .toList(), MAX_MODULE_PATHS);
-        var targetSystems = distinctLimited(combineScopeTargets(
-                scope.target().systems(),
-                referencedRepositories.stream().flatMap(repository -> repository.systems().stream()).toList()
-        ), MAX_ALIASES);
-        var targetProcesses = distinctLimited(combineScopeTargets(
-                scope.target().processes(),
-                referencedRepositories.stream().flatMap(repository -> repository.processes().stream()).toList()
-        ), MAX_ALIASES);
-        var targetBoundedContexts = distinctLimited(combineScopeTargets(
-                scope.target().boundedContexts(),
-                referencedRepositories.stream().flatMap(repository -> repository.boundedContexts().stream()).toList()
-        ), MAX_ALIASES);
 
         return new GitLabAvailableCodeSearchScope(
                 scope.id(),
                 firstNonBlank(scope.name(), scope.id()),
+                scope.scopeType(),
                 scope.lifecycleStatus(),
-                targetSystems,
-                targetProcesses,
-                targetBoundedContexts,
+                new GitLabAvailableCodeSearchTarget(scope.target().type(), scope.target().id()),
                 scope.useFor(),
                 repositories,
                 projectNames,
@@ -157,13 +141,9 @@ final class GitLabAvailableRepositoryMapper {
                 distinctLimited(scope.classHints(), MAX_PACKAGE_PREFIXES),
                 distinctLimited(scope.endpointHints(), MAX_ENDPOINT_PREFIXES),
                 distinctLimited(scope.queueTopicHints(), MAX_ENDPOINT_PREFIXES),
-                new GitLabAvailableCodeSearchStrategy(
-                        scope.searchStrategy().priorityOrder(),
-                        scope.searchStrategy().includeGeneratedClients(),
-                        scope.searchStrategy().includeSharedLibraries(),
-                        scope.searchStrategy().includeDeploymentConfig(),
-                        scope.searchStrategy().includeDocumentation(),
-                        scope.searchStrategy().notes()
+                new GitLabAvailableCodeSearchTraversal(
+                        scope.traversal().rules(),
+                        scope.traversal().expandWhen()
                 )
         );
     }
@@ -196,7 +176,8 @@ final class GitLabAvailableRepositoryMapper {
                 scopeRepository.priority(),
                 distinctLimited(List.of(repository.projectName()), MAX_ALIASES),
                 scopeRepository.moduleIds(),
-                scopeRepository.reason()
+                scopeRepository.reason(),
+                scopeRepository.readFor()
         );
     }
 
@@ -204,7 +185,6 @@ final class GitLabAvailableRepositoryMapper {
             OperationalContextRepositorySearchScope scope
     ) {
         return scope.repositories().stream()
-                .filter(OperationalContextRepositorySearchRepository::include)
                 .sorted(Comparator.comparing(
                         repository -> repository.priority() != null ? repository.priority() : Integer.MAX_VALUE
                 ))

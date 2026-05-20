@@ -145,14 +145,15 @@ public final class OperationalContextDtos {
     public record OperationalContextCodeSearchScopeRowDto(
             String id,
             String name,
+            String scopeType,
             String lifecycleStatus,
-            ExplainableAggregateDto targets,
+            ExplainableAggregateDto target,
             ExplainableAggregateDto repositories,
             ExplainableAggregateDto packageHints,
             ExplainableAggregateDto entryHints,
             ExplainableAggregateDto dataHints,
             ExplainableAggregateDto workflowHints,
-            ExplainableAggregateDto strategy,
+            ExplainableAggregateDto traversal,
             ExplainableAggregateDto validation
     ) {
     }

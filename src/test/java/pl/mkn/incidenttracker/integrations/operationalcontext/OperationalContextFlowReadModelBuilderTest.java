@@ -248,23 +248,23 @@ class OperationalContextFlowReadModelBuilderTest {
                 List.of(map(
                         "id", "agreement-service-scope",
                         "target", map(
-                                "systems", List.of("agreement-service"),
-                                "processes", List.of("agreement-submit-process"),
-                                "boundedContexts", List.of("agreement-process-management")
+                                "type", "process",
+                                "id", "agreement-submit-process"
                         ),
                         "repositories", List.of(map(
                                 "repoId", "agreement-service-repo",
-                                "role", "primary",
+                                "role", "primary-implementation",
                                 "priority", 1,
-                                "include", true,
                                 "moduleIds", List.of("agreement-module"),
                                 "reason", "Main agreement implementation"
                         )),
-                        "packagePrefixes", List.of("com.example.agreement"),
-                        "classHints", List.of("AgreementSubmitController"),
-                        "endpointHints", List.of("/agreements"),
-                        "databaseHints", map(
-                                "tables", List.of("AGREEMENT_PROCESS")
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.agreement"),
+                                "classHints", List.of("AgreementSubmitController"),
+                                "endpointHints", List.of("/agreements"),
+                                "database", map(
+                                        "tables", List.of("AGREEMENT_PROCESS")
+                                )
                         )
                 )),
                 List.of(

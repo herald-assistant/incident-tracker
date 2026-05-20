@@ -38,7 +38,7 @@ class OperationalContextViewServiceTest {
         assertEquals("new-system", service.systems().get(0).id());
         assertEquals(1, service.repositories().size());
         assertEquals("new-repo", service.repositories().get(0).id());
-        assertEquals(1, service.codeSearchScopes().size());
+        assertEquals(2, service.codeSearchScopes().size());
         assertEquals("new-scope", service.codeSearchScopes().get(0).id());
         assertEquals(1, service.processes().size());
         assertEquals(1, service.integrations().size());
@@ -63,13 +63,13 @@ class OperationalContextViewServiceTest {
         assertEquals(1, repository.contexts().count());
         assertFalse(repository.packageRoots().detailsIds().isEmpty());
         assertFalse(repository.entrypoints().detailsIds().isEmpty());
-        assertEquals(1, repository.codeSearchScopes().count());
-        assertEquals(1, repository.codeSearchRoles().count());
+        assertEquals(2, repository.codeSearchScopes().count());
+        assertEquals(2, repository.codeSearchRoles().count());
 
         var codeSearchScope = service.codeSearchScopes().get(0);
         assertEquals("New Scope", codeSearchScope.name());
         assertEquals(1, codeSearchScope.repositories().count());
-        assertEquals(3, codeSearchScope.targets().count());
+        assertEquals(1, codeSearchScope.target().count());
         assertEquals(3, codeSearchScope.dataHints().count());
         assertTrue(codeSearchScope.dataHints().detailsIds().contains("Migrations:src/main/resources/db/changelog"));
 
@@ -103,7 +103,7 @@ class OperationalContextViewServiceTest {
         assertEquals(1, team.ownsIntegrations().count());
 
         assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
-        assertTrue(service.search("primary-application").stream().anyMatch(result -> result.type().equals("code-search-scope")));
+        assertTrue(service.search("primary-implementation").stream().anyMatch(result -> result.type().equals("code-search-scope")));
         assertTrue(service.search("db/changelog").stream().anyMatch(result -> result.type().equals("code-search-scope")));
         assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
     }
@@ -124,7 +124,7 @@ class OperationalContextViewServiceTest {
 
         var implementations = service.implementationReadModel("process", "new-process");
         assertEquals("operational-context.implementation-map", implementations.contract());
-        assertEquals("new-scope::new-repo::api", implementations.implementations().get(0).id());
+        assertEquals("new-process-scope::new-repo::api", implementations.implementations().get(0).id());
 
         var flow = service.flowReadModel("process", "new-process");
         assertEquals("operational-context.flow", flow.contract());
@@ -345,30 +345,51 @@ class OperationalContextViewServiceTest {
                 List.of(map(
                         "id", "new-scope",
                         "name", "New Scope",
+                        "scopeType", "system",
                         "lifecycleStatus", "active",
-                        "target", map(
-                                "systems", List.of("new-system"),
-                                "processes", List.of("new-process"),
-                                "boundedContexts", List.of("new-context")
-                        ),
+                        "target", map("type", "system", "id", "new-system"),
                         "useFor", List.of("incident-analysis"),
                         "repositories", List.of(map(
                                 "repoId", "new-repo",
-                                "role", "primary-application",
+                                "role", "primary-implementation",
                                 "priority", 1,
-                                "include", true,
                                 "moduleIds", List.of("api"),
                                 "reason", "Main code path for new-system."
                         )),
-                        "packagePrefixes", List.of("com.example.newservice"),
-                        "classHints", List.of("NewController"),
-                        "endpointHints", List.of("/new/api"),
-                        "databaseHints", map("schemas", List.of("NEW_SCHEMA"), "tables", List.of("NEW_TABLE")),
-                        "workflowHints", map("workflowNames", List.of("NewWorkflow")),
-                        "searchStrategy", map(
-                                "priorityOrder", List.of("primary-application"),
-                                "includeGeneratedClients", false,
-                                "includeSharedLibraries", true
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.newservice"),
+                                "classHints", List.of("NewController"),
+                                "endpointHints", List.of("/new/api"),
+                                "database", map("schemas", List.of("NEW_SCHEMA"), "tables", List.of("NEW_TABLE")),
+                                "workflow", map("workflowNames", List.of("NewWorkflow"))
+                        ),
+                        "traversal", map(
+                                "rules", List.of("Read primary implementation first."),
+                                "expandWhen", List.of("Expand when shared rules are referenced.")
+                        )
+                ), map(
+                        "id", "new-process-scope",
+                        "name", "New Process Scope",
+                        "scopeType", "process",
+                        "lifecycleStatus", "active",
+                        "target", map("type", "process", "id", "new-process"),
+                        "useFor", List.of("incident-analysis"),
+                        "repositories", List.of(map(
+                                "repoId", "new-repo",
+                                "role", "primary-implementation",
+                                "priority", 1,
+                                "moduleIds", List.of("api"),
+                                "reason", "Main code path for new-process."
+                        )),
+                        "hints", map(
+                                "packagePrefixes", List.of("com.example.newservice"),
+                                "classHints", List.of("NewController"),
+                                "endpointHints", List.of("/new/api"),
+                                "database", map("schemas", List.of("NEW_SCHEMA"), "tables", List.of("NEW_TABLE")),
+                                "workflow", map("workflowNames", List.of("NewWorkflow"))
+                        ),
+                        "traversal", map(
+                                "rules", List.of("Read primary implementation first.")
                         )
                 )),
                 List.of(map(

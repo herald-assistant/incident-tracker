@@ -162,8 +162,8 @@ Examples:
 ## Handoff and ownership
 
 Use `operational-context` evidence when available.
-When it contains `codeSearchScopes`, `codeSearchProjects` or several repository projects for the matched system, treat them as the component's code scope, including libraries and shared modules that can be relevant to the incident.
-If repository roles are present, start with the primary repository and then follow shared-library, generated-client, integration-library or collaborator repositories in priority order when the hypothesis needs them.
+When it contains `codeSearchScopes`, `codeSearchProjects` or several repository projects for the matched semantic target, treat them as one implementation search scope, including libraries and shared modules that can be relevant to the incident.
+If repository roles are present, start with the `primary-implementation` or priority `1` repository and then follow supporting-library, generated-client, integration-adapter, legacy or collaborator repositories when the hypothesis needs them.
 
 Do not name a specific process, bounded context, or team unless it is supported by:
 

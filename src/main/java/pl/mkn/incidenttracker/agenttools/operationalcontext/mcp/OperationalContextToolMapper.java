@@ -235,7 +235,7 @@ public class OperationalContextToolMapper {
             List<OperationalContextOpenQuestion> openQuestions
     ) {
         var codeSearchScopes = catalog.codeSearchScopes().stream()
-                .filter(scope -> containsNormalized(scope.target().systems(), system.id()))
+                .filter(scope -> semanticTargetMatches(scope.target(), TYPE_SYSTEM, system.id()))
                 .toList();
         var facets = facets(
                 "ownerTeamIds", teamIds(system.responsibilities(), system.references()),
@@ -368,14 +368,12 @@ public class OperationalContextToolMapper {
             List<OperationalContextOpenQuestion> openQuestions
     ) {
         var includedRepositories = scope.repositories().stream()
-                .filter(OperationalContextRepositorySearchRepository::include)
                 .map(repository -> scopeRepository(repository, repositoriesById))
                 .toList();
         var facets = facets(
-                "targetSystems", scope.target().systems(),
-                "targetProcesses", scope.target().processes(),
-                "targetBoundedContexts", scope.target().boundedContexts(),
-                "targetIntegrations", scope.target().integrations(),
+                "scopeType", scope.scopeType(),
+                "targetType", scope.target().type(),
+                "targetId", scope.target().id(),
                 "repositories", scope.repositories().stream().map(OperationalContextRepositorySearchRepository::repoId).toList(),
                 "packagePrefixes", scope.packagePrefixes(),
                 "classHints", scope.classHints(),
@@ -383,7 +381,9 @@ public class OperationalContextToolMapper {
                 "queueTopicHints", scope.queueTopicHints()
         );
         var overview = values(
+                "scopeType", scope.scopeType(),
                 "lifecycleStatus", scope.lifecycleStatus(),
+                "summary", scope.summary(),
                 "useFor", scope.useFor()
         );
         var relations = values(
@@ -398,7 +398,7 @@ public class OperationalContextToolMapper {
                 "queueTopicHints", scope.queueTopicHints(),
                 "databaseHints", databaseHints(scope.databaseHints()),
                 "workflowHints", workflowHints(scope.workflowHints()),
-                "searchStrategy", searchStrategy(scope.searchStrategy())
+                "traversal", traversal(scope.traversal())
         );
         var sourceCoverage = values(
                 "limitations", scope.limitations(),
@@ -1514,35 +1514,34 @@ public class OperationalContextToolMapper {
                 "classHints", scope.classHints(),
                 "endpointHints", scope.endpointHints(),
                 "queueTopicHints", scope.queueTopicHints(),
-                "searchStrategy", searchStrategy(scope.searchStrategy()),
+                "traversal", traversal(scope.traversal()),
                 "limitations", scope.limitations()
         );
     }
 
     private String codeSearchScopeSummary(OperationalContextRepositorySearchScope scope) {
-        var targets = flattenFacets(facets(
-                "systems", scope.target().systems(),
-                "processes", scope.target().processes(),
-                "boundedContexts", scope.target().boundedContexts(),
-                "integrations", scope.target().integrations()
-        ));
-        if (targets.isEmpty()) {
+        if (!StringUtils.hasText(scope.target().value())) {
             return "Code search scope for repositories: " + String.join(", ", scope.repositories().stream()
                     .map(OperationalContextRepositorySearchRepository::repoId)
                     .toList());
         }
-        return "Code search scope for: " + String.join(", ", targets);
+        return "Code search scope for " + scope.target().value();
     }
 
     private Map<String, Object> repositorySearchTarget(OperationalContextRepositorySearchTarget target) {
         return values(
-                "systems", target.systems(),
-                "deploymentComponents", target.deploymentComponents(),
-                "processes", target.processes(),
-                "boundedContexts", target.boundedContexts(),
-                "integrations", target.integrations(),
-                "terms", target.terms()
+                "type", target.type(),
+                "id", target.id()
         );
+    }
+
+    private boolean semanticTargetMatches(
+            OperationalContextRepositorySearchTarget target,
+            String expectedType,
+            String expectedId
+    ) {
+        return normalize(target.type()).equals(normalize(expectedType))
+                && normalize(target.id()).equals(normalize(expectedId));
     }
 
     private Map<String, Object> scopeRepository(
@@ -1554,9 +1553,9 @@ public class OperationalContextToolMapper {
                 "repoId", scopeRepository.repoId(),
                 "role", scopeRepository.role(),
                 "priority", scopeRepository.priority(),
-                "include", scopeRepository.include(),
                 "moduleIds", scopeRepository.moduleIds(),
                 "reason", scopeRepository.reason(),
+                "readFor", scopeRepository.readFor(),
                 "projectName", repository != null ? repository.git().project() : null,
                 "gitLabPath", repository != null ? repository.git().projectPath() : null,
                 "packagePrefixes", repository != null ? repository.packagePrefixSignals() : List.of()
@@ -1582,14 +1581,10 @@ public class OperationalContextToolMapper {
         );
     }
 
-    private Map<String, Object> searchStrategy(OperationalContextRepositorySearchStrategy strategy) {
+    private Map<String, Object> traversal(OperationalContextRepositorySearchTraversal traversal) {
         return values(
-                "priorityOrder", strategy.priorityOrder(),
-                "includeGeneratedClients", strategy.includeGeneratedClients(),
-                "includeSharedLibraries", strategy.includeSharedLibraries(),
-                "includeDeploymentConfig", strategy.includeDeploymentConfig(),
-                "includeDocumentation", strategy.includeDocumentation(),
-                "notes", strategy.notes()
+                "rules", traversal.rules(),
+                "expandWhen", traversal.expandWhen()
         );
     }
 

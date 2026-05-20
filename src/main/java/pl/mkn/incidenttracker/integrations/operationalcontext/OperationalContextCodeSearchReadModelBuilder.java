@@ -7,8 +7,8 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.GitView;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.ModuleView;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.RepositoryView;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.SearchStrategyView;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.SourceLayoutView;
+import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.TraversalView;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextCodeSearchReadModel.WorkflowHints;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
@@ -154,7 +154,6 @@ public class OperationalContextCodeSearchReadModelBuilder {
                 .distinct()
                 .toList();
         var repositoryRefs = scope.repositories().stream()
-                .filter(OperationalContextRepositorySearchRepository::include)
                 .map(OperationalContextRepositorySearchRepository::repoId)
                 .filter(StringUtils::hasText)
                 .map(repoId -> repositoriesById.containsKey(repoId)
@@ -165,10 +164,11 @@ public class OperationalContextCodeSearchReadModelBuilder {
 
         return new CodeSearchScopeView(
                 ref(relationIndex, scopeKey),
-                targetRefs,
+                scope.scopeType(),
+                targetRefs.stream().findFirst().orElse(null),
                 repositoryRefs,
                 scopeHints(scope),
-                searchStrategy(scope),
+                traversal(scope),
                 scope.limitations(),
                 new Provenance(
                         true,
@@ -186,7 +186,7 @@ public class OperationalContextCodeSearchReadModelBuilder {
             Map<String, OperationalContextRepository> repositoriesById,
             List<ValidationFinding> findings
     ) {
-        if (!scopeRepository.include() || !StringUtils.hasText(scopeRepository.repoId())) {
+        if (!StringUtils.hasText(scopeRepository.repoId())) {
             return null;
         }
 
@@ -195,8 +195,8 @@ public class OperationalContextCodeSearchReadModelBuilder {
             findings.add(new ValidationFinding(
                     "error",
                     "UNKNOWN_CODE_SEARCH_REPOSITORY",
-                    "Code-search scope " + scope.id() + " includes unknown repository " + scopeRepository.repoId() + ".",
-                    List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + scopeRepository.repoId() + "]", "includes-repository"))
+                    "Code-search scope " + scope.id() + " references unknown repository " + scopeRepository.repoId() + ".",
+                    List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + scopeRepository.repoId() + "]", "references-repository"))
             ));
             return null;
         }
@@ -210,8 +210,8 @@ public class OperationalContextCodeSearchReadModelBuilder {
                 repositoryRef(repository),
                 scopeRepository.role(),
                 scopeRepository.priority(),
-                true,
                 scopeRepository.reason(),
+                scopeRepository.readFor(),
                 gitView(repository),
                 sourceLayoutView(repository),
                 modules,
@@ -221,7 +221,7 @@ public class OperationalContextCodeSearchReadModelBuilder {
                         "direct-yaml",
                         "high",
                         List.of(
-                                sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.id() + "]", "includes-repository"),
+                                sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.id() + "]", "references-repository"),
                                 sourceRef(REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "]", "repository-details")
                         ),
                         List.of()
@@ -351,15 +351,11 @@ public class OperationalContextCodeSearchReadModelBuilder {
         );
     }
 
-    private SearchStrategyView searchStrategy(OperationalContextRepositorySearchScope scope) {
-        var strategy = scope.searchStrategy();
-        return new SearchStrategyView(
-                strategy.priorityOrder(),
-                strategy.includeGeneratedClients(),
-                strategy.includeSharedLibraries(),
-                strategy.includeDeploymentConfig(),
-                strategy.includeDocumentation(),
-                strategy.notes()
+    private TraversalView traversal(OperationalContextRepositorySearchScope scope) {
+        var traversal = scope.traversal();
+        return new TraversalView(
+                traversal.rules(),
+                traversal.expandWhen()
         );
     }
 

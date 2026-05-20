@@ -4,8 +4,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegrationParticipant;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRelationIndex.EntityKey;
@@ -64,7 +62,6 @@ public class OperationalContextReadModelValidator {
         validateSystemDependenciesDerivedFromIntegrations(safeCatalog, findings);
         validateBoundedContextReferencesDerivedFromReadModel(safeCatalog, findings);
         validateProcessParticipantReferenceDuplicates(safeCatalog, findings);
-        validateCodeSearchTargetReferencesDerivedFromRepositories(safeCatalog, findings);
         validateTeamReferenceDuplicates(safeCatalog, findings);
         validateBidirectionalReferences(relationIndex.relations(), findings);
         validateCodeSearchScopes(safeCatalog, findings);
@@ -361,14 +358,6 @@ public class OperationalContextReadModelValidator {
                     integrations.add(pair(boundedContextId, integration.id())));
         }
 
-        for (var scope : catalog.codeSearchScopes()) {
-            for (var boundedContextId : scope.target().boundedContexts()) {
-                scope.target().systems().forEach(systemId -> systems.add(pair(boundedContextId, systemId)));
-                scope.target().integrations().forEach(integrationId ->
-                        integrations.add(pair(boundedContextId, integrationId)));
-            }
-        }
-
         return new DerivedBoundedContextReferences(Set.copyOf(systems), Set.copyOf(integrations));
     }
 
@@ -424,134 +413,6 @@ public class OperationalContextReadModelValidator {
         result.addAll(process.participants().externalSystems());
         result.addAll(process.participants().platformComponents());
         return Set.copyOf(result);
-    }
-
-    private void validateCodeSearchTargetReferencesDerivedFromRepositories(
-            OperationalContextCatalog catalog,
-            List<ValidationFinding> findings
-    ) {
-        var repositoriesById = repositoriesById(catalog);
-        for (var scope : catalog.codeSearchScopes()) {
-            var derivedTargets = codeSearchTargetsDerivedFromRepositories(scope, repositoriesById);
-            warnCodeSearchTargetDerivedFromRepository(
-                    findings,
-                    scope,
-                    scope.target().systems(),
-                    derivedTargets.systems(),
-                    "target.systems",
-                    "targets-system",
-                    "CODE_SEARCH_TARGET_SYSTEM_DERIVED_FROM_REPOSITORY"
-            );
-            warnCodeSearchTargetDerivedFromRepository(
-                    findings,
-                    scope,
-                    scope.target().processes(),
-                    derivedTargets.processes(),
-                    "target.processes",
-                    "targets-process",
-                    "CODE_SEARCH_TARGET_PROCESS_DERIVED_FROM_REPOSITORY"
-            );
-            warnCodeSearchTargetDerivedFromRepository(
-                    findings,
-                    scope,
-                    scope.target().boundedContexts(),
-                    derivedTargets.boundedContexts(),
-                    "target.boundedContexts",
-                    "targets-bounded-context",
-                    "CODE_SEARCH_TARGET_BOUNDED_CONTEXT_DERIVED_FROM_REPOSITORY"
-            );
-            warnCodeSearchTargetDerivedFromRepository(
-                    findings,
-                    scope,
-                    scope.target().integrations(),
-                    derivedTargets.integrations(),
-                    "target.integrations",
-                    "targets-integration",
-                    "CODE_SEARCH_TARGET_INTEGRATION_DERIVED_FROM_REPOSITORY"
-            );
-            warnCodeSearchTargetDerivedFromRepository(
-                    findings,
-                    scope,
-                    scope.target().terms(),
-                    derivedTargets.terms(),
-                    "target.terms",
-                    "targets-term",
-                    "CODE_SEARCH_TARGET_TERM_DERIVED_FROM_REPOSITORY"
-            );
-        }
-    }
-
-    private void warnCodeSearchTargetDerivedFromRepository(
-            List<ValidationFinding> findings,
-            OperationalContextRepositorySearchScope scope,
-            List<String> rawTargets,
-            Set<String> derivedTargets,
-            String fieldPath,
-            String relationRole,
-            String code
-    ) {
-        for (var target : rawTargets) {
-            if (!derivedTargets.contains(target)) {
-                continue;
-            }
-            findings.add(new ValidationFinding(
-                    "error",
-                    code,
-                    "Code-search scope " + scope.id() + " keeps " + target + " in " + fieldPath
-                            + ", but the same target is derivable from included repository references.",
-                    List.of(new SourceRef(
-                            "src/main/resources/operational-context/repo-map.yml",
-                            CODE_SEARCH_SCOPE,
-                            scope.id(),
-                            "$.codeSearchScopes[id=" + scope.id() + "]." + fieldPath,
-                            relationRole
-                    ))
-            ));
-        }
-    }
-
-    private DerivedCodeSearchTargets codeSearchTargetsDerivedFromRepositories(
-            OperationalContextRepositorySearchScope scope,
-            Map<String, OperationalContextRepository> repositoriesById
-    ) {
-        var systems = new LinkedHashSet<String>();
-        var processes = new LinkedHashSet<String>();
-        var boundedContexts = new LinkedHashSet<String>();
-        var integrations = new LinkedHashSet<String>();
-        var terms = new LinkedHashSet<String>();
-
-        for (var scopeRepository : scope.repositories()) {
-            if (!scopeRepository.include() || !StringUtils.hasText(scopeRepository.repoId())) {
-                continue;
-            }
-            var repository = repositoriesById.get(scopeRepository.repoId());
-            if (repository == null) {
-                continue;
-            }
-            systems.addAll(repository.references().systems());
-            processes.addAll(repository.references().processes());
-            boundedContexts.addAll(repository.references().boundedContexts());
-            integrations.addAll(repository.references().integrations());
-            terms.addAll(repository.references().terms());
-        }
-
-        return new DerivedCodeSearchTargets(
-                Set.copyOf(systems),
-                Set.copyOf(processes),
-                Set.copyOf(boundedContexts),
-                Set.copyOf(integrations),
-                Set.copyOf(terms)
-        );
-    }
-
-    private Map<String, OperationalContextRepository> repositoriesById(OperationalContextCatalog catalog) {
-        var result = new LinkedHashMap<String, OperationalContextRepository>();
-        for (var repository : catalog.repositories()) {
-            if (StringUtils.hasText(repository.id())) {
-                result.putIfAbsent(repository.id(), repository);
-            }
-        }
-        return result;
     }
 
     private void validateTeamReferenceDuplicates(
@@ -747,31 +608,30 @@ public class OperationalContextReadModelValidator {
             Set<String> repositoryIds,
             List<ValidationFinding> findings
     ) {
-        var includedRepositories = scope.repositories().stream()
-                .filter(OperationalContextRepositorySearchRepository::include)
-                .toList();
+        var includedRepositories = scope.repositories();
         if (includedRepositories.isEmpty()) {
             findings.add(new ValidationFinding(
                     "error",
                     "CODE_SEARCH_SCOPE_WITHOUT_INCLUDED_REPOSITORY",
-                    "Code-search scope " + scope.id() + " has no included repositories.",
-                    List.of(scopeRef(scope, "repositories", "included-repositories"))
+                    "Code-search scope " + scope.id() + " has no repositories.",
+                    List.of(scopeRef(scope, "repositories", "repositories"))
             ));
         }
 
         var hasPrimaryRepository = includedRepositories.stream()
-                .anyMatch(repository -> "primary".equalsIgnoreCase(text(repository.role()))
+                .anyMatch(repository -> "primary-implementation".equalsIgnoreCase(text(repository.role()))
+                        || "primary".equalsIgnoreCase(text(repository.role()))
                         || Integer.valueOf(1).equals(repository.priority()));
         if (!includedRepositories.isEmpty() && !hasPrimaryRepository) {
             findings.add(new ValidationFinding(
                     "warning",
                     "CODE_SEARCH_SCOPE_WITHOUT_PRIMARY_REPOSITORY",
-                    "Code-search scope " + scope.id() + " has included repositories but no primary repository or priority 1 repository.",
+                    "Code-search scope " + scope.id() + " has repositories but no primary implementation or priority 1 repository.",
                     List.of(scopeRef(scope, "repositories", "primary-repository"))
             ));
         }
 
-        if (scopeTargetValues(scope).isEmpty()) {
+        if (scopeTargetValue(scope) == null) {
             findings.add(new ValidationFinding(
                     "error",
                     "CODE_SEARCH_SCOPE_WITHOUT_TARGET",
@@ -785,8 +645,8 @@ public class OperationalContextReadModelValidator {
                 findings.add(new ValidationFinding(
                         "error",
                         "UNKNOWN_CODE_SEARCH_REPOSITORY",
-                        "Code-search scope " + scope.id() + " includes unknown repository " + repository.repoId() + ".",
-                        List.of(scopeRef(scope, "repositories[repoId=" + repository.repoId() + "]", "includes-repository"))
+                        "Code-search scope " + scope.id() + " references unknown repository " + repository.repoId() + ".",
+                        List.of(scopeRef(scope, "repositories[repoId=" + repository.repoId() + "]", "references-repository"))
                 ));
             }
         }
@@ -802,16 +662,11 @@ public class OperationalContextReadModelValidator {
         return Set.copyOf(result);
     }
 
-    private List<String> scopeTargetValues(OperationalContextRepositorySearchScope scope) {
-        var values = new ArrayList<String>();
-        values.addAll(scope.target().systems());
-        values.addAll(scope.target().processes());
-        values.addAll(scope.target().boundedContexts());
-        values.addAll(scope.target().integrations());
-        values.addAll(scope.target().terms());
-        return values.stream()
-                .filter(StringUtils::hasText)
-                .toList();
+    private String scopeTargetValue(OperationalContextRepositorySearchScope scope) {
+        if (!StringUtils.hasText(scope.target().type()) || !StringUtils.hasText(scope.target().id())) {
+            return null;
+        }
+        return scope.target().value();
     }
 
     private SourceRef scopeRef(
@@ -887,15 +742,6 @@ public class OperationalContextReadModelValidator {
     }
 
     private record DerivedBoundedContextReferences(Set<String> systems, Set<String> integrations) {
-    }
-
-    private record DerivedCodeSearchTargets(
-            Set<String> systems,
-            Set<String> processes,
-            Set<String> boundedContexts,
-            Set<String> integrations,
-            Set<String> terms
-    ) {
     }
 
     private record TeamResponsibilityTargets(

@@ -148,7 +148,7 @@ public class CopilotIncidentDigestService {
 
         addListValue(lines, "matched systems", systems);
         addListValue(lines, "code search scopes", scopeIds);
-        addListValue(lines, "GitLab projects to search as one deployment component", projects);
+        addListValue(lines, "GitLab projects to search as one semantic implementation scope", projects);
         addListValue(lines, "code search repository roles", repositoryRoles.stream().limit(8).toList());
         addListValue(lines, "package roots", packages.stream().limit(8).toList());
         addListValue(lines, "class hints", classHints.stream().limit(8).toList());

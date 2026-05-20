@@ -233,7 +233,12 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'name',
       'Scope',
-      'Nazwa wirtualnego zakresu wyszukiwania kodu. Scope nie jest komponentem runtime, tylko mapa tego, ktore repozytoria i hinty nalezy traktowac jako jeden logiczny obszar kodu dla systemu lub procesu.'
+      'Nazwa semantycznego zakresu implementacji. Scope nie jest komponentem runtime, tylko mapa gdzie dany bounded context, proces, system albo integracja jest zaimplementowana.'
+    ),
+    column(
+      'scopeType',
+      'Type',
+      'Rodzaj semantycznego zakresu, na przyklad bounded-context, process, system albo integration. Pomaga szybko ocenic, czy scope modeluje granice domeny, flow czy techniczny system.'
     ),
     column(
       'lifecycleStatus',
@@ -241,9 +246,9 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'Stan aktualnosci scope, na przyklad aktywny, planowany albo historyczny. Pomaga AI nie opierac sie bezrefleksyjnie na przestarzalym zakresie kodu.'
     ),
     column(
-      'targets',
-      'Targets',
-      'Systemy, procesy, bounded contexty, integracje lub terminy, dla ktorych scope jest wlasciwy. To wskazuje AI, kiedy dany zakres kodu pasuje do pytania lub evidence.',
+      'target',
+      'Target',
+      'Pojedynczy kanoniczny target semantyczny, dla ktorego scope wskazuje implementacje. To jest najwazniejszy punkt review po aktualizacji repo-map.yml.',
       'aggregate'
     ),
     column(
@@ -277,9 +282,9 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'aggregate'
     ),
     column(
-      'strategy',
-      'Strategy',
-      'Instrukcja kolejnosci szukania: ktore repozytoria czytac najpierw i czy wlaczac generated clients, shared libraries, deployment config lub dokumentacje. Pomaga AI zuzyc mniej tool calls i utrzymac dobra widocznosc.',
+      'traversal',
+      'Traversal',
+      'Reguly czytania i warunki rozszerzania zakresu na biblioteki, adaptery albo legacy moduly. Pomaga AI zuzyc mniej tool calls bez gubienia istotnej implementacji.',
       'aggregate'
     ),
     column(

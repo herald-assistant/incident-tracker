@@ -223,11 +223,14 @@ public class OperationalContextBlastRadiusReadModelBuilder {
     ) {
         return catalog.codeSearchScopes().stream()
                 .filter(scope -> scopeId.equals(scope.id()))
-                .anyMatch(scope -> scope.target().processes().contains(process.id())
-                        || intersects(scope.target().systems(), process.participants().primarySystems())
-                        || intersects(scope.target().systems(), process.references().systems())
-                        || intersects(scope.target().boundedContexts(), process.references().boundedContexts())
-                        || intersects(scope.target().integrations(), process.references().integrations()));
+                .anyMatch(scope -> switch (normalizeEntityType(scope.target().type())) {
+                    case PROCESS -> process.id().equals(scope.target().id());
+                    case SYSTEM -> process.participants().primarySystems().contains(scope.target().id())
+                            || process.references().systems().contains(scope.target().id());
+                    case BOUNDED_CONTEXT -> process.references().boundedContexts().contains(scope.target().id());
+                    case INTEGRATION -> process.references().integrations().contains(scope.target().id());
+                    default -> false;
+                });
     }
 
     private List<Integer> allStepOrders(List<FlowStepView> steps) {

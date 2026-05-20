@@ -59,10 +59,11 @@ Runtime, deployment, service and container names are recognition signals and pro
 
 Use operational context to narrow GitLab exploration:
 
-- prefer `codeSearchScope` when a system maps to several repositories,
+- prefer `codeSearchScope` when it matches the semantic target you are analyzing: bounded context, process, system or integration,
+- treat `codeSearchScope.target.type/id` as the reason this repository set belongs together,
 - use all relevant `projectName` values from the scope for GitLab search/flow tools,
-- start with repositories marked `primary`,
-- follow shared libraries, generated clients, integration libraries or collaborator repositories only when evidence points there,
+- start with repositories marked `primary-implementation` or priority `1`,
+- follow supporting libraries, generated clients, integration adapters, legacy modules or collaborator repositories only when evidence or `traversal.expandWhen` points there,
 - use package prefixes, class hints, endpoint hints and queue/topic hints as focused search terms.
 
 Do not conclude that code is unavailable after one repository lookup when operational context lists a wider code-search scope.

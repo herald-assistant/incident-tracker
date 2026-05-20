@@ -51,7 +51,7 @@ class OperationalContextImplementationReadModelBuilderTest {
         var legacy = implementations.get("agreement-legacy-scope::legacy-monolith-repo::legacy-agreement-module");
         assertEquals("source-implementation", legacy.lifecycleRole());
         assertEquals("being-replaced", legacy.migrationStatus());
-        assertEquals("legacy-monolith", legacy.systems().get(0).id());
+        assertTrue(legacy.systems().stream().anyMatch(system -> system.id().equals("legacy-monolith")));
         assertEquals("agreement-context", legacy.boundedContexts().get(0).id());
 
         var shared = implementations.get("agreement-service-scope::shared-contracts-repo");
@@ -66,7 +66,7 @@ class OperationalContextImplementationReadModelBuilderTest {
         var systemModel = builder.buildForEntity(sampleCatalog(), "system", "agreement-service");
         var processModel = builder.buildForEntity(sampleCatalog(), "process", "agreement-process");
 
-        assertEquals(2, systemModel.implementations().size());
+        assertEquals(1, systemModel.implementations().size());
         assertTrue(systemModel.implementations().stream()
                 .allMatch(implementation -> implementation.systems().stream()
                         .anyMatch(system -> system.id().equals("agreement-service"))));
@@ -100,12 +100,11 @@ class OperationalContextImplementationReadModelBuilderTest {
                 )),
                 List.of(map(
                         "id", "domain-scope",
-                        "target", map("boundedContexts", List.of("domain-context")),
+                        "target", map("type", "bounded-context", "id", "domain-context"),
                         "repositories", List.of(map(
                                 "repoId", "domain-repo",
-                                "role", "primary",
+                                "role", "primary-implementation",
                                 "priority", 1,
-                                "include", true,
                                 "moduleIds", List.of("domain-module")
                         ))
                 )),
@@ -128,7 +127,8 @@ class OperationalContextImplementationReadModelBuilderTest {
                 List.of(),
                 List.of(map(
                         "id", "agreement-process",
-                        "participants", map("primarySystems", List.of("agreement-service"))
+                        "participants", map("primarySystems", List.of("agreement-service")),
+                        "references", map("boundedContexts", List.of("agreement-context"))
                 )),
                 List.of(
                         map("id", "agreement-service"),
@@ -197,49 +197,65 @@ class OperationalContextImplementationReadModelBuilderTest {
                         map(
                                 "id", "agreement-service-scope",
                                 "name", "Agreement Service Scope",
-                                "target", map(
-                                        "systems", List.of("agreement-service"),
-                                        "processes", List.of("agreement-process"),
-                                        "boundedContexts", List.of("agreement-context")
-                                ),
+                                "target", map("type", "bounded-context", "id", "agreement-context"),
                                 "repositories", List.of(
                                         map(
                                                 "repoId", "agreement-service-repo",
-                                                "role", "primary",
+                                                "role", "primary-implementation",
                                                 "priority", 1,
-                                                "include", true,
                                                 "moduleIds", List.of("agreement-module"),
                                                 "reason", "Target service implementation"
                                         ),
                                         map(
                                                 "repoId", "shared-contracts-repo",
-                                                "role", "library",
+                                                "role", "supporting-library",
                                                 "priority", 3,
-                                                "include", true,
                                                 "reason", "Shared API contracts"
                                         )
                                 ),
-                                "packagePrefixes", List.of("com.example.agreement"),
-                                "classHints", List.of("AgreementController"),
-                                "endpointHints", List.of("/agreements")
+                                "hints", map(
+                                        "packagePrefixes", List.of("com.example.agreement"),
+                                        "classHints", List.of("AgreementController"),
+                                        "endpointHints", List.of("/agreements")
+                                )
                         ),
                         map(
                                 "id", "agreement-legacy-scope",
                                 "name", "Agreement Legacy Scope",
-                                "target", map(
-                                        "systems", List.of("legacy-monolith"),
-                                        "boundedContexts", List.of("agreement-context")
-                                ),
+                                "target", map("type", "bounded-context", "id", "agreement-context"),
                                 "repositories", List.of(map(
                                         "repoId", "legacy-monolith-repo",
-                                        "role", "legacy-source",
+                                        "role", "legacy-implementation",
                                         "priority", 2,
-                                        "include", true,
                                         "moduleIds", List.of("legacy-agreement-module"),
                                         "reason", "Source implementation being replaced"
                                 )),
-                                "packagePrefixes", List.of("com.example.legacy.agreement"),
-                                "classHints", List.of("LegacyAgreementFacade")
+                                "hints", map(
+                                        "packagePrefixes", List.of("com.example.legacy.agreement"),
+                                        "classHints", List.of("LegacyAgreementFacade")
+                                )
+                        ),
+                        map(
+                                "id", "agreement-system-scope",
+                                "name", "Agreement System Scope",
+                                "target", map("type", "system", "id", "agreement-service"),
+                                "repositories", List.of(map(
+                                        "repoId", "agreement-service-repo",
+                                        "role", "primary-implementation",
+                                        "priority", 1,
+                                        "moduleIds", List.of("agreement-module")
+                                ))
+                        ),
+                        map(
+                                "id", "agreement-process-scope",
+                                "name", "Agreement Process Scope",
+                                "target", map("type", "process", "id", "agreement-process"),
+                                "repositories", List.of(map(
+                                        "repoId", "agreement-service-repo",
+                                        "role", "primary-implementation",
+                                        "priority", 1,
+                                        "moduleIds", List.of("agreement-module")
+                                ))
                         )
                 ),
                 List.of(map(

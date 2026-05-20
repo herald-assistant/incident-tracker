@@ -795,16 +795,13 @@ class OperationalContextProfiledReadModelMapper {
     private Map<String, Object> scopeSummary(CodeSearchScopeView scope, ProfileBudget budget) {
         return map(
                 "scope", entityRefSummary(scope.scope()),
-                "targets", refs(scope.targets(), budget.neighbors()),
+                "scopeType", scope.scopeType(),
+                "target", entityRefSummary(scope.target()),
                 "repositories", refs(scope.repositories(), budget.repositories()),
                 "hints", compactHints(scope.hints(), budget.hints()),
-                "searchStrategy", map(
-                        "priorityOrder", limitText(scope.searchStrategy().priorityOrder(), budget.repositories()),
-                        "includeGeneratedClients", scope.searchStrategy().includeGeneratedClients(),
-                        "includeSharedLibraries", scope.searchStrategy().includeSharedLibraries(),
-                        "includeDeploymentConfig", scope.searchStrategy().includeDeploymentConfig(),
-                        "includeDocumentation", scope.searchStrategy().includeDocumentation(),
-                        "notes", limitText(scope.searchStrategy().notes(), budget.groupItems())
+                "traversal", map(
+                        "rules", limitText(scope.traversal().rules(), budget.groupItems()),
+                        "expandWhen", limitText(scope.traversal().expandWhen(), budget.groupItems())
                 ),
                 "limitations", limitText(scope.limitations(), budget.groupItems()),
                 "provenance", provenanceSummary(scope.provenance())
@@ -816,8 +813,8 @@ class OperationalContextProfiledReadModelMapper {
                 "repository", entityRefSummary(repository.repository()),
                 "role", repository.role(),
                 "priority", repository.priority(),
-                "include", repository.include(),
                 "reason", repository.reason(),
+                "readFor", limitText(repository.readFor(), budget.groupItems()),
                 "git", map(
                         "provider", repository.git().provider(),
                         "group", repository.git().group(),
@@ -2150,8 +2147,7 @@ class OperationalContextProfiledReadModelMapper {
 
     private int compareRepositories(RepositoryView left, RepositoryView right) {
         return Comparator
-                .comparingInt((RepositoryView repository) -> repository.include() ? 0 : 1)
-                .thenComparingInt(repository -> repository.priority() != null ? repository.priority() : Integer.MAX_VALUE)
+                .comparingInt((RepositoryView repository) -> repository.priority() != null ? repository.priority() : Integer.MAX_VALUE)
                 .thenComparingInt(repository -> roleRank(repository.role()))
                 .thenComparing(repository -> repository.repository().id())
                 .compare(left, right);

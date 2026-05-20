@@ -36,8 +36,8 @@ class CopilotIncidentDigestServiceTest {
         assertTrue(digest.contains("- commitSha: `abc123`"));
         assertTrue(digest.contains("## Operational code search scope"));
         assertTrue(digest.contains("- code search scopes: `billing-code-search`"));
-        assertTrue(digest.contains("- GitLab projects to search as one deployment component: `billing-service`, `libs/billing-shared`"));
-        assertTrue(digest.contains("- code search repository roles: `billing-code-search:billing-service-repo:primary:priority=1`, `billing-code-search:billing-shared-repo:shared-library:priority=2`"));
+        assertTrue(digest.contains("- GitLab projects to search as one semantic implementation scope: `billing-service`, `libs/billing-shared`"));
+        assertTrue(digest.contains("- code search repository roles: `billing-code-search:billing-service-repo:primary-implementation:priority=1`, `billing-code-search:billing-shared-repo:supporting-library:priority=2`"));
         assertTrue(digest.contains("- package roots: `com.example.billing.shared`"));
         assertTrue(digest.contains("- class hints: `BillingRules`"));
         assertTrue(digest.contains("## Runtime signals"));
@@ -147,7 +147,7 @@ class CopilotIncidentDigestServiceTest {
                                                 attr("codeSearchScopeIds", "billing-code-search"),
                                                 attr("codeSearchRepositoryIds", "billing-service-repo; billing-shared-repo"),
                                                 attr("codeSearchProjects", "billing-service; libs/billing-shared"),
-                                                attr("codeSearchRepositoryRoles", "billing-code-search:billing-service-repo:primary:priority=1; billing-code-search:billing-shared-repo:shared-library:priority=2"),
+                                                attr("codeSearchRepositoryRoles", "billing-code-search:billing-service-repo:primary-implementation:priority=1; billing-code-search:billing-shared-repo:supporting-library:priority=2"),
                                                 attr("sourcePackages", "com.example.billing.shared"),
                                                 attr("classHints", "BillingRules")
                                         ),

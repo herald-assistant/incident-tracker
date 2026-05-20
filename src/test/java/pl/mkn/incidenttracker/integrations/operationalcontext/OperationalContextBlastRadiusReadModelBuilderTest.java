@@ -154,20 +154,17 @@ class OperationalContextBlastRadiusReadModelBuilderTest {
                 )),
                 List.of(map(
                         "id", "agreement-service-scope",
-                        "target", map(
-                                "systems", List.of("agreement-service"),
-                                "processes", List.of("agreement-submit-process"),
-                                "boundedContexts", List.of("agreement-process-management")
-                        ),
+                        "target", map("type", "process", "id", "agreement-submit-process"),
                         "repositories", List.of(map(
                                 "repoId", "agreement-service-repo",
-                                "role", "primary",
+                                "role", "primary-implementation",
                                 "priority", 1,
-                                "include", true,
                                 "moduleIds", List.of("agreement-module")
                         )),
-                        "endpointHints", List.of("/agreements"),
-                        "databaseHints", map("tables", List.of("AGREEMENT_PROCESS"))
+                        "hints", map(
+                                "endpointHints", List.of("/agreements"),
+                                "database", map("tables", List.of("AGREEMENT_PROCESS"))
+                        )
                 )),
                 List.of(
                         map("id", "agreement-process-management"),

@@ -369,25 +369,23 @@ class OperationalContextMcpToolsTest {
         return map(
                 "id", "payments-runtime",
                 "name", "Payments runtime code scope",
+                "scopeType", "system",
                 "lifecycleStatus", "active",
-                "target", map(
-                        "systems", List.of("payments"),
-                        "processes", List.of("checkout"),
-                        "boundedContexts", List.of("payments")
-                ),
+                "target", map("type", "system", "id", "payments"),
                 "useFor", List.of("incident-analysis", "code-search"),
                 "repositories", List.of(map(
                         "repoId", "payments-service",
-                        "role", "primary",
+                        "role", "primary-implementation",
                         "priority", 1,
-                        "include", true,
                         "moduleIds", List.of("app"),
                         "reason", "Primary implementation."
                 )),
-                "packagePrefixes", List.of("pl.example.payments"),
-                "classHints", List.of("PaymentController"),
-                "endpointHints", List.of("/payments"),
-                "databaseHints", map("schemas", List.of("PAYMENTS_APP"), "entities", List.of("PaymentEntity")),
+                "hints", map(
+                        "packagePrefixes", List.of("pl.example.payments"),
+                        "classHints", List.of("PaymentController"),
+                        "endpointHints", List.of("/payments"),
+                        "database", map("schemas", List.of("PAYMENTS_APP"), "entities", List.of("PaymentEntity"))
+                ),
                 "limitations", List.of("Generated clients are partial.")
         );
     }

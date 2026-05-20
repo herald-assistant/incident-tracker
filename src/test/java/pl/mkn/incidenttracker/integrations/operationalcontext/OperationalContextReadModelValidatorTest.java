@@ -173,7 +173,7 @@ class OperationalContextReadModelValidatorTest {
     }
 
     @Test
-    void shouldReportCodeSearchTargetsDerivedFromIncludedRepositoryReferences() {
+    void shouldAllowSemanticCodeSearchTargetEvenWhenRepositoryReferencesOverlap() {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
@@ -189,16 +189,11 @@ class OperationalContextReadModelValidatorTest {
                 )),
                 List.of(map(
                         "id", "app-scope",
-                        "target", map(
-                                "systems", List.of("app-core"),
-                                "boundedContexts", List.of("core-context"),
-                                "terms", List.of("core-term")
-                        ),
+                        "target", map("type", "system", "id", "app-core"),
                         "repositories", List.of(map(
                                 "repoId", "app-repo",
-                                "role", "primary",
-                                "priority", 1,
-                                "include", true
+                                "role", "primary-implementation",
+                                "priority", 1
                         ))
                 )),
                 List.of(map("id", "core-context")),
@@ -219,9 +214,7 @@ class OperationalContextReadModelValidatorTest {
                 "index"
         ));
 
-        assertHasError(findings, "CODE_SEARCH_TARGET_SYSTEM_DERIVED_FROM_REPOSITORY");
-        assertHasError(findings, "CODE_SEARCH_TARGET_BOUNDED_CONTEXT_DERIVED_FROM_REPOSITORY");
-        assertHasError(findings, "CODE_SEARCH_TARGET_TERM_DERIVED_FROM_REPOSITORY");
+        assertFalse(findings.stream().anyMatch(finding -> finding.code().startsWith("CODE_SEARCH_TARGET_")));
     }
 
     @Test
@@ -295,25 +288,23 @@ class OperationalContextReadModelValidatorTest {
                 List.of(
                         map(
                                 "id", "empty-scope",
-                                "target", map("systems", List.of("app-core")),
+                                "target", map("type", "system", "id", "app-core"),
                                 "repositories", List.of()
                         ),
                         map(
                                 "id", "no-primary-scope",
-                                "target", map("systems", List.of("app-core")),
+                                "target", map("type", "system", "id", "app-core"),
                                 "repositories", List.of(map(
                                         "repoId", "app-repo",
-                                        "role", "library",
-                                        "priority", 2,
-                                        "include", true
+                                        "role", "supporting-library",
+                                        "priority", 2
                                 ))
                         ),
                         map(
                                 "id", "no-target-scope",
                                 "repositories", List.of(map(
                                         "repoId", "missing-repo",
-                                        "role", "primary",
-                                        "include", true
+                                        "role", "primary-implementation"
                                 ))
                         )
                 ),
@@ -340,12 +331,11 @@ class OperationalContextReadModelValidatorTest {
                 List.of(map("id", "app-repo")),
                 List.of(map(
                         "id", "app-scope",
-                        "target", map("systems", List.of("app-core")),
+                        "target", map("type", "system", "id", "app-core"),
                         "repositories", List.of(map(
                                 "repoId", "app-repo",
-                                "role", "primary",
-                                "priority", 1,
-                                "include", true
+                                "role", "primary-implementation",
+                                "priority", 1
                         ))
                 )),
                 List.of(),

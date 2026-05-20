@@ -345,9 +345,11 @@ public class OperationalContextEvidenceMapper {
             List<String> seedRepoIds
     ) {
         var target = scope.target();
-        return containsNormalized(target.systems(), system.id())
-                || intersectsNormalized(target.processes(), system.references().processes())
-                || intersectsNormalized(target.boundedContexts(), system.references().boundedContexts())
+        var targetType = normalizeTargetType(target.type());
+        return ("system".equals(targetType) && sameId(target.id(), system.id()))
+                || ("process".equals(targetType) && containsNormalized(system.references().processes(), target.id()))
+                || ("bounded-context".equals(targetType) && containsNormalized(system.references().boundedContexts(), target.id()))
+                || ("integration".equals(targetType) && containsNormalized(system.references().integrations(), target.id()))
                 || intersectsNormalized(primaryScopeRepositoryIds(scope), seedRepoIds);
     }
 
@@ -355,7 +357,6 @@ public class OperationalContextEvidenceMapper {
             OperationalContextRepositorySearchScope scope
     ) {
         return scope.repositories().stream()
-                .filter(OperationalContextRepositorySearchRepository::include)
                 .sorted(Comparator.comparing(
                         repository -> repository.priority() != null ? repository.priority() : Integer.MAX_VALUE
                 ))
@@ -364,7 +365,8 @@ public class OperationalContextEvidenceMapper {
 
     private List<String> primaryScopeRepositoryIds(OperationalContextRepositorySearchScope scope) {
         var primaryIds = scope.repositories().stream()
-                .filter(repository -> "primary".equalsIgnoreCase(firstNonBlank(repository.role(), "")))
+                .filter(repository -> "primary".equalsIgnoreCase(firstNonBlank(repository.role(), ""))
+                        || "primary-implementation".equalsIgnoreCase(firstNonBlank(repository.role(), "")))
                 .map(OperationalContextRepositorySearchRepository::repoId)
                 .toList();
         if (!primaryIds.isEmpty()) {
@@ -516,6 +518,17 @@ public class OperationalContextEvidenceMapper {
         return StringUtils.hasText(left)
                 && StringUtils.hasText(right)
                 && normalize(left).equals(normalize(right));
+    }
+
+    private String normalizeTargetType(String value) {
+        var normalized = normalize(value).replace("_", "-").replace(" ", "-");
+        return switch (normalized) {
+            case "systems" -> "system";
+            case "processes" -> "process";
+            case "boundedcontext", "boundedcontexts", "bounded-contexts", "context", "contexts" -> "bounded-context";
+            case "integrations" -> "integration";
+            default -> normalized;
+        };
     }
 
     private String joined(List<String> values) {

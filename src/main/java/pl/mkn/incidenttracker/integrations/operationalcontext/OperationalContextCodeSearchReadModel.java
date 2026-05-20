@@ -75,19 +75,19 @@ public record OperationalContextCodeSearchReadModel(
 
     public record CodeSearchScopeView(
             OperationalContextRelationIndex.EntityRef scope,
-            List<OperationalContextRelationIndex.EntityRef> targets,
+            String scopeType,
+            OperationalContextRelationIndex.EntityRef target,
             List<OperationalContextRelationIndex.EntityRef> repositories,
             CodeSearchHints hints,
-            SearchStrategyView searchStrategy,
+            TraversalView traversal,
             List<String> limitations,
             OperationalContextRelationIndex.Provenance provenance
     ) {
 
         public CodeSearchScopeView {
-            targets = copyList(targets);
             repositories = copyList(repositories);
             hints = hints != null ? hints : CodeSearchHints.empty();
-            searchStrategy = searchStrategy != null ? searchStrategy : SearchStrategyView.empty();
+            traversal = traversal != null ? traversal : TraversalView.empty();
             limitations = copyTextList(limitations);
         }
     }
@@ -96,8 +96,8 @@ public record OperationalContextCodeSearchReadModel(
             OperationalContextRelationIndex.EntityRef repository,
             String role,
             Integer priority,
-            boolean include,
             String reason,
+            List<String> readFor,
             GitView git,
             SourceLayoutView sourceLayout,
             List<ModuleView> modules,
@@ -106,8 +106,9 @@ public record OperationalContextCodeSearchReadModel(
     ) {
 
         public RepositoryView {
-            role = textOrDefault(role, "included");
+            role = textOrDefault(role, "referenced");
             reason = text(reason);
+            readFor = copyTextList(readFor);
             git = git != null ? git : GitView.empty();
             sourceLayout = sourceLayout != null ? sourceLayout : SourceLayoutView.empty();
             modules = copyList(modules);
@@ -276,22 +277,18 @@ public record OperationalContextCodeSearchReadModel(
         }
     }
 
-    public record SearchStrategyView(
-            List<String> priorityOrder,
-            boolean includeGeneratedClients,
-            boolean includeSharedLibraries,
-            boolean includeDeploymentConfig,
-            boolean includeDocumentation,
-            List<String> notes
+    public record TraversalView(
+            List<String> rules,
+            List<String> expandWhen
     ) {
 
-        public SearchStrategyView {
-            priorityOrder = copyTextList(priorityOrder);
-            notes = copyTextList(notes);
+        public TraversalView {
+            rules = copyTextList(rules);
+            expandWhen = copyTextList(expandWhen);
         }
 
-        public static SearchStrategyView empty() {
-            return new SearchStrategyView(List.of(), false, false, false, false, List.of());
+        public static TraversalView empty() {
+            return new TraversalView(List.of(), List.of());
         }
     }
 

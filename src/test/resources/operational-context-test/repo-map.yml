@@ -78,36 +78,33 @@ repositories:
 codeSearchScopes:
   - id: app-core-code-search
     name: App Core Code Search Scope
+    scopeType: system
     lifecycleStatus: active
+    summary: Implementation search scope for the app-core system.
     target:
-      systems: [app-core]
-      runtimeComponents: [app-core]
-      processes: [main-process]
-      boundedContexts: [core-context]
+      type: system
+      id: app-core
     useFor: [code-search, incident-analysis]
     repositories:
       - repoId: app-core-repo
-        role: primary
+        role: primary-implementation
         priority: 1
-        include: true
         moduleIds: [core-module]
         reason: Main service repository for app-core.
+        readFor: [business-flow, runtime-entrypoints]
       - repoId: app-shared-lib-repo
-        role: shared-library
+        role: supporting-library
         priority: 2
-        include: true
         moduleIds: [shared-domain-module]
         reason: Shared domain predicates are used by app-core.
-    packagePrefixes: [com.example.app, com.example.shared]
-    classHints: [SyncGateway, SharedPredicate]
-    endpointHints: [/api/resources]
-    queueTopicHints: []
-    searchStrategy:
-      priorityOrder: [app-core-repo, app-shared-lib-repo]
-      includeGeneratedClients: false
-      includeSharedLibraries: true
-      includeDeploymentConfig: false
-      includeDocumentation: false
-      notes: [Search app-core first, then shared predicates if the class is not found.]
+        readFor: [shared-rules]
+    hints:
+      packagePrefixes: [com.example.app, com.example.shared]
+      classHints: [SyncGateway, SharedPredicate]
+      endpointHints: [/api/resources]
+      queueTopicHints: []
+    traversal:
+      rules: [Search app-core first, then shared predicates if the class is not found.]
+      expandWhen: [Expand to supporting-library repositories when a referenced class or rule is not implemented in the primary repository.]
 
 gaps: []

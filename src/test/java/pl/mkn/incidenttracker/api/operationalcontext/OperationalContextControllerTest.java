@@ -102,14 +102,15 @@ class OperationalContextControllerTest {
         when(viewService.codeSearchScopes()).thenReturn(List.of(new OperationalContextCodeSearchScopeRowDto(
                 "app-core-scope",
                 "App Core Scope",
+                "bounded-context",
                 "active",
-                emptyAggregate("Targets"),
+                emptyAggregate("Target"),
                 emptyAggregate("Repositories"),
                 emptyAggregate("Package hints"),
                 emptyAggregate("Entry hints"),
                 emptyAggregate("Data hints"),
                 emptyAggregate("Workflow hints"),
-                emptyAggregate("Strategy"),
+                emptyAggregate("Traversal"),
                 emptyAggregate("Validation")
         )));
 
