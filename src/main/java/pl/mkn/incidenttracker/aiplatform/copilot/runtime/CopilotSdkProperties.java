@@ -41,8 +41,8 @@ public class CopilotSdkProperties {
 
     private static String defaultSkillRuntimeDirectory() {
         return System.getProperty("java.io.tmpdir") + java.io.File.separator
-                + "incidenttracker" + java.io.File.separator
-                + "copilot-skills";
+                + "incident-tracker" + java.io.File.separator
+                + "copilot-runtime";
     }
 
     @Getter

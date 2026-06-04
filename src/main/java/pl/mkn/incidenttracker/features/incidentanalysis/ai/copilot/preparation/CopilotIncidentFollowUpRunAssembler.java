@@ -23,13 +23,17 @@ public class CopilotIncidentFollowUpRunAssembler {
         var toolSessionContext = toolSessionContextFactory.fromChatRequest(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = toolAccessPolicyFactory.createForFollowUp(request, registeredTools);
-        var renderedArtifacts = artifactService.renderArtifacts(artifactRequestFactory.create(request), toolAccessPolicy);
-        var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
         var sessionConfigRequest = sessionConfigRequestFactory.create(
                 toolSessionContext.copilotSessionId(),
                 toolAccessPolicy,
                 request.options()
         );
+        var renderedArtifacts = artifactService.renderArtifacts(
+                artifactRequestFactory.create(request),
+                toolAccessPolicy,
+                sessionConfigRequest
+        );
+        var prompt = promptRenderer.render(request, toolAccessPolicy, sessionConfigRequest, renderedArtifacts);
 
         return runRequestFactory.create(
                 request.correlationId(),

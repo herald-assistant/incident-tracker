@@ -18,6 +18,14 @@ class CopilotSkillRuntimeLoaderTest {
     Path tempDirectory;
 
     @Test
+    void shouldUseRuntimeDirectoryAsBaseDirectory() {
+        var properties = new CopilotSdkProperties();
+
+        assertTrue(Path.of(properties.getSkillRuntimeDirectory())
+                .endsWith(Path.of("incident-tracker", "copilot-runtime")));
+    }
+
+    @Test
     void shouldExtractClasspathSkillsToRuntimeDirectory() throws Exception {
         var properties = new CopilotSdkProperties();
         properties.setSkillResourceRoots(List.of("copilot/skills"));

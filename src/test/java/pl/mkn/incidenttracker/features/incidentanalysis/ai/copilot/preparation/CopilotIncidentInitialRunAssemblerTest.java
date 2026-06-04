@@ -69,10 +69,10 @@ class CopilotIncidentInitialRunAssemblerTest {
         when(toolSessionContextFactory.fromInitialRequest(request)).thenReturn(toolSessionContext);
         when(toolFactory.createToolDefinitions(toolSessionContext)).thenReturn(List.of());
         when(toolAccessPolicyFactory.create(eq(request), anyList())).thenReturn(toolAccessPolicy);
-        when(artifactService.renderArtifacts(request, toolAccessPolicy)).thenReturn(artifacts);
-        when(promptRenderer.render(request, toolAccessPolicy, artifacts)).thenReturn("Initial prompt");
         when(sessionConfigRequestFactory.create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options))
                 .thenReturn(sessionConfigRequest);
+        when(artifactService.renderArtifacts(request, toolAccessPolicy, sessionConfigRequest)).thenReturn(artifacts);
+        when(promptRenderer.render(request, toolAccessPolicy, sessionConfigRequest, artifacts)).thenReturn("Initial prompt");
 
         var assembly = assembler.assemble(request);
         var runRequest = assembly.runRequest();
@@ -82,7 +82,8 @@ class CopilotIncidentInitialRunAssemblerTest {
         assertSame(sessionConfigRequest, runRequest.sessionConfigRequest());
         assertEquals(Map.of("01-incident-digest.md", "# Digest"), runRequest.artifactContents());
         verify(sessionConfigRequestFactory).create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options);
-        verify(promptRenderer).render(request, toolAccessPolicy, artifacts);
+        verify(artifactService).renderArtifacts(request, toolAccessPolicy, sessionConfigRequest);
+        verify(promptRenderer).render(request, toolAccessPolicy, sessionConfigRequest, artifacts);
     }
 
     private CopilotRenderedArtifact artifact(String displayName, String content) {

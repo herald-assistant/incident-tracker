@@ -21,13 +21,13 @@ public class CopilotIncidentInitialRunAssembler {
         var toolSessionContext = toolSessionContextFactory.fromInitialRequest(request);
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
         var toolAccessPolicy = toolAccessPolicyFactory.create(request, registeredTools);
-        var renderedArtifacts = artifactService.renderArtifacts(request, toolAccessPolicy);
-        var prompt = promptRenderer.render(request, toolAccessPolicy, renderedArtifacts);
         var sessionConfigRequest = sessionConfigRequestFactory.create(
                 toolSessionContext.copilotSessionId(),
                 toolAccessPolicy,
                 request.options()
         );
+        var renderedArtifacts = artifactService.renderArtifacts(request, toolAccessPolicy, sessionConfigRequest);
+        var prompt = promptRenderer.render(request, toolAccessPolicy, sessionConfigRequest, renderedArtifacts);
 
         return new CopilotIncidentInitialRunAssembly(
                 runRequestFactory.create(

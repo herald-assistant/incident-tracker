@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
@@ -12,6 +13,7 @@ public class CopilotIncidentPromptRenderer {
     public String render(
             InitialAnalysisRequest request,
             CopilotIncidentToolAccessPolicy toolAccessPolicy,
+            CopilotSessionConfigRequest sessionConfigRequest,
             List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return """
@@ -43,7 +45,7 @@ public class CopilotIncidentPromptRenderer {
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system.
                 - Do not assume facts unsupported by the incident artifacts or tool results.
-                - Follow loaded skills for incident analysis, functional analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
+                %s
                 - Use tools only when they can materially confirm, reject, or refine a concrete hypothesis.
                 - Use tools only for evidence gaps listed in `evidenceCoverage.gaps` in `00-incident-manifest.json`.
                 - Do not use tools just because they are available.
@@ -53,7 +55,7 @@ public class CopilotIncidentPromptRenderer {
                 - Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a targeted gap for `technicalAnalysis`: when GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer to ground the technical handoff.
                 - If GitLab or Operational Context tools are not enabled, use the attached artifacts and state the visibility limit instead of guessing.
                 - `functionalAnalysis` must avoid implementation-first language. Mention code identifiers only when they help anchor the system/process explanation.
-                - `technicalAnalysis` must follow Technical Handoff v1 from the loaded `incident-technical-handoff` skill.
+                - `technicalAnalysis` must follow Technical Handoff v1 from the runtime `incident-technical-handoff` skill after loading it through the `skill` tool when that tool is available.
                 - If `DB_CODE_GROUNDING_NEEDED` is listed, do not start broad DB table/column discovery from guesses.
                 - Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom, you must either cite deterministic GitLab evidence that already identifies the entity/repository mapping, call an enabled GitLab tool to try to find that mapping, or state that GitLab grounding is unavailable and use DB discovery as a fallback.
                 - Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
@@ -65,6 +67,9 @@ public class CopilotIncidentPromptRenderer {
                 - If visibility is incomplete, state exactly what remains unverified and what the next verification step is.
                 %s
 
+                %s
+
+                Runtime skills:
                 %s
 
                 Artifacts:
@@ -80,8 +85,10 @@ public class CopilotIncidentPromptRenderer {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
+                runtimeSkillHardRules(sessionConfigRequest),
                 feedbackGuidance(toolAccessPolicy),
                 jsonResponseContract(),
+                formatRuntimeSkills(sessionConfigRequest),
                 formatArtifacts(renderedArtifacts),
                 formatEmbeddedArtifacts(renderedArtifacts),
                 formatAvailableToolGroups(toolAccessPolicy)
@@ -113,10 +120,38 @@ public class CopilotIncidentPromptRenderer {
                   "visibilityLimits": ["string"]
                 }
 
-                `functionalAnalysis` must follow Functional Analysis v1 from the loaded `incident-functional-analysis` skill.
-                `technicalAnalysis` must follow Technical Handoff v1 from the loaded `incident-technical-handoff` skill.
+                `functionalAnalysis` must follow Functional Analysis v1 from the runtime `incident-functional-analysis` skill when that skill was loaded through the `skill` tool.
+                `technicalAnalysis` must follow Technical Handoff v1 from the runtime `incident-technical-handoff` skill when that skill was loaded through the `skill` tool.
                 `visibilityLimits` should list the most important unverified assumptions or missing data across both sections.
                 """.trim();
+    }
+
+    private String runtimeSkillHardRules(CopilotSessionConfigRequest sessionConfigRequest) {
+        if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
+            return """
+                    - The built-in `skill` tool is enabled for runtime skills. Before the final answer, use it to load available incident runtime skills listed in `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames`.
+                    - Evidence-gap restrictions below apply to diagnostic capability tools, not to the `skill` tool used for runtime skill loading.
+                    - Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session.
+                    - Never read skill files from the local filesystem; use only the `skill` tool for runtime skills.
+                    """.trim();
+        }
+
+        return """
+                - The built-in `skill` tool is not enabled for this session. Do not claim detailed runtime skill contents; follow only the embedded artifacts and explicit prompt rules.
+                """.trim();
+    }
+
+    private String formatRuntimeSkills(CopilotSessionConfigRequest sessionConfigRequest) {
+        if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
+            return """
+                    - built-in tool: `skill`
+                    - preferred skills to load before the final answer: %s
+                    - source: runtime skill directories configured by the backend; do not inspect local paths
+                    - if a listed skill is unavailable or disabled, continue with embedded artifacts and state any resulting limitation only when it affects the answer
+                    """.formatted(String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)).trim();
+        }
+
+        return "- built-in `skill` tool is unavailable; no runtime skill contents are confirmed for this session.";
     }
 
     private String formatAvailableToolGroups(CopilotIncidentToolAccessPolicy toolAccessPolicy) {

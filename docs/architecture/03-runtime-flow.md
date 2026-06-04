@@ -126,12 +126,13 @@ Preparation obejmuje:
 
 - wyliczenie `CopilotIncidentEvidenceCoverageReport`,
 - zbudowanie `CopilotIncidentToolAccessPolicy`,
-- dekorowanie opisow tools,
-- wyrenderowanie manifestu, digestu i evidence artifacts,
-- osadzenie artifact contents inline w promptcie,
 - zaladowanie runtime skills, w tym incidentowego playbooka operational
   context tools,
 - zbudowanie platformowego requestu sesji,
+- dekorowanie opisow tools,
+- wyrenderowanie manifestu, digestu i evidence artifacts z efektywna lista
+  tools oraz sekcja `runtimeSkills`,
+- osadzenie artifact contents inline w promptcie,
 - dolaczenie platformowego `CopilotRunAuth` z non-secret auth reference,
 - zastosowanie requestowych preferencji AI (`model`, `reasoningEffort`) albo
   fallback do properties,
@@ -152,6 +153,9 @@ renderingu i konfiguracji SDK:
 - `CopilotIncidentSessionConfigRequestFactory` sklada incidentowe parametry
   sesji: enabled tools, available tool names, skill directories, model
   selection i komunikat odmowy tooli,
+- `CopilotSessionConfigRequest` wylicza effective available tools; gdy
+  skonfigurowano skill directories, dodaje built-in tool `skill`, zeby model
+  mogl ladowac runtime skille przez mechanike Copilot SDK,
 - `CopilotFollowUpArtifactRequestFactory` mapuje follow-up snapshot na request
   artefaktow: deterministic evidence plus tool evidence z poprzednich sesji,
 - `CopilotIncidentRunRequestFactory` tworzy neutralny `CopilotRunRequest` z
@@ -232,6 +236,10 @@ Manifest zawiera:
 - `readNext=01-incident-digest.md`,
 - `artifactPolicy.deliveryMode=embedded-prompt`,
 - enabled/disabled tool groups,
+- `toolPolicy.enabledToolNames`, czyli efektywna allowlista sesji, wlacznie z
+  built-in `skill`, gdy skill directories sa skonfigurowane,
+- `runtimeSkills`, czyli nazwe built-in toola `skill`, flage dostepnosci
+  skilli i preferowane nazwy runtime skilli bez lokalnych sciezek plikowych,
 - `evidenceCoverage`,
 - indeks artefaktow i ich `itemIds`.
 
@@ -366,6 +374,12 @@ fallbackiem z limitation w `reason`.
 sesji i nie przebudowuje policy ani promptu. Do logowania runtime uzywa
 neutralnego `runReference`; incident assembler przekazuje tam obecny
 `correlationId`.
+
+Effective available tools sa wyliczane z `CopilotSessionConfigRequest`.
+Jezeli session request ma runtime skill directories, allowlista dostaje
+built-in `skill`. Ten sam effective zestaw trafia do `SessionConfig`, hooks
+`onPreToolUse` i manifestu, zeby prompt/debug/export nie rozjezdzal sie z tym,
+co realnie widzi Copilot SDK.
 
 Execution gateway subskrybuje `session.on(...)` i mapuje SDK events na
 neutralne `shared.ai.AnalysisAiActivityEvent`. Te eventy sa user-visible:
@@ -676,7 +690,7 @@ analysis.ai.copilot.send-and-wait-timeout=5m
 analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-roots=copilot/skills
-analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-skills
+analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-runtime
 
 analysis.ai.copilot.tool-budget.enabled=true
 analysis.ai.copilot.tool-budget.mode=soft

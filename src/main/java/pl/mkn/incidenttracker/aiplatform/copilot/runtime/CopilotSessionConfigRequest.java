@@ -13,6 +13,7 @@ public record CopilotSessionConfigRequest(
         String deniedToolUseMessage
 ) {
 
+    public static final String SKILL_TOOL_NAME = "skill";
     public static final String DEFAULT_DENIED_TOOL_USE_MESSAGE =
             "Use only the explicitly enabled tools for this session.";
 
@@ -27,6 +28,22 @@ public record CopilotSessionConfigRequest(
         deniedToolUseMessage = hasText(deniedToolUseMessage)
                 ? deniedToolUseMessage
                 : DEFAULT_DENIED_TOOL_USE_MESSAGE;
+    }
+
+    public List<String> effectiveAvailableToolNames() {
+        var effectiveToolNames = new java.util.ArrayList<>(availableToolNames);
+        if (skillDirectoriesConfigured() && !effectiveToolNames.contains(SKILL_TOOL_NAME)) {
+            effectiveToolNames.add(SKILL_TOOL_NAME);
+        }
+        return List.copyOf(effectiveToolNames);
+    }
+
+    public boolean skillToolAvailable() {
+        return effectiveAvailableToolNames().contains(SKILL_TOOL_NAME);
+    }
+
+    public boolean skillDirectoriesConfigured() {
+        return !skillDirectories.isEmpty();
     }
 
     private static boolean hasText(String value) {

@@ -30,15 +30,19 @@ class CopilotSessionConfigFactoryTest {
         var tools = tools("gitlab_find_flow_context", "gitlab_read_repository_file_chunk");
 
         var clientOptions = factory.clientOptions();
-        var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
+        var sessionConfigRequest = new CopilotSessionConfigRequest(
                 sessionId(),
                 tools,
                 List.of("gitlab_find_flow_context"),
                 List.of("C:\\runtime\\copilot_skills"),
                 CopilotModelSelection.DEFAULT,
                 "Use only the enabled test tools."
-        ));
+        );
+        var sessionConfig = factory.sessionConfig(sessionConfigRequest);
 
+        assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfigRequest.effectiveAvailableToolNames());
+        assertEquals(true, sessionConfigRequest.skillToolAvailable());
+        assertEquals(true, sessionConfigRequest.skillDirectoriesConfigured());
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser());

@@ -5,6 +5,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatAn
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
     public String render(
             AnalysisAiChatRequest request,
             CopilotIncidentToolAccessPolicy toolAccessPolicy,
+            CopilotSessionConfigRequest sessionConfigRequest,
             List<CopilotRenderedArtifact> renderedArtifacts
     ) {
         return """
@@ -43,8 +45,8 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 - `elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted. When a comparison path is provided, it searches by that path without forcing the current incident correlationId.
                 - Prefer typed Database tools. Raw SQL is unavailable unless explicitly listed in available tools.
                 - If a requested capability is not available because scope was not resolved or the backend did not register it, say that directly and give the best grounded answer from existing evidence.
-                - Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation.
-                - If the latest user message asks for a handoff, zgloszenie, raport for a developer, QA, DevOps, DBA, data owner, partner system or another team, use the loaded `incident-technical-handoff` skill and answer directly in Markdown using `Technical Handoff v1`.
+                %s
+                - If the latest user message asks for a handoff, zgloszenie, raport for a developer, QA, DevOps, DBA, data owner, partner system or another team, load `incident-technical-handoff` through the `skill` tool when available and answer directly in Markdown using `Technical Handoff v1`.
                 - A technical handoff must keep the required section order, distinguish confirmed facts from hypotheses, and use `Nie ustalono`, `Nie dotyczy`, or `Brak danych w evidence` instead of dropping missing fields.
                 - If the user asks for a report, generate the report directly in the requested structure in the chat answer.
                 - Do not return a JSON envelope unless the user explicitly asks for JSON.
@@ -62,6 +64,9 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 Previous chat history:
                 %s
 
+                Runtime skills:
+                %s
+
                 Artifacts:
                 %s
 
@@ -75,10 +80,12 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 renderEnvironment(request.environment()),
                 renderGitLabBranch(request.gitLabBranch()),
                 renderGitLabGroup(request.gitLabGroup()),
+                runtimeSkillHardRules(sessionConfigRequest),
                 feedbackGuidance(toolAccessPolicy),
                 safeText(request.message()),
                 formatAnalysisResult(request.analysisResult()),
                 formatHistory(request.history()),
+                formatRuntimeSkills(sessionConfigRequest),
                 formatArtifacts(renderedArtifacts),
                 formatEmbeddedArtifacts(renderedArtifacts),
                 formatAvailableToolGroups(toolAccessPolicy)
@@ -176,6 +183,35 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 - The platform tool `record_tool_feedback` is available for visible tool-quality feedback. Use it only for significant cases: a tool result was especially useful, partial, empty, wrong, misleading, noisy, stale, incorrectly scoped, or suggests a missing tool/policy/operational-context improvement.
                 - Feedback is diagnostic for human improvement of tools and operational context. It is not evidence for root cause and must not replace the chat answer.
                 """.trim();
+    }
+
+    private String runtimeSkillHardRules(CopilotSessionConfigRequest sessionConfigRequest) {
+        if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
+            return """
+                    - The built-in `skill` tool is enabled for runtime skills. Use it to load available incident runtime skills from `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames` whenever the latest user request depends on skill rules or asks about skill definitions.
+                    - Diagnostic-tool restrictions apply to external evidence tools, not to the `skill` tool used for runtime skill loading.
+                    - If the user asks what skills are available or where a skill definition came from, answer only after using the `skill` tool; otherwise say the detailed skill contents are not confirmed in this turn.
+                    - Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session.
+                    - Never read skill files from the local filesystem; use only the `skill` tool for runtime skills.
+                    """.trim();
+        }
+
+        return """
+                - The built-in `skill` tool is not enabled for this session. Do not claim detailed runtime skill contents; follow only the embedded artifacts, final analysis, chat history and explicit prompt rules.
+                """.trim();
+    }
+
+    private String formatRuntimeSkills(CopilotSessionConfigRequest sessionConfigRequest) {
+        if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
+            return """
+                    - built-in tool: `skill`
+                    - preferred skills to load when relevant to the latest user request: %s
+                    - source: runtime skill directories configured by the backend; do not inspect local paths
+                    - if a listed skill is unavailable or disabled, continue with existing evidence and state the limitation only when it affects the answer
+                    """.formatted(String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)).trim();
+        }
+
+        return "- built-in `skill` tool is unavailable; no runtime skill contents are confirmed for this session.";
     }
 
     private String formatArtifacts(List<CopilotRenderedArtifact> renderedArtifacts) {

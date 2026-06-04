@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.List;
@@ -58,7 +59,7 @@ class CopilotIncidentPromptRendererTest {
                 )
         );
 
-        var prompt = renderer.render(request, policy, artifacts);
+        var prompt = renderer.render(request, policy, sessionConfigRequest(), artifacts);
 
         assertTrue(prompt.contains("You are helping with an enterprise software incident analysis."));
         assertTrue(prompt.contains("- correlationId: corr-123"));
@@ -81,7 +82,11 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));
         assertTrue(prompt.contains("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals"));
         assertTrue(prompt.contains("Operational Context tools provide catalog context"));
-        assertTrue(prompt.contains("Follow loaded skills for incident analysis, functional analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
+        assertTrue(prompt.contains("The built-in `skill` tool is enabled for runtime skills."));
+        assertTrue(prompt.contains("Before the final answer, use it to load available incident runtime skills listed in `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames`."));
+        assertTrue(prompt.contains("Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session."));
+        assertTrue(prompt.contains("Runtime skills:"));
+        assertTrue(prompt.contains("preferred skills to load before the final answer: incident-analysis-core, incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
         assertTrue(prompt.contains("Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a targeted gap for `functionalAnalysis`"));
         assertTrue(prompt.contains("Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a targeted gap for `technicalAnalysis`"));
@@ -97,13 +102,26 @@ class CopilotIncidentPromptRendererTest {
                 List.of()
         );
 
-        var prompt = renderer.render(request, CopilotIncidentToolAccessPolicy.empty(), List.of());
+        var prompt = renderer.render(request, CopilotIncidentToolAccessPolicy.empty(), null, List.of());
 
         assertTrue(prompt.contains("- environment: <not-resolved-from-logs>"));
         assertTrue(prompt.contains("- gitLabBranch: <not-resolved-from-logs>"));
         assertTrue(prompt.contains("- gitLabGroup: <not-configured>"));
+        assertTrue(prompt.contains("The built-in `skill` tool is not enabled for this session."));
+        assertTrue(prompt.contains("Runtime skills:\n- built-in `skill` tool is unavailable"));
         assertTrue(prompt.contains("Artifacts:\n- none"));
         assertTrue(prompt.contains("Embedded artifact contents:\n<none>"));
         assertTrue(prompt.contains("Available capability groups:\n- none; rely on the incident artifacts for this session."));
+    }
+
+    private CopilotSessionConfigRequest sessionConfigRequest() {
+        return new CopilotSessionConfigRequest(
+                "session-123",
+                List.of(),
+                List.of("gitlab_find_flow_context"),
+                List.of("copilot-skills/incident"),
+                null,
+                "Denied"
+        );
     }
 }

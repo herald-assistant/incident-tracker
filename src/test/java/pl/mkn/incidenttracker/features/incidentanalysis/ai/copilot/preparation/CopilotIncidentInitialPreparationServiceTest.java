@@ -148,7 +148,11 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Only the explicitly listed capability groups are enabled for this session."));
             assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
-            assertTrue(prompt.contains("Follow loaded skills for incident analysis, functional analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
+            assertTrue(prompt.contains("The built-in `skill` tool is enabled for runtime skills."));
+            assertTrue(prompt.contains("Before the final answer, use it to load available incident runtime skills listed in `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames`."));
+            assertTrue(prompt.contains("Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session."));
+            assertTrue(prompt.contains("Runtime skills:"));
+            assertTrue(prompt.contains("preferred skills to load before the final answer: incident-analysis-core, incident-functional-analysis, incident-technical-handoff"));
             assertTrue(prompt.contains("Use tools only for evidence gaps listed in `evidenceCoverage.gaps`"));
             assertTrue(prompt.contains("Do not use tools just because they are available."));
             assertTrue(prompt.contains("GitLab, Elasticsearch, Operational Context and Database tools are coverage-aware"));
@@ -200,6 +204,15 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(manifestContent.contains("\"localWorkspaceAccessBlocked\" : true"));
             assertTrue(manifestContent.contains("\"enabledToolNames\""));
             assertTrue(manifestContent.contains("\"gitlab_find_flow_context\""));
+            assertTrue(manifestContent.contains("\"skill\""));
+            assertTrue(manifestContent.contains("\"enabledIncidentToolNames\""));
+            assertTrue(manifestContent.contains("\"platformBuiltInToolNames\""));
+            assertTrue(manifestContent.contains("\"runtimeSkills\""));
+            assertTrue(manifestContent.contains("\"skillToolAvailable\" : true"));
+            assertTrue(manifestContent.contains("\"skillDirectoriesConfigured\" : true"));
+            assertTrue(manifestContent.contains("\"preferredSkillNames\""));
+            assertTrue(manifestContent.contains("\"incident-functional-analysis\""));
+            assertTrue(manifestContent.contains("\"claimSkillContentsOnlyAfterSkillToolCall\" : true"));
             assertTrue(manifestContent.contains("\"evidenceCoverage\""));
             assertTrue(manifestContent.contains("\"gitLab\" : \"DIRECT_COLLABORATOR_ATTACHED\""));
             assertTrue(manifestContent.contains("\"code\" : \"MISSING_FLOW_CONTEXT\""));

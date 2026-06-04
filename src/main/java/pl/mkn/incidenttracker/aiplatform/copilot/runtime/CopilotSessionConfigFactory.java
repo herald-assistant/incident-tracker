@@ -21,8 +21,6 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class CopilotSessionConfigFactory {
 
-    private static final String SKILL_TOOL_NAME = "skill";
-
     private final CopilotSdkProperties properties;
     private final CopilotAccessTokenResolver accessTokenResolver;
 
@@ -69,7 +67,7 @@ public class CopilotSessionConfigFactory {
     }
 
     public SessionConfig sessionConfig(CopilotSessionConfigRequest request) {
-        var availableToolNames = availableToolNames(request);
+        var availableToolNames = request.effectiveAvailableToolNames();
         var sessionConfig = new SessionConfig()
                 .setSessionId(request.sessionId())
                 .setClientName(properties.getClientName())
@@ -93,14 +91,6 @@ public class CopilotSessionConfigFactory {
         }
 
         return sessionConfig;
-    }
-
-    private List<String> availableToolNames(CopilotSessionConfigRequest request) {
-        var availableToolNames = new java.util.ArrayList<>(safeList(request.availableToolNames()));
-        if (!safeList(request.skillDirectories()).isEmpty() && !availableToolNames.contains(SKILL_TOOL_NAME)) {
-            availableToolNames.add(SKILL_TOOL_NAME);
-        }
-        return List.copyOf(availableToolNames);
     }
 
     private String selectedModel(CopilotModelSelection modelSelection) {

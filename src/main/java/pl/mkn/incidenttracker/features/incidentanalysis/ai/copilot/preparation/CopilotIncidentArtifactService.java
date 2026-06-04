@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
@@ -47,6 +48,14 @@ public class CopilotIncidentArtifactService {
             InitialAnalysisRequest request,
             CopilotIncidentToolAccessPolicy toolAccessPolicy
     ) {
+        return renderArtifacts(request, toolAccessPolicy, null);
+    }
+
+    public List<CopilotRenderedArtifact> renderArtifacts(
+            InitialAnalysisRequest request,
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
+            CopilotSessionConfigRequest sessionConfigRequest
+    ) {
         var descriptors = buildArtifactIndex(request);
         var artifacts = new ArrayList<CopilotRenderedArtifact>();
         artifacts.add(new CopilotRenderedArtifact(
@@ -56,7 +65,7 @@ public class CopilotIncidentArtifactService {
                 null,
                 null,
                 "application/json",
-                renderManifestArtifact(request, descriptors, toolAccessPolicy)
+                renderManifestArtifact(request, descriptors, toolAccessPolicy, sessionConfigRequest)
         ));
         artifacts.add(new CopilotRenderedArtifact(
                 DIGEST_ARTIFACT_ID,
@@ -97,10 +106,11 @@ public class CopilotIncidentArtifactService {
     private String renderManifestArtifact(
             InitialAnalysisRequest request,
             List<ArtifactDescriptor> descriptors,
-            CopilotIncidentToolAccessPolicy toolAccessPolicy
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
+            CopilotSessionConfigRequest sessionConfigRequest
     ) {
         try {
-            return renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy));
+            return renderJson(buildManifestPayload(request, descriptors, toolAccessPolicy, sessionConfigRequest));
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to render Copilot incident manifest.", exception);
         }
@@ -174,7 +184,8 @@ public class CopilotIncidentArtifactService {
     private Map<String, Object> buildManifestPayload(
             InitialAnalysisRequest request,
             List<ArtifactDescriptor> descriptors,
-            CopilotIncidentToolAccessPolicy toolAccessPolicy
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
+            CopilotSessionConfigRequest sessionConfigRequest
     ) {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("correlationId", request.correlationId());
@@ -191,22 +202,58 @@ public class CopilotIncidentArtifactService {
                 "useToolsOnlyForGapFilling", true,
                 "deliveryMode", "embedded-prompt"
         ));
-        payload.put("toolPolicy", buildToolPolicyPayload(toolAccessPolicy));
+        payload.put("toolPolicy", buildToolPolicyPayload(toolAccessPolicy, sessionConfigRequest));
+        payload.put("runtimeSkills", buildRuntimeSkillsPayload(sessionConfigRequest));
         payload.put("evidenceCoverage", buildEvidenceCoveragePayload(toolAccessPolicy));
         payload.put("artifacts", descriptors.stream().map(this::toManifestEntry).toList());
         return payload;
     }
 
-    private Map<String, Object> buildToolPolicyPayload(CopilotIncidentToolAccessPolicy toolAccessPolicy) {
+    private Map<String, Object> buildToolPolicyPayload(
+            CopilotIncidentToolAccessPolicy toolAccessPolicy,
+            CopilotSessionConfigRequest sessionConfigRequest
+    ) {
         var policy = toolAccessPolicy != null
                 ? toolAccessPolicy
                 : CopilotIncidentToolAccessPolicy.empty();
+        var enabledToolNames = sessionConfigRequest != null
+                ? sessionConfigRequest.effectiveAvailableToolNames()
+                : policy.availableToolNames();
         var payload = new LinkedHashMap<String, Object>();
         payload.put("localWorkspaceAccessBlocked", policy.localWorkspaceAccessBlocked());
-        payload.put("enabledToolNames", policy.availableToolNames());
+        payload.put("enabledToolNames", enabledToolNames);
+        payload.put("enabledIncidentToolNames", policy.availableToolNames());
+        payload.put("platformBuiltInToolNames", platformBuiltInToolNames(enabledToolNames, policy.availableToolNames()));
         payload.put("enabledCapabilityGroups", policy.enabledCapabilityGroups());
         payload.put("disabledCapabilityGroups", policy.disabledCapabilityGroups());
         return payload;
+    }
+
+    private Map<String, Object> buildRuntimeSkillsPayload(CopilotSessionConfigRequest sessionConfigRequest) {
+        var skillToolAvailable = sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable();
+        var skillDirectoriesConfigured = sessionConfigRequest != null && sessionConfigRequest.skillDirectoriesConfigured();
+        var payload = new LinkedHashMap<String, Object>();
+        payload.put("skillToolName", CopilotSessionConfigRequest.SKILL_TOOL_NAME);
+        payload.put("skillToolAvailable", skillToolAvailable);
+        payload.put("skillDirectoriesConfigured", skillDirectoriesConfigured);
+        payload.put("skillDirectoryCount", sessionConfigRequest != null ? sessionConfigRequest.skillDirectories().size() : 0);
+        payload.put("preferredSkillNames", skillToolAvailable
+                ? CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES
+                : List.of());
+        payload.put("loadBeforeFinalAnswer", skillToolAvailable);
+        payload.put("claimSkillContentsOnlyAfterSkillToolCall", true);
+        payload.put("doNotReadSkillFilesFromFilesystem", true);
+        return payload;
+    }
+
+    private List<String> platformBuiltInToolNames(
+            List<String> enabledToolNames,
+            List<String> incidentToolNames
+    ) {
+        var incidentToolSet = new java.util.LinkedHashSet<>(incidentToolNames);
+        return enabledToolNames.stream()
+                .filter(toolName -> !incidentToolSet.contains(toolName))
+                .toList();
     }
 
     private Map<String, Object> buildEvidenceCoveragePayload(CopilotIncidentToolAccessPolicy toolAccessPolicy) {

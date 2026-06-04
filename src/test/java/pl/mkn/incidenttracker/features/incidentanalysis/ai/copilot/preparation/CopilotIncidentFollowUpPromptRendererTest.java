@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRe
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 
 import java.util.List;
 
@@ -63,7 +64,7 @@ class CopilotIncidentFollowUpPromptRendererTest {
                 "# Incident digest"
         ));
 
-        var prompt = renderer.render(request, policy, artifacts);
+        var prompt = renderer.render(request, policy, sessionConfigRequest(), artifacts);
 
         assertTrue(prompt.contains("You are continuing an already completed enterprise software incident analysis."));
         assertTrue(prompt.contains("- correlationId: corr-123"));
@@ -76,8 +77,12 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("### user"));
         assertTrue(prompt.contains("Co sprawdzic dalej?"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
-        assertTrue(prompt.contains("Follow loaded skills for incident analysis, operational context catalog use, GitLab exploration, DB/data diagnostics and technical handoff generation."));
-        assertTrue(prompt.contains("use the loaded `incident-technical-handoff` skill and answer directly in Markdown using `Technical Handoff v1`"));
+        assertTrue(prompt.contains("The built-in `skill` tool is enabled for runtime skills."));
+        assertTrue(prompt.contains("Use it to load available incident runtime skills from `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames` whenever the latest user request depends on skill rules or asks about skill definitions."));
+        assertTrue(prompt.contains("If the user asks what skills are available or where a skill definition came from, answer only after using the `skill` tool"));
+        assertTrue(prompt.contains("load `incident-technical-handoff` through the `skill` tool when available and answer directly in Markdown using `Technical Handoff v1`"));
+        assertTrue(prompt.contains("Runtime skills:"));
+        assertTrue(prompt.contains("preferred skills to load when relevant to the latest user request: incident-analysis-core, incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("A technical handoff must keep the required section order"));
         assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch."));
         assertTrue(prompt.contains("- Operational context catalog: browse or search reusable catalog context"));
@@ -100,15 +105,28 @@ class CopilotIncidentFollowUpPromptRendererTest {
                 null
         );
 
-        var prompt = renderer.render(request, CopilotIncidentToolAccessPolicy.empty(), List.of());
+        var prompt = renderer.render(request, CopilotIncidentToolAccessPolicy.empty(), null, List.of());
 
         assertTrue(prompt.contains("- environment: <not-resolved-from-logs>"));
         assertTrue(prompt.contains("- gitLabBranch: <not-resolved-from-logs>"));
         assertTrue(prompt.contains("- gitLabGroup: <not-configured>"));
+        assertTrue(prompt.contains("The built-in `skill` tool is not enabled for this session."));
+        assertTrue(prompt.contains("Runtime skills:\n- built-in `skill` tool is unavailable"));
         assertTrue(prompt.contains("Final analysis result:\n- brak zapisanego wyniku koncowego"));
         assertTrue(prompt.contains("Previous chat history:\n- brak wczesniejszych wiadomosci"));
         assertTrue(prompt.contains("Artifacts:\n- none"));
         assertTrue(prompt.contains("Embedded artifact contents:\n<none>"));
         assertTrue(prompt.contains("Available capability groups:\n- none; answer only from existing analysis evidence and chat history."));
+    }
+
+    private CopilotSessionConfigRequest sessionConfigRequest() {
+        return new CopilotSessionConfigRequest(
+                "session-123",
+                List.of(),
+                List.of("gitlab_find_flow_context"),
+                List.of("copilot-skills/incident"),
+                null,
+                "Denied"
+        );
     }
 }
