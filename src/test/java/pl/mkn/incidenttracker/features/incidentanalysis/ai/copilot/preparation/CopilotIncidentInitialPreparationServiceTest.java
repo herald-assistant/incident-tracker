@@ -100,7 +100,8 @@ class CopilotIncidentInitialPreparationServiceTest {
                             "gitlab_list_available_repositories",
                             "gitlab_read_repository_file_chunk",
                             "gitlab_read_repository_file_chunks",
-                            "gitlab_read_repository_file_outline"
+                            "gitlab_read_repository_file_outline",
+                            "skill"
                     ),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
@@ -274,11 +275,15 @@ class CopilotIncidentInitialPreparationServiceTest {
                             && context.copilotSessionId().startsWith("analysis-")
             ));
             assertEquals(expectedTools, prepared.session().sessionConfig().getTools());
-            assertEquals(List.of("gitlab_read_repository_file"), prepared.session().sessionConfig().getAvailableTools());
+            assertEquals(List.of("gitlab_read_repository_file", "skill"), prepared.session().sessionConfig().getAvailableTools());
             var allowedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("gitlab_read_repository_file"), null)
                     .join();
+            var skillToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
+                    .handle(new PreToolUseHookInput().setToolName("skill"), null)
+                    .join();
             assertEquals("allow", allowedToolDecision.permissionDecision());
+            assertEquals("allow", skillToolDecision.permissionDecision());
             var deniedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("read_file"), null)
                     .join();
@@ -317,7 +322,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         try (var prepared = service.prepare(request)) {
             assertEquals(List.of(expectedTools.get(0)), prepared.session().sessionConfig().getTools());
             assertEquals(
-                    Set.of("gitlab_read_repository_file"),
+                    Set.of("gitlab_read_repository_file", "skill"),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
         }
@@ -356,7 +361,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         try (var prepared = service.prepare(request)) {
             assertEquals(List.of(), prepared.session().sessionConfig().getTools());
-            assertEquals(List.of(), prepared.session().sessionConfig().getAvailableTools());
+            assertEquals(List.of("skill"), prepared.session().sessionConfig().getAvailableTools());
             assertFalse(prepared.prompt().contains("Database diagnostics:"));
             assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
             assertFalse(prepared.prompt().contains("GitLab code: inspect class references/imports"));

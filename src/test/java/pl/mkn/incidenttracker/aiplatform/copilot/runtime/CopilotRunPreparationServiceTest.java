@@ -46,7 +46,7 @@ class CopilotRunPreparationServiceTest {
             assertEquals("session-123", prepared.sessionConfig().getSessionId());
             assertEquals("gpt-5.4", prepared.sessionConfig().getModel());
             assertEquals("medium", prepared.sessionConfig().getReasoningEffort());
-            assertEquals(List.of("tool-a"), prepared.sessionConfig().getAvailableTools());
+            assertEquals(List.of("tool-a", "skill"), prepared.sessionConfig().getAvailableTools());
             assertEquals(List.of("copilot-skills/incident"), prepared.sessionConfig().getSkillDirectories());
         }
     }

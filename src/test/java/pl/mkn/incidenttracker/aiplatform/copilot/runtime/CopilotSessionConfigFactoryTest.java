@@ -48,7 +48,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("C:\\workspace", sessionConfig.getWorkingDirectory());
         assertFalse(sessionConfig.isStreaming());
         assertEquals(tools, sessionConfig.getTools());
-        assertEquals(List.of("gitlab_find_flow_context"), sessionConfig.getAvailableTools());
+        assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfig.getAvailableTools());
         assertEquals(List.of("C:\\runtime\\copilot_skills"), sessionConfig.getSkillDirectories());
         assertEquals(List.of("incident-analysis-gitlab-tools"), sessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", sessionConfig.getModel());
@@ -62,9 +62,13 @@ class CopilotSessionConfigFactoryTest {
         var deniedToolDecision = sessionConfig.getHooks().getOnPreToolUse()
                 .handle(new PreToolUseHookInput().setToolName("read_file"), null)
                 .join();
+        var skillToolDecision = sessionConfig.getHooks().getOnPreToolUse()
+                .handle(new PreToolUseHookInput().setToolName("skill"), null)
+                .join();
 
         assertEquals("allow", allowedToolDecision.permissionDecision());
         assertEquals("deny", deniedToolDecision.permissionDecision());
+        assertEquals("allow", skillToolDecision.permissionDecision());
     }
 
     @Test
@@ -122,6 +126,7 @@ class CopilotSessionConfigFactoryTest {
                 .join();
 
         assertEquals(PermissionRequestResultKind.DENIED_BY_RULES.toString(), decision.getKind());
+        assertEquals(List.of(), sessionConfig.getAvailableTools());
         assertEquals(List.of(), sessionConfig.getSkillDirectories());
         assertEquals(List.of(), sessionConfig.getDisabledSkills());
     }
