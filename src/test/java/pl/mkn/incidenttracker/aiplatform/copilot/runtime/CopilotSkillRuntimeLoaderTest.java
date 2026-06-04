@@ -39,6 +39,45 @@ class CopilotSkillRuntimeLoaderTest {
     }
 
     @Test
+    void shouldFallbackToDevelopmentResourceRootWhenClasspathSkillsAreMissing() throws Exception {
+        var projectRoot = tempDirectory.resolve("project");
+        var sourceSkillRoot = projectRoot
+                .resolve(Path.of("src", "main", "resources", "copilot", "dev-skills", "local-skill"));
+        Files.createDirectories(sourceSkillRoot);
+        Files.writeString(
+                sourceSkillRoot.resolve("SKILL.md"),
+                """
+                ---
+                name: local-skill
+                ---
+
+                # Local Skill
+                """
+        );
+
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory(projectRoot.toString());
+        properties.setSkillResourceRoots(List.of("copilot/dev-skills"));
+        properties.setSkillRuntimeDirectory(tempDirectory.resolve("runtime").toString());
+
+        var loader = new CopilotSkillRuntimeLoader(properties);
+
+        var resolvedDirectories = loader.resolveSkillDirectories();
+
+        assertEquals(1, resolvedDirectories.size());
+        assertEquals(
+                projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "dev-skills")).toString(),
+                resolvedDirectories.get(0)
+        );
+
+        var runtimeRoot = Path.of(resolvedDirectories.get(0));
+        var skillFile = runtimeRoot.resolve("local-skill").resolve("SKILL.md");
+
+        assertTrue(Files.exists(skillFile));
+        assertTrue(Files.readString(skillFile).contains("name: local-skill"));
+    }
+
+    @Test
     void shouldAppendAdditionalExternalSkillDirectories() {
         var properties = new CopilotSdkProperties();
         properties.setSkillResourceRoots(List.of());

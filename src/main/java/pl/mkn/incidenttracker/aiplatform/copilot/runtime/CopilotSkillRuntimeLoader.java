@@ -86,6 +86,13 @@ public class CopilotSkillRuntimeLoader {
             }
 
             if (!copiedAnyFile) {
+                var developmentResourceRoot = resolveDevelopmentResourceRoot(normalizedRoot);
+                if (developmentResourceRoot != null) {
+                    return developmentResourceRoot;
+                }
+            }
+
+            if (!copiedAnyFile) {
                 log.warn("No Copilot skills were found under classpath root '{}'.", normalizedRoot);
                 return null;
             }
@@ -94,6 +101,33 @@ public class CopilotSkillRuntimeLoader {
         }
         catch (IOException exception) {
             throw new IllegalStateException("Failed to prepare Copilot skill runtime directory for root: " + normalizedRoot, exception);
+        }
+    }
+
+    private Path resolveDevelopmentResourceRoot(String normalizedRoot) throws IOException {
+        var sourceRoot = developmentResourceRoot(normalizedRoot);
+        if (!Files.isDirectory(sourceRoot) || !containsRegularFile(sourceRoot)) {
+            return null;
+        }
+
+        log.info("Loaded Copilot skills from development resource root '{}'.", sourceRoot);
+        return sourceRoot;
+    }
+
+    private Path developmentResourceRoot(String normalizedRoot) {
+        var workingDirectory = properties.getWorkingDirectory();
+        if (workingDirectory == null || workingDirectory.isBlank()) {
+            workingDirectory = System.getProperty("user.dir");
+        }
+
+        return Path.of(workingDirectory)
+                .resolve(Path.of("src", "main", "resources"))
+                .resolve(normalizedRoot.replace('/', java.io.File.separatorChar));
+    }
+
+    private boolean containsRegularFile(Path directory) throws IOException {
+        try (var paths = Files.walk(directory)) {
+            return paths.anyMatch(Files::isRegularFile);
         }
     }
 
