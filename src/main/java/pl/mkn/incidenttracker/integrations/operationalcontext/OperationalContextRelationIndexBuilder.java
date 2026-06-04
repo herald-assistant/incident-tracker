@@ -47,6 +47,8 @@ public class OperationalContextRelationIndexBuilder {
     private static final String DATASTORE = "datastore";
     private static final String EXTERNAL_PARTY = "external-party";
     private static final String RUNTIME_SIGNAL = "runtime-signal";
+    private static final String REPO_MAP_FILE = "repo-map.yml";
+    private static final String CODE_SEARCH_SCOPES_FILE = "code-search-scopes.yml";
 
     public OperationalContextRelationIndex build(OperationalContextCatalog catalog) {
         var state = new BuildState();
@@ -105,9 +107,9 @@ public class OperationalContextRelationIndexBuilder {
     private void extractRepositoryRelations(BuildState state, List<OperationalContextRepository> repositories) {
         for (var repository : repositories) {
             var source = new EntityKey(REPOSITORY, repository.id());
-            references(state, source, repository.references(), "repo-map.yml", REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].references", true);
-            responsibilities(state, source, repository.responsibilities(), "repo-map.yml", REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].responsibilities");
-            explicitRelations(state, source, repository.relations(), "repo-map.yml", repository.id(), "$.repositories[id=" + repository.id() + "].relations");
+            references(state, source, repository.references(), REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].references", true);
+            responsibilities(state, source, repository.responsibilities(), REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].responsibilities");
+            explicitRelations(state, source, repository.relations(), REPO_MAP_FILE, repository.id(), "$.repositories[id=" + repository.id() + "].relations");
 
             for (var module : repository.modules()) {
                 var moduleId = moduleId(repository, module);
@@ -122,7 +124,7 @@ public class OperationalContextRelationIndexBuilder {
                         false,
                         "direct-yaml",
                         "high",
-                        sourceRef("repo-map.yml", REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "]", "contains-module")
+                        sourceRef(REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "]", "contains-module")
                 );
                 moduleReferences(state, repository, module, moduleId);
             }
@@ -150,7 +152,7 @@ public class OperationalContextRelationIndexBuilder {
                         false,
                         "direct-yaml",
                         "high",
-                        sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target", "semantic-target")
+                        sourceRef(CODE_SEARCH_SCOPES_FILE, CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].target", "semantic-target")
                 );
             }
             for (var repository : scope.repositories()) {
@@ -533,7 +535,7 @@ public class OperationalContextRelationIndexBuilder {
                 state,
                 source,
                 module.references(),
-                "repo-map.yml",
+                REPO_MAP_FILE,
                 REPOSITORY,
                 repository.id(),
                 "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "].references",
@@ -543,7 +545,7 @@ public class OperationalContextRelationIndexBuilder {
                 state,
                 source,
                 module.responsibilities(),
-                "repo-map.yml",
+                REPO_MAP_FILE,
                 REPOSITORY,
                 repository.id(),
                 "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "].responsibilities"
@@ -570,7 +572,7 @@ public class OperationalContextRelationIndexBuilder {
                 false,
                 "direct-yaml",
                 "high",
-                sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "]", "references-repository")
+                sourceRef(CODE_SEARCH_SCOPES_FILE, CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "]", "references-repository")
         );
         for (var moduleId : safeTextList(repository.moduleIds())) {
             relation(
@@ -584,7 +586,7 @@ public class OperationalContextRelationIndexBuilder {
                     false,
                     "direct-yaml",
                     "high",
-                    sourceRef("repo-map.yml", CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "].moduleIds", "references-module")
+                    sourceRef(CODE_SEARCH_SCOPES_FILE, CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "].moduleIds", "references-module")
             );
         }
     }
@@ -605,7 +607,7 @@ public class OperationalContextRelationIndexBuilder {
             return;
         }
         var repositoryScopeRef = sourceRef(
-                "repo-map.yml",
+                CODE_SEARCH_SCOPES_FILE,
                 CODE_SEARCH_SCOPE,
                 scope.id(),
                 "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + scopeRepository.repoId() + "]",
@@ -703,7 +705,7 @@ public class OperationalContextRelationIndexBuilder {
                     List.of(
                             repositoryScopeRef,
                             sourceRef(
-                                    "repo-map.yml",
+                                    REPO_MAP_FILE,
                                     REPOSITORY,
                                     repository.id(),
                                     "$.repositories[id=" + repository.id() + "].references." + referenceField,

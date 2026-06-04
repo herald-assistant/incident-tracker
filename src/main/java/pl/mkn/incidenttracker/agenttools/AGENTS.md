@@ -60,7 +60,7 @@ Nie obejmuje:
   `integrations.operationalcontext`, ale nie moze importowac incident feature'a,
   Copilot runtime ani HTTP API. Nie zwracaj raw payload/source preview.
 - `codeSearchScope` w operational context tools jest wirtualna encja z
-  `repo-map.yml/codeSearchScopes`, nie osobny komponent runtime.
+  `code-search-scopes.yml/codeSearchScopes`, nie osobny komponent runtime.
 - GitLab tools korzystajace z operational context maja wystawiac systemy jako
   kanoniczny target repozytoriow i `codeSearchScopes`. Nie dodawaj model-facing
   pol ani odpowiedzi dla osobnego targetu runtime; runtime/deployment names

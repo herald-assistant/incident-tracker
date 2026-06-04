@@ -36,24 +36,24 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                 """
                         {
                           "type": "codeSearchScope",
-                          "id": "clp-collateral-full-scope",
+                          "id": "collateral-management-code-search-scope",
                           "reason": "need focused code search"
                         }
                         """,
                 """
                         {
                           "type": "codeSearchScope",
-                          "id": "clp-collateral-full-scope",
-                          "label": "CLP collateral full scope",
+                          "id": "collateral-management-code-search-scope",
+                          "label": "Collateral Management Code Search Scope",
                           "codeSearch": {
                             "payload": "VERY_LARGE_PAYLOAD"
                           },
-                          "sourceRefs": ["src/main/resources/operational-context/repo-map.yml"],
+                          "sourceRefs": ["src/main/resources/operational-context/code-search-scopes.yml"],
                           "affordances": {
                             "profile": "default",
                             "availableExpansions": ["include=codeSearch", "include=relations"],
                             "suggestedNextReads": [
-                              "opctx_get_entity(type=codeSearchScope,id=clp-collateral-full-scope,include=[codeSearch])"
+                              "opctx_get_entity(type=codeSearchScope,id=collateral-management-code-search-scope,include=[codeSearch])"
                             ],
                             "suggestedTools": ["opctx_search"],
                             "reasonToExpand": "Need full repository hint inventory before GitLab search.",
@@ -62,7 +62,7 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                             "links": [
                               {
                                 "rel": "expanded",
-                                "href": "/api/operational-context/entities/codeSearchScope/clp-collateral-full-scope?profile=expanded"
+                                "href": "/api/operational-context/entities/codeSearchScope/collateral-management-code-search-scope?profile=expanded"
                               }
                             ],
                             "truncation": {

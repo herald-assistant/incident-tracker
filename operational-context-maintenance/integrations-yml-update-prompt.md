@@ -35,8 +35,9 @@ Keep facts here only when they describe the integration contract:
 Do not maintain these facts here:
 
 - system runtime aliases that belong to `systems.yml`,
-- repository source layout or code-search scope contents that belong to
-  `repo-map.yml`,
+- repository source layout that belongs to `repo-map.yml`,
+- semantic code-search scope contents that belong to
+  `code-search-scopes.yml`,
 - process boundaries or ordered flow steps that belong to `processes.yml` or
   the future flow write model,
 - semantic bounded-context definitions that belong to `bounded-contexts.yml`,
@@ -133,8 +134,9 @@ shape-conflicting fields.
 - Put unresolved durable questions in top-level or entry-level `gaps`; each gap
   must include enough evidence context to be actionable.
 - Validate references against the attached `systems.yml`, `repo-map.yml`,
-  `processes.yml`, `bounded-contexts.yml`, `teams.yml`, `glossary.md`, and
-  `handoff-rules.md`, but do not add reciprocal references only for symmetry.
+  `code-search-scopes.yml`, `processes.yml`, `bounded-contexts.yml`,
+  `teams.yml`, `glossary.md`, and `handoff-rules.md`, but do not add
+  reciprocal references only for symmetry.
 - Every value in `references.*` and participant module lists must resolve to an
   existing catalog id. Participant `system` values must be `systems[].id`, and
   participant `modules` values must be canonical

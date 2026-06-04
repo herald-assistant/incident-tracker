@@ -65,6 +65,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         var systemsDocument = loadYamlDocument(resourceRoot, "systems.yml");
         var integrationsDocument = loadYamlDocument(resourceRoot, "integrations.yml");
         var repositoriesDocument = loadYamlDocument(resourceRoot, "repo-map.yml");
+        var codeSearchScopesDocument = loadYamlDocument(resourceRoot, "code-search-scopes.yml");
         var boundedContextsDocument = loadYamlDocument(resourceRoot, "bounded-contexts.yml");
 
         var rawTeams = mapList(teamsDocument.get("teams"));
@@ -72,7 +73,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         var rawSystems = mapList(systemsDocument.get("systems"));
         var rawIntegrations = mapList(integrationsDocument.get("integrations"));
         var rawRepositories = mapList(repositoriesDocument.get("repositories"));
-        var rawCodeSearchScopes = mapList(repositoriesDocument.get("codeSearchScopes"));
+        var rawCodeSearchScopes = mapList(codeSearchScopesDocument.get("codeSearchScopes"));
         var rawBoundedContexts = mapList(boundedContextsDocument.get("boundedContexts"));
         var teams = rawTeams.stream().map(OperationalContextDtos::team).toList();
         var processes = rawProcesses.stream().map(OperationalContextDtos::process).toList();
@@ -92,6 +93,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
         var openQuestions = openQuestions(
                 systemsDocument,
                 repositoriesDocument,
+                codeSearchScopesDocument,
                 processesDocument,
                 integrationsDocument,
                 boundedContextsDocument,
@@ -100,6 +102,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 handoffRulesDocument,
                 rawSystems,
                 rawRepositories,
+                rawCodeSearchScopes,
                 rawProcesses,
                 rawIntegrations,
                 rawBoundedContexts,
@@ -342,6 +345,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
     private List<OperationalContextOpenQuestion> openQuestions(
             Map<String, Object> systemsDocument,
             Map<String, Object> repositoriesDocument,
+            Map<String, Object> codeSearchScopesDocument,
             Map<String, Object> processesDocument,
             Map<String, Object> integrationsDocument,
             Map<String, Object> boundedContextsDocument,
@@ -350,6 +354,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
             String handoffRulesDocument,
             List<Map<String, Object>> systems,
             List<Map<String, Object>> repositories,
+            List<Map<String, Object>> codeSearchScopes,
             List<Map<String, Object>> processes,
             List<Map<String, Object>> integrations,
             List<Map<String, Object>> boundedContexts,
@@ -360,6 +365,8 @@ public class OperationalContextAdapter implements OperationalContextPort {
         addEntityGaps(questions, "systems.yml", "system", systems);
         addYamlGaps(questions, "repo-map.yml", "repository", null, repositoriesDocument.get("gaps"));
         addEntityGaps(questions, "repo-map.yml", "repository", repositories);
+        addYamlGaps(questions, "code-search-scopes.yml", "code-search-scope", null, codeSearchScopesDocument.get("gaps"));
+        addEntityGaps(questions, "code-search-scopes.yml", "code-search-scope", codeSearchScopes);
         addYamlGaps(questions, "processes.yml", "process", null, processesDocument.get("gaps"));
         addEntityGaps(questions, "processes.yml", "process", processes);
         addYamlGaps(questions, "integrations.yml", "integration", null, integrationsDocument.get("gaps"));

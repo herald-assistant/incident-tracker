@@ -1053,14 +1053,14 @@ class OperationalContextProfiledReadModelMapper {
                 "classHints", limitText(hints.classHints(), limit),
                 "endpointHints", limitText(hints.endpointHints(), limit),
                 "queueTopicHints", limitText(hints.queueTopicHints(), limit),
-                "databaseHints", map(
+                "database", map(
                         "datasourceNames", limitText(hints.databaseHints().datasourceNames(), limit),
                         "schemas", limitText(hints.databaseHints().schemas(), limit),
                         "tables", limitText(hints.databaseHints().tables(), limit),
                         "entities", limitText(hints.databaseHints().entities(), limit),
                         "migrations", limitText(hints.databaseHints().migrations(), limit)
                 ),
-                "workflowHints", map(
+                "workflow", map(
                         "jobNames", limitText(hints.workflowHints().jobNames(), limit),
                         "workflowNames", limitText(hints.workflowHints().workflowNames(), limit),
                         "definitionPaths", limitText(hints.workflowHints().definitionPaths(), limit)
@@ -1077,10 +1077,10 @@ class OperationalContextProfiledReadModelMapper {
                 "classHints", hints.classHints().size(),
                 "endpointHints", hints.endpointHints().size(),
                 "queueTopicHints", hints.queueTopicHints().size(),
-                "databaseHints", hints.databaseHints().tables().size()
+                "database", hints.databaseHints().tables().size()
                         + hints.databaseHints().entities().size()
                         + hints.databaseHints().migrations().size(),
-                "workflowHints", hints.workflowHints().jobNames().size()
+                "workflow", hints.workflowHints().jobNames().size()
                         + hints.workflowHints().workflowNames().size()
                         + hints.workflowHints().definitionPaths().size()
         );
@@ -2359,7 +2359,7 @@ class OperationalContextProfiledReadModelMapper {
         return switch (type) {
             case "system" -> "systems.yml";
             case "repository" -> "repo-map.yml";
-            case "code-search-scope" -> "repo-map.yml";
+            case "code-search-scope" -> "code-search-scopes.yml";
             case "process" -> "processes.yml";
             case "integration" -> "integrations.yml";
             case "bounded-context" -> "bounded-contexts.yml";

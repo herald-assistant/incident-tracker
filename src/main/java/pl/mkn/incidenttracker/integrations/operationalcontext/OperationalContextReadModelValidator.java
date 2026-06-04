@@ -675,7 +675,7 @@ public class OperationalContextReadModelValidator {
             String relationRole
     ) {
         return new SourceRef(
-                "src/main/resources/operational-context/repo-map.yml",
+                "src/main/resources/operational-context/code-search-scopes.yml",
                 CODE_SEARCH_SCOPE,
                 scope.id(),
                 "$.codeSearchScopes[id=" + scope.id() + "]." + fieldPath,

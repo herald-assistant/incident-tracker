@@ -1,0 +1,36 @@
+schemaVersion: 1
+catalogKind: operational-context-code-search-scopes
+
+codeSearchScopes:
+  - id: app-core-code-search
+    name: App Core Code Search Scope
+    scopeType: system
+    lifecycleStatus: active
+    summary: Implementation search scope for the app-core system.
+    target:
+      type: system
+      id: app-core
+    useFor: [code-search, incident-analysis]
+    repositories:
+      - repoId: app-core-repo
+        role: primary-implementation
+        priority: 1
+        moduleIds: [core-module]
+        reason: Main service repository for app-core.
+        readFor: [business-flow, runtime-entrypoints]
+      - repoId: app-shared-lib-repo
+        role: supporting-library
+        priority: 2
+        moduleIds: [shared-domain-module]
+        reason: Shared domain predicates are used by app-core.
+        readFor: [shared-rules]
+    hints:
+      packagePrefixes: [com.example.app, com.example.shared]
+      classHints: [SyncGateway, SharedPredicate]
+      endpointHints: [/api/resources]
+      queueTopicHints: []
+    traversal:
+      rules: [Search app-core first, then shared predicates if the class is not found.]
+      expandWhen: [Expand to supporting-library repositories when a referenced class or rule is not implemented in the primary repository.]
+
+gaps: []

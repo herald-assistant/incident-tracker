@@ -396,13 +396,13 @@ public class OperationalContextToolMapper {
                 "classHints", scope.classHints(),
                 "endpointHints", scope.endpointHints(),
                 "queueTopicHints", scope.queueTopicHints(),
-                "databaseHints", databaseHints(scope.databaseHints()),
-                "workflowHints", workflowHints(scope.workflowHints()),
+                "database", databaseHints(scope.databaseHints()),
+                "workflow", workflowHints(scope.workflowHints()),
                 "traversal", traversal(scope.traversal())
         );
         var sourceCoverage = values(
                 "limitations", scope.limitations(),
-                "sourceRefs", List.of("repo-map.yml#codeSearchScopes/" + scope.id())
+                "sourceRefs", List.of("code-search-scopes.yml#codeSearchScopes/" + scope.id())
         );
 
         return entity(
@@ -421,7 +421,7 @@ public class OperationalContextToolMapper {
                 Map.of(),
                 sourceCoverage,
                 openQuestionsFor(openQuestions, TYPE_CODE_SEARCH_SCOPE, scope.id()),
-                List.of("repo-map.yml#codeSearchScopes/" + scope.id()),
+                List.of("code-search-scopes.yml#codeSearchScopes/" + scope.id()),
                 flattenFacets(facets)
         );
     }

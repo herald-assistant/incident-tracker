@@ -194,7 +194,7 @@ describe('ContextHomePageComponent', () => {
           'code-search-scope',
           'core-scope',
           'Scope can be tighter',
-          'repo-map.yml',
+          'code-search-scopes.yml',
           '$.codeSearchScopes[0]'
         )
       ]
@@ -209,7 +209,7 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('systems.yml');
     expect(fixture.nativeElement.textContent).toContain('$.systems[0].owner');
     expect(fixture.nativeElement.textContent).toContain('system/app-core');
-    expect(fixture.nativeElement.textContent).toContain('repo-map.yml');
+    expect(fixture.nativeElement.textContent).toContain('code-search-scopes.yml');
 
     component.validationCategoryControl.setValue('ownership');
     component.validationSourceFileControl.setValue('systems.yml');

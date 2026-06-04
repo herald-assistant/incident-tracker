@@ -32,8 +32,9 @@ Keep facts here only when they describe ownership, support or routing:
 Do not maintain these facts here:
 
 - system runtime aliases that belong to `systems.yml`,
-- repository source layout or code-search strategy that belongs to
-  `repo-map.yml`,
+- repository source layout that belongs to `repo-map.yml`,
+- semantic code-search scopes and traversal rules that belong to
+  `code-search-scopes.yml`,
 - integration participants and transport contracts that belong to
   `integrations.yml`,
 - process boundaries or ordered steps that belong to `processes.yml`,
@@ -119,9 +120,9 @@ shape-conflicting fields.
 - Put unresolved durable questions in top-level or entry-level `gaps`; each gap
   must include enough evidence context to be actionable.
 - Validate referenced targets against the attached `systems.yml`,
-  `repo-map.yml`, `processes.yml`, `bounded-contexts.yml`, `integrations.yml`,
-  `glossary.md`, and `handoff-rules.md`, but do not add reciprocal references
-  only for symmetry.
+  `repo-map.yml`, `code-search-scopes.yml`, `processes.yml`,
+  `bounded-contexts.yml`, `integrations.yml`, `glossary.md`, and
+  `handoff-rules.md`, but do not add reciprocal references only for symmetry.
 - If evidence suggests a fact whose owner is another file, update that file
   with its own prompt or add an actionable `gaps` item instead of duplicating
   the fact here.

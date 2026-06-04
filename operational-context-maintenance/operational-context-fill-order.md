@@ -17,7 +17,8 @@ Use this matrix before writing any fact:
 
 | Fact type | Canonical owner |
 | --- | --- |
-| GitLab project, repository layout, modules, package roots, generated clients, shared libraries, code-search scopes | `repo-map.yml` |
+| GitLab project, repository layout, modules, package roots, generated clients, shared libraries | `repo-map.yml` |
+| Semantic implementation search scopes, repository/module read order, scope traversal rules | `code-search-scopes.yml` |
 | System identity, runtime names, deployment/service/container aliases, stable system-level recognition signals | `systems.yml` |
 | Bounded-context semantics, local language, concepts, invariants, includes/excludes | `bounded-contexts.yml` |
 | Integration source/target, channel, transport, operations, payloads, retry/consistency/failure modes | `integrations.yml` |
@@ -83,11 +84,10 @@ are snapshots, not the source of truth. The API endpoint
 
 ## 1. `repo-map.yml`
 
-Start with repositories, modules, source roots, package prefixes, runtime
-mappings, and reusable `codeSearchScopes`. This connects analysis evidence to
-real code and is the backbone for AI-guided fetching. Do not use this file to
-describe system runtime, integration contracts or process flow except as
-code-search anchors.
+Start with repositories, modules, source roots, package prefixes and runtime
+mappings. This connects analysis evidence to real code. Do not use this file to
+describe system runtime, integration contracts, process flow or semantic search
+scope traversal.
 
 Fill first:
 
@@ -98,9 +98,21 @@ Fill first:
 - `repositories[].codeSearch`
 - `repositories[].sourceCoverage`
 - `repositories[].scannedSubtrees`
-- `codeSearchScopes[]`
 
-## 2. `systems.yml`
+## 2. `code-search-scopes.yml`
+
+Create semantic implementation scopes after repository/module inventory exists.
+Prefer bounded-context targets when the implementation is spread across a
+modular monolith, microservice and shared libraries.
+
+Fill first:
+
+- `codeSearchScopes[].target`
+- `codeSearchScopes[].repositories`
+- `codeSearchScopes[].hints`
+- `codeSearchScopes[].traversal`
+
+## 3. `systems.yml`
 
 Map stable systems as canonical catalog entities. Runtime service names,
 deployment names, endpoints, queues, schemas, and package prefixes are signals
@@ -121,7 +133,7 @@ Fill first:
 - `systems[].responsibilities`
 - `systems[].handoffHints`
 
-## 3. `bounded-contexts.yml`
+## 4. `bounded-contexts.yml`
 
 Capture domain and semantic boundaries after code and system identities are
 clear. Link contexts to repositories, systems, processes, integrations, teams,
@@ -140,7 +152,7 @@ Fill first:
 - `boundedContexts[].llmToolHints`
 - `boundedContexts[].sourceCoverage`
 
-## 4. `integrations.yml`
+## 5. `integrations.yml`
 
 Describe durable contracts and data flows between systems, external parties,
 repositories, or platform services. `participants` is the canonical owner of
@@ -160,7 +172,7 @@ Fill first:
 - `integrations[].handoffHints`
 - `integrations[].failureModes`
 
-## 5. `processes.yml`
+## 6. `processes.yml`
 
 Build process descriptions from confirmed systems, repositories, contexts, and
 integrations. A process should represent a durable business or operational
@@ -184,7 +196,7 @@ Fill first:
 - `processes[].observability`
 - `processes[].analysisHints`
 
-## 6. `teams.yml`
+## 7. `teams.yml`
 
 Add teams and external parties after catalog targets are stable enough to avoid
 speculative ownership.
@@ -203,13 +215,13 @@ Use `responsibilities[]` to link teams to catalog targets. Each responsibility
 should include `targetType`, `targetId`, `role`, `status`, `confidence`, and
 evidence when available.
 
-## 7. `glossary.md`
+## 8. `glossary.md`
 
 Define terms that appear repeatedly in code, logs, business language, or
 operator handoffs. Keep definitions short and link terms back from YAML through
 `references.terms`.
 
-## 8. `handoff-rules.md`
+## 9. `handoff-rules.md`
 
 Keep handoff rules practical and operator-facing. Link rules from YAML through
 `references.handoffRules` and use entity-level `handoffHints` for short routing

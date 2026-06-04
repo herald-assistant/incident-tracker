@@ -88,7 +88,7 @@ public class OperationalContextViewService {
     private static final Map<String, String> SOURCE_FILES = Map.of(
             SYSTEM, "systems.yml",
             REPOSITORY, "repo-map.yml",
-            CODE_SEARCH_SCOPE, "repo-map.yml",
+            CODE_SEARCH_SCOPE, "code-search-scopes.yml",
             PROCESS, "processes.yml",
             INTEGRATION, "integrations.yml",
             BOUNDED_CONTEXT, "bounded-contexts.yml",
@@ -610,8 +610,8 @@ public class OperationalContextViewService {
                                 "classHints", scope.classHints(),
                                 "endpointHints", scope.endpointHints(),
                                 "queueTopicHints", scope.queueTopicHints(),
-                                "databaseHints", codeSearchDataHints(view, scope),
-                                "workflowHints", scope.workflowHints(),
+                                "database", codeSearchDataHints(view, scope),
+                                "workflow", scope.workflowHints(),
                                 "traversal", scope.traversal()
                         ))
                 ),
@@ -621,7 +621,7 @@ public class OperationalContextViewService {
                         "Semantic implementation search scope",
                         "This scope tells operators and AI where a semantic target is implemented across repositories and modules.",
                         "high",
-                        List.of(reason("repo-map.yml codeSearchScopes", "The scope is parsed from the top-level codeSearchScopes section in repo-map.yml.", "strong")),
+                        List.of(reason("code-search-scopes.yml", "The scope is parsed from code-search-scopes.yml codeSearchScopes.", "strong")),
                         scope.limitations().isEmpty() ? List.of() : scope.limitations(),
                         List.of(sourceRef)
                 )),
@@ -1014,16 +1014,16 @@ public class OperationalContextViewService {
             List<OperationalContextRepositorySearchScope> scopes
     ) {
         var items = scopes.stream()
-                .map(scope -> item(scope.id(), codeSearchScopeName(scope), CODE_SEARCH_SCOPE, "Loaded from repo-map.yml codeSearchScopes.", "verified", sourceRef(CODE_SEARCH_SCOPE, scope.id())))
+                .map(scope -> item(scope.id(), codeSearchScopeName(scope), CODE_SEARCH_SCOPE, "Loaded from code-search-scopes.yml.", "verified", sourceRef(CODE_SEARCH_SCOPE, scope.id())))
                 .toList();
         return aggregate(
                 "Code Search Scopes",
                 items.size(),
                 items.isEmpty() ? "unknown" : "ok",
                 "high",
-                "Top-level multi-repository search scopes loaded from repo-map.yml.",
+                "Semantic multi-repository search scopes loaded from code-search-scopes.yml.",
                 List.of(group("Code Search Scopes", items)),
-                List.of(reason("Catalog count", "Count is derived from repo-map.yml codeSearchScopes.", "strong")),
+                List.of(reason("Catalog count", "Count is derived from code-search-scopes.yml codeSearchScopes.", "strong")),
                 List.of(),
                 sourceRefs(items),
                 CODE_SEARCH_SCOPE,
@@ -1168,7 +1168,7 @@ public class OperationalContextViewService {
                         scope.id(),
                         codeSearchScopeName(scope),
                         CODE_SEARCH_SCOPE,
-                        "Repository is part of this top-level codeSearchScopes entry.",
+                        "Repository is referenced by this semantic codeSearchScopes entry.",
                         "verified",
                         List.of(sourceRef(REPOSITORY, repository.id()), sourceRef(CODE_SEARCH_SCOPE, scope.id()))
                 ))
@@ -1182,7 +1182,7 @@ public class OperationalContextViewService {
                         ? "This repository is not assigned to any codeSearchScopes entry."
                         : "Semantic codeSearchScopes entries that reference this repository.",
                 List.of(group("Search scopes", items)),
-                List.of(reason("repo-map.yml codeSearchScopes", "Scopes are matched by repository id in repo-map.yml.", "strong")),
+                List.of(reason("code-search-scopes.yml", "Scopes are matched by repository id in code-search-scopes.yml.", "strong")),
                 items.isEmpty() ? List.of("AI may only see this repository as an isolated project in the UI catalogue.") : List.of(),
                 List.of(sourceRef(REPOSITORY, repository.id())),
                 CODE_SEARCH_SCOPE,
@@ -1215,7 +1215,7 @@ public class OperationalContextViewService {
                         ? "No role/priority is assigned to this repository in codeSearchScopes."
                         : "Repository roles and priorities in multi-repository code search scopes.",
                 List.of(group("Scope roles", items)),
-                List.of(reason("repo-map.yml codeSearchScopes.repositories", "Roles and priorities come from top-level codeSearchScopes repositories entries.", "strong")),
+                List.of(reason("code-search-scopes.yml repositories", "Roles and priorities come from semantic codeSearchScopes repositories entries.", "strong")),
                 items.isEmpty() ? List.of("Missing scope roles make shared libraries and generated clients harder to understand from the UI.") : List.of(),
                 List.of(sourceRef(REPOSITORY, repository.id())),
                 CODE_SEARCH_SCOPE,
@@ -1237,7 +1237,7 @@ public class OperationalContextViewService {
                 count == 0 ? "low" : "high",
                 count == 0 ? "No semantic target is declared." : "Semantic target implemented by this search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.target", "Target is parsed from repo-map.yml codeSearchScopes.target.type/id.", "strong")),
+                List.of(reason("codeSearchScopes.target", "Target is parsed from code-search-scopes.yml codeSearchScopes.target.type/id.", "strong")),
                 count == 0 ? List.of("Scope is not anchored to operational entities.") : List.of(),
                 List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id())),
                 "",
@@ -1279,7 +1279,7 @@ public class OperationalContextViewService {
                         ? "Scope has no repositories, so GitLab search cannot be planned."
                         : "Ordered repository set for this semantic implementation scope.",
                 List.of(group("Repositories", items)),
-                List.of(reason("codeSearchScopes.repositories", "Repository roles, priorities, module ids and read purpose are explicit in repo-map.yml.", "strong")),
+                List.of(reason("codeSearchScopes.repositories", "Repository roles, priorities, module ids and read purpose are explicit in code-search-scopes.yml.", "strong")),
                 hasMissing ? List.of("Some repositories referenced by this scope are missing from repositories[].") : List.of(),
                 List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id())),
                 REPOSITORY,
@@ -1309,7 +1309,7 @@ public class OperationalContextViewService {
                 count == 0 ? "low" : "high",
                 count == 0 ? "No DB/persistence hints are declared." : "DB and persistence hints from the code search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.databaseHints", "Hints come from repo-map.yml databaseHints and referenced repository source layouts.", "strong")),
+                List.of(reason("codeSearchScopes.hints.database", "Hints come from code-search-scopes.yml hints.database and referenced repository source layouts.", "strong")),
                 List.of(),
                 List.of(sourceRef),
                 "",
@@ -1395,7 +1395,7 @@ public class OperationalContextViewService {
                 count == 0 ? "low" : "high",
                 count == 0 ? "No workflow hints are declared." : "Workflow and batch lookup hints from the code search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.workflowHints", "Hints come from repo-map.yml workflowHints.", "strong")),
+                List.of(reason("codeSearchScopes.hints.workflow", "Hints come from code-search-scopes.yml hints.workflow.", "strong")),
                 List.of(),
                 List.of(sourceRef),
                 "",
@@ -1421,7 +1421,7 @@ public class OperationalContextViewService {
                 count == 0 ? "low" : "high",
                 count == 0 ? "No explicit traversal guidance is declared." : "How AI should traverse repositories in this semantic search scope.",
                 groups,
-                List.of(reason("codeSearchScopes.traversal", "Traversal guidance comes from repo-map.yml traversal and limitations.", "strong")),
+                List.of(reason("codeSearchScopes.traversal", "Traversal guidance comes from code-search-scopes.yml traversal and limitations.", "strong")),
                 limitations.isEmpty() ? List.of() : List.of("Scope declares limitations that should be considered during analysis."),
                 List.of(sourceRef),
                 "",

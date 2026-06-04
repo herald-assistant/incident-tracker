@@ -37,7 +37,8 @@ Do not maintain these facts here:
   future implementation write model,
 - process call graphs that belong to `processes.yml` or the future flow write
   model,
-- repository source layout, modules or code-search strategy,
+- repository source layout or modules,
+- semantic code-search scopes and traversal rules,
 - team ownership when a more precise responsibility belongs in `teams.yml`.
 
 ## Target file contract
@@ -117,9 +118,10 @@ or shape-conflicting fields.
   and `handoffHints` when evidence supports them.
 - Put unresolved durable questions in top-level or entry-level `gaps`; each gap
   must include enough evidence context to be actionable.
-- Validate references against the attached `repo-map.yml`, `processes.yml`,
-  `bounded-contexts.yml`, `integrations.yml`, `teams.yml`, `glossary.md`, and
-  `handoff-rules.md`, but do not add reciprocal references only for symmetry.
+- Validate references against the attached `repo-map.yml`,
+  `code-search-scopes.yml`, `processes.yml`, `bounded-contexts.yml`,
+  `integrations.yml`, `teams.yml`, `glossary.md`, and `handoff-rules.md`, but
+  do not add reciprocal references only for symmetry.
 - Every value in `references.*` must resolve to an existing catalog id. For
   example, `references.integrations` may contain only existing
   `integrations[].id` values; if the integration is not modeled yet, add or

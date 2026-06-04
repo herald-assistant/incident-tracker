@@ -279,8 +279,8 @@ Polityka:
   systemie, bounded context, pakiecie, endpointcie albo module, zanim uzyje
   search/read tools.
 - `gitlab_list_available_repositories` zwraca tez `codeSearchScopes` z
-  `repo-map.yml`: role, priorytety i `projectName` repozytoriow, ktore nalezy
-  przeszukiwac razem dla dopasowanego systemu.
+  `code-search-scopes.yml`: semantic target, role, priorytety i `projectName`
+  repozytoriow, ktore nalezy przeszukiwac razem dla dopasowanego zakresu.
 - DB tools sa wlaczane tylko przy resolved environment i
   `IncidentDataDiagnosticNeed=LIKELY/REQUIRED`.
 - Dla `POSSIBLE` dostepne sa tylko discovery tools.

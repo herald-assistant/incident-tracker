@@ -33,8 +33,9 @@ Keep facts here only when they describe process knowledge:
 Do not maintain these facts here:
 
 - runtime/deployment names that belong to `systems.yml`,
-- repository source layout or code-search strategy that belongs to
-  `repo-map.yml`,
+- repository source layout that belongs to `repo-map.yml`,
+- semantic code-search scopes and traversal rules that belong to
+  `code-search-scopes.yml`,
 - integration source/target participants and transport details that belong to
   `integrations.yml`,
 - semantic bounded-context definitions that belong to `bounded-contexts.yml`,
@@ -140,8 +141,9 @@ shape-conflicting fields.
 - Put unresolved durable questions in `gaps`; each gap must include enough
   evidence context to be actionable.
 - Validate references against the attached `systems.yml`, `repo-map.yml`,
-  `bounded-contexts.yml`, `integrations.yml`, `teams.yml`, `glossary.md`, and
-  `handoff-rules.md`, but do not add reciprocal references only for symmetry.
+  `code-search-scopes.yml`, `bounded-contexts.yml`, `integrations.yml`,
+  `teams.yml`, `glossary.md`, and `handoff-rules.md`, but do not add
+  reciprocal references only for symmetry.
 - Do not add `references.handoffRules` only to mirror
   `handoff-rules.md` `Operational context links`. The handoff rule is the
   owner of process-handoff applicability; the read model projects incoming

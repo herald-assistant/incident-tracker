@@ -35,8 +35,9 @@ Keep facts here only when they describe domain semantics:
 Do not maintain these facts here:
 
 - runtime/deployment identity that belongs to `systems.yml`,
-- repository source layout or code-search strategy that belongs to
-  `repo-map.yml`,
+- repository source layout that belongs to `repo-map.yml`,
+- semantic code-search scopes and traversal rules that belong to
+  `code-search-scopes.yml`,
 - integration participants and transport contracts that belong to
   `integrations.yml`,
 - process flow steps that belong to `processes.yml` or the future flow write
@@ -116,8 +117,9 @@ shape-conflicting fields.
 - Put unresolved durable questions in top-level or entry-level `gaps`; each gap
   must include enough evidence context to be actionable.
 - Validate references against the attached `systems.yml`, `repo-map.yml`,
-  `processes.yml`, `integrations.yml`, `teams.yml`, `glossary.md`, and
-  `handoff-rules.md`, but do not add reciprocal references only for symmetry.
+  `code-search-scopes.yml`, `processes.yml`, `integrations.yml`, `teams.yml`,
+  `glossary.md`, and `handoff-rules.md`, but do not add reciprocal references
+  only for symmetry.
 - Every value in `references.*` must resolve to an existing catalog id.
   `references.modules` may contain only canonical ids from
   `repo-map.yml` `repositories[].modules[].id`. Do not use Maven submodule,

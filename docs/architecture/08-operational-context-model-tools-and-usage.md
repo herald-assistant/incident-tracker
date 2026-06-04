@@ -207,7 +207,8 @@ Domyslny katalog znajduje sie w `src/main/resources/operational-context`.
 | --- | --- |
 | `operational-context-index.md` | opis katalogu, reguly modelowania, quality gates i update rules |
 | `systems.yml` | kanoniczne systemy, runtime/deployment metadata, service names, aliases, local runtime signals |
-| `repo-map.yml` | repozytoria, moduly, source layout, shared libraries, generated clients i code-search scopes |
+| `repo-map.yml` | repozytoria, moduly, source layout, shared libraries i generated clients |
+| `code-search-scopes.yml` | semantyczne code-search scopes, read order repozytoriow/modulow i reguly traversal |
 | `processes.yml` | procesy, kroki procesow, participants procesu, outcomes i process boundaries |
 | `integrations.yml` | kontrakty komunikacji, participants, transport, channels, implementation hints i failure modes |
 | `bounded-contexts.yml` | granice semantyczne, local language, concepts, invariants i analysis hints |
@@ -247,12 +248,22 @@ Utrzymuje fakty o kodzie:
 - build files,
 - generated sources,
 - shared/imported libraries,
-- package/class/endpoint/DB hints,
-- `codeSearchScopes`.
+- package/class/endpoint/DB hints.
 
-To najwazniejszy plik dla wielorepozytoryjnego code grounding. Scope ma
-obejmowac glowne repozytorium i biblioteki wymagane do analizy, aby LLM nie
-musial zgadywac, gdzie jest klasa.
+Repozytoria nie definiuja semantycznych zakresow czytania kodu. Te zakresy
+sa utrzymywane w `code-search-scopes.yml`.
+
+### `code-search-scopes.yml`
+
+Utrzymuje semantyczne zakresy code grounding:
+
+- jeden `target { type, id }` na scope,
+- repozytoria i moduly czytane razem,
+- role i priorytety repozytoriow,
+- hinty techniczne i reguly traversal.
+
+Scope ma obejmowac glowne repozytorium i biblioteki wymagane do analizy, aby
+LLM nie musial zgadywac, gdzie jest klasa.
 
 ### `processes.yml`
 
@@ -482,8 +493,8 @@ repozytoriow, AI powinno traktowac je jako jeden logiczny zakres kodu systemu.
 `OperationalContextImplementationReadModel` odpowiada na pytanie: gdzie
 bounded context albo system jest zaimplementowany.
 
-Obecnie implementacje sa projektowane z `codeSearchScopes`, repozytoriow i
-modulow. Model zawiera:
+Obecnie implementacje sa projektowane z `codeSearchScopes` z
+`code-search-scopes.yml`, repozytoriow i modulow. Model zawiera:
 
 - implementation id,
 - implementation kind,
@@ -847,8 +858,8 @@ Operational context zasila GitLab capability.
   prefixes, endpoint prefixes i module paths.
 
 Jesli dopasowany scope zawiera kilka repozytoriow, AI ma przeszukiwac je jako
-jeden zakres komponentu. To dotyczy szczegolnie bibliotek shared, generated
-clients, modulow wspoldzielonych i konfiguracji deploymentowej.
+jeden semantyczny zakres implementacji. To dotyczy szczegolnie bibliotek
+shared, generated clients i modulow wspoldzielonych.
 
 `OperationalContextRepositoryProjectPathResolver` rozwija system hints na
 GitLab project paths zgodne z configured group. Jest to neutralny helper

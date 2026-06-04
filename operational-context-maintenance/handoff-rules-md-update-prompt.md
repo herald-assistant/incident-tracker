@@ -48,8 +48,9 @@ Do not maintain these facts here:
 
 - team responsibility records that belong to `teams.yml`,
 - system runtime identity that belongs to `systems.yml`,
-- repository source layout or code-search strategy that belongs to
-  `repo-map.yml`,
+- repository source layout that belongs to `repo-map.yml`,
+- semantic code-search scopes and traversal rules that belong to
+  `code-search-scopes.yml`,
 - integration participants and transport contracts that belong to
   `integrations.yml`,
 - process boundaries or ordered steps that belong to `processes.yml`.

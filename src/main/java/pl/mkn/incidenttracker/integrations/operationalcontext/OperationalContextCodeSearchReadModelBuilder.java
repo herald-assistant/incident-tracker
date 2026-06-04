@@ -35,6 +35,7 @@ public class OperationalContextCodeSearchReadModelBuilder {
     private static final String CODE_SEARCH_SCOPE = "code-search-scope";
     private static final String REPOSITORY = "repository";
     private static final String MODULE = "module";
+    private static final String CODE_SEARCH_SCOPES_FILE = "src/main/resources/operational-context/code-search-scopes.yml";
 
     private final OperationalContextRelationIndexBuilder relationIndexBuilder;
 
@@ -68,7 +69,7 @@ public class OperationalContextCodeSearchReadModelBuilder {
                     "NO_CODE_SEARCH_SCOPE",
                     "No code-search scope targets " + target.value() + ".",
                     List.of(new SourceRef(
-                            "src/main/resources/operational-context/repo-map.yml",
+                            CODE_SEARCH_SCOPES_FILE,
                             target.type(),
                             target.id(),
                             "$.codeSearchScopes",
@@ -133,12 +134,27 @@ public class OperationalContextCodeSearchReadModelBuilder {
             return relationIndex.entities().containsKey(target) ? List.of(target.id()) : List.of();
         }
 
-        return relationIndex.entityRelations(target.type(), target.id()).incomingRelations().stream()
+        var result = new LinkedHashSet<String>();
+        addScopeIds(result, relationIndex, target);
+        if (!result.isEmpty()) {
+            return List.copyOf(result);
+        }
+        relationIndex.entityRelations(target.type(), target.id()).neighbors().forEach(neighbor ->
+                addScopeIds(result, relationIndex, new EntityKey(neighbor.type(), neighbor.id()))
+        );
+        return List.copyOf(result);
+    }
+
+    private void addScopeIds(
+            LinkedHashSet<String> scopeIds,
+            OperationalContextRelationIndex relationIndex,
+            EntityKey target
+    ) {
+        relationIndex.entityRelations(target.type(), target.id()).incomingRelations().stream()
                 .filter(relation -> CODE_SEARCH_SCOPE.equals(relation.source().type()))
                 .filter(relation -> relation.relationType().startsWith("targets-"))
                 .map(relation -> relation.source().id())
-                .distinct()
-                .toList();
+                .forEach(scopeIds::add);
     }
 
     private CodeSearchScopeView scopeView(
@@ -174,7 +190,7 @@ public class OperationalContextCodeSearchReadModelBuilder {
                         true,
                         "direct-yaml",
                         "high",
-                        List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "]", "code-search-scope")),
+                    List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "]", "code-search-scope")),
                         List.of()
                 )
         );
@@ -439,7 +455,9 @@ public class OperationalContextCodeSearchReadModelBuilder {
             String relationRole
     ) {
         return new SourceRef(
-                "src/main/resources/operational-context/repo-map.yml",
+                REPOSITORY.equals(entityType)
+                        ? "src/main/resources/operational-context/repo-map.yml"
+                        : CODE_SEARCH_SCOPES_FILE,
                 entityType,
                 entityId,
                 fieldPath,

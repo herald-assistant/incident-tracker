@@ -248,7 +248,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'target',
       'Target',
-      'Pojedynczy kanoniczny target semantyczny, dla ktorego scope wskazuje implementacje. To jest najwazniejszy punkt review po aktualizacji repo-map.yml.',
+      'Pojedynczy kanoniczny target semantyczny, dla ktorego scope wskazuje implementacje. To jest najwazniejszy punkt review po aktualizacji code-search-scopes.yml.',
       'aggregate'
     ),
     column(

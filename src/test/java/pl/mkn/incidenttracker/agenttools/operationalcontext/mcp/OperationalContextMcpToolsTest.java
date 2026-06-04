@@ -155,7 +155,7 @@ class OperationalContextMcpToolsTest {
 
         var result = runtimeTools.getEntity(
                 "codeSearchScope",
-                "clp-collateral-full-scope",
+                "collateral-management-code-search-scope",
                 null,
                 "Sprawdzam kompaktowy payload narzedzia dla duzego scope.",
                 null
@@ -204,7 +204,7 @@ class OperationalContextMcpToolsTest {
         );
         assertEquals("Payments runtime code scope", codeSearchScope.label());
         assertTrue(codeSearchScope.relations().containsKey("repositories"));
-        assertTrue(codeSearchScope.codeSearch().containsKey("databaseHints"));
+        assertTrue(codeSearchScope.codeSearch().containsKey("database"));
         assertTrue(codeSearchScope.sourceCoverage().containsKey("limitations"));
         assertFalse(codeSearchScope.codeSearch().containsKey("payload"));
 
