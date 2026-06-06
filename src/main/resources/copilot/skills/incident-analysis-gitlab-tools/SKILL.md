@@ -17,6 +17,107 @@ kodu:
 - async/event flow,
 - operacja i flow potrzebne do handoffu.
 
+## Rola Wobec Orkiestratora
+
+Ten skill jest diagnostycznym playbookiem kodowym wybieranym przez
+`incident-analysis-orchestrator` po wstepnym researchu flow i lokalizacji
+przerwania.
+
+Nie zaczynaj diagnozy od nowa. Twoim zadaniem jest ugruntowac kodem te
+elementy, ktore sa potrzebne do rozroznienia hipotez i do napisania
+`technicalAnalysis`.
+
+## Wejscie Oczekiwane Od Orkiestratora
+
+Przyjmij od orkiestratora:
+
+- fingerprint incydentu,
+- result-sufficient use-case flow albo jego aktualny szkic,
+- failure point na flow,
+- aktywne klasy bledu i hipotezy,
+- evidence gaps z manifestu,
+- znane repozytoria, code-search scopes, klasy, metody, endpointy albo
+  package hints.
+
+Jezeli brakuje tych danych, wykonaj tylko minimalne code search potrzebne do
+ich uzyskania albo wroc do orkiestratora z prosba o doprecyzowanie flow.
+
+## Klasy Bledu Obslugiwane Przez Ten Skill
+
+Uzywaj tego skilla przede wszystkim dla klas:
+
+- `code_mapping_or_type_conversion`,
+- `code_query_or_repository_logic`,
+- `code_validation_or_business_rule`.
+
+Uzywaj go wspierajaco dla:
+
+- `integration_downstream_failure`, gdy trzeba zrozumiec klienta integracji,
+  endpoint, payload mapping albo error handling,
+- `async_or_process_state`, gdy trzeba zrozumiec listener, scheduler, outbox,
+  retry flow albo event handler,
+- `data_missing`, `data_predicate_mismatch` i
+  `data_orphan_or_stale_reference`, gdy DB diagnostics wymaga code-first
+  ugruntowania entity, repository, table, relation albo predicate.
+
+## Hipotezy, Ktore Skill Ma Potwierdzic Albo Obalic
+
+Ten skill ma pomagac odpowiedziec:
+
+- czy blad wynika z logiki kodu, mapowania, walidacji, predykatu albo
+  integracyjnego calla,
+- czy kod tylko ujawnia problem danych, runtime albo downstream,
+- jaki jest najmniejszy techniczny flow od entry pointu do failure point,
+- jakie klasy/metody/pliki sa evidence dla handoffu,
+- jakie hints trzeba przekazac do DB, runtime albo integration diagnostics.
+
+Nie traktuj samego znalezienia klasy jako root cause. Root cause wymaga
+mechanizmu: warunek, input, predykat, mapping, call albo error path.
+
+## Testy Rozrozniajace
+
+Dla aktywnej hipotezy wybierz najmniejszy GitLab check, ktory moze ja
+potwierdzic, oslabic albo obalic:
+
+- dla mapping/type/null: przeczytaj mapper, repository method albo converter i
+  porownaj expected type/state z tym, co pokazuje evidence,
+- dla repository logic: ustal method name, derived predicate, `@Query`, entity
+  annotations i filtry status/tenant/deleted/validity,
+- dla validation/business rule: przeczytaj walidator albo service decision i
+  ustal, jaki warunek odrzuca flow,
+- dla integration failure: przeczytaj client/gateway, endpoint, payload
+  mapping, retry/error handling i downstream boundary,
+- dla async/process: przeczytaj listener/job/outbox handler i ustal event,
+  state transition oraz miejsce retry/error handling.
+
+## Wklad Do Wyniku
+
+Po uzyciu tego skilla zwroc do orkiestratora material w tej postaci:
+
+- `technicalAnalysis`: repozytorium, plik, klasa/metoda, entry point,
+  execution flow, failing method, direct collaborators, predicate/mapping/call
+  i evidence dla Technical Handoff v1,
+- `functionalAnalysis`: krotkie tlumaczenie, jaka operacja biznesowo-systemowa
+  jest obslugiwana, gdzie flow sie przerywa i czy potrzebny jest handoff,
+- `visibilityLimits`: czego nie udalo sie potwierdzic w kodzie albo ktory
+  fragment wymaga DB/runtime/downstream visibility,
+- `confidence`: czy code hypothesis jest confirmed, strong_hypothesis,
+  weak_hypothesis albo rejected.
+
+## Kiedy Wrocic Do Orkiestratora
+
+Zakoncz GitLab exploration i wroc z wynikiem, gdy:
+
+- failure point i direct collaborators sa jasne dla handoffu,
+- repository predicate, mapping, validation albo integration call jest
+  zrozumiany,
+- dalszy kod nie rozroznia hipotez,
+- pytanie przeszlo do DB, runtime, downstream albo ownership visibility,
+- code-search scope zostal wyczerpany w sposob focused.
+
+Jesli GitLab nie potwierdza hipotezy kodowej, napisz to wprost i przekaz
+orkiestratorowi, ktora klasa bledu powinna byc sprawdzona dalej.
+
 ## Staly Kontekst Repozytorium
 
 Traktuj `gitLabGroup` i `gitLabBranch` z manifestu/promptu jako stale.
@@ -172,7 +273,7 @@ napisz limitation.
 
 1. Preferuj attached deterministic GitLab evidence.
 2. Uzyj `gitlab_list_available_repositories`, gdy projectName/GitLab path jest
-   niejasny, a evidence zawiera luzne clues systemu, modułu, endpointu,
+   niejasny, a evidence zawiera luzne clues systemu, modulu, endpointu,
    integracji albo bounded contextu.
 3. Jesli operational context listuje `codeSearchScopes` albo kilka
    `codeSearchProjects`, uzyj ich jako jednego implementation scope.

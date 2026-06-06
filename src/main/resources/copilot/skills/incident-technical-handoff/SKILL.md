@@ -17,6 +17,48 @@ Frontend renderuje odpowiedzi chatu jako Markdown, wiec odpowiedz ma byc
 bezposrednim, dobrze ustrukturyzowanym Markdownem. Nie opakowuj handoffu w JSON,
 chyba ze uzytkownik jawnie o to prosi.
 
+## Rola Wobec Orkiestratora
+
+Ten skill jest kontraktem wyniku dla `technicalAnalysis` oraz technicznych
+follow-upow. Orkiestrator uzywa go po researchu flow, klasyfikacji bledu i
+zebraniu evidence potrzebnego do naprawy, weryfikacji albo przekazania poza
+analizowany system.
+
+Nie zaczynaj diagnostyki od nowa. Ten skill syntetyzuje ustalenia w gotowy
+handoff i moze dociagnac tylko brakujacy, konkretny szczegol, jezeli bez niego
+odbiorca nie moze zaczac dzialania.
+
+## Wejscie Oczekiwane Od Orkiestratora
+
+Przyjmij:
+
+- fingerprint incydentu i detected problem,
+- result-sufficient use-case flow z failure point,
+- klasyfikacje bledu i causal chain,
+- rozdzielenie faktow, hipotez i visibility limits,
+- material specjalistyczny: GitLab code path, DB finding, runtime evidence,
+  downstream boundary, operational context albo handoff route,
+- oczekiwany profil odbiorcy, gdy wynika z pytania albo ownershipu.
+
+## Czego Ten Skill Nie Diagnozuje
+
+Nie diagnozuj tutaj od zera:
+
+- calego systemu ani nowego use case'u,
+- klas bledu, jesli orkiestrator ich jeszcze nie ustalil,
+- DB issue bez DB evidence,
+- code issue bez code evidence,
+- ownershipu i route bez operational context albo incident evidence.
+
+Jezeli handoff wymaga brakujacej diagnostyki, wypisz limitation i skieruj do
+odpowiedniego skilla specjalistycznego zamiast ukrywac luke.
+
+## Wklad Do Wyniku
+
+Ten skill wypelnia `technicalAnalysis`: techniczny opis problemu, lokalizacje,
+root cause albo najlepsza hipoteze, dowody, proponowana akcje, testy,
+verification path, ryzyka, ograniczenia i Definition of Done.
+
 ## Cel
 
 Wygeneruj powtarzalny dokument `Technical Handoff v1`, ktory odbiorca

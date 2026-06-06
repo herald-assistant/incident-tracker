@@ -14,6 +14,48 @@ wysokopoziomowa architekture i ownership, ale nie zna kodu.
 Celem jest pomoc analitykowi zrozumiec, gdzie incydent znajduje sie w systemie
 i jak go poprawnie przekazac dalej. Nie pisz tutaj developerskiego handoffu.
 
+## Rola Wobec Orkiestratora
+
+Ten skill jest kontraktem wyniku dla `functionalAnalysis`. Orkiestrator uzywa
+go po researchu flow, klasyfikacji bledu i zebraniu wystarczajacego evidence,
+aby przetlumaczyc ustalenia na jezyk analityka biznesowo-systemowego.
+
+Nie zaczynaj diagnostyki od nowa i nie uruchamiaj samodzielnie eksploracji
+tools. Jezeli wynik nie da sie wypelnic, nazwij brakujace evidence i ogranicz
+confidence zamiast dopowiadac proces albo ownership.
+
+## Wejscie Oczekiwane Od Orkiestratora
+
+Przyjmij:
+
+- result-sufficient use-case flow,
+- detected problem i failure point,
+- klasyfikacje bledu oraz najwazniejsza hipoteze przyczynowa,
+- evidence ledger: co jest potwierdzone, co jest hipoteza, czego nie widac,
+- operational context: system, proces, bounded context, integracje, glossary,
+  owner albo handoff route,
+- material z GitLab/DB/runtime/downstream tylko w takim zakresie, w jakim
+  trzeba go przetlumaczyc na znaczenie funkcjonalne.
+
+## Czego Ten Skill Nie Diagnozuje
+
+Nie diagnozuj tutaj:
+
+- root cause od zera,
+- szczegolowego code path jako materialu dla developera,
+- predykatow SQL, mapperow, retry logic albo konfiguracji runtime,
+- ownershipu bez katalogu albo innego evidence,
+- naprawy technicznej.
+
+Jezeli te informacje sa potrzebne, wroc do orkiestratora albo do
+`technicalAnalysis` z limitation.
+
+## Wklad Do Wyniku
+
+Ten skill wypelnia tylko pole `functionalAnalysis`: system, proces, bounded
+context, normalny flow, miejsce przerwania, znaczenie funkcjonalne, handoff i
+ograniczenia widocznosci z perspektywy analityka.
+
 ## Minimalny Poziom Jakosci
 
 `functionalAnalysis` musi byc:
@@ -125,6 +167,6 @@ Nie:
 - pisz tylko "blad w klasie X" albo "problem w repozytorium Y",
 - wklejaj stack traces albo dlugie fragmenty kodu,
 - dawaj instrukcji implementacyjnych,
-- ukrywaj brakujacych danych o procesie albo kontekście,
+- ukrywaj brakujacych danych o procesie albo kontekscie,
 - uzywaj Operational Context jako dowodu, ze root cause wystapil,
 - mieszaj tej sekcji z Technical Handoff v1.

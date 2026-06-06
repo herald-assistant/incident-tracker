@@ -15,6 +15,111 @@ Katalog jest przydatny do ugruntowania nazw, relacji, ownershipu, code scope,
 DB targeting hints i handoff guidance. Nie jest samodzielnym dowodem root
 cause.
 
+## Rola Wobec Orkiestratora
+
+Ten skill jest playbookiem grounding/routing wybieranym przez
+`incident-analysis-orchestrator`, gdy analiza potrzebuje lepszego nazwania
+systemu, procesu, bounded contextu, integracji, code-search scope, DB targetu
+albo handoffu.
+
+Nie jest to playbook root-cause diagnosis. Operational context nie potwierdza,
+ze awaria wystapila. Potwierdza tylko, jak nazwac i ukierunkowac obszar, ktory
+jest wsparty incident evidence.
+
+## Klasy Bledu Obslugiwane Przez Ten Skill
+
+Uzywaj tego skilla przede wszystkim dla:
+
+- `outside_visibility_or_handoff`,
+- `configuration_or_environment`, gdy potrzebny jest system/deployment/config
+  context,
+- kazdej klasy, gdy trzeba nazwac affected system, process, bounded context,
+  team, integration albo repository scope.
+
+Uzywaj go wspierajaco dla:
+
+- `code_query_or_repository_logic`, `code_mapping_or_type_conversion` i
+  `code_validation_or_business_rule`, aby dobrac code-search scope,
+- `data_missing`, `data_predicate_mismatch` i
+  `data_orphan_or_stale_reference`, aby dobrac application/repository/DB hints,
+- `integration_downstream_failure`, aby nazwac downstream/upstream i
+  receiving owner,
+- `async_or_process_state`, aby powiazac event/process z systemem i handoffem.
+
+## Wejscie Oczekiwane Od Orkiestratora
+
+Przyjmij:
+
+- fingerprint incydentu,
+- sygnaly z logow, deploymentu, runtime albo kodu,
+- aktualny szkic flow use case'u,
+- failure point albo integration boundary,
+- brakujace pola `affectedProcess`, `affectedBoundedContext`, `affectedTeam`,
+- potrzebe GitLab scope, DB target albo handoff route.
+
+Nie szukaj w katalogu bez sygnalu. Uzywaj concrete query z evidence albo
+najnowszej wiadomosci uzytkownika.
+
+## Hipotezy, Ktore Skill Ma Potwierdzic Albo Obalic
+
+Ten skill ma potwierdzic albo oslabic tylko hipotezy routingowe i katalogowe:
+
+- jaki system, proces, bounded context albo integracja najlepiej pasuje do
+  incident evidence,
+- ktory team, owner albo handoff route jest najbardziej uzasadniony,
+- jaki repository/code-search scope albo DB target warto przekazac dalej,
+- czy problem wyglada na poza zasiegiem analizowanego systemu,
+- czy katalog jest zbyt niepelny albo niejednoznaczny, aby podniesc confidence.
+
+Nie potwierdzaj root cause na podstawie katalogu. Root cause wymaga evidence z
+logow, kodu, runtime, DB albo downstream.
+
+## Testy Rozrozniajace
+
+Dobierz najmniejszy katalogowy check, ktory rozroznia aktywne potrzeby:
+
+- system/process match rozroznia lokalny problem od cross-system handoffu,
+- repository/code-search scope rozroznia, gdzie GitLab skill ma szukac kodu,
+- integration relation rozroznia upstream, downstream i local boundary,
+- ownership/handoff rule rozroznia odbiorce i pierwsza akcje,
+- glossary/bounded context rozroznia znaczenie biznesowe dla
+  `functionalAnalysis`.
+
+## Co Ten Skill Ma Dostarczyc
+
+Po uzyciu operational context zwroc do orkiestratora:
+
+- kanoniczna nazwe systemu/aplikacji, jesli dopasowanie jest wsparte evidence,
+- candidate process i bounded context z poziomem pewnosci i limitation,
+- integration/downstream/upstream context, jesli dotyczy,
+- repository/code-search scope dla GitLab tools,
+- application/deployment/repository hints dla DB targeting,
+- handoff route, expected first action i evidence package dla odbiorcy,
+- glossary/local language, jesli pomaga analitykowi zrozumiec flow.
+
+## Wklad Do Wyniku
+
+- `functionalAnalysis`: system, process, bounded context, integration,
+  ownership, local language, handoff reason i functional routing.
+- `technicalAnalysis`: repository scope, target system/integration, receiving
+  owner, handoff evidence i first technical verification.
+- `visibilityLimits`: weak catalog match, missing owner, incomplete process
+  coverage, ambiguous repository scope, open questions.
+- `confidence`: katalog moze podniesc confidence w routingu, ale nie w root
+  cause bez supporting logs/code/runtime/DB evidence.
+
+## Kiedy Wrocic Do Orkiestratora
+
+Wroc, gdy:
+
+- dopasowanie system/process/context/team jest wystarczajace dla wyniku,
+- katalog jest niejednoznaczny i dalsze browse nie rozroznia hipotez,
+- brakuje encji katalogowej albo source coverage,
+- dalszy krok nalezy do GitLab, DB, Elasticsearch, runtime albo innego zespolu.
+
+Jesli katalog nie potwierdza ownershipu albo procesu, wpisz `nieustalone` i
+podaj limitation zamiast zgadywac.
+
 ## Kiedy Uzywac
 
 Uzywaj operational context tools, gdy:

@@ -28,6 +28,107 @@ Liquibase zwykle utrzymuja schema i code aligned. Dlatego najpierw sprawdzaj
 przyczyny data-related. Schema i mapping checks sa dopuszczalne, gdy evidence
 wyraznie na nie wskazuje.
 
+## Rola Wobec Orkiestratora
+
+Ten skill jest diagnostycznym playbookiem danych wybieranym przez
+`incident-analysis-orchestrator` po wstepnym researchu flow, lokalizacji
+failure point i klasyfikacji bledu jako data-related albo process-state-related.
+
+Nie zaczynaj diagnozy od nowa. Twoim zadaniem jest potwierdzic albo obalic
+hipoteze danych przez DB evidence. Nie wolno oglosic data issue bez DB
+evidence.
+
+## Wejscie Oczekiwane Od Orkiestratora
+
+Przyjmij od orkiestratora:
+
+- fingerprint incydentu,
+- flow use case'u i miejsce przerwania,
+- aktywna hipoteze danych,
+- ugruntowana aplikacje/deployment/container/project name,
+- code-derived hints, gdy sa dostepne: entity, repository, table, columns,
+  relations, predicates,
+- identyfikatory z logs/evidence: ID, business key, tenant/context, status,
+  event ID, correlationId, timestamps.
+
+Jezeli brakuje code-derived hints, ale hipoteza danych jest silna, uzyj
+fallback discovery oszczednie i opisz brak ugruntowania w `visibilityLimits`.
+
+## Klasy Bledu Obslugiwane Przez Ten Skill
+
+Uzywaj tego skilla dla:
+
+- `data_missing`,
+- `data_predicate_mismatch`,
+- `data_orphan_or_stale_reference`,
+- `data_duplicate_or_non_unique`,
+- `async_or_process_state`, gdy stan outbox/event/process jest utrzymywany w
+  DB.
+
+Uzywaj go wspierajaco dla:
+
+- `configuration_or_environment`, gdy roznice danych/scope'u miedzy
+  srodowiskami sa realna hipoteza,
+- `outside_visibility_or_handoff`, gdy dane sa utrzymywane przez inna aplikacje
+  albo schema ownera.
+
+## Hipotezy, Ktore Skill Ma Potwierdzic Albo Obalic
+
+Ten skill ma odpowiedziec:
+
+- czy wymagany row istnieje,
+- czy row istnieje, ale odpada przez pelny predykat aplikacji,
+- czy problem wynika z tenant/context/status/soft-delete/validity/type,
+- czy istnieje orphan albo stale reference,
+- czy aktywne dane sa zduplikowane,
+- czy outbox/event/process jest stuck, exhausted albo missing,
+- czy DB data nie tlumaczy incydentu i nalezy wrocic do code/runtime/integration.
+
+## Testy Rozrozniajace
+
+Dobierz najmniejszy DB check, ktory rozroznia aktywne hipotezy:
+
+- `key-only count = 0` vs `full-predicate count = 0` rozroznia missing row od
+  predicate mismatch,
+- group by status/tenant/deleted/state rozroznia zly stan danych od braku
+  danych,
+- orphan check rozroznia missing parent/reference od bledu kodu,
+- duplicate count rozroznia non-unique data od zlego error handlingu,
+- process/outbox group count rozroznia stuck state od downstream/runtime
+  problemu.
+
+Jesli code grounding jest wymagany, a nieudany, napisz to w `reason` DB
+fallbacku.
+
+## Wklad Do Wyniku
+
+Po uzyciu tego skilla zwroc do orkiestratora:
+
+- `technicalAnalysis`: application/schema scope, table, key, predicate, status,
+  tenant/context, relation albo process-state finding oraz konkretna akcja dla
+  Data/DBA/Developer,
+- `functionalAnalysis`: co dane blokuja w procesie albo jaki obiekt
+  biznesowo-systemowy nie przechodzi dalej,
+- `visibilityLimits`: brak DB access, niepewny schema/application scope,
+  niepotwierdzona relacja, brak code grounding albo cross-application
+  ownership,
+- `confidence`: confirmed tylko przy DB evidence; strong_hypothesis przy mocnym
+  DB sygnale i braku sprzecznosci; weak_hypothesis gdy brakuje kluczowego
+  checku.
+
+## Kiedy Wrocic Do Orkiestratora
+
+Wroc do orkiestratora, gdy:
+
+- DB evidence potwierdza data issue,
+- DB evidence obala hipoteze danych,
+- dalsza diagnostyka wymaga kodu, runtime, downstream albo innego schema ownera,
+- table/application scope pozostaje niejasny po focused discovery,
+- kolejne DB calls bylyby browsingiem, a nie testem rozrozniajacym.
+
+Jesli dane wygladaja poprawnie, napisz wprost: `DB evidence nie tlumaczy
+incydentu` i wskaz, ktora klasa bledu powinna byc sprawdzona dalej.
+
 ## Regula Sesji
 
 Srodowisko DB pochodzi z ukrytego session-bound tool context. Nie przekazuj i
