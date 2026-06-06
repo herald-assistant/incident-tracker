@@ -33,6 +33,76 @@ sekcji:
 - `incident-functional-analysis` dla `functionalAnalysis`,
 - `incident-technical-handoff` dla `technicalAnalysis`.
 
+## Ekspercki Model Pracy
+
+Traktuj analize jak procedure dobrego eksperta, nie jak zgadywanie etykiety.
+Twoim zadaniem jest odtworzyc normalny flow, porownac go z flow zaobserwowanym
+w evidence, znalezc punkt rozjazdu i dopiero wtedy rozstrzygac hipotezy.
+
+Utrzymuj roboczy ledger analizy:
+
+```text
+expectedFlow: co normalnie powinno sie wydarzyc
+observedFlow: co evidence pokazuje w tym incydencie
+divergencePoint: pierwszy konkretny punkt rozjazdu
+hypotheses:
+  - class: data_missing | code_query_or_repository_logic | ...
+    mechanism: jaki warunek/input/dane/call powoduje przerwanie
+    owningLayer: DB | code | integration | runtime | config | operational-context | outside
+    supportingEvidence: co hipoteze wspiera
+    contradictingEvidence: co hipoteze obala albo oslabia
+    distinguishingTest: najmniejszy test, ktory zmieni decyzje
+    nextSkillOrTool: gdzie wykonac test
+    confidence: confirmed | strong_hypothesis | weak_hypothesis | rejected
+causalChain: trigger -> operation -> condition -> boundary -> symptom -> impact
+actionability: kto / co / gdzie / jak zweryfikowac
+```
+
+### Zasady Trafnosci Eksperta
+
+- Mechanism-first: brak mechanizmu oznacza brak root cause. Nie wystarczy
+  exception name, stack frame albo nazwa klasy.
+- Hypothesis tournament: utrzymuj 2-4 konkurujace hipotezy, dopoki test
+  rozrozniajacy ich nie potwierdzi, nie oslabi albo nie obali.
+- Negative evidence: dla kazdej waznej hipotezy nazwij, jaki dowod by ja
+  obalil, i sprawdz, czy taki dowod juz istnieje.
+- Owning-layer proof: klasa moze byc `confirmed` tylko przez dowod z warstwy,
+  ktora jest wlascicielem tego typu przyczyny.
+- Information gain: przed kazdym tool call powiedz, jaka decyzja zmieni sie po
+  wyniku. Jezeli odpowiedz brzmi tylko "dowiem sie wiecej", nie wywoluj toola.
+- Fixability test: finalna analiza jest gotowa dopiero, gdy odbiorca wie, kto
+  ma zadzialac, jaki obiekt/plik/tabela/endpoint sprawdzic i jak potwierdzic
+  fix albo routing.
+
+### Owning-Layer Proof
+
+| Klasa | Warstwa potwierdzajaca | Bez tego najwyzej |
+|---|---|---|
+| `data_missing`, `data_predicate_mismatch`, `data_orphan_or_stale_reference`, `data_duplicate_or_non_unique` | DB evidence albo jawny brak DB visibility | `strong_hypothesis` |
+| `code_mapping_or_type_conversion`, `code_query_or_repository_logic`, `code_validation_or_business_rule` | code evidence z konkretnego pliku/metody/predykatu/reguly | `strong_hypothesis` |
+| `integration_downstream_failure` | downstream/log/HTTP boundary evidence | `strong_hypothesis` |
+| `async_or_process_state` | event/outbox/process state evidence albo code evidence handlera | `strong_hypothesis` |
+| `runtime_or_platform` | runtime/platform evidence z czasu incydentu | `strong_hypothesis` |
+| `configuration_or_environment` | config/deployment/environment evidence | `strong_hypothesis` |
+| `outside_visibility_or_handoff` | lokalny boundary + brak visibility + handoff route | `strong_hypothesis` |
+| `inconclusive` | jawne braki evidence po minimalnym researchu | `confirmed` |
+
+Operational context potwierdza routing, ownership, glossary, process i scope.
+Nie potwierdza samodzielnie root cause.
+
+### Macierz Diagnostyki Roznicowej
+
+| Obserwowany punkt rozjazdu | Konkurujace klasy | Test rozrozniajacy | Regula przeklasyfikowania |
+|---|---|---|---|
+| repository empty result | `data_missing`, `data_predicate_mismatch`, `code_query_or_repository_logic` | code predicate + DB key-only vs full-predicate | key-only = 0 -> `data_missing`; key-only > 0 i full = 0 -> `data_predicate_mismatch`; predicate w kodzie bledny -> `code_query_or_repository_logic` |
+| entity/reference lookup fails | `data_missing`, `data_orphan_or_stale_reference`, `outside_visibility_or_handoff` | parent row + referenced row + owner/source check | parent exists i reference missing/stale -> `data_orphan_or_stale_reference`; source poza systemem -> `outside_visibility_or_handoff` |
+| non-unique result | `data_duplicate_or_non_unique`, `code_query_or_repository_logic` | duplicate count + expected uniqueness rule | duplicates w danych -> `data_duplicate_or_non_unique`; query zbyt szerokie -> `code_query_or_repository_logic` |
+| mapper/type/null failure | `code_mapping_or_type_conversion`, `data_predicate_mismatch`, `integration_downstream_failure` | mapper expected vs actual value/source | mapper nie obsluguje wartosci -> `code_mapping_or_type_conversion`; downstream contract/value invalid -> `integration_downstream_failure` |
+| business rejection | `code_validation_or_business_rule`, `data_predicate_mismatch`, `outside_visibility_or_handoff` | rule code + object state + owner | rule zgodna, stan danych blokuje -> data class; rule bledna -> `code_validation_or_business_rule`; decision poza systemem -> `outside_visibility_or_handoff` |
+| downstream HTTP failure | `integration_downstream_failure`, `configuration_or_environment`, `runtime_or_platform` | boundary status/path + config/runtime evidence | 4xx/5xx downstream z boundary evidence -> `integration_downstream_failure`; env flag/URL/credential drift -> `configuration_or_environment`; local runtime abnormal -> `runtime_or_platform` |
+| async/outbox stuck | `async_or_process_state`, `integration_downstream_failure`, `data_missing` | event row state + last error + retry timeline | stuck/exhausted row -> `async_or_process_state`; last error downstream -> integration; missing required row -> data class |
+| pod/restart/metric abnormal | `runtime_or_platform`, `configuration_or_environment`, `inconclusive` | runtime status in incident window + deploy/config evidence | abnormal runtime signal -> `runtime_or_platform`; config drift -> `configuration_or_environment`; unavailable/no match -> limitation |
+
 ## Algorytm Orkiestracji
 
 ### 1. Przeczytaj Kontekst Sesji
@@ -102,7 +172,7 @@ Research musi wystarczyc, zeby:
 
 Nie mapuj calego systemu ani niezwiazanych flow. Jednoczesnie nie zatrzymuj sie
 na lokalnym exceptionie, jezeli wynik funkcjonalny albo techniczny bylby zbyt
-plytki, zeby dało sie go przekazac albo na nim dzialac.
+plytki, zeby dalo sie go przekazac albo na nim dzialac.
 
 Zbuduj najmniejsze flow wystarczajace dla wyniku:
 
@@ -113,6 +183,14 @@ trigger / request / event
       -> validation / decision / lookup / mapping
         -> DB / integration / async / runtime boundary
           -> observed failure point
+```
+
+Nazwij oba flow:
+
+```text
+expectedFlow: happy path albo expected system path
+observedFlow: path potwierdzony przez evidence
+divergencePoint: pierwszy punkt, gdzie observedFlow odchodzi od expectedFlow
 ```
 
 Uzywaj:
@@ -166,7 +244,13 @@ wsparta hipoteza.
 
 ### 5. Sklasyfikuj Typ Bledu
 
-Klasyfikuj incydent dopiero po researchu flow.
+Klasyfikuj incydent dopiero po researchu flow i nazwaniu `divergencePoint`.
+Nie wybieraj od razu jednej ulubionej klasy. Najpierw zbuduj turniej hipotez:
+
+- wybierz 2-4 klasy, ktore realnie tlumacza ten sam punkt rozjazdu,
+- dla kazdej opisz mechanizm, owning layer i evidence,
+- dla kazdej nazwij evidence, ktore ja obala albo oslabia,
+- wybierz test rozrozniajacy o najwiekszym information gain.
 
 Uzyj jednej albo kilku klas:
 
@@ -193,7 +277,7 @@ Dla kazdej aktywnej klasy utrzymuj:
   `rejected`.
 
 Nie oznaczaj klasy jako confirmed, jezeli evidence nie wspiera bezposrednio
-mechanizmu.
+mechanizmu albo nie pochodzi z owning layer dla tej klasy.
 
 Zawsze oddzielaj:
 
@@ -237,6 +321,7 @@ Dla kazdej waznej hipotezy zapytaj:
 
 ```text
 Jaki najmniejszy nastepny dowod potwierdzi, oslabi albo obali te hipoteze?
+Co zrobie inaczej, jezeli wynik bedzie pozytywny, negatywny albo niekonkluzywny?
 ```
 
 Przyklady:
@@ -270,6 +355,17 @@ Nie wymyslaj endpoint paths.
 Zatrzymaj eksploracje, gdy kolejne sprawdzenia tylko powtorza istniejace
 evidence albo wymagaja widocznosci poza aktualna sesja.
 
+Po kazdym tescie zaktualizuj turniej hipotez:
+
+- `confirmed`: owning-layer proof potwierdza mechanizm,
+- `strong_hypothesis`: kilka sygnalow jest spojnych, ale brakuje owning-layer
+  proof,
+- `weak_hypothesis`: jeden sygnal bez rozroznienia,
+- `rejected`: test rozrozniajacy przeczy hipotezie.
+
+Jezeli test obala aktualna klase, przeklasyfikuj zamiast bronic pierwszej
+hipotezy.
+
 ### 8. Zsyntetyzuj Przyczyne I Rozwiazanie
 
 Przed finalnym wynikiem zbuduj causal chain:
@@ -296,6 +392,13 @@ Potem zmapuj diagnoze na akcje:
 
 Nie przedstawiaj poprawki jako potwierdzonej, jezeli root cause jest tylko
 hipoteza.
+
+Wykonaj fixability test. Wynik nie jest gotowy, jezeli nie da sie odpowiedziec:
+
+- kto ma zadzialac,
+- jaki object, key, state, endpoint, table, file albo method jest targetem,
+- co dokladnie trzeba zmienic, sprawdzic, odtworzyc albo przekazac,
+- jaki test albo obserwacja potwierdzi fix albo poprawny handoff.
 
 Nie wymuszaj code-level root cause, gdy kod pokazuje tylko miejsce ujawnienia
 bledu, a evidence wskazuje na downstream system, data state, configuration,
