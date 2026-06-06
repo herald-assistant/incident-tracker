@@ -38,12 +38,12 @@ class CopilotSkillRuntimeLoaderTest {
         assertEquals(1, resolvedDirectories.size());
 
         var runtimeRoot = Path.of(resolvedDirectories.get(0));
-        var skillFile = runtimeRoot.resolve("incident-analysis-gitlab-tools").resolve("SKILL.md");
+        var skillFile = runtimeRoot.resolve("incident-analysis-orchestrator").resolve("SKILL.md");
 
         assertTrue(Files.exists(skillFile));
         var skillContent = Files.readString(skillFile);
-        assertTrue(skillContent.contains("name: incident-analysis-gitlab-tools"));
-        assertTrue(skillContent.contains("# Incident Analysis With GitLab Tools"));
+        assertTrue(skillContent.contains("name: incident-analysis-orchestrator"));
+        assertTrue(skillContent.contains("# Skill Orkiestratora Analizy Incydentu"));
     }
 
     @Test

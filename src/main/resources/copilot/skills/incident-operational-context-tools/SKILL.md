@@ -1,100 +1,124 @@
 ---
 name: incident-operational-context-tools
-description: Incident-analysis playbook for using neutral operational context catalog tools to ground systems, processes, bounded contexts, ownership, code scope and handoff.
+description: Playbook analizy incydentu dla neutralnych tools katalogu operational context: grounding systemow, procesow, bounded contextow, ownershipu, code scope i handoffu.
 ---
 
-# Incident Operational Context Tools
+# Operational Context Tools W Analizie Incydentu
 
-Use this skill when operational context tools are available in an incident analysis session.
+Uzywaj tego skilla, gdy operational context tools sa dostepne w sesji analizy
+incydentu.
 
-Operational context is a catalog of systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules.
+Operational context to katalog systemow, repozytoriow, code-search scopes,
+procesow, integracji, bounded contexts, teamow, glossary terms i handoff rules.
 
-It is useful for grounding names, relationships, ownership, code scope, DB targeting hints and handoff guidance.
-It is not standalone proof of the incident root cause.
+Katalog jest przydatny do ugruntowania nazw, relacji, ownershipu, code scope,
+DB targeting hints i handoff guidance. Nie jest samodzielnym dowodem root
+cause.
 
-## When to use
+## Kiedy Uzywac
 
-Use operational context tools when:
+Uzywaj operational context tools, gdy:
 
-- deterministic operational-context evidence is missing, partial or too narrow,
-- the affected process, bounded context, team, repository or integration is unclear,
-- a GitLab project or code-search scope is not grounded,
-- a DB application/schema target needs help from system or repository context,
-- the final answer needs a concrete handoff route,
-- the user asks a follow-up about business/operational meaning, ownership, process, glossary terms or related systems.
+- deterministic operational-context evidence jest brakujace, czesciowe albo za
+  waskie,
+- affected process, bounded context, team, repository albo integration sa
+  niejasne,
+- GitLab project albo code-search scope nie jest ugruntowany,
+- DB application/schema target potrzebuje pomocy z system albo repository
+  context,
+- finalna odpowiedz potrzebuje konkretnej trasy handoffu,
+- uzytkownik pyta w follow-upie o znaczenie biznesowo-operacyjne, ownership,
+  proces, glossary terms albo powiazane systemy.
 
-Do not use these tools just because they are available.
+Nie uzywaj tych tooli tylko dlatego, ze sa dostepne.
 
-## Tool order
+## Kolejnosc Tooli
 
-Prefer this order:
+Preferuj ta kolejnosc:
 
-1. Use attached incident artifacts first.
-2. Use `opctx_get_scope` at most once when you do not know which catalog types are available.
-3. Use `opctx_list_entities` for a table-of-contents browse when you do not know the catalog term yet.
-4. Use `opctx_search` when you have a concrete signal from logs, code, tool results or the user question.
-5. Use `opctx_get_entity` before relying on ownership, handoff, process, bounded-context, relation or code-search details.
+1. Najpierw dolaczone artefakty incydentu.
+2. `opctx_get_scope` najwyzej raz, gdy nie wiesz, jakie typy katalogu sa
+   dostepne.
+3. `opctx_list_entities` jako table-of-contents browse, gdy nie znasz jeszcze
+   terminu katalogowego.
+4. `opctx_search`, gdy masz konkretny sygnal z logow, kodu, tool results albo
+   pytania uzytkownika.
+5. `opctx_get_entity` przed poleganiem na ownershipie, handoffie, procesie,
+   bounded context, relacji albo code-search details.
 
-## Browsing rules
+## Zasady Browse
 
-Use `opctx_list_entities` narrowly:
+Uzywaj `opctx_list_entities` wasko:
 
-- browse one type at a time,
-- prefer a simple filter when any clue exists,
-- do not page through the whole catalog,
-- read another page only when the previous page makes it plausible that the relevant entity is nearby,
-- use it especially for processes, bounded contexts, integrations and glossary terms when the model may not know the vocabulary.
+- browse jednego typu naraz,
+- preferuj prosty filter, gdy istnieje jakikolwiek clue,
+- nie przegladaj calego katalogu,
+- czytaj kolejna strone tylko wtedy, gdy poprzednia sugeruje, ze relevant
+  entity moze byc blisko,
+- uzywaj szczegolnie dla processes, bounded contexts, integrations i glossary
+  terms, gdy model moze nie znac lokalnego slownictwa.
 
-## Grounding rules
+## Zasady Groundingu
 
-Do not invent or silently upgrade catalog context into incident evidence.
+Nie wymyslaj i nie podnos kontekstu katalogowego do rangi incident evidence.
 
-Only name `affectedProcess`, `affectedBoundedContext` or `affectedTeam` when the catalog entity is supported by incident artifacts or tool results.
-If the match is weak, write `nieustalone` or state the limitation.
+Nazywaj `affectedProcess`, `affectedBoundedContext` albo `affectedTeam` tylko
+wtedy, gdy catalog entity jest wsparta przez artefakty incydentu albo tool
+results. Gdy dopasowanie jest slabe, wpisz `nieustalone` albo opisz
+ograniczenie.
 
-`system` is the canonical catalog entity.
-Runtime, deployment, service and container names are recognition signals and properties of a system, not separate canonical runtime components.
+`system` jest kanoniczna encja katalogowa. Runtime, deployment, service i
+container names sa sygnalami oraz wlasciwosciami systemu, nie osobnymi
+kanonicznymi runtime components.
 
-## GitLab targeting
+## Targetowanie GitLaba
 
-Use operational context to narrow GitLab exploration:
+Uzywaj operational context do zawezania GitLab exploration:
 
-- prefer `codeSearchScope` when it matches the semantic target you are analyzing: bounded context, process, system or integration,
-- treat `codeSearchScope.target.type/id` as the reason this repository set belongs together,
-- use all relevant `projectName` values from the scope for GitLab search/flow tools,
-- start with repositories marked `primary-implementation` or priority `1`,
-- follow supporting libraries, generated clients, integration adapters, legacy modules or collaborator repositories only when evidence or `traversal.expandWhen` points there,
-- use package prefixes, class hints, endpoint hints and queue/topic hints as focused search terms.
+- preferuj `codeSearchScope`, gdy pasuje do semantic target analizy: bounded
+  context, process, system albo integration,
+- traktuj `codeSearchScope.target.type/id` jako powod, dla ktorego repository
+  set nalezy czytac razem,
+- przekaz wszystkie istotne `projectName` ze scope do GitLab search/flow tools,
+- zaczynaj od repozytoriow `primary-implementation` albo priority `1`,
+- przechodz do supporting libraries, generated clients, integration adapters,
+  legacy modules albo collaborator repositories tylko wtedy, gdy evidence albo
+  `traversal.expandWhen` to uzasadnia,
+- uzywaj package prefixes, class hints, endpoint hints i queue/topic hints jako
+  focused search terms.
 
-Do not conclude that code is unavailable after one repository lookup when operational context lists a wider code-search scope.
+Nie uznawaj kodu za niedostepny po jednym repository lookup, gdy operational
+context listuje szerszy code-search scope.
 
-## DB targeting
+## Targetowanie DB
 
-Operational context can help choose an application, deployment, system, repository or DB hint for DB tools.
+Operational context moze pomoc wybrac application, deployment, system,
+repository albo DB hint dla DB tools.
 
-It does not prove a data issue.
-For JPA, repository or data-access symptoms, still ground entity/repository/table hints from deterministic GitLab evidence or enabled GitLab tools before broad DB discovery when possible.
+Nie dowodzi data issue. Dla JPA, repository albo data-access symptoms nadal
+najpierw ugruntuj entity/repository/table hints z deterministic GitLab evidence
+albo enabled GitLab tools, gdy to mozliwe.
 
 ## Handoff
 
-Use handoff hints and handoff rules as routing guidance.
+Uzywaj handoff hints i handoff rules jako guidance routingu.
 
-When recommending handoff, include:
+Gdy rekomendujesz handoff, uwzglednij:
 
-- why the route is relevant to this incident,
-- what evidence should be passed,
-- what the receiving team or party should verify first.
+- dlaczego ta trasa jest istotna dla incydentu,
+- jakie evidence trzeba przekazac,
+- co receiving team albo party powinien sprawdzic jako pierwsze.
 
-If ownership is ambiguous, say so.
+Jezeli ownership jest niejednoznaczny, napisz to wprost.
 
-## Tool reason
+## `reason` Dla Operational Context Tooli
 
-Every operational context tool call must include the optional `reason` argument.
+Kazdy operational context tool call musi miec opcjonalny argument `reason`.
 
-Write `reason` in Polish as one short, practical sentence for the operator.
-Do not include hidden reasoning, long analysis or step-by-step deliberation.
+Pisz `reason` po polsku jako jedno krotkie praktyczne zdanie dla operatora.
+Nie umieszczaj hidden reasoning, dlugiej analizy ani chain-of-thought.
 
-Good examples:
+Dobre przyklady:
 
 ```text
 Sprawdzam, czy sygnaly z logow pasuja do znanego procesu lub bounded contextu.
@@ -102,14 +126,14 @@ Przegladam katalog integracji, bo evidence nie wskazuje jednoznacznego downstrea
 Pobieram szczegoly systemu, zeby potwierdzic wlasciciela i zakres szukania kodu.
 ```
 
-## Anti-patterns
+## Antywzorce
 
-Do not:
+Nie:
 
-- browse the whole catalog for safety,
-- use glossary terms as proof of failure,
-- name owners, processes or bounded contexts without incident grounding,
-- use operational context instead of GitLab to prove code behavior,
-- use operational context instead of DB tools to prove data state,
-- call `opctx_get_scope` repeatedly,
-- treat deployment/runtime names as separate canonical entities.
+- przegladaj calego katalogu "dla bezpieczenstwa",
+- uzywaj glossary terms jako dowodu awarii,
+- nazywaj ownerow, procesow albo bounded contexts bez incident groundingu,
+- uzywaj operational context zamiast GitLaba do dowodzenia zachowania kodu,
+- uzywaj operational context zamiast DB tools do dowodzenia stanu danych,
+- wywoluj `opctx_get_scope` wielokrotnie,
+- traktuj deployment/runtime names jako osobne canonical entities.

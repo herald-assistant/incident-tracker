@@ -1,126 +1,130 @@
 ---
 name: incident-functional-analysis
-description: Functional Analysis v1 contract for incident results written for business-system analysts who need system, process, bounded-context and handoff context without implementation-first noise.
+description: Kontrakt Functional Analysis v1 dla pola functionalAnalysis: wynik dla analityka biznesowo-systemowego, z kontekstem systemu, procesu, bounded contextu i handoffu, bez szumu implementacyjnego.
 ---
 
-# Incident Functional Analysis Skill
+# Skill Analizy Funkcjonalnej Incydentu
 
-Use this skill for the `functionalAnalysis` field in every initial incident
-analysis result.
+Uzywaj tego skilla dla pola `functionalAnalysis` w kazdym poczatkowym wyniku
+analizy incydentu.
 
-The reader is a business/system analyst. They may know business rules,
-high-level architecture and team ownership, but they do not know the code.
+Odbiorca to analityk biznesowo-systemowy. Moze znac reguly biznesowe,
+wysokopoziomowa architekture i ownership, ale nie zna kodu.
 
-The goal is to help the analyst understand where the incident sits in the
-system and route it correctly. Do not write a developer handoff here.
+Celem jest pomoc analitykowi zrozumiec, gdzie incydent znajduje sie w systemie
+i jak go poprawnie przekazac dalej. Nie pisz tutaj developerskiego handoffu.
 
-## Mandatory quality bar
+## Minimalny Poziom Jakosci
 
-`functionalAnalysis` must be:
+`functionalAnalysis` musi byc:
 
-- written in Polish,
-- understandable without reading Java code,
-- grounded in incident evidence and operational context,
-- explicit about system, process, bounded context and handoff when known,
-- concrete enough to let an analyst route the issue,
-- free from root-cause claims based only on catalog context,
-- clear about missing visibility.
+- napisane po polsku,
+- zrozumiale bez czytania kodu Java,
+- ugruntowane w evidence incydentu i operational context,
+- jawne co do systemu, procesu, bounded contextu i handoffu, gdy sa znane,
+- wystarczajaco konkretne, zeby analityk mogl skierowac sprawe,
+- wolne od root-cause claims opartych tylko na katalogu,
+- jasne co do brakujacej widocznosci.
 
-If a value is missing, keep the section and use one of:
+Jezeli wartosc jest nieznana, zachowaj sekcje i uzyj jednej z wartosci:
 
 - `Nie ustalono`
 - `Nie dotyczy`
 - `Brak danych w evidence`
 - `Hipoteza, wymaga potwierdzenia`
 
-## Evidence rules
+## Zasady Evidence
 
-Use incident artifacts as the primary source of truth.
+Uzywaj artefaktow incydentu jako podstawowego zrodla prawdy.
 
-Use Operational Context for:
+Operational Context sluzy do:
 
-- canonical system naming,
-- process and bounded-context vocabulary,
-- glossary and local language,
-- integrations and upstream/downstream context,
-- handoff and ownership guidance,
-- code-search scope only as supporting context.
+- kanonicznych nazw systemow,
+- slownictwa procesu i bounded contextu,
+- glossary i lokalnego jezyka,
+- integracji oraz kontekstu upstream/downstream,
+- guidance handoffu i ownershipu,
+- code-search scope jako kontekstu pomocniczego.
 
-Operational Context is not proof of root cause. It can explain where the
-incident likely sits and how to route it, but logs/code/runtime/DB evidence
-must support failure claims.
+Operational Context nie jest dowodem root cause. Moze wyjasnic, gdzie incydent
+najprawdopodobniej lezy i jak go przekazac, ale twierdzenia o awarii musza byc
+wspierane przez logi, kod, runtime albo DB evidence.
 
-Use GitLab details only to translate implementation into functional meaning.
-Do not turn this field into a class/method walkthrough.
+Szczegolow GitLaba uzywaj tylko do tlumaczenia implementacji na znaczenie
+funkcjonalne. Nie zamieniaj tego pola w opis klas i metod.
 
-## Output format
+## Format Wyniku
 
-Use exactly this top-level structure, in this order.
+Uzyj dokladnie tej struktury top-level, w tej kolejnosci.
 
 ````markdown
-# Functional Analysis v1: <short analyst-facing title>
+# Functional Analysis v1: <krotki tytul dla analityka>
 
 ## 1. Gdzie jestesmy w systemie
 
 | Pole | Wartosc |
 |---|---|
-| System / aplikacja | <canonical system/application or Nie ustalono> |
-| Proces | <affected process or Nie ustalono> |
-| Bounded context | <bounded context or Nie ustalono> |
-| Integracja / downstream | <relevant integration/system or Nie dotyczy> |
-| Wlasciciel / handoff | <team/owner/route or Nie ustalono> |
+| System / aplikacja | <kanoniczny system/aplikacja albo Nie ustalono> |
+| Proces | <dotkniety proces albo Nie ustalono> |
+| Bounded context | <bounded context albo Nie ustalono> |
+| Integracja / downstream | <istotna integracja/system albo Nie dotyczy> |
+| Wlasciciel / handoff | <team/owner/route albo Nie ustalono> |
 
 ## 2. Co ten fragment robi funkcjonalnie
 
-<Explain the business/system capability in 4-8 short sentences. Mention the
-business object, decision, status, validation, integration, event or data flow
-being handled. Prefer process language over code language.>
+<Wyjasnij capability biznesowa albo systemowa w 4-8 krotkich zdaniach.
+Wspomnij obiekt biznesowy, decyzje, status, walidacje, integracje, event albo
+przeplyw danych. Preferuj jezyk procesu zamiast jezyka kodu.>
 
 ## 3. Co sie stalo w tym incydencie
 
-- **Objaw:** <what evidence shows in operator-friendly language>
-- **Miejsce przerwania flow:** <where the process/system flow is interrupted>
-- **Skutek funkcjonalny:** <what cannot proceed, may be delayed, rejected or routed incorrectly>
+- **Objaw:** <co pokazuje evidence, jezykiem operatora/analityka>
+- **Miejsce przerwania flow:** <gdzie przerwany jest proces/system flow>
+- **Skutek funkcjonalny:** <co nie moze isc dalej, moze byc opoznione, odrzucone albo zle przekazane>
 
 ## 4. Dlaczego to ma znaczenie
 
-<Explain the impact on process continuity, data consistency, customer/user
-experience, downstream systems, SLA, manual work or handoff. If impact is not
-confirmed, say exactly that.>
+<Wyjasnij wplyw na ciaglosc procesu, spojnosci danych, user/customer
+experience, downstream systems, SLA, prace reczna albo handoff. Jezeli impact
+nie jest potwierdzony, napisz to wprost.>
 
 ## 5. Komu to przekazac i po co
 
 | Pole | Wartosc |
 |---|---|
-| Sugerowany odbiorca | <team/system owner/role or Nie ustalono> |
-| Powod przekazania | <why this receiver is relevant> |
-| Pierwsze pytanie / akcja | <one concrete verification/action for the receiver> |
+| Sugerowany odbiorca | <team/system owner/rola albo Nie ustalono> |
+| Powod przekazania | <dlaczego ten odbiorca jest istotny> |
+| Pierwsze pytanie / akcja | <jedna konkretna weryfikacja/akcja dla odbiorcy> |
 
 ## 6. Co jest potwierdzone, a czego nie wiemy
 
 **Potwierdzone:**
-- <evidence-grounded fact>
+- <fakt ugruntowany w evidence>
 
 **Niepotwierdzone / brak widocznosci:**
-- <missing evidence or limitation>
+- <brakujace evidence albo ograniczenie>
 ````
 
-## Writing rules
+## Zasady Pisania
 
-- Start from the user-visible/system process, not from the exception.
-- Use code identifiers only as anchors, for example: "evidence wskazuje na klase `X`", not as the main explanation.
-- Explain local jargon when it comes from glossary or bounded context.
-- Do not claim a team, process or context unless incident evidence or tool results support the catalog match.
-- If the incident is technical but functionally important, explain the normal business/system flow first, then the interruption.
-- If the issue is outside the analyzed system, state what evidence should be passed to the receiving system/team.
+- Zacznij od procesu widocznego dla uzytkownika albo systemu, nie od exceptiona.
+- Identyfikatorow kodu uzywaj tylko jako anchorow, np. "evidence wskazuje na
+  klase `X`", nie jako glownego opisu.
+- Wyjasniaj lokalny jargon, gdy pochodzi z glossary albo bounded contextu.
+- Nie twierdz, ze znasz team, proces albo context, jezeli evidence incydentu
+  lub tool results nie wspieraja dopasowania katalogowego.
+- Jezeli incydent jest techniczny, ale funkcjonalnie istotny, najpierw opisz
+  normalny flow biznesowo-systemowy, potem jego przerwanie.
+- Jezeli problem lezy poza analizowanym systemem, napisz, jakie evidence trzeba
+  przekazac do odbierajacego systemu albo zespolu.
 
-## Anti-patterns
+## Antywzorce
 
-Do not:
+Nie:
 
-- write only "blad w klasie X" or "problem w repozytorium Y",
-- paste stack traces or code snippets,
-- give implementation fix instructions,
-- hide missing process/context data,
-- use Operational Context as proof that a root cause happened,
-- merge this section with Technical Handoff v1.
+- pisz tylko "blad w klasie X" albo "problem w repozytorium Y",
+- wklejaj stack traces albo dlugie fragmenty kodu,
+- dawaj instrukcji implementacyjnych,
+- ukrywaj brakujacych danych o procesie albo kontekście,
+- uzywaj Operational Context jako dowodu, ze root cause wystapil,
+- mieszaj tej sekcji z Technical Handoff v1.

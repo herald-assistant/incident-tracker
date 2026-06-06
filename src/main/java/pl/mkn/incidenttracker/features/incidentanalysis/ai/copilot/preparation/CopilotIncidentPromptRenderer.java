@@ -129,11 +129,12 @@ public class CopilotIncidentPromptRenderer {
     private String runtimeSkillHardRules(CopilotSessionConfigRequest sessionConfigRequest) {
         if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
             return """
-                    - The built-in `skill` tool is enabled for runtime skills. Before the final answer, use it to load available incident runtime skills listed in `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames`.
+                    - The built-in `skill` tool is enabled for runtime skills. At the start of the initial diagnosis, load the starter skill `%s` from `00-incident-manifest.json` under `runtimeSkills.starterSkillName`.
+                    - Then load the result-contract and specialized diagnostic skills listed under `runtimeSkills.preferredSkillNames` when the starter algorithm requires them.
                     - Evidence-gap restrictions below apply to diagnostic capability tools, not to the `skill` tool used for runtime skill loading.
                     - Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session.
                     - Never read skill files from the local filesystem; use only the `skill` tool for runtime skills.
-                    """.trim();
+                    """.formatted(CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME).trim();
         }
 
         return """
@@ -145,10 +146,14 @@ public class CopilotIncidentPromptRenderer {
         if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
             return """
                     - built-in tool: `skill`
+                    - starter skill to load before classifying the incident: `%s`
                     - preferred skills to load before the final answer: %s
                     - source: runtime skill directories configured by the backend; do not inspect local paths
                     - if a listed skill is unavailable or disabled, continue with embedded artifacts and state any resulting limitation only when it affects the answer
-                    """.formatted(String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)).trim();
+                    """.formatted(
+                    CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME,
+                    String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)
+            ).trim();
         }
 
         return "- built-in `skill` tool is unavailable; no runtime skill contents are confirmed for this session.";

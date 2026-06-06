@@ -188,12 +188,13 @@ public class CopilotIncidentFollowUpPromptRenderer {
     private String runtimeSkillHardRules(CopilotSessionConfigRequest sessionConfigRequest) {
         if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
             return """
-                    - The built-in `skill` tool is enabled for runtime skills. Use it to load available incident runtime skills from `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames` whenever the latest user request depends on skill rules or asks about skill definitions.
+                    - The built-in `skill` tool is enabled for runtime skills. For follow-up diagnosis or reassessment, start by loading `%s` from `00-incident-manifest.json` under `runtimeSkills.starterSkillName`.
+                    - For handoff-only, report-only or narrowly scoped follow-up requests, load the relevant result-contract or diagnostic skill from `runtimeSkills.preferredSkillNames`.
                     - Diagnostic-tool restrictions apply to external evidence tools, not to the `skill` tool used for runtime skill loading.
                     - If the user asks what skills are available or where a skill definition came from, answer only after using the `skill` tool; otherwise say the detailed skill contents are not confirmed in this turn.
                     - Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session.
                     - Never read skill files from the local filesystem; use only the `skill` tool for runtime skills.
-                    """.trim();
+                    """.formatted(CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME).trim();
         }
 
         return """
@@ -205,10 +206,14 @@ public class CopilotIncidentFollowUpPromptRenderer {
         if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
             return """
                     - built-in tool: `skill`
+                    - starter skill for diagnosis/reassessment: `%s`
                     - preferred skills to load when relevant to the latest user request: %s
                     - source: runtime skill directories configured by the backend; do not inspect local paths
                     - if a listed skill is unavailable or disabled, continue with existing evidence and state the limitation only when it affects the answer
-                    """.formatted(String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)).trim();
+                    """.formatted(
+                    CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME,
+                    String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)
+            ).trim();
         }
 
         return "- built-in `skill` tool is unavailable; no runtime skill contents are confirmed for this session.";

@@ -1,326 +1,376 @@
 ---
 name: incident-analysis-gitlab-tools
-description: Use GitLab tools efficiently to understand the failing code path, repository predicates, integrations, and surrounding functional flow.
+description: Playbook korzystania z GitLab tools podczas analizy incydentu: rozumienie failing code path, predykatow repozytorium, integracji, flow i technicznego handoffu.
 ---
 
-# Incident Analysis With GitLab Tools
+# Analiza Incydentu Z GitLab Tools
 
-Use this skill when logs, stack traces, deterministic GitLab evidence, or runtime signals suggest that code context is needed to understand:
+Uzywaj tego skilla, gdy logs, stacktrace, deterministic GitLab evidence albo
+runtime signals sugeruja, ze do zrozumienia incydentu potrzebny jest kontekst
+kodu:
 
-- the failing method,
-- the repository predicate,
-- the entity or DTO mapping,
-- the integration path,
-- the validation path,
-- the async/event flow,
-- or the affected operation and flow for handoff.
+- failing method,
+- repository predicate,
+- entity albo DTO mapping,
+- integration path,
+- validation path,
+- async/event flow,
+- operacja i flow potrzebne do handoffu.
 
-## Fixed repository context
+## Staly Kontekst Repozytorium
 
-Treat `gitLabGroup` and `gitLabBranch` from the manifest/prompt as fixed.
+Traktuj `gitLabGroup` i `gitLabBranch` z manifestu/promptu jako stale.
 
-Do not switch group or branch.
-Do not invent project names.
-Infer project names and file paths only from evidence and repository exploration.
+Nie zmieniaj group ani branch. Nie wymyslaj project names. Wyprowadzaj project
+names i file paths tylko z evidence oraz eksploracji repozytorium.
 
-## Semantic code-search scope
+## Semantyczny Code-Search Scope
 
-A bounded context, process, system or integration may be implemented by more than one GitLab project.
-Operational context can list a `codeSearchScope` for that semantic target, including:
+Bounded context, process, system albo integration moze byc implementowany przez
+wiecej niz jeden GitLab project. Operational context moze podac
+`codeSearchScope` dla semantic target, obejmujacy:
 
-- the main service repository,
-- internal libraries,
+- glowne repozytorium serwisu,
+- biblioteki wewnetrzne,
 - shared domain modules,
-- generated clients or integration libraries,
-- supporting modules that are packaged into or called by the primary implementation.
+- generated clients albo integration libraries,
+- supporting modules pakowane do glownej implementacji albo przez nia wolane.
 
-When operational context provides `codeSearchScopeIds`, `codeSearchRepoIds`, `codeSearchProjects`, repository `project`, package roots or class hints for a matched semantic target, treat that whole list as one implementation search scope.
-If `codeSearchRepositoryRoles` are present, use the `primary-implementation` or priority `1` repository first and then supporting libraries, generated clients, integration adapters, legacy modules or collaborators in priority order.
+Gdy operational context podaje `codeSearchScopeIds`, `codeSearchRepoIds`,
+`codeSearchProjects`, repository `project`, package roots albo class hints dla
+dopasowanego targetu, traktuj cala liste jako jeden implementation search
+scope.
 
-If a grounded class, entity, DTO, mapper, client or repository is not found in the main service repository, do not conclude that the code is unavailable after one repository lookup. Make a focused GitLab attempt across the matching `codeSearchScopes`, remaining `codeSearchProjects` or matched repository projects first.
+Jesli sa `codeSearchRepositoryRoles`, zaczynaj od `primary-implementation` albo
+priority `1`, a potem przechodz przez supporting libraries, generated clients,
+integration adapters, legacy modules albo collaborators wedlug priorytetu.
 
-Use this especially when:
+Jesli ugruntowana klasa, entity, DTO, mapper, client albo repository nie zostala
+znaleziona w glownym repozytorium, nie uznawaj kodu za niedostepny po jednym
+lookupie. Wykonaj focused GitLab attempt przez pasujace `codeSearchScopes`,
+pozostale `codeSearchProjects` albo dopasowane repository projects.
 
-- the stacktrace class belongs to a package prefix that looks like a library or shared module,
-- the failing method delegates to a shared client, mapper, validator or repository abstraction,
-- deterministic code evidence shows the service entry point but not the class that decides the failing predicate,
-- DB grounding depends on an entity/repository that may live in a library repository.
+Uzyj tego szczegolnie, gdy:
 
-Keep the search bounded: search the listed component repositories with the grounded class/package/method hints, read only the best matching outline/chunk, then stop if no useful library code is found.
+- stacktrace class wyglada jak biblioteka albo shared module,
+- failing method deleguje do shared client, mapper, validator albo repository
+  abstraction,
+- deterministic code evidence pokazuje entry point serwisu, ale nie klase,
+  ktora decyduje o failing predicate,
+- DB grounding zalezy od entity/repository w bibliotece.
 
-## Available repository catalog
+Trzymaj search ograniczony: przeszukaj wskazane repozytoria konkretnymi
+class/package/method hints, przeczytaj najlepszy outline/chunk i zatrzymaj sie,
+gdy nie ma uzytecznego kodu biblioteki.
 
-Use `gitlab_list_available_repositories` when the relevant repository is not grounded by logs, deterministic evidence, or existing code references, but the incident contains loose clues about another repository, component, module, package, endpoint, integration, system, bounded context, or process.
+## Katalog Dostepnych Repozytoriow
 
-The tool reads the repository catalog from operational context for the fixed session group. It does not search code and it does not change the fixed branch or group.
+Uzyj `gitlab_list_available_repositories`, gdy istotne repozytorium nie jest
+ugruntowane przez logs, deterministic evidence albo code references, ale
+incydent zawiera luzne clues o repozytorium, komponencie, module, package,
+endpointcie, integracji, systemie, bounded context albo procesie.
 
-Use the returned `projectName` as the input for later GitLab search, flow context, outline, chunk, and read tools. Treat `gitLabPath`, `summary`, and repository metadata as disambiguating context.
+Tool czyta katalog repozytoriow z operational context dla stalej session group.
+Nie przeszukuje kodu i nie zmienia branch ani group.
 
-When the response contains `codeSearchScopes`, prefer the matching semantic scope over a single repository. Pass all `projectNames` from that scope together to search/flow/class-reference tools. The scope repositories carry roles and priorities; start with `primary-implementation` or priority `1`, then follow supporting libraries, generated clients or integration adapters only as needed.
+Uzyj zwroconego `projectName` jako inputu dla kolejnych GitLab search, flow,
+outline, chunk i read tools. `gitLabPath`, `summary` i metadata repozytorium
+traktuj jako kontekst rozrozniajacy.
 
-Match incident clues against:
+Gdy odpowiedz zawiera `codeSearchScopes`, preferuj dopasowany semantic scope
+zamiast pojedynczego repozytorium. Przekaz wszystkie `projectNames` z tego
+scope razem do search/flow/class-reference tools.
 
-- repository `name`, `aliases`, `projectName`, and `gitLabPath`,
-- `systems`, `runtimeComponents`, `boundedContexts`, `processes`, and `integrations`,
-- `packagePrefixes`, `endpointPrefixes`, and `modulePaths`,
-- `codeSearchScopes[].target.type/id`, `codeSearchScopes[].projectNames`, repository roles, package prefixes, class hints and traversal guidance.
+Dopasowuj incident clues do:
 
-Prefer one catalog call at the beginning of a cross-repository investigation. Do not repeat the catalog lookup unless new evidence clearly points to another repository family.
+- repository `name`, `aliases`, `projectName`, `gitLabPath`,
+- `systems`, `runtimeComponents`, `boundedContexts`, `processes`,
+  `integrations`,
+- `packagePrefixes`, `endpointPrefixes`, `modulePaths`,
+- `codeSearchScopes[].target.type/id`, repository roles, package prefixes,
+  class hints i traversal guidance.
 
-## GitLab tool reason
+Preferuj jeden catalog call na poczatku cross-repository investigation. Nie
+powtarzaj go, chyba ze nowe evidence wskazuje inna rodzine repozytoriow.
 
-Every GitLab tool call must include the optional `reason` argument.
+## `reason` Dla GitLab Tooli
 
-Write `reason` in Polish as one short, practical sentence for a junior analyst.
-Explain what the tool call is meant to verify or clarify.
-Do not include hidden reasoning, long analysis, or step-by-step deliberation.
+Kazdy GitLab tool call musi miec opcjonalny argument `reason`.
 
-Good examples:
+Pisz `reason` po polsku jako jedno krotkie praktyczne zdanie dla junior
+analityka. Wyjasnij, co tool call ma potwierdzic albo doprecyzowac. Nie
+umieszczaj hidden reasoning, dlugiej analizy ani chain-of-thought.
+
+Dobre przyklady:
 
 - `Sprawdzam fragment metody ze stacktrace, zeby potwierdzic predykat repozytorium.`
 - `Szukam uzyc klasy encji, zeby ustalic gdzie zaczyna sie przeplyw biznesowy.`
 - `Czytam serwis i repozytorium, zeby wyjasnic juniorowi ktory warunek odcina dane.`
 
-## When not to use GitLab tools
+## Kiedy Nie Uzywac GitLab Tooli
 
-The exception is `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED`: when that gap is listed and GitLab tools are enabled, make one focused GitLab attempt to improve `technicalAnalysis`, even if deterministic code evidence already explains the local failure.
+Wyjatek: gdy manifest zawiera `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` i GitLab
+tools sa wlaczone, wykonaj jeden focused GitLab attempt, zeby poprawic
+`technicalAnalysis`, nawet gdy deterministic code evidence tlumaczy lokalna
+awarie.
 
-Do not call GitLab tools when:
+Nie wywoluj GitLab tools, gdy:
 
-- attached deterministic code evidence already contains the relevant stack frame, surrounding method, direct collaborator and enough flow context for the technical handoff, and `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is not listed;
-- the logs, runtime signals and attached code evidence already explain both:
-    - the likely issue,
-    - and the technical handoff location / broader flow, and `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is not listed;
-- the incident is clearly outside repository visibility;
-- another tool type is more direct for the current hypothesis, for example DB tools for a concrete data check.
+- deterministic code evidence zawiera istotny stack frame, surrounding method,
+  direct collaborator i wystarczajacy flow context dla technical handoff, a
+  `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` nie jest listed,
+- logs, runtime signals i code evidence juz wyjasniaja prawdopodobny problem
+  oraz lokalizacje/handoff, a luka GitLab nie jest listed,
+- incydent jest wyraznie poza widocznoscia repozytorium,
+- inny tool jest bardziej bezposredni dla hipotezy, np. DB tools dla
+  konkretnego data check.
 
-If the likely technical error is clear but `technicalAnalysis` would remain shallow, use GitLab tools to read enough surrounding code to explain the flow and handoff.
+Jesli blad techniczny jest jasny, ale `technicalAnalysis` byloby zbyt plytkie,
+uzyj GitLab tools, aby doczytac tyle surrounding code, ile potrzeba do
+wyjasnienia flow i handoffu.
 
-## Exploration goal
+## Cel Eksploracji
 
-The goal is not to map the whole repository.
+Celem nie jest zmapowanie calego repozytorium.
 
-The goal is to understand the smallest useful cross-file and, when relevant, cross-repository flow that explains:
+Celem jest najmniejsze przydatne cross-file i, gdy potrzebne, cross-repository
+flow, ktore wyjasnia:
 
-- where the incident starts,
-- which component receives or creates the failing operation,
-- where the failing method sits,
-- what data or request enters that method,
-- which repository, mapper, validator, integration client, listener, scheduler or outbox handler participates,
-- where the incident interrupts the function,
-- what a beginner or mid-level analyst should verify next,
-- which team or owner may need to receive the handoff when evidence supports it.
+- gdzie incydent sie zaczyna,
+- ktory komponent odbiera albo tworzy failing operation,
+- gdzie lezy failing method,
+- jakie dane albo request wchodza do tej metody,
+- ktore repository, mapper, validator, integration client, listener, scheduler
+  albo outbox handler uczestniczy,
+- gdzie incydent przerywa funkcje,
+- co beginner albo mid-level analyst powinien sprawdzic dalej,
+- ktory team albo owner moze dostac handoff, jesli evidence to wspiera.
 
-## Technical analysis grounding
+## Ugruntowanie Technical Analysis
 
-If `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` is listed in the manifest and GitLab tools are enabled, make a focused GitLab exploration attempt before the final answer.
+Gdy manifest zawiera `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` i GitLab tools sa
+wlaczone, wykonaj focused GitLab exploration przed finalna odpowiedzia.
 
-Use the attempt to write a concrete `technicalAnalysis` in Technical Handoff v1.
-The handoff should explain:
+Uzyj tej proby, aby napisac konkretne `technicalAnalysis` zgodne z Technical
+Handoff v1. Handoff powinien wyjasnic:
 
-- what capability or operation is affected,
-- what starts it,
-- what data or business object is being handled,
-- which application components participate at a high level,
-- where the incident interrupts the flow,
-- whether the impact is read, write, validation, async processing, integration or handoff.
+- jaka capability albo operacja jest dotknieta,
+- co ja uruchamia,
+- jakie dane albo obiekt biznesowy sa obslugiwane,
+- jakie komponenty aplikacyjne uczestnicza wysokopoziomowo,
+- gdzie incydent przerywa flow,
+- czy impact dotyczy read, write, validation, async processing, integration
+  albo handoff.
 
-Do not turn `technicalAnalysis` into a raw code dump.
-Mention classes, methods, files and repositories as precise handoff evidence.
+Nie zamieniaj `technicalAnalysis` w dump kodu. Wspominaj klasy, metody, pliki i
+repozytoria jako precyzyjne evidence handoffu.
 
-If the GitLab attempt finds no useful flow context, stop and state that limitation.
+Jesli GitLab attempt nie znajduje uzytecznego flow contextu, zatrzymaj sie i
+napisz limitation.
 
-## Tool order
+## Kolejnosc Tooli
 
-1. Prefer attached deterministic GitLab evidence.
-2. Use `gitlab_list_available_repositories` when projectName/GitLab path is unclear and evidence contains only loose repository, system, module, package, endpoint, integration, or bounded-context clues.
-3. If operational context lists `codeSearchScopes` or multiple `codeSearchProjects` for the matched semantic target, use those projects as one implementation scope before treating a class as missing.
-4. Use `gitlab_search_repository_candidates` when project/file is unclear or you need broad cross-repository candidates after using available catalog clues.
-5. Use `gitlab_find_class_references` when an exception, stacktrace, entity, repository, DTO or mapper class is grounded and you need files that declare, import or directly use that class.
-6. When `gitlab_find_class_references` returns no useful result for the main project, retry once across the other operational-context projects for that component.
-7. Use `gitlab_find_flow_context` when the local failure is known but the broader flow or collaborators are unclear; pass focused `keywords` grounded in logs, stacktrace, code evidence or current tool results.
-8. Use `gitlab_read_repository_file_outline` before full file reads when you need to understand a file role cheaply.
-9. Use `gitlab_read_repository_file_chunk` or `gitlab_read_repository_file_chunks` before full file reads.
-10. Use `gitlab_read_repository_file` only when:
-    - the file is short,
-    - the chunk is insufficient,
-    - class-level context is necessary,
-    - or the broader flow cannot be understood from chunks/outlines.
+1. Preferuj attached deterministic GitLab evidence.
+2. Uzyj `gitlab_list_available_repositories`, gdy projectName/GitLab path jest
+   niejasny, a evidence zawiera luzne clues systemu, modułu, endpointu,
+   integracji albo bounded contextu.
+3. Jesli operational context listuje `codeSearchScopes` albo kilka
+   `codeSearchProjects`, uzyj ich jako jednego implementation scope.
+4. Uzyj `gitlab_search_repository_candidates`, gdy project/file jest niejasny
+   albo potrzebujesz ranked candidates.
+5. Uzyj `gitlab_find_class_references`, gdy exception, stacktrace, entity,
+   repository, DTO albo mapper class jest ugruntowana.
+6. Gdy class references nic nie daja w main project, sprobuj raz po pozostalych
+   projektach z operational-context scope.
+7. Uzyj `gitlab_find_flow_context`, gdy znasz lokalna awarie, ale broader flow
+   albo collaborators sa niejasni; przekaz focused `keywords` z evidence.
+8. Uzyj `gitlab_read_repository_file_outline` przed full read.
+9. Uzywaj `gitlab_read_repository_file_chunk` albo
+   `gitlab_read_repository_file_chunks` przed full file.
+10. Uzyj `gitlab_read_repository_file` tylko gdy plik jest krotki, chunk nie
+    wystarcza, potrzebny jest class-level context albo broader flow nie da sie
+    zrozumiec z chunks/outlines.
 
-If a listed tool is not available in the current session, use the available GitLab tools and state limitations only if they affect the diagnosis.
+Jesli dany tool nie jest dostepny w sesji, uzyj dostepnych GitLab tools i
+opisz limitation tylko wtedy, gdy wplywa na diagnoze.
 
-## Search strategy
+## Strategia Szukania
 
-Use inputs inferred from evidence:
+Uzywaj inputow wynikajacych z evidence:
 
 - stacktrace class names,
 - exception names,
 - repository method names,
 - entity names,
 - DTO names,
-- endpoint or operation names,
+- endpoint albo operation names,
 - queue/topic/message names,
 - downstream client names,
 - service/container/project hints,
-- operational-context `codeSearchScopes`, `codeSearchProjects`, repository `project`, package roots and class hints,
-- available repository catalog signals such as aliases, systems, bounded contexts, package prefixes, endpoint prefixes and module paths,
-- business identifiers from logs.
+- operational-context `codeSearchScopes`, `codeSearchProjects`, repository
+  `project`, package roots i class hints,
+- repository catalog signals, np. aliases, systems, bounded contexts, package
+  prefixes, endpoint prefixes, module paths,
+- business identifiers z logow.
 
-Search broadly enough to find the relevant project and direct collaborators, but do not read every candidate.
+Szukaj wystarczajaco szeroko, zeby znalezc istotny project i direct
+collaborators, ale nie czytaj kazdego kandydata.
 
-Prefer ranked candidates and role hints over blind full-file reads.
+Preferuj ranked candidates i role hints zamiast slepych full-file reads.
 
-## Exception -> entity/repository -> DB targeting
+## Exception -> Entity/Repository -> DB Targeting
 
-When the incident suggests a JPA, repository or data issue, do not jump straight into broad DB discovery.
+Gdy incydent sugeruje JPA, repository albo data issue, nie zaczynaj od broad DB
+discovery.
 
-Instead:
+Najpierw:
 
-1. Ground the class from logs, stacktrace or deterministic evidence:
+1. Ugruntuj klase z logs, stacktrace albo deterministic evidence:
    - entity,
    - repository,
    - DTO,
    - mapper,
    - validator,
    - service.
-2. If the project is unclear, use `gitlab_list_available_repositories` first when loose repository or component clues are available, then use `gitlab_search_repository_candidates` with all `projectName` values from the selected `codeSearchScope` or repository set.
-3. If the class is grounded, use `gitlab_find_class_references` with:
-   - the fully qualified class name when known,
-   - the simple class name,
-   - hints such as `@Entity`, `@Table`, `@Query`, `JpaRepository`, `JoinColumn`, `mappedBy`, repository method names, business keys or exception names.
-4. Read the entity/repository files with outline or focused chunks.
-5. Only then drive DB tools with the code-derived table, column and relation hints.
+2. Jesli project jest niejasny, uzyj `gitlab_list_available_repositories`, a
+   potem `gitlab_search_repository_candidates` z `projectName` z wybranego
+   scope.
+3. Jesli klasa jest ugruntowana, uzyj `gitlab_find_class_references` z:
+   - FQCN, gdy znany,
+   - simple class name,
+   - hintami typu `@Entity`, `@Table`, `@Query`, `JpaRepository`,
+     `JoinColumn`, `mappedBy`, repository method names, business keys albo
+     exception names.
+4. Czytaj entity/repository files przez outline albo focused chunks.
+5. Dopiero potem kieruj DB tools kodowymi hintami table, column i relation.
 
-If `DB_CODE_GROUNDING_NEEDED` is listed in the manifest, treat this as a required attempt before DB table/column discovery whenever GitLab tools are available.
+Gdy manifest zawiera `DB_CODE_GROUNDING_NEEDED`, potraktuj to jako wymagana
+probe przed DB table/column discovery, jesli GitLab tools sa dostepne.
 
-If the attempt does not find an entity or repository, do not keep browsing indefinitely.
-Move to DB discovery as fallback and make the limitation visible in the DB tool `reason`.
+Jesli nie znajdziesz entity albo repository, nie przegladaj bez konca.
+Przejdz do DB discovery jako fallback i uwidocznij limitation w DB `reason`.
 
-Use this sequence especially for:
+## Chunk-First Reading Strategy
 
-- `EntityNotFoundException`,
-- `JpaObjectRetrievalFailureException`,
-- repository empty-result behavior,
-- missing dictionary/reference data,
-- orphan relation symptoms,
-- unexpected join/filter behavior.
+Zacznij od najbardziej ugruntowanego miejsca:
 
-## Chunk-first reading strategy
-
-Start from the most grounded location:
-
-- stacktrace file and line,
-- class name from logs,
-- method name from exception,
+- stacktrace file i line,
+- class name z logow,
+- method name z exception,
 - repository method name,
 - endpoint/controller/service name,
-- deterministic candidate from attached evidence.
+- deterministic candidate z evidence.
 
-Read outward in this order:
+Czytaj na zewnatrz w tej kolejnosci:
 
-1. failing method or stack frame area,
+1. failing method albo okolica stack frame,
 2. containing class/service method,
 3. direct collaborator:
-    - repository,
-    - mapper,
-    - validator,
-    - facade,
-    - gateway,
-    - downstream client,
-    - scheduler,
-    - listener,
-    - outbox/event handler,
-4. one or two direct upstream/downstream steps if they materially improve the explanation for a beginner analyst,
-5. related repository/component only when the current evidence indicates a cross-component flow or handoff.
+   - repository,
+   - mapper,
+   - validator,
+   - facade,
+   - gateway,
+   - downstream client,
+   - scheduler,
+   - listener,
+   - outbox/event handler,
+4. jeden albo dwa upstream/downstream kroki, gdy realnie poprawiaja wyjasnienie,
+5. powiazane repo/component tylko gdy evidence wskazuje cross-component flow
+   albo handoff.
 
-## What to extract from code
+## Co Wyciagac Z Kodu
 
-When reading code, extract only what helps the diagnosis and final UX:
+Wyciagaj tylko to, co pomaga diagnozie i finalnemu UX:
 
-- method name and responsibility,
-- entry point or trigger,
+- nazwa metody i odpowiedzialnosc,
+- entry point albo trigger,
 - repository predicate,
-- derived Spring Data query intent from method names such as `findBy...AndStatus...`,
-- explicit `@Query` predicates when present,
+- sens Spring Data query z method names typu `findBy...AndStatus...`,
+- jawne `@Query` predicates,
 - entity/table/field names,
-- JPA annotations such as `@Entity`, `@Table`, `@Column`, `@JoinColumn`, `@JoinTable`, `mappedBy`, `@Embeddable`, `@ElementCollection`,
-- ID or business key used,
+- JPA annotations: `@Entity`, `@Table`, `@Column`, `@JoinColumn`,
+  `@JoinTable`, `mappedBy`, `@Embeddable`, `@ElementCollection`,
+- ID albo business key,
 - tenant/context/status filters,
-- soft-delete or validity filters,
+- soft-delete albo validity filters,
 - integration endpoint/client,
 - async message/event type,
 - error handling path,
-- classes importing the grounded entity/repository and what role they play,
+- klasy importujace entity/repository i ich role,
 - direct collaborators,
-- ownership hints if grounded.
+- ownership hints, jesli sa ugruntowane.
 
-## Repository predicate analysis
+## Analiza Predykatu Repozytorium
 
-When the incident involves "not found", empty result, entity lookup, data filtering, or repository failure, identify:
+Przy "not found", empty result, entity lookup, data filtering albo repository
+failure zidentyfikuj:
 
 - direct key predicate,
 - business key predicate,
-- query-derivation parts from repository method names,
+- query-derivation z repository method name,
 - tenant/context predicate,
 - status/state predicate,
 - soft-delete predicate,
 - validity-date predicate,
 - type/discriminator predicate,
-- joins or relation loading,
-- the entity and relation annotations that suggest which tables and links DB tools should verify.
+- joins albo relation loading,
+- entity/relation annotations sugerujace tabele i linki do DB tools.
 
-This information should guide DB/data diagnostics.
+Te informacje maja prowadzic DB/data diagnostics.
 
-## Broader flow explanation
+## Wyjasnienie Szerszego Flow
 
-If the failing method is only a local step, explain the surrounding flow.
+Jesli failing method jest tylko lokalnym krokiem, wyjasnij surrounding flow.
 
-For example:
+Przyklady:
 
 - controller/request handler -> service -> repository,
 - listener/scheduler -> service -> outbox table -> downstream call,
 - validator -> dictionary/reference lookup -> save,
 - facade -> mapper -> downstream client.
 
-Do not describe the whole system.
-Describe the smallest broader flow that helps a new analyst understand the incident.
+Nie opisuj calego systemu. Opisz najmniejsze broader flow, ktore pomaga nowemu
+analitykowi zrozumiec incydent.
 
-## Stop conditions
+## Warunki Zatrzymania
 
-Stop reading code when:
+Zatrzymaj czytanie kodu, gdy:
 
-- the likely failure point is clear,
-- the repository predicate or integration call is understood,
-- the affected operation and flow can be explained to a newcomer,
-- the direct upstream/downstream collaborator is clear enough for handoff,
-- further reads would be speculative,
-- or the remaining question requires DB/runtime/downstream visibility rather than more code.
+- likely failure point jest jasny,
+- repository predicate albo integration call jest zrozumialy,
+- affected operation i flow da sie wyjasnic newcomerowi,
+- direct upstream/downstream collaborator jest wystarczajaco jasny dla handoffu,
+- dalsze read bylyby spekulacyjne,
+- pozostale pytanie wymaga DB/runtime/downstream visibility, nie wiecej kodu.
 
-Do not stop only because the local exception is clear.
-Stop when both the technical failure and the affected flow are clear enough.
+Nie zatrzymuj sie tylko dlatego, ze lokalny exception jest jasny. Zatrzymaj sie
+dopiero, gdy techniczna awaria i affected flow sa wystarczajaco jasne.
 
-## Context budget
+## Budzet Kontekstu
 
-Tool call count is less important than context quality.
+Liczba tool calli jest mniej wazna niz jakosc kontekstu.
 
-It is acceptable to perform broader GitLab exploration when it materially improves `technicalAnalysis`, handoff, or next action.
+Dopuszczalna jest szersza eksploracja GitLaba, gdy realnie poprawia
+`technicalAnalysis`, handoff albo next action.
 
-Prefer:
+Preferuj:
 
-- more ranked candidate searches,
+- ranked candidate searches,
 - file outlines,
 - focused chunks,
-- small batches of related chunks,
+- male batches powiazanych chunks,
 
-over:
+zamiast:
 
-- many large full-file reads,
-- repeated reads of the same file,
-- reading unrelated candidates,
-- dumping code into the final answer.
+- wielu duzych full-file reads,
+- powtarzanych odczytow tego samego pliku,
+- czytania niepowiazanych kandydatow,
+- dumpowania kodu do finalnej odpowiedzi.
 
 ## Grounding
 
-When describing code behavior, mention the supporting class, method, file, or tool result.
+Gdy opisujesz zachowanie kodu, wspomnij wspierajaca klase, metode, plik albo
+tool result.
 
-If code context remains incomplete, state that limitation instead of guessing.
+Jesli code context pozostaje niepelny, napisz limitation zamiast zgadywac.

@@ -126,8 +126,9 @@ Preparation obejmuje:
 
 - wyliczenie `CopilotIncidentEvidenceCoverageReport`,
 - zbudowanie `CopilotIncidentToolAccessPolicy`,
-- zaladowanie runtime skills, w tym incidentowego playbooka operational
-  context tools,
+- zaladowanie runtime skills, z `incident-analysis-orchestrator` jako
+  preferowanym starterem diagnostyki oraz dedykowanymi skillami kontraktu
+  wyniku i narzedzi,
 - zbudowanie platformowego requestu sesji,
 - dekorowanie opisow tools,
 - wyrenderowanie manifestu, digestu i evidence artifacts z efektywna lista

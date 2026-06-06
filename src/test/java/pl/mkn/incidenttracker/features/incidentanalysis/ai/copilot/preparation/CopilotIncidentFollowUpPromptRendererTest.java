@@ -78,11 +78,12 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("Co sprawdzic dalej?"));
         assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
         assertTrue(prompt.contains("The built-in `skill` tool is enabled for runtime skills."));
-        assertTrue(prompt.contains("Use it to load available incident runtime skills from `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames` whenever the latest user request depends on skill rules or asks about skill definitions."));
+        assertTrue(prompt.contains("For follow-up diagnosis or reassessment, start by loading `incident-analysis-orchestrator`"));
         assertTrue(prompt.contains("If the user asks what skills are available or where a skill definition came from, answer only after using the `skill` tool"));
         assertTrue(prompt.contains("load `incident-technical-handoff` through the `skill` tool when available and answer directly in Markdown using `Technical Handoff v1`"));
         assertTrue(prompt.contains("Runtime skills:"));
-        assertTrue(prompt.contains("preferred skills to load when relevant to the latest user request: incident-analysis-core, incident-functional-analysis, incident-technical-handoff"));
+        assertTrue(prompt.contains("starter skill for diagnosis/reassessment: `incident-analysis-orchestrator`"));
+        assertTrue(prompt.contains("preferred skills to load when relevant to the latest user request: incident-analysis-orchestrator, incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("A technical handoff must keep the required section order"));
         assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch."));
         assertTrue(prompt.contains("- Operational context catalog: browse or search reusable catalog context"));

@@ -83,10 +83,11 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals"));
         assertTrue(prompt.contains("Operational Context tools provide catalog context"));
         assertTrue(prompt.contains("The built-in `skill` tool is enabled for runtime skills."));
-        assertTrue(prompt.contains("Before the final answer, use it to load available incident runtime skills listed in `00-incident-manifest.json` under `runtimeSkills.preferredSkillNames`."));
+        assertTrue(prompt.contains("At the start of the initial diagnosis, load the starter skill `incident-analysis-orchestrator`"));
         assertTrue(prompt.contains("Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session."));
         assertTrue(prompt.contains("Runtime skills:"));
-        assertTrue(prompt.contains("preferred skills to load before the final answer: incident-analysis-core, incident-functional-analysis, incident-technical-handoff"));
+        assertTrue(prompt.contains("starter skill to load before classifying the incident: `incident-analysis-orchestrator`"));
+        assertTrue(prompt.contains("preferred skills to load before the final answer: incident-analysis-orchestrator, incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
         assertTrue(prompt.contains("Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a targeted gap for `functionalAnalysis`"));
         assertTrue(prompt.contains("Treat `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` as a targeted gap for `technicalAnalysis`"));

@@ -56,6 +56,10 @@ Przed wieksza zmiana zacznij od:
     provider,
   - AI-guided fetching przez tools.
 - Skill Copilota jest runtime resource aplikacji, nie plikiem w `.github`.
+- Runtime skille Copilota w `src/main/resources/copilot/skills` utrzymuj po
+  polsku. Nazwy skilli, nazwy tooli, pola JSON, klasy, endpointy i inne
+  identyfikatory techniczne zostaja w oryginalnym brzmieniu, ale opisy,
+  procedury, playbooki, przyklady i zasady pisz po polsku.
 - Publiczny wynik initial incident analysis ma aktualny kontrakt:
   `detectedProblem`, `affectedProcess`, `affectedBoundedContext`,
   `affectedTeam`, `functionalAnalysis`, `technicalAnalysis`, `confidence`,
@@ -258,6 +262,8 @@ Zasady granic:
 - Rozdziel strategie od danych konkretnego feature'a.
 - Prompt ma niesc dane danego feature'a, a nie zalozenia platformy.
 - Skill ma niesc stale zasady pracy z tools i evidence.
+- Skill runtime ma byc po polsku, z zachowaniem technicznych identyfikatorow
+  kontraktow, tooli i kodu.
 
 ### Gdy dodajesz nowy feature analityczny
 

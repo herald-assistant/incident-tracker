@@ -33,6 +33,9 @@ neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
   `integrations`, `shared` ani `common`.
 - Prompt ma niesc dane konkretnego incydentu. Stale zasady pracy z toolami i
   evidence trzymaj w skillu albo incident preparation.
+- Runtime skille w `src/main/resources/copilot/skills` utrzymuj po polsku.
+  Zostawiaj bez tlumaczenia tylko identyfikatory techniczne: nazwy skilli,
+  tooli, pol JSON, klas, metod, endpointow, plikow i kontraktow.
 - Initial response contract nie ma kompatybilnosci wstecznej ze starymi polami:
   nie dodawaj `summary`, `recommendedAction`, `rationale`, `affectedFunction`
   ani `evidenceReferences`.

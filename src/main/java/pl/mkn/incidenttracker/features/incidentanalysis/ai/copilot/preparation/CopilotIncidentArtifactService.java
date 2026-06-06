@@ -237,9 +237,13 @@ public class CopilotIncidentArtifactService {
         payload.put("skillToolAvailable", skillToolAvailable);
         payload.put("skillDirectoriesConfigured", skillDirectoriesConfigured);
         payload.put("skillDirectoryCount", sessionConfigRequest != null ? sessionConfigRequest.skillDirectories().size() : 0);
+        payload.put("starterSkillName", skillToolAvailable
+                ? CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME
+                : null);
         payload.put("preferredSkillNames", skillToolAvailable
                 ? CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES
                 : List.of());
+        payload.put("loadStarterBeforeDiagnosis", skillToolAvailable);
         payload.put("loadBeforeFinalAnswer", skillToolAvailable);
         payload.put("claimSkillContentsOnlyAfterSkillToolCall", true);
         payload.put("doNotReadSkillFilesFromFilesystem", true);
