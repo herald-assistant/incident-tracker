@@ -83,7 +83,8 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("load `incident-technical-handoff` through the `skill` tool when available and answer directly in Markdown using `Technical Handoff v1`"));
         assertTrue(prompt.contains("Runtime skills:"));
         assertTrue(prompt.contains("starter skill for diagnosis/reassessment: `incident-analysis-orchestrator`"));
-        assertTrue(prompt.contains("preferred skills to load when relevant to the latest user request: incident-analysis-orchestrator, incident-functional-analysis, incident-technical-handoff"));
+        assertTrue(prompt.contains("diagnostic skills to load only when needed for new diagnosis: incident-operational-context-tools, incident-analysis-gitlab-tools, incident-data-diagnostics"));
+        assertTrue(prompt.contains("result skills to load for handoff/report/final synthesis: incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("A technical handoff must keep the required section order"));
         assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch."));
         assertTrue(prompt.contains("- Operational context catalog: browse or search reusable catalog context"));

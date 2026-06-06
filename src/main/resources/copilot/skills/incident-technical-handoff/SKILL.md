@@ -328,175 +328,33 @@ brakujace kroki.
 | <artifact/tool/code/log/db/opctx> | <id/path> | <jak zostal uzyty> |
 ````
 
-## Wskazowki Dla Sekcji
+## Quality Gate
 
-### Tytul
+Przed oddaniem handoffu sprawdz:
 
-Tytul powinien wskazywac objaw i prawdopodobny obszar awarii.
+- tytul wskazuje objaw i prawdopodobny obszar, nie tylko "blad",
+- streszczenie jest zrozumiale bez stacktrace,
+- severity wynika z impactu i powtarzalnosci, nie z tonu exceptiona,
+- lokalizacja techniczna pozwala odbiorcy zaczac od konkretnego file/method,
+  table/key, endpoint, pod/config albo downstream boundary,
+- root cause opisuje mechanizm, nie tylko exception,
+- kazde mocne twierdzenie ma evidence albo jest oznaczone jako hipoteza,
+- rekomendacja mowi kto/co/gdzie/jak zweryfikowac,
+- testy sa konkretne dla warstwy: unit/API/DB/runtime/manual,
+- ograniczenia mowia, czego nie zweryfikowano i jaki dowod jest potrzebny,
+- Definition of Done pozwala potwierdzic fix albo prawidlowy handoff.
 
-Dobre:
+Dopasuj akcje do odbiorcy:
 
-- `ClassCastException: LocalDateTime -> LocalDate w MisFactoringRepositoryImpl`
-- `EntityNotFoundException przy pobieraniu aktywnego limitu klienta`
-- `Timeout downstream podczas synchronizacji statusu platnosci`
+- `Developer`: file/method, oczekiwana zmiana, edge cases, testy.
+- `QA / Tester`: reproduction path, input, expected result, regresja.
+- `DevOps / Platform`: namespace/pod/service/image/config/metric/log check.
+- `Data / DBA`: application scope, table/column/key/predicate, data correction.
+- `Partner / Other Team`: system/integration, evidence package, konkretne
+  pytanie albo oczekiwana odpowiedz.
 
-Slabe:
-
-- `Problem w aplikacji`
-- `Blad`
-- `Do sprawdzenia`
-
-### Streszczenie
-
-Streszczenie musi byc zrozumiale bez czytania stacktrace.
-
-Wspomnij:
-
-- co sie nie udalo,
-- gdzie sie nie udalo,
-- co zostalo dotkniete,
-- czy przyczyna jest potwierdzona czy jest hipoteza,
-- co odbiorca powinien zrobic jako pierwsze.
-
-### Severity
-
-Dobierz severity po impact i powtarzalnosci:
-
-- `krytyczny`: szeroka awaria, ryzyko utraty/uszkodzenia danych, ryzyko
-  bezpieczenstwa albo calkowita niedostepnosc krytycznego procesu.
-- `wysoki`: deterministyczny blocker waznego endpointu/procesu albo brak
-  praktycznego workaroundu.
-- `sredni`: czesciowa degradacja, ograniczony zakres, workaround istnieje albo
-  flow nie jest krytyczny.
-- `niski`: kosmetyczny, rzadki albo o niskim wplywie operacyjnym.
-
-Nie zawyzaj severity bez evidence.
-
-### Lokalizacja Techniczna
-
-Dla developer handoff sekcja ma byc na tyle konkretna, zeby otworzyc wlasciwy
-plik i metode.
-
-Dla QA, DevOps, Data albo Partner handoff zachowaj sekcje, ale podkresl entry
-point, affected service, runtime object, data object, external system albo
-verification target.
-
-### Root Cause
-
-Wyjasnij mechanizm, nie tylko exception.
-
-Dobre:
-
-- `Kod zaklada LocalDate, ale natywne zapytanie Oracle DATE zwraca LocalDateTime.`
-- `Rekord istnieje, ale nie spelnia predykatu status=ACTIVE uzywanego przez repozytorium.`
-
-Slabe:
-
-- `Jest ClassCastException.`
-- `Baza zwraca blad.`
-
-### Dowody
-
-Kazde wazne twierdzenie powinno miec przynajmniej jeden wiersz evidence, gdy
-jest dostepne.
-
-Uzywaj artifact IDs, item IDs, tool result IDs, file paths, class names, log IDs
-albo DB check names.
-
-Nie wklejaj dlugich logow ani calych plikow. Cytuj tylko krotkie identyfikatory
-i streszczaj evidence.
-
-### Proponowana Akcja
-
-Dla `Developer`:
-
-- wskaz file/method,
-- opisz oczekiwana zmiane kodu,
-- wymien edge cases,
-- podaj testy.
-
-Dla `QA / Tester`:
-
-- wskaz reproduction path,
-- input data,
-- expected result,
-- negative/regression cases.
-
-Dla `DevOps / Platform`:
-
-- wskaz namespace/pod/service/image/config/metric/log check,
-- oczekiwany runtime signal,
-- warunek rollbacku albo redeploy, gdy jest ugruntowany.
-
-Dla `Data / DBA`:
-
-- wskaz schema/application scope tylko jezeli jest potwierdzony,
-- table/column/key/predicate do sprawdzenia,
-- masking/readonly oczekiwania,
-- data correction albo ownership check.
-
-Dla `Partner / Other Team`:
-
-- wskaz system/integration,
-- evidence package,
-- dokladne pytanie albo akcje dla odbiorcy,
-- oczekiwana odpowiedz albo potwierdzenie.
-
-### Testy
-
-Preferuj konkretne testy zamiast ogolnego "dodac testy".
-
-Przyklady:
-
-- `MisFactoringRepositoryTest` pokrywa `LocalDateTime`, `LocalDate` i `null`.
-- API test dla `GET /...` zwraca `200` zamiast `500` dla reprodukowanego inputu.
-- DB check potwierdza, ze rekord istnieje i spelnia pelny predykat repozytorium.
-- Log verification potwierdza, ze correlationId nie emituje juz tego samego
-  exceptiona.
-
-### Ograniczenia Diagnostyki
-
-Zawsze wpisz, czego nie zweryfikowano.
-
-Przyklady:
-
-- `Brak bezposredniego dostepu do bazy MIS.`
-- `Dynatrace nie zwrocil danych dla srodowiska dev.`
-- `Nie potwierdzono, czy problem wystepuje na wyzszych srodowiskach.`
-- `Nie znaleziono pelnego upstream flow w dostepnym GitLab scope.`
-
-## Krotki Tryb Handoffu
-
-Jezeli uzytkownik jawnie prosi o krotki handoff, zachowaj sens, ale uzyj
-kompaktowej struktury:
-
-```markdown
-# Technical Handoff v1: <title>
-
-## Cel i odbiorca
-...
-
-## Co sie dzieje
-...
-
-## Gdzie poprawic / sprawdzic
-...
-
-## Evidence
-...
-
-## Oczekiwana akcja
-...
-
-## Weryfikacja
-...
-
-## Ograniczenia
-...
-```
-
-Nie uzywaj krotkiego trybu, chyba ze uzytkownik jawnie prosi o short, concise,
-TL;DR albo krotka wersje.
+Jezeli uzytkownik prosi o krotka wersje, zachowaj ta sama kolejnosc logiczna,
+ale skondensuj tresc zamiast zmieniac kontrakt.
 
 ## Antywzorce
 

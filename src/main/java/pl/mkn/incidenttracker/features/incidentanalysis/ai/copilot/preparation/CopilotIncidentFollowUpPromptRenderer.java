@@ -189,7 +189,8 @@ public class CopilotIncidentFollowUpPromptRenderer {
         if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
             return """
                     - The built-in `skill` tool is enabled for runtime skills. For follow-up diagnosis or reassessment, start by loading `%s` from `00-incident-manifest.json` under `runtimeSkills.starterSkillName`.
-                    - For handoff-only, report-only or narrowly scoped follow-up requests, load the relevant result-contract or diagnostic skill from `runtimeSkills.preferredSkillNames`.
+                    - For diagnostic follow-up requests, load only the relevant skill from `runtimeSkills.diagnosticSkillNames` when a new distinguishing test, grounding or routing step is needed.
+                    - For handoff-only, report-only or narrowly scoped follow-up requests, load the relevant result skill from `runtimeSkills.resultSkillNames`.
                     - Diagnostic-tool restrictions apply to external evidence tools, not to the `skill` tool used for runtime skill loading.
                     - If the user asks what skills are available or where a skill definition came from, answer only after using the `skill` tool; otherwise say the detailed skill contents are not confirmed in this turn.
                     - Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session.
@@ -204,15 +205,17 @@ public class CopilotIncidentFollowUpPromptRenderer {
 
     private String formatRuntimeSkills(CopilotSessionConfigRequest sessionConfigRequest) {
         if (sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable()) {
-            return """
+                return """
                     - built-in tool: `skill`
                     - starter skill for diagnosis/reassessment: `%s`
-                    - preferred skills to load when relevant to the latest user request: %s
+                    - diagnostic skills to load only when needed for new diagnosis: %s
+                    - result skills to load for handoff/report/final synthesis: %s
                     - source: runtime skill directories configured by the backend; do not inspect local paths
                     - if a listed skill is unavailable or disabled, continue with existing evidence and state the limitation only when it affects the answer
                     """.formatted(
                     CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME,
-                    String.join(", ", CopilotIncidentRuntimeSkillNames.PREFERRED_SKILL_NAMES)
+                    String.join(", ", CopilotIncidentRuntimeSkillNames.DIAGNOSTIC_SKILL_NAMES),
+                    String.join(", ", CopilotIncidentRuntimeSkillNames.RESULT_SKILL_NAMES)
             ).trim();
         }
 

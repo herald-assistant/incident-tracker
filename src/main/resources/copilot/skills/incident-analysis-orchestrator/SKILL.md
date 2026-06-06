@@ -118,7 +118,8 @@ Ustal:
 - wlaczone i wylaczone capability groups,
 - dolaczone sekcje evidence,
 - luki diagnostyczne z `evidenceCoverage.gaps`,
-- runtime skille z `runtimeSkills.preferredSkillNames`.
+- runtime skille z `runtimeSkills.diagnosticSkillNames` i
+  `runtimeSkills.resultSkillNames`.
 
 Traktuj artefakty jako podstawowe zrodlo prawdy.
 

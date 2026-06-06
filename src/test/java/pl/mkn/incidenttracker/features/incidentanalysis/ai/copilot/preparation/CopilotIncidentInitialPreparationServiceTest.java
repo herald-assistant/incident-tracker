@@ -153,7 +153,8 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session."));
             assertTrue(prompt.contains("Runtime skills:"));
             assertTrue(prompt.contains("starter skill to load before classifying the incident: `incident-analysis-orchestrator`"));
-            assertTrue(prompt.contains("preferred skills to load before the final answer: incident-analysis-orchestrator, incident-functional-analysis, incident-technical-handoff"));
+            assertTrue(prompt.contains("diagnostic skills to load only when required by the starter algorithm: incident-operational-context-tools, incident-analysis-gitlab-tools, incident-data-diagnostics"));
+            assertTrue(prompt.contains("result skills to load after diagnosis for final answer synthesis: incident-functional-analysis, incident-technical-handoff"));
             assertTrue(prompt.contains("Use tools only for evidence gaps listed in `evidenceCoverage.gaps`"));
             assertTrue(prompt.contains("Do not use tools just because they are available."));
             assertTrue(prompt.contains("GitLab, Elasticsearch, Operational Context and Database tools are coverage-aware"));
@@ -212,10 +213,16 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(manifestContent.contains("\"skillToolAvailable\" : true"));
             assertTrue(manifestContent.contains("\"skillDirectoriesConfigured\" : true"));
             assertTrue(manifestContent.contains("\"starterSkillName\" : \"incident-analysis-orchestrator\""));
-            assertTrue(manifestContent.contains("\"preferredSkillNames\""));
-            assertTrue(manifestContent.contains("\"incident-analysis-orchestrator\""));
+            assertTrue(manifestContent.contains("\"diagnosticSkillNames\""));
+            assertTrue(manifestContent.contains("\"resultSkillNames\""));
+            assertTrue(manifestContent.contains("\"incident-operational-context-tools\""));
+            assertTrue(manifestContent.contains("\"incident-analysis-gitlab-tools\""));
+            assertTrue(manifestContent.contains("\"incident-data-diagnostics\""));
             assertTrue(manifestContent.contains("\"incident-functional-analysis\""));
+            assertTrue(manifestContent.contains("\"incident-technical-handoff\""));
             assertTrue(manifestContent.contains("\"loadStarterBeforeDiagnosis\" : true"));
+            assertTrue(manifestContent.contains("\"loadDiagnosticSkillsOnlyWhenRequired\" : true"));
+            assertTrue(manifestContent.contains("\"loadResultSkillsAfterDiagnosis\" : true"));
             assertTrue(manifestContent.contains("\"claimSkillContentsOnlyAfterSkillToolCall\" : true"));
             assertTrue(manifestContent.contains("\"evidenceCoverage\""));
             assertTrue(manifestContent.contains("\"gitLab\" : \"DIRECT_COLLABORATOR_ATTACHED\""));

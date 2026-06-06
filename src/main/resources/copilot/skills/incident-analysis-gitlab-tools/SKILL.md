@@ -247,192 +247,76 @@ flow, ktore wyjasnia:
 - co beginner albo mid-level analyst powinien sprawdzic dalej,
 - ktory team albo owner moze dostac handoff, jesli evidence to wspiera.
 
-## Ugruntowanie Technical Analysis
+## Focused Code Exploration
 
-Gdy manifest zawiera `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` i GitLab tools sa
-wlaczone, wykonaj focused GitLab exploration przed finalna odpowiedzia.
+Gdy manifest zawiera `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` albo
+`DB_CODE_GROUNDING_NEEDED`, wykonaj tylko taka eksploracje, ktora zmienia
+diagnoze, DB targeting albo handoff.
 
-Uzyj tej proby, aby napisac konkretne `technicalAnalysis` zgodne z Technical
-Handoff v1. Handoff powinien wyjasnic:
+Preferowana kolejnosc:
 
-- jaka capability albo operacja jest dotknieta,
-- co ja uruchamia,
-- jakie dane albo obiekt biznesowy sa obslugiwane,
-- jakie komponenty aplikacyjne uczestnicza wysokopoziomowo,
-- gdzie incydent przerywa flow,
-- czy impact dotyczy read, write, validation, async processing, integration
-  albo handoff.
+1. deterministic GitLab evidence,
+2. `gitlab_list_available_repositories` tylko gdy project/scope jest niejasny,
+3. `gitlab_search_repository_candidates` dla ranked project/file candidates,
+4. `gitlab_find_class_references` dla ugruntowanej klasy, entity, repository,
+   DTO, mappera, validatora albo klienta,
+5. `gitlab_find_flow_context` dla direct collaborators i broader flow,
+6. outline/chunk/chunks przed full file,
+7. full file tylko gdy krotki plik albo chunk nie wystarcza.
 
-Nie zamieniaj `technicalAnalysis` w dump kodu. Wspominaj klasy, metody, pliki i
-repozytoria jako precyzyjne evidence handoffu.
+Szukaj po evidence, nie po ciekawosci:
 
-Jesli GitLab attempt nie znajduje uzytecznego flow contextu, zatrzymaj sie i
-napisz limitation.
+- stacktrace class/method, exception, endpoint/operation,
+- entity/repository/DTO/mapper/validator,
+- queue/topic/event, scheduler/listener/outbox,
+- downstream client/path/status,
+- service/container/project i operational-context code-search scope,
+- business key tylko jako pomocniczy clue, nie jako root cause.
 
-## Kolejnosc Tooli
+## Co Zwrocic Z Kodu
 
-1. Preferuj attached deterministic GitLab evidence.
-2. Uzyj `gitlab_list_available_repositories`, gdy projectName/GitLab path jest
-   niejasny, a evidence zawiera luzne clues systemu, modulu, endpointu,
-   integracji albo bounded contextu.
-3. Jesli operational context listuje `codeSearchScopes` albo kilka
-   `codeSearchProjects`, uzyj ich jako jednego implementation scope.
-4. Uzyj `gitlab_search_repository_candidates`, gdy project/file jest niejasny
-   albo potrzebujesz ranked candidates.
-5. Uzyj `gitlab_find_class_references`, gdy exception, stacktrace, entity,
-   repository, DTO albo mapper class jest ugruntowana.
-6. Gdy class references nic nie daja w main project, sprobuj raz po pozostalych
-   projektach z operational-context scope.
-7. Uzyj `gitlab_find_flow_context`, gdy znasz lokalna awarie, ale broader flow
-   albo collaborators sa niejasni; przekaz focused `keywords` z evidence.
-8. Uzyj `gitlab_read_repository_file_outline` przed full read.
-9. Uzywaj `gitlab_read_repository_file_chunk` albo
-   `gitlab_read_repository_file_chunks` przed full file.
-10. Uzyj `gitlab_read_repository_file` tylko gdy plik jest krotki, chunk nie
-    wystarcza, potrzebny jest class-level context albo broader flow nie da sie
-    zrozumiec z chunks/outlines.
+Zwroc do orkiestratora tylko material, ktory wspiera diagnoze:
 
-Jesli dany tool nie jest dostepny w sesji, uzyj dostepnych GitLab tools i
-opisz limitation tylko wtedy, gdy wplywa na diagnoze.
+- entry point, failing method i direct collaborators,
+- repository predicate: key, tenant/context, status/state, deleted/active,
+  validity, type, joins/relation loading,
+- entity/table/column/relation hints dla DB diagnostics,
+- mapper/converter expected vs actual type/value,
+- validator/business rule i warunek odrzucenia,
+- integration client, endpoint, payload mapping, retry/error handling,
+- async listener/scheduler/outbox handler i state transition,
+- file/class/method evidence dla handoffu.
 
-## Strategia Szukania
+Nie formatuj pelnego `technicalAnalysis`; dostarcz material, ktory
+`incident-technical-handoff` moze pozniej zsyntetyzowac.
 
-Uzywaj inputow wynikajacych z evidence:
+## DB Targeting Z Kodu
 
-- stacktrace class names,
-- exception names,
-- repository method names,
-- entity names,
-- DTO names,
-- endpoint albo operation names,
-- queue/topic/message names,
-- downstream client names,
-- service/container/project hints,
-- operational-context `codeSearchScopes`, `codeSearchProjects`, repository
-  `project`, package roots i class hints,
-- repository catalog signals, np. aliases, systems, bounded contexts, package
-  prefixes, endpoint prefixes, module paths,
-- business identifiers z logow.
+Dla JPA/repository/data symptoms nie zaczynaj od broad DB discovery, jezeli kod
+moze ugruntowac table albo predicate.
 
-Szukaj wystarczajaco szeroko, zeby znalezc istotny project i direct
-collaborators, ale nie czytaj kazdego kandydata.
+Minimalny path:
 
-Preferuj ranked candidates i role hints zamiast slepych full-file reads.
+```text
+exception/log class -> entity/repository/mapper/service -> annotations/query
+  -> table/columns/relation/predicate hints -> DB diagnostics
+```
 
-## Exception -> Entity/Repository -> DB Targeting
+Jesli GitLab nie znajduje entity/repository w focused scope, zatrzymaj sie i
+przekaz limitation do DB `reason` zamiast czytac kolejne niepowiazane pliki.
 
-Gdy incydent sugeruje JPA, repository albo data issue, nie zaczynaj od broad DB
-discovery.
+## Flow Do Wyjasnienia
 
-Najpierw:
-
-1. Ugruntuj klase z logs, stacktrace albo deterministic evidence:
-   - entity,
-   - repository,
-   - DTO,
-   - mapper,
-   - validator,
-   - service.
-2. Jesli project jest niejasny, uzyj `gitlab_list_available_repositories`, a
-   potem `gitlab_search_repository_candidates` z `projectName` z wybranego
-   scope.
-3. Jesli klasa jest ugruntowana, uzyj `gitlab_find_class_references` z:
-   - FQCN, gdy znany,
-   - simple class name,
-   - hintami typu `@Entity`, `@Table`, `@Query`, `JpaRepository`,
-     `JoinColumn`, `mappedBy`, repository method names, business keys albo
-     exception names.
-4. Czytaj entity/repository files przez outline albo focused chunks.
-5. Dopiero potem kieruj DB tools kodowymi hintami table, column i relation.
-
-Gdy manifest zawiera `DB_CODE_GROUNDING_NEEDED`, potraktuj to jako wymagana
-probe przed DB table/column discovery, jesli GitLab tools sa dostepne.
-
-Jesli nie znajdziesz entity albo repository, nie przegladaj bez konca.
-Przejdz do DB discovery jako fallback i uwidocznij limitation w DB `reason`.
-
-## Chunk-First Reading Strategy
-
-Zacznij od najbardziej ugruntowanego miejsca:
-
-- stacktrace file i line,
-- class name z logow,
-- method name z exception,
-- repository method name,
-- endpoint/controller/service name,
-- deterministic candidate z evidence.
-
-Czytaj na zewnatrz w tej kolejnosci:
+Czytaj na zewnatrz od najbardziej ugruntowanego miejsca:
 
 1. failing method albo okolica stack frame,
 2. containing class/service method,
-3. direct collaborator:
-   - repository,
-   - mapper,
-   - validator,
-   - facade,
-   - gateway,
-   - downstream client,
-   - scheduler,
-   - listener,
-   - outbox/event handler,
-4. jeden albo dwa upstream/downstream kroki, gdy realnie poprawiaja wyjasnienie,
-5. powiazane repo/component tylko gdy evidence wskazuje cross-component flow
-   albo handoff.
+3. direct collaborator: repository, mapper, validator, gateway, downstream
+   client, listener, scheduler albo outbox handler,
+4. jeden upstream/downstream krok tylko gdy poprawia diagnoze albo handoff.
 
-## Co Wyciagac Z Kodu
-
-Wyciagaj tylko to, co pomaga diagnozie i finalnemu UX:
-
-- nazwa metody i odpowiedzialnosc,
-- entry point albo trigger,
-- repository predicate,
-- sens Spring Data query z method names typu `findBy...AndStatus...`,
-- jawne `@Query` predicates,
-- entity/table/field names,
-- JPA annotations: `@Entity`, `@Table`, `@Column`, `@JoinColumn`,
-  `@JoinTable`, `mappedBy`, `@Embeddable`, `@ElementCollection`,
-- ID albo business key,
-- tenant/context/status filters,
-- soft-delete albo validity filters,
-- integration endpoint/client,
-- async message/event type,
-- error handling path,
-- klasy importujace entity/repository i ich role,
-- direct collaborators,
-- ownership hints, jesli sa ugruntowane.
-
-## Analiza Predykatu Repozytorium
-
-Przy "not found", empty result, entity lookup, data filtering albo repository
-failure zidentyfikuj:
-
-- direct key predicate,
-- business key predicate,
-- query-derivation z repository method name,
-- tenant/context predicate,
-- status/state predicate,
-- soft-delete predicate,
-- validity-date predicate,
-- type/discriminator predicate,
-- joins albo relation loading,
-- entity/relation annotations sugerujace tabele i linki do DB tools.
-
-Te informacje maja prowadzic DB/data diagnostics.
-
-## Wyjasnienie Szerszego Flow
-
-Jesli failing method jest tylko lokalnym krokiem, wyjasnij surrounding flow.
-
-Przyklady:
-
-- controller/request handler -> service -> repository,
-- listener/scheduler -> service -> outbox table -> downstream call,
-- validator -> dictionary/reference lookup -> save,
-- facade -> mapper -> downstream client.
-
-Nie opisuj calego systemu. Opisz najmniejsze broader flow, ktore pomaga nowemu
-analitykowi zrozumiec incydent.
+Nie opisuj calego systemu. Opisz najmniejsze broader flow, ktore pomaga
+zrozumiec divergence point.
 
 ## Warunki Zatrzymania
 

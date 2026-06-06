@@ -155,599 +155,100 @@ Licze rekordy, zeby porownac klucz z pelnym filtrem aplikacji.
 Sprawdzam statusy rekordow powiazanych z correlationId.
 ```
 
-## Model Oracle Application Schema
+## DB Scope I Code-First Targeting
 
-Analizowane srodowiska uzywaja jednej bazy Oracle per environment.
+DB tools sa session-bound: environment i techniczny DB user pochodza z ukrytego
+contextu. Nie podawaj `environment` ani Oracle ownera jako model-facing input.
 
-Aplikacje zwykle posiadaja tabele przez dedykowanych Oracle users/schemas.
-Database tools uzywaja:
-
-- session-bound environment,
-- readonly technical DB user,
-- skonfigurowanego mapowania application/deployment names na Oracle
-  owners/schemas.
-
-Traktuj `schema` jako Oracle owner/application user.
-
-Preferuj application-scoped table discovery:
+Mysl w kategoriach aplikacji/deploymentu, nie schema:
 
 ```text
-application/deployment/container/project name -> configured Oracle owner/schema -> tables/views
+deployment/container/GitLab project -> applicationPattern -> resolved Oracle owner/schema
 ```
 
-Nie pytaj uzytkownika o application name. Wywnioskuj application/deployment
-name z logow, deployment evidence, deterministic GitLab evidence albo manifest
-context.
+Gdy symptom dotyczy JPA, repository lookup, relation traversal albo data
+filtering, najpierw ugruntuj entity/table/predicate w evidence albo kodzie.
+Jesli `DB_CODE_GROUNDING_NEEDED` jest w manifest, przed DB discovery uzyj
+deterministic GitLab evidence albo focused GitLab tool. Fallback discovery jest
+dozwolony tylko po nieudanym albo niedostepnym code grounding i musi to mowic
+w `reason`.
 
-Dobre `applicationPattern`:
+Wyciagaj z kodu tylko to, co prowadzi DB check:
 
-```text
-crm-service
-customer-api
-crm-sync-worker
-crm-case-service
-application container name from logs
-GitLab project name from deterministic evidence
-deployment name from runtime evidence
-```
+- `@Entity`, `@Table`, `@Column`, relation annotations,
+- repository method, derived predicate albo `@Query`,
+- business key, tenant/context, status/state, deleted/active, validity, type,
+  event/correlation identifiers.
 
-Nie przekazuj Oracle schema names, chyba ze poprzedni DB tool result pokazal
-dokladny schema. Model ma zwykle myslec w kategoriach application/deployment,
-nie Oracle owner.
+## Minimalny DB Flow
 
-## Obowiazkowe Code-First Targeting Przed DB Discovery
+Nie przegladaj bazy. Wybierz najmniejszy check, ktory rozroznia hipotezy:
 
-Gdy symptom wskazuje JPA, repository lookup, missing entity, relation traversal
-albo data filtering, najpierw wyprowadz table i relation hints z kodu przed
-broad DB discovery.
+1. `db_get_scope` tylko gdy application/schema scope jest niejasny.
+2. `db_find_tables` / `db_find_columns` tylko dla ranked discovery z
+   `applicationPattern`, `tableNamePattern`, `entityOrKeywordHint` albo field
+   hints.
+3. `db_describe_table` dla jednego najlepszego kandydata, gdy kolumny lub
+   relacje sa niepewne.
+4. `db_exists_by_key` dla direct ID/business key.
+5. `db_count_rows` dla key-only i full-predicate checks.
+6. `db_group_count` dla tenant/status/state/deleted/validity/retry/error
+   distribution.
+7. `db_check_orphans`, `db_find_relationships`, `db_join_count` dla relacji.
+8. `db_sample_rows` tylko po count/group i tylko dla minimalnych technical
+   columns.
+9. `db_compare_table_to_expected_mapping` tylko przy explicit schema/mapping
+   symptoms.
+10. `db_execute_readonly_sql` jako last resort, gdy typed tools nie wystarcza.
 
-Jesli `DB_CODE_GROUNDING_NEEDED` wystepuje w `00-incident-manifest.json`, nie
-zaczynaj `db_find_tables`, `db_find_columns`, `db_describe_table`, row counts
-ani samples z guessed table/column names.
-
-Przed pierwszym DB table/column/schema-table query zrob jedno z:
-
-1. Uzyj deterministic GitLab evidence, jezeli juz pokazuje entity/repository
-   mapping.
-2. Jesli GitLab tools sa dostepne, wykonaj focused GitLab tool call, aby
-   znalezc entity/repository/table mapping.
-3. Jesli code grounding jest niedostepny albo nie znaleziono entity/repository,
-   napisz to w DB `reason` i uzyj DB discovery jako fallbacku.
-
-Fallback jest dozwolony, ale dopiero po code-grounding attempt albo po
-potwierdzeniu, ze nie ma odpowiedniego GitLab toola.
-
-Preferowana sekwencja:
-
-1. Uzyj deterministic GitLab evidence, gdy zawiera grounded entity/repository.
-2. Gdy GitLab tools sa dostepne i klasa jest ugruntowana, uzyj:
-   - `gitlab_find_class_references`,
-   - `gitlab_read_repository_file_outline`,
-   - `gitlab_read_repository_file_chunk` albo
-     `gitlab_read_repository_file_chunks`.
-3. Wyciagnij z kodu:
-   - `@Entity`, `@Table`, `@Column`,
-   - `@JoinColumn`, `@JoinTable`, `mappedBy`,
-   - `@Embeddable`, `@ElementCollection`,
-   - repository method names i derived `findBy...` predicates,
-   - jawne `@Query`,
-   - business keys, tenant/status/deleted/validity filters.
-4. Uzyj code-derived hints do zawezenia:
-   - `applicationPattern`,
-   - `tableNamePattern`,
-   - `entityOrKeywordHint`,
-   - expected columns,
-   - expected relationships.
-
-Nie zgaduj tabeli tylko z etykiety exceptiona, jesli kod moze ja ugruntowac.
-
-Dobry fallback `reason`:
-
-```text
-Nie udalo sie potwierdzic encji w dostepnym kodzie, wiec szukam tabeli po nazwie aplikacji i slowach z bledu.
-```
-
-## Priorytet Data-First
-
-Najpierw sprawdzaj:
-
-1. brakujacy row,
-2. zly key albo business identifier,
-3. zly tenant/context,
-4. zly status/state/lifecycle,
-5. inactive albo soft-deleted row,
-6. row poza validity window,
-7. missing dictionary/reference value,
-8. stale albo orphan reference,
-9. duplicate/non-unique active data,
-10. stuck outbox/event/process state.
-
-Przejdz do schema/mapping tylko gdy:
-
-- logs wspominaja invalid table/column/mapping,
-- jest Liquibase/migration evidence,
-- data checks sa sprzeczne z zachowaniem aplikacji,
-- repository predicate nie da sie zmapowac na DB columns,
-- JPA annotations wygladaja niespojnie z DB metadata.
-
-## Kolejnosc Tooli
-
-Uzywaj tej kolejnosci, chyba ze evidence wyraznie uzasadnia inna:
-
-1. `db_get_scope`
-   - gdy application-to-schema scope, DB alias albo allowed schemas sa niejasne,
-   - zeby zobaczyc application aliases/schemas dla aktualnego environment,
-   - nie wywoluj wielokrotnie.
-
-2. `db_find_tables`
-   - gdy dokladna tabela jest nieznana,
-   - przekaz `applicationPattern` z evidence, gdy to mozliwe,
-   - uzywaj `tableNamePattern` i `entityOrKeywordHint` do ranked candidates.
-
-3. `db_find_columns`
-   - gdy key/filter columns sa nieznane,
-   - przekaz `applicationPattern`,
-   - lokalizuj ID, business key, tenant, status, state, soft-delete, validity,
-     event albo correlation columns.
-
-4. `db_describe_table`
-   - dla najbardziej prawdopodobnej tabeli,
-   - nie opisuj wielu tabel na slepo,
-   - uzyj przed data checks, gdy column names, PK/FK albo relationships sa
-     niepewne.
-
-5. `db_exists_by_key`
-   - dla direct primary key albo business key checks,
-   - najlepszy dla `EntityNotFoundException`, missing dictionary/reference
-     value i direct entity lookup.
-
-6. `db_count_rows`
-   - dla key-only i full-predicate checks,
-   - uzywaj przed samplingiem.
-
-7. `db_group_count`
-   - dla status, state, tenant, type, deleted, active, validity, retry albo
-     error distribution.
-
-8. `db_check_orphans`
-   - dla stale child/parent/reference problems,
-   - preferuj przed recznym joinowaniem.
-
-9. `db_find_relationships`
-   - gdy relation structure jest niejasna,
-   - odrozniaj declared FK relationships od inferred `*_ID` hints.
-
-10. `db_join_count`
-    - dla relation albo repository join checks,
-    - przed `db_join_sample`.
-
-11. `db_join_sample`
-    - tylko po join count, gdy minimalny przyklad jest uzyteczny.
-
-12. `db_sample_rows`
-    - tylko dla malych, jawnych technical projections,
-    - nie uzywaj do browse danych.
-
-13. `db_compare_table_to_expected_mapping`
-    - tylko po data checks albo przy explicit schema/mapping symptoms.
-
-14. `db_execute_readonly_sql`
-    - last resort.
-
-## Application-Scoped Discovery
-
-Dla `db_find_tables` preferuj request:
-
-```text
-db_find_tables(applicationPattern, tableNamePattern, entityOrKeywordHint, limit, reason)
-```
-
-Dla `db_find_columns` preferuj:
-
-```text
-db_find_columns(applicationPattern, tableNamePattern, columnNamePattern, javaFieldNameHint, limit, reason)
-```
-
-Backend rozwiazuje:
-
-```text
-session environment + applicationPattern -> configured Oracle owner/schema
-```
-
-Potem szuka w Oracle metadata dla resolved owner/schema.
-
-Uzywaj `applicationPattern` z:
-
-- deployment name,
-- container name,
-- service name,
-- GitLab project name,
-- stacktrace project/module hint,
-- deterministic deployment evidence,
-- runtime evidence.
-
-Jesli application scope jest niejednoznaczny:
-
-1. wywolaj `db_get_scope`,
-2. wybierz najlepszego application candidate ugruntowanego w evidence,
-3. jesli nadal jest niejasno, uzyj malego discovery query i opisz ambiguity w
-   final technical analysis.
-
-Nie pytaj uzytkownika o application name podczas normalnej analizy incydentu.
-
-## Minimalna Eksploracja DB
-
-Nie przegladaj bazy.
-
-Kazdy DB call ma miec jeden cel:
-
-- Czy row istnieje po ID?
-- Czy istnieje po business key?
-- Czy spelnia pelny predykat aplikacji?
-- Czy jest w innym tenant/context?
-- Czy jest inactive, deleted albo expired?
-- Czy child row wskazuje missing parent?
-- Czy sa duplicate active rows?
-- Czy outbox/event row utknal w failed state?
-
-Preferuj ranked discovery i exact data checks zamiast szerokich dumpow
-metadata.
+Kazdy DB call ma odpowiedziec na jedno pytanie: czy row istnieje, czy spelnia
+pelny predykat, czy jest w innym context/statusie, czy relacja jest orphan, czy
+istnieja duplikaty, albo czy process/event row utknal.
 
 ## Kluczowe Porownanie: Key-Only Vs Full Predicate
 
-Dla "not found", empty result, repository lookup albo entity loading symptoms
-porownaj:
+Dla "not found", empty result, repository lookup albo entity loading porownaj:
 
-1. count po direct key/business key,
-2. count po pelnym predykacie aplikacji.
+| Wynik | Interpretacja | Klasa |
+|---|---|---|
+| `key-only count = 0` | row nie istnieje po kluczu albo scope/table jest bledny | `data_missing` albo visibility gap |
+| `key-only count > 0`, `full-predicate count = 0` | row istnieje, ale odpada przez tenant/status/deleted/validity/type/state | `data_predicate_mismatch` |
+| `full-predicate count > 0`, aplikacja nadal failuje | dane mniej prawdopodobne; sprawdz argumenty, code path, mapping, cache, downstream/runtime | reclass poza data issue |
 
-Interpretacja:
-
-```text
-key-only count = 0
-```
-
-Mozliwe wyjasnienia:
-
-- brak danych testowych,
-- zly ID/business key,
-- zly table candidate,
-- zly application/schema scope,
-- niewystarczajaca DB visibility.
-
-```text
-key-only count > 0
-full-predicate count = 0
-```
-
-Mocne data explanation:
-
-- dane istnieja, ale sa odfiltrowane przez tenant, status, soft-delete,
-  validity, type albo state predicate.
-
-```text
-full-predicate count > 0
-application still fails
-```
-
-Dane sa mniej prawdopodobne. Skup sie na:
-
-- wrong method arguments,
-- wrong code path,
-- mapping/conversion,
-- transaction/cache/staleness,
-- downstream/runtime problem.
-
-## Pattern: EntityNotFound / Missing Entity
-
-Uzywaj dla:
-
-- `EntityNotFoundException`,
-- `JpaObjectRetrievalFailureException`,
-- "Unable to find ... with id ...",
-- lazy-loaded missing entity,
-- missing dictionary/reference entity.
-
-Procedura:
-
-1. Wyciagnij z logs/code:
-   - entity class,
-   - ID albo business key,
-   - parent/child clue,
-   - repository method,
-   - tenant/context,
-   - status/state clue,
-   - application/deployment/container/project name.
-2. Jesli tabela jest niejasna:
-   - uzyj GitLab evidence albo GitLab tools do mapowania entity/repository,
-   - uzyj entity annotations, relation annotations i repository method names
-     jako hints,
-   - uzyj `db_find_tables` z `applicationPattern`,
-   - uzyj `entityOrKeywordHint`,
-   - potem `db_describe_table` dla najlepszego kandydata.
-3. Sprawdz direct existence przez `db_exists_by_key`.
-4. Jesli row brakuje:
-   - sprawdz, czy inna tabela referencjonuje missing ID,
-   - uzyj `db_check_orphans`, gdy znana jest relacja child/parent,
-   - w przeciwnym razie uzyj `db_find_relationships` albo focused code read.
-5. Jesli row istnieje:
-   - uzyj `db_count_rows` z pelnym repository predicate:
-     tenant/context, status/state, soft delete, validity date,
-     type/discriminator, active flag.
-6. Wnioskuj tylko to, co wspiera DB evidence.
-
-Mozliwe wnioski:
-
-- missing test data,
-- stale/orphan reference,
-- row exists but predicate excludes it,
-- wrong tenant/context,
-- inactive/soft-deleted/expired data,
-- DB data looks correct, implementation/runtime issue more likely.
-
-## Pattern: Repository Empty / Business Not Found
-
-Uzywaj dla:
-
-- `Optional.empty`,
-- business 404,
-- "not found" exception z logiki serwisu,
-- repository method returning no rows.
-
-Procedura:
-
-1. Zidentyfikuj repository method i predicates z logs/code.
-2. Wyciagnij filtry:
-   - key,
-   - tenant,
-   - status/state,
-   - type,
-   - soft delete,
-   - validity dates,
-   - active flag,
-   - ownership/context,
-   - joins i relation paths z entity annotations albo method structure.
-3. Zlokalizuj tabele przez `db_find_tables` z `applicationPattern`, jesli
-   trzeba.
-4. Uzyj `db_count_rows` po key only.
-5. Uzyj `db_count_rows` po full predicate.
-6. Uzyj `db_group_count` po status/tenant/deleted/state, jesli full predicate
-   zwraca zero.
-7. `db_sample_rows` tylko dla minimalnych technical columns.
-
-Dobra finalna fraza:
-
-```text
-Rekord istnieje, ale aplikacja go nie widzi, bo nie spelnia predykatu repozytorium: ...
-```
-
-Nie nazywaj tego "missing entity", jesli key-only count dowodzi, ze row
+Nie nazywaj przypadku `data_missing`, jezeli key-only check dowodzi, ze row
 istnieje.
 
-## Pattern: Tenant Albo Context Mismatch
+## Patterny Diagnostyczne
 
-Uzywaj, gdy evidence zawiera tenant, organization, customer context, user
-context, account scope, permission scope albo environment-specific context.
+| Symptom | Minimalny test DB | Wniosek / reclass |
+|---|---|---|
+| `EntityNotFoundException`, missing dictionary/reference | entity/table z kodu -> `db_exists_by_key`; gdy row istnieje, full predicate | brak row -> `data_missing`; row odpada -> `data_predicate_mismatch`; child wskazuje brak parent -> `data_orphan_or_stale_reference` |
+| repository empty / business not found | repository predicate -> key-only count -> full-predicate count -> group by status/tenant/deleted/state | key-only > 0 i full = 0 -> predicate mismatch; full > 0 -> sprawdz code/runtime |
+| tenant/context mismatch | count bez contextu, count z contextem, group by context | dane sa w innym context/tenant niz failing flow |
+| status/lifecycle/soft-delete/validity | count key-only, count z expected state/validity, group by status/state/deleted/active | row istnieje, ale ma zly stan albo validity window |
+| orphan/stale reference | child table + reference column + parent table -> `db_check_orphans` | relation issue potwierdzony tylko przez DB evidence |
+| duplicate/non-unique | count z expected unique/active predicate, group albo minimal sample gdy count > 1 | `data_duplicate_or_non_unique` |
+| async/outbox/process stuck | event/correlation/business ID -> count -> group by state/error/retry -> minimal sample | `async_or_process_state`; last error moze przekierowac do downstream/runtime |
+| cross-application reference data | primary application first; related application tylko gdy evidence to wspiera | utrzymuj limitation albo handoff, nie skanuj wszystkich schemas |
 
-Procedura:
-
-1. Wyciagnij tenant/context uzyty przez failing flow.
-2. Zlokalizuj relevant table.
-3. Count by business key bez tenant/context.
-4. Count by business key z tenant/context.
-5. Group by tenant/context, jesli trzeba.
-6. Sample tylko minimal columns, jesli trzeba.
-
-Interpretacja:
-
-```text
-count without tenant > 0
-count with tenant = 0
-```
-
-Prawdopodobny wniosek:
-
-```text
-Dane istnieja, ale w innym kontekscie niz uzyty przez aplikacje.
-```
-
-## Pattern: Status, Lifecycle, Soft Delete Albo Validity Mismatch
-
-Uzywaj, gdy evidence wspomina status, state, active/inactive, deleted flag,
-validity dates, lifecycle transition albo current version.
-
-Procedura:
-
-1. Ustal expected state z code/logs.
-2. Zlokalizuj key/status columns przez `db_find_columns`, jesli trzeba.
-3. Count by key only.
-4. Count by key + expected status/state/active/validity predicate.
-5. Group by status/state/deleted/active.
-6. Sample minimal technical columns, jesli trzeba:
-   ID, business key, tenant/context, status/state, deleted/active, validity
-   dates, updated timestamp.
-
-Mozliwe wnioski:
-
-- row exists but has wrong status/state,
-- row exists but is inactive albo soft-deleted,
-- row exists but is outside validity window.
-
-## Pattern: Orphan Albo Stale Reference
-
-Uzywaj, gdy evidence sugeruje:
-
-- child references missing parent,
-- missing dictionary/reference row,
-- lazy loading failure,
-- stale relation,
-- FK-like relation bez declared FK.
-
-Procedura:
-
-1. Zidentyfikuj child table i reference column.
-2. Zidentyfikuj parent/reference table i key column.
-3. Uzyj `db_find_relationships`, jesli relation structure jest niejasna.
-4. Opisz obie tabele tylko gdy trzeba.
-5. Uzyj `db_check_orphans`.
-6. Uzyj `db_join_count` albo `db_join_sample` tylko gdy orphan check nie
-   wystarcza.
-7. Raportuj child key i missing parent/reference key, nie duze row dumps.
-
-Mocny wniosek:
-
-```text
-Potwierdzono osierocona referencje: rekord dziecka wskazuje na brakujacy rekord nadrzedny/referencyjny.
-```
-
-Uzyj go tylko, gdy DB evidence to potwierdza.
-
-## Pattern: Duplicate Albo Non-Unique Data
-
-Uzywaj dla:
-
-- `NonUniqueResultException`,
-- `IncorrectResultSizeDataAccessException`,
-- duplicate key,
-- unique constraint violation,
-- unexpected multiple active rows.
-
-Procedura:
-
-1. Zidentyfikuj expected unique key i active predicate.
-2. Zlokalizuj table przez application-scoped discovery, jesli trzeba.
-3. Uzyj `db_count_rows` z pelnym predykatem.
-4. Jesli count > 1, uzyj `db_group_count` albo minimal sample.
-5. Wyjasnij, czy duplikaty sa active, inactive, soft-deleted czy historical.
-
-Mozliwy wniosek:
-
-```text
-Duplikaty aktywnych danych naruszaja zalozenie unikalnosci repozytorium/uslugi.
-```
-
-## Pattern: Async / Outbox / Event / Process Stuck
-
-Uzywaj, gdy evidence wspomina outbox, event, message, scheduler, listener,
-consumer, retry, processing state albo failed process row.
-
-Procedura:
-
-1. Wyciagnij:
-   - correlation ID,
-   - event ID,
-   - aggregate/business ID,
-   - message type,
-   - processing state,
-   - retry count,
-   - error code,
-   - timestamps,
-   - application/deployment/container/project name.
-2. Zlokalizuj table:
-   - `db_find_tables` z `applicationPattern`,
-   - hints: `OUTBOX`, `EVENT`, `MESSAGE`, `PROCESS`, `JOB`, `TASK`.
-3. Zlokalizuj columns:
-   - `CORRELATION_ID`,
-   - `EVENT_ID`,
-   - `AGGREGATE_ID`,
-   - `STATUS`,
-   - `STATE`,
-   - `RETRY_COUNT`,
-   - `ERROR_CODE`.
-4. Count by correlation/event/business ID.
-5. Group by processing state albo error code.
-6. Sample minimal technical columns, jesli trzeba.
-
-Mozliwe wnioski:
-
-- event was not created,
-- event exists but is stuck,
-- retry was exhausted,
-- process data points to downstream failure,
-- DB process state looks normal, so runtime/downstream should be checked.
-
-## Pattern: Cross-Application Albo Shared Reference Data
-
-Uzywaj, gdy evidence sugeruje:
-
-- common dictionary/reference schema,
-- shared outbox/event schema,
-- another application owns parent/reference data,
-- integration flow writes data in one application and reads it in another.
-
-Procedura:
-
-1. Zacznij od primary application z evidence.
-2. Uzyj `db_get_scope`, jesli related application/schema jest niejasny.
-3. Uzyj `db_find_tables` z related application name tylko gdy evidence to
-   wspiera.
-4. Nie rozszerzaj do wszystkich schemas tylko dlatego, ze pierwsza aplikacja
-   nie miala tabeli.
-5. Opisz cross-application scope w final technical analysis.
-
-Dobre wyjasnienie:
-
-```text
-Pierwsze sprawdzenie dotyczylo aplikacji `crm-service`, ale referencja wskazuje na dane utrzymywane przez `customer-service`.
-```
-
-## Regula Raw SQL
-
-Nie uzywaj `db_execute_readonly_sql`, jezeli check da sie wyrazic przez:
-
-- `db_exists_by_key`,
-- `db_count_rows`,
-- `db_group_count`,
-- `db_check_orphans`,
-- `db_join_count`,
-- `db_sample_rows`.
-
-Raw SQL nigdy nie jest pierwszym DB tool.
-
-Jesli raw SQL jest uzyty, wyjasnij w polskim `reason`, dlaczego typed tools nie
-wystarczyly.
-
-## Standard Evidence
+## Standard Evidence I Styl
 
 Nie wnioskuj "data issue", jezeli DB evidence tego nie potwierdza.
 
-Mocne wnioski danych zwykle wymagaja jednego z:
+Mocne wnioski danych wymagaja zwykle: missing row, key-only vs full-predicate
+split, orphan reference, duplicate count albo process/outbox state.
 
-- direct missing row confirmed,
-- key-only count rozni sie od full predicate count,
-- orphan reference confirmed,
-- duplicate count confirmed,
-- process/outbox state confirmed.
-
-Jesli DB checks wygladaja poprawnie, napisz, ze dane aktualnie nie tlumacza
-incydentu i przenies uwage na code, runtime, integration albo visibility
+Jesli DB checks wygladaja poprawnie, napisz: `DB evidence nie tlumaczy
+incydentu` i przenies uwage na code, runtime, integration albo visibility
 limits.
 
-## Styl Wyjasniania Wynikow DB
-
-W finalnej odpowiedzi tlumacz DB findings jezykiem operator-friendly.
-
-Preferuj:
+Tlumacz DB findings jezykiem operator-friendly:
 
 ```text
 Rekord istnieje, ale aplikacja go nie widzi, bo nie spelnia filtra `STATUS=ACTIVE`.
 ```
 
-zamiast:
-
-```text
-COUNT(*) with predicate returned 0.
-```
-
-Gdy raportujesz discovery, wspomnij application-to-schema resolution, jesli ma
-znaczenie:
-
-```text
-Tabele byly szukane w schemacie `CRM_APP`, dobranym z aplikacji/deploymentu `crm-service`.
-```
-
-Podawaj techniczne identyfikatory, gdy sa przydatne, ale nie zalewaj wyniku raw
-rows.
+Podawaj table/key/predicate, gdy pomaga dzialac, ale nie dumpuj raw rows.
 
 ## Antywzorce
 
