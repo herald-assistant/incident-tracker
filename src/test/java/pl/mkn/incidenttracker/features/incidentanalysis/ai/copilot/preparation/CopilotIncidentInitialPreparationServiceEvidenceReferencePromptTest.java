@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.ToolDefinition;
+import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;

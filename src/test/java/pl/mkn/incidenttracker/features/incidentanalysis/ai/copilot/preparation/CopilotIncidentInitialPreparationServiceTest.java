@@ -1,11 +1,11 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.PreToolUseHookInput;
-import com.github.copilot.sdk.json.ToolDefinition;
-import com.github.copilot.sdk.json.PermissionHandler;
-import com.github.copilot.sdk.json.PermissionRequest;
-import com.github.copilot.sdk.json.PermissionRequestResultKind;
+import com.github.copilot.rpc.PreToolUseHookInput;
+import com.github.copilot.rpc.ToolDefinition;
+import com.github.copilot.rpc.PermissionHandler;
+import com.github.copilot.rpc.PermissionRequest;
+import com.github.copilot.rpc.PermissionRequestResultKind;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -83,7 +83,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         try (var prepared = service.prepare(request)) {
             assertEquals("C:\\tools\\copilot.exe", prepared.session().clientOptions().getCliPath());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().clientOptions().getCwd());
-            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
             assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
 
             assertEquals("incidenttracker-test", prepared.session().sessionConfig().getClientName());
@@ -401,7 +401,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         try (var prepared = service.prepare(request)) {
             assertEquals("ghp_test_token", prepared.session().clientOptions().getGithubToken());
-            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
         }
     }
 
@@ -442,7 +442,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         try (var prepared = service.prepare(request)) {
             assertEquals("incidenttracker", prepared.session().sessionConfig().getClientName());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
-            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser());
+            assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
             assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
             assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());

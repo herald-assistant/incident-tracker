@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
-import com.github.copilot.sdk.CopilotClient;
-import com.github.copilot.sdk.json.ModelInfo;
+import com.github.copilot.CopilotClient;
+import com.github.copilot.rpc.ModelInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;

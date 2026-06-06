@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.ToolDefinition;
-import com.github.copilot.sdk.json.ToolInvocation;
+import com.github.copilot.rpc.ToolDefinition;
+import com.github.copilot.rpc.ToolInvocation;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;

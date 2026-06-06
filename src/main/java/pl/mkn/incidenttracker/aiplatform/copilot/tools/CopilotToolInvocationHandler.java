@@ -2,7 +2,7 @@ package pl.mkn.incidenttracker.aiplatform.copilot.tools;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.ToolInvocation;
+import com.github.copilot.rpc.ToolInvocation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;

@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
-import com.github.copilot.sdk.CopilotClient;
-import com.github.copilot.sdk.CopilotSession;
-import com.github.copilot.sdk.events.*;
+import com.github.copilot.CopilotClient;
+import com.github.copilot.CopilotSession;
+import com.github.copilot.generated.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -145,7 +145,7 @@ public class CopilotSdkExecutionGateway {
     }
 
     private void handleSessionEvent(
-            AbstractSessionEvent event,
+            SessionEvent event,
             CopilotSession session,
             SessionLogSummary sessionSummary,
             CopilotUsageAccumulator usageAccumulator,
@@ -156,7 +156,7 @@ public class CopilotSdkExecutionGateway {
         publishActivityEvent(event, activitySink);
     }
 
-    private void recordUsageEvent(AbstractSessionEvent event, CopilotUsageAccumulator usageAccumulator) {
+    private void recordUsageEvent(SessionEvent event, CopilotUsageAccumulator usageAccumulator) {
         if (event instanceof AssistantUsageEvent assistantUsageEvent) {
             var data = assistantUsageEvent.getData();
             if (data == null) {
@@ -182,15 +182,15 @@ public class CopilotSdkExecutionGateway {
             }
 
             usageAccumulator.recordSessionUsageInfo(
-                    data.tokenLimit(),
-                    data.currentTokens(),
-                    data.messagesLength()
+                    numeric(data.tokenLimit()),
+                    numeric(data.currentTokens()),
+                    numeric(data.messagesLength())
             );
         }
     }
 
     private void publishActivityEvent(
-            AbstractSessionEvent event,
+            SessionEvent event,
             Consumer<AnalysisAiActivityEvent> activitySink
     ) {
         if (activitySink == null) {
@@ -215,7 +215,7 @@ public class CopilotSdkExecutionGateway {
         }
     }
 
-    private AnalysisAiActivityEvent toActivityEvent(AbstractSessionEvent event) {
+    private AnalysisAiActivityEvent toActivityEvent(SessionEvent event) {
         var details = baseDetails(event);
 
         if (event instanceof AssistantTurnStartEvent assistantTurnStartEvent) {
@@ -486,8 +486,8 @@ public class CopilotSdkExecutionGateway {
                     "CONTEXT",
                     "INFO",
                     "Kontekst sesji",
-                    "Kontekst: " + Math.round(data.currentTokens()) + "/" + Math.round(data.tokenLimit())
-                            + " tokenów, " + Math.round(data.messagesLength()) + " wiadomości.",
+                    "Kontekst: " + Math.round(numeric(data.currentTokens())) + "/" + Math.round(numeric(data.tokenLimit()))
+                            + " tokenów, " + Math.round(numeric(data.messagesLength())) + " wiadomości.",
                     null,
                     null,
                     null,
@@ -599,7 +599,7 @@ public class CopilotSdkExecutionGateway {
         return null;
     }
 
-    private Map<String, Object> baseDetails(AbstractSessionEvent event) {
+    private Map<String, Object> baseDetails(SessionEvent event) {
         var details = new LinkedHashMap<String, Object>();
         put(details, "type", event.getType());
         put(details, "eventId", event.getId() != null ? event.getId().toString() : null);
@@ -610,7 +610,7 @@ public class CopilotSdkExecutionGateway {
     }
 
     private AnalysisAiActivityEvent activity(
-            AbstractSessionEvent event,
+            SessionEvent event,
             String category,
             String status,
             String title,
@@ -644,7 +644,7 @@ public class CopilotSdkExecutionGateway {
         }
     }
 
-    private String usageSummary(AssistantUsageEvent.AssistantUsageData data) {
+    private String usageSummary(AssistantUsageEvent.AssistantUsageEventData data) {
         var inputTokens = data.inputTokens() != null ? Math.round(data.inputTokens()) : 0L;
         var cacheReadTokens = data.cacheReadTokens() != null ? Math.round(data.cacheReadTokens()) : 0L;
         var outputTokens = data.outputTokens() != null ? Math.round(data.outputTokens()) : 0L;
@@ -693,6 +693,10 @@ public class CopilotSdkExecutionGateway {
         return value.length() > maxLength
                 ? value.substring(0, maxLength) + "...(" + value.length() + " chars)"
                 : value;
+    }
+
+    private double numeric(Number value) {
+        return value != null ? value.doubleValue() : 0D;
     }
 
     private String buildFailureMessage(Throwable rootCause) {

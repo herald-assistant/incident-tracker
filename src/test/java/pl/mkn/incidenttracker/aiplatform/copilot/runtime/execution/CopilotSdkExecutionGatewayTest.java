@@ -1,16 +1,17 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
-import com.github.copilot.sdk.ConnectionState;
-import com.github.copilot.sdk.CopilotClient;
-import com.github.copilot.sdk.CopilotSession;
-import com.github.copilot.sdk.events.AbstractSessionEvent;
-import com.github.copilot.sdk.events.AssistantMessageEvent;
-import com.github.copilot.sdk.events.AssistantReasoningEvent;
-import com.github.copilot.sdk.events.AssistantUsageEvent;
-import com.github.copilot.sdk.events.SessionUsageInfoEvent;
-import com.github.copilot.sdk.json.CopilotClientOptions;
-import com.github.copilot.sdk.json.MessageOptions;
-import com.github.copilot.sdk.json.SessionConfig;
+import com.github.copilot.ConnectionState;
+import com.github.copilot.CopilotClient;
+import com.github.copilot.CopilotSession;
+import com.github.copilot.generated.SessionEvent;
+import com.github.copilot.generated.AssistantMessageEvent;
+import com.github.copilot.generated.AssistantMessageToolRequest;
+import com.github.copilot.generated.AssistantReasoningEvent;
+import com.github.copilot.generated.AssistantUsageEvent;
+import com.github.copilot.generated.SessionUsageInfoEvent;
+import com.github.copilot.rpc.CopilotClientOptions;
+import com.github.copilot.rpc.MessageOptions;
+import com.github.copilot.rpc.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
@@ -163,7 +164,7 @@ class CopilotSdkExecutionGatewayTest {
                 "Diagnose incident",
                 Map.of()
         );
-        var eventHandler = new AtomicReference<Consumer<AbstractSessionEvent>>();
+        var eventHandler = new AtomicReference<Consumer<SessionEvent>>();
 
         try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
             var session = mock(CopilotSession.class);
@@ -175,7 +176,7 @@ class CopilotSdkExecutionGatewayTest {
             when(session.getSessionId()).thenReturn(sessionId);
             when(session.on(isA(Consumer.class))).thenAnswer(invocation -> {
                 @SuppressWarnings("unchecked")
-                var handler = (Consumer<AbstractSessionEvent>) invocation.getArgument(0);
+                var handler = (Consumer<SessionEvent>) invocation.getArgument(0);
                 eventHandler.set(handler);
                 return (Closeable) () -> {
                 };
@@ -222,7 +223,7 @@ class CopilotSdkExecutionGatewayTest {
                 "Diagnose incident",
                 Map.of()
         ).withActivitySink(activities::add);
-        var eventHandler = new AtomicReference<Consumer<AbstractSessionEvent>>();
+        var eventHandler = new AtomicReference<Consumer<SessionEvent>>();
 
         try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
             var session = mock(CopilotSession.class);
@@ -234,7 +235,7 @@ class CopilotSdkExecutionGatewayTest {
             when(session.getSessionId()).thenReturn(sessionId);
             when(session.on(isA(Consumer.class))).thenAnswer(invocation -> {
                 @SuppressWarnings("unchecked")
-                var handler = (Consumer<AbstractSessionEvent>) invocation.getArgument(0);
+                var handler = (Consumer<SessionEvent>) invocation.getArgument(0);
                 eventHandler.set(handler);
                 return (Closeable) () -> {
                 };
@@ -246,10 +247,15 @@ class CopilotSdkExecutionGatewayTest {
                         eventHandler.get().accept(assistantMessageWithReasoning(
                                 "",
                                 reasoningText,
-                                List.of(new AssistantMessageEvent.AssistantMessageData.ToolRequest(
+                                List.of(new AssistantMessageToolRequest(
                                         "tool-call-1",
                                         "gitlab_find_class_references",
-                                        Map.of("reason", "Sprawdzam klasę z stack trace.")
+                                        Map.of("reason", "Sprawdzam klasę z stack trace."),
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null
                                 ))
                         ));
                         return CompletableFuture.completedFuture(assistantMessage("Structured answer"));
@@ -316,12 +322,20 @@ class CopilotSdkExecutionGatewayTest {
 
     private AssistantMessageEvent assistantMessage(String content) {
         var event = new AssistantMessageEvent();
-        event.setData(new AssistantMessageEvent.AssistantMessageData(
+        event.setData(new AssistantMessageEvent.AssistantMessageEventData(
                 "message-1",
+                null,
                 content,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 "interaction-1",
+                null,
+                null,
                 null,
                 null,
                 null
@@ -332,17 +346,25 @@ class CopilotSdkExecutionGatewayTest {
     private AssistantMessageEvent assistantMessageWithReasoning(
             String content,
             String reasoningText,
-            List<AssistantMessageEvent.AssistantMessageData.ToolRequest> toolRequests
+            List<AssistantMessageToolRequest> toolRequests
     ) {
         var event = new AssistantMessageEvent();
-        event.setData(new AssistantMessageEvent.AssistantMessageData(
+        event.setData(new AssistantMessageEvent.AssistantMessageEventData(
                 "message-reasoning",
+                null,
                 content,
                 toolRequests,
                 null,
-                "interaction-reasoning",
-                "reasoning-1",
                 reasoningText,
+                null,
+                null,
+                null,
+                "interaction-reasoning",
+                null,
+                null,
+                null,
+                null,
+                "reasoning-1",
                 null
         ));
         return event;
@@ -350,7 +372,7 @@ class CopilotSdkExecutionGatewayTest {
 
     private AssistantReasoningEvent assistantReasoning(String reasoningId, String content) {
         var event = new AssistantReasoningEvent();
-        event.setData(new AssistantReasoningEvent.AssistantReasoningData(
+        event.setData(new AssistantReasoningEvent.AssistantReasoningEventData(
                 reasoningId,
                 content
         ));
@@ -367,19 +389,25 @@ class CopilotSdkExecutionGatewayTest {
             Double duration
     ) {
         var event = new AssistantUsageEvent();
-        event.setData(new AssistantUsageEvent.AssistantUsageData(
+        event.setData(new AssistantUsageEvent.AssistantUsageEventData(
                 model,
-                inputTokens,
-                outputTokens,
-                cacheReadTokens,
-                cacheWriteTokens,
+                inputTokens != null ? inputTokens.longValue() : null,
+                outputTokens != null ? outputTokens.longValue() : null,
+                cacheReadTokens != null ? cacheReadTokens.longValue() : null,
+                cacheWriteTokens != null ? cacheWriteTokens.longValue() : null,
+                null,
                 cost,
-                duration,
+                duration != null ? duration.longValue() : null,
+                null,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
                 null,
                 Map.of(),
+                null,
                 null
         ));
         return event;
@@ -391,10 +419,14 @@ class CopilotSdkExecutionGatewayTest {
             double messagesLength
     ) {
         var event = new SessionUsageInfoEvent();
-        event.setData(new SessionUsageInfoEvent.SessionUsageInfoData(
-                tokenLimit,
-                currentTokens,
-                messagesLength
+        event.setData(new SessionUsageInfoEvent.SessionUsageInfoEventData(
+                Math.round(tokenLimit),
+                Math.round(currentTokens),
+                Math.round(messagesLength),
+                null,
+                null,
+                null,
+                null
         ));
         return event;
     }

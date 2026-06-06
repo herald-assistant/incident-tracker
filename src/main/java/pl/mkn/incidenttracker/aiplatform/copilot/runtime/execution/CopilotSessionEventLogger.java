@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
-import com.github.copilot.sdk.CopilotSession;
-import com.github.copilot.sdk.events.*;
+import com.github.copilot.CopilotSession;
+import com.github.copilot.generated.*;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,7 +17,7 @@ public class CopilotSessionEventLogger {
         return new SessionLogSummary(runReference);
     }
 
-    public void logSessionEvent(AbstractSessionEvent event, CopilotSession session, SessionLogSummary summary) {
+    public void logSessionEvent(SessionEvent event, CopilotSession session, SessionLogSummary summary) {
         String sessionId = session.getSessionId();
         String runReference = summary.runReference();
 

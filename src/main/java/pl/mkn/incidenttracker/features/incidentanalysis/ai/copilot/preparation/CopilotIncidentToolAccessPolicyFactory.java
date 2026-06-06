@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
-import com.github.copilot.sdk.json.ToolDefinition;
+import com.github.copilot.rpc.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

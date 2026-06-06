@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
-import com.github.copilot.sdk.json.MessageOptions;
+import com.github.copilot.rpc.MessageOptions;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

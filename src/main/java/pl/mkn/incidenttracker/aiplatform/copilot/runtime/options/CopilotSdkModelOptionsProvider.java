@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime.options;
 
-import com.github.copilot.sdk.json.ModelInfo;
+import com.github.copilot.rpc.ModelInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

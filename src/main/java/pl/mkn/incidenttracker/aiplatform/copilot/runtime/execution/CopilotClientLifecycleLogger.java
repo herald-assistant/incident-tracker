@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution;
 
-import com.github.copilot.sdk.ConnectionState;
-import com.github.copilot.sdk.json.SessionLifecycleEvent;
+import com.github.copilot.ConnectionState;
+import com.github.copilot.rpc.SessionLifecycleEvent;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 

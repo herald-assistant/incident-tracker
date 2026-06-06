@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
-import com.github.copilot.sdk.json.ToolDefinition;
+import com.github.copilot.rpc.ToolDefinition;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageReport;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.coverage.IncidentGitLabEvidenceCoverage;
 import pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames;

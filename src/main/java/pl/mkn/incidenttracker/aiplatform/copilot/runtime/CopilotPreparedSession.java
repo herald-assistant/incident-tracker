@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
-import com.github.copilot.sdk.json.CopilotClientOptions;
-import com.github.copilot.sdk.json.MessageOptions;
-import com.github.copilot.sdk.json.SessionConfig;
+import com.github.copilot.rpc.CopilotClientOptions;
+import com.github.copilot.rpc.MessageOptions;
+import com.github.copilot.rpc.SessionConfig;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 

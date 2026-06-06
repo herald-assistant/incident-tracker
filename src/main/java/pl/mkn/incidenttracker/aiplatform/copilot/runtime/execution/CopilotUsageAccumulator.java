@@ -23,12 +23,12 @@ final class CopilotUsageAccumulator {
 
     void recordAssistantUsage(
             String model,
-            Double inputTokens,
-            Double outputTokens,
-            Double cacheReadTokens,
-            Double cacheWriteTokens,
-            Double cost,
-            Double durationMs
+            Number inputTokens,
+            Number outputTokens,
+            Number cacheReadTokens,
+            Number cacheWriteTokens,
+            Number cost,
+            Number durationMs
     ) {
         callCount++;
         this.inputTokens += numeric(inputTokens);
@@ -76,8 +76,8 @@ final class CopilotUsageAccumulator {
         );
     }
 
-    private double numeric(Double value) {
-        return value != null ? value : 0D;
+    private double numeric(Number value) {
+        return value != null ? value.doubleValue() : 0D;
     }
 
     private long rounded(double value) {

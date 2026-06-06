@@ -1,8 +1,8 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime.options;
 
-import com.github.copilot.sdk.json.ModelCapabilities;
-import com.github.copilot.sdk.json.ModelInfo;
-import com.github.copilot.sdk.json.ModelSupports;
+import com.github.copilot.rpc.ModelCapabilities;
+import com.github.copilot.rpc.ModelInfo;
+import com.github.copilot.rpc.ModelSupports;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;

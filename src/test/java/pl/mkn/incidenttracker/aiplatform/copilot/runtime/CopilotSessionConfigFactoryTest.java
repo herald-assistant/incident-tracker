@@ -1,10 +1,10 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
-import com.github.copilot.sdk.json.PermissionHandler;
-import com.github.copilot.sdk.json.PermissionRequest;
-import com.github.copilot.sdk.json.PermissionRequestResultKind;
-import com.github.copilot.sdk.json.PreToolUseHookInput;
-import com.github.copilot.sdk.json.ToolDefinition;
+import com.github.copilot.rpc.PermissionHandler;
+import com.github.copilot.rpc.PermissionRequest;
+import com.github.copilot.rpc.PermissionRequestResultKind;
+import com.github.copilot.rpc.PreToolUseHookInput;
+import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -45,7 +45,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(true, sessionConfigRequest.skillDirectoriesConfigured());
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
-        assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser());
+        assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
         assertEquals("test-token", clientOptions.getGithubToken());
         assertEquals("analysis-123", sessionConfig.getSessionId());
         assertEquals("incidenttracker-test", sessionConfig.getClientName());
@@ -106,7 +106,7 @@ class CopilotSessionConfigFactoryTest {
         var clientOptions = factory.clientOptions();
 
         assertEquals("ghp_test_token", clientOptions.getGithubToken());
-        assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser());
+        assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
     }
 
     @Test

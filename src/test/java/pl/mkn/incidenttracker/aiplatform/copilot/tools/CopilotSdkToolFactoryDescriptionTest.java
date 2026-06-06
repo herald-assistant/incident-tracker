@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.ToolDefinition;
+import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -44,7 +44,7 @@ class CopilotSdkToolFactoryDescriptionTest {
         assertTrue(descriptionsByName.get("gitlab_search_repository_candidates")
                 .contains("Use when project or file is unclear."));
         assertTrue(descriptionsByName.get("gitlab_search_repository_candidates")
-                .contains("including library/shared repositories"));
+                .contains("including supporting repositories"));
     }
 
     private CopilotToolSessionContext sessionContext() {

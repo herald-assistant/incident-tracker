@@ -1,6 +1,6 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
-import com.github.copilot.sdk.json.ToolDefinition;
+import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentSessionConfigRequestFactory;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicy;

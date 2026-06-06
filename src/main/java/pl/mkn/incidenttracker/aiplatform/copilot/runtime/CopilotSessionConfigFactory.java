@@ -1,12 +1,12 @@
 package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
-import com.github.copilot.sdk.json.CopilotClientOptions;
-import com.github.copilot.sdk.json.PermissionHandler;
-import com.github.copilot.sdk.json.PermissionRequestResult;
-import com.github.copilot.sdk.json.PermissionRequestResultKind;
-import com.github.copilot.sdk.json.PreToolUseHookOutput;
-import com.github.copilot.sdk.json.SessionConfig;
-import com.github.copilot.sdk.json.SessionHooks;
+import com.github.copilot.rpc.CopilotClientOptions;
+import com.github.copilot.rpc.PermissionHandler;
+import com.github.copilot.rpc.PermissionRequestResult;
+import com.github.copilot.rpc.PermissionRequestResultKind;
+import com.github.copilot.rpc.PreToolUseHookOutput;
+import com.github.copilot.rpc.SessionConfig;
+import com.github.copilot.rpc.SessionHooks;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

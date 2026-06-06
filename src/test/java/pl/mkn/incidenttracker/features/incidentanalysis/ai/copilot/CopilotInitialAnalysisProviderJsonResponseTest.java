@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.copilot.sdk.json.SessionConfig;
+import com.github.copilot.rpc.SessionConfig;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
