@@ -41,7 +41,37 @@ describe('App', () => {
     expect(compiled.querySelector('app-analysis-console')).not.toBeNull();
   });
 
-  it('should render the evidence console shell on the evidence route', async () => {
+  it('should render the elastic console shell on the elastic route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/elastic');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
+    expect(compiled.textContent).toContain('HTTP Call Summary');
+    expect(compiled.textContent).not.toContain('Endpoint Inventory');
+  });
+
+  it('should render the gitlab console shell on the gitlab route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/gitlab');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
+    expect(compiled.textContent).toContain('Endpoint Inventory');
+    expect(compiled.textContent).not.toContain('HTTP Call Summary');
+  });
+
+  it('should redirect the legacy evidence route to elastic', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
 
@@ -50,8 +80,7 @@ describe('App', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
+    expect(router.url).toBe('/elastic');
   });
 
   it('should render the database console shell on the database route', async () => {

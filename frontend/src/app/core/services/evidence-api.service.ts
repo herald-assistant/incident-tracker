@@ -42,6 +42,48 @@ export interface GitLabSourceResolvePayload {
   symbol: string;
 }
 
+export interface GitLabRepositoryEndpointsPayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  endpointPathPrefix?: string;
+  httpMethod?: string;
+  sourcePathPrefix?: string;
+  maxScannedFiles?: number;
+}
+
+export interface GitLabRepositoryEndpoint {
+  endpointId: string;
+  httpMethods: string[];
+  path?: string | null;
+  pathExpression?: string | null;
+  controllerClass?: string | null;
+  handlerMethod?: string | null;
+  filePath?: string | null;
+  lineStart: number;
+  lineEnd: number;
+  requestTypes: string[];
+  responseTypes: string[];
+  annotations: string[];
+  confidence?: string | null;
+  limitations: string[];
+  suggestedNextReads: string[];
+}
+
+export interface GitLabRepositoryEndpointsResponse {
+  group: string;
+  projectName: string;
+  branch: string;
+  endpointPathPrefix?: string | null;
+  httpMethod?: string | null;
+  sourcePathPrefix?: string | null;
+  candidateFileCount: number;
+  scannedFileCount: number;
+  scannedFileLimitReached: boolean;
+  endpoints: GitLabRepositoryEndpoint[];
+  limitations: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -67,5 +109,14 @@ export class EvidenceApiService {
   resolveGitLabSource(payload: GitLabSourceResolvePayload, preview: boolean): Observable<unknown> {
     const url = preview ? '/api/gitlab/source/resolve/preview' : '/api/gitlab/source/resolve';
     return this.http.post(url, payload);
+  }
+
+  listGitLabRepositoryEndpoints(
+    payload: GitLabRepositoryEndpointsPayload
+  ): Observable<GitLabRepositoryEndpointsResponse> {
+    return this.http.post<GitLabRepositoryEndpointsResponse>(
+      '/api/gitlab/repository/endpoints',
+      payload
+    );
   }
 }

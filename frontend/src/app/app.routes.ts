@@ -11,7 +11,18 @@ export const routes: Routes = [
   },
   {
     path: 'evidence',
-    component: EvidenceConsoleComponent
+    redirectTo: 'elastic',
+    pathMatch: 'full'
+  },
+  {
+    path: 'elastic',
+    component: EvidenceConsoleComponent,
+    data: { integration: 'elastic' }
+  },
+  {
+    path: 'gitlab',
+    component: EvidenceConsoleComponent,
+    data: { integration: 'gitlab' }
   },
   {
     path: 'database',

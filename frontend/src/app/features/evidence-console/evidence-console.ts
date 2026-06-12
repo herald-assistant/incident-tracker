@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, WritableSignal, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -7,9 +8,8 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { Observable } from 'rxjs';
-import { Component, DestroyRef, WritableSignal, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
@@ -18,17 +18,22 @@ import {
   ElasticLogDetailLevel,
   ElasticLogSearchPayload,
   EvidenceApiService,
+  GitLabRepositoryEndpoint,
+  GitLabRepositoryEndpointsPayload,
+  GitLabRepositoryEndpointsResponse,
   GitLabRepositorySearchPayload,
   GitLabSourceResolvePayload
 } from '../../core/services/evidence-api.service';
 
 type ToolStateStatus = 'idle' | 'loading' | 'success' | 'error';
+type EvidenceIntegrationView = 'elastic' | 'gitlab';
 
 interface ToolState {
   status: ToolStateStatus;
   statusCode: number | null;
   message: string;
   responseJson: string;
+  response: unknown | null;
 }
 
 @Component({
@@ -40,6 +45,14 @@ interface ToolState {
 export class EvidenceConsoleComponent {
   private readonly evidenceApi = inject(EvidenceApiService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly routeData = toSignal(this.route.data, {
+    initialValue: this.route.snapshot.data
+  });
+
+  readonly activeIntegration = computed<EvidenceIntegrationView>(() =>
+    this.routeData()['integration'] === 'gitlab' ? 'gitlab' : 'elastic'
+  );
 
   readonly elasticForm = new FormGroup({
     correlationId: new FormControl('', {
@@ -80,6 +93,28 @@ export class EvidenceConsoleComponent {
     keywords: new FormControl('', { nonNullable: true })
   });
 
+  readonly gitLabEndpointForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    endpointPathPrefix: new FormControl('', { nonNullable: true }),
+    httpMethod: new FormControl('', { nonNullable: true }),
+    sourcePathPrefix: new FormControl('src/main/java', { nonNullable: true }),
+    maxScannedFiles: new FormControl('120', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(250)]
+    })
+  });
+
   readonly gitLabSourceForm = new FormGroup({
     gitlabBaseUrl: new FormControl('', {
       nonNullable: true,
@@ -113,8 +148,15 @@ export class EvidenceConsoleComponent {
   readonly gitLabRepositoryState = signal<ToolState>(
     this.idleState('Wpisz hinty projektu, aby przetestować mapowanie component -> repo.')
   );
+  readonly gitLabEndpointState = signal<ToolState>(
+    this.idleState('Podaj scope repozytorium, aby znaleźć endpointy Spring REST.')
+  );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
+  );
+
+  readonly gitLabEndpointResult = computed(() =>
+    this.asGitLabEndpointResult(this.gitLabEndpointState().response)
   );
 
   submitElastic(event: Event): void {
@@ -238,6 +280,40 @@ export class EvidenceConsoleComponent {
     );
   }
 
+  submitGitLabEndpointSearch(event: Event): void {
+    event.preventDefault();
+
+    if (this.gitLabEndpointForm.invalid) {
+      this.gitLabEndpointForm.markAllAsTouched();
+      this.gitLabEndpointState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch dla GitLab endpoint inventory.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabRepositoryEndpointsPayload = {
+      group: this.gitLabEndpointForm.controls.group.value.trim(),
+      projectName: this.gitLabEndpointForm.controls.projectName.value.trim(),
+      branch: this.gitLabEndpointForm.controls.branch.value.trim(),
+      endpointPathPrefix: this.optionalValue(
+        this.gitLabEndpointForm.controls.endpointPathPrefix.value
+      ),
+      httpMethod: this.optionalValue(this.gitLabEndpointForm.controls.httpMethod.value),
+      sourcePathPrefix: this.optionalValue(this.gitLabEndpointForm.controls.sourcePathPrefix.value),
+      maxScannedFiles: this.optionalNumber(this.gitLabEndpointForm.controls.maxScannedFiles.value)
+    };
+
+    this.runRequest(
+      this.gitLabEndpointState,
+      this.evidenceApi.listGitLabRepositoryEndpoints(payload),
+      payload,
+      'Wysyłamy request do /api/gitlab/repository/endpoints...'
+    );
+  }
+
   submitGitLabSource(event: Event): void {
     event.preventDefault();
 
@@ -299,6 +375,10 @@ export class EvidenceConsoleComponent {
     }
   }
 
+  endpointMethods(endpoint: GitLabRepositoryEndpoint): string {
+    return endpoint.httpMethods?.length ? endpoint.httpMethods.join(', ') : 'ANY';
+  }
+
   private runRequest(
     state: WritableSignal<ToolState>,
     request$: Observable<unknown>,
@@ -309,6 +389,7 @@ export class EvidenceConsoleComponent {
       status: 'loading',
       statusCode: null,
       message: loadingMessage,
+      response: null,
       responseJson: this.toFormattedJson({
         status: 'WAITING',
         request: payload
@@ -321,6 +402,7 @@ export class EvidenceConsoleComponent {
           status: 'success',
           statusCode: 200,
           message: 'Backend zwrócił odpowiedź JSON.',
+          response,
           responseJson: this.toFormattedJson(response)
         });
       },
@@ -335,6 +417,7 @@ export class EvidenceConsoleComponent {
         status: 'error',
         statusCode: error.status || null,
         message: payload.message,
+        response: null,
         responseJson: this.toFormattedJson(payload.body)
       };
     }
@@ -425,6 +508,7 @@ export class EvidenceConsoleComponent {
       status: 'error',
       statusCode: null,
       message: payload.message,
+      response: null,
       responseJson: this.toFormattedJson(payload)
     };
   }
@@ -434,6 +518,7 @@ export class EvidenceConsoleComponent {
       status: 'idle',
       statusCode: null,
       message,
+      response: null,
       responseJson: this.toFormattedJson({
         message
       })
@@ -464,5 +549,14 @@ export class EvidenceConsoleComponent {
   private toFormattedJson(value: unknown): string {
     const formatted = JSON.stringify(value, null, 2);
     return formatted === undefined ? 'null' : formatted;
+  }
+
+  private asGitLabEndpointResult(response: unknown): GitLabRepositoryEndpointsResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabRepositoryEndpointsResponse>;
+    return Array.isArray(record.endpoints) ? (record as GitLabRepositoryEndpointsResponse) : null;
   }
 }

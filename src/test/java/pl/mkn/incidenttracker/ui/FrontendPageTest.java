@@ -37,8 +37,16 @@ class FrontendPageTest {
     }
 
     @Test
-    void shouldServeEvidenceRoute() throws Exception {
+    void shouldServeIntegrationRoutes() throws Exception {
         mockMvc.perform(get("/evidence"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/elastic"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/gitlab"))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
     }

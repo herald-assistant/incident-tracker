@@ -3145,10 +3145,12 @@ body.is-column-resizing {
 
   .topbar-nav {
     width: 100%;
+    flex-wrap: wrap;
+    border-radius: 18px;
   }
 
   .topbar-link {
-    flex: 1 1 0;
+    flex: 1 1 128px;
   }
 
   .field-row {

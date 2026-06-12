@@ -46,8 +46,8 @@ describe('GithubAuthService', () => {
   });
 
   it('should build the GitHub OAuth start URL with an encoded returnUrl', () => {
-    expect(service.connectUrl('/evidence?analysisId=123')).toBe(
-      '/api/auth/github/start?returnUrl=%2Fevidence%3FanalysisId%3D123'
+    expect(service.connectUrl('/elastic?analysisId=123')).toBe(
+      '/api/auth/github/start?returnUrl=%2Felastic%3FanalysisId%3D123'
     );
   });
 

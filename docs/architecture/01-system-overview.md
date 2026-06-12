@@ -59,8 +59,9 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
-- ekran `GET /evidence` do recznego testowania helper endpointow Elastica i
-  GitLaba,
+- ekran `GET /elastic` do recznego testowania helper endpointow Elastica,
+- ekran `GET /gitlab` do recznego testowania helper endpointow GitLaba, w tym
+  repository search, endpoint inventory i source resolve,
 - ekran `GET /database` do recznego testowania shared/operator endpointow nad
   `DatabaseToolService` z jawnym operatorskim `environment`,
 - ekran `GET /operational-context` do utrzymania katalogu systemow, repozytoriow,
@@ -97,9 +98,13 @@ Na dzisiaj projekt ma:
 
 - `GET /`
   Angularowy ekran operacyjny do uruchamiania analizy z pola `correlationId`.
-- `GET /evidence`
+- `GET /elastic`
   Angularowy ekran pomocniczy do recznego testowania helper endpointow
-  Elastica i GitLaba oraz podgladu odpowiedzi JSON.
+  Elastica oraz podgladu odpowiedzi JSON.
+- `GET /gitlab`
+  Angularowy ekran pomocniczy do recznego testowania helper endpointow
+  GitLaba oraz podgladu odpowiedzi JSON. Legacy route `GET /evidence`
+  przekierowuje w Angularze do `/elastic`.
 - `GET /database`
   Angularowy ekran pomocniczy do recznego testowania Database tools przez
   shared/operator endpointy `/api/database/*`.
@@ -142,6 +147,9 @@ Na dzisiaj projekt ma:
 - `POST /api/gitlab/repository/search`
   Narzedzie pomocnicze do recznego testowania mapowania `component -> repo` i
   opcjonalnego wyszukiwania kandydatow plikow.
+- `POST /api/gitlab/repository/endpoints`
+  Narzedzie pomocnicze do recznego testowania inventory endpointow REST w
+  konkretnym repozytorium GitLaba.
 - `POST /api/elasticsearch/logs/search`
   Narzedzie pomocnicze do wyszukiwania logow z Kibana proxy po `correlationId`.
   To jest jedyny endpoint testowy Elastica. Nie ma juz wariantu `preview`.
@@ -316,7 +324,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   albo integracjami. Endpointy konkretnego use case'u zostaja przy
   `features.<feature>.api`.
 - `pl.mkn.incidenttracker.ui`
-  Cienki routing Spring MVC dla route'ow Angulara, np. `/evidence`.
+  Cienki routing Spring MVC dla route'ow Angulara, np. `/elastic`, `/gitlab`
+  i `/operational-context`.
 - Zamkniety root `pl.mkn.incidenttracker.analysis`
   Produkcyjny i testowy root `analysis.*` jest zamkniety. Publiczne URL-e
   moga nadal zawierac slowo `analysis`, ale nowe klasy Javy trafiaja do
@@ -463,6 +472,24 @@ To jest osobny, pomocniczy flow do recznego testowania mapowania repozytorium:
 Ten endpoint nie jest czescia glownego job flow analizy, ale pomaga recznie
 zweryfikowac te sama logike mapowania, z ktorej korzysta deterministic
 provider i AI-guided exploration przez tools.
+
+## Dodatkowy use case GitLab endpoint inventory
+
+To jest osobny, pomocniczy flow do recznego testowania listowania endpointow
+REST udostepnianych przez konkretne repozytorium:
+
+1. klient podaje `group`, `projectName`, `branch` oraz opcjonalne filtry
+   `endpointPathPrefix`, `httpMethod`, `sourcePathPrefix` i `maxScannedFiles`,
+2. backend deleguje do `integrations.gitlab.GitLabRepositoryEndpointService`,
+3. serwis uzywa wspolnego GitLab repository tree/cache przez adapter
+   repozytorium,
+4. parser best-effort znajduje Spring MVC/REST controller mappings,
+5. endpoint zwraca liste endpointow, klasy/metody handlerow, pliki, linie,
+   request/response types, confidence, limitations i suggested next reads.
+
+Ten endpoint nie jest czescia glownego job flow analizy. Sluzy operatorowi do
+manualnej weryfikacji tej samej capability, ktora jest wystawiona AI jako
+`gitlab_list_repository_endpoints`.
 
 ## Dodatkowy use case Database tool console
 

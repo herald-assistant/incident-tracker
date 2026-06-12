@@ -7,6 +7,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpoint;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListResult;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointUseCaseInput;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryProjectCandidate;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchException;
@@ -32,6 +37,9 @@ class GitLabRepositorySearchControllerTest {
 
     @MockitoBean
     private GitLabRepositorySearchService gitLabRepositorySearchService;
+
+    @MockitoBean
+    private GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
 
     @Test
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {
@@ -83,6 +91,80 @@ class GitLabRepositorySearchControllerTest {
     }
 
     @Test
+    void shouldListGitLabRepositoryEndpointsForValidRequest() throws Exception {
+        when(gitLabRepositoryEndpointService.listEndpoints(any(GitLabRepositoryEndpointListRequest.class)))
+                .thenReturn(new GitLabRepositoryEndpointListResult(
+                        "TENANT-ALPHA",
+                        "orders-api",
+                        "release-candidate",
+                        "/api/orders",
+                        "GET",
+                        "src/main/java",
+                        2,
+                        2,
+                        false,
+                        List.of(new GitLabRepositoryEndpoint(
+                                "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                List.of("GET"),
+                                "/api/orders/{orderId}",
+                                null,
+                                "com.example.orders.OrderController",
+                                "getOrder",
+                                "src/main/java/com/example/orders/OrderController.java",
+                                17,
+                                19,
+                                List.of("@PathVariable String orderId"),
+                                List.of("ResponseEntity<OrderResponse>"),
+                                List.of("RestController", "GetMapping"),
+                                "high",
+                                List.of(),
+                                new GitLabRepositoryEndpointUseCaseInput(
+                                        "orders-api",
+                                        "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                        List.of("GET"),
+                                        "/api/orders/{orderId}",
+                                        "src/main/java/com/example/orders/OrderController.java",
+                                        17,
+                                        19
+                                ),
+                                List.of("orders-api:src/main/java/com/example/orders/OrderController.java lines 17-19 via gitlab_read_repository_file_chunk")
+                        )),
+                        List.of()
+                ));
+
+        mockMvc.perform(post("/api/gitlab/repository/endpoints")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "TENANT-ALPHA",
+                                  "projectName": "orders-api",
+                                  "branch": "release-candidate",
+                                  "endpointPathPrefix": "/api/orders",
+                                  "httpMethod": "GET",
+                                  "sourcePathPrefix": "src/main/java",
+                                  "maxScannedFiles": 50
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.group").value("TENANT-ALPHA"))
+                .andExpect(jsonPath("$.projectName").value("orders-api"))
+                .andExpect(jsonPath("$.candidateFileCount").value(2))
+                .andExpect(jsonPath("$.endpoints[0].path").value("/api/orders/{orderId}"))
+                .andExpect(jsonPath("$.endpoints[0].controllerClass").value("com.example.orders.OrderController"))
+                .andExpect(jsonPath("$.endpoints[0].handlerMethod").value("getOrder"));
+
+        verify(gitLabRepositoryEndpointService).listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "TENANT-ALPHA",
+                "orders-api",
+                "release-candidate",
+                "/api/orders",
+                "GET",
+                "src/main/java",
+                50
+        ));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenGitLabSearchFindsNoCandidates() throws Exception {
         when(gitLabRepositorySearchService.search(any(GitLabRepositorySearchRequest.class)))
                 .thenThrow(new GitLabRepositorySearchException(
@@ -123,5 +205,24 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"));
 
         verifyNoInteractions(gitLabRepositorySearchService);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidEndpointListingRequest() throws Exception {
+        mockMvc.perform(post("/api/gitlab/repository/endpoints")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "",
+                                  "projectName": "",
+                                  "branch": "",
+                                  "maxScannedFiles": 999
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+
+        verifyNoInteractions(gitLabRepositoryEndpointService);
     }
 }

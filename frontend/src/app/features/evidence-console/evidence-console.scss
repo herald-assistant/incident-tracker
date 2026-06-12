@@ -28,6 +28,17 @@
   gap: 16px;
 }
 
+.evidence-tool-section {
+  display: grid;
+  gap: 14px;
+}
+
+.evidence-tool-section__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .tool-card {
   display: grid;
   gap: 16px;
@@ -167,7 +178,90 @@
   accent-color: var(--primary);
 }
 
+.endpoint-results {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.endpoint-results__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.endpoint-results__stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.endpoint-list {
+  display: grid;
+  gap: 10px;
+}
+
+.endpoint-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(9, 30, 66, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.endpoint-card__main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.endpoint-card__method {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(12, 102, 228, 0.1);
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.endpoint-card h4 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+}
+
+.endpoint-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.endpoint-card__meta span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 860px) {
+  .evidence-tool-section__header,
+  .endpoint-results__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .tool-status {
     flex-direction: column;
     align-items: flex-start;
@@ -176,9 +270,22 @@
   .tool-status__badges {
     justify-content: flex-start;
   }
+
+  .endpoint-results__stats {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
+  .topbar-nav {
+    flex-wrap: wrap;
+    border-radius: 18px;
+  }
+
+  .topbar-link {
+    flex: 1 1 132px;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -193,5 +300,15 @@
 
   .json-output {
     min-height: 220px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .endpoint-card__main {
+    grid-template-columns: 1fr;
+  }
+
+  .endpoint-card__method {
+    justify-self: flex-start;
   }
 }

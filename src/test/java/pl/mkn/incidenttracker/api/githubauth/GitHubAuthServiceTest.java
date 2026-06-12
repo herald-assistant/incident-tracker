@@ -87,7 +87,7 @@ class GitHubAuthServiceTest {
         var fixture = fixture(CopilotAuthMode.GITHUB_APP);
         var response = new MockHttpServletResponse();
 
-        var redirect = fixture.service.start("/evidence?analysisId=123", new MockHttpServletRequest(), response);
+        var redirect = fixture.service.start("/elastic?analysisId=123", new MockHttpServletRequest(), response);
         var query = UriComponentsBuilder.fromUri(redirect).build().getQueryParams();
 
         assertEquals("https", redirect.getScheme());

@@ -70,8 +70,8 @@ chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
 
 Pozostale shared/operator wejscia, np. `/api/database/*`,
 `/api/operational-context/*`, GitLab/Elasticsearch helper endpoints i route'y
-`/database`, `/operational-context`, `/evidence`, nie sa krokami incident
-runtime flow. To osobne fasady nad reusable capability albo widoki
+`/database`, `/operational-context`, `/elastic`, `/gitlab`, nie sa krokami
+incident runtime flow. To osobne fasady nad reusable capability albo widoki
 utrzymaniowe dla operatora.
 
 ## 2. Orkiestracja wysokiego poziomu

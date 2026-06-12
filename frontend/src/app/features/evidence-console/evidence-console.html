@@ -18,8 +18,11 @@
         >
           Analysis
         </a>
-        <a class="topbar-link" routerLink="/evidence" routerLinkActive="topbar-link--active">
-          Evidence
+        <a class="topbar-link" routerLink="/elastic" routerLinkActive="topbar-link--active">
+          Elastic
+        </a>
+        <a class="topbar-link" routerLink="/gitlab" routerLinkActive="topbar-link--active">
+          GitLab
         </a>
         <a class="topbar-link" routerLink="/database" routerLinkActive="topbar-link--active">
           Database
@@ -37,39 +40,78 @@
 
   <main class="workspace">
     <section class="hero-card evidence-hero">
-      <div class="hero-main">
-        <div class="hero-copy">
-          <p class="section-eyebrow">Manualne testy adapterów</p>
-          <h2>Sprawdzaj helper endpointy Elastica i GitLaba bez wychodzenia z aplikacji.</h2>
-          <p class="hero-description">
-            Widok służy do ręcznego odpalania adapterów diagnostycznych. Każda karta wysyła
-            request do backendu i pokazuje sformatowaną odpowiedź JSON w polu tekstowym.
-          </p>
-        </div>
+      @if (activeIntegration() === 'elastic') {
+        <div class="hero-main">
+          <div class="hero-copy">
+            <p class="section-eyebrow">Manualne testy integracji</p>
+            <h2>Elastic</h2>
+            <p class="hero-description">
+              Widok służy do ręcznego odpalania helper endpointów Elastica. Każda karta wysyła
+              request do backendu i pokazuje sformatowaną odpowiedź JSON w polu tekstowym.
+            </p>
+          </div>
 
-        <div class="evidence-intro">
-          <div class="evidence-intro__chip-list">
-            <span class="panel-chip">JSON response preview</span>
-            <span class="panel-chip">Elastic log search</span>
-            <span class="panel-chip">Elastic HTTP compare</span>
-            <span class="panel-chip">GitLab repo mapping</span>
-            <span class="panel-chip">GitLab source resolve</span>
+          <div class="evidence-intro">
+            <div class="evidence-intro__chip-list">
+              <span class="panel-chip">JSON response preview</span>
+              <span class="panel-chip">Elastic log search</span>
+              <span class="panel-chip">Elastic HTTP compare</span>
+              <span class="panel-chip">HTTP call logs</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="hero-side-panel">
-        <p class="panel-title">Przydatne scenariusze</p>
-        <ul class="mini-list">
-          <li>czy `correlationId` zwraca oczekiwane logi z Elastica</li>
-          <li>czy podobne wywołania HTTP na tym samym path kończą się 200/400/500</li>
-          <li>czy hint komponentu mapuje się na właściwe repozytorium GitLaba</li>
-          <li>czy symbol klasy rozwiązuje się do pliku i preview kodu</li>
-        </ul>
-      </div>
+        <div class="hero-side-panel">
+          <p class="panel-title">Przydatne scenariusze</p>
+          <ul class="mini-list">
+            <li>czy `correlationId` zwraca oczekiwane logi z Elastica</li>
+            <li>czy podobne wywołania HTTP na tym samym path kończą się 200/400/500</li>
+            <li>czy konkretny path/status/metoda dają dobry przykład do analizy kontraktu</li>
+          </ul>
+        </div>
+      } @else {
+        <div class="hero-main">
+          <div class="hero-copy">
+            <p class="section-eyebrow">Manualne testy integracji</p>
+            <h2>GitLab</h2>
+            <p class="hero-description">
+              Widok służy do ręcznej weryfikacji capability GitLaba: mapowania repozytoriów,
+              listowania endpointów REST i rozwiązywania symboli do plików źródłowych.
+            </p>
+          </div>
+
+          <div class="evidence-intro">
+            <div class="evidence-intro__chip-list">
+              <span class="panel-chip">JSON response preview</span>
+              <span class="panel-chip">GitLab repo mapping</span>
+              <span class="panel-chip">GitLab endpoint inventory</span>
+              <span class="panel-chip">GitLab source resolve</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-side-panel">
+          <p class="panel-title">Przydatne scenariusze</p>
+          <ul class="mini-list">
+            <li>czy hint komponentu mapuje się na właściwe repozytorium GitLaba</li>
+            <li>czy repozytorium wystawia oczekiwane endpointy REST</li>
+            <li>czy symbol klasy rozwiązuje się do pliku i preview kodu</li>
+          </ul>
+        </div>
+      }
     </section>
 
-    <section class="tool-grid">
+    @if (activeIntegration() === 'elastic') {
+      <section class="evidence-tool-section evidence-tool-section--elastic">
+      <div class="evidence-tool-section__header">
+        <div>
+          <p class="section-eyebrow">Elastic evidence</p>
+          <h2>Elasticsearch</h2>
+        </div>
+        <span class="panel-chip">Logi i diagnostyka HTTP</span>
+      </div>
+
+      <div class="tool-grid">
       <article class="analysis-card tool-card">
         <div class="section-heading">
           <div>
@@ -384,7 +426,21 @@
           [value]="elasticHttpLogsState().responseJson"
         ></textarea>
       </article>
+      </div>
+      </section>
+    }
 
+    @if (activeIntegration() === 'gitlab') {
+      <section class="evidence-tool-section evidence-tool-section--gitlab">
+      <div class="evidence-tool-section__header">
+        <div>
+          <p class="section-eyebrow">GitLab evidence</p>
+          <h2>GitLab</h2>
+        </div>
+        <span class="panel-chip">Repozytoria, endpointy i source resolve</span>
+      </div>
+
+      <div class="tool-grid">
       <article class="analysis-card tool-card">
         <div class="section-heading">
           <div>
@@ -500,6 +556,224 @@
           readonly
           spellcheck="false"
           [value]="gitLabRepositoryState().responseJson"
+        ></textarea>
+      </article>
+
+      <article class="analysis-card tool-card">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">GitLab</p>
+            <h2>Endpoint Inventory</h2>
+            <p class="field-hint">
+              Przeszukuje repozytorium pod kątem kontrolerów Spring MVC/REST i zwraca ścieżki,
+              metody HTTP, klasy oraz miejsca do kolejnego doczytania kodu.
+            </p>
+          </div>
+          <span class="panel-chip route-chip">POST /api/gitlab/repository/endpoints</span>
+        </div>
+
+        <form class="tool-form" novalidate (submit)="submitGitLabEndpointSearch($event)">
+          <div class="form-grid">
+            <label class="form-field">
+              <span class="field-label">Group</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. TENANT-ALPHA"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointForm.controls.group"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Project Name</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. orders-api"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointForm.controls.projectName"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Branch / Ref</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="HEAD"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointForm.controls.branch"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">HTTP Method</span>
+              <select class="text-input" [formControl]="gitLabEndpointForm.controls.httpMethod">
+                <option value="">All</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+              </select>
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Endpoint Path Prefix</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="opcjonalnie, np. /api/orders"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointForm.controls.endpointPathPrefix"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Source Path Prefix</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="src/main/java"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointForm.controls.sourcePathPrefix"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Max Scanned Files</span>
+              <input
+                class="text-input"
+                type="number"
+                min="1"
+                max="250"
+                [formControl]="gitLabEndpointForm.controls.maxScannedFiles"
+              />
+            </label>
+          </div>
+
+          @if (
+            controlInvalid(gitLabEndpointForm.controls.group) ||
+            controlInvalid(gitLabEndpointForm.controls.projectName) ||
+            controlInvalid(gitLabEndpointForm.controls.branch)
+          ) {
+            <p class="form-error">Pola `group`, `projectName` i `branch` są wymagane.</p>
+          }
+
+          @if (controlInvalid(gitLabEndpointForm.controls.maxScannedFiles)) {
+            <p class="form-error">Pole `maxScannedFiles` musi mieścić się w zakresie 1-250.</p>
+          }
+
+          <div class="tool-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="gitLabEndpointState().status === 'loading'"
+            >
+              <span class="button-label">Szukaj endpointów</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="tool-status" [attr.data-status]="gitLabEndpointState().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ gitLabEndpointState().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (gitLabEndpointState().statusCode !== null) {
+              <span class="tool-status__code">HTTP {{ gitLabEndpointState().statusCode }}</span>
+            }
+            <span [class]="statusPillClass(gitLabEndpointState().status)">
+              {{ statusLabel(gitLabEndpointState().status) }}
+            </span>
+          </div>
+        </div>
+
+        @if (gitLabEndpointResult(); as endpointResult) {
+          <section class="endpoint-results">
+            <div class="endpoint-results__header">
+              <div>
+                <p class="tool-status__label">Znalezione endpointy</p>
+                <h3>{{ endpointResult.endpoints.length }} endpointów</h3>
+              </div>
+              <div class="endpoint-results__stats">
+                <span class="panel-chip">{{ endpointResult.scannedFileCount }} skanowanych</span>
+                <span class="panel-chip">{{ endpointResult.candidateFileCount }} kandydatów</span>
+                @if (endpointResult.scannedFileLimitReached) {
+                  <span class="panel-chip panel-chip--warning">limit skanowania</span>
+                }
+              </div>
+            </div>
+
+            @if (endpointResult.limitations.length > 0) {
+              <ul class="endpoint-results__limitations">
+                @for (limitation of endpointResult.limitations; track limitation) {
+                  <li>{{ limitation }}</li>
+                }
+              </ul>
+            }
+
+            @if (endpointResult.endpoints.length > 0) {
+              <div class="endpoint-list">
+                @for (endpoint of endpointResult.endpoints; track endpoint.endpointId) {
+                  <article class="endpoint-card">
+                    <div class="endpoint-card__main">
+                      <span class="endpoint-card__method">{{ endpointMethods(endpoint) }}</span>
+                      <div>
+                        <h4>{{ endpoint.path || endpoint.pathExpression || '&lt;unresolved-path&gt;' }}</h4>
+                        <p>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</p>
+                      </div>
+                    </div>
+
+                    <div class="endpoint-card__meta">
+                      <span>{{ endpoint.filePath }}</span>
+                      <span>lines {{ endpoint.lineStart }}-{{ endpoint.lineEnd }}</span>
+                      @if (endpoint.confidence) {
+                        <span>confidence {{ endpoint.confidence }}</span>
+                      }
+                    </div>
+
+                    @if (endpoint.requestTypes.length > 0 || endpoint.responseTypes.length > 0) {
+                      <div class="endpoint-card__meta">
+                        @if (endpoint.requestTypes.length > 0) {
+                          <span>Request: {{ endpoint.requestTypes.join(', ') }}</span>
+                        }
+                        @if (endpoint.responseTypes.length > 0) {
+                          <span>Response: {{ endpoint.responseTypes.join(', ') }}</span>
+                        }
+                      </div>
+                    }
+
+                    @if (endpoint.limitations.length > 0) {
+                      <ul class="endpoint-card__limitations">
+                        @for (limitation of endpoint.limitations; track limitation) {
+                          <li>{{ limitation }}</li>
+                        }
+                      </ul>
+                    }
+                  </article>
+                }
+              </div>
+            } @else {
+              <p class="empty-state">Backend nie zwrócił endpointów dla podanych filtrów.</p>
+            }
+          </section>
+        }
+
+        <label class="field-label" for="gitlabEndpointJsonResponse">JSON response</label>
+        <textarea
+          id="gitlabEndpointJsonResponse"
+          class="json-output"
+          readonly
+          spellcheck="false"
+          [value]="gitLabEndpointState().responseJson"
         ></textarea>
       </article>
 
@@ -630,6 +904,8 @@
           [value]="gitLabSourceState().responseJson"
         ></textarea>
       </article>
-    </section>
+      </div>
+      </section>
+    }
   </main>
 </div>

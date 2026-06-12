@@ -289,12 +289,12 @@ zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
 wlacznie z `toolFeedback`; starsze eksporty bez tego pola sa normalizowane do
 pustych list.
-route `/evidence` sluzy do recznego odpalania helper endpointow Elastica i
-GitLaba, route `/database` sluzy do recznego testowania endpointow nad
-`DatabaseToolService` z jawnym operatorskim `environment`, a route
-`/operational-context` sluzy do utrzymania katalogu systemow, repozytoriow,
-procesow, integracji i handoffu. Takie endpointy traktuj jako shared/operator
-API nad adapterami:
+route `/elastic` sluzy do recznego odpalania helper endpointow Elastica,
+route `/gitlab` sluzy do recznego odpalania helper endpointow GitLaba, route
+`/database` sluzy do recznego testowania endpointow nad `DatabaseToolService`
+z jawnym operatorskim `environment`, a route `/operational-context` sluzy do
+utrzymania katalogu systemow, repozytoriow, procesow, integracji i handoffu.
+Takie endpointy traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
 

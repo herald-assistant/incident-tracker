@@ -6,8 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 class FrontendRouteController {
 
-    @GetMapping("/evidence")
-    String forwardEvidence() {
+    @GetMapping({
+            "/evidence",
+            "/elastic",
+            "/gitlab"
+    })
+    String forwardIntegrationConsoles() {
         return "forward:/index.html";
     }
 
