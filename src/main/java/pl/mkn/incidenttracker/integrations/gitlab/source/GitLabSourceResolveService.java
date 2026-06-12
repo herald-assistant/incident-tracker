@@ -1,14 +1,16 @@
 package pl.mkn.incidenttracker.integrations.gitlab.source;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.util.UriUtils;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeException;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeNode;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRestClientFactory;
 
 import java.net.URI;
@@ -20,15 +22,27 @@ import java.util.List;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class GitLabSourceResolveService {
 
-    private static final int TREE_PAGE_SIZE = 100;
     private static final int PREVIEW_CONTENT_LIMIT = 2_000;
     private static final List<String> SOURCE_FILE_SUFFIXES = List.of(".java", ".kt", ".groovy");
     private static final String TREE_CACHE_ATTRIBUTE = GitLabSourceResolveService.class.getName() + ".repositoryTreeCache";
 
     private final GitLabRestClientFactory gitLabRestClientFactory;
+    private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
+
+    @Autowired
+    public GitLabSourceResolveService(
+            GitLabRestClientFactory gitLabRestClientFactory,
+            GitLabRepositoryTreeService gitLabRepositoryTreeService
+    ) {
+        this.gitLabRestClientFactory = gitLabRestClientFactory;
+        this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
+    }
+
+    GitLabSourceResolveService(GitLabRestClientFactory gitLabRestClientFactory) {
+        this(gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory));
+    }
 
     public GitLabSourceResolveResponse resolve(GitLabSourceResolveRequest request) {
         return resolve(request, requestScopedSession());
@@ -56,7 +70,6 @@ public class GitLabSourceResolveService {
     ) {
         var effectiveSession = effectiveSession(session);
         var effectiveRef = request.effectiveRef();
-        var projectIdOrPath = encodeProjectIdOrPath(request.groupPath(), request.projectPath());
         var symbol = request.symbol().trim();
 
         log.info(
@@ -67,14 +80,7 @@ public class GitLabSourceResolveService {
                 effectiveRef
         );
 
-        var treeNodes = fetchRepositoryTree(
-                request.gitlabBaseUrl(),
-                projectIdOrPath,
-                effectiveRef,
-                request.groupPath(),
-                request.projectPath(),
-                effectiveSession
-        );
+        var treeNodes = fetchRepositoryTree(request, effectiveRef, effectiveSession);
         var candidates = findCandidates(treeNodes, symbol);
 
         if (candidates.isEmpty()) {
@@ -134,65 +140,21 @@ public class GitLabSourceResolveService {
     }
 
     private List<GitLabRepositoryTreeNode> fetchRepositoryTree(
-            String gitlabBaseUrl,
-            String projectIdOrPath,
+            GitLabSourceResolveRequest request,
             String ref,
-            String groupPath,
-            String projectPath,
             GitLabSourceResolveSession session
     ) {
-        var gitlabApiBaseUrl = apiBaseUrl(gitlabBaseUrl);
-
-        var cachedNodes = session.findRepositoryTree(gitlabApiBaseUrl, projectIdOrPath, ref);
-        if (cachedNodes != null) {
-            log.debug(
-                    "Using cached GitLab repository tree groupPath={} projectPath={} ref={} nodeCount={}",
-                    groupPath,
-                    projectPath,
+        try {
+            return gitLabRepositoryTreeService.fetchRepositoryBlobs(
+                    request.gitlabBaseUrl(),
+                    request.groupPath().trim() + "/" + request.projectPath().trim(),
                     ref,
-                    cachedNodes.size()
+                    null,
+                    session.repositoryTreeSession()
             );
-            return cachedNodes;
+        } catch (GitLabRepositoryTreeException exception) {
+            throw mapTreeFailure(exception, request.groupPath(), request.projectPath(), ref);
         }
-
-        var allNodes = new ArrayList<GitLabRepositoryTreeNode>();
-        var page = "1";
-
-        while (StringUtils.hasText(page)) {
-            try {
-                var entity = gitLabRestClientFactory.create()
-                        .get()
-                        .uri(repositoryTreeUri(gitlabBaseUrl, projectIdOrPath, ref, page))
-                        .retrieve()
-                        .toEntity(GitLabRepositoryTreeNode[].class);
-
-                var body = entity.getBody();
-                if (body != null) {
-                    for (var node : body) {
-                        if ("blob".equals(node.type())) {
-                            allNodes.add(node);
-                        }
-                    }
-                }
-
-                log.debug(
-                        "Fetched GitLab tree page={} groupPath={} projectPath={} blobCount={} nextPage={}",
-                        page,
-                        groupPath,
-                        projectPath,
-                        body != null ? body.length : 0,
-                        entity.getHeaders().getFirst("X-Next-Page")
-                );
-
-                page = entity.getHeaders().getFirst("X-Next-Page");
-            } catch (RestClientResponseException exception) {
-                throw mapTreeFailure(exception, groupPath, projectPath, ref);
-            }
-        }
-
-        var nodes = List.copyOf(allNodes);
-        session.storeRepositoryTree(gitlabApiBaseUrl, projectIdOrPath, ref, nodes);
-        return nodes;
     }
 
     private String fetchRawFile(
@@ -285,12 +247,12 @@ public class GitLabSourceResolveService {
     }
 
     private GitLabSourceResolveException mapTreeFailure(
-            RestClientResponseException exception,
+            GitLabRepositoryTreeException exception,
             String groupPath,
             String projectPath,
             String ref
     ) {
-        if (exception.getStatusCode().value() == 404) {
+        if (exception.statusCode() == 404) {
             return failure(
                     HttpStatus.NOT_FOUND,
                     List.of(),
@@ -301,7 +263,7 @@ public class GitLabSourceResolveService {
         return failure(
                 HttpStatus.BAD_GATEWAY,
                 List.of(),
-                "GitLab repository tree request failed with status " + exception.getStatusCode().value()
+                "GitLab repository tree request failed with status " + exception.statusCode()
         );
     }
 
@@ -344,15 +306,6 @@ public class GitLabSourceResolveService {
         return encodePathSegment(groupPath.trim() + "/" + projectPath.trim());
     }
 
-    private URI repositoryTreeUri(String gitlabBaseUrl, String projectIdOrPath, String ref, String page) {
-        return URI.create(apiBaseUrl(gitlabBaseUrl)
-                + "/projects/" + projectIdOrPath
-                + "/repository/tree?recursive=true"
-                + "&per_page=" + TREE_PAGE_SIZE
-                + "&ref=" + encodeQueryParam(ref)
-                + "&page=" + encodeQueryParam(page));
-    }
-
     private URI rawFileUri(String gitlabBaseUrl, String projectIdOrPath, String filePath, String ref) {
         return URI.create(apiBaseUrl(gitlabBaseUrl)
                 + "/projects/" + projectIdOrPath
@@ -383,14 +336,7 @@ public class GitLabSourceResolveService {
             return openSession();
         }
 
-        var existingCache = requestAttributes.getAttribute(TREE_CACHE_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
-        if (existingCache instanceof GitLabSourceResolveSession session) {
-            return session;
-        }
-
-        var newSession = openSession();
-        requestAttributes.setAttribute(TREE_CACHE_ATTRIBUTE, newSession, RequestAttributes.SCOPE_REQUEST);
-        return newSession;
+        return new GitLabSourceResolveSession(gitLabRepositoryTreeService.requestScopedSession(TREE_CACHE_ATTRIBUTE));
     }
 
     private GitLabSourceResolveSession effectiveSession(GitLabSourceResolveSession session) {

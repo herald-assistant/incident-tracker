@@ -8,6 +8,41 @@ import java.util.Map;
 public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
     private static final Map<String, String> FILE_CONTENTS = Map.of(
+            repositoryKey("orders-api", "src/main/java/com/example/synthetic/orders/api/OrderController.java"),
+            """
+                    package com.example.synthetic.orders.api;
+
+                    import jakarta.validation.Valid;
+                    import org.springframework.http.ResponseEntity;
+                    import org.springframework.web.bind.annotation.GetMapping;
+                    import org.springframework.web.bind.annotation.PathVariable;
+                    import org.springframework.web.bind.annotation.PostMapping;
+                    import org.springframework.web.bind.annotation.RequestBody;
+                    import org.springframework.web.bind.annotation.RequestMapping;
+                    import org.springframework.web.bind.annotation.RestController;
+
+                    @RestController
+                    @RequestMapping("/api/orders")
+                    public class OrderController {
+
+                        @GetMapping("/{orderId}")
+                        public ResponseEntity<OrderResponse> getOrder(@PathVariable String orderId) {
+                            return ResponseEntity.ok(new OrderResponse(orderId));
+                        }
+
+                        @PostMapping(path = "/")
+                        public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest request) {
+                            return new OrderResponse(request.orderId());
+                        }
+                    }
+                    """,
+            repositoryKey("orders-api", "src/main/java/com/example/synthetic/orders/service/OrderService.java"),
+            """
+                    package com.example.synthetic.orders.service;
+
+                    public class OrderService {
+                    }
+                    """,
             repositoryKey("edge-client-service", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"),
             """
                     package com.example.synthetic.edge;
@@ -139,6 +174,21 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
     }
 
     @Override
+    public List<GitLabRepositoryFile> listRepositoryFiles(
+            String group,
+            String projectName,
+            String branch,
+            String pathPrefix
+    ) {
+        return FILE_CONTENTS.keySet().stream()
+                .map(TestGitLabRepositoryPort::splitRepositoryKey)
+                .filter(entry -> projectName.equals(entry.projectName()))
+                .map(entry -> new GitLabRepositoryFile(group, projectName, branch, entry.filePath()))
+                .filter(file -> pathPrefix == null || file.filePath().startsWith(pathPrefix))
+                .toList();
+    }
+
+    @Override
     public GitLabRepositoryFileContent readFile(
             String group,
             String projectName,
@@ -221,6 +271,20 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
     private static String repositoryKey(String projectName, String filePath) {
         return projectName + "::" + filePath;
+    }
+
+    private static RepositoryFileKey splitRepositoryKey(String repositoryKey) {
+        var separatorIndex = repositoryKey.indexOf("::");
+        return new RepositoryFileKey(
+                repositoryKey.substring(0, separatorIndex),
+                repositoryKey.substring(separatorIndex + 2)
+        );
+    }
+
+    private record RepositoryFileKey(
+            String projectName,
+            String filePath
+    ) {
     }
 }
 

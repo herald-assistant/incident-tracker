@@ -219,6 +219,46 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldListRepositoryEndpointsUsingSessionBoundScope() {
+        var response = gitLabMcpTools.listRepositoryEndpoints(
+                "orders-api",
+                "/api/orders",
+                "GET",
+                "src/main/java",
+                50,
+                "Listuje endpointy zamowien.",
+                gitLabToolContext("platform/backend", "feature/FLOW-1", "flow-123")
+        );
+
+        assertEquals("platform/backend", response.group());
+        assertEquals("orders-api", response.projectName());
+        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals("/api/orders", response.endpointPathPrefix());
+        assertEquals("GET", response.httpMethod());
+        assertEquals("src/main/java", response.sourcePathPrefix());
+        assertEquals(2, response.candidateFileCount());
+        assertEquals(2, response.scannedFileCount());
+        assertFalse(response.scannedFileLimitReached());
+        assertEquals(1, response.endpoints().size());
+
+        var endpoint = response.endpoints().get(0);
+        assertEquals("/api/orders/{orderId}", endpoint.path());
+        assertIterableEquals(List.of("GET"), endpoint.httpMethods());
+        assertEquals("com.example.synthetic.orders.api.OrderController", endpoint.controllerClass());
+        assertEquals("getOrder", endpoint.handlerMethod());
+        assertEquals("src/main/java/com/example/synthetic/orders/api/OrderController.java", endpoint.filePath());
+        assertIterableEquals(List.of("@PathVariable String orderId"), endpoint.requestTypes());
+        assertIterableEquals(List.of("ResponseEntity<OrderResponse>"), endpoint.responseTypes());
+        assertTrue(endpoint.annotations().contains("RestController"));
+        assertTrue(endpoint.annotations().contains("GetMapping"));
+        assertEquals("high", endpoint.confidence());
+        assertTrue(endpoint.limitations().isEmpty());
+        assertEquals("orders-api", endpoint.useCaseContextInput().projectName());
+        assertEquals(endpoint.endpointId(), endpoint.useCaseContextInput().endpointId());
+        assertTrue(endpoint.suggestedNextReads().get(0).contains("gitlab_read_repository_file_chunk"));
+    }
+
+    @Test
     void shouldDelegateReadRepositoryFileUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);

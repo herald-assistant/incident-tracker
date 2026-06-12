@@ -5,6 +5,7 @@ public final class GitLabToolNames {
     public static final String PREFIX = "gitlab_";
 
     public static final String LIST_AVAILABLE_REPOSITORIES = PREFIX + "list_available_repositories";
+    public static final String LIST_REPOSITORY_ENDPOINTS = PREFIX + "list_repository_endpoints";
     public static final String SEARCH_REPOSITORY_CANDIDATES = PREFIX + "search_repository_candidates";
     public static final String READ_REPOSITORY_FILE = PREFIX + "read_repository_file";
     public static final String READ_REPOSITORY_FILE_CHUNK = PREFIX + "read_repository_file_chunk";

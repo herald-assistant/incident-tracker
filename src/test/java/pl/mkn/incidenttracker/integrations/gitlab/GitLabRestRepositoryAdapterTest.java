@@ -173,6 +173,45 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldListRepositoryFilesThroughGitLabRepositoryTreeApi() {
+        var properties = gitLabProperties("sample/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/sample%2Fruntime%2Forders-api/repository/tree?recursive=true&per_page=100&ref=release/2026.04&page=1&path=src/main/java"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "path": "src/main/java/com/example/orders/OrderController.java",
+                            "type": "blob"
+                          },
+                          {
+                            "path": "src/main/java/com/example/orders",
+                            "type": "tree"
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        var files = adapter.listRepositoryFiles(
+                "sample/runtime",
+                "orders-api",
+                "release/2026.04",
+                "src/main/java"
+        );
+
+        assertEquals(1, files.size());
+        assertEquals("sample/runtime", files.get(0).group());
+        assertEquals("orders-api", files.get(0).projectName());
+        assertEquals("release/2026.04", files.get(0).branch());
+        assertEquals("src/main/java/com/example/orders/OrderController.java", files.get(0).filePath());
+
+        server.verify();
+    }
+
+    @Test
     void shouldReadRawFileAndBuildChunkFromGitLabRestApi() {
         var properties = gitLabProperties("sample/runtime");
         var restClientBuilder = RestClient.builder();

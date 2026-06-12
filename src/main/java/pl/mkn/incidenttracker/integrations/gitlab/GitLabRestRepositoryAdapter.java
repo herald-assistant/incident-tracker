@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.integrations.gitlab;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -18,13 +18,31 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
-@RequiredArgsConstructor
 public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
 
     private static final int PROJECT_SEARCH_PAGE_SIZE = 100;
 
     private final GitLabProperties properties;
     private final GitLabRestClientFactory gitLabRestClientFactory;
+    private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
+
+    @Autowired
+    public GitLabRestRepositoryAdapter(
+            GitLabProperties properties,
+            GitLabRestClientFactory gitLabRestClientFactory,
+            GitLabRepositoryTreeService gitLabRepositoryTreeService
+    ) {
+        this.properties = properties;
+        this.gitLabRestClientFactory = gitLabRestClientFactory;
+        this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
+    }
+
+    public GitLabRestRepositoryAdapter(
+            GitLabProperties properties,
+            GitLabRestClientFactory gitLabRestClientFactory
+    ) {
+        this(properties, gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory));
+    }
 
     @Override
     public List<GitLabRepositoryProjectCandidate> searchProjects(String group, List<String> projectHints) {
@@ -89,6 +107,43 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                 .limit(properties.getMaxCandidateCount())
                 .map(CandidateAccumulator::toCandidate)
                 .toList();
+    }
+
+    @Override
+    public List<GitLabRepositoryFile> listRepositoryFiles(
+            String group,
+            String projectName,
+            String branch,
+            String pathPrefix
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(branch)) {
+            return List.of();
+        }
+
+        try {
+            return gitLabRepositoryTreeService.fetchRepositoryBlobs(
+                            properties.getBaseUrl(),
+                            group.trim() + "/" + projectName.trim(),
+                            branch.trim(),
+                            pathPrefix,
+                            gitLabRepositoryTreeService.requestScopedSession()
+                    )
+                    .stream()
+                    .filter(node -> StringUtils.hasText(node.path()))
+                    .map(node -> new GitLabRepositoryFile(
+                            group,
+                            projectName,
+                            branch,
+                            node.path()
+                    ))
+                    .toList();
+        } catch (GitLabRepositoryTreeException exception) {
+            if (exception.statusCode() == 404) {
+                return List.of();
+            }
+
+            throw new IllegalStateException("GitLab repository tree request failed for " + group + "/" + projectName, exception);
+        }
     }
 
     @Override

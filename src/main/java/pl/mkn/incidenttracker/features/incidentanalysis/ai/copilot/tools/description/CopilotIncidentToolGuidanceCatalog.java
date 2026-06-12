@@ -72,6 +72,15 @@ public class CopilotIncidentToolGuidanceCatalog {
                     )
             ),
             Map.entry(
+                    GitLabToolNames.LIST_REPOSITORY_ENDPOINTS,
+                    List.of(
+                            "Use when the user or follow-up asks about a concrete HTTP endpoint, endpoint family or whether a requirement belongs to an existing endpoint.",
+                            "Prefer endpointPathPrefix/httpMethod filters when known; avoid broad repository inventories during incident root-cause work.",
+                            "Use returned endpointId, controller file path and line range as grounded inputs for focused read tools.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
+            Map.entry(
                     GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                     List.of(
                             "Use when project or file is unclear.",

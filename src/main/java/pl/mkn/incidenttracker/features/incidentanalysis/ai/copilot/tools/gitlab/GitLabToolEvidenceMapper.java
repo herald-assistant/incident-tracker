@@ -14,6 +14,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindCla
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListAvailableRepositoriesToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListRepositoryEndpointsToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
@@ -27,6 +28,7 @@ import java.util.List;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_ENDPOINTS;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
@@ -60,6 +62,7 @@ public class GitLabToolEvidenceMapper {
                  READ_REPOSITORY_FILE_CHUNKS,
                  READ_REPOSITORY_FILE_OUTLINE,
                  LIST_AVAILABLE_REPOSITORIES,
+                 LIST_REPOSITORY_ENDPOINTS,
                  SEARCH_REPOSITORY_CANDIDATES,
                  FIND_CLASS_REFERENCES,
                  FIND_FLOW_CONTEXT -> true;
@@ -80,6 +83,12 @@ public class GitLabToolEvidenceMapper {
             case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(toolCallId, rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, sessionEvidence);
             case LIST_AVAILABLE_REPOSITORIES -> captureGitLabAvailableRepositories(
+                    toolCallId,
+                    rawArguments,
+                    rawResult,
+                    sessionEvidence
+            );
+            case LIST_REPOSITORY_ENDPOINTS -> captureGitLabRepositoryEndpoints(
                     toolCallId,
                     rawArguments,
                     rawResult,
@@ -319,6 +328,48 @@ public class GitLabToolEvidenceMapper {
         }
     }
 
+    private AnalysisEvidenceSection captureGitLabRepositoryEndpoints(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabListRepositoryEndpointsToolResponse.class);
+            var endpoints = safeList(response.endpoints());
+            var limitations = safeList(response.limitations());
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    LIST_REPOSITORY_ENDPOINTS,
+                    rawArguments
+            );
+            addAttribute(attributes, "group", response.group());
+            addAttribute(attributes, "projectName", response.projectName());
+            addAttribute(attributes, "branch", response.branch());
+            addAttribute(attributes, "endpointCount", String.valueOf(endpoints.size()));
+            addAttribute(attributes, "candidateFileCount", String.valueOf(response.candidateFileCount()));
+            addAttribute(attributes, "scannedFileCount", String.valueOf(response.scannedFileCount()));
+            addAttribute(attributes, "scannedFileLimitReached", String.valueOf(response.scannedFileLimitReached()));
+            addJsonAttribute(attributes, "endpoints", endpoints);
+            addJsonAttribute(attributes, "limitations", limitations);
+
+            return sessionEvidence.appendItem(
+                    GITLAB_PROVIDER,
+                    GITLAB_DISCOVERY_CATEGORY,
+                    discoveryKey(toolCallId, LIST_REPOSITORY_ENDPOINTS),
+                    GITLAB_DISCOVERY_ORDER_NAMESPACE,
+                    GITLAB_DISCOVERY_FALLBACK_KEY,
+                    new AnalysisEvidenceItem(
+                            gitLabDiscoveryTitle(LIST_REPOSITORY_ENDPOINTS),
+                            List.copyOf(attributes)
+                    )
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab repository endpoints result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
     private AnalysisEvidenceSection captureGitLabClassReferences(
             String toolCallId,
             String rawArguments,
@@ -533,6 +584,7 @@ public class GitLabToolEvidenceMapper {
     private String gitLabDiscoveryTitle(String toolName) {
         return switch (toolName) {
             case LIST_AVAILABLE_REPOSITORIES -> "GitLab available repositories";
+            case LIST_REPOSITORY_ENDPOINTS -> "GitLab repository endpoints";
             case SEARCH_REPOSITORY_CANDIDATES -> "GitLab search candidates";
             case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
             case FIND_CLASS_REFERENCES -> "GitLab class references";

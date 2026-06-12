@@ -364,6 +364,16 @@ class AnalysisEvidenceCollectorTest {
         }
 
         @Override
+        public List<pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFile> listRepositoryFiles(
+                String group,
+                String projectName,
+                String branch,
+                String pathPrefix
+        ) {
+            return List.of();
+        }
+
+        @Override
         public GitLabRepositoryFileContent readFile(
                 String group,
                 String projectName,

@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import org.springframework.ai.chat.model.ToolContext;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpoint;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 
 import java.util.List;
@@ -92,6 +93,25 @@ public final class GitLabToolDtos {
         public GitLabListAvailableRepositoriesToolResponse {
             repositories = repositories != null ? List.copyOf(repositories) : List.of();
             codeSearchScopes = codeSearchScopes != null ? List.copyOf(codeSearchScopes) : List.of();
+        }
+    }
+
+    public record GitLabListRepositoryEndpointsToolResponse(
+            String group,
+            String projectName,
+            String branch,
+            String endpointPathPrefix,
+            String httpMethod,
+            String sourcePathPrefix,
+            int candidateFileCount,
+            int scannedFileCount,
+            boolean scannedFileLimitReached,
+            List<GitLabRepositoryEndpoint> endpoints,
+            List<String> limitations
+    ) {
+        public GitLabListRepositoryEndpointsToolResponse {
+            endpoints = endpoints != null ? List.copyOf(endpoints) : List.of();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
         }
     }
 

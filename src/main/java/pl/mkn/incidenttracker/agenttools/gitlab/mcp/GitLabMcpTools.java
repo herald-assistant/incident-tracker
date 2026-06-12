@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -21,6 +23,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlo
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextCandidate;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListAvailableRepositoriesToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListRepositoryEndpointsToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
@@ -40,6 +43,7 @@ import java.util.regex.Pattern;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_ENDPOINTS;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
@@ -77,14 +81,28 @@ public class GitLabMcpTools {
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
+    private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
 
     @Autowired
     public GitLabMcpTools(
             GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort
+            OperationalContextPort operationalContextPort,
+            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
     ) {
         this.gitLabRepositoryPort = gitLabRepositoryPort;
         this.operationalContextPort = operationalContextPort;
+        this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
+    }
+
+    public GitLabMcpTools(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            OperationalContextPort operationalContextPort
+    ) {
+        this(
+                gitLabRepositoryPort,
+                operationalContextPort,
+                new GitLabRepositoryEndpointService(gitLabRepositoryPort)
+        );
     }
 
     public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
@@ -148,6 +166,89 @@ public class GitLabMcpTools {
                 scope.branch(),
                 repositories,
                 codeSearchScopes
+        );
+    }
+
+    @Tool(
+            name = LIST_REPOSITORY_ENDPOINTS,
+            description = """
+                    Lists Spring MVC HTTP endpoints declared by RestController/Controller classes in a GitLab repository.
+                    The group and branch are taken from hidden ToolContext. Provide projectName from gitlab_list_available_repositories
+                    or another grounded GitLab result. Use endpointPathPrefix/httpMethod to narrow the inventory when the user asks
+                    about a concrete endpoint family. The result returns endpointId, HTTP method/path, controller class/method,
+                    file path, line range, request/response type hints and ready input for a later endpoint use-case context tool.
+                    """
+    )
+    public GitLabListRepositoryEndpointsToolResponse listRepositoryEndpoints(
+            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            String projectName,
+            @ToolParam(required = false, description = "Optional endpoint path prefix, for example /api/orders.")
+            String endpointPathPrefix,
+            @ToolParam(required = false, description = "Optional HTTP method filter, for example GET, POST, PUT or DELETE.")
+            String httpMethod,
+            @ToolParam(required = false, description = "Optional repository source path prefix or module path to narrow scanning.")
+            String sourcePathPrefix,
+            @ToolParam(required = false, description = "Maximum Java source files to scan. Defaults to backend limit and is capped by the server.")
+            Integer maxScannedFiles,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model listuje endpointy repozytorium.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = GitLabToolScope.from(toolContext);
+
+        log.info(
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} sourcePathPrefix={} maxScannedFiles={}",
+                LIST_REPOSITORY_ENDPOINTS,
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                projectName,
+                endpointPathPrefix,
+                httpMethod,
+                sourcePathPrefix,
+                maxScannedFiles
+        );
+
+        var result = gitLabRepositoryEndpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                scope.group(),
+                projectName,
+                scope.branch(),
+                endpointPathPrefix,
+                httpMethod,
+                sourcePathPrefix,
+                maxScannedFiles
+        ));
+
+        log.info(
+                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} endpointCount={} candidateFileCount={} scannedFileCount={} scannedFileLimitReached={}",
+                LIST_REPOSITORY_ENDPOINTS,
+                scope.correlationId(),
+                result.group(),
+                result.branch(),
+                scope.environment(),
+                result.projectName(),
+                result.endpoints().size(),
+                result.candidateFileCount(),
+                result.scannedFileCount(),
+                result.scannedFileLimitReached()
+        );
+
+        return new GitLabListRepositoryEndpointsToolResponse(
+                result.group(),
+                result.projectName(),
+                result.branch(),
+                result.endpointPathPrefix(),
+                result.httpMethod(),
+                result.sourcePathPrefix(),
+                result.candidateFileCount(),
+                result.scannedFileCount(),
+                result.scannedFileLimitReached(),
+                result.endpoints(),
+                result.limitations()
         );
     }
 
