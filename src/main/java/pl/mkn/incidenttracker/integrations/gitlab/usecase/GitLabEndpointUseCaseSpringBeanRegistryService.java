@@ -23,7 +23,8 @@ class GitLabEndpointUseCaseSpringBeanRegistryService {
             "Repository",
             "Controller",
             "RestController",
-            "Configuration"
+            "Configuration",
+            "AdapterBean"
     );
     private static final Set<String> SPRING_DATA_REPOSITORY_TYPES = Set.of(
             "Repository",
@@ -240,6 +241,7 @@ class GitLabEndpointUseCaseSpringBeanRegistryService {
         if (resolvedType != null) {
             assignableTypes.add(resolvedType.fqn());
             assignableTypes.add(resolvedType.simpleName());
+            assignableTypes.add(relativeNestedName(resolvedType.fqn(), resolvedType.packageName()));
             return;
         }
 
@@ -265,7 +267,21 @@ class GitLabEndpointUseCaseSpringBeanRegistryService {
             return byFqn;
         }
         var bySimpleName = codeIndex.typesBySimpleName().get(simpleName(normalizedTypeName));
-        return bySimpleName != null && bySimpleName.size() == 1 ? bySimpleName.get(0) : null;
+        if (bySimpleName != null && bySimpleName.size() == 1) {
+            return bySimpleName.get(0);
+        }
+        return uniqueSuffixMatch(normalizedTypeName, codeIndex);
+    }
+
+    private GitLabEndpointUseCaseTypeInfo uniqueSuffixMatch(
+            String typeName,
+            GitLabEndpointUseCaseCodeIndex codeIndex
+    ) {
+        var suffix = "." + typeName;
+        var matches = codeIndex.types().stream()
+                .filter(type -> type.fqn().endsWith(suffix))
+                .toList();
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     private boolean shouldWarnUnresolvedAssignableType(String typeName) {
@@ -392,6 +408,14 @@ class GitLabEndpointUseCaseSpringBeanRegistryService {
             return simpleName;
         }
         return simpleName.substring(0, 1).toLowerCase(Locale.ROOT) + simpleName.substring(1);
+    }
+
+    private String relativeNestedName(String fqn, String packageName) {
+        if (!StringUtils.hasText(fqn) || !StringUtils.hasText(packageName)) {
+            return fqn;
+        }
+        var prefix = packageName + ".";
+        return fqn.startsWith(prefix) ? fqn.substring(prefix.length()) : fqn;
     }
 
     private String normalizeTypeName(String typeName) {

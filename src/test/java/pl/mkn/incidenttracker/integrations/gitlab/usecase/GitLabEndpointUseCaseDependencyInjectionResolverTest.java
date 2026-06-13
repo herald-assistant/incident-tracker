@@ -216,6 +216,37 @@ class GitLabEndpointUseCaseDependencyInjectionResolverTest {
         assertTrue(hasWarning(resolution, GitLabEndpointUseCaseWarningCodes.DI_QUALIFIER_NOT_FOUND));
     }
 
+    @Test
+    void shouldResolveNestedPortImplementedByAdapterBean() {
+        var resolution = resolution("""
+                package com.example.orders;
+
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.web.bind.annotation.RestController;
+
+                interface ProductRepositoryPort {
+                    interface Query {
+                    }
+                }
+
+                @AdapterBean
+                class ProductQueryRepository implements ProductRepositoryPort.Query {
+                }
+
+                @RestController
+                @RequiredArgsConstructor
+                class DataProductController {
+                    private final ProductRepositoryPort.Query productQueryRepository;
+                }
+                """);
+
+        assertResolved(
+                resolution.findDependency("com.example.orders.DataProductController", "productQueryRepository"),
+                "com.example.orders.ProductQueryRepository",
+                GitLabEndpointUseCaseResolutionKind.SPRING_BEAN_POLYMORPHIC
+        );
+    }
+
     private GitLabEndpointUseCaseDependencyResolution resolution(String source) {
         var snapshot = new GitLabEndpointUseCaseSourceSnapshot(
                 "tenant-alpha",

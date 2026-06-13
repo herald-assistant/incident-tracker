@@ -120,6 +120,47 @@ class GitLabEndpointUseCaseCodeIndexServiceTest {
                         && "src/main/java/com/example/orders/BrokenService.java".equals(warning.sourcePath())));
     }
 
+    @Test
+    void shouldIndexJava21PatternSwitchSources() {
+        var snapshot = snapshot(List.of(new GitLabEndpointUseCaseSourceFile(
+                "src/main/java/com/example/orders/ProductMapper.java",
+                """
+                        package com.example.orders;
+
+                        interface FormView {
+                        }
+
+                        class OverdraftFormView implements FormView {
+                        }
+
+                        class ProductWebModel {
+                        }
+
+                        class OverdraftProductWebModel extends ProductWebModel {
+                        }
+
+                        interface ProductMapper {
+                            default ProductWebModel from(FormView formView) {
+                                return switch (formView) {
+                                    case OverdraftFormView overdraftFormView -> new OverdraftProductWebModel();
+                                    default -> throw new IllegalArgumentException("Unsupported form view");
+                                };
+                            }
+                        }
+                        """,
+                1_000,
+                false
+        )));
+
+        var index = service.buildIndex(snapshot);
+
+        assertEquals(GitLabEndpointUseCaseIndexStatus.BUILT_DURING_CALL, index.indexStatus());
+        var mapper = index.findType("com.example.orders.ProductMapper").orElseThrow();
+        assertTrue(mapper.methods().stream().anyMatch(method -> "from(FormView)".equals(method.signature())));
+        assertTrue(index.warnings().stream()
+                .noneMatch(warning -> GitLabEndpointUseCaseWarningCodes.SOURCE_PARSE_FAILED.equals(warning.code())));
+    }
+
     private static GitLabEndpointUseCaseSourceSnapshot snapshot(List<GitLabEndpointUseCaseSourceFile> files) {
         return new GitLabEndpointUseCaseSourceSnapshot(
                 "tenant-alpha",

@@ -123,6 +123,19 @@ class GitLabEndpointUseCaseCallTargetResolver {
             );
         }
 
+        var singletonReceiverType = singletonReceiverType(receiver, context);
+        if (singletonReceiverType != null) {
+            return resolveMethodOnType(
+                    call,
+                    callerType,
+                    singletonReceiverType,
+                    GitLabEndpointUseCaseResolutionKind.STATIC_METHOD,
+                    true,
+                    context,
+                    warnings
+            );
+        }
+
         var staticType = resolveType(receiver, context);
         if (staticType != null) {
             return resolveMethodOnType(
@@ -507,7 +520,32 @@ class GitLabEndpointUseCaseCallTargetResolver {
             return byFqn;
         }
         var bySimpleName = context.codeIndex().typesBySimpleName().get(simpleName(normalizedTypeName));
-        return bySimpleName != null && bySimpleName.size() == 1 ? bySimpleName.get(0) : null;
+        if (bySimpleName != null && bySimpleName.size() == 1) {
+            return bySimpleName.get(0);
+        }
+        return uniqueSuffixMatch(normalizedTypeName, context);
+    }
+
+    private GitLabEndpointUseCaseTypeInfo singletonReceiverType(
+            String receiver,
+            ResolverContext context
+    ) {
+        if (!StringUtils.hasText(receiver) || !receiver.endsWith(".INSTANCE")) {
+            return null;
+        }
+        var typeName = receiver.substring(0, receiver.length() - ".INSTANCE".length());
+        return resolveType(typeName, context);
+    }
+
+    private GitLabEndpointUseCaseTypeInfo uniqueSuffixMatch(
+            String typeName,
+            ResolverContext context
+    ) {
+        var suffix = "." + typeName;
+        var matches = context.codeIndex().types().stream()
+                .filter(type -> type.fqn().endsWith(suffix))
+                .toList();
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     private List<GitLabEndpointUseCaseSpringBean> beanCandidates(

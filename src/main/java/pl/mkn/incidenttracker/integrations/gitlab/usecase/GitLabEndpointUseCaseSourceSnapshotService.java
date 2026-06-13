@@ -16,6 +16,8 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -26,6 +28,42 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
 
     private static final String TREE_CACHE_ATTRIBUTE =
             GitLabEndpointUseCaseSourceSnapshotService.class.getName() + ".repositoryTreeCache";
+    private static final Set<String> LOW_VALUE_PATH_TOKENS = Set.of(
+            "api",
+            "application",
+            "adapter",
+            "agreement",
+            "clp",
+            "com",
+            "controller",
+            "dto",
+            "delete",
+            "get",
+            "id",
+            "ids",
+            "in",
+            "int",
+            "java",
+            "main",
+            "model",
+            "models",
+            "org",
+            "out",
+            "pl",
+            "post",
+            "port",
+            "process",
+            "put",
+            "patch",
+            "rest",
+            "src",
+            "trace",
+            "v1",
+            "v2",
+            "web",
+            "webmodel",
+            "webmodels"
+    );
 
     private final GitLabProperties gitLabProperties;
     private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
@@ -119,7 +157,7 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
             );
         }
 
-        var sourcePaths = sourcePaths(treeNodes, sourcePathPrefix);
+        var sourcePaths = sourcePaths(treeNodes, sourcePathPrefix, request);
         var sourceFileLimitReached = sourcePaths.size() > maxSourceFiles;
         if (sourceFileLimitReached) {
             warnings.add(new GitLabEndpointUseCaseWarning(
@@ -240,7 +278,11 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
         return gitLabRepositoryPort.readFile(group, projectName, branch, sourcePath, maxFileCharacters);
     }
 
-    private List<String> sourcePaths(List<GitLabRepositoryTreeNode> treeNodes, String sourcePathPrefix) {
+    private List<String> sourcePaths(
+            List<GitLabRepositoryTreeNode> treeNodes,
+            String sourcePathPrefix,
+            GitLabEndpointUseCaseContextRequest request
+    ) {
         var paths = new LinkedHashSet<String>();
         for (var treeNode : treeNodes != null ? treeNodes : List.<GitLabRepositoryTreeNode>of()) {
             var path = normalizePath(treeNode.path());
@@ -249,9 +291,198 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
             }
         }
 
+        var priorities = sourcePathPriorities(request);
+        var controllerPath = controllerPath(request);
         return paths.stream()
-                .sorted(Comparator.naturalOrder())
+                .sorted(Comparator.comparingInt((String path) -> -sourcePathScore(path, priorities, controllerPath))
+                        .thenComparing(Comparator.naturalOrder()))
                 .toList();
+    }
+
+    private int sourcePathScore(
+            String path,
+            List<SourcePathPriority> priorities,
+            String controllerPath
+    ) {
+        if (!StringUtils.hasText(path)) {
+            return 0;
+        }
+        if ((priorities == null || priorities.isEmpty()) && !StringUtils.hasText(controllerPath)) {
+            return 0;
+        }
+
+        var normalizedPath = path.toLowerCase(Locale.ROOT);
+        var fileName = fileName(normalizedPath);
+        var score = 0;
+
+        if (StringUtils.hasText(controllerPath) && normalizedPath.endsWith(controllerPath)) {
+            score += 10_000;
+        }
+        if (normalizedPath.contains("/adapter/in/rest/")) {
+            score += 400;
+        }
+        if (normalizedPath.contains("/adapter/out/")) {
+            score += 320;
+        }
+        if (normalizedPath.contains("/application/port/")) {
+            score += 300;
+        }
+        if (normalizedPath.contains("/application/service/")) {
+            score += 260;
+        }
+        if (normalizedPath.contains("/model/")) {
+            score += 180;
+        }
+        if (fileName.contains("mapper")) {
+            score += 160;
+        }
+        if (fileName.contains("repository")) {
+            score += 140;
+        }
+        if (fileName.contains("port")) {
+            score += 120;
+        }
+
+        for (var priority : priorities) {
+            var token = priority.token();
+            var weight = priority.weight();
+            if (containsPathSegment(normalizedPath, token)) {
+                score += 160 * weight;
+            } else if (fileName.contains(token)) {
+                score += 110 * weight;
+            } else if (normalizedPath.contains(token)) {
+                score += 25 * weight;
+            }
+        }
+
+        return score;
+    }
+
+    private List<SourcePathPriority> sourcePathPriorities(GitLabEndpointUseCaseContextRequest request) {
+        var priorities = new java.util.LinkedHashMap<String, Integer>();
+        addEndpointPathPriorities(priorities, request != null ? request.endpointPath() : null);
+        addControllerPriorities(priorities, controllerClass(request));
+        if (request != null) {
+            addEndpointPathPriorities(priorities, endpointPathFromEndpointId(request.endpointId()));
+        }
+        return priorities.entrySet().stream()
+                .map(entry -> new SourcePathPriority(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private void addEndpointPathPriorities(Map<String, Integer> priorities, String value) {
+        var segments = meaningfulPathSegments(value);
+        for (int index = 0; index < segments.size(); index++) {
+            var weight = index == segments.size() - 1 ? 6 : 2;
+            addPriority(priorities, segments.get(index), weight);
+        }
+    }
+
+    private void addControllerPriorities(Map<String, Integer> priorities, String controllerClass) {
+        if (!StringUtils.hasText(controllerClass)) {
+            return;
+        }
+        for (var segment : controllerClass.split("\\.")) {
+            addTokenPriorities(priorities, segment, 4);
+        }
+    }
+
+    private void addTokenPriorities(Map<String, Integer> priorities, String value, int weight) {
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        var normalized = value.replaceAll("([a-z])([A-Z])", "$1-$2");
+        for (var token : normalized.split("[^A-Za-z0-9]+")) {
+            addPriority(priorities, token, weight);
+        }
+    }
+
+    private void addPriority(Map<String, Integer> priorities, String token, int weight) {
+        var normalized = normalizeToken(token);
+        if (!StringUtils.hasText(normalized) || LOW_VALUE_PATH_TOKENS.contains(normalized)) {
+            return;
+        }
+        priorities.merge(normalized, weight, Math::max);
+    }
+
+    private List<String> meaningfulPathSegments(String value) {
+        if (!StringUtils.hasText(value)) {
+            return List.of();
+        }
+        var segments = new ArrayList<String>();
+        for (var rawSegment : value.split("[/#?&=\\s]+")) {
+            if (!StringUtils.hasText(rawSegment) || rawSegment.contains("{") || rawSegment.contains("}")) {
+                continue;
+            }
+            var segment = rawSegment.trim();
+            if (segment.contains("->")) {
+                continue;
+            }
+            var normalizedSegment = normalizeToken(segment);
+            if (StringUtils.hasText(normalizedSegment) && !LOW_VALUE_PATH_TOKENS.contains(normalizedSegment)) {
+                segments.add(normalizedSegment);
+            }
+        }
+        return List.copyOf(segments);
+    }
+
+    private String controllerPath(GitLabEndpointUseCaseContextRequest request) {
+        var controllerClass = controllerClass(request);
+        return StringUtils.hasText(controllerClass)
+                ? controllerClass.toLowerCase(Locale.ROOT).replace('.', '/') + ".java"
+                : null;
+    }
+
+    private String controllerClass(GitLabEndpointUseCaseContextRequest request) {
+        if (request == null || !StringUtils.hasText(request.endpointId())) {
+            return null;
+        }
+        var endpointId = request.endpointId();
+        var arrowIndex = endpointId.indexOf("->");
+        if (arrowIndex < 0) {
+            return null;
+        }
+        var methodSeparator = endpointId.indexOf('#', arrowIndex + 2);
+        if (methodSeparator < 0) {
+            return null;
+        }
+        var controllerClass = endpointId.substring(arrowIndex + 2, methodSeparator).trim();
+        return StringUtils.hasText(controllerClass) ? controllerClass : null;
+    }
+
+    private String endpointPathFromEndpointId(String endpointId) {
+        if (!StringUtils.hasText(endpointId)) {
+            return null;
+        }
+        var arrowIndex = endpointId.indexOf("->");
+        var leftSide = arrowIndex >= 0 ? endpointId.substring(0, arrowIndex) : endpointId;
+        for (var token : leftSide.split("\\s+")) {
+            if (token.startsWith("/")) {
+                return token;
+            }
+        }
+        return null;
+    }
+
+    private boolean containsPathSegment(String path, String segment) {
+        return path.equals(segment)
+                || path.startsWith(segment + "/")
+                || path.endsWith("/" + segment)
+                || path.contains("/" + segment + "/");
+    }
+
+    private String fileName(String path) {
+        var slashIndex = path.lastIndexOf('/');
+        return slashIndex >= 0 ? path.substring(slashIndex + 1) : path;
+    }
+
+    private String normalizeToken(String token) {
+        if (!StringUtils.hasText(token)) {
+            return null;
+        }
+        var normalized = token.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "");
+        return normalized.length() >= 3 ? normalized : null;
     }
 
     private boolean isAnalyzableJavaSource(String path, String sourcePathPrefix) {
@@ -267,7 +498,6 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
                 && !lowerPath.endsWith("/package-info.java")
                 && !containsSegment(lowerPath, "target")
                 && !containsSegment(lowerPath, "build")
-                && !containsSegment(lowerPath, "out")
                 && !containsSegment(lowerPath, "generated")
                 && !containsSegment(lowerPath, "generated-sources")
                 && !containsPathFragment(lowerPath, "src/test")
@@ -354,5 +584,8 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
     private String trimSlashes(String value) {
         var normalized = normalizePath(value);
         return normalized != null ? normalized : "";
+    }
+
+    private record SourcePathPriority(String token, int weight) {
     }
 }

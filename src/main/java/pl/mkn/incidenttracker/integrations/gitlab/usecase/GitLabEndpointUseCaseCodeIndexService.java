@@ -37,7 +37,7 @@ class GitLabEndpointUseCaseCodeIndexService {
 
     GitLabEndpointUseCaseCodeIndexService() {
         this(new JavaParser(new ParserConfiguration()
-                .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17)));
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21)));
     }
 
     GitLabEndpointUseCaseCodeIndexService(JavaParser javaParser) {

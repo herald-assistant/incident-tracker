@@ -118,6 +118,61 @@ class GitLabEndpointUseCaseSourceSnapshotServiceTest {
     }
 
     @Test
+    void shouldPrioritizeEndpointRelatedSourcesBeforeApplyingFileLimit() {
+        var fixture = fixture(3, 1_000);
+        var treeSession = new GitLabRepositoryTreeSession();
+        var request = request(
+                "GET /clp/agreement/data/{ttaId}/product -> "
+                        + "pl.centrum24.clp.agreement.data.adapter.in.rest.product.DataProductController#getProduct",
+                "/clp/agreement/data/{ttaId}/product",
+                "clp-agreement-process"
+        );
+        var controllerPath = "clp-agreement-process/clp-agreement-data/data-adapter/src/main/java/"
+                + "pl/centrum24/clp/agreement/data/adapter/in/rest/product/DataProductController.java";
+        var repositoryPath = "clp-agreement-process/clp-agreement-data/data-adapter/src/main/java/"
+                + "pl/centrum24/clp/agreement/data/adapter/out/persistence/tta/product/ProductQueryRepository.java";
+        var portPath = "clp-agreement-process/clp-agreement-data/data-application/src/main/java/"
+                + "pl/centrum24/clp/agreement/data/application/port/out/persistence/product/ProductRepositoryPort.java";
+        var unrelatedProductPath = "clp-agreement-process/aaa-documents/src/main/java/"
+                + "pl/centrum24/clp/agreement/documents/print/product/DefaultProductDocument.java";
+        var unrelatedCustomerPath = "clp-agreement-process/aab-customer/src/main/java/"
+                + "pl/centrum24/clp/agreement/customer/Customer.java";
+
+        when(fixture.treeService().requestScopedSession(anyString())).thenReturn(treeSession);
+        when(fixture.treeService().fetchRepositoryBlobs(
+                eq("https://gitlab.example"),
+                eq(GROUP + "/" + PROJECT),
+                eq(BRANCH),
+                eq("clp-agreement-process"),
+                same(treeSession)
+        )).thenReturn(List.of(
+                node(unrelatedCustomerPath),
+                node(unrelatedProductPath),
+                node(repositoryPath),
+                node(portPath),
+                node(controllerPath)
+        ));
+        for (var path : List.of(controllerPath, repositoryPath, portPath, unrelatedProductPath, unrelatedCustomerPath)) {
+            whenRead(fixture.repositoryPort(), path, path);
+        }
+
+        var snapshot = fixture.service().buildSnapshot(GROUP, BRANCH, request);
+
+        assertEquals(GitLabEndpointUseCaseIndexStatus.PARTIAL, snapshot.indexStatus());
+        assertEquals(5, snapshot.eligibleSourceFileCount());
+        assertEquals(List.of(controllerPath, portPath, repositoryPath),
+                snapshot.files().stream().map(GitLabEndpointUseCaseSourceFile::path).toList());
+        assertTrue(snapshot.sourceFileLimitReached());
+        verify(fixture.repositoryPort(), never()).readFile(
+                eq(GROUP),
+                eq(PROJECT),
+                eq(BRANCH),
+                eq(unrelatedProductPath),
+                eq(1_000)
+        );
+    }
+
+    @Test
     void shouldReturnNotBuiltSnapshotWhenRepositoryTreeFails() {
         var fixture = fixture(10, 1_000);
         var treeSession = new GitLabRepositoryTreeSession();
@@ -155,12 +210,20 @@ class GitLabEndpointUseCaseSourceSnapshotServiceTest {
     }
 
     private static GitLabEndpointUseCaseContextRequest request() {
+        return request(null, null, null);
+    }
+
+    private static GitLabEndpointUseCaseContextRequest request(
+            String endpointId,
+            String endpointPath,
+            String sourcePathPrefix
+    ) {
         return new GitLabEndpointUseCaseContextRequest(
                 PROJECT,
-                null,
-                null,
-                null,
-                null,
+                endpointId,
+                "GET",
+                endpointPath,
+                sourcePathPrefix,
                 null,
                 null,
                 null,

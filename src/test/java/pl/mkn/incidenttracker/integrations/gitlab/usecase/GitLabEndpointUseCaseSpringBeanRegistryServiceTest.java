@@ -125,6 +125,30 @@ class GitLabEndpointUseCaseSpringBeanRegistryServiceTest {
     }
 
     @Test
+    void shouldIndexAdapterBeanAsComponentWithNestedPortAssignableType() {
+        var registry = registry("""
+                package com.example.orders;
+
+                interface ProductRepositoryPort {
+                    interface Query {
+                    }
+                }
+
+                @AdapterBean
+                class ProductQueryRepository implements ProductRepositoryPort.Query {
+                }
+                """);
+
+        var repositoryBean = registry.beansByName().get("productQueryRepository");
+
+        assertEquals(GitLabEndpointUseCaseSpringBeanSourceKind.COMPONENT, repositoryBean.sourceKind());
+        assertTrue(repositoryBean.stereotypes().contains("AdapterBean"));
+        assertTrue(registry.candidatesForType("ProductRepositoryPort.Query").contains(repositoryBean));
+        assertTrue(registry.candidatesForType("com.example.orders.ProductRepositoryPort.Query")
+                .contains(repositoryBean));
+    }
+
+    @Test
     void shouldWarnWhenAssignableParentIsOutsideSnapshot() {
         var registry = registry("""
                 package com.example.orders;

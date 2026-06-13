@@ -109,6 +109,76 @@ class GitLabEndpointUseCaseCallTargetResolverTest {
     }
 
     @Test
+    void shouldResolveNestedAdapterPortAndMapperSingletonReceiver() {
+        var resolution = resolution("""
+                package com.example.orders;
+
+                import lombok.RequiredArgsConstructor;
+                import org.mapstruct.Mapper;
+                import org.springframework.web.bind.annotation.RestController;
+
+                class TtaId {
+                }
+
+                enum ProductType {
+                    OVERDRAFT
+                }
+
+                interface FormView {
+                }
+
+                class ProductWebModel {
+                }
+
+                interface ProductRepositoryPort {
+                    interface Query {
+                        FormView getProductFormView(TtaId ttaId, ProductType productType);
+                    }
+                }
+
+                @AdapterBean
+                class ProductQueryRepository implements ProductRepositoryPort.Query {
+                    public FormView getProductFormView(TtaId ttaId, ProductType productType) {
+                        return null;
+                    }
+                }
+
+                @Mapper
+                interface ProductWebModelMapper {
+                    ProductWebModelMapper INSTANCE = null;
+
+                    default ProductWebModel from(FormView formView) {
+                        return new ProductWebModel();
+                    }
+                }
+
+                @RestController
+                @RequiredArgsConstructor
+                class DataProductController {
+                    private final ProductRepositoryPort.Query productQueryRepository;
+
+                    ProductWebModel getProductWebModel(TtaId id, ProductType productType) {
+                        var productView = productQueryRepository.getProductFormView(id, productType);
+                        return ProductWebModelMapper.INSTANCE.from(productView);
+                    }
+                }
+                """);
+
+        assertResolvedCall(
+                resolution,
+                "productQueryRepository.getProductFormView(id, productType)",
+                "com.example.orders.ProductQueryRepository#getProductFormView(TtaId,ProductType)",
+                GitLabEndpointUseCaseResolutionKind.SPRING_BEAN_POLYMORPHIC
+        );
+        assertResolvedCall(
+                resolution,
+                "ProductWebModelMapper.INSTANCE.from(productView)",
+                "com.example.orders.ProductWebModelMapper#from(FormView)",
+                GitLabEndpointUseCaseResolutionKind.STATIC_METHOD
+        );
+    }
+
+    @Test
     void shouldResolveParameterReceiverAndReportExternalTerminal() {
         var resolution = resolution("""
                 package com.example.orders;
