@@ -22,6 +22,7 @@
         <spring-ai.version>1.1.2</spring-ai.version>
         <copilot-sdk-java.version>1.0.0</copilot-sdk-java.version>
         <oracle.jdbc.version>23.6.0.24.10</oracle.jdbc.version>
+        <javaparser.version>3.26.4</javaparser.version>
         <frontend-maven-plugin.version>1.15.4</frontend-maven-plugin.version>
         <frontend.node.version>v22.14.0</frontend.node.version>
     </properties>
@@ -65,6 +66,11 @@
             <groupId>com.github</groupId>
             <artifactId>copilot-sdk-java</artifactId>
             <version>${copilot-sdk-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-core</artifactId>
+            <version>${javaparser.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

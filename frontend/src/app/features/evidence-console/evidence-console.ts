@@ -18,6 +18,9 @@ import {
   ElasticLogDetailLevel,
   ElasticLogSearchPayload,
   EvidenceApiService,
+  GitLabEndpointUseCaseContextPayload,
+  GitLabEndpointUseCaseContextResponse,
+  GitLabEndpointUseCaseOutputMode,
   GitLabRepositoryEndpoint,
   GitLabRepositoryEndpointsPayload,
   GitLabRepositoryEndpointsResponse,
@@ -115,6 +118,38 @@ export class EvidenceConsoleComponent {
     })
   });
 
+  readonly gitLabUseCaseForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    endpointId: new FormControl('', { nonNullable: true }),
+    httpMethod: new FormControl('', { nonNullable: true }),
+    endpointPath: new FormControl('', { nonNullable: true }),
+    sourcePathPrefix: new FormControl('src/main/java', { nonNullable: true }),
+    outputMode: new FormControl<GitLabEndpointUseCaseOutputMode>('COMPACT', {
+      nonNullable: true
+    }),
+    maxDepth: new FormControl('8', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(20)]
+    }),
+    maxNodes: new FormControl('80', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(200)]
+    }),
+    includeAsyncConsumers: new FormControl(false, { nonNullable: true }),
+    reason: new FormControl('Manual verification from GitLab console', { nonNullable: true })
+  });
+
   readonly gitLabSourceForm = new FormGroup({
     gitlabBaseUrl: new FormControl('', {
       nonNullable: true,
@@ -151,12 +186,18 @@ export class EvidenceConsoleComponent {
   readonly gitLabEndpointState = signal<ToolState>(
     this.idleState('Podaj scope repozytorium, aby znaleźć endpointy Spring REST.')
   );
+  readonly gitLabUseCaseState = signal<ToolState>(
+    this.idleState('Podaj endpoint, aby zbudować kontekst use-case z GitLaba.')
+  );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
   );
 
   readonly gitLabEndpointResult = computed(() =>
     this.asGitLabEndpointResult(this.gitLabEndpointState().response)
+  );
+  readonly gitLabUseCaseResult = computed(() =>
+    this.asGitLabUseCaseResult(this.gitLabUseCaseState().response)
   );
 
   submitElastic(event: Event): void {
@@ -314,6 +355,43 @@ export class EvidenceConsoleComponent {
     );
   }
 
+  submitGitLabUseCaseContext(event: Event): void {
+    event.preventDefault();
+
+    if (this.gitLabUseCaseForm.invalid) {
+      this.gitLabUseCaseForm.markAllAsTouched();
+      this.gitLabUseCaseState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch dla GitLab use-case context.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabEndpointUseCaseContextPayload = {
+      group: this.gitLabUseCaseForm.controls.group.value.trim(),
+      projectName: this.gitLabUseCaseForm.controls.projectName.value.trim(),
+      branch: this.gitLabUseCaseForm.controls.branch.value.trim(),
+      endpointId: this.optionalValue(this.gitLabUseCaseForm.controls.endpointId.value),
+      httpMethod: this.optionalValue(this.gitLabUseCaseForm.controls.httpMethod.value),
+      endpointPath: this.optionalValue(this.gitLabUseCaseForm.controls.endpointPath.value),
+      sourcePathPrefix: this.optionalValue(this.gitLabUseCaseForm.controls.sourcePathPrefix.value),
+      outputMode: this.gitLabUseCaseForm.controls.outputMode.value,
+      maxDepth: this.optionalNumber(this.gitLabUseCaseForm.controls.maxDepth.value),
+      maxNodes: this.optionalNumber(this.gitLabUseCaseForm.controls.maxNodes.value),
+      includeAsyncConsumers: this.gitLabUseCaseForm.controls.includeAsyncConsumers.value,
+      reason: this.optionalValue(this.gitLabUseCaseForm.controls.reason.value)
+    };
+
+    this.runRequest(
+      this.gitLabUseCaseState,
+      this.evidenceApi.buildGitLabEndpointUseCaseContext(payload),
+      payload,
+      'Wysyłamy request do /api/gitlab/repository/endpoint-use-case-context...'
+    );
+  }
+
   submitGitLabSource(event: Event): void {
     event.preventDefault();
 
@@ -377,6 +455,24 @@ export class EvidenceConsoleComponent {
 
   endpointMethods(endpoint: GitLabRepositoryEndpoint): string {
     return endpoint.httpMethods?.length ? endpoint.httpMethods.join(', ') : 'ANY';
+  }
+
+  prepareGitLabUseCaseContext(endpoint: GitLabRepositoryEndpoint): void {
+    this.gitLabUseCaseForm.patchValue({
+      group: this.gitLabEndpointForm.controls.group.value.trim(),
+      projectName: this.gitLabEndpointForm.controls.projectName.value.trim(),
+      branch: this.gitLabEndpointForm.controls.branch.value.trim(),
+      endpointId: endpoint.endpointId,
+      httpMethod: endpoint.httpMethods?.[0] && endpoint.httpMethods[0] !== 'ANY'
+        ? endpoint.httpMethods[0]
+        : '',
+      endpointPath: endpoint.path || endpoint.pathExpression || '',
+      sourcePathPrefix: this.gitLabEndpointForm.controls.sourcePathPrefix.value.trim() || 'src/main/java',
+      reason: `Manual verification of ${endpoint.endpointId}`
+    });
+    this.gitLabUseCaseState.set(
+      this.idleState('Endpoint przeniesiony z inventory. Możesz uruchomić build context.')
+    );
   }
 
   private runRequest(
@@ -558,5 +654,16 @@ export class EvidenceConsoleComponent {
 
     const record = response as Partial<GitLabRepositoryEndpointsResponse>;
     return Array.isArray(record.endpoints) ? (record as GitLabRepositoryEndpointsResponse) : null;
+  }
+
+  private asGitLabUseCaseResult(response: unknown): GitLabEndpointUseCaseContextResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabEndpointUseCaseContextResponse>;
+    return record.graph && Array.isArray(record.classList)
+      ? (record as GitLabEndpointUseCaseContextResponse)
+      : null;
   }
 }

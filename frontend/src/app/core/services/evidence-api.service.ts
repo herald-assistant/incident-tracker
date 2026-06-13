@@ -84,6 +84,106 @@ export interface GitLabRepositoryEndpointsResponse {
   limitations: string[];
 }
 
+export type GitLabEndpointUseCaseOutputMode = 'COMPACT' | 'GRAPH' | 'BUSINESS' | 'DEBUG';
+
+export interface GitLabEndpointUseCaseContextPayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  endpointId?: string;
+  httpMethod?: string;
+  endpointPath?: string;
+  sourcePathPrefix?: string;
+  outputMode?: GitLabEndpointUseCaseOutputMode;
+  maxDepth?: number;
+  maxNodes?: number;
+  includeAsyncConsumers?: boolean;
+  reason?: string;
+}
+
+export interface GitLabEndpointUseCaseContextResponse {
+  repository: {
+    group?: string | null;
+    projectName?: string | null;
+    requestedBranch?: string | null;
+    sourcePathPrefix?: string | null;
+    indexStatus?: string | null;
+  } | null;
+  endpoint: {
+    endpointId?: string | null;
+    httpMethods: string[];
+    inputPath?: string | null;
+    matchedPathPattern?: string | null;
+    controllerClass?: string | null;
+    controllerMethod?: string | null;
+    sourcePath?: string | null;
+    lineStart: number;
+    lineEnd: number;
+  } | null;
+  useCaseSummary: {
+    mainResponsibility?: string | null;
+    businessObjects: string[];
+    sideEffects: string[];
+    externalSystems: string[];
+    asyncBoundaries: string[];
+  };
+  graph: {
+    nodes: Array<{
+      id: string;
+      kind?: string | null;
+      classFqn?: string | null;
+      methodSignature?: string | null;
+      role?: string | null;
+      depth: number;
+      sourcePath?: string | null;
+      lineStart: number;
+      lineEnd: number;
+      terminal: boolean;
+      terminalReason?: string | null;
+    }>;
+    edges: Array<{
+      from: string;
+      to: string;
+      kind?: string | null;
+      resolutionKind?: string | null;
+      call?: string | null;
+      line?: number | null;
+      confidence?: string | null;
+      ambiguous: boolean;
+    }>;
+  };
+  classList: Array<{
+    classFqn: string;
+    role?: string | null;
+    depth: number;
+    methods: string[];
+    terminal: boolean;
+    reason?: string | null;
+  }>;
+  warnings: Array<{
+    code?: string | null;
+    severity?: string | null;
+    message?: string | null;
+    sourcePath?: string | null;
+    line?: number | null;
+    candidates: string[];
+  }>;
+  evidence: Array<{
+    kind?: string | null;
+    message?: string | null;
+    sourcePath?: string | null;
+    line?: number | null;
+  }>;
+  suggestedNextReads: string[];
+  limits: {
+    maxDepth: number;
+    maxNodes: number;
+    maxDepthReached: boolean;
+    maxNodesReached: boolean;
+  };
+  confidence?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -116,6 +216,15 @@ export class EvidenceApiService {
   ): Observable<GitLabRepositoryEndpointsResponse> {
     return this.http.post<GitLabRepositoryEndpointsResponse>(
       '/api/gitlab/repository/endpoints',
+      payload
+    );
+  }
+
+  buildGitLabEndpointUseCaseContext(
+    payload: GitLabEndpointUseCaseContextPayload
+  ): Observable<GitLabEndpointUseCaseContextResponse> {
+    return this.http.post<GitLabEndpointUseCaseContextResponse>(
+      '/api/gitlab/repository/endpoint-use-case-context',
       payload
     );
   }

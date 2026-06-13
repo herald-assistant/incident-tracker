@@ -7,6 +7,14 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseGraph;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseIndexStatus;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseOutputMode;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRepositoryContext;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
@@ -25,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -256,6 +265,65 @@ class GitLabMcpToolsTest {
         assertEquals("orders-api", endpoint.useCaseContextInput().projectName());
         assertEquals(endpoint.endpointId(), endpoint.useCaseContextInput().endpointId());
         assertTrue(endpoint.suggestedNextReads().get(0).contains("gitlab_read_repository_file_chunk"));
+    }
+
+    @Test
+    void shouldBuildEndpointUseCaseContextUsingSessionBoundScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var contextService = mock(GitLabEndpointUseCaseContextService.class);
+        var tools = new GitLabMcpTools(
+                gitLabRepositoryPort,
+                ignored -> OperationalContextCatalog.empty(),
+                contextService
+        );
+        when(contextService.buildContext(any(), any(), any())).thenReturn(new GitLabEndpointUseCaseContextResult(
+                new GitLabEndpointUseCaseRepositoryContext(
+                        "platform/backend",
+                        "orders-api",
+                        "feature/INC-123",
+                        "src/main/java",
+                        GitLabEndpointUseCaseIndexStatus.BUILT_DURING_CALL
+                ),
+                null,
+                null,
+                GitLabEndpointUseCaseGraph.empty(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                new GitLabEndpointUseCaseLimits(8, 80, false, false),
+                GitLabEndpointUseCaseConfidence.HIGH
+        ));
+
+        var response = tools.buildEndpointUseCaseContext(
+                "orders-api",
+                "POST /api/orders/{id}/submit -> com.example.orders.OrderController#submit",
+                null,
+                null,
+                null,
+                GitLabEndpointUseCaseOutputMode.COMPACT,
+                8,
+                80,
+                false,
+                "Buduje kontekst endpointu w tescie.",
+                gitLabToolContext()
+        );
+
+        verify(contextService).buildContext(
+                eq("platform/backend"),
+                eq("feature/INC-123"),
+                argThat(request -> "orders-api".equals(request.projectName())
+                        && "POST /api/orders/{id}/submit -> com.example.orders.OrderController#submit"
+                        .equals(request.endpointId())
+                        && request.outputMode() == GitLabEndpointUseCaseOutputMode.COMPACT
+                        && request.maxDepth() == 8
+                        && request.maxNodes() == 80
+                        && !request.includeAsyncConsumers())
+        );
+        assertEquals("platform/backend", response.repository().group());
+        assertEquals("orders-api", response.repository().projectName());
+        assertEquals("feature/INC-123", response.repository().requestedBranch());
+        assertEquals(GitLabEndpointUseCaseConfidence.HIGH, response.confidence());
     }
 
     @Test

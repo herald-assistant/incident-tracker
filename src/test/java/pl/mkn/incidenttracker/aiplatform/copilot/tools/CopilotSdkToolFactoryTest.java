@@ -51,12 +51,14 @@ class CopilotSdkToolFactoryTest {
                 null
         ));
 
-        assertEquals(8, tools.size());
+        assertEquals(10, tools.size());
         assertEquals(
                 Set.of(
+                        "gitlab_build_endpoint_use_case_context",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
                         "gitlab_list_available_repositories",
+                        "gitlab_list_repository_endpoints",
                         "gitlab_search_repository_candidates",
                         "gitlab_read_repository_file",
                         "gitlab_read_repository_file_chunk",
@@ -207,6 +209,27 @@ class CopilotSdkToolFactoryTest {
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunks"),
                 Set.of("chunks", "maxTotalCharacters", "reason"),
+                Set.of("group", "branch", "correlationId", "toolContext")
+        );
+        assertSchemaProperties(
+                toolsByName.get("gitlab_list_repository_endpoints"),
+                Set.of("projectName", "endpointPathPrefix", "httpMethod", "sourcePathPrefix", "maxScannedFiles", "reason"),
+                Set.of("group", "branch", "correlationId", "toolContext")
+        );
+        assertSchemaProperties(
+                toolsByName.get("gitlab_build_endpoint_use_case_context"),
+                Set.of(
+                        "projectName",
+                        "endpointId",
+                        "httpMethod",
+                        "endpointPath",
+                        "sourcePathPrefix",
+                        "outputMode",
+                        "maxDepth",
+                        "maxNodes",
+                        "includeAsyncConsumers",
+                        "reason"
+                ),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(

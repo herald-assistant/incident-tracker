@@ -18,10 +18,25 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchExceptio
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseClassItem;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseEndpointContext;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseGraph;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseIndexStatus;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseOutputMode;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRepositoryContext;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRole;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseSummary;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -40,6 +55,9 @@ class GitLabRepositorySearchControllerTest {
 
     @MockitoBean
     private GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
+
+    @MockitoBean
+    private GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
 
     @Test
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {
@@ -165,6 +183,97 @@ class GitLabRepositorySearchControllerTest {
     }
 
     @Test
+    void shouldBuildGitLabEndpointUseCaseContextForValidRequest() throws Exception {
+        when(gitLabEndpointUseCaseContextService.buildContext(
+                eq("TENANT-ALPHA"),
+                eq("release-candidate"),
+                any(GitLabEndpointUseCaseContextRequest.class)
+        )).thenReturn(new GitLabEndpointUseCaseContextResult(
+                new GitLabEndpointUseCaseRepositoryContext(
+                        "TENANT-ALPHA",
+                        "orders-api",
+                        "release-candidate",
+                        "src/main/java",
+                        GitLabEndpointUseCaseIndexStatus.BUILT_DURING_CALL
+                ),
+                new GitLabEndpointUseCaseEndpointContext(
+                        "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                        List.of("GET"),
+                        "/api/orders/{orderId}",
+                        "/api/orders/{orderId}",
+                        "com.example.orders.OrderController",
+                        "getOrder",
+                        "src/main/java/com/example/orders/OrderController.java",
+                        17,
+                        19
+                ),
+                new GitLabEndpointUseCaseSummary(
+                        "Loads order details.",
+                        List.of("Order"),
+                        List.of("Repository read"),
+                        List.of(),
+                        List.of()
+                ),
+                GitLabEndpointUseCaseGraph.empty(),
+                List.of(new GitLabEndpointUseCaseClassItem(
+                        "com.example.orders.OrderService",
+                        GitLabEndpointUseCaseRole.USE_CASE_SERVICE,
+                        1,
+                        List.of("getOrder"),
+                        false,
+                        "Injected into controller"
+                )),
+                List.of(),
+                List.of(),
+                List.of("orders-api:src/main/java/com/example/orders/OrderService.java"),
+                new GitLabEndpointUseCaseLimits(5, 40, false, false),
+                GitLabEndpointUseCaseConfidence.HIGH
+        ));
+
+        mockMvc.perform(post("/api/gitlab/repository/endpoint-use-case-context")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "TENANT-ALPHA",
+                                  "projectName": "orders-api",
+                                  "branch": "release-candidate",
+                                  "endpointId": "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                  "httpMethod": "GET",
+                                  "endpointPath": "/api/orders/{orderId}",
+                                  "sourcePathPrefix": "src/main/java",
+                                  "outputMode": "GRAPH",
+                                  "maxDepth": 5,
+                                  "maxNodes": 40,
+                                  "includeAsyncConsumers": true,
+                                  "reason": "Manual UI verification"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.repository.group").value("TENANT-ALPHA"))
+                .andExpect(jsonPath("$.repository.projectName").value("orders-api"))
+                .andExpect(jsonPath("$.endpoint.matchedPathPattern").value("/api/orders/{orderId}"))
+                .andExpect(jsonPath("$.useCaseSummary.businessObjects[0]").value("Order"))
+                .andExpect(jsonPath("$.classList[0].classFqn").value("com.example.orders.OrderService"))
+                .andExpect(jsonPath("$.limits.maxDepth").value(5))
+                .andExpect(jsonPath("$.confidence").value("HIGH"));
+
+        verify(gitLabEndpointUseCaseContextService).buildContext(
+                eq("TENANT-ALPHA"),
+                eq("release-candidate"),
+                argThat(request -> request.projectName().equals("orders-api")
+                        && request.endpointId().startsWith("GET /api/orders")
+                        && request.httpMethod().equals("GET")
+                        && request.endpointPath().equals("/api/orders/{orderId}")
+                        && request.sourcePathPrefix().equals("src/main/java")
+                        && request.outputMode() == GitLabEndpointUseCaseOutputMode.GRAPH
+                        && request.maxDepth() == 5
+                        && request.maxNodes() == 40
+                        && request.includeAsyncConsumers()
+                        && request.reason().equals("Manual UI verification"))
+        );
+    }
+
+    @Test
     void shouldReturnNotFoundWhenGitLabSearchFindsNoCandidates() throws Exception {
         when(gitLabRepositorySearchService.search(any(GitLabRepositorySearchRequest.class)))
                 .thenThrow(new GitLabRepositorySearchException(
@@ -224,5 +333,25 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"));
 
         verifyNoInteractions(gitLabRepositoryEndpointService);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidEndpointUseCaseContextRequest() throws Exception {
+        mockMvc.perform(post("/api/gitlab/repository/endpoint-use-case-context")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "",
+                                  "projectName": "",
+                                  "branch": "",
+                                  "maxDepth": 21,
+                                  "maxNodes": 999
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+
+        verifyNoInteractions(gitLabEndpointUseCaseContextService);
     }
 }
