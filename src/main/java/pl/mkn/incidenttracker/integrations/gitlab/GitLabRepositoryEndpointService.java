@@ -300,6 +300,9 @@ public class GitLabRepositoryEndpointService {
     ) {
         var qualifiedClassName = StringUtils.hasText(packageName) ? packageName + "." + className : className;
         var annotationNames = annotationNames(annotations);
+        if (annotationNames.contains("FeignClient")) {
+            return null;
+        }
         var mappings = mappings(annotations);
         var controllerLike = annotationNames.stream().anyMatch(name ->
                 "RestController".equals(name)
