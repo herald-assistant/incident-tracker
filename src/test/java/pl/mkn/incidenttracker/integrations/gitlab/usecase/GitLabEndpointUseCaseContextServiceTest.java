@@ -2,6 +2,11 @@ package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpoint;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListResult;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointUseCaseInput;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeNode;
@@ -95,7 +100,77 @@ class GitLabEndpointUseCaseContextServiceTest {
                 .anyMatch(warning -> GitLabEndpointUseCaseWarningCodes.ENDPOINT_NOT_FOUND.equals(warning.code())));
     }
 
+    @Test
+    void shouldBuildEndpointUseCaseContextFromOpenApiBackedEndpointInventoryFallback() {
+        var repositoryEndpointService = mock(GitLabRepositoryEndpointService.class);
+        when(repositoryEndpointService.listEndpoints(any(GitLabRepositoryEndpointListRequest.class)))
+                .thenReturn(new GitLabRepositoryEndpointListResult(
+                        "tenant-alpha",
+                        "orders-api",
+                        "feature/FLOW-1",
+                        null,
+                        "GET",
+                        "src/main/java",
+                        1,
+                        1,
+                        false,
+                        List.of(openApiBackedEndpoint()),
+                        List.of()
+                ));
+        var service = service(openApiBackedSource(), repositoryEndpointService);
+
+        var result = service.buildContext(
+                "tenant-alpha",
+                "feature/FLOW-1",
+                new GitLabEndpointUseCaseContextRequest(
+                        "orders-api",
+                        null,
+                        "GET",
+                        "/api/crm/customers/123",
+                        null,
+                        GitLabEndpointUseCaseOutputMode.COMPACT,
+                        8,
+                        80,
+                        false,
+                        "Opisuje endpoint customer profile."
+                )
+        );
+
+        assertNotNull(result.endpoint());
+        assertEquals("/api/crm/customers/123", result.endpoint().inputPath());
+        assertEquals("/api/crm/customers/{customerId}", result.endpoint().matchedPathPattern());
+        assertEquals("com.example.crm.customer.CustomerDataController", result.endpoint().controllerClass());
+        assertEquals("getCustomer", result.endpoint().controllerMethod());
+        assertTrue(result.classList().stream()
+                .anyMatch(item -> "com.example.crm.customer.CustomerLookupUseCase".equals(item.classFqn())
+                        && item.role() == GitLabEndpointUseCaseRole.USE_CASE_SERVICE));
+        assertFalse(result.warnings().stream()
+                .anyMatch(warning -> GitLabEndpointUseCaseWarningCodes.ENDPOINT_NOT_FOUND.equals(warning.code())));
+    }
+
     private GitLabEndpointUseCaseContextService service(String source) {
+        var repositoryEndpointService = mock(GitLabRepositoryEndpointService.class);
+        when(repositoryEndpointService.listEndpoints(any(GitLabRepositoryEndpointListRequest.class)))
+                .thenReturn(new GitLabRepositoryEndpointListResult(
+                        "tenant-alpha",
+                        "orders-api",
+                        "feature/FLOW-1",
+                        null,
+                        null,
+                        "src/main/java",
+                        0,
+                        0,
+                        false,
+                        List.of(),
+                        List.of()
+                ));
+        return service(source, repositoryEndpointService);
+    }
+
+    private GitLabEndpointUseCaseContextService service(
+            String source,
+            GitLabRepositoryEndpointService repositoryEndpointService
+    ) {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
         var treeService = mock(GitLabRepositoryTreeService.class);
@@ -135,7 +210,40 @@ class GitLabEndpointUseCaseContextServiceTest {
                 new GitLabEndpointUseCaseDependencyInjectionResolver(),
                 new GitLabEndpointUseCaseCallTargetResolver(),
                 new GitLabEndpointUseCaseGraphBuilderService(),
-                new GitLabEndpointUseCaseContextCompressorService()
+                new GitLabEndpointUseCaseContextCompressorService(),
+                repositoryEndpointService
+        );
+    }
+
+    private GitLabRepositoryEndpoint openApiBackedEndpoint() {
+        return new GitLabRepositoryEndpoint(
+                "GET /api/crm/customers/{customerId} -> com.example.crm.customer.CustomerDataController#getCustomer",
+                List.of("GET"),
+                "/api/crm/customers/{customerId}",
+                null,
+                "com.example.crm.customer.CustomerDataController",
+                "getCustomer",
+                "src/main/java/com/example/orders/OrderFlow.java",
+                23,
+                26,
+                List.of("String"),
+                List.of("CustomerDto"),
+                List.of("RestController", "OpenApiContract", "Implements CustomerDataApi", "OperationId getCustomer"),
+                "high",
+                List.of("Endpoint mapping resolved from OpenAPI YAML contract, not Java annotations."),
+                new GitLabRepositoryEndpointUseCaseInput(
+                        "orders-api",
+                        "GET /api/crm/customers/{customerId} -> com.example.crm.customer.CustomerDataController#getCustomer",
+                        List.of("GET"),
+                        "/api/crm/customers/{customerId}",
+                        "src/main/java/com/example/orders/OrderFlow.java",
+                        23,
+                        26
+                ),
+                List.of(
+                        "src/main/resources/openapi/customer-api.yaml:12",
+                        "src/main/java/com/example/orders/OrderFlow.java:23"
+                )
         );
     }
 
@@ -185,6 +293,40 @@ class GitLabEndpointUseCaseContextServiceTest {
                     @PostMapping("/{id}/submit")
                     void submit(@PathVariable String id) {
                         useCase.submit(id);
+                    }
+                }
+                """;
+    }
+
+    private String openApiBackedSource() {
+        return """
+                package com.example.crm.customer;
+
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Service;
+                import org.springframework.web.bind.annotation.RestController;
+
+                class CustomerDto {
+                }
+
+                interface CustomerDataApi {
+                    CustomerDto getCustomer(String customerId);
+                }
+
+                @Service
+                class CustomerLookupUseCase {
+                    CustomerDto load(String customerId) {
+                        return new CustomerDto();
+                    }
+                }
+
+                @RestController
+                @RequiredArgsConstructor
+                class CustomerDataController implements CustomerDataApi {
+                    private final CustomerLookupUseCase useCase;
+
+                    public CustomerDto getCustomer(String customerId) {
+                        return useCase.load(customerId);
                     }
                 }
                 """;
