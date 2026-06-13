@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryAnalysisCache;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeException;
@@ -19,6 +20,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -173,6 +175,42 @@ class GitLabEndpointUseCaseSourceSnapshotServiceTest {
     }
 
     @Test
+    void shouldCacheSourceSnapshotForSameEndpointScope() {
+        var fixture = fixture(10, 1_000, new GitLabRepositoryAnalysisCache());
+        var treeSession = new GitLabRepositoryTreeSession();
+        var controllerPath = "src/main/java/com/example/orders/api/OrderController.java";
+
+        when(fixture.treeService().requestScopedSession(anyString())).thenReturn(treeSession);
+        when(fixture.treeService().fetchRepositoryBlobs(
+                eq("https://gitlab.example"),
+                eq(GROUP + "/" + PROJECT),
+                eq(BRANCH),
+                eq("src/main/java"),
+                same(treeSession)
+        )).thenReturn(List.of(node(controllerPath)));
+        whenRead(fixture.repositoryPort(), controllerPath, "class OrderController {}");
+
+        var firstSnapshot = fixture.service().buildSnapshot(GROUP, BRANCH, request());
+        var secondSnapshot = fixture.service().buildSnapshot(GROUP, BRANCH, request());
+
+        assertEquals(firstSnapshot.files(), secondSnapshot.files());
+        verify(fixture.treeService(), times(1)).fetchRepositoryBlobs(
+                eq("https://gitlab.example"),
+                eq(GROUP + "/" + PROJECT),
+                eq(BRANCH),
+                eq("src/main/java"),
+                same(treeSession)
+        );
+        verify(fixture.repositoryPort(), times(1)).readFile(
+                eq(GROUP),
+                eq(PROJECT),
+                eq(BRANCH),
+                eq(controllerPath),
+                eq(1_000)
+        );
+    }
+
+    @Test
     void shouldReturnNotBuiltSnapshotWhenRepositoryTreeFails() {
         var fixture = fixture(10, 1_000);
         var treeSession = new GitLabRepositoryTreeSession();
@@ -195,6 +233,14 @@ class GitLabEndpointUseCaseSourceSnapshotServiceTest {
     }
 
     private static Fixture fixture(int maxSourceFiles, int maxFileCharacters) {
+        return fixture(maxSourceFiles, maxFileCharacters, null);
+    }
+
+    private static Fixture fixture(
+            int maxSourceFiles,
+            int maxFileCharacters,
+            GitLabRepositoryAnalysisCache analysisCache
+    ) {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example");
         var treeService = mock(GitLabRepositoryTreeService.class);
@@ -204,7 +250,8 @@ class GitLabEndpointUseCaseSourceSnapshotServiceTest {
                 treeService,
                 repositoryPort,
                 maxSourceFiles,
-                maxFileCharacters
+                maxFileCharacters,
+                analysisCache
         );
         return new Fixture(service, treeService, repositoryPort);
     }

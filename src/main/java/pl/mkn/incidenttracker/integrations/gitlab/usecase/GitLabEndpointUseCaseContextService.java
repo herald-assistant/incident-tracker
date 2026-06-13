@@ -1,9 +1,10 @@
 package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryAnalysisCache;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpoint;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
@@ -14,10 +15,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class GitLabEndpointUseCaseContextService {
 
@@ -30,6 +31,57 @@ public class GitLabEndpointUseCaseContextService {
     private final GitLabEndpointUseCaseGraphBuilderService graphBuilderService;
     private final GitLabEndpointUseCaseContextCompressorService contextCompressorService;
     private final GitLabRepositoryEndpointService repositoryEndpointService;
+    private final GitLabRepositoryAnalysisCache analysisCache;
+
+    @Autowired
+    GitLabEndpointUseCaseContextService(
+            GitLabEndpointUseCaseSourceSnapshotService sourceSnapshotService,
+            GitLabEndpointUseCaseCodeIndexService codeIndexService,
+            GitLabEndpointUseCaseEndpointIndexService endpointIndexService,
+            GitLabEndpointUseCaseSpringBeanRegistryService springBeanRegistryService,
+            GitLabEndpointUseCaseDependencyInjectionResolver dependencyInjectionResolver,
+            GitLabEndpointUseCaseCallTargetResolver callTargetResolver,
+            GitLabEndpointUseCaseGraphBuilderService graphBuilderService,
+            GitLabEndpointUseCaseContextCompressorService contextCompressorService,
+            GitLabRepositoryEndpointService repositoryEndpointService,
+            GitLabRepositoryAnalysisCache analysisCache
+    ) {
+        this.sourceSnapshotService = sourceSnapshotService;
+        this.codeIndexService = codeIndexService;
+        this.endpointIndexService = endpointIndexService;
+        this.springBeanRegistryService = springBeanRegistryService;
+        this.dependencyInjectionResolver = dependencyInjectionResolver;
+        this.callTargetResolver = callTargetResolver;
+        this.graphBuilderService = graphBuilderService;
+        this.contextCompressorService = contextCompressorService;
+        this.repositoryEndpointService = repositoryEndpointService;
+        this.analysisCache = analysisCache;
+    }
+
+    GitLabEndpointUseCaseContextService(
+            GitLabEndpointUseCaseSourceSnapshotService sourceSnapshotService,
+            GitLabEndpointUseCaseCodeIndexService codeIndexService,
+            GitLabEndpointUseCaseEndpointIndexService endpointIndexService,
+            GitLabEndpointUseCaseSpringBeanRegistryService springBeanRegistryService,
+            GitLabEndpointUseCaseDependencyInjectionResolver dependencyInjectionResolver,
+            GitLabEndpointUseCaseCallTargetResolver callTargetResolver,
+            GitLabEndpointUseCaseGraphBuilderService graphBuilderService,
+            GitLabEndpointUseCaseContextCompressorService contextCompressorService,
+            GitLabRepositoryEndpointService repositoryEndpointService
+    ) {
+        this(
+                sourceSnapshotService,
+                codeIndexService,
+                endpointIndexService,
+                springBeanRegistryService,
+                dependencyInjectionResolver,
+                callTargetResolver,
+                graphBuilderService,
+                contextCompressorService,
+                repositoryEndpointService,
+                null
+        );
+    }
 
     public GitLabEndpointUseCaseContextResult buildContext(
             String group,
@@ -51,8 +103,9 @@ public class GitLabEndpointUseCaseContextService {
                 null
         );
         var sourceSnapshot = sourceSnapshotService.buildSnapshot(group, branch, effectiveRequest);
-        var codeIndex = codeIndexService.buildIndex(sourceSnapshot);
-        var endpointIndex = endpointIndexService.buildIndex(codeIndex);
+        var indexWorkspace = indexWorkspace(sourceSnapshot);
+        var codeIndex = indexWorkspace.codeIndex();
+        var endpointIndex = indexWorkspace.endpointIndex();
         var endpointMatch = endpointIndexService.match(effectiveRequest, endpointIndex);
         if (!endpointMatch.matched()) {
             endpointMatch = fallbackEndpointMatchFromRepositoryInventory(
@@ -85,9 +138,10 @@ public class GitLabEndpointUseCaseContextService {
             return result(repository, null, compressed, emptyGraphBuild, deduplicateWarnings(warnings));
         }
 
-        var springBeanRegistry = springBeanRegistryService.buildRegistry(codeIndex);
-        var dependencyResolution = dependencyInjectionResolver.resolve(codeIndex, springBeanRegistry);
-        var callTargetResolution = callTargetResolver.resolve(codeIndex, springBeanRegistry, dependencyResolution);
+        var dependencyWorkspace = dependencyWorkspace(codeIndex);
+        var springBeanRegistry = dependencyWorkspace.springBeanRegistry();
+        var dependencyResolution = dependencyWorkspace.dependencyResolution();
+        var callTargetResolution = dependencyWorkspace.callTargetResolution();
         var graphBuild = graphBuilderService.buildGraph(
                 endpointMatch.endpoint(),
                 codeIndex,
@@ -154,6 +208,79 @@ public class GitLabEndpointUseCaseContextService {
                 graphBuild.limits(),
                 compressed.confidence()
         );
+    }
+
+    private GitLabEndpointUseCaseIndexWorkspace indexWorkspace(GitLabEndpointUseCaseSourceSnapshot sourceSnapshot) {
+        if (analysisCache == null || sourceSnapshot == null) {
+            return buildIndexWorkspace(sourceSnapshot);
+        }
+
+        return analysisCache.getOrCompute(
+                "gitlab.endpoint-usecase.index-workspace",
+                List.of(sourceSnapshotFingerprint(sourceSnapshot)),
+                () -> buildIndexWorkspace(sourceSnapshot)
+        );
+    }
+
+    private GitLabEndpointUseCaseIndexWorkspace buildIndexWorkspace(GitLabEndpointUseCaseSourceSnapshot sourceSnapshot) {
+        var codeIndex = codeIndexService.buildIndex(sourceSnapshot);
+        var endpointIndex = endpointIndexService.buildIndex(codeIndex);
+        return new GitLabEndpointUseCaseIndexWorkspace(codeIndex, endpointIndex);
+    }
+
+    private GitLabEndpointUseCaseDependencyWorkspace dependencyWorkspace(GitLabEndpointUseCaseCodeIndex codeIndex) {
+        if (analysisCache == null || codeIndex == null) {
+            return buildDependencyWorkspace(codeIndex);
+        }
+
+        return analysisCache.getOrCompute(
+                "gitlab.endpoint-usecase.dependency-workspace",
+                List.of(codeIndexFingerprint(codeIndex)),
+                () -> buildDependencyWorkspace(codeIndex)
+        );
+    }
+
+    private GitLabEndpointUseCaseDependencyWorkspace buildDependencyWorkspace(GitLabEndpointUseCaseCodeIndex codeIndex) {
+        var springBeanRegistry = springBeanRegistryService.buildRegistry(codeIndex);
+        var dependencyResolution = dependencyInjectionResolver.resolve(codeIndex, springBeanRegistry);
+        var callTargetResolution = callTargetResolver.resolve(codeIndex, springBeanRegistry, dependencyResolution);
+        return new GitLabEndpointUseCaseDependencyWorkspace(
+                springBeanRegistry,
+                dependencyResolution,
+                callTargetResolution
+        );
+    }
+
+    private String sourceSnapshotFingerprint(GitLabEndpointUseCaseSourceSnapshot snapshot) {
+        var fingerprint = new StringBuilder();
+        fingerprint.append(safe(snapshot.group())).append('|')
+                .append(safe(snapshot.projectName())).append('|')
+                .append(safe(snapshot.branch())).append('|')
+                .append(safe(snapshot.sourcePathPrefix())).append('|')
+                .append(snapshot.maxSourceFiles()).append('|')
+                .append(snapshot.maxFileCharacters()).append('|')
+                .append(snapshot.indexStatus());
+
+        for (var file : snapshot.files()) {
+            fingerprint.append('|')
+                    .append(safe(file.path()))
+                    .append(':')
+                    .append(file.characterCount())
+                    .append(':')
+                    .append(file.truncated())
+                    .append(':')
+                    .append(file.content() != null ? file.content().hashCode() : 0);
+        }
+        return fingerprint.toString();
+    }
+
+    private String codeIndexFingerprint(GitLabEndpointUseCaseCodeIndex codeIndex) {
+        var snapshot = codeIndex.sourceSnapshot();
+        return sourceSnapshotFingerprint(snapshot)
+                + "|types=" + codeIndex.types().size()
+                + "|calls=" + codeIndex.methodCallIndex().calls().size()
+                + "|status=" + codeIndex.indexStatus()
+                + "|warnings=" + Objects.hash(codeIndex.warnings());
     }
 
     private GitLabEndpointUseCaseRepositoryContext repositoryContext(
@@ -443,5 +570,18 @@ public class GitLabEndpointUseCaseContextService {
 
     private String safe(String value) {
         return value != null ? value : "";
+    }
+
+    private record GitLabEndpointUseCaseIndexWorkspace(
+            GitLabEndpointUseCaseCodeIndex codeIndex,
+            GitLabEndpointUseCaseEndpointIndex endpointIndex
+    ) {
+    }
+
+    private record GitLabEndpointUseCaseDependencyWorkspace(
+            GitLabEndpointUseCaseSpringBeanRegistry springBeanRegistry,
+            GitLabEndpointUseCaseDependencyResolution dependencyResolution,
+            GitLabEndpointUseCaseCallTargetResolution callTargetResolution
+    ) {
     }
 }

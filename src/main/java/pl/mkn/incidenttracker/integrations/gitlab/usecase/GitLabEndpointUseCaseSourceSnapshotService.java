@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryAnalysisCache;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeException;
@@ -12,6 +13,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeNode;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeService;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -70,8 +72,25 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final int maxSourceFiles;
     private final int maxFileCharacters;
+    private final GitLabRepositoryAnalysisCache analysisCache;
 
     @Autowired
+    public GitLabEndpointUseCaseSourceSnapshotService(
+            GitLabProperties gitLabProperties,
+            GitLabRepositoryTreeService gitLabRepositoryTreeService,
+            GitLabRepositoryPort gitLabRepositoryPort,
+            GitLabRepositoryAnalysisCache analysisCache
+    ) {
+        this(
+                gitLabProperties,
+                gitLabRepositoryTreeService,
+                gitLabRepositoryPort,
+                DEFAULT_MAX_SOURCE_FILES,
+                DEFAULT_MAX_FILE_CHARACTERS,
+                analysisCache
+        );
+    }
+
     public GitLabEndpointUseCaseSourceSnapshotService(
             GitLabProperties gitLabProperties,
             GitLabRepositoryTreeService gitLabRepositoryTreeService,
@@ -82,7 +101,8 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
                 gitLabRepositoryTreeService,
                 gitLabRepositoryPort,
                 DEFAULT_MAX_SOURCE_FILES,
-                DEFAULT_MAX_FILE_CHARACTERS
+                DEFAULT_MAX_FILE_CHARACTERS,
+                null
         );
     }
 
@@ -93,14 +113,43 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
             int maxSourceFiles,
             int maxFileCharacters
     ) {
+        this(gitLabProperties, gitLabRepositoryTreeService, gitLabRepositoryPort,
+                maxSourceFiles, maxFileCharacters, null);
+    }
+
+    GitLabEndpointUseCaseSourceSnapshotService(
+            GitLabProperties gitLabProperties,
+            GitLabRepositoryTreeService gitLabRepositoryTreeService,
+            GitLabRepositoryPort gitLabRepositoryPort,
+            int maxSourceFiles,
+            int maxFileCharacters,
+            GitLabRepositoryAnalysisCache analysisCache
+    ) {
         this.gitLabProperties = gitLabProperties;
         this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
         this.gitLabRepositoryPort = gitLabRepositoryPort;
         this.maxSourceFiles = Math.max(1, maxSourceFiles);
         this.maxFileCharacters = Math.max(1, maxFileCharacters);
+        this.analysisCache = analysisCache;
     }
 
     GitLabEndpointUseCaseSourceSnapshot buildSnapshot(
+            String group,
+            String branch,
+            GitLabEndpointUseCaseContextRequest request
+    ) {
+        if (analysisCache == null) {
+            return buildSnapshotUncached(group, branch, request);
+        }
+
+        return analysisCache.getOrCompute(
+                "gitlab.endpoint-usecase.source-snapshot",
+                sourceSnapshotCacheKey(group, branch, request),
+                () -> buildSnapshotUncached(group, branch, request)
+        );
+    }
+
+    private GitLabEndpointUseCaseSourceSnapshot buildSnapshotUncached(
             String group,
             String branch,
             GitLabEndpointUseCaseContextRequest request
@@ -249,6 +298,19 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
     ) {
         try {
             var session = gitLabRepositoryTreeService.requestScopedSession(TREE_CACHE_ATTRIBUTE);
+            if (analysisCache != null) {
+                return analysisCache.getOrCompute(
+                        "gitlab.endpoint-usecase.repository-tree",
+                        Arrays.asList(gitLabProperties.getBaseUrl(), group, projectName, branch, sourcePathPrefix),
+                        () -> gitLabRepositoryTreeService.fetchRepositoryBlobs(
+                                gitLabProperties.getBaseUrl(),
+                                group + "/" + projectName,
+                                branch,
+                                sourcePathPrefix,
+                                session
+                        )
+                );
+            }
             return gitLabRepositoryTreeService.fetchRepositoryBlobs(
                     gitLabProperties.getBaseUrl(),
                     group + "/" + projectName,
@@ -368,6 +430,24 @@ public class GitLabEndpointUseCaseSourceSnapshotService {
         return priorities.entrySet().stream()
                 .map(entry -> new SourcePathPriority(entry.getKey(), entry.getValue()))
                 .toList();
+    }
+
+    private List<Object> sourceSnapshotCacheKey(
+            String group,
+            String branch,
+            GitLabEndpointUseCaseContextRequest request
+    ) {
+        return Arrays.asList(
+                group,
+                branch,
+                request != null ? request.projectName() : "",
+                request != null ? request.endpointId() : "",
+                request != null ? request.httpMethod() : "",
+                request != null ? request.endpointPath() : "",
+                request != null ? request.sourcePathPrefix() : "",
+                maxSourceFiles,
+                maxFileCharacters
+        );
     }
 
     private void addEndpointPathPriorities(Map<String, Integer> priorities, String value) {

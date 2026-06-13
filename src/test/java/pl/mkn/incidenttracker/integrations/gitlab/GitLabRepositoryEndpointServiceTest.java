@@ -6,6 +6,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -123,6 +125,94 @@ class GitLabRepositoryEndpointServiceTest {
                 .anyMatch(nextRead -> nextRead.contains(yamlFile.filePath())));
         assertEquals("PUT /api/crm/customers/{customerId} -> com.example.crm.customer.adapter.in.rest.CustomerDataController#updateCustomer",
                 result.endpoints().get(1).endpointId());
+    }
+
+    @Test
+    void shouldCacheEndpointInventoryAcrossDifferentFilters() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(
+                repositoryPort,
+                new GitLabRepositoryAnalysisCache()
+        );
+        var controllerFile = new GitLabRepositoryFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                "src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java"
+        );
+
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", "src/main/java"))
+                .thenReturn(List.of(controllerFile));
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", null))
+                .thenReturn(List.of(controllerFile));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerFile.filePath(),
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerFile.filePath(),
+                """
+                        package com.example.crm.casehandling.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.PostMapping;
+                        import org.springframework.web.bind.annotation.RequestMapping;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        @RestController
+                        @RequestMapping("/api/crm/customer-cases")
+                        class CustomerCaseController {
+
+                          @GetMapping("/{caseId}")
+                          CustomerCaseResponse getCase(String caseId) {
+                            return new CustomerCaseResponse(caseId);
+                          }
+
+                          @PostMapping
+                          CustomerCaseResponse createCase(CustomerCaseRequest request) {
+                            return new CustomerCaseResponse("new");
+                          }
+                        }
+                        """,
+                false
+        ));
+
+        var allEndpoints = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-case-service",
+                "main",
+                null,
+                null,
+                "src/main/java",
+                20
+        ));
+        var getEndpoints = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-case-service",
+                "main",
+                "/api/crm/customer-cases",
+                "GET",
+                "src/main/java",
+                20
+        ));
+
+        assertEquals(2, allEndpoints.endpoints().size());
+        assertEquals(1, getEndpoints.endpoints().size());
+        assertEquals("GET", getEndpoints.endpoints().get(0).httpMethods().get(0));
+        verify(repositoryPort, times(1)).listRepositoryFiles("CRM", "crm-case-service", "main", "src/main/java");
+        verify(repositoryPort, times(1)).listRepositoryFiles("CRM", "crm-case-service", "main", null);
+        verify(repositoryPort, times(1)).readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerFile.filePath(),
+                80_000
+        );
     }
 
     @Test

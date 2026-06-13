@@ -1,10 +1,11 @@
 package pl.mkn.incidenttracker.integrations.gitlab;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -13,7 +14,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
 public class GitLabRepositoryEndpointService {
 
     private static final int DEFAULT_MAX_SCANNED_FILES = 120;
@@ -67,6 +67,20 @@ public class GitLabRepositoryEndpointService {
     private static final Pattern IDENTIFIER_BEFORE_PAREN_PATTERN = Pattern.compile("([A-Za-z_$][\\w$]*)\\s*\\(");
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final GitLabRepositoryAnalysisCache analysisCache;
+
+    @Autowired
+    public GitLabRepositoryEndpointService(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            GitLabRepositoryAnalysisCache analysisCache
+    ) {
+        this.gitLabRepositoryPort = gitLabRepositoryPort;
+        this.analysisCache = analysisCache;
+    }
+
+    public GitLabRepositoryEndpointService(GitLabRepositoryPort gitLabRepositoryPort) {
+        this(gitLabRepositoryPort, null);
+    }
 
     public GitLabRepositoryEndpointListResult listEndpoints(GitLabRepositoryEndpointListRequest request) {
         var group = required(request.group(), "group");
@@ -76,6 +90,61 @@ public class GitLabRepositoryEndpointService {
         var httpMethod = normalizeHttpMethod(request.httpMethod());
         var sourcePathPrefix = normalizeSourcePathPrefix(request.sourcePathPrefix());
         var maxScannedFiles = normalizeMaxScannedFiles(request.maxScannedFiles());
+        var inventory = endpointInventory(group, projectName, branch, sourcePathPrefix, maxScannedFiles);
+        var limitations = new ArrayList<String>(inventory.limitations());
+
+        var filteredEndpoints = inventory.endpoints().stream()
+                .filter(endpoint -> matchesHttpMethod(endpoint, httpMethod))
+                .filter(endpoint -> matchesEndpointPathPrefix(endpoint, endpointPathPrefix))
+                .sorted(Comparator.comparing(GitLabRepositoryEndpoint::path, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(GitLabRepositoryEndpoint::controllerClass, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(GitLabRepositoryEndpoint::handlerMethod, Comparator.nullsLast(String::compareTo)))
+                .toList();
+
+        if (filteredEndpoints.isEmpty() && !inventory.endpoints().isEmpty()) {
+            limitations.add("Endpoints were found, but none matched the requested endpointPathPrefix/httpMethod filters.");
+        }
+
+        return new GitLabRepositoryEndpointListResult(
+                group,
+                projectName,
+                branch,
+                endpointPathPrefix,
+                httpMethod,
+                sourcePathPrefix,
+                inventory.candidateFileCount(),
+                inventory.scannedFileCount(),
+                inventory.scannedFileLimitReached(),
+                filteredEndpoints,
+                List.copyOf(limitations)
+        );
+    }
+
+    private EndpointInventory endpointInventory(
+            String group,
+            String projectName,
+            String branch,
+            String sourcePathPrefix,
+            int maxScannedFiles
+    ) {
+        if (analysisCache == null) {
+            return buildEndpointInventory(group, projectName, branch, sourcePathPrefix, maxScannedFiles);
+        }
+
+        return analysisCache.getOrCompute(
+                "gitlab.repository-endpoint-inventory",
+                Arrays.asList(group, projectName, branch, sourcePathPrefix, maxScannedFiles),
+                () -> buildEndpointInventory(group, projectName, branch, sourcePathPrefix, maxScannedFiles)
+        );
+    }
+
+    private EndpointInventory buildEndpointInventory(
+            String group,
+            String projectName,
+            String branch,
+            String sourcePathPrefix,
+            int maxScannedFiles
+    ) {
         var limitations = new ArrayList<String>();
 
         var repositoryFiles = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, sourcePathPrefix);
@@ -155,29 +224,11 @@ public class GitLabRepositoryEndpointService {
                     .formatted(scannedFiles.size(), candidateFiles.size()));
         }
 
-        var filteredEndpoints = endpoints.stream()
-                .filter(endpoint -> matchesHttpMethod(endpoint, httpMethod))
-                .filter(endpoint -> matchesEndpointPathPrefix(endpoint, endpointPathPrefix))
-                .sorted(Comparator.comparing(GitLabRepositoryEndpoint::path, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(GitLabRepositoryEndpoint::controllerClass, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(GitLabRepositoryEndpoint::handlerMethod, Comparator.nullsLast(String::compareTo)))
-                .toList();
-
-        if (filteredEndpoints.isEmpty() && !endpoints.isEmpty()) {
-            limitations.add("Endpoints were found, but none matched the requested endpointPathPrefix/httpMethod filters.");
-        }
-
-        return new GitLabRepositoryEndpointListResult(
-                group,
-                projectName,
-                branch,
-                endpointPathPrefix,
-                httpMethod,
-                sourcePathPrefix,
+        return new EndpointInventory(
                 candidateFiles.size(),
                 scannedFiles.size(),
                 scannedFileLimitReached,
-                filteredEndpoints,
+                endpoints,
                 List.copyOf(limitations)
         );
     }
@@ -1381,6 +1432,19 @@ public class GitLabRepositoryEndpointService {
     ) {
         private OpenApiOperation {
             tags = tags != null ? List.copyOf(tags) : List.of();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
+    }
+
+    private record EndpointInventory(
+            int candidateFileCount,
+            int scannedFileCount,
+            boolean scannedFileLimitReached,
+            List<GitLabRepositoryEndpoint> endpoints,
+            List<String> limitations
+    ) {
+        private EndpointInventory {
+            endpoints = endpoints != null ? List.copyOf(endpoints) : List.of();
             limitations = limitations != null ? List.copyOf(limitations) : List.of();
         }
     }

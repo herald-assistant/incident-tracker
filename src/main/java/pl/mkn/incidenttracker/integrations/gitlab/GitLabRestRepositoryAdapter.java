@@ -12,6 +12,7 @@ import org.springframework.web.util.UriUtils;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,23 +26,34 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     private final GitLabProperties properties;
     private final GitLabRestClientFactory gitLabRestClientFactory;
     private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
+    private final GitLabRepositoryAnalysisCache analysisCache;
 
     @Autowired
     public GitLabRestRepositoryAdapter(
             GitLabProperties properties,
             GitLabRestClientFactory gitLabRestClientFactory,
-            GitLabRepositoryTreeService gitLabRepositoryTreeService
+            GitLabRepositoryTreeService gitLabRepositoryTreeService,
+            GitLabRepositoryAnalysisCache analysisCache
     ) {
         this.properties = properties;
         this.gitLabRestClientFactory = gitLabRestClientFactory;
         this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
+        this.analysisCache = analysisCache;
+    }
+
+    public GitLabRestRepositoryAdapter(
+            GitLabProperties properties,
+            GitLabRestClientFactory gitLabRestClientFactory,
+            GitLabRepositoryTreeService gitLabRepositoryTreeService
+    ) {
+        this(properties, gitLabRestClientFactory, gitLabRepositoryTreeService, null);
     }
 
     public GitLabRestRepositoryAdapter(
             GitLabProperties properties,
             GitLabRestClientFactory gitLabRestClientFactory
     ) {
-        this(properties, gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory));
+        this(properties, gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory), null);
     }
 
     @Override
@@ -120,6 +132,23 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
             return List.of();
         }
 
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.repository-files",
+                    Arrays.asList(apiBaseUrl(), group, projectName, branch, pathPrefix),
+                    () -> listRepositoryFilesUncached(group, projectName, branch, pathPrefix)
+            );
+        }
+
+        return listRepositoryFilesUncached(group, projectName, branch, pathPrefix);
+    }
+
+    private List<GitLabRepositoryFile> listRepositoryFilesUncached(
+            String group,
+            String projectName,
+            String branch,
+            String pathPrefix
+    ) {
         try {
             return gitLabRepositoryTreeService.fetchRepositoryBlobs(
                             properties.getBaseUrl(),
@@ -272,6 +301,18 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     private String fetchRawFile(String group, String projectName, String branch, String filePath) {
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.raw-file",
+                    Arrays.asList(apiBaseUrl(), group, projectName, branch, filePath),
+                    () -> fetchRawFileUncached(group, projectName, branch, filePath)
+            );
+        }
+
+        return fetchRawFileUncached(group, projectName, branch, filePath);
+    }
+
+    private String fetchRawFileUncached(String group, String projectName, String branch, String filePath) {
         try {
             return restClient().get()
                     .uri(rawFileUri(group, projectName, branch, filePath))
