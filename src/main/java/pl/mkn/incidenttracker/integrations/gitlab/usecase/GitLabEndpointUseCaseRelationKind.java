@@ -1,0 +1,16 @@
+package pl.mkn.incidenttracker.integrations.gitlab.usecase;
+
+public enum GitLabEndpointUseCaseRelationKind {
+    ENDPOINT_HANDLER,
+    LOCAL_METHOD_CALL,
+    INJECTED_PORT_CALL,
+    INTERFACE_IMPLEMENTATION,
+    STATIC_METHOD_CALL,
+    MAPPER_CALL,
+    REPOSITORY_CALL,
+    DOMAIN_METHOD_CALL,
+    SPRING_DATA_BOUNDARY,
+    EXTERNAL_BOUNDARY,
+    OPENAPI_CONTRACT,
+    UNKNOWN
+}

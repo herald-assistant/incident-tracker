@@ -5,8 +5,19 @@ import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseEndpointContext;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseFileCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseFileRole;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRelationKind;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRepositoryContext;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
@@ -25,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -254,6 +266,98 @@ class GitLabMcpToolsTest {
         assertEquals("high", endpoint.confidence());
         assertTrue(endpoint.limitations().isEmpty());
         assertTrue(endpoint.suggestedNextReads().get(0).contains("gitlab_read_repository_file_chunk"));
+    }
+
+    @Test
+    void shouldBuildEndpointUseCaseContextUsingSessionBoundScope() {
+        var endpointUseCaseContextService = mock(GitLabEndpointUseCaseContextService.class);
+        var tools = new GitLabMcpTools(
+                mock(GitLabRepositoryPort.class),
+                ignored -> OperationalContextCatalog.empty(),
+                mock(GitLabRepositoryEndpointService.class),
+                endpointUseCaseContextService
+        );
+        when(endpointUseCaseContextService.buildContext(any(), any(), any()))
+                .thenReturn(new GitLabEndpointUseCaseContextResult(
+                        new GitLabEndpointUseCaseRepositoryContext(
+                                "platform/backend",
+                                "orders-api",
+                                "feature/FLOW-1",
+                                "src/main/java"
+                        ),
+                        new GitLabEndpointUseCaseEndpointContext(
+                                "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                List.of("GET"),
+                                "/api/orders/{orderId}",
+                                "/api/orders/{orderId}",
+                                "com.example.orders.OrderController",
+                                "getOrder",
+                                "src/main/java/com/example/orders/OrderController.java",
+                                10,
+                                18,
+                                List.of("@PathVariable String orderId"),
+                                List.of("OrderResponse"),
+                                List.of("RestController", "GetMapping"),
+                                GitLabEndpointUseCaseConfidence.HIGH,
+                                List.of(),
+                                List.of()
+                        ),
+                        List.of(new GitLabEndpointUseCaseFileCandidate(
+                                "src/main/java/com/example/orders/OrderController.java",
+                                GitLabEndpointUseCaseFileRole.CONTROLLER,
+                                1,
+                                List.of("getOrder"),
+                                "Endpoint handler and local controller flow.",
+                                GitLabEndpointUseCaseConfidence.HIGH
+                        )),
+                        List.of(new GitLabEndpointUseCaseRelation(
+                                "GET /api/orders/{orderId}",
+                                "com.example.orders.OrderController#getOrder",
+                                GitLabEndpointUseCaseRelationKind.ENDPOINT_HANDLER,
+                                GitLabEndpointUseCaseConfidence.HIGH,
+                                "Endpoint inventory resolved this handler method."
+                        )),
+                        List.of(),
+                        List.of(),
+                        List.of("orders-api:src/main/java/com/example/orders/OrderController.java via gitlab_read_repository_file_outline"),
+                        GitLabEndpointUseCaseLimits.defaults(),
+                        GitLabEndpointUseCaseConfidence.HIGH
+                ));
+
+        var response = tools.buildEndpointUseCaseContext(
+                "orders-api",
+                "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                null,
+                null,
+                "src/main/java",
+                4,
+                12,
+                "Buduje liste plikow dla endpointu zamowienia.",
+                gitLabToolContext("platform/backend", "feature/FLOW-1", "flow-123")
+        );
+
+        verify(endpointUseCaseContextService).buildContext(
+                eq("platform/backend"),
+                eq("feature/FLOW-1"),
+                argThat(request -> "orders-api".equals(request.projectName())
+                        && "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder".equals(request.endpointId())
+                        && request.httpMethod() == null
+                        && request.endpointPath() == null
+                        && "src/main/java".equals(request.sourcePathPrefix())
+                        && request.maxDepth() == 4
+                        && request.maxFiles() == 12
+                        && "Buduje liste plikow dla endpointu zamowienia.".equals(request.reason()))
+        );
+        assertEquals("platform/backend", response.group());
+        assertEquals("orders-api", response.projectName());
+        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals("src/main/java", response.sourcePathPrefix());
+        assertEquals("getOrder", response.endpoint().handlerMethod());
+        assertEquals(1, response.files().size());
+        assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER, response.files().get(0).role());
+        assertEquals(1, response.relations().size());
+        assertEquals(GitLabEndpointUseCaseConfidence.HIGH, response.confidence());
+        assertTrue(response.suggestedNextReads().get(0).contains("gitlab_read_repository_file_outline"));
     }
 
     @Test

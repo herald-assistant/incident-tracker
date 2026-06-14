@@ -85,6 +85,7 @@
               <span class="panel-chip">JSON response preview</span>
               <span class="panel-chip">GitLab repo mapping</span>
               <span class="panel-chip">GitLab endpoint inventory</span>
+              <span class="panel-chip">Endpoint use-case context</span>
               <span class="panel-chip">GitLab source resolve</span>
             </div>
           </div>
@@ -95,6 +96,7 @@
           <ul class="mini-list">
             <li>czy hint komponentu mapuje się na właściwe repozytorium GitLaba</li>
             <li>czy repozytorium wystawia oczekiwane endpointy REST</li>
+            <li>czy endpoint zwraca właściwą listę plików do analizy use-case</li>
             <li>czy symbol klasy rozwiązuje się do pliku i preview kodu</li>
           </ul>
         </div>
@@ -759,6 +761,16 @@
                       </ul>
                     }
 
+                    <div class="endpoint-card__actions">
+                      <button
+                        class="secondary-button secondary-button--compact"
+                        type="button"
+                        (click)="useEndpointForContext(endpoint)"
+                      >
+                        <span class="button-label">Użyj do contextu</span>
+                      </button>
+                    </div>
+
                   </article>
                 }
               </div>
@@ -775,6 +787,320 @@
           readonly
           spellcheck="false"
           [value]="gitLabEndpointState().responseJson"
+        ></textarea>
+      </article>
+
+      <article class="analysis-card tool-card">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">GitLab</p>
+            <h2>Endpoint Use Case Context</h2>
+            <p class="field-hint">
+              Buduje kompaktową listę plików, symboli i relacji dla konkretnego endpointu. Najwygodniej
+              zacząć od przycisku `Użyj do contextu` na wyniku Endpoint Inventory.
+            </p>
+          </div>
+          <span class="panel-chip route-chip">POST /api/gitlab/repository/endpoint-use-case-context</span>
+        </div>
+
+        <form class="tool-form" novalidate (submit)="submitGitLabEndpointUseCaseContext($event)">
+          <div class="form-grid">
+            <label class="form-field">
+              <span class="field-label">Group</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. TENANT-ALPHA"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.group"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Project Name</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. orders-api"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.projectName"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Branch / Ref</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="HEAD"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.branch"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">HTTP Method</span>
+              <select
+                class="text-input"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.httpMethod"
+              >
+                <option value="">From endpointId</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+              </select>
+            </label>
+
+            <label class="form-field form-field--wide">
+              <span class="field-label">Endpoint ID</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. GET /api/orders/{orderId} -> com.example.OrderController#getOrder"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointId"
+              />
+              <span class="field-hint">Jeśli `endpointId` jest uzupełniony, builder użyje go przed method/path.</span>
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Endpoint Path</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. /api/orders/{orderId}"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointPath"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Source Path Prefix</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="src/main/java"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.sourcePathPrefix"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Max Depth</span>
+              <input
+                class="text-input"
+                type="number"
+                min="1"
+                max="8"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.maxDepth"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Max Files</span>
+              <input
+                class="text-input"
+                type="number"
+                min="1"
+                max="40"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.maxFiles"
+              />
+            </label>
+
+            <label class="form-field form-field--wide">
+              <span class="field-label">Reason</span>
+              <input
+                class="text-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabEndpointUseCaseContextForm.controls.reason"
+              />
+            </label>
+          </div>
+
+          @if (
+            controlInvalid(gitLabEndpointUseCaseContextForm.controls.group) ||
+            controlInvalid(gitLabEndpointUseCaseContextForm.controls.projectName) ||
+            controlInvalid(gitLabEndpointUseCaseContextForm.controls.branch)
+          ) {
+            <p class="form-error">Pola `group`, `projectName` i `branch` są wymagane.</p>
+          }
+
+          @if (
+            controlInvalid(gitLabEndpointUseCaseContextForm.controls.maxDepth) ||
+            controlInvalid(gitLabEndpointUseCaseContextForm.controls.maxFiles)
+          ) {
+            <p class="form-error">Limity muszą mieścić się w zakresach: depth 1-8, files 1-40.</p>
+          }
+
+          <div class="tool-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="gitLabEndpointUseCaseContextState().status === 'loading'"
+            >
+              <span class="button-label">Buduj context endpointu</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="tool-status" [attr.data-status]="gitLabEndpointUseCaseContextState().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ gitLabEndpointUseCaseContextState().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (gitLabEndpointUseCaseContextState().statusCode !== null) {
+              <span class="tool-status__code">
+                HTTP {{ gitLabEndpointUseCaseContextState().statusCode }}
+              </span>
+            }
+            <span [class]="statusPillClass(gitLabEndpointUseCaseContextState().status)">
+              {{ statusLabel(gitLabEndpointUseCaseContextState().status) }}
+            </span>
+          </div>
+        </div>
+
+        @if (gitLabEndpointUseCaseContextResult(); as contextResult) {
+          <section class="context-results">
+            <div class="context-results__header">
+              <div>
+                <p class="tool-status__label">Use-case context</p>
+                <h3>
+                  {{ contextResult.files.length }} plików ·
+                  {{ contextResult.relations.length }} relacji
+                </h3>
+              </div>
+              <div class="endpoint-results__stats">
+                <span [class]="confidenceClass(contextResult.confidence)">
+                  {{ contextResult.confidence || 'UNKNOWN' }}
+                </span>
+                @if (contextResult.unresolved.length > 0) {
+                  <span class="panel-chip panel-chip--warning">
+                    {{ contextResult.unresolved.length }} unresolved
+                  </span>
+                }
+              </div>
+            </div>
+
+            @if (contextResult.endpoint) {
+              <div class="context-endpoint">
+                <span class="endpoint-card__method">
+                  {{ contextResult.endpoint.httpMethods.join(', ') || 'ANY' }}
+                </span>
+                <div>
+                  <h4>
+                    {{
+                      contextResult.endpoint.path ||
+                        contextResult.endpoint.pathExpression ||
+                        '&lt;unresolved-path&gt;'
+                    }}
+                  </h4>
+                  <p>
+                    {{ contextResult.endpoint.controllerClass }}#{{ contextResult.endpoint.handlerMethod }}
+                  </p>
+                </div>
+              </div>
+            }
+
+            @if (contextResult.limitations.length > 0) {
+              <ul class="endpoint-results__limitations">
+                @for (limitation of contextResult.limitations; track limitation) {
+                  <li>{{ limitation }}</li>
+                }
+              </ul>
+            }
+
+            @if (contextResult.files.length > 0) {
+              <div class="context-file-list">
+                @for (file of contextResult.files; track file.path || $index) {
+                  <article class="context-file">
+                    <div class="context-file__header">
+                      <div>
+                        <h4>{{ file.path || '&lt;unknown-file&gt;' }}</h4>
+                        <p>{{ file.reason || 'Bez opisu powodu wyboru pliku.' }}</p>
+                      </div>
+                      <div class="context-file__badges">
+                        <span class="panel-chip">{{ file.role || 'UNKNOWN' }}</span>
+                        <span [class]="confidenceClass(file.confidence)">
+                          {{ file.confidence || 'UNKNOWN' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    @if (file.symbols.length > 0) {
+                      <div class="context-chip-list">
+                        @for (symbol of file.symbols; track symbol) {
+                          <span class="context-chip">{{ symbol }}</span>
+                        }
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+            } @else {
+              <p class="empty-state">Builder nie zwrócił plików dla podanego endpointu.</p>
+            }
+
+            @if (contextResult.relations.length > 0) {
+              <section class="context-subsection">
+                <h4>Relacje</h4>
+                <ul class="context-list">
+                  @for (relation of contextResult.relations; track $index) {
+                    <li>
+                      <span>{{ relation.kind || 'UNKNOWN' }}</span>
+                      {{ relation.from || '?' }} -> {{ relation.to || '?' }}
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+
+            @if (contextResult.unresolved.length > 0) {
+              <section class="context-subsection">
+                <h4>Unresolved</h4>
+                <ul class="context-list">
+                  @for (reference of contextResult.unresolved; track reference.symbol || $index) {
+                    <li>
+                      <span>{{ reference.symbol || 'unknown' }}</span>
+                      {{ reference.reason || 'Brak powodu.' }}
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+
+            @if (contextResult.suggestedNextReads.length > 0) {
+              <section class="context-subsection">
+                <h4>Suggested next reads</h4>
+                <ul class="context-list">
+                  @for (read of contextResult.suggestedNextReads; track read) {
+                    <li>{{ read }}</li>
+                  }
+                </ul>
+              </section>
+            }
+          </section>
+        }
+
+        <label class="field-label" for="gitlabEndpointUseCaseContextJsonResponse">
+          JSON response
+        </label>
+        <textarea
+          id="gitlabEndpointUseCaseContextJsonResponse"
+          class="json-output"
+          readonly
+          spellcheck="false"
+          [value]="gitLabEndpointUseCaseContextState().responseJson"
         ></textarea>
       </article>
 

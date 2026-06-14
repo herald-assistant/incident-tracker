@@ -52,6 +52,19 @@ export interface GitLabRepositoryEndpointsPayload {
   maxScannedFiles?: number;
 }
 
+export interface GitLabEndpointUseCaseContextPayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  endpointId?: string;
+  httpMethod?: string;
+  endpointPath?: string;
+  sourcePathPrefix?: string;
+  maxDepth?: number;
+  maxFiles?: number;
+  reason?: string;
+}
+
 export interface GitLabRepositoryEndpoint {
   endpointId: string;
   httpMethods: string[];
@@ -68,6 +81,78 @@ export interface GitLabRepositoryEndpoint {
   confidence?: string | null;
   limitations: string[];
   suggestedNextReads: string[];
+}
+
+export interface GitLabEndpointUseCaseRepositoryContext {
+  group?: string | null;
+  projectName?: string | null;
+  branch?: string | null;
+  sourcePathPrefix?: string | null;
+}
+
+export interface GitLabEndpointUseCaseEndpointContext {
+  endpointId?: string | null;
+  httpMethods: string[];
+  path?: string | null;
+  pathExpression?: string | null;
+  controllerClass?: string | null;
+  handlerMethod?: string | null;
+  filePath?: string | null;
+  lineStart: number;
+  lineEnd: number;
+  requestTypes: string[];
+  responseTypes: string[];
+  annotations: string[];
+  confidence?: string | null;
+  limitations: string[];
+  suggestedNextReads: string[];
+}
+
+export interface GitLabEndpointUseCaseFileCandidate {
+  path?: string | null;
+  role?: string | null;
+  priority: number;
+  symbols: string[];
+  reason?: string | null;
+  confidence?: string | null;
+}
+
+export interface GitLabEndpointUseCaseRelation {
+  from?: string | null;
+  to?: string | null;
+  kind?: string | null;
+  confidence?: string | null;
+  reason?: string | null;
+}
+
+export interface GitLabEndpointUseCaseUnresolvedReference {
+  symbol?: string | null;
+  ownerPath?: string | null;
+  reason?: string | null;
+  searchedKeywords: string[];
+  candidates: string[];
+}
+
+export interface GitLabEndpointUseCaseLimits {
+  maxDepth: number;
+  maxFiles: number;
+  maxReadFiles: number;
+  maxDepthReached: boolean;
+  maxFilesReached: boolean;
+  readFileCount: number;
+  readFileLimitReached: boolean;
+}
+
+export interface GitLabEndpointUseCaseContextResponse {
+  repository?: GitLabEndpointUseCaseRepositoryContext | null;
+  endpoint?: GitLabEndpointUseCaseEndpointContext | null;
+  files: GitLabEndpointUseCaseFileCandidate[];
+  relations: GitLabEndpointUseCaseRelation[];
+  unresolved: GitLabEndpointUseCaseUnresolvedReference[];
+  limitations: string[];
+  suggestedNextReads: string[];
+  limits: GitLabEndpointUseCaseLimits;
+  confidence?: string | null;
 }
 
 export interface GitLabRepositoryEndpointsResponse {
@@ -116,6 +201,15 @@ export class EvidenceApiService {
   ): Observable<GitLabRepositoryEndpointsResponse> {
     return this.http.post<GitLabRepositoryEndpointsResponse>(
       '/api/gitlab/repository/endpoints',
+      payload
+    );
+  }
+
+  buildGitLabEndpointUseCaseContext(
+    payload: GitLabEndpointUseCaseContextPayload
+  ): Observable<GitLabEndpointUseCaseContextResponse> {
+    return this.http.post<GitLabEndpointUseCaseContextResponse>(
+      '/api/gitlab/repository/endpoint-use-case-context',
       payload
     );
   }

@@ -12,10 +12,13 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRe
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkResult;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
@@ -40,6 +43,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
@@ -82,16 +86,32 @@ public class GitLabMcpTools {
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
+    private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
 
     @Autowired
     public GitLabMcpTools(
             GitLabRepositoryPort gitLabRepositoryPort,
             OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
+            GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
+            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService
     ) {
         this.gitLabRepositoryPort = gitLabRepositoryPort;
         this.operationalContextPort = operationalContextPort;
         this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
+        this.gitLabEndpointUseCaseContextService = gitLabEndpointUseCaseContextService;
+    }
+
+    public GitLabMcpTools(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            OperationalContextPort operationalContextPort,
+            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
+    ) {
+        this(
+                gitLabRepositoryPort,
+                operationalContextPort,
+                gitLabRepositoryEndpointService,
+                defaultEndpointUseCaseContextService(gitLabRepositoryPort, gitLabRepositoryEndpointService)
+        );
     }
 
     public GitLabMcpTools(
@@ -107,6 +127,13 @@ public class GitLabMcpTools {
 
     public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
         this(gitLabRepositoryPort, ignored -> emptyOperationalContextCatalog());
+    }
+
+    private static GitLabEndpointUseCaseContextService defaultEndpointUseCaseContextService(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
+    ) {
+        return GitLabEndpointUseCaseContextService.createDefault(gitLabRepositoryPort, gitLabRepositoryEndpointService);
     }
 
     @Tool(
@@ -250,6 +277,90 @@ public class GitLabMcpTools {
                 result.endpoints(),
                 result.limitations()
         );
+    }
+
+    @Tool(
+            name = BUILD_ENDPOINT_USE_CASE_CONTEXT,
+            description = """
+                    Builds a compact use-case context for one concrete HTTP endpoint in the current fixed session group and branch.
+                    Use after gitlab_list_repository_endpoints when endpointId is known, or provide httpMethod + endpointPath when the
+                    endpoint is uniquely identifiable. The result returns candidate file paths, roles, symbols, direct relations,
+                    unresolved references, limitations and suggested next reads for focused code fetching.
+                    """
+    )
+    public GitLabBuildEndpointUseCaseContextToolResponse buildEndpointUseCaseContext(
+            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            String projectName,
+            @ToolParam(required = false, description = "Exact endpointId returned by gitlab_list_repository_endpoints.")
+            String endpointId,
+            @ToolParam(required = false, description = "HTTP method when endpointId is unknown, for example GET, POST, PUT or DELETE.")
+            String httpMethod,
+            @ToolParam(required = false, description = "Endpoint path when endpointId is unknown, for example /api/orders/{orderId}.")
+            String endpointPath,
+            @ToolParam(required = false, description = "Optional repository source path prefix or module path to narrow scanning.")
+            String sourcePathPrefix,
+            @ToolParam(required = false, description = "Maximum traversal depth. Defaults to backend limit and is capped by the server.")
+            Integer maxDepth,
+            @ToolParam(required = false, description = "Maximum returned files. Defaults to backend limit and is capped by the server.")
+            Integer maxFiles,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model buduje kontekst endpointu.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = GitLabToolScope.from(toolContext);
+
+        log.info(
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} sourcePathPrefix={} maxDepth={} maxFiles={}",
+                BUILD_ENDPOINT_USE_CASE_CONTEXT,
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                projectName,
+                endpointId,
+                httpMethod,
+                endpointPath,
+                sourcePathPrefix,
+                maxDepth,
+                maxFiles
+        );
+
+        var result = gitLabEndpointUseCaseContextService.buildContext(
+                scope.group(),
+                scope.branch(),
+                new GitLabEndpointUseCaseContextRequest(
+                        projectName,
+                        endpointId,
+                        httpMethod,
+                        endpointPath,
+                        sourcePathPrefix,
+                        maxDepth,
+                        maxFiles,
+                        reason
+                )
+        );
+        var response = GitLabBuildEndpointUseCaseContextToolResponse.from(result);
+
+        log.info(
+                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} endpointResolved={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
+                BUILD_ENDPOINT_USE_CASE_CONTEXT,
+                scope.correlationId(),
+                response.group(),
+                response.branch(),
+                scope.environment(),
+                response.projectName(),
+                response.endpoint() != null,
+                response.files().size(),
+                response.relations().size(),
+                response.unresolved().size(),
+                response.suggestedNextReads().size(),
+                response.confidence()
+        );
+
+        return response;
     }
 
     @Tool(

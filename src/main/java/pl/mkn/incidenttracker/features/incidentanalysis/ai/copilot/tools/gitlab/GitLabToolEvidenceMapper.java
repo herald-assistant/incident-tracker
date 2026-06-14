@@ -10,6 +10,7 @@ import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
@@ -25,6 +26,7 @@ import pl.mkn.incidenttracker.common.JsonPayloadReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
@@ -63,6 +65,7 @@ public class GitLabToolEvidenceMapper {
                  READ_REPOSITORY_FILE_OUTLINE,
                  LIST_AVAILABLE_REPOSITORIES,
                  LIST_REPOSITORY_ENDPOINTS,
+                 BUILD_ENDPOINT_USE_CASE_CONTEXT,
                  SEARCH_REPOSITORY_CANDIDATES,
                  FIND_CLASS_REFERENCES,
                  FIND_FLOW_CONTEXT -> true;
@@ -89,6 +92,12 @@ public class GitLabToolEvidenceMapper {
                     sessionEvidence
             );
             case LIST_REPOSITORY_ENDPOINTS -> captureGitLabRepositoryEndpoints(
+                    toolCallId,
+                    rawArguments,
+                    rawResult,
+                    sessionEvidence
+            );
+            case BUILD_ENDPOINT_USE_CASE_CONTEXT -> captureGitLabEndpointUseCaseContext(
                     toolCallId,
                     rawArguments,
                     rawResult,
@@ -370,6 +379,66 @@ public class GitLabToolEvidenceMapper {
         }
     }
 
+    private AnalysisEvidenceSection captureGitLabEndpointUseCaseContext(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabBuildEndpointUseCaseContextToolResponse.class);
+            var files = safeList(response.files());
+            var relations = safeList(response.relations());
+            var unresolved = safeList(response.unresolved());
+            var limitations = safeList(response.limitations());
+            var suggestedNextReads = safeList(response.suggestedNextReads());
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    BUILD_ENDPOINT_USE_CASE_CONTEXT,
+                    rawArguments
+            );
+            addAttribute(attributes, "group", response.group());
+            addAttribute(attributes, "projectName", response.projectName());
+            addAttribute(attributes, "branch", response.branch());
+            addAttribute(attributes, "sourcePathPrefix", response.sourcePathPrefix());
+            if (response.endpoint() != null) {
+                addAttribute(attributes, "endpointId", response.endpoint().endpointId());
+                addAttribute(attributes, "endpointPath", response.endpoint().path());
+                addJsonAttribute(attributes, "httpMethods", response.endpoint().httpMethods());
+                addAttribute(attributes, "controllerClass", response.endpoint().controllerClass());
+                addAttribute(attributes, "handlerMethod", response.endpoint().handlerMethod());
+                addAttribute(attributes, "endpointFilePath", response.endpoint().filePath());
+            }
+            addAttribute(attributes, "fileCount", String.valueOf(files.size()));
+            addAttribute(attributes, "relationCount", String.valueOf(relations.size()));
+            addAttribute(attributes, "unresolvedCount", String.valueOf(unresolved.size()));
+            addAttribute(attributes, "limitationCount", String.valueOf(limitations.size()));
+            addAttribute(attributes, "suggestedNextReadCount", String.valueOf(suggestedNextReads.size()));
+            addAttribute(attributes, "confidence", response.confidence() != null ? response.confidence().name() : null);
+            addJsonAttribute(attributes, "files", files);
+            addJsonAttribute(attributes, "relations", relations);
+            addJsonAttribute(attributes, "unresolved", unresolved);
+            addJsonAttribute(attributes, "limitations", limitations);
+            addJsonAttribute(attributes, "suggestedNextReads", suggestedNextReads);
+            addJsonAttribute(attributes, "limits", response.limits());
+
+            return sessionEvidence.appendItem(
+                    GITLAB_PROVIDER,
+                    GITLAB_DISCOVERY_CATEGORY,
+                    discoveryKey(toolCallId, BUILD_ENDPOINT_USE_CASE_CONTEXT),
+                    GITLAB_DISCOVERY_ORDER_NAMESPACE,
+                    GITLAB_DISCOVERY_FALLBACK_KEY,
+                    new AnalysisEvidenceItem(
+                            gitLabDiscoveryTitle(BUILD_ENDPOINT_USE_CASE_CONTEXT),
+                            List.copyOf(attributes)
+                    )
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab endpoint use case context result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
     private AnalysisEvidenceSection captureGitLabClassReferences(
             String toolCallId,
             String rawArguments,
@@ -585,6 +654,7 @@ public class GitLabToolEvidenceMapper {
         return switch (toolName) {
             case LIST_AVAILABLE_REPOSITORIES -> "GitLab available repositories";
             case LIST_REPOSITORY_ENDPOINTS -> "GitLab repository endpoints";
+            case BUILD_ENDPOINT_USE_CASE_CONTEXT -> "GitLab endpoint use case context";
             case SEARCH_REPOSITORY_CANDIDATES -> "GitLab search candidates";
             case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
             case FIND_CLASS_REFERENCES -> "GitLab class references";

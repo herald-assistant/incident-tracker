@@ -76,6 +76,31 @@ class CopilotSdkToolFactoryBudgetTest {
         assertEquals(1, snapshot.gitLabReadFileCalls());
     }
 
+    @Test
+    void shouldTreatEndpointUseCaseContextAsGitLabSearchBudget() {
+        var tools = new BudgetTestTools();
+        var properties = new CopilotToolBudgetProperties();
+        properties.setMode(BudgetMode.HARD);
+        properties.setMaxGitlabSearchCalls(0);
+        var budgetRegistry = new CopilotToolBudgetRegistry(properties);
+        var factory = factory(tools, budgetRegistry);
+        var context = registerSession(budgetRegistry);
+        var tool = toolByName(factory, context, "gitlab_build_endpoint_use_case_context");
+
+        var result = invoke(tool, context, "tool-gitlab-context-1");
+
+        assertInstanceOf(Map.class, result);
+        @SuppressWarnings("unchecked")
+        var payload = (Map<String, Object>) result;
+        assertEquals("denied_by_tool_budget", payload.get("status"));
+        assertTrue(payload.get("reason").toString().contains("GitLab search tool call budget exceeded"));
+        assertEquals(0, tools.gitLabEndpointContextCalls.get());
+
+        var snapshot = budgetRegistry.state(context.copilotSessionId()).orElseThrow().snapshot();
+        assertEquals(1, snapshot.deniedToolCalls());
+        assertEquals(0, snapshot.gitLabSearchCalls());
+    }
+
     private CopilotSdkToolFactory factory(
             BudgetTestTools tools,
             CopilotToolBudgetRegistry budgetRegistry
@@ -125,6 +150,7 @@ class CopilotSdkToolFactoryBudgetTest {
     static class BudgetTestTools {
         private final AtomicInteger rawSqlCalls = new AtomicInteger();
         private final AtomicInteger gitLabReadFileCalls = new AtomicInteger();
+        private final AtomicInteger gitLabEndpointContextCalls = new AtomicInteger();
 
         @Tool(name = "db_execute_readonly_sql", description = "Raw SQL test tool.")
         public Map<String, Object> executeReadonlySql() {
@@ -136,6 +162,12 @@ class CopilotSdkToolFactoryBudgetTest {
         public Map<String, Object> readRepositoryFile() {
             gitLabReadFileCalls.incrementAndGet();
             return Map.of("status", "ok", "content", "class OrdersApi {}");
+        }
+
+        @Tool(name = "gitlab_build_endpoint_use_case_context", description = "GitLab endpoint use case context test tool.")
+        public Map<String, Object> buildEndpointUseCaseContext() {
+            gitLabEndpointContextCalls.incrementAndGet();
+            return Map.of("status", "ok");
         }
     }
 }

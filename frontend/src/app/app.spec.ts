@@ -68,6 +68,7 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
     expect(compiled.textContent).toContain('Endpoint Inventory');
+    expect(compiled.textContent).toContain('Endpoint Use Case Context');
     expect(compiled.textContent).not.toContain('HTTP Call Summary');
   });
 

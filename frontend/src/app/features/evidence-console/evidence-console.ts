@@ -18,6 +18,8 @@ import {
   ElasticLogDetailLevel,
   ElasticLogSearchPayload,
   EvidenceApiService,
+  GitLabEndpointUseCaseContextPayload,
+  GitLabEndpointUseCaseContextResponse,
   GitLabRepositoryEndpoint,
   GitLabRepositoryEndpointsPayload,
   GitLabRepositoryEndpointsResponse,
@@ -115,6 +117,36 @@ export class EvidenceConsoleComponent {
     })
   });
 
+  readonly gitLabEndpointUseCaseContextForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    endpointId: new FormControl('', { nonNullable: true }),
+    httpMethod: new FormControl('', { nonNullable: true }),
+    endpointPath: new FormControl('', { nonNullable: true }),
+    sourcePathPrefix: new FormControl('src/main/java', { nonNullable: true }),
+    maxDepth: new FormControl('5', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(8)]
+    }),
+    maxFiles: new FormControl('25', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(40)]
+    }),
+    reason: new FormControl('Manualna weryfikacja kontekstu use-case endpointu.', {
+      nonNullable: true
+    })
+  });
+
   readonly gitLabSourceForm = new FormGroup({
     gitlabBaseUrl: new FormControl('', {
       nonNullable: true,
@@ -151,12 +183,19 @@ export class EvidenceConsoleComponent {
   readonly gitLabEndpointState = signal<ToolState>(
     this.idleState('Podaj scope repozytorium, aby znaleźć endpointy Spring REST.')
   );
+  readonly gitLabEndpointUseCaseContextState = signal<ToolState>(
+    this.idleState('Wybierz endpoint z inventory albo uzupełnij selector, aby zbudować listę plików use-case.')
+  );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
   );
 
   readonly gitLabEndpointResult = computed(() =>
     this.asGitLabEndpointResult(this.gitLabEndpointState().response)
+  );
+
+  readonly gitLabEndpointUseCaseContextResult = computed(() =>
+    this.asGitLabEndpointUseCaseContextResult(this.gitLabEndpointUseCaseContextState().response)
   );
 
   submitElastic(event: Event): void {
@@ -314,6 +353,72 @@ export class EvidenceConsoleComponent {
     );
   }
 
+  submitGitLabEndpointUseCaseContext(event: Event): void {
+    event.preventDefault();
+
+    const endpointId = this.optionalValue(
+      this.gitLabEndpointUseCaseContextForm.controls.endpointId.value
+    );
+    const httpMethod = this.optionalValue(
+      this.gitLabEndpointUseCaseContextForm.controls.httpMethod.value
+    );
+    const endpointPath = this.optionalValue(
+      this.gitLabEndpointUseCaseContextForm.controls.endpointPath.value
+    );
+
+    if (
+      this.gitLabEndpointUseCaseContextForm.invalid ||
+      (!endpointId && (!httpMethod || !endpointPath))
+    ) {
+      this.gitLabEndpointUseCaseContextForm.markAllAsTouched();
+      this.gitLabEndpointUseCaseContextState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message:
+            'Uzupełnij group, projectName, branch oraz endpointId albo parę httpMethod + endpointPath.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabEndpointUseCaseContextPayload = {
+      group: this.gitLabEndpointUseCaseContextForm.controls.group.value.trim(),
+      projectName: this.gitLabEndpointUseCaseContextForm.controls.projectName.value.trim(),
+      branch: this.gitLabEndpointUseCaseContextForm.controls.branch.value.trim(),
+      endpointId,
+      httpMethod,
+      endpointPath,
+      sourcePathPrefix: this.optionalValue(
+        this.gitLabEndpointUseCaseContextForm.controls.sourcePathPrefix.value
+      ),
+      maxDepth: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxDepth.value),
+      maxFiles: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxFiles.value),
+      reason: this.optionalValue(this.gitLabEndpointUseCaseContextForm.controls.reason.value)
+    };
+
+    this.runRequest(
+      this.gitLabEndpointUseCaseContextState,
+      this.evidenceApi.buildGitLabEndpointUseCaseContext(payload),
+      payload,
+      'Wysyłamy request do /api/gitlab/repository/endpoint-use-case-context...'
+    );
+  }
+
+  useEndpointForContext(endpoint: GitLabRepositoryEndpoint): void {
+    this.gitLabEndpointUseCaseContextForm.patchValue({
+      group: this.gitLabEndpointForm.controls.group.value,
+      projectName: this.gitLabEndpointForm.controls.projectName.value,
+      branch: this.gitLabEndpointForm.controls.branch.value,
+      endpointId: endpoint.endpointId,
+      httpMethod: endpoint.httpMethods?.[0] || '',
+      endpointPath: endpoint.path || endpoint.pathExpression || '',
+      sourcePathPrefix: this.gitLabEndpointForm.controls.sourcePathPrefix.value || 'src/main/java'
+    });
+    this.gitLabEndpointUseCaseContextState.set(
+      this.idleState('Endpoint przeniesiony z inventory. Uruchom context builder, aby zbudować listę plików.')
+    );
+  }
+
   submitGitLabSource(event: Event): void {
     event.preventDefault();
 
@@ -377,6 +482,20 @@ export class EvidenceConsoleComponent {
 
   endpointMethods(endpoint: GitLabRepositoryEndpoint): string {
     return endpoint.httpMethods?.length ? endpoint.httpMethods.join(', ') : 'ANY';
+  }
+
+  confidenceClass(confidence: string | null | undefined): string {
+    const normalized = (confidence || '').toLowerCase();
+    if (normalized === 'high') {
+      return 'confidence-pill confidence-pill--high';
+    }
+    if (normalized === 'medium') {
+      return 'confidence-pill confidence-pill--medium';
+    }
+    if (normalized === 'low') {
+      return 'confidence-pill confidence-pill--low';
+    }
+    return 'confidence-pill';
   }
 
   private runRequest(
@@ -558,6 +677,17 @@ export class EvidenceConsoleComponent {
 
     const record = response as Partial<GitLabRepositoryEndpointsResponse>;
     return Array.isArray(record.endpoints) ? (record as GitLabRepositoryEndpointsResponse) : null;
+  }
+
+  private asGitLabEndpointUseCaseContextResult(
+    response: unknown
+  ): GitLabEndpointUseCaseContextResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabEndpointUseCaseContextResponse>;
+    return Array.isArray(record.files) ? (record as GitLabEndpointUseCaseContextResponse) : null;
   }
 
 }

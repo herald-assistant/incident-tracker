@@ -3,6 +3,13 @@ package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpoint;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseEndpointContext;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseFileCandidate;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseUnresolvedReference;
 
 import java.util.List;
 import java.util.Map;
@@ -112,6 +119,49 @@ public final class GitLabToolDtos {
         public GitLabListRepositoryEndpointsToolResponse {
             endpoints = endpoints != null ? List.copyOf(endpoints) : List.of();
             limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
+    }
+
+    public record GitLabBuildEndpointUseCaseContextToolResponse(
+            String group,
+            String projectName,
+            String branch,
+            String sourcePathPrefix,
+            GitLabEndpointUseCaseEndpointContext endpoint,
+            List<GitLabEndpointUseCaseFileCandidate> files,
+            List<GitLabEndpointUseCaseRelation> relations,
+            List<GitLabEndpointUseCaseUnresolvedReference> unresolved,
+            List<String> limitations,
+            List<String> suggestedNextReads,
+            GitLabEndpointUseCaseLimits limits,
+            GitLabEndpointUseCaseConfidence confidence
+    ) {
+        public GitLabBuildEndpointUseCaseContextToolResponse {
+            files = files != null ? List.copyOf(files) : List.of();
+            relations = relations != null ? List.copyOf(relations) : List.of();
+            unresolved = unresolved != null ? List.copyOf(unresolved) : List.of();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+            suggestedNextReads = suggestedNextReads != null ? List.copyOf(suggestedNextReads) : List.of();
+            limits = limits != null ? limits : GitLabEndpointUseCaseLimits.defaults();
+            confidence = confidence != null ? confidence : GitLabEndpointUseCaseConfidence.LOW;
+        }
+
+        public static GitLabBuildEndpointUseCaseContextToolResponse from(GitLabEndpointUseCaseContextResult result) {
+            var repository = result != null ? result.repository() : null;
+            return new GitLabBuildEndpointUseCaseContextToolResponse(
+                    repository != null ? repository.group() : null,
+                    repository != null ? repository.projectName() : null,
+                    repository != null ? repository.branch() : null,
+                    repository != null ? repository.sourcePathPrefix() : null,
+                    result != null ? result.endpoint() : null,
+                    result != null ? result.files() : List.of(),
+                    result != null ? result.relations() : List.of(),
+                    result != null ? result.unresolved() : List.of(),
+                    result != null ? result.limitations() : List.of(),
+                    result != null ? result.suggestedNextReads() : List.of(),
+                    result != null ? result.limits() : GitLabEndpointUseCaseLimits.defaults(),
+                    result != null ? result.confidence() : GitLabEndpointUseCaseConfidence.LOW
+            );
         }
     }
 

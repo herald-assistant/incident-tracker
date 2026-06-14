@@ -173,6 +173,89 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         capture(
                 toolEvidenceListener,
                 "session-1",
+                "tool-call-gitlab-endpoint-context-1",
+                "gitlab_build_endpoint_use_case_context",
+                "{\"reason\":\"Buduje liste plikow dla endpointu.\"}",
+                """
+                        {
+                          "group": "sample/runtime",
+                          "projectName": "orders-api",
+                          "branch": "main",
+                          "sourcePathPrefix": "src/main/java",
+                          "endpoint": {
+                            "endpointId": "GET /api/orders/{orderId} -> pl.mkn.orders.OrderController#getOrder",
+                            "httpMethods": ["GET"],
+                            "path": "/api/orders/{orderId}",
+                            "pathExpression": "/api/orders/{orderId}",
+                            "controllerClass": "pl.mkn.orders.OrderController",
+                            "handlerMethod": "getOrder",
+                            "filePath": "src/main/java/pl/mkn/orders/OrderController.java",
+                            "lineStart": 12,
+                            "lineEnd": 20,
+                            "requestTypes": ["@PathVariable String orderId"],
+                            "responseTypes": ["OrderResponse"],
+                            "annotations": ["RestController", "GetMapping"],
+                            "confidence": "HIGH",
+                            "limitations": [],
+                            "suggestedNextReads": []
+                          },
+                          "files": [
+                            {
+                              "path": "src/main/java/pl/mkn/orders/OrderController.java",
+                              "role": "CONTROLLER",
+                              "priority": 1,
+                              "symbols": ["getOrder"],
+                              "reason": "Endpoint handler and local controller flow.",
+                              "confidence": "HIGH"
+                            },
+                            {
+                              "path": "src/main/java/pl/mkn/orders/OrderService.java",
+                              "role": "USE_CASE_SERVICE",
+                              "priority": 2,
+                              "symbols": ["findOrder"],
+                              "reason": "Direct service dependency.",
+                              "confidence": "MEDIUM"
+                            }
+                          ],
+                          "relations": [
+                            {
+                              "from": "pl.mkn.orders.OrderController#getOrder",
+                              "to": "pl.mkn.orders.OrderService#findOrder",
+                              "kind": "LOCAL_METHOD_CALL",
+                              "confidence": "MEDIUM",
+                              "reason": "Controller calls service."
+                            }
+                          ],
+                          "unresolved": [
+                            {
+                              "symbol": "OrderMapper",
+                              "ownerPath": "src/main/java/pl/mkn/orders/OrderService.java",
+                              "reason": "Implementation not found in narrowed traversal.",
+                              "searchedKeywords": ["OrderMapper"],
+                              "candidates": []
+                            }
+                          ],
+                          "limitations": ["Traversal stopped at max depth."],
+                          "suggestedNextReads": [
+                            "orders-api:src/main/java/pl/mkn/orders/OrderController.java via gitlab_read_repository_file_outline",
+                            "orders-api:src/main/java/pl/mkn/orders/OrderService.java via gitlab_read_repository_file_outline"
+                          ],
+                          "limits": {
+                            "maxDepth": 5,
+                            "maxFiles": 25,
+                            "maxReadFiles": 60,
+                            "maxDepthReached": false,
+                            "maxFilesReached": false,
+                            "readFileCount": 4,
+                            "readFileLimitReached": false
+                          },
+                          "confidence": "MEDIUM"
+                        }
+                        """
+        );
+        capture(
+                toolEvidenceListener,
+                "session-1",
                 "tool-call-gitlab-class-1",
                 "gitlab_find_class_references",
                 "{\"reason\":\"Szukam referencji klasy.\"}",
@@ -188,11 +271,11 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                         """
         );
 
-        assertEquals(5, capturedSections.size());
-        var lastSection = capturedSections.get(4);
+        assertEquals(6, capturedSections.size());
+        var lastSection = capturedSections.get(5);
         assertEquals("gitlab", lastSection.provider());
         assertEquals("tool-discovery", lastSection.category());
-        assertEquals(5, lastSection.items().size());
+        assertEquals(6, lastSection.items().size());
 
         var listAttributes = attributes(lastSection.items().get(0));
         assertEquals("gitlab_list_available_repositories", listAttributes.get("toolName"));
@@ -222,10 +305,28 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         assertTrue(flowAttributes.get("groups").contains("OrderRepository.java"));
         assertEquals("4", flowAttributes.get("toolCaptureOrder"));
 
-        var classAttributes = attributes(lastSection.items().get(4));
+        var endpointContextAttributes = attributes(lastSection.items().get(4));
+        assertEquals("gitlab_build_endpoint_use_case_context", endpointContextAttributes.get("toolName"));
+        assertEquals("Buduje liste plikow dla endpointu.", endpointContextAttributes.get("reason"));
+        assertEquals("orders-api", endpointContextAttributes.get("projectName"));
+        assertEquals("/api/orders/{orderId}", endpointContextAttributes.get("endpointPath"));
+        assertEquals("getOrder", endpointContextAttributes.get("handlerMethod"));
+        assertEquals("2", endpointContextAttributes.get("fileCount"));
+        assertEquals("1", endpointContextAttributes.get("relationCount"));
+        assertEquals("1", endpointContextAttributes.get("unresolvedCount"));
+        assertEquals("2", endpointContextAttributes.get("suggestedNextReadCount"));
+        assertEquals("MEDIUM", endpointContextAttributes.get("confidence"));
+        assertEquals("5", endpointContextAttributes.get("toolCaptureOrder"));
+        assertTrue(endpointContextAttributes.get("files").contains("OrderController.java"));
+        assertTrue(endpointContextAttributes.get("files").contains("OrderService.java"));
+        assertTrue(endpointContextAttributes.get("relations").contains("LOCAL_METHOD_CALL"));
+        assertTrue(endpointContextAttributes.get("unresolved").contains("OrderMapper"));
+        assertTrue(endpointContextAttributes.get("suggestedNextReads").contains("gitlab_read_repository_file_outline"));
+
+        var classAttributes = attributes(lastSection.items().get(5));
         assertEquals("gitlab_find_class_references", classAttributes.get("toolName"));
         assertEquals("OrderEntity", classAttributes.get("searchedClass"));
-        assertEquals("5", classAttributes.get("toolCaptureOrder"));
+        assertEquals("6", classAttributes.get("toolCaptureOrder"));
     }
 
     private Map<String, String> attributes(AnalysisEvidenceItem item) {
