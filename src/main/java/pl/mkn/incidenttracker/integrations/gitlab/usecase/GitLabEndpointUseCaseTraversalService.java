@@ -4,6 +4,7 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.ClassExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
@@ -224,7 +225,7 @@ public class GitLabEndpointUseCaseTraversalService {
         var dependencies = dependencyModelBuilder.build(astFile, match.declaringTypeQualifiedName());
         state.addLimitations(dependencies.limitations());
         var dependenciesByName = dependenciesByName(dependencies);
-        var localTypes = localTypes(method);
+        var localTypes = localTypes(session, astFile, match, dependenciesByName, method);
         var currentSymbol = symbol(match.declaringTypeQualifiedName(), match.methodName());
 
         for (var methodCall : directMethodCalls(method)) {
@@ -493,6 +494,9 @@ public class GitLabEndpointUseCaseTraversalService {
                 resolved.confidence(),
                 "Domain method called from traversed flow."
         ));
+        if (resolved.type() != null && resolved.type().kind() == GitLabJavaTypeKind.INTERFACE) {
+            addDomainInterfaceImplementations(session, state, node, currentSymbol, resolved, methodCall);
+        }
         return true;
     }
 
@@ -620,6 +624,66 @@ public class GitLabEndpointUseCaseTraversalService {
                     role,
                     candidate.confidence(),
                     "Implementation method for injected interface call."
+            ));
+        }
+    }
+
+    private void addDomainInterfaceImplementations(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabEndpointUseCaseTraversalState state,
+            GitLabEndpointUseCaseTraversalNode node,
+            String currentSymbol,
+            GitLabJavaResolvedType interfaceType,
+            MethodCallExpr methodCall
+    ) {
+        var implementors = implementorResolver.resolveImplementors(session, interfaceType);
+        state.addLimitations(implementors.limitations());
+        if (implementors.status() == GitLabJavaImplementorResolutionStatus.NOT_FOUND
+                || implementors.status() == GitLabJavaImplementorResolutionStatus.INVALID_REQUEST) {
+            state.addUnresolved(
+                    interfaceType.requestedName(),
+                    interfaceType.filePath(),
+                    "No implementation was resolved for domain interface variable.",
+                    implementors.searchKeywords(),
+                    List.of()
+            );
+            return;
+        }
+        if (implementors.status() == GitLabJavaImplementorResolutionStatus.AMBIGUOUS) {
+            state.addUnresolved(
+                    interfaceType.requestedName(),
+                    interfaceType.filePath(),
+                    "More than one implementation matched domain interface variable.",
+                    implementors.searchKeywords(),
+                    implementors.candidates().stream().map(GitLabJavaImplementorCandidate::filePath).distinct().toList()
+            );
+        }
+        for (var candidate : implementors.candidates()) {
+            var role = roleForTypeName(candidate.implementationQualifiedName(), candidate.filePath());
+            state.addFile(
+                    candidate.filePath(),
+                    role,
+                    methodCall.getNameAsString(),
+                    candidate.reason(),
+                    candidate.confidence()
+            );
+            state.addRelation(
+                    symbol(interfaceType.qualifiedName() != null ? interfaceType.qualifiedName() : interfaceType.requestedName(),
+                            methodCall.getNameAsString()),
+                    symbol(candidate.implementationQualifiedName(), methodCall.getNameAsString()),
+                    GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION,
+                    candidate.confidence(),
+                    "Implementation candidate for domain interface method call."
+            );
+            state.enqueue(new GitLabEndpointUseCaseTraversalNode(
+                    candidate.filePath(),
+                    candidate.implementationQualifiedName(),
+                    methodCall.getNameAsString(),
+                    methodCall.getArguments().size(),
+                    node.depth() + 1,
+                    role,
+                    candidate.confidence(),
+                    "Domain interface implementation method called from traversed flow."
             ));
         }
     }
@@ -831,18 +895,108 @@ public class GitLabEndpointUseCaseTraversalService {
         return byName;
     }
 
-    private Map<String, String> localTypes(MethodDeclaration method) {
+    private Map<String, String> localTypes(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabJavaAstFile astFile,
+            GitLabJavaMethodMatch currentMethod,
+            Map<String, GitLabJavaInjectedDependency> dependenciesByName,
+            MethodDeclaration method
+    ) {
         var localTypes = new LinkedHashMap<String, String>();
         method.getParameters().forEach(parameter ->
                 localTypes.put(parameter.getNameAsString(), parameter.getType().asString()));
         for (var declaration : method.findAll(VariableDeclarationExpr.class)) {
             var typeName = declaration.getElementType().asString();
-            if (!"var".equals(typeName)) {
-                declaration.getVariables().forEach(variable ->
-                        localTypes.putIfAbsent(variable.getNameAsString(), typeName));
-            }
+            declaration.getVariables().forEach(variable -> {
+                var inferredTypeName = "var".equals(typeName)
+                        ? inferVariableType(session, astFile, currentMethod, dependenciesByName,
+                        variable.getInitializer().orElse(null))
+                        : typeName;
+                if (StringUtils.hasText(inferredTypeName)) {
+                    localTypes.putIfAbsent(variable.getNameAsString(), inferredTypeName);
+                }
+            });
         }
         return localTypes;
+    }
+
+    private String inferVariableType(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabJavaAstFile astFile,
+            GitLabJavaMethodMatch currentMethod,
+            Map<String, GitLabJavaInjectedDependency> dependenciesByName,
+            Expression initializer
+    ) {
+        if (initializer == null) {
+            return null;
+        }
+        if (initializer.isEnclosedExpr()) {
+            return inferVariableType(session, astFile, currentMethod, dependenciesByName,
+                    initializer.asEnclosedExpr().getInner());
+        }
+        if (initializer.isCastExpr()) {
+            return initializer.asCastExpr().getType().asString();
+        }
+        if (initializer.isObjectCreationExpr()) {
+            return initializer.asObjectCreationExpr().getType().asString();
+        }
+        if (!initializer.isMethodCallExpr()) {
+            return null;
+        }
+
+        var methodCall = initializer.asMethodCallExpr();
+        var scope = methodCall.getScope().orElse(null);
+        var scopeName = simpleScopeName(scope);
+        if (StringUtils.hasText(scopeName)) {
+            var dependency = dependenciesByName.get(scopeName);
+            if (dependency != null) {
+                return returnTypeFromResolvedMethod(
+                        session,
+                        astFile,
+                        dependency.typeName(),
+                        methodCall.getNameAsString(),
+                        methodCall.getArguments().size()
+                );
+            }
+        }
+        if (scope == null || scope instanceof ThisExpr) {
+            var resolution = methodLocator.resolveMethod(
+                    astFile,
+                    currentMethod.declaringTypeQualifiedName(),
+                    methodCall.getNameAsString(),
+                    methodCall.getArguments().size()
+            );
+            if (resolution.status() == GitLabJavaMethodResolutionStatus.RESOLVED) {
+                return resolution.method().returnType();
+            }
+        }
+        return null;
+    }
+
+    private String returnTypeFromResolvedMethod(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabJavaAstFile context,
+            String typeName,
+            String methodName,
+            int argumentCount
+    ) {
+        var resolvedType = sourceResolver.resolveType(session, context, typeName);
+        if (!resolvedType.resolved()) {
+            return null;
+        }
+        var targetAstFile = sourceResolver.astFile(session, resolvedType.filePath());
+        if (!targetAstFile.parsed()) {
+            return null;
+        }
+        var resolution = methodLocator.resolveMethod(
+                targetAstFile,
+                resolvedType.qualifiedName() != null ? resolvedType.qualifiedName() : typeName,
+                methodName,
+                argumentCount
+        );
+        return resolution.status() == GitLabJavaMethodResolutionStatus.RESOLVED
+                ? resolution.method().returnType()
+                : null;
     }
 
     private List<MethodCallExpr> directMethodCalls(MethodDeclaration method) {
@@ -951,6 +1105,9 @@ public class GitLabEndpointUseCaseTraversalService {
     private String simpleScopeName(Expression scope) {
         if (scope instanceof NameExpr nameExpr) {
             return nameExpr.getNameAsString();
+        }
+        if (scope instanceof FieldAccessExpr fieldAccessExpr && fieldAccessExpr.getScope() instanceof ThisExpr) {
+            return fieldAccessExpr.getNameAsString();
         }
         return null;
     }

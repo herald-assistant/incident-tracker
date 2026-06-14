@@ -109,7 +109,6 @@ class GitLabRepositoryEndpointServiceTest {
                 "main",
                 null,
                 null,
-                "src/main/java",
                 20
         ));
 
@@ -141,8 +140,6 @@ class GitLabRepositoryEndpointServiceTest {
                 "src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java"
         );
 
-        when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", "src/main/java"))
-                .thenReturn(List.of(controllerFile));
         when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", null))
                 .thenReturn(List.of(controllerFile));
         when(repositoryPort.readFile(
@@ -188,7 +185,6 @@ class GitLabRepositoryEndpointServiceTest {
                 "main",
                 null,
                 null,
-                "src/main/java",
                 20
         ));
         var getEndpoints = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
@@ -197,14 +193,12 @@ class GitLabRepositoryEndpointServiceTest {
                 "main",
                 "/api/crm/customer-cases",
                 "GET",
-                "src/main/java",
                 20
         ));
 
         assertEquals(2, allEndpoints.endpoints().size());
         assertEquals(1, getEndpoints.endpoints().size());
         assertEquals("GET", getEndpoints.endpoints().get(0).httpMethods().get(0));
-        verify(repositoryPort, times(1)).listRepositoryFiles("CRM", "crm-case-service", "main", "src/main/java");
         verify(repositoryPort, times(1)).listRepositoryFiles("CRM", "crm-case-service", "main", null);
         verify(repositoryPort, times(1)).readFile(
                 "CRM",

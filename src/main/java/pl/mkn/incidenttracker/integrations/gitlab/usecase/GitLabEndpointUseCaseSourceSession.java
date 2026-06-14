@@ -73,6 +73,10 @@ public final class GitLabEndpointUseCaseSourceSession {
         )));
     }
 
+    public List<GitLabRepositoryFile> listRepositoryFiles() {
+        return listRepositoryFiles(null);
+    }
+
     public GitLabEndpointUseCaseSourceFile readFile(String path) {
         var normalizedPath = GitLabEndpointUseCaseModelSupport.normalizeFilePath(path);
         if (!StringUtils.hasText(normalizedPath)) {

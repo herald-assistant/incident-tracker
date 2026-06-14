@@ -16,8 +16,6 @@ public record GitLabRepositoryEndpointListRequest(
         String endpointPathPrefix,
         @Size(max = 20, message = "httpMethod must contain at most 20 characters")
         String httpMethod,
-        @Size(max = 300, message = "sourcePathPrefix must contain at most 300 characters")
-        String sourcePathPrefix,
         @Min(value = 1, message = "maxScannedFiles must be at least 1")
         @Max(value = 250, message = "maxScannedFiles must be at most 250")
         Integer maxScannedFiles

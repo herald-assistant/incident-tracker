@@ -479,10 +479,10 @@ To jest osobny, pomocniczy flow do recznego testowania listowania endpointow
 REST udostepnianych przez konkretne repozytorium:
 
 1. klient podaje `group`, `projectName`, `branch` oraz opcjonalne filtry
-   `endpointPathPrefix`, `httpMethod`, `sourcePathPrefix` i `maxScannedFiles`,
+   `endpointPathPrefix`, `httpMethod` i `maxScannedFiles`,
 2. backend deleguje do `integrations.gitlab.GitLabRepositoryEndpointService`,
-3. serwis uzywa wspolnego GitLab repository tree/cache przez adapter
-   repozytorium,
+3. serwis uzywa wspolnego GitLab repository tree/cache od root repozytorium i
+   sam wybiera produkcyjne source rooty w ukladzie multi-module,
 4. parser best-effort znajduje Spring MVC/REST controller mappings,
 5. endpoint zwraca liste endpointow, klasy/metody handlerow, pliki, linie,
    request/response types, confidence, limitations i suggested next reads.

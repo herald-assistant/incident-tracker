@@ -33,8 +33,7 @@ public class GitLabEndpointUseCaseEndpointResolver {
         var repository = new GitLabEndpointUseCaseRepositoryContext(
                 group,
                 request.projectName(),
-                branch,
-                request.sourcePathPrefix()
+                branch
         );
         var validationLimitations = validate(repository, request);
         if (!validationLimitations.isEmpty()) {
@@ -53,7 +52,6 @@ public class GitLabEndpointUseCaseEndpointResolver {
                 repository.branch(),
                 request.endpointId() == null ? request.endpointPath() : null,
                 request.endpointId() == null ? request.httpMethod() : null,
-                repository.sourcePathPrefix(),
                 null
         ));
         var limitations = new ArrayList<String>(endpointList.limitations());

@@ -213,12 +213,12 @@ class CopilotSdkToolFactoryTest {
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_list_repository_endpoints"),
-                Set.of("projectName", "endpointPathPrefix", "httpMethod", "sourcePathPrefix", "maxScannedFiles", "reason"),
+                Set.of("projectName", "endpointPathPrefix", "httpMethod", "maxScannedFiles", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_build_endpoint_use_case_context"),
-                Set.of("projectName", "endpointId", "httpMethod", "endpointPath", "sourcePathPrefix", "maxDepth", "maxFiles", "reason"),
+                Set.of("projectName", "endpointId", "httpMethod", "endpointPath", "maxDepth", "maxFiles", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(

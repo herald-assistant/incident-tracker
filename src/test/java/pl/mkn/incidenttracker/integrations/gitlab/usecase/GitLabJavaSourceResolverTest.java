@@ -20,8 +20,7 @@ class GitLabJavaSourceResolverTest {
     private final GitLabEndpointUseCaseRepositoryContext repository = new GitLabEndpointUseCaseRepositoryContext(
             "CRM",
             "crm-customer-service",
-            "main",
-            "src/main/java"
+            "main"
     );
     private final GitLabEndpointUseCaseSourceSession session = new GitLabEndpointUseCaseSourceSession(
             repositoryPort,
@@ -128,6 +127,42 @@ class GitLabJavaSourceResolverTest {
     }
 
     @Test
+    void shouldResolveExactImportByTreeInMultiModuleRepository() {
+        var rootRepository = new GitLabEndpointUseCaseRepositoryContext(
+                "CRM",
+                "crm-customer-service",
+                "main"
+        );
+        var rootSession = new GitLabEndpointUseCaseSourceSession(repositoryPort, rootRepository);
+        var controllerPath = "crm-customer-service/customer-adapter/src/main/java/com/example/crm/customer/CustomerController.java";
+        var servicePath = "crm-customer-service/customer-application/src/main/java/com/example/crm/customer/application/CustomerService.java";
+        repositoryFiles(controllerPath, servicePath);
+        source(controllerPath, """
+                package com.example.crm.customer;
+
+                import com.example.crm.customer.application.CustomerService;
+
+                class CustomerController {
+                    private final CustomerService customerService;
+                }
+                """);
+        source(servicePath, """
+                package com.example.crm.customer.application;
+
+                class CustomerService {
+                }
+                """);
+        var astFile = resolver.astFile(rootSession, controllerPath);
+
+        var resolved = resolver.resolveType(rootSession, astFile, "CustomerService");
+
+        assertEquals(GitLabJavaTypeResolutionKind.EXACT_IMPORT, resolved.kind());
+        assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolved.confidence());
+        assertEquals(servicePath, resolved.filePath());
+        assertEquals("com.example.crm.customer.application.CustomerService", resolved.qualifiedName());
+    }
+
+    @Test
     void shouldResolveTypeFromSamePackageWithoutImport() {
         var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
         var servicePath = "src/main/java/com/example/crm/customer/CustomerService.java";
@@ -220,7 +255,7 @@ class GitLabJavaSourceResolverTest {
         assertEquals("org.springframework.http.ResponseEntity", resolved.qualifiedName());
         assertEquals(List.of("org.springframework.http.ResponseEntity"), resolved.candidates());
         assertEquals(List.of("ResponseEntity is a response wrapper, not a source lookup target."), resolved.limitations());
-        verify(repositoryPort, never()).listRepositoryFiles("CRM", "crm-customer-service", "main", "src/main/java");
+        verify(repositoryPort, never()).listRepositoryFiles("CRM", "crm-customer-service", "main", null);
     }
 
     @Test
@@ -279,7 +314,7 @@ class GitLabJavaSourceResolverTest {
         var files = List.of(paths).stream()
                 .map(path -> new GitLabRepositoryFile("CRM", "crm-customer-service", "main", path))
                 .toList();
-        when(repositoryPort.listRepositoryFiles("CRM", "crm-customer-service", "main", "src/main/java"))
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-customer-service", "main", null))
                 .thenReturn(files);
     }
 

@@ -236,7 +236,6 @@ class GitLabMcpToolsTest {
                 "orders-api",
                 "/api/orders",
                 "GET",
-                "src/main/java",
                 50,
                 "Listuje endpointy zamowien.",
                 gitLabToolContext("platform/backend", "feature/FLOW-1", "flow-123")
@@ -247,7 +246,6 @@ class GitLabMcpToolsTest {
         assertEquals("feature/FLOW-1", response.branch());
         assertEquals("/api/orders", response.endpointPathPrefix());
         assertEquals("GET", response.httpMethod());
-        assertEquals("src/main/java", response.sourcePathPrefix());
         assertEquals(2, response.candidateFileCount());
         assertEquals(2, response.scannedFileCount());
         assertFalse(response.scannedFileLimitReached());
@@ -282,8 +280,7 @@ class GitLabMcpToolsTest {
                         new GitLabEndpointUseCaseRepositoryContext(
                                 "platform/backend",
                                 "orders-api",
-                                "feature/FLOW-1",
-                                "src/main/java"
+                                "feature/FLOW-1"
                         ),
                         new GitLabEndpointUseCaseEndpointContext(
                                 "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
@@ -329,7 +326,6 @@ class GitLabMcpToolsTest {
                 "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
                 null,
                 null,
-                "src/main/java",
                 4,
                 12,
                 "Buduje liste plikow dla endpointu zamowienia.",
@@ -343,7 +339,6 @@ class GitLabMcpToolsTest {
                         && "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder".equals(request.endpointId())
                         && request.httpMethod() == null
                         && request.endpointPath() == null
-                        && "src/main/java".equals(request.sourcePathPrefix())
                         && request.maxDepth() == 4
                         && request.maxFiles() == 12
                         && "Buduje liste plikow dla endpointu zamowienia.".equals(request.reason()))
@@ -351,7 +346,6 @@ class GitLabMcpToolsTest {
         assertEquals("platform/backend", response.group());
         assertEquals("orders-api", response.projectName());
         assertEquals("feature/FLOW-1", response.branch());
-        assertEquals("src/main/java", response.sourcePathPrefix());
         assertEquals("getOrder", response.endpoint().handlerMethod());
         assertEquals(1, response.files().size());
         assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER, response.files().get(0).role());

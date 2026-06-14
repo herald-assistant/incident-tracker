@@ -48,7 +48,6 @@ export interface GitLabRepositoryEndpointsPayload {
   branch: string;
   endpointPathPrefix?: string;
   httpMethod?: string;
-  sourcePathPrefix?: string;
   maxScannedFiles?: number;
 }
 
@@ -59,7 +58,6 @@ export interface GitLabEndpointUseCaseContextPayload {
   endpointId?: string;
   httpMethod?: string;
   endpointPath?: string;
-  sourcePathPrefix?: string;
   maxDepth?: number;
   maxFiles?: number;
   reason?: string;
@@ -87,7 +85,6 @@ export interface GitLabEndpointUseCaseRepositoryContext {
   group?: string | null;
   projectName?: string | null;
   branch?: string | null;
-  sourcePathPrefix?: string | null;
 }
 
 export interface GitLabEndpointUseCaseEndpointContext {
@@ -161,7 +158,6 @@ export interface GitLabRepositoryEndpointsResponse {
   branch: string;
   endpointPathPrefix?: string | null;
   httpMethod?: string | null;
-  sourcePathPrefix?: string | null;
   candidateFileCount: number;
   scannedFileCount: number;
   scannedFileLimitReached: boolean;

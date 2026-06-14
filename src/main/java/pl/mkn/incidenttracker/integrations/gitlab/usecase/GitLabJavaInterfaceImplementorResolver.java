@@ -130,7 +130,7 @@ public class GitLabJavaInterfaceImplementorResolver {
             String interfaceName
     ) {
         var interfaceTokens = interfaceTokens(interfaceName);
-        return session.listRepositoryFiles(session.repository().sourcePathPrefix()).stream()
+        return session.listRepositoryFiles().stream()
                 .filter(file -> isJavaSource(file.filePath()))
                 .filter(file -> !isTestSource(file.filePath()))
                 .sorted(Comparator

@@ -61,19 +61,6 @@ final class GitLabEndpointUseCaseModelSupport {
         return normalized;
     }
 
-    static String normalizeSourcePathPrefix(String value) {
-        var normalized = normalizeFilePath(value);
-        if (normalized == null) {
-            return GitLabEndpointUseCaseContextRequest.DEFAULT_SOURCE_PATH_PREFIX;
-        }
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized.isBlank()
-                ? GitLabEndpointUseCaseContextRequest.DEFAULT_SOURCE_PATH_PREFIX
-                : normalized;
-    }
-
     static Integer normalizeLimit(Integer value, int defaultValue, int maxValue) {
         if (value == null || value < 1) {
             return defaultValue;

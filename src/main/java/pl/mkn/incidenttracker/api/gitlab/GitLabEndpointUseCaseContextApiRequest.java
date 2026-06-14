@@ -19,8 +19,6 @@ public record GitLabEndpointUseCaseContextApiRequest(
         String httpMethod,
         @Size(max = 200, message = "endpointPath must contain at most 200 characters")
         String endpointPath,
-        @Size(max = 300, message = "sourcePathPrefix must contain at most 300 characters")
-        String sourcePathPrefix,
         @Min(value = 1, message = "maxDepth must be at least 1")
         @Max(value = GitLabEndpointUseCaseContextRequest.MAX_MAX_DEPTH, message = "maxDepth must be at most 8")
         Integer maxDepth,
@@ -37,7 +35,6 @@ public record GitLabEndpointUseCaseContextApiRequest(
                 endpointId,
                 httpMethod,
                 endpointPath,
-                sourcePathPrefix,
                 maxDepth,
                 maxFiles,
                 reason

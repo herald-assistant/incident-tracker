@@ -38,7 +38,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 endpoint.endpointId(),
                 null,
                 null,
-                "src/main/java",
                 null,
                 null,
                 "manual check"
@@ -58,7 +57,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
         verify(endpointService).listEndpoints(captor.capture());
         assertNull(captor.getValue().endpointPathPrefix());
         assertNull(captor.getValue().httpMethod());
-        assertEquals("src/main/java", captor.getValue().sourcePathPrefix());
     }
 
     @Test
@@ -80,7 +78,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 "/api/crm/customers/{id}",
                 null,
                 null,
-                null,
                 null
         ));
 
@@ -92,7 +89,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
         verify(endpointService).listEndpoints(captor.capture());
         assertEquals("/api/crm/customers/{id}", captor.getValue().endpointPathPrefix());
         assertEquals("PUT", captor.getValue().httpMethod());
-        assertEquals("src/main/java", captor.getValue().sourcePathPrefix());
     }
 
     @Test
@@ -120,7 +116,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 null,
                 "GET",
                 "/api/crm/customers/{id}",
-                null,
                 null,
                 null,
                 null
@@ -154,7 +149,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 "/api/crm/customers/{id}",
                 null,
                 null,
-                null,
                 null
         ));
 
@@ -170,7 +164,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
     void shouldReturnInvalidRequestWhenSelectorIsMissing() {
         var resolution = resolver.resolve("CRM", "main", new GitLabEndpointUseCaseContextRequest(
                 "crm-customer-service",
-                null,
                 null,
                 null,
                 null,
@@ -193,7 +186,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 "main",
                 null,
                 null,
-                "src/main/java",
                 endpoints.size(),
                 endpoints.size(),
                 false,

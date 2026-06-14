@@ -181,7 +181,6 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                           "group": "sample/runtime",
                           "projectName": "orders-api",
                           "branch": "main",
-                          "sourcePathPrefix": "src/main/java",
                           "endpoint": {
                             "endpointId": "GET /api/orders/{orderId} -> pl.mkn.orders.OrderController#getOrder",
                             "httpMethods": ["GET"],

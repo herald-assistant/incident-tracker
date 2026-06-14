@@ -114,7 +114,6 @@ class GitLabRepositorySearchControllerTest {
                         "release-candidate",
                         "/api/orders",
                         "GET",
-                        "src/main/java",
                         2,
                         2,
                         false,
@@ -147,7 +146,6 @@ class GitLabRepositorySearchControllerTest {
                                   "branch": "release-candidate",
                                   "endpointPathPrefix": "/api/orders",
                                   "httpMethod": "GET",
-                                  "sourcePathPrefix": "src/main/java",
                                   "maxScannedFiles": 50
                                 }
                                 """))
@@ -165,7 +163,6 @@ class GitLabRepositorySearchControllerTest {
                 "release-candidate",
                 "/api/orders",
                 "GET",
-                "src/main/java",
                 50
         ));
     }
@@ -177,8 +174,7 @@ class GitLabRepositorySearchControllerTest {
                         new GitLabEndpointUseCaseRepositoryContext(
                                 "TENANT-ALPHA",
                                 "orders-api",
-                                "release-candidate",
-                                "src/main/java"
+                                "release-candidate"
                         ),
                         new GitLabEndpointUseCaseEndpointContext(
                                 "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
@@ -227,7 +223,6 @@ class GitLabRepositorySearchControllerTest {
                                   "projectName": "orders-api",
                                   "branch": "release-candidate",
                                   "endpointId": "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
-                                  "sourcePathPrefix": "src/main/java",
                                   "maxDepth": 4,
                                   "maxFiles": 12,
                                   "reason": "Manualny test kontekstu endpointu."
@@ -248,7 +243,6 @@ class GitLabRepositorySearchControllerTest {
                         && "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder".equals(request.endpointId())
                         && request.httpMethod() == null
                         && request.endpointPath() == null
-                        && "src/main/java".equals(request.sourcePathPrefix())
                         && request.maxDepth() == 4
                         && request.maxFiles() == 12
                         && "Manualny test kontekstu endpointu.".equals(request.reason()))

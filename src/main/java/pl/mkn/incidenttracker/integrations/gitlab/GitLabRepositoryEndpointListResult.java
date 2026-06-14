@@ -8,7 +8,6 @@ public record GitLabRepositoryEndpointListResult(
         String branch,
         String endpointPathPrefix,
         String httpMethod,
-        String sourcePathPrefix,
         int candidateFileCount,
         int scannedFileCount,
         boolean scannedFileLimitReached,

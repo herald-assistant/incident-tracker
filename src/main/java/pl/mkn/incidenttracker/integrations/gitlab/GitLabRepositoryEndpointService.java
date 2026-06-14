@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -88,9 +87,8 @@ public class GitLabRepositoryEndpointService {
         var branch = required(request.branch(), "branch");
         var endpointPathPrefix = normalizeEndpointPathPrefix(request.endpointPathPrefix());
         var httpMethod = normalizeHttpMethod(request.httpMethod());
-        var sourcePathPrefix = normalizeSourcePathPrefix(request.sourcePathPrefix());
         var maxScannedFiles = normalizeMaxScannedFiles(request.maxScannedFiles());
-        var inventory = endpointInventory(group, projectName, branch, sourcePathPrefix, maxScannedFiles);
+        var inventory = endpointInventory(group, projectName, branch, maxScannedFiles);
         var limitations = new ArrayList<String>(inventory.limitations());
 
         var filteredEndpoints = inventory.endpoints().stream()
@@ -111,7 +109,6 @@ public class GitLabRepositoryEndpointService {
                 branch,
                 endpointPathPrefix,
                 httpMethod,
-                sourcePathPrefix,
                 inventory.candidateFileCount(),
                 inventory.scannedFileCount(),
                 inventory.scannedFileLimitReached(),
@@ -124,17 +121,16 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
-            String sourcePathPrefix,
             int maxScannedFiles
     ) {
         if (analysisCache == null) {
-            return buildEndpointInventory(group, projectName, branch, sourcePathPrefix, maxScannedFiles);
+            return buildEndpointInventory(group, projectName, branch, maxScannedFiles);
         }
 
         return analysisCache.getOrCompute(
                 "gitlab.repository-endpoint-inventory",
-                Arrays.asList(group, projectName, branch, sourcePathPrefix, maxScannedFiles),
-                () -> buildEndpointInventory(group, projectName, branch, sourcePathPrefix, maxScannedFiles)
+                List.of(group, projectName, branch, maxScannedFiles),
+                () -> buildEndpointInventory(group, projectName, branch, maxScannedFiles)
         );
     }
 
@@ -142,20 +138,16 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
-            String sourcePathPrefix,
             int maxScannedFiles
     ) {
         var limitations = new ArrayList<String>();
 
-        var repositoryFiles = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, sourcePathPrefix);
-        var contractRepositoryFiles = sourcePathPrefix == null
-                ? repositoryFiles
-                : gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+        var repositoryFiles = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
         var candidateFiles = candidateFiles(repositoryFiles);
         var scannedFiles = candidateFiles.stream()
                 .limit(maxScannedFiles)
                 .toList();
-        var openApiFiles = openApiCandidateFiles(contractRepositoryFiles);
+        var openApiFiles = openApiCandidateFiles(repositoryFiles);
         var scannedOpenApiFiles = openApiFiles.stream()
                 .limit(MAX_OPENAPI_FILES)
                 .toList();
@@ -214,13 +206,13 @@ public class GitLabRepositoryEndpointService {
         endpoints.addAll(openApiBackedEndpoints(projectName, openApiOperations, controllerImplementations, endpoints));
 
         if (repositoryFiles.isEmpty()) {
-            limitations.add("No repository files were returned by GitLab for the requested source path prefix.");
+            limitations.add("No repository files were returned by GitLab for the repository root.");
         }
         if (candidateFiles.isEmpty() && !repositoryFiles.isEmpty()) {
-            limitations.add("Repository tree was read, but no Java source files were eligible for endpoint parsing.");
+            limitations.add("Repository tree was read, but no production Java source files were eligible for endpoint parsing.");
         }
         if (scannedFileLimitReached) {
-            limitations.add("Endpoint parsing scanned the top %d of %d Java source files; narrow sourcePathPrefix for exhaustive inventory."
+            limitations.add("Endpoint parsing scanned the top %d of %d production Java source files; increase maxScannedFiles for broader inventory."
                     .formatted(scannedFiles.size(), candidateFiles.size()));
         }
 
@@ -953,7 +945,7 @@ public class GitLabRepositoryEndpointService {
 
     private List<GitLabRepositoryFile> candidateFiles(List<GitLabRepositoryFile> repositoryFiles) {
         return repositoryFiles.stream()
-                .filter(file -> file != null && isSourceFile(file.filePath()))
+                .filter(file -> file != null && isProductionJavaSource(file.filePath()))
                 .filter(file -> !isTestSource(file.filePath()))
                 .sorted(Comparator.comparingInt((GitLabRepositoryFile file) -> candidateScore(file.filePath())).reversed()
                         .thenComparing(GitLabRepositoryFile::filePath))
@@ -1000,6 +992,14 @@ public class GitLabRepositoryEndpointService {
         }
         var normalized = filePath.toLowerCase(Locale.ROOT);
         return SOURCE_FILE_SUFFIXES.stream().anyMatch(normalized::endsWith);
+    }
+
+    private boolean isProductionJavaSource(String filePath) {
+        if (!isSourceFile(filePath)) {
+            return false;
+        }
+        var normalized = filePath.toLowerCase(Locale.ROOT).replace('\\', '/');
+        return normalized.startsWith("src/main/java/") || normalized.contains("/src/main/java/");
     }
 
     private boolean isOpenApiSpecFile(String filePath) {
@@ -1202,20 +1202,6 @@ public class GitLabRepositoryEndpointService {
 
     private String normalizeHttpMethod(String httpMethod) {
         return StringUtils.hasText(httpMethod) ? httpMethod.trim().toUpperCase(Locale.ROOT) : null;
-    }
-
-    private String normalizeSourcePathPrefix(String sourcePathPrefix) {
-        if (!StringUtils.hasText(sourcePathPrefix)) {
-            return null;
-        }
-        var normalized = sourcePathPrefix.trim().replace('\\', '/');
-        while (normalized.startsWith("/")) {
-            normalized = normalized.substring(1);
-        }
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized;
     }
 
     private int normalizeMaxScannedFiles(Integer maxScannedFiles) {

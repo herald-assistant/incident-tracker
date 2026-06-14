@@ -28,8 +28,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     private final GitLabEndpointUseCaseRepositoryContext repository = new GitLabEndpointUseCaseRepositoryContext(
             GROUP,
             PROJECT,
-            BRANCH,
-            SOURCE_PREFIX
+            BRANCH
     );
     private final GitLabEndpointUseCaseTraversalService traversalService = new GitLabEndpointUseCaseTraversalService();
 
@@ -107,6 +106,103 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     }
 
     @Test
+    void shouldResolveThisScopedInjectedFieldCallInMultiModuleRepository() {
+        var rootRepository = new GitLabEndpointUseCaseRepositoryContext(
+                GROUP,
+                PROJECT,
+                BRANCH
+        );
+        var controllerPath = "crm-product-service/product-adapter/src/main/java/com/example/crm/product/api/DataProductController.java";
+        var portPath = "crm-product-service/product-application/src/main/java/com/example/crm/product/application/UpdateProductPort.java";
+        var servicePath = "crm-product-service/product-application/src/main/java/com/example/crm/product/application/UpdateProductService.java";
+        var productPath = "crm-product-service/product-domain/src/main/java/com/example/crm/product/domain/Product.java";
+        var sources = new LinkedHashMap<String, String>();
+        sources.put(controllerPath, """
+                package com.example.crm.product.api;
+
+                import com.example.crm.product.application.UpdateProductPort;
+                import com.example.crm.product.domain.Product;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequiredArgsConstructor
+                class DataProductController {
+                    private final UpdateProductPort updateProductPort;
+
+                    public void updateProduct(Product product) {
+                        this.updateProductPort.update(product);
+                    }
+                }
+                """);
+        sources.put(portPath, """
+                package com.example.crm.product.application;
+
+                import com.example.crm.product.domain.Product;
+
+                interface UpdateProductPort {
+                    void update(Product product);
+                }
+                """);
+        sources.put(servicePath, """
+                package com.example.crm.product.application;
+
+                import com.example.crm.product.domain.Product;
+                import org.springframework.stereotype.Service;
+
+                @Service
+                class UpdateProductService implements UpdateProductPort {
+                    public void update(Product product) {
+                        product.update();
+                    }
+                }
+                """);
+        sources.put(productPath, """
+                package com.example.crm.product.domain;
+
+                public class Product {
+                    public void update() {
+                    }
+                }
+                """);
+        stubRepository(rootRepository, sources);
+        var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, rootRepository);
+
+        var result = traversalService.traverse(
+                session,
+                new GitLabEndpointUseCaseEndpointContext(
+                        "PUT /api/products/{productId} -> DataProductController#updateProduct",
+                        List.of("PUT"),
+                        "/api/products/{productId}",
+                        null,
+                        "com.example.crm.product.api.DataProductController",
+                        "updateProduct",
+                        controllerPath,
+                        1,
+                        20,
+                        List.of("Product"),
+                        List.of(),
+                        List.of(),
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of(),
+                        List.of()
+                ),
+                new GitLabEndpointUseCaseLimits(5, 20, 40, false, false, 0, false)
+        );
+
+        var byPath = filesByPath(result);
+        assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_PORT, byPath.get(portPath).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE, byPath.get(servicePath).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL, byPath.get(productPath).role());
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INJECTED_PORT_CALL
+                        && relation.to().contains("UpdateProductPort#update")));
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
+                        && relation.to().contains("UpdateProductService#update")));
+    }
+
+    @Test
     void shouldRespectMaxDepthLimit() {
         var files = crmProductSources();
         stubRepository(files);
@@ -144,12 +240,38 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     }
 
     private void stubRepository(Map<String, String> sources) {
-        when(repositoryPort.listRepositoryFiles(GROUP, PROJECT, BRANCH, SOURCE_PREFIX))
+        stubRepository(repository, sources);
+    }
+
+    private void stubRepository(GitLabEndpointUseCaseRepositoryContext repository, Map<String, String> sources) {
+        when(repositoryPort.listRepositoryFiles(
+                repository.group(),
+                repository.projectName(),
+                repository.branch(),
+                null
+        ))
                 .thenReturn(sources.keySet().stream()
-                        .map(filePath -> new GitLabRepositoryFile(GROUP, PROJECT, BRANCH, filePath))
+                        .map(filePath -> new GitLabRepositoryFile(
+                                repository.group(),
+                                repository.projectName(),
+                                repository.branch(),
+                                filePath
+                        ))
                         .toList());
-        sources.forEach((filePath, content) -> when(repositoryPort.readFile(GROUP, PROJECT, BRANCH, filePath, 120_000))
-                .thenReturn(new GitLabRepositoryFileContent(GROUP, PROJECT, BRANCH, filePath, content, false)));
+        sources.forEach((filePath, content) -> when(repositoryPort.readFile(
+                repository.group(),
+                repository.projectName(),
+                repository.branch(),
+                filePath,
+                120_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                repository.group(),
+                repository.projectName(),
+                repository.branch(),
+                filePath,
+                content,
+                false
+        )));
     }
 
     private Map<String, GitLabEndpointUseCaseFileCandidate> filesByPath(GitLabEndpointUseCaseContextResult result) {

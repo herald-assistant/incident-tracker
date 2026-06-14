@@ -23,8 +23,7 @@ class GitLabEndpointUseCaseSourceSessionTest {
     private final GitLabEndpointUseCaseRepositoryContext repository = new GitLabEndpointUseCaseRepositoryContext(
             "CRM",
             "crm-customer-service",
-            "main",
-            "src/main/java"
+            "main"
     );
 
     @Test

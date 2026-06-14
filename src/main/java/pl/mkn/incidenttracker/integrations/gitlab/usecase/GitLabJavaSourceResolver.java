@@ -154,6 +154,10 @@ public class GitLabJavaSourceResolver {
             return ambiguous(typeName, candidates, "Exact imports resolved to more than one candidate file.");
         }
         if (candidates.isEmpty()) {
+            var treeResolution = resolveExactImportByRepositoryTree(session, typeName, matchingImports);
+            if (treeResolution != null) {
+                return treeResolution;
+            }
             var boundary = externalTypePolicy.localLookupMiss(typeName, matchingImports.get(0));
             if (boundary.classification() == GitLabJavaExternalTypeClassification.TERMINAL_BOUNDARY) {
                 return externalBoundary(typeName, boundary);
@@ -171,6 +175,59 @@ public class GitLabJavaSourceResolver {
         );
     }
 
+    private GitLabJavaResolvedType resolveExactImportByRepositoryTree(
+            GitLabEndpointUseCaseSourceSession session,
+            String requestedTypeName,
+            List<String> matchingImports
+    ) {
+        var resolvedPaths = new ArrayList<String>();
+        var reasons = new ArrayList<String>();
+        for (var importName : matchingImports) {
+            var topLevelName = topLevelTypeName(importName, null);
+            var suffix = "/" + topLevelName + ".java";
+            var candidatePaths = session.listRepositoryFiles().stream()
+                    .map(GitLabRepositoryFile::filePath)
+                    .map(GitLabEndpointUseCaseModelSupport::normalizeFilePath)
+                    .filter(path -> path != null && (path.endsWith(suffix) || path.equals(topLevelName + ".java")))
+                    .distinct()
+                    .sorted()
+                    .toList();
+
+            for (var candidatePath : candidatePaths) {
+                var astFile = astFile(session, candidatePath);
+                if (!astFile.parsed()) {
+                    continue;
+                }
+                var importedType = findExactQualifiedType(astFile, importName);
+                var requestedType = findType(astFile, requestedTypeName);
+                if (importedType != null && requestedType != null) {
+                    resolvedPaths.add(candidatePath);
+                    reasons.add("Exact import " + importName + " matched repository tree file " + candidatePath + ".");
+                }
+            }
+        }
+
+        var distinctPaths = resolvedPaths.stream().distinct().sorted().toList();
+        if (distinctPaths.isEmpty()) {
+            return null;
+        }
+        if (distinctPaths.size() > 1) {
+            return ambiguous(
+                    requestedTypeName,
+                    distinctPaths,
+                    "Exact import matched more than one source file by repository tree validation."
+            );
+        }
+        return resolveFromFile(
+                session,
+                distinctPaths.get(0),
+                requestedTypeName,
+                GitLabJavaTypeResolutionKind.EXACT_IMPORT,
+                GitLabEndpointUseCaseConfidence.HIGH,
+                reasons.stream().distinct().toList()
+        );
+    }
+
     private GitLabJavaResolvedType resolveSamePackage(
             GitLabEndpointUseCaseSourceSession session,
             GitLabJavaAstFile context,
@@ -185,18 +242,25 @@ public class GitLabJavaSourceResolver {
 
         var packagePath = context.packageName().replace('.', '/');
         var topLevelName = topLevelTypeName(typeName, context.packageName());
-        var candidatePath = "%s/%s/%s.java".formatted(
-                session.repository().sourcePathPrefix(),
-                packagePath,
-                topLevelName
-        );
-        if (context.path().equals(candidatePath) || !repositoryContains(session, candidatePath)) {
+        var suffix = "/" + packagePath + "/" + topLevelName + ".java";
+        var candidates = session.listRepositoryFiles().stream()
+                .map(GitLabRepositoryFile::filePath)
+                .map(GitLabEndpointUseCaseModelSupport::normalizeFilePath)
+                .filter(path -> path != null && (path.endsWith(suffix) || path.equals(packagePath + "/" + topLevelName + ".java")))
+                .filter(path -> !path.equals(context.path()))
+                .distinct()
+                .sorted()
+                .toList();
+        if (candidates.isEmpty()) {
             return null;
+        }
+        if (candidates.size() > 1) {
+            return ambiguous(typeName, candidates, "More than one same-package source file matched " + topLevelName + ".java.");
         }
 
         return resolveFromFile(
                 session,
-                candidatePath,
+                candidates.get(0),
                 typeName,
                 GitLabJavaTypeResolutionKind.SAME_PACKAGE,
                 GitLabEndpointUseCaseConfidence.MEDIUM,
@@ -211,7 +275,7 @@ public class GitLabJavaSourceResolver {
     ) {
         var topLevelName = topLevelTypeName(typeName, context.packageName());
         var suffix = "/" + topLevelName + ".java";
-        var candidates = session.listRepositoryFiles(session.repository().sourcePathPrefix()).stream()
+        var candidates = session.listRepositoryFiles().stream()
                 .map(GitLabRepositoryFile::filePath)
                 .map(GitLabEndpointUseCaseModelSupport::normalizeFilePath)
                 .filter(path -> path != null && (path.endsWith(suffix) || path.equals(topLevelName + ".java")))
@@ -311,6 +375,15 @@ public class GitLabJavaSourceResolver {
                         || simpleName.equals(type.simpleName()))
                 .sorted(Comparator.comparing(GitLabJavaTypeDeclaration::topLevel).reversed()
                         .thenComparing(GitLabJavaTypeDeclaration::relativeName, Comparator.nullsLast(String::compareTo)))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private GitLabJavaTypeDeclaration findExactQualifiedType(GitLabJavaAstFile astFile, String typeName) {
+        var normalizedTypeName = normalizeTypeName(typeName);
+        return astFile.types().stream()
+                .filter(type -> normalizedTypeName.equals(type.qualifiedName())
+                        || normalizedTypeName.equals(type.relativeName()))
                 .findFirst()
                 .orElse(null);
     }
@@ -445,17 +518,22 @@ public class GitLabJavaSourceResolver {
             typeIndex = Math.max(0, importParts.size() - 1);
         }
         var packageName = String.join(".", importParts.subList(0, typeIndex));
-        var path = "%s/%s/%s.java".formatted(
-                session.repository().sourcePathPrefix(),
-                packageName.replace('.', '/'),
-                importParts.get(typeIndex)
-        ).replace("//", "/");
-        return repositoryContains(session, path) ? path : null;
+        var packagePath = packageName.replace('.', '/');
+        var relativePath = packagePath + "/" + importParts.get(typeIndex) + ".java";
+        var suffix = "/" + relativePath;
+        return session.listRepositoryFiles().stream()
+                .map(GitLabRepositoryFile::filePath)
+                .map(GitLabEndpointUseCaseModelSupport::normalizeFilePath)
+                .filter(path -> path != null && (path.endsWith(suffix) || path.equals(relativePath)))
+                .distinct()
+                .sorted()
+                .findFirst()
+                .orElse(null);
     }
 
     private boolean repositoryContains(GitLabEndpointUseCaseSourceSession session, String path) {
         var normalizedPath = GitLabEndpointUseCaseModelSupport.normalizeFilePath(path);
-        return session.listRepositoryFiles(session.repository().sourcePathPrefix()).stream()
+        return session.listRepositoryFiles().stream()
                 .map(GitLabRepositoryFile::filePath)
                 .map(GitLabEndpointUseCaseModelSupport::normalizeFilePath)
                 .anyMatch(normalizedPath::equals);

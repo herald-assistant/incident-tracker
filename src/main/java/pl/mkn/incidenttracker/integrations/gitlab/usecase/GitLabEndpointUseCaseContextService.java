@@ -100,8 +100,7 @@ public class GitLabEndpointUseCaseContextService {
         return new GitLabEndpointUseCaseRepositoryContext(
                 null,
                 request != null ? request.projectName() : null,
-                null,
-                request != null ? request.sourcePathPrefix() : GitLabEndpointUseCaseContextRequest.DEFAULT_SOURCE_PATH_PREFIX
+                null
         );
     }
 

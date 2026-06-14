@@ -22,8 +22,7 @@ class GitLabJavaInterfaceImplementorResolverTest {
     private final GitLabEndpointUseCaseRepositoryContext repository = new GitLabEndpointUseCaseRepositoryContext(
             "CRM",
             "crm-customer-service",
-            "main",
-            "src/main/java"
+            "main"
     );
     private final GitLabJavaInterfaceImplementorResolver resolver = new GitLabJavaInterfaceImplementorResolver();
 

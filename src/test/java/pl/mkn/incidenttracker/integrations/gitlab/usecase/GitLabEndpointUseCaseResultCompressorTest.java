@@ -13,7 +13,7 @@ class GitLabEndpointUseCaseResultCompressorTest {
 
     @Test
     void shouldMergeSortAndSuggestNextReads() {
-        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main", "src/main/java");
+        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main");
         var result = compressor.compress(new GitLabEndpointUseCaseContextResult(
                 repository,
                 null,
@@ -48,7 +48,7 @@ class GitLabEndpointUseCaseResultCompressorTest {
 
     @Test
     void shouldTruncateFilesAfterPrioritySorting() {
-        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main", "src/main/java");
+        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main");
         var result = compressor.compress(new GitLabEndpointUseCaseContextResult(
                 repository,
                 null,

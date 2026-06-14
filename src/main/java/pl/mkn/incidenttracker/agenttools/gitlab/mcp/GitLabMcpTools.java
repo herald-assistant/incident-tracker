@@ -213,8 +213,6 @@ public class GitLabMcpTools {
             String endpointPathPrefix,
             @ToolParam(required = false, description = "Optional HTTP method filter, for example GET, POST, PUT or DELETE.")
             String httpMethod,
-            @ToolParam(required = false, description = "Optional repository source path prefix or module path to narrow scanning.")
-            String sourcePathPrefix,
             @ToolParam(required = false, description = "Maximum Java source files to scan. Defaults to backend limit and is capped by the server.")
             Integer maxScannedFiles,
             @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model listuje endpointy repozytorium.")
@@ -224,7 +222,7 @@ public class GitLabMcpTools {
         var scope = GitLabToolScope.from(toolContext);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} sourcePathPrefix={} maxScannedFiles={}",
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} maxScannedFiles={}",
                 LIST_REPOSITORY_ENDPOINTS,
                 scope.correlationId(),
                 scope.group(),
@@ -236,7 +234,6 @@ public class GitLabMcpTools {
                 projectName,
                 endpointPathPrefix,
                 httpMethod,
-                sourcePathPrefix,
                 maxScannedFiles
         );
 
@@ -246,7 +243,6 @@ public class GitLabMcpTools {
                 scope.branch(),
                 endpointPathPrefix,
                 httpMethod,
-                sourcePathPrefix,
                 maxScannedFiles
         ));
 
@@ -270,7 +266,6 @@ public class GitLabMcpTools {
                 result.branch(),
                 result.endpointPathPrefix(),
                 result.httpMethod(),
-                result.sourcePathPrefix(),
                 result.candidateFileCount(),
                 result.scannedFileCount(),
                 result.scannedFileLimitReached(),
@@ -297,8 +292,6 @@ public class GitLabMcpTools {
             String httpMethod,
             @ToolParam(required = false, description = "Endpoint path when endpointId is unknown, for example /api/orders/{orderId}.")
             String endpointPath,
-            @ToolParam(required = false, description = "Optional repository source path prefix or module path to narrow scanning.")
-            String sourcePathPrefix,
             @ToolParam(required = false, description = "Maximum traversal depth. Defaults to backend limit and is capped by the server.")
             Integer maxDepth,
             @ToolParam(required = false, description = "Maximum returned files. Defaults to backend limit and is capped by the server.")
@@ -310,7 +303,7 @@ public class GitLabMcpTools {
         var scope = GitLabToolScope.from(toolContext);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} sourcePathPrefix={} maxDepth={} maxFiles={}",
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} maxDepth={} maxFiles={}",
                 BUILD_ENDPOINT_USE_CASE_CONTEXT,
                 scope.correlationId(),
                 scope.group(),
@@ -323,7 +316,6 @@ public class GitLabMcpTools {
                 endpointId,
                 httpMethod,
                 endpointPath,
-                sourcePathPrefix,
                 maxDepth,
                 maxFiles
         );
@@ -336,7 +328,6 @@ public class GitLabMcpTools {
                         endpointId,
                         httpMethod,
                         endpointPath,
-                        sourcePathPrefix,
                         maxDepth,
                         maxFiles,
                         reason

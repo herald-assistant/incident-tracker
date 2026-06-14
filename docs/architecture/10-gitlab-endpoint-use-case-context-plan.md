@@ -73,7 +73,6 @@ Model-facing schema:
   "endpointId": "GET /api/products/{ttaId} -> ...DataProductController#getProduct",
   "httpMethod": "GET",
   "endpointPath": "/api/products/{ttaId}",
-  "sourcePathPrefix": "src/main/java",
   "maxDepth": 5,
   "maxFiles": 25,
   "reason": "..."
@@ -86,7 +85,8 @@ Zasady:
 - `endpointId` jest preferowany, gdy pochodzi z
   `gitlab_list_repository_endpoints`.
 - Jesli `endpointId` nie ma, wymagamy `httpMethod + endpointPath`.
-- `sourcePathPrefix` domyslnie `src/main/java`.
+- Skan kodu startuje od root repozytorium; source rooty w aplikacjach
+  multi-module sa wykrywane z repository tree, bez model-facing prefixu.
 - `maxDepth` domyslnie `5`, cap `8`.
 - `maxFiles` domyslnie `25`, cap `40`.
 - `reason` jest prostym operator-facing powodem po polsku.

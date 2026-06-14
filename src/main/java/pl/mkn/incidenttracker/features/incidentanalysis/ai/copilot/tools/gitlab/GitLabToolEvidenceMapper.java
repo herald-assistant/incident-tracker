@@ -400,7 +400,6 @@ public class GitLabToolEvidenceMapper {
             addAttribute(attributes, "group", response.group());
             addAttribute(attributes, "projectName", response.projectName());
             addAttribute(attributes, "branch", response.branch());
-            addAttribute(attributes, "sourcePathPrefix", response.sourcePathPrefix());
             if (response.endpoint() != null) {
                 addAttribute(attributes, "endpointId", response.endpoint().endpointId());
                 addAttribute(attributes, "endpointPath", response.endpoint().path());

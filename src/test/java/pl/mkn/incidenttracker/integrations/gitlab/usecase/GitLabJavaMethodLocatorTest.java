@@ -19,8 +19,7 @@ class GitLabJavaMethodLocatorTest {
     private final GitLabEndpointUseCaseRepositoryContext repository = new GitLabEndpointUseCaseRepositoryContext(
             "CRM",
             "crm-customer-service",
-            "main",
-            "src/main/java"
+            "main"
     );
     private final GitLabEndpointUseCaseSourceSession session = new GitLabEndpointUseCaseSourceSession(
             repositoryPort,

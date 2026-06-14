@@ -110,7 +110,6 @@ export class EvidenceConsoleComponent {
     }),
     endpointPathPrefix: new FormControl('', { nonNullable: true }),
     httpMethod: new FormControl('', { nonNullable: true }),
-    sourcePathPrefix: new FormControl('src/main/java', { nonNullable: true }),
     maxScannedFiles: new FormControl('120', {
       nonNullable: true,
       validators: [Validators.min(1), Validators.max(250)]
@@ -133,7 +132,6 @@ export class EvidenceConsoleComponent {
     endpointId: new FormControl('', { nonNullable: true }),
     httpMethod: new FormControl('', { nonNullable: true }),
     endpointPath: new FormControl('', { nonNullable: true }),
-    sourcePathPrefix: new FormControl('src/main/java', { nonNullable: true }),
     maxDepth: new FormControl('5', {
       nonNullable: true,
       validators: [Validators.min(1), Validators.max(8)]
@@ -341,7 +339,6 @@ export class EvidenceConsoleComponent {
         this.gitLabEndpointForm.controls.endpointPathPrefix.value
       ),
       httpMethod: this.optionalValue(this.gitLabEndpointForm.controls.httpMethod.value),
-      sourcePathPrefix: this.optionalValue(this.gitLabEndpointForm.controls.sourcePathPrefix.value),
       maxScannedFiles: this.optionalNumber(this.gitLabEndpointForm.controls.maxScannedFiles.value)
     };
 
@@ -388,9 +385,6 @@ export class EvidenceConsoleComponent {
       endpointId,
       httpMethod,
       endpointPath,
-      sourcePathPrefix: this.optionalValue(
-        this.gitLabEndpointUseCaseContextForm.controls.sourcePathPrefix.value
-      ),
       maxDepth: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxDepth.value),
       maxFiles: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxFiles.value),
       reason: this.optionalValue(this.gitLabEndpointUseCaseContextForm.controls.reason.value)
@@ -411,8 +405,7 @@ export class EvidenceConsoleComponent {
       branch: this.gitLabEndpointForm.controls.branch.value,
       endpointId: endpoint.endpointId,
       httpMethod: endpoint.httpMethods?.[0] || '',
-      endpointPath: endpoint.path || endpoint.pathExpression || '',
-      sourcePathPrefix: this.gitLabEndpointForm.controls.sourcePathPrefix.value || 'src/main/java'
+      endpointPath: endpoint.path || endpoint.pathExpression || ''
     });
     this.gitLabEndpointUseCaseContextState.set(
       this.idleState('Endpoint przeniesiony z inventory. Uruchom context builder, aby zbudować listę plików.')
