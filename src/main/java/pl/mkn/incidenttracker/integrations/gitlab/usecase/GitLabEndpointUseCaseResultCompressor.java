@@ -8,6 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class GitLabEndpointUseCaseResultCompressor {
@@ -27,7 +29,8 @@ public class GitLabEndpointUseCaseResultCompressor {
             );
         }
 
-        var mergedFiles = mergeFiles(result.files()).stream()
+        var filesWithPromotedCandidates = filesWithPromotedUnresolvedCandidates(result.files(), result.unresolved());
+        var mergedFiles = mergeFiles(filesWithPromotedCandidates).stream()
                 .sorted(fileComparator())
                 .toList();
         var maxFiles = result.limits().maxFiles();
@@ -75,6 +78,72 @@ public class GitLabEndpointUseCaseResultCompressor {
         return merged.values().stream()
                 .map(MutableFile::toCandidate)
                 .toList();
+    }
+
+    private List<GitLabEndpointUseCaseFileCandidate> filesWithPromotedUnresolvedCandidates(
+            List<GitLabEndpointUseCaseFileCandidate> files,
+            List<GitLabEndpointUseCaseUnresolvedReference> unresolved
+    ) {
+        var result = new ArrayList<>(GitLabEndpointUseCaseModelSupport.copy(files));
+        var existingPaths = new LinkedHashSet<String>();
+        result.stream()
+                .map(GitLabEndpointUseCaseFileCandidate::path)
+                .filter(path -> path != null)
+                .forEach(existingPaths::add);
+        for (var reference : GitLabEndpointUseCaseModelSupport.copy(unresolved)) {
+            promotedFile(reference, existingPaths).ifPresent(file -> {
+                result.add(file);
+                existingPaths.add(file.path());
+            });
+        }
+        return result;
+    }
+
+    private Optional<GitLabEndpointUseCaseFileCandidate> promotedFile(
+            GitLabEndpointUseCaseUnresolvedReference reference,
+            Set<String> existingPaths
+    ) {
+        if (reference == null) {
+            return Optional.empty();
+        }
+        var candidatePaths = GitLabEndpointUseCaseModelSupport.copyStrings(reference.candidates()).stream()
+                .map(GitLabEndpointUseCaseModelSupport::normalizeFilePath)
+                .filter(this::isPromotableSourceCandidate)
+                .distinct()
+                .toList();
+        if (candidatePaths.size() != 1) {
+            return java.util.Optional.empty();
+        }
+        var path = candidatePaths.get(0);
+        if (existingPaths.contains(path)) {
+            return Optional.empty();
+        }
+        var role = roleForPromotedCandidate(path, reference.symbol());
+        return Optional.of(new GitLabEndpointUseCaseFileCandidate(
+                path,
+                role,
+                rolePriority(role),
+                reference.symbol() != null ? List.of(reference.symbol()) : List.of(),
+                promotedReason(reference.reason()),
+                GitLabEndpointUseCaseConfidence.MEDIUM
+        ));
+    }
+
+    private String promotedReason(String unresolvedReason) {
+        var reason = GitLabEndpointUseCaseModelSupport.trimToNull(unresolvedReason);
+        return reason != null
+                ? "Exact source candidate was found but not read before traversal completed. " + reason
+                : "Exact source candidate was found but not read before traversal completed.";
+    }
+
+    private boolean isPromotableSourceCandidate(String path) {
+        if (path == null) {
+            return false;
+        }
+        var normalized = path.toLowerCase();
+        return normalized.endsWith(".java")
+                && !normalized.contains("/src/test/")
+                && (normalized.startsWith("src/main/java/") || normalized.contains("/src/main/java/"));
     }
 
     private List<GitLabEndpointUseCaseRelation> deduplicateRelations(List<GitLabEndpointUseCaseRelation> relations) {
@@ -176,6 +245,76 @@ public class GitLabEndpointUseCaseResultCompressor {
             case CONFIGURATION, EXTERNAL_CLIENT -> 8;
             case UNKNOWN -> 9;
         };
+    }
+
+    private GitLabEndpointUseCaseFileRole roleForPromotedCandidate(String path, String symbol) {
+        var fileName = simpleFileNameWithoutExtension(path);
+        var symbolName = simpleTypeName(symbol);
+        var simpleName = fileName != null ? fileName : symbolName;
+        var lowerPath = path != null ? path.toLowerCase() : "";
+        if (simpleName == null) {
+            return GitLabEndpointUseCaseFileRole.UNKNOWN;
+        }
+        if (simpleName.endsWith("Mapper") || simpleName.endsWith("Mapping")) {
+            return GitLabEndpointUseCaseFileRole.MAPPER;
+        }
+        if (simpleName.endsWith("Api")) {
+            return GitLabEndpointUseCaseFileRole.API_INTERFACE;
+        }
+        if (simpleName.contains("RepositoryPort")) {
+            return GitLabEndpointUseCaseFileRole.REPOSITORY_PORT;
+        }
+        if (simpleName.endsWith("Port")) {
+            return GitLabEndpointUseCaseFileRole.USE_CASE_PORT;
+        }
+        if (simpleName.endsWith("Service") || simpleName.endsWith("UseCase")) {
+            return GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE;
+        }
+        if (simpleName.contains("Repository")) {
+            return GitLabEndpointUseCaseFileRole.REPOSITORY_IMPLEMENTATION;
+        }
+        if (simpleName.endsWith("Client")) {
+            return GitLabEndpointUseCaseFileRole.EXTERNAL_CLIENT;
+        }
+        if (simpleName.contains("WebModel") || simpleName.endsWith("Dto")
+                || simpleName.endsWith("Request") || simpleName.endsWith("Response")) {
+            return GitLabEndpointUseCaseFileRole.WEB_MODEL;
+        }
+        if (simpleName.contains("FormView") || simpleName.endsWith("Projection") || simpleName.endsWith("View")) {
+            return GitLabEndpointUseCaseFileRole.PROJECTION;
+        }
+        if (lowerPath.contains("/config/") || lowerPath.contains("/configuration/")) {
+            return GitLabEndpointUseCaseFileRole.CONFIGURATION;
+        }
+        if (symbolName != null && symbolName.endsWith("Mapper")) {
+            return GitLabEndpointUseCaseFileRole.MAPPER;
+        }
+        return GitLabEndpointUseCaseFileRole.DOMAIN_MODEL;
+    }
+
+    private String simpleFileNameWithoutExtension(String path) {
+        var normalized = GitLabEndpointUseCaseModelSupport.normalizeFilePath(path);
+        if (normalized == null) {
+            return null;
+        }
+        var slashIndex = normalized.lastIndexOf('/');
+        var fileName = slashIndex >= 0 ? normalized.substring(slashIndex + 1) : normalized;
+        return fileName.endsWith(".java")
+                ? fileName.substring(0, fileName.length() - ".java".length())
+                : fileName;
+    }
+
+    private String simpleTypeName(String symbol) {
+        var normalized = GitLabEndpointUseCaseModelSupport.trimToNull(symbol);
+        if (normalized == null) {
+            return null;
+        }
+        var hashIndex = normalized.indexOf('#');
+        if (hashIndex >= 0) {
+            normalized = normalized.substring(0, hashIndex);
+        }
+        var dotIndex = normalized.lastIndexOf('.');
+        return dotIndex >= 0 ? normalized.substring(dotIndex + 1) : normalized;
     }
 
     private List<String> deduplicate(List<String> values) {

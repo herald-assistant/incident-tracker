@@ -32,7 +32,18 @@ public class GitLabJavaMethodLocator {
             String methodName,
             Integer argumentCount
     ) {
+        return resolveMethod(astFile, declaringTypeName, methodName, argumentCount, List.of());
+    }
+
+    public GitLabJavaMethodResolution resolveMethod(
+            GitLabJavaAstFile astFile,
+            String declaringTypeName,
+            String methodName,
+            Integer argumentCount,
+            List<String> expectedParameterTypes
+    ) {
         var normalizedMethodName = GitLabEndpointUseCaseModelSupport.trimToNull(methodName);
+        var normalizedExpectedParameterTypes = normalizeParameterTypes(expectedParameterTypes);
         if (!StringUtils.hasText(normalizedMethodName)) {
             return new GitLabJavaMethodResolution(
                     GitLabJavaMethodResolutionStatus.INVALID_REQUEST,
@@ -78,6 +89,37 @@ public class GitLabJavaMethodLocator {
             );
         }
 
+        var selectedByExpectedTypes = false;
+        if (!normalizedExpectedParameterTypes.isEmpty()
+                && normalizedExpectedParameterTypes.size() == selectedCandidates.get(0).getParameters().size()) {
+            var scoredCandidates = selectedCandidates.stream()
+                    .map(method -> new MethodCandidate(method, parameterTypesScore(method, normalizedExpectedParameterTypes)))
+                    .filter(candidate -> candidate.score() > 0)
+                    .toList();
+            var bestScore = scoredCandidates.stream()
+                    .mapToInt(MethodCandidate::score)
+                    .max()
+                    .orElse(0);
+            if (bestScore > 0) {
+                selectedCandidates = scoredCandidates.stream()
+                        .filter(candidate -> candidate.score() == bestScore)
+                        .map(MethodCandidate::method)
+                        .toList();
+                selectedByExpectedTypes = true;
+            }
+        }
+
+        var eventListenerOverloadsIgnored = false;
+        if (selectedCandidates.size() > 1) {
+            var nonEventListenerCandidates = selectedCandidates.stream()
+                    .filter(method -> !hasEventListenerAnnotation(method))
+                    .toList();
+            if (nonEventListenerCandidates.size() == 1) {
+                selectedCandidates = nonEventListenerCandidates;
+                eventListenerOverloadsIgnored = true;
+            }
+        }
+
         if (selectedCandidates.size() > 1) {
             return new GitLabJavaMethodResolution(
                     GitLabJavaMethodResolutionStatus.AMBIGUOUS,
@@ -85,14 +127,15 @@ public class GitLabJavaMethodLocator {
                     selectedCandidates.stream()
                             .map(method -> toMatch(astFile, method, GitLabEndpointUseCaseConfidence.LOW))
                             .toList(),
-                    List.of(argumentCount != null
-                            ? "More than one overload matched method name and argument count."
-                            : "More than one method matched; provide argument count to disambiguate overloads."),
+                    List.of(ambiguousOverloadLimitation(argumentCount, selectedByExpectedTypes)),
                     GitLabEndpointUseCaseConfidence.LOW
             );
         }
 
-        var match = toMatch(astFile, selectedCandidates.get(0), GitLabEndpointUseCaseConfidence.HIGH);
+        var confidence = eventListenerOverloadsIgnored
+                ? GitLabEndpointUseCaseConfidence.MEDIUM
+                : GitLabEndpointUseCaseConfidence.HIGH;
+        var match = toMatch(astFile, selectedCandidates.get(0), confidence);
         return new GitLabJavaMethodResolution(
                 GitLabJavaMethodResolutionStatus.RESOLVED,
                 match,
@@ -198,6 +241,60 @@ public class GitLabJavaMethodLocator {
                 .anyMatch(modifier -> modifier.getKeyword() == keyword);
     }
 
+    private String ambiguousOverloadLimitation(Integer argumentCount, boolean selectedByExpectedTypes) {
+        if (argumentCount == null) {
+            return "More than one method matched; provide argument count to disambiguate overloads.";
+        }
+        if (selectedByExpectedTypes) {
+            return "More than one overload matched method name, argument count and expected parameter types.";
+        }
+        return "More than one overload matched method name and argument count.";
+    }
+
+    private int parameterTypesScore(MethodDeclaration method, List<String> expectedParameterTypes) {
+        if (method.getParameters().size() != expectedParameterTypes.size()) {
+            return 0;
+        }
+        var score = 0;
+        for (var index = 0; index < expectedParameterTypes.size(); index++) {
+            var parameterScore = parameterTypeScore(
+                    method.getParameter(index).getType().asString(),
+                    expectedParameterTypes.get(index)
+            );
+            if (parameterScore == 0) {
+                return 0;
+            }
+            score += parameterScore;
+        }
+        return score;
+    }
+
+    private int parameterTypeScore(String actualType, String expectedType) {
+        var normalizedActualType = normalizeComparableType(actualType);
+        var normalizedExpectedType = normalizeComparableType(expectedType);
+        if (!StringUtils.hasText(normalizedActualType) || !StringUtils.hasText(normalizedExpectedType)) {
+            return 0;
+        }
+        if (normalizedActualType.equals(normalizedExpectedType)) {
+            return 100;
+        }
+        if (simpleName(normalizedActualType).equals(simpleName(normalizedExpectedType))) {
+            return 80;
+        }
+        if (normalizedActualType.endsWith("." + normalizedExpectedType)
+                || normalizedExpectedType.endsWith("." + normalizedActualType)) {
+            return 70;
+        }
+        return 0;
+    }
+
+    private boolean hasEventListenerAnnotation(MethodDeclaration method) {
+        return method.getAnnotations().stream()
+                .map(annotation -> annotation.getName().asString())
+                .map(this::simpleName)
+                .anyMatch("EventListener"::equals);
+    }
+
     private String qualifiedTypeName(GitLabJavaAstFile astFile, MethodDeclaration method) {
         var type = declaringType(method);
         if (type == null) {
@@ -267,5 +364,33 @@ public class GitLabJavaMethodLocator {
 
     private String normalizeTypeName(String typeName) {
         return GitLabEndpointUseCaseModelSupport.trimToNull(typeName);
+    }
+
+    private List<String> normalizeParameterTypes(List<String> parameterTypes) {
+        return GitLabEndpointUseCaseModelSupport.copyStrings(parameterTypes).stream()
+                .map(this::normalizeComparableType)
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    private String normalizeComparableType(String typeName) {
+        var normalized = normalizeTypeName(typeName);
+        if (!StringUtils.hasText(normalized)) {
+            return "";
+        }
+        var genericIndex = normalized.indexOf('<');
+        if (genericIndex >= 0) {
+            normalized = normalized.substring(0, genericIndex).trim();
+        }
+        while (normalized.endsWith("[]")) {
+            normalized = normalized.substring(0, normalized.length() - 2).trim();
+        }
+        return normalized.replace('$', '.');
+    }
+
+    private record MethodCandidate(
+            MethodDeclaration method,
+            int score
+    ) {
     }
 }

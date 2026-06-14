@@ -86,6 +86,73 @@ class GitLabJavaInterfaceImplementorResolverTest {
     }
 
     @Test
+    void shouldResolveConventionalServiceImplementationBeforeFallbackScan() {
+        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductPort.java", """
+                package com.example.crm.product;
+
+                interface UpdateProductPort {
+                    void update(Product product);
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductService.java", """
+                package com.example.crm.product;
+
+                class UpdateProductService implements UpdateProductPort {
+                    public void update(Product product) {
+                    }
+                }
+                """);
+        for (var index = 0; index < 100; index++) {
+            repositoryPort.add("src/main/java/com/example/crm/noise/AgreementService" + index + ".java", """
+                    package com.example.crm.noise;
+
+                    class AgreementService%s implements OtherPort {
+                    }
+                    """.formatted(index));
+        }
+
+        var session = session();
+        var resolution = resolver.resolveImplementors(session, "UpdateProductPort");
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("UpdateProductService", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals(1, session.readFileCount());
+    }
+
+    @Test
+    void shouldResolveNestedCommandRepositoryBeforeFallbackScan() {
+        repositoryPort.add("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
+                package com.example.crm.product;
+
+                interface ProductRepositoryPort {
+                    interface Command {
+                    }
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/product/ProductCommandRepository.java", """
+                package com.example.crm.product;
+
+                class ProductCommandRepository implements ProductRepositoryPort.Command {
+                }
+                """);
+        for (var index = 0; index < 100; index++) {
+            repositoryPort.add("src/main/java/com/example/crm/noise/ProductService" + index + ".java", """
+                    package com.example.crm.noise;
+
+                    class ProductService%s implements OtherPort {
+                    }
+                    """.formatted(index));
+        }
+
+        var session = session();
+        var resolution = resolver.resolveImplementors(session, "ProductRepositoryPort.Command");
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("ProductCommandRepository", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals(1, session.readFileCount());
+    }
+
+    @Test
     void shouldResolveNestedInterfaceImportedBySimpleName() {
         repositoryPort.add("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
                 package com.example.crm.product;

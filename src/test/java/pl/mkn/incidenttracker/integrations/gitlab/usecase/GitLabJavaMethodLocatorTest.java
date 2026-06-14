@@ -113,6 +113,58 @@ class GitLabJavaMethodLocatorTest {
     }
 
     @Test
+    void shouldResolveOverloadByExpectedParameterTypes() {
+        var astFile = astFile("src/main/java/com/example/crm/product/UpdateProductService.java", """
+                package com.example.crm.product;
+
+                import org.springframework.context.event.EventListener;
+
+                class UpdateProductService {
+                    void update(Product product) {
+                    }
+
+                    @EventListener
+                    void update(DecisionChangeEvent event) {
+                    }
+
+                    @EventListener
+                    void update(CreditCaseUpdatedEvent event) {
+                    }
+                }
+                """);
+
+        var resolution = locator.resolveMethod(astFile, "UpdateProductService", "update", 1, List.of("Product"));
+
+        assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
+        assertEquals(List.of("Product"), resolution.method().parameterTypes());
+        assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolution.confidence());
+    }
+
+    @Test
+    void shouldPreferNonEventListenerOverloadWhenOnlyEventListenersCompete() {
+        var astFile = astFile("src/main/java/com/example/crm/product/UpdateProductService.java", """
+                package com.example.crm.product;
+
+                import org.springframework.context.event.EventListener;
+
+                class UpdateProductService {
+                    void update(Product product) {
+                    }
+
+                    @EventListener
+                    void update(Object event) {
+                    }
+                }
+                """);
+
+        var resolution = locator.resolveMethod(astFile, "UpdateProductService", "update", 1);
+
+        assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
+        assertEquals(List.of("Product"), resolution.method().parameterTypes());
+        assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, resolution.confidence());
+    }
+
+    @Test
     void shouldReturnAmbiguousForOverloadWithoutArgumentCount() {
         var astFile = astFile("src/main/java/com/example/crm/product/CustomerPolicy.java", """
                 package com.example.crm.product;

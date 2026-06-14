@@ -19,7 +19,8 @@ import java.util.Set;
 @Component
 public class GitLabJavaInterfaceImplementorResolver {
 
-    private static final int MAX_CANDIDATE_FILES = 80;
+    private static final int MAX_EXACT_CANDIDATE_FILES = 16;
+    private static final int MAX_FALLBACK_CANDIDATE_FILES = 16;
 
     private final GitLabJavaSourceResolver sourceResolver;
 
@@ -58,60 +59,36 @@ public class GitLabJavaInterfaceImplementorResolver {
 
         var searchKeywords = searchKeywords(normalizedInterfaceName);
         var limitations = new ArrayList<String>();
-        var candidateFiles = candidateFiles(session, normalizedInterfaceName);
-        var availableReadBudget = Math.max(0, session.maxReadFiles() - session.readFileCount());
-        var scanLimit = Math.min(MAX_CANDIDATE_FILES, availableReadBudget);
-        var scannedFiles = candidateFiles.stream()
-                .limit(scanLimit)
-                .toList();
-
-        if (candidateFiles.size() > scannedFiles.size()) {
-            limitations.add("Interface implementor lookup scanned the top %d of %d Java candidate files."
-                    .formatted(scannedFiles.size(), candidateFiles.size()));
-        }
-        if (scanLimit == 0 && !candidateFiles.isEmpty()) {
-            limitations.add("Source read file limit was reached before interface implementor lookup.");
-        }
-
-        var candidates = scannedFiles.stream()
-                .flatMap(file -> implementorsInFile(session, file.filePath(), normalizedInterfaceName).stream())
-                .sorted(Comparator.comparingInt((GitLabJavaImplementorCandidate candidate) -> confidenceScore(candidate.confidence()))
-                        .reversed()
-                        .thenComparing(GitLabJavaImplementorCandidate::filePath)
-                        .thenComparing(GitLabJavaImplementorCandidate::implementationRelativeName))
-                .toList();
-
-        if (candidates.isEmpty()) {
-            limitations.add("No implementation was found for interface " + normalizedInterfaceName + ".");
-            return new GitLabJavaImplementorResolution(
-                    GitLabJavaImplementorResolutionStatus.NOT_FOUND,
-                    normalizedInterfaceName,
-                    searchKeywords,
-                    List.of(),
-                    limitations,
-                    GitLabEndpointUseCaseConfidence.LOW
-            );
-        }
-        if (candidates.size() > 1) {
-            limitations.add("More than one implementation matched interface " + normalizedInterfaceName + ".");
-            return new GitLabJavaImplementorResolution(
-                    GitLabJavaImplementorResolutionStatus.AMBIGUOUS,
-                    normalizedInterfaceName,
-                    searchKeywords,
-                    candidates,
-                    limitations,
-                    GitLabEndpointUseCaseConfidence.MEDIUM
-            );
-        }
-
-        return new GitLabJavaImplementorResolution(
-                GitLabJavaImplementorResolutionStatus.RESOLVED,
-                normalizedInterfaceName,
-                searchKeywords,
-                candidates,
-                limitations,
-                candidates.get(0).confidence()
+        var exactCandidateFiles = exactCandidateFiles(session, normalizedInterfaceName);
+        var scannedExactFiles = limitedCandidateFiles(
+                session,
+                exactCandidateFiles,
+                MAX_EXACT_CANDIDATE_FILES,
+                "Exact interface implementor lookup",
+                limitations
         );
+        var candidates = implementorsInFiles(session, scannedExactFiles, normalizedInterfaceName);
+
+        if (!candidates.isEmpty()) {
+            return resolutionFromCandidates(normalizedInterfaceName, searchKeywords, candidates, limitations);
+        }
+
+        var scannedExactFilePaths = scannedExactFiles.stream()
+                .map(GitLabRepositoryFile::filePath)
+                .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+        var fallbackCandidateFiles = candidateFiles(session, normalizedInterfaceName).stream()
+                .filter(file -> !scannedExactFilePaths.contains(file.filePath()))
+                .toList();
+        var scannedFallbackFiles = limitedCandidateFiles(
+                session,
+                fallbackCandidateFiles,
+                MAX_FALLBACK_CANDIDATE_FILES,
+                "Interface implementor fallback lookup",
+                limitations
+        );
+        candidates = implementorsInFiles(session, scannedFallbackFiles, normalizedInterfaceName);
+
+        return resolutionFromCandidates(normalizedInterfaceName, searchKeywords, candidates, limitations);
     }
 
     private GitLabJavaImplementorResolution invalid(String interfaceName, String limitation) {
@@ -137,6 +114,101 @@ public class GitLabJavaInterfaceImplementorResolver {
                         .comparingInt((GitLabRepositoryFile file) -> candidateScore(file.filePath(), interfaceTokens)).reversed()
                         .thenComparing(GitLabRepositoryFile::filePath))
                 .toList();
+    }
+
+    private List<GitLabRepositoryFile> exactCandidateFiles(
+            GitLabEndpointUseCaseSourceSession session,
+            String interfaceName
+    ) {
+        var expectedNames = expectedImplementationSimpleNames(interfaceName);
+        if (expectedNames.isEmpty()) {
+            return List.of();
+        }
+        return session.listRepositoryFiles().stream()
+                .filter(file -> isJavaSource(file.filePath()))
+                .filter(file -> !isTestSource(file.filePath()))
+                .map(file -> new ImplementorFileCandidate(file, exactCandidateScore(file.filePath(), expectedNames)))
+                .filter(candidate -> candidate.score() > 0)
+                .sorted(Comparator.comparingInt(ImplementorFileCandidate::score).reversed()
+                        .thenComparing(candidate -> candidate.file().filePath()))
+                .map(ImplementorFileCandidate::file)
+                .toList();
+    }
+
+    private List<GitLabRepositoryFile> limitedCandidateFiles(
+            GitLabEndpointUseCaseSourceSession session,
+            List<GitLabRepositoryFile> candidateFiles,
+            int maxCandidateFiles,
+            String lookupName,
+            List<String> limitations
+    ) {
+        var availableReadBudget = Math.max(0, session.maxReadFiles() - session.readFileCount());
+        var scanLimit = Math.min(maxCandidateFiles, availableReadBudget);
+        var scannedFiles = candidateFiles.stream()
+                .limit(scanLimit)
+                .toList();
+
+        if (candidateFiles.size() > scannedFiles.size()) {
+            limitations.add("%s scanned the top %d of %d Java candidate files."
+                    .formatted(lookupName, scannedFiles.size(), candidateFiles.size()));
+        }
+        if (scanLimit == 0 && !candidateFiles.isEmpty()) {
+            limitations.add("Source read file limit was reached before " + lookupName.toLowerCase() + ".");
+        }
+        return scannedFiles;
+    }
+
+    private List<GitLabJavaImplementorCandidate> implementorsInFiles(
+            GitLabEndpointUseCaseSourceSession session,
+            List<GitLabRepositoryFile> files,
+            String interfaceName
+    ) {
+        return files.stream()
+                .flatMap(file -> implementorsInFile(session, file.filePath(), interfaceName).stream())
+                .sorted(Comparator.comparingInt((GitLabJavaImplementorCandidate candidate) -> confidenceScore(candidate.confidence()))
+                        .reversed()
+                        .thenComparing(GitLabJavaImplementorCandidate::filePath)
+                        .thenComparing(GitLabJavaImplementorCandidate::implementationRelativeName))
+                .toList();
+    }
+
+    private GitLabJavaImplementorResolution resolutionFromCandidates(
+            String interfaceName,
+            List<String> searchKeywords,
+            List<GitLabJavaImplementorCandidate> candidates,
+            List<String> limitations
+    ) {
+        if (candidates.isEmpty()) {
+            limitations.add("No implementation was found for interface " + interfaceName + ".");
+            return new GitLabJavaImplementorResolution(
+                    GitLabJavaImplementorResolutionStatus.NOT_FOUND,
+                    interfaceName,
+                    searchKeywords,
+                    List.of(),
+                    limitations,
+                    GitLabEndpointUseCaseConfidence.LOW
+            );
+        }
+        if (candidates.size() > 1) {
+            limitations.add("More than one implementation matched interface " + interfaceName + ".");
+            return new GitLabJavaImplementorResolution(
+                    GitLabJavaImplementorResolutionStatus.AMBIGUOUS,
+                    interfaceName,
+                    searchKeywords,
+                    candidates,
+                    limitations,
+                    GitLabEndpointUseCaseConfidence.MEDIUM
+            );
+        }
+
+        return new GitLabJavaImplementorResolution(
+                GitLabJavaImplementorResolutionStatus.RESOLVED,
+                interfaceName,
+                searchKeywords,
+                candidates,
+                limitations,
+                candidates.get(0).confidence()
+        );
     }
 
     private List<GitLabJavaImplementorCandidate> implementorsInFile(
@@ -268,6 +340,114 @@ public class GitLabJavaInterfaceImplementorResolver {
         }
     }
 
+    private Set<String> expectedImplementationSimpleNames(String interfaceName) {
+        var names = new LinkedHashSet<String>();
+        var parts = List.of(relativeInterfaceName(interfaceName).split("\\."));
+        if (parts.isEmpty()) {
+            return names;
+        }
+
+        var topLevelName = parts.get(0);
+        var topLevelBaseName = removeInterfaceSuffix(topLevelName);
+        if (parts.size() == 1) {
+            addSingleInterfaceImplementationNames(names, topLevelBaseName);
+            return names;
+        }
+
+        var nestedName = parts.get(parts.size() - 1);
+        var nestedBaseName = removeInterfaceSuffix(nestedName);
+        addNestedInterfaceImplementationNames(names, topLevelBaseName, nestedBaseName);
+        return names;
+    }
+
+    private void addSingleInterfaceImplementationNames(Set<String> names, String baseName) {
+        if (!StringUtils.hasText(baseName)) {
+            return;
+        }
+        if (isBoundaryImplementationBaseName(baseName)) {
+            names.add(baseName);
+        }
+        names.add(baseName + "Service");
+        names.add(baseName + "UseCase");
+        names.add(baseName + "Handler");
+        names.add(baseName + "Processor");
+        names.add(baseName + "Adapter");
+        names.add(baseName + "Gateway");
+        names.add(baseName + "Client");
+        names.add(baseName + "Repository");
+        names.add(baseName + "Facade");
+        names.add(baseName + "Impl");
+        names.add("Default" + baseName);
+    }
+
+    private void addNestedInterfaceImplementationNames(
+            Set<String> names,
+            String topLevelBaseName,
+            String nestedBaseName
+    ) {
+        if (!StringUtils.hasText(topLevelBaseName) || !StringUtils.hasText(nestedBaseName)) {
+            return;
+        }
+
+        var domainBaseName = removeBoundarySuffix(topLevelBaseName);
+        names.add(topLevelBaseName + nestedBaseName);
+        names.add(topLevelBaseName + nestedBaseName + "Repository");
+        names.add(topLevelBaseName + nestedBaseName + "Service");
+        names.add(topLevelBaseName + nestedBaseName + "Adapter");
+        names.add(topLevelBaseName + "Impl");
+        names.add(topLevelBaseName + "Adapter");
+        if (StringUtils.hasText(domainBaseName)) {
+            names.add(domainBaseName + nestedBaseName + "Repository");
+            names.add(domainBaseName + nestedBaseName + "Service");
+            names.add(domainBaseName + nestedBaseName + "Adapter");
+            names.add(nestedBaseName + domainBaseName + "Repository");
+        }
+    }
+
+    private String removeInterfaceSuffix(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value.replaceAll("(Port|Interface|Api)$", "");
+    }
+
+    private String removeBoundarySuffix(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value.replaceAll("(Repository|Client|Gateway|Service|UseCase|Adapter)$", "");
+    }
+
+    private boolean isBoundaryImplementationBaseName(String value) {
+        return StringUtils.hasText(value)
+                && (value.endsWith("Repository")
+                || value.endsWith("Client")
+                || value.endsWith("Gateway")
+                || value.endsWith("Adapter")
+                || value.endsWith("Service"));
+    }
+
+    private int exactCandidateScore(String filePath, Set<String> expectedNames) {
+        var fileName = simpleFileNameWithoutExtension(filePath);
+        if (!StringUtils.hasText(fileName)) {
+            return 0;
+        }
+        var normalizedFileName = fileName.toLowerCase();
+        var bestScore = 0;
+        for (var expectedName : expectedNames) {
+            var normalizedExpectedName = expectedName.toLowerCase();
+            if (normalizedFileName.equals(normalizedExpectedName)) {
+                bestScore = Math.max(bestScore, 1_000 + expectedName.length());
+            } else if (normalizedFileName.endsWith(normalizedExpectedName)) {
+                bestScore = Math.max(bestScore, 850 + expectedName.length());
+            }
+        }
+        if (bestScore == 0) {
+            return 0;
+        }
+        return bestScore + candidateScore(filePath, interfaceTokens(fileName));
+    }
+
     private int candidateScore(String filePath, Set<String> interfaceTokens) {
         var normalized = filePath.toLowerCase().replace('\\', '/');
         var score = 0;
@@ -368,6 +548,18 @@ public class GitLabJavaInterfaceImplementorResolver {
         return dotIndex >= 0 ? normalized.substring(dotIndex + 1) : normalized;
     }
 
+    private String simpleFileNameWithoutExtension(String filePath) {
+        var normalized = GitLabEndpointUseCaseModelSupport.normalizeFilePath(filePath);
+        if (!StringUtils.hasText(normalized)) {
+            return "";
+        }
+        var slashIndex = normalized.lastIndexOf('/');
+        var fileName = slashIndex >= 0 ? normalized.substring(slashIndex + 1) : normalized;
+        return fileName.endsWith(".java")
+                ? fileName.substring(0, fileName.length() - ".java".length())
+                : fileName;
+    }
+
     private String normalizeTypeName(String typeName) {
         var normalized = GitLabEndpointUseCaseModelSupport.trimToNull(typeName);
         if (normalized == null) {
@@ -394,6 +586,12 @@ public class GitLabJavaInterfaceImplementorResolver {
     private record InterfaceMatch(
             GitLabEndpointUseCaseConfidence confidence,
             String reason
+    ) {
+    }
+
+    private record ImplementorFileCandidate(
+            GitLabRepositoryFile file,
+            int score
     ) {
     }
 }

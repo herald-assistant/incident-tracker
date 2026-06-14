@@ -103,6 +103,12 @@ class GitLabEndpointUseCaseTraversalServiceTest {
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.DOMAIN_METHOD_CALL
                         && relation.to().contains("Product#update")));
+        assertFalse(byPath.containsKey(path("domain/DecisionChangeEvent.java")), byPath.keySet().toString());
+        assertFalse(byPath.containsKey(path("domain/CreditCaseUpdatedEvent.java")), byPath.keySet().toString());
+        assertFalse(result.relations().stream()
+                .anyMatch(relation -> relation.to().contains("DecisionChangeEvent#")));
+        assertFalse(result.relations().stream()
+                .anyMatch(relation -> relation.to().contains("CreditCaseUpdatedEvent#")));
     }
 
     @Test
@@ -309,7 +315,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
                     public ProductWebModel updateProduct(String productId, ProductWebModel webModel) {
                         Product product = ProductWebModelMapper.INSTANCE.from(webModel);
-                        updateProductPort.update(getTtaId(productId), product);
+                        updateProductPort.update(product);
                         return getProductWebModel(productQueryRepository.getProductFormView(productId));
                     }
 
@@ -412,12 +418,14 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 import com.example.crm.product.domain.Product;
 
                 interface UpdateProductPort {
-                    void update(String productId, Product product);
+                    void update(Product product);
                 }
                 """);
         sources.put(path("application/UpdateProductService.java"), """
                 package com.example.crm.product.application;
 
+                import com.example.crm.product.domain.CreditCaseUpdatedEvent;
+                import com.example.crm.product.domain.DecisionChangeEvent;
                 import com.example.crm.product.domain.Product;
                 import com.example.crm.product.domain.ProductRepositoryPort;
                 import lombok.RequiredArgsConstructor;
@@ -430,14 +438,20 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                     private final ProductRepositoryPort.Query queryRepository;
                     private final ProductRepositoryPort.Command commandRepository;
 
-                    public void update(String productId, Product product) {
-                        Product current = queryRepository.getProductForUpdate(productId);
+                    public void update(Product product) {
+                        Product current = queryRepository.getProductForUpdate(product.productId());
                         product.update(current);
                         commandRepository.update(product);
                     }
 
                     @EventListener
-                    void afterProductUpdated(Object event) {
+                    void update(DecisionChangeEvent event) {
+                        event.recalculateDecision();
+                    }
+
+                    @EventListener
+                    void update(CreditCaseUpdatedEvent event) {
+                        event.refreshCreditCase();
                     }
                 }
                 """);
@@ -544,6 +558,10 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 package com.example.crm.product.domain;
 
                 public class Product {
+                    public String productId() {
+                        return "product-1";
+                    }
+
                     public void update(Product current) {
                         calculateStatus();
                     }
@@ -576,6 +594,22 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
                 enum ProductStatus {
                     ACTIVE
+                }
+                """);
+        sources.put(path("domain/DecisionChangeEvent.java"), """
+                package com.example.crm.product.domain;
+
+                public class DecisionChangeEvent {
+                    public void recalculateDecision() {
+                    }
+                }
+                """);
+        sources.put(path("domain/CreditCaseUpdatedEvent.java"), """
+                package com.example.crm.product.domain;
+
+                public class CreditCaseUpdatedEvent {
+                    public void refreshCreditCase() {
+                    }
                 }
                 """);
         sources.put(path("domain/ProductType.java"), """

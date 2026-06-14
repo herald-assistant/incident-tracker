@@ -158,7 +158,8 @@ public class GitLabEndpointUseCaseTraversalService {
                 astFile,
                 node.typeName(),
                 node.methodName(),
-                node.argumentCount()
+                node.argumentCount(),
+                node.parameterTypes()
         );
         if (methodResolution.status() == GitLabJavaMethodResolutionStatus.RESOLVED) {
             visitResolvedMethod(session, state, node, astFile, methodResolution.method(), methodResolution.confidence());
@@ -579,6 +580,7 @@ public class GitLabEndpointUseCaseTraversalService {
                     implementors.candidates().stream().map(GitLabJavaImplementorCandidate::filePath).distinct().toList()
             );
         }
+        var interfaceParameterTypes = interfaceMethodParameterTypes(session, dependencyType, methodCall);
         for (var candidate : implementors.candidates()) {
             var role = roleForTypeName(candidate.implementationQualifiedName(), candidate.filePath());
             state.addFile(
@@ -620,6 +622,7 @@ public class GitLabEndpointUseCaseTraversalService {
                     candidate.implementationQualifiedName(),
                     methodCall.getNameAsString(),
                     methodCall.getArguments().size(),
+                    interfaceParameterTypes,
                     node.depth() + 1,
                     role,
                     candidate.confidence(),
@@ -658,6 +661,7 @@ public class GitLabEndpointUseCaseTraversalService {
                     implementors.candidates().stream().map(GitLabJavaImplementorCandidate::filePath).distinct().toList()
             );
         }
+        var interfaceParameterTypes = interfaceMethodParameterTypes(session, interfaceType, methodCall);
         for (var candidate : implementors.candidates()) {
             var role = roleForTypeName(candidate.implementationQualifiedName(), candidate.filePath());
             state.addFile(
@@ -680,12 +684,36 @@ public class GitLabEndpointUseCaseTraversalService {
                     candidate.implementationQualifiedName(),
                     methodCall.getNameAsString(),
                     methodCall.getArguments().size(),
+                    interfaceParameterTypes,
                     node.depth() + 1,
                     role,
                     candidate.confidence(),
                     "Domain interface implementation method called from traversed flow."
             ));
         }
+    }
+
+    private List<String> interfaceMethodParameterTypes(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabJavaResolvedType interfaceType,
+            MethodCallExpr methodCall
+    ) {
+        if (interfaceType == null || !interfaceType.resolved() || !StringUtils.hasText(interfaceType.filePath())) {
+            return List.of();
+        }
+        var interfaceAstFile = sourceResolver.astFile(session, interfaceType.filePath());
+        if (!interfaceAstFile.parsed()) {
+            return List.of();
+        }
+        var resolution = methodLocator.resolveMethod(
+                interfaceAstFile,
+                interfaceType.qualifiedName() != null ? interfaceType.qualifiedName() : interfaceType.requestedName(),
+                methodCall.getNameAsString(),
+                methodCall.getArguments().size()
+        );
+        return resolution.status() == GitLabJavaMethodResolutionStatus.RESOLVED
+                ? resolution.method().parameterTypes()
+                : List.of();
     }
 
     private GitLabJavaResolvedType addResolvedType(
