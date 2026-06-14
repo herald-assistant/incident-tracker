@@ -26,8 +26,24 @@ codeSearchScopes:
         readFor: [shared-rules]
     hints:
       packagePrefixes: [com.example.crm.customer, com.example.crm.shared]
-      classHints: [CustomerNotificationGateway, CustomerRule]
-      endpointHints: [/crm/customers]
+      classHints:
+        - CustomerController
+        - CustomerProfileController
+        - CustomerService
+        - CustomerProfileService
+        - CustomerAccountService
+        - CustomerPreferenceService
+        - CustomerStatusService
+        - CustomerNotificationGateway
+        - CustomerRule
+        - CustomerValidator
+        - CustomerRepository
+        - CustomerMapper
+      endpointHints:
+        - /crm/customers
+        - /crm/customers/{customerId}
+        - /crm/customers/{customerId}/profile
+        - /crm/customers/{customerId}/accounts
       queueTopicHints: []
     traversal:
       rules: [Search crm-customer-service first, then shared customer rules if the class is not found.]

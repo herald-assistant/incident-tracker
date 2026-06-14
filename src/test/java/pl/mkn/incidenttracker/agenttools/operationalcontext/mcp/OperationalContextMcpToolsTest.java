@@ -155,7 +155,7 @@ class OperationalContextMcpToolsTest {
 
         var result = runtimeTools.getEntity(
                 "codeSearchScope",
-                "collateral-management-code-search-scope",
+                "crm-customer-service-code-search",
                 null,
                 "Sprawdzam kompaktowy payload narzedzia dla duzego scope.",
                 null

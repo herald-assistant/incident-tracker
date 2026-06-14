@@ -36,15 +36,15 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                 """
                         {
                           "type": "codeSearchScope",
-                          "id": "collateral-management-code-search-scope",
+                          "id": "crm-customer-service-code-search",
                           "reason": "need focused code search"
                         }
                         """,
                 """
                         {
                           "type": "codeSearchScope",
-                          "id": "collateral-management-code-search-scope",
-                          "label": "Collateral Management Code Search Scope",
+                          "id": "crm-customer-service-code-search",
+                          "label": "CRM Customer Service Code Search Scope",
                           "codeSearch": {
                             "payload": "VERY_LARGE_PAYLOAD"
                           },
@@ -53,7 +53,7 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                             "profile": "default",
                             "availableExpansions": ["include=codeSearch", "include=relations"],
                             "suggestedNextReads": [
-                              "opctx_get_entity(type=codeSearchScope,id=collateral-management-code-search-scope,include=[codeSearch])"
+                              "opctx_get_entity(type=codeSearchScope,id=crm-customer-service-code-search,include=[codeSearch])"
                             ],
                             "suggestedTools": ["opctx_search"],
                             "reasonToExpand": "Need full repository hint customer-profile before GitLab search.",
@@ -62,7 +62,7 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                             "links": [
                               {
                                 "rel": "expanded",
-                                "href": "/api/operational-context/entities/codeSearchScope/collateral-management-code-search-scope?profile=expanded"
+                                "href": "/api/operational-context/entities/codeSearchScope/crm-customer-service-code-search?profile=expanded"
                               }
                             ],
                             "truncation": {
