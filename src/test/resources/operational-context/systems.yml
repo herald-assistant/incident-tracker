@@ -1,0 +1,43 @@
+schemaVersion: 1
+
+systems:
+  - id: crm-customer-service
+    name: CRM Customer Service
+    kind: internal-application
+    purpose: Executes CRM customer profile and support workflows.
+    responsibilities:
+      - teamId: crm-team
+        role: first-responder
+    matchSignals:
+      exact:
+        serviceNames: [crm-customer-service]
+        containerNames: [crm-customer-service]
+      strong:
+        projectNames: [crm-customer-service-repo, crm-customer-shared]
+        packagePrefixes: [com.example.crm.customer, com.example.crm.shared]
+        endpointPrefixes: [/crm/customers]
+        spans: [CustomerNotificationGateway.call]
+        markers: [CRM_CUSTOMER]
+    handoffHints:
+      defaultRouteLabel: crm-team
+      firstResponderTeamIds: [crm-team]
+      partnerTeamIds: [crm-integration-team]
+      requiredEvidence: [correlationId, environment, serviceName, className, endpoint, exception]
+
+  - id: notification-provider
+    name: Notification Provider
+    kind: external-system
+    purpose: Provides data used by the customer support workflow.
+    matchSignals:
+      exact:
+        endpointPrefixes: [/crm/notifications]
+        hosts: [api.notifications.local]
+      strong:
+        markers: [CRM_NOTIFICATION]
+    handoffHints:
+      defaultRouteLabel: crm-integration-team
+      firstResponderTeamIds: [crm-integration-team]
+      partnerTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+
+gaps: []

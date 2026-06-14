@@ -19,34 +19,34 @@ class OperationalContextAdapterTest {
 
         assertEquals(2, catalog.systems().size());
         assertEquals(1, catalog.integrations().size());
-        assertEquals(List.of("partner-service"), catalog.integrations().get(0).participants().finalTargetSystems());
+        assertEquals(List.of("notification-provider"), catalog.integrations().get(0).participants().finalTargetSystems());
         assertEquals("server", catalog.integrations().get(0).participants().finalTargets().get(0).role());
         assertEquals(1, catalog.processes().size());
         assertEquals(2, catalog.repositories().size());
         assertEquals(1, catalog.codeSearchScopes().size());
-        assertEquals(1, catalog.boundedContexts().size());
+        assertEquals(2, catalog.boundedContexts().size());
         assertEquals(2, catalog.teams().size());
         assertEquals(1, catalog.glossaryTerms().size());
         assertEquals(2, catalog.handoffRules().size());
         assertEquals(3, catalog.openQuestions().size());
-        assertEquals("Confirm whether Core Context should include shared library semantics.", catalog.openQuestions().get(0).question());
+        assertEquals("Confirm whether Customer Profile Context should include shared customer rule semantics.", catalog.openQuestions().get(0).question());
         assertEquals("bounded-context", catalog.openQuestions().get(0).entityType());
-        assertEquals("core-context", catalog.openQuestions().get(0).entityId());
-        assertEquals("app-core-code-search", catalog.codeSearchScopes().get(0).id());
+        assertEquals("customer-profile-context", catalog.openQuestions().get(0).entityId());
+        assertEquals("crm-customer-service-code-search", catalog.codeSearchScopes().get(0).id());
         assertEquals(2, catalog.codeSearchScopes().get(0).repositories().size());
         assertEquals("supporting-library", catalog.codeSearchScopes().get(0).repositories().get(1).role());
         assertTrue(catalog.openQuestions().stream()
                 .anyMatch(question -> question.sourceFile().equals("glossary.md")
-                        && question.question().equals("Confirm whether SOAP fault terminology needs separate domain-specific subtypes.")));
+                        && question.question().equals("Confirm whether remote API error terminology needs CRM-specific subtypes.")));
         assertTrue(catalog.openQuestions().stream()
                 .anyMatch(question -> question.sourceFile().equals("handoff-rules.md")
-                        && question.question().equals("Confirm actual routing target for partner-service synchronous failures.")));
+                        && question.question().equals("Confirm actual routing target for notification-provider synchronous failures.")));
         assertFalse(catalog.indexDocument().isBlank());
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutIntegrationParticipantReferenceDuplication() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutIntegrationParticipantReferenceDuplication() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -58,8 +58,8 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutSystemSelfReferencesOrDerivedDependencyCopies() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutSystemSelfReferencesOrDerivedDependencyCopies() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -71,8 +71,8 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutBoundedContextDerivedReferenceCopies() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutBoundedContextDerivedReferenceCopies() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -84,8 +84,8 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutProcessParticipantSystemReferenceCopies() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutProcessParticipantSystemReferenceCopies() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -96,8 +96,8 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutCodeSearchTargetReferenceCopies() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutCodeSearchTargetReferenceCopies() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -109,8 +109,8 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutTeamReferenceCopies() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutTeamReferenceCopies() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -121,15 +121,15 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutStrictValidationErrors() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutStrictValidationErrors() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
 
         assertTrue(
                 findings.stream().noneMatch(finding -> finding.severity().equals("error")),
-                () -> "Runtime catalog should not contain strict validation errors: "
+                () -> "Test catalog should not contain strict validation errors: "
                         + findings.stream()
                                 .filter(finding -> finding.severity().equals("error"))
                                 .toList()
@@ -137,8 +137,8 @@ class OperationalContextAdapterTest {
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutUnknownRelationTargets() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutUnknownRelationTargets() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var index = new OperationalContextRelationIndexBuilder().build(catalog);
@@ -148,13 +148,13 @@ class OperationalContextAdapterTest {
 
         assertTrue(
                 unknownTargets.isEmpty(),
-                () -> "Runtime catalog should not contain unknown relation targets: " + unknownTargets
+                () -> "Test catalog should not contain unknown relation targets: " + unknownTargets
         );
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutBidirectionalReferences() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutBidirectionalReferences() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -164,13 +164,13 @@ class OperationalContextAdapterTest {
 
         assertTrue(
                 bidirectionalReferences.isEmpty(),
-                () -> "Runtime catalog should not contain bidirectional references: " + bidirectionalReferences
+                () -> "Test catalog should not contain bidirectional references: " + bidirectionalReferences
         );
     }
 
     @Test
-    void shouldLoadRuntimeCatalogWithoutValidationWarnings() {
-        var adapter = new OperationalContextAdapter(new OperationalContextProperties());
+    void shouldLoadTestCatalogWithoutValidationWarnings() {
+        var adapter = new OperationalContextAdapter(testProperties());
 
         var catalog = adapter.loadContext(OperationalContextQuery.all());
         var findings = new OperationalContextReadModelValidator().validate(catalog);
@@ -180,7 +180,7 @@ class OperationalContextAdapterTest {
 
         assertTrue(
                 warnings.isEmpty(),
-                () -> "Runtime catalog should not contain validation warnings: " + warnings
+                () -> "Test catalog should not contain validation warnings: " + warnings
         );
     }
 
@@ -189,14 +189,14 @@ class OperationalContextAdapterTest {
         var adapter = new OperationalContextAdapter(testProperties());
         var query = new OperationalContextQuery(
                 Set.of(OperationalContextEntryType.SYSTEM),
-                List.of(OperationalContextFilter.exact(OperationalContextEntryType.SYSTEM, "id", "app-core")),
+                List.of(OperationalContextFilter.exact(OperationalContextEntryType.SYSTEM, "id", "crm-customer-service")),
                 false
         );
 
         var catalog = adapter.loadContext(query);
 
         assertEquals(1, catalog.systems().size());
-        assertEquals("app-core", catalog.systems().get(0).id());
+        assertEquals("crm-customer-service", catalog.systems().get(0).id());
         assertTrue(catalog.integrations().isEmpty());
         assertTrue(catalog.processes().isEmpty());
         assertTrue(catalog.repositories().isEmpty());
@@ -215,7 +215,7 @@ class OperationalContextAdapterTest {
                 List.of(OperationalContextFilter.contains(
                         OperationalContextEntryType.GLOSSARY_TERM,
                         "canonicalReferences",
-                        "partner-sync"
+                        "notification-sync"
                 )),
                 false
         );
@@ -224,12 +224,12 @@ class OperationalContextAdapterTest {
 
         assertTrue(catalog.systems().isEmpty());
         assertEquals(1, catalog.glossaryTerms().size());
-        assertEquals("soap-fault", catalog.glossaryTerms().get(0).id());
+        assertEquals("remote-api-error", catalog.glossaryTerms().get(0).id());
     }
 
     private static OperationalContextProperties testProperties() {
         var properties = new OperationalContextProperties();
-        properties.setResourceRoot("operational-context-test");
+        properties.setResourceRoot("operational-context");
         return properties;
     }
 }

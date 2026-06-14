@@ -1,0 +1,38 @@
+schemaVersion: 1
+
+integrations:
+  - id: crm-customer-to-notification-sync
+    name: CRM Customer Service to Notification Provider
+    summary: CRM Customer Service calls Notification Provider synchronously.
+    integrationStyle: synchronous-request
+    participants:
+      source:
+        system: crm-customer-service
+      targets:
+        - system: notification-provider
+      finalTargets:
+        - system: notification-provider
+          role: server
+    transport:
+      protocols: [HTTP]
+      http:
+        endpointPrefixes: [/crm/notifications]
+        hosts: [api.notifications.local]
+    responsibilities:
+      - teamId: crm-integration-team
+        role: contract-owner
+    matchSignals:
+      exact:
+        endpointPrefixes: [/crm/notifications]
+        hosts: [api.notifications.local]
+      strong:
+        spans: [CustomerNotificationGateway.call]
+        markers: [CRM_NOTIFICATION]
+        errors: [RemoteApiError, Read timed out]
+    handoffHints:
+      defaultRouteLabel: CRM Integration Team
+      firstResponderTeamIds: [crm-integration-team]
+      partnerTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+
+gaps: []

@@ -1,0 +1,45 @@
+schemaVersion: 1
+
+teams:
+  - id: crm-team
+    name: CRM Team
+    purpose: Owns the customer support workflow.
+    responsibilities:
+      - targetType: system
+        targetId: crm-customer-service
+      - targetType: repository
+        targetId: crm-customer-service-repo
+      - targetType: process
+        targetId: customer-support-process
+      - targetType: bounded-context
+        targetId: customer-profile-context
+    matchSignals:
+      exact:
+        serviceNames: [crm-customer-service]
+        containerNames: [crm-customer-service]
+      strong:
+        projectNames: [crm-customer-service-repo]
+        packagePrefixes: [com.example.crm.customer]
+        endpointPrefixes: [/crm/customers]
+    handoffHints:
+      defaultRouteLabel: crm-owner
+      firstResponderTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+
+  - id: crm-integration-team
+    name: CRM Integration Team
+    purpose: Owns cross-system contracts.
+    responsibilities:
+      - targetType: integration
+        targetId: crm-customer-to-notification-sync
+    matchSignals:
+      exact:
+        endpointPrefixes: [/crm/notifications]
+        hosts: [api.notifications.local]
+    handoffHints:
+      defaultRouteLabel: crm-integration-owner
+      firstResponderTeamIds: [crm-integration-team]
+      partnerTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+
+gaps: []

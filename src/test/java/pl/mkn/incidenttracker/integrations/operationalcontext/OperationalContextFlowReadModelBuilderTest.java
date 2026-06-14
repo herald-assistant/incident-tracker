@@ -17,12 +17,12 @@ class OperationalContextFlowReadModelBuilderTest {
 
     @Test
     void shouldProjectRequestFlowFromProcessStepsImplementationsAndIntegrations() {
-        var model = builder.buildForEntity(sampleCatalog(), "process", "agreement-submit-process");
+        var model = builder.buildForEntity(sampleCatalog(), "process", "customer-profile-update-process");
 
         assertEquals("operational-context.flow", model.contract());
-        assertEquals("agreement-submit-process", model.analysisTarget().id());
+        assertEquals("customer-profile-update-process", model.analysisTarget().id());
         assertEquals("http", model.trigger().channel());
-        assertTrue(model.trigger().endpoints().contains("POST /agreements/{agreementId}/submit"));
+        assertTrue(model.trigger().endpoints().contains("POST /crm/customers/{customerId}/profile"));
         assertEquals(4, model.steps().size());
         assertEquals(3, model.edges().size());
         assertTrue(model.validationFindings().isEmpty());
@@ -30,37 +30,37 @@ class OperationalContextFlowReadModelBuilderTest {
         var receive = model.steps().get(0);
         assertEquals("receive-submit", receive.id());
         assertEquals("http-endpoint", receive.kind());
-        assertTrue(receive.systems().stream().anyMatch(system -> system.id().equals("operator-frontend")));
-        assertTrue(receive.systems().stream().anyMatch(system -> system.id().equals("agreement-service")));
+        assertTrue(receive.systems().stream().anyMatch(system -> system.id().equals("crm-operator-ui")));
+        assertTrue(receive.systems().stream().anyMatch(system -> system.id().equals("crm-customer-service")));
         assertTrue(receive.boundedContexts().stream()
-                .anyMatch(context -> context.id().equals("agreement-process-management")));
+                .anyMatch(context -> context.id().equals("customer-profile-management")));
         assertTrue(receive.implementations().stream()
-                .anyMatch(implementation -> implementation.id().equals("agreement-service-scope::agreement-service-repo::agreement-module")));
+                .anyMatch(implementation -> implementation.id().equals("crm-customer-service-scope::crm-customer-service-repo::customer-module")));
         assertTrue(receive.codeSearchScopes().stream()
-                .anyMatch(scope -> scope.id().equals("agreement-service-scope")));
-        assertTrue(receive.codeHints().endpointHints().contains("/agreements"));
-        assertTrue(receive.codeHints().classHints().contains("AgreementSubmitController"));
+                .anyMatch(scope -> scope.id().equals("crm-customer-service-scope")));
+        assertTrue(receive.codeHints().endpointHints().contains("/crm/customers"));
+        assertTrue(receive.codeHints().classHints().contains("CustomerProfileController"));
 
         var persist = model.steps().get(1);
         assertEquals("database-write", persist.kind());
-        assertTrue(persist.dataStores().stream().anyMatch(store -> store.id().equals("agreement-db")));
-        assertTrue(persist.codeHints().databaseHints().tables().contains("AGREEMENT_PROCESS"));
-        assertTrue(persist.classHints().contains("AgreementProcessRepository"));
+        assertTrue(persist.dataStores().stream().anyMatch(store -> store.id().equals("customer-profile-db")));
+        assertTrue(persist.codeHints().databaseHints().tables().contains("CUSTOMER_PROFILE"));
+        assertTrue(persist.classHints().contains("CustomerProfileRepository"));
 
         var notify = model.steps().get(2);
         assertEquals("integration-call", notify.kind());
         assertTrue(notify.integrations().stream()
-                .anyMatch(integration -> integration.id().equals("agreement-to-notifications")));
+                .anyMatch(integration -> integration.id().equals("customer-to-notifications")));
         assertTrue(notify.integrationHints().endpoints().contains("/notifications"));
         assertTrue(notify.boundedContexts().stream().anyMatch(context -> context.id().equals("notifications")));
 
         var external = model.steps().get(3);
         assertEquals("integration-call", external.kind());
         assertTrue(external.integrations().stream()
-                .anyMatch(integration -> integration.id().equals("notifications-to-external-b")));
+                .anyMatch(integration -> integration.id().equals("notifications-to-crm-provider")));
         assertTrue(external.integrationHints().topics().contains("external.notifications"));
         assertTrue(model.involvedIntegrations().stream()
-                .anyMatch(integration -> integration.id().equals("notifications-to-external-b")));
+                .anyMatch(integration -> integration.id().equals("notifications-to-crm-provider")));
 
         assertEquals("receive-submit", model.edges().get(0).sourceStepId());
         assertEquals("persist-state", model.edges().get(0).targetStepId());
@@ -92,7 +92,7 @@ class OperationalContextFlowReadModelBuilderTest {
 
     @Test
     void shouldWarnWhenTargetIsNotAProcess() {
-        var model = builder.buildForEntity(sampleCatalog(), "system", "agreement-service");
+        var model = builder.buildForEntity(sampleCatalog(), "system", "crm-customer-service");
 
         assertTrue(model.steps().isEmpty());
         assertTrue(model.validationFindings().stream()
@@ -103,65 +103,65 @@ class OperationalContextFlowReadModelBuilderTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(map(
-                        "id", "agreement-submit-process",
-                        "name", "Agreement Submit Process",
+                        "id", "customer-profile-update-process",
+                        "name", "Customer Profile Update Process",
                         "type", "request-flow",
                         "participants", map(
-                                "primarySystems", List.of("agreement-service"),
+                                "primarySystems", List.of("crm-customer-service"),
                                 "supportingSystems", List.of("notification-service"),
-                                "externalSystems", List.of("operator-frontend", "external-system-b"),
-                                "platformComponents", List.of("agreement-db")
+                                "externalSystems", List.of("crm-operator-ui", "notification-provider-b"),
+                                "platformComponents", List.of("customer-profile-db")
                         ),
                         "references", map(
-                                "systems", List.of("operator-frontend", "agreement-service", "notification-service", "external-system-b"),
-                                "boundedContexts", List.of("agreement-process-management", "notifications"),
-                                "integrations", List.of("agreement-to-notifications", "notifications-to-external-b"),
-                                "dataStores", List.of("agreement-db")
+                                "systems", List.of("crm-operator-ui", "crm-customer-service", "notification-service", "notification-provider-b"),
+                                "boundedContexts", List.of("customer-profile-management", "notifications"),
+                                "integrations", List.of("customer-to-notifications", "notifications-to-crm-provider"),
+                                "dataStores", List.of("customer-profile-db")
                         ),
                         "lifecycle", map(
                                 "triggers", List.of(map(
                                         "type", "api",
-                                        "name", "Agreement submit",
-                                        "endpoint", "POST /agreements/{agreementId}/submit"
+                                        "name", "Customer profile update",
+                                        "endpoint", "POST /crm/customers/{customerId}/profile"
                                 ))
                         ),
                         "steps", List.of(
                                 map(
                                         "id", "receive-submit",
                                         "name", "Receive Submit Request",
-                                        "summary", "Frontend submits agreement for processing.",
+                                        "summary", "Frontend submits customer profile update.",
                                         "references", map(
-                                                "systems", List.of("operator-frontend", "agreement-service"),
-                                                "boundedContexts", List.of("agreement-process-management")
+                                                "systems", List.of("crm-operator-ui", "crm-customer-service"),
+                                                "boundedContexts", List.of("customer-profile-management")
                                         ),
                                         "match", map(
-                                                "endpointPrefixes", List.of("/agreements"),
-                                                "classHints", List.of("AgreementSubmitController")
+                                                "endpointPrefixes", List.of("/crm/customers"),
+                                                "classHints", List.of("CustomerProfileController")
                                         )
                                 ),
                                 map(
                                         "id", "persist-state",
                                         "name", "Persist Process State",
                                         "type", "database-write",
-                                        "summary", "Write process state into agreement database.",
+                                        "summary", "Write process state into customer profile database.",
                                         "references", map(
-                                                "systems", List.of("agreement-service"),
-                                                "boundedContexts", List.of("agreement-process-management"),
-                                                "dataStores", List.of("agreement-db")
+                                                "systems", List.of("crm-customer-service"),
+                                                "boundedContexts", List.of("customer-profile-management"),
+                                                "dataStores", List.of("customer-profile-db")
                                         ),
                                         "match", map(
-                                                "classHints", List.of("AgreementProcessRepository"),
-                                                "tables", List.of("AGREEMENT_PROCESS")
+                                                "classHints", List.of("CustomerProfileRepository"),
+                                                "tables", List.of("CUSTOMER_PROFILE")
                                         )
                                 ),
                                 map(
                                         "id", "request-notification",
                                         "name", "Request Notification",
-                                        "summary", "Agreement process asks notifications capability to send a message.",
+                                        "summary", "Customer profile process asks notifications capability to send a message.",
                                         "references", map(
-                                                "systems", List.of("agreement-service", "notification-service"),
-                                                "boundedContexts", List.of("agreement-process-management", "notifications"),
-                                                "integrations", List.of("agreement-to-notifications")
+                                                "systems", List.of("crm-customer-service", "notification-service"),
+                                                "boundedContexts", List.of("customer-profile-management", "notifications"),
+                                                "integrations", List.of("customer-to-notifications")
                                         ),
                                         "match", map(
                                                 "classHints", List.of("NotificationPort")
@@ -172,9 +172,9 @@ class OperationalContextFlowReadModelBuilderTest {
                                         "name", "Deliver External Message",
                                         "summary", "Notifications publishes the outbound message to external system B.",
                                         "references", map(
-                                                "systems", List.of("notification-service", "external-system-b"),
+                                                "systems", List.of("notification-service", "notification-provider-b"),
                                                 "boundedContexts", List.of("notifications"),
-                                                "integrations", List.of("notifications-to-external-b")
+                                                "integrations", List.of("notifications-to-crm-provider")
                                         ),
                                         "match", map(
                                                 "topics", List.of("external.notifications")
@@ -183,17 +183,17 @@ class OperationalContextFlowReadModelBuilderTest {
                         )
                 )),
                 List.of(
-                        map("id", "operator-frontend"),
-                        map("id", "agreement-service"),
+                        map("id", "crm-operator-ui"),
+                        map("id", "crm-customer-service"),
                         map("id", "notification-service"),
-                        map("id", "external-system-b")
+                        map("id", "notification-provider-b")
                 ),
                 List.of(
                         map(
-                                "id", "agreement-to-notifications",
+                                "id", "customer-to-notifications",
                                 "integrationStyle", "sync-http",
                                 "participants", map(
-                                        "source", map("system", "agreement-service", "boundedContext", "agreement-process-management"),
+                                        "source", map("system", "crm-customer-service", "boundedContext", "customer-profile-management"),
                                         "targets", List.of(map("system", "notification-service", "boundedContext", "notifications"))
                                 ),
                                 "transport", map(
@@ -208,11 +208,11 @@ class OperationalContextFlowReadModelBuilderTest {
                                 )
                         ),
                         map(
-                                "id", "notifications-to-external-b",
+                                "id", "notifications-to-crm-provider",
                                 "integrationStyle", "async-event",
                                 "participants", map(
                                         "source", map("system", "notification-service", "boundedContext", "notifications"),
-                                        "targets", List.of(map("system", "external-system-b"))
+                                        "targets", List.of(map("system", "notification-provider-b"))
                                 ),
                                 "transport", map(
                                         "protocols", List.of("messaging"),
@@ -226,49 +226,49 @@ class OperationalContextFlowReadModelBuilderTest {
                         )
                 ),
                 List.of(map(
-                        "id", "agreement-service-repo",
-                        "name", "Agreement Service Repository",
-                        "git", map("projectPath", "Group/agreement-service"),
-                        "packagePrefixes", List.of("com.example.agreement"),
-                        "classHints", List.of("AgreementApplication"),
-                        "endpointHints", List.of("/agreements"),
+                        "id", "crm-customer-service-repo",
+                        "name", "CRM Customer Service Repository",
+                        "git", map("projectPath", "Group/crm-customer-service"),
+                        "packagePrefixes", List.of("com.example.crm.customer"),
+                        "classHints", List.of("CustomerApplication"),
+                        "endpointHints", List.of("/crm/customers"),
                         "modules", List.of(map(
-                                "id", "agreement-module",
-                                "name", "Agreement Module",
-                                "sourceRoots", List.of("agreement-module/src/main/java"),
+                                "id", "customer-module",
+                                "name", "Customer Module",
+                                "sourceRoots", List.of("customer-module/src/main/java"),
                                 "source", map(
-                                        "paths", List.of("agreement-module/src/main/java"),
-                                        "packages", List.of("com.example.agreement.process")
+                                        "paths", List.of("customer-module/src/main/java"),
+                                        "packages", List.of("com.example.crm.customer")
                                 ),
                                 "matchSignals", map("strong", map(
-                                        "classHints", List.of("AgreementSubmitController")
+                                        "classHints", List.of("CustomerProfileController")
                                 ))
                         ))
                 )),
                 List.of(map(
-                        "id", "agreement-service-scope",
+                        "id", "crm-customer-service-scope",
                         "target", map(
                                 "type", "process",
-                                "id", "agreement-submit-process"
+                                "id", "customer-profile-update-process"
                         ),
                         "repositories", List.of(map(
-                                "repoId", "agreement-service-repo",
+                                "repoId", "crm-customer-service-repo",
                                 "role", "primary-implementation",
                                 "priority", 1,
-                                "moduleIds", List.of("agreement-module"),
-                                "reason", "Main agreement implementation"
+                                "moduleIds", List.of("customer-module"),
+                                "reason", "Main customer profile implementation"
                         )),
                         "hints", map(
-                                "packagePrefixes", List.of("com.example.agreement"),
-                                "classHints", List.of("AgreementSubmitController"),
-                                "endpointHints", List.of("/agreements"),
+                                "packagePrefixes", List.of("com.example.crm.customer"),
+                                "classHints", List.of("CustomerProfileController"),
+                                "endpointHints", List.of("/crm/customers"),
                                 "database", map(
-                                        "tables", List.of("AGREEMENT_PROCESS")
+                                        "tables", List.of("CUSTOMER_PROFILE")
                                 )
                         )
                 )),
                 List.of(
-                        map("id", "agreement-process-management"),
+                        map("id", "customer-profile-management"),
                         map("id", "notifications")
                 ),
                 List.of(),

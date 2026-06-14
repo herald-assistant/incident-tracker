@@ -1,0 +1,33 @@
+schemaVersion: 1
+
+processes:
+  - id: customer-support-process
+    name: Customer Support Process
+    purpose: Handles the customer support workflow.
+    participants:
+      primarySystems: [crm-customer-service]
+      externalSystems: [notification-provider]
+    responsibilities:
+      - teamId: crm-team
+        role: process-owner
+    processSteps:
+      - id: call-notification-provider
+        name: Call Notification Provider
+        participants:
+          systems: [crm-customer-service, notification-provider]
+        matchSignals:
+          exact:
+            serviceNames: [crm-customer-service]
+            endpointPrefixes: [/crm/notifications]
+            hosts: [api.notifications.local]
+    processBoundary:
+      endsWhen: [customer-support-process-completed]
+    handoffHints:
+      defaultRouteLabel: crm-team
+      firstResponderTeamIds: [crm-team]
+      partnerTeamIds: [crm-integration-team]
+      requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+      routingNotes:
+        - If the flow waits on the notification call, route first to the integration owner.
+
+gaps: []

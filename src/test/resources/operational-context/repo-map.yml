@@ -1,0 +1,78 @@
+schemaVersion: 1
+
+repositories:
+  - id: crm-customer-service-repo
+    name: CRM Customer Service Repository
+    git:
+      group: CRM/runtime
+      project: crm-customer-service-repo
+      projectPath: CRM/runtime/crm-customer-service-repo
+    references:
+      systems: [crm-customer-service]
+      processes: [customer-support-process]
+      boundedContexts: [customer-profile-context]
+      teams: [crm-team]
+      runtimeComponents: [crm-customer-service]
+    responsibilities:
+      - teamId: crm-team
+        role: code-owner
+    sourceLayout:
+      sourceRoots: [src/main/java/com/example/crm/customer]
+      importantPaths: [src/main/java/com/example/crm/customer/profile]
+    modules:
+      - moduleId: customer-module
+        name: Customer Module
+        sourceRoots: [src/main/java/com/example/crm/customer]
+        matchSignals:
+          strong:
+            packagePrefixes: [com.example.crm.customer]
+            classHints: [CustomerNotificationGateway]
+    matchSignals:
+      exact:
+        projectNames: [crm-customer-service-repo]
+      strong:
+        serviceNames: [crm-customer-service]
+        containerNames: [crm-customer-service]
+        packagePrefixes: [com.example.crm.customer]
+        endpointPrefixes: [/crm/customers]
+    handoffHints:
+      defaultRouteLabel: crm-team
+      firstResponderTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
+
+  - id: crm-customer-shared-repo
+    name: CRM Customer Shared Library
+    git:
+      group: CRM/runtime
+      project: crm-customer-shared
+      projectPath: CRM/runtime/crm-customer-shared
+    references:
+      systems: [crm-customer-service]
+      processes: [customer-support-process]
+      boundedContexts: [customer-profile-context]
+      teams: [crm-team]
+      runtimeComponents: [crm-customer-service]
+    responsibilities:
+      - teamId: crm-team
+        role: code-owner
+    sourceLayout:
+      sourceRoots: [src/main/java/com/example/crm/shared]
+    modules:
+      - moduleId: customer-shared-module
+        name: Customer Shared Module
+        sourceRoots: [src/main/java/com/example/crm/shared]
+        matchSignals:
+          strong:
+            packagePrefixes: [com.example.crm.shared]
+            classHints: [CustomerRule, CustomerLookupClient]
+    matchSignals:
+      exact:
+        projectNames: [crm-customer-shared]
+      strong:
+        packagePrefixes: [com.example.crm.shared]
+    handoffHints:
+      defaultRouteLabel: crm-team
+      firstResponderTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
+
+gaps: []

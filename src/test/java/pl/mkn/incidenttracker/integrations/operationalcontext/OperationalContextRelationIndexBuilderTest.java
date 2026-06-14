@@ -18,36 +18,36 @@ class OperationalContextRelationIndexBuilderTest {
     void shouldBuildIncomingOutgoingAndNeighborIndexesFromCurrentCatalogShape() {
         var index = builder.build(sampleCatalog());
 
-        var systemRelations = index.entityRelations("system", "app-core");
+        var systemRelations = index.entityRelations("system", "crm-customer-service");
 
         assertTrue(systemRelations.incomingRelations().stream()
                 .anyMatch(relation -> relation.relationType().equals("target-system")
                         && relation.source().type().equals("integration")
-                        && relation.source().id().equals("partner-sync")));
+                        && relation.source().id().equals("crm-customer-to-notification-sync")));
         assertTrue(systemRelations.incomingRelations().stream()
                 .anyMatch(relation -> relation.relationType().equals("primary-system")
                         && relation.source().type().equals("process")
-                        && relation.source().id().equals("core-process")));
+                        && relation.source().id().equals("customer-support-process")));
         assertTrue(systemRelations.incomingRelations().stream()
                 .anyMatch(relation -> relation.relationType().equals("targets-system")
                         && relation.source().type().equals("code-search-scope")
-                        && relation.source().id().equals("app-core-scope")));
-        assertTrue(systemRelations.neighbors().stream().anyMatch(neighbor -> neighbor.id().equals("partner-sync")));
+                        && relation.source().id().equals("crm-customer-service-scope")));
+        assertTrue(systemRelations.neighbors().stream().anyMatch(neighbor -> neighbor.id().equals("crm-customer-to-notification-sync")));
     }
 
     @Test
     void shouldExposeCodeSearchScopeRelationsToRepositoriesAndModules() {
         var index = builder.build(sampleCatalog());
 
-        var scopeRelations = index.entityRelations("code-search-scope", "app-core-scope");
+        var scopeRelations = index.entityRelations("code-search-scope", "crm-customer-service-scope");
 
         assertTrue(scopeRelations.outgoingRelations().stream()
                 .anyMatch(relation -> relation.relationType().equals("references-repository")
-                        && relation.target().id().equals("app-repo")
+                        && relation.target().id().equals("crm-customer-service-repo")
                         && relation.role().equals("primary-implementation")));
         assertTrue(scopeRelations.outgoingRelations().stream()
                 .anyMatch(relation -> relation.relationType().equals("references-module")
-                        && relation.target().id().equals("app-module")));
+                        && relation.target().id().equals("customer-module")));
     }
 
     @Test
@@ -56,11 +56,11 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(),
                 List.of(),
                 List.of(map(
-                        "id", "app-core",
-                        "references", map("repositories", List.of("app-repo", "app-repo"))
+                        "id", "crm-customer-service",
+                        "references", map("repositories", List.of("crm-customer-service-repo", "crm-customer-service-repo"))
                 )),
                 List.of(),
-                List.of(map("id", "app-repo")),
+                List.of(map("id", "crm-customer-service-repo")),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -69,7 +69,7 @@ class OperationalContextRelationIndexBuilderTest {
                 "index"
         ));
 
-        var relations = index.entityRelations("system", "app-core").outgoingRelations().stream()
+        var relations = index.entityRelations("system", "crm-customer-service").outgoingRelations().stream()
                 .filter(relation -> relation.relationType().equals("references-repository"))
                 .toList();
 
@@ -84,8 +84,8 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(),
                 List.of(),
                 List.of(map(
-                        "id", "app-core",
-                        "references", map("systems", List.of("app-core", "missing-system"))
+                        "id", "crm-customer-service",
+                        "references", map("systems", List.of("crm-customer-service", "missing-system"))
                 )),
                 List.of(),
                 List.of(),
@@ -110,22 +110,22 @@ class OperationalContextRelationIndexBuilderTest {
     void shouldTreatGlossaryTypedReferencesAsRelationsAndFreeTextAsHints() {
         var index = builder.build(OperationalContextDtos.catalogFromRaw(
                 List.of(),
-                List.of(map("id", "core-process")),
-                List.of(map("id", "app-core")),
+                List.of(map("id", "customer-support-process")),
+                List.of(map("id", "crm-customer-service")),
                 List.of(),
                 List.of(),
                 List.of(),
                 List.of(),
                 List.of(
                         new OperationalContextDtos.OperationalContextGlossaryTerm(
-                                "core-term",
-                                "Core term",
+                                "customer-profile-term",
+                                "Customer profile term",
                                 "business-term",
-                                "Core term.",
+                                "Customer profile term.",
                                 List.of(),
                                 List.of(),
                                 List.of(),
-                                List.of("system:app-core", "process:core-process", "related-term", "Business label", "None"),
+                                List.of("system:crm-customer-service", "process:customer-support-process", "related-term", "Business label", "None"),
                                 List.of(),
                                 List.of()
                         ),
@@ -147,16 +147,16 @@ class OperationalContextRelationIndexBuilderTest {
                 "index"
         ));
 
-        var relations = index.entityRelations("term", "core-term").outgoingRelations();
+        var relations = index.entityRelations("term", "customer-profile-term").outgoingRelations();
 
         assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("canonical-reference")
                         && relation.target().type().equals("system")
-                        && relation.target().id().equals("app-core")));
+                        && relation.target().id().equals("crm-customer-service")));
         assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("canonical-reference")
                         && relation.target().type().equals("process")
-                        && relation.target().id().equals("core-process")));
+                        && relation.target().id().equals("customer-support-process")));
         assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("canonical-reference")
                         && relation.target().type().equals("term")
@@ -170,30 +170,30 @@ class OperationalContextRelationIndexBuilderTest {
     void shouldUseHandoffOperationalContextLinksAsTypedReferences() {
         var index = builder.build(OperationalContextDtos.catalogFromRaw(
                 List.of(),
-                List.of(map("id", "core-process")),
-                List.of(map("id", "app-core")),
-                List.of(map("id", "core-sync")),
+                List.of(map("id", "customer-support-process")),
+                List.of(map("id", "crm-customer-service")),
+                List.of(map("id", "crm-customer-to-notification-sync")),
                 List.of(),
                 List.of(),
                 List.of(),
                 List.of(),
                 List.of(new OperationalContextDtos.OperationalContextHandoffRule(
-                        "core-failure",
-                        "Core failure",
+                        "notification-sync-failure",
+                        "Notification sync failure",
                         "Owner of backend",
                         List.of("Backend failed"),
                         List.of(),
                         List.of("correlationId"),
                         List.of("Check backend"),
-                        List.of("CLP Backend maintainers"),
+                        List.of("CRM Customer maintainers"),
                         new OperationalContextDtos.OperationalContextReferences(
-                                List.of("app-core"),
+                                List.of("crm-customer-service"),
                                 List.of(),
                                 List.of(),
                                 List.of(),
-                                List.of("core-process"),
+                                List.of("customer-support-process"),
                                 List.of(),
-                                List.of("core-sync"),
+                                List.of("crm-customer-to-notification-sync"),
                                 List.of(),
                                 List.of(),
                                 List.of(),
@@ -206,25 +206,25 @@ class OperationalContextRelationIndexBuilderTest {
                 "index"
         ));
 
-        var relations = index.entityRelations("handoff-rule", "core-failure").outgoingRelations();
+        var relations = index.entityRelations("handoff-rule", "notification-sync-failure").outgoingRelations();
 
         assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("references-system")
-                        && relation.target().id().equals("app-core")));
+                        && relation.target().id().equals("crm-customer-service")));
         assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("references-process")
-                        && relation.target().id().equals("core-process")));
+                        && relation.target().id().equals("customer-support-process")));
         assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("references-integration")
-                        && relation.target().id().equals("core-sync")));
+                        && relation.target().id().equals("crm-customer-to-notification-sync")));
         assertFalse(relations.stream()
                 .anyMatch(relation -> relation.target().type().equals("team")
                         && (relation.target().id().equals("Owner of backend")
-                        || relation.target().id().equals("CLP Backend maintainers"))));
+                        || relation.target().id().equals("CRM Customer maintainers"))));
         assertFalse(index.validationFindings().stream()
                 .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
                         && (finding.message().contains("Owner of backend")
-                        || finding.message().contains("CLP Backend maintainers"))));
+                        || finding.message().contains("CRM Customer maintainers"))));
     }
 
     private static OperationalContextDtos.OperationalContextCatalog sampleCatalog() {
@@ -234,86 +234,86 @@ class OperationalContextRelationIndexBuilderTest {
                         "name", "Team A",
                         "responsibilities", List.of(map(
                                 "targetType", "system",
-                                "targetId", "app-core",
+                                "targetId", "crm-customer-service",
                                 "role", "maintainer",
                                 "confidence", "high"
                         ))
                 )),
                 List.of(map(
-                        "id", "core-process",
-                        "name", "Core Process",
+                        "id", "customer-support-process",
+                        "name", "Customer Support Process",
                         "participants", map(
-                                "primarySystems", List.of("app-core"),
-                                "supportingSystems", List.of("support-service")
+                                "primarySystems", List.of("crm-customer-service"),
+                                "supportingSystems", List.of("crm-support-service")
                         ),
                         "references", map(
-                                "boundedContexts", List.of("core-context")
+                                "boundedContexts", List.of("customer-profile-context")
                         ),
                         "steps", List.of(map(
                                 "id", "receive-request",
                                 "name", "Receive request",
                                 "type", "http-request",
-                                "references", map("systems", List.of("app-core"))
+                                "references", map("systems", List.of("crm-customer-service"))
                         ))
                 )),
                 List.of(
                         map(
-                                "id", "app-core",
-                                "name", "App Core",
-                                "references", map("repositories", List.of("app-repo")),
+                                "id", "crm-customer-service",
+                                "name", "CRM Customer Service",
+                                "references", map("repositories", List.of("crm-customer-service-repo")),
                                 "deployment", map(
-                                        "serviceNames", List.of("app-core-service")
+                                        "serviceNames", List.of("crm-customer-service")
                                 )
                         ),
-                        map("id", "support-service", "name", "Support Service"),
-                        map("id", "partner-system", "name", "Partner System")
+                        map("id", "crm-support-service", "name", "Support Service"),
+                        map("id", "notification-provider", "name", "Notification Provider")
                 ),
                 List.of(map(
-                        "id", "partner-sync",
-                        "name", "Partner Sync",
+                        "id", "crm-customer-to-notification-sync",
+                        "name", "Customer Notification Sync",
                         "participants", map(
                                 "source", map(
-                                        "system", "partner-system",
+                                        "system", "notification-provider",
                                         "role", "producer",
-                                        "repositories", List.of("partner-repo")
+                                        "repositories", List.of("notification-provider-repo")
                                 ),
                                 "targets", List.of(map(
-                                        "system", "app-core",
-                                        "boundedContext", "core-context",
-                                        "repositories", List.of("app-repo"),
-                                        "modules", List.of("app-module"),
+                                        "system", "crm-customer-service",
+                                        "boundedContext", "customer-profile-context",
+                                        "repositories", List.of("crm-customer-service-repo"),
+                                        "modules", List.of("customer-module"),
                                         "role", "consumer"
                                 ))
                         ),
                         "references", map(
-                                "processes", List.of("core-process")
+                                "processes", List.of("customer-support-process")
                         )
                 )),
                 List.of(map(
-                        "id", "app-repo",
-                        "name", "App Repository",
-                        "references", map("systems", List.of("app-core")),
+                        "id", "crm-customer-service-repo",
+                        "name", "CRM Customer Service Repository",
+                        "references", map("systems", List.of("crm-customer-service")),
                         "modules", List.of(map(
-                                "id", "app-module",
-                                "name", "App Module",
-                                "references", map("boundedContexts", List.of("core-context"))
+                                "id", "customer-module",
+                                "name", "Customer Module",
+                                "references", map("boundedContexts", List.of("customer-profile-context"))
                         ))
-                ), map("id", "partner-repo", "name", "Partner Repository")),
+                ), map("id", "notification-provider-repo", "name", "Notification Provider Repository")),
                 List.of(map(
-                        "id", "app-core-scope",
-                        "name", "App Core Scope",
-                        "target", map("type", "system", "id", "app-core"),
+                        "id", "crm-customer-service-scope",
+                        "name", "CRM Customer Service Scope",
+                        "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
-                                "repoId", "app-repo",
+                                "repoId", "crm-customer-service-repo",
                                 "role", "primary-implementation",
                                 "priority", 1,
-                                "moduleIds", List.of("app-module")
+                                "moduleIds", List.of("customer-module")
                         ))
                 )),
                 List.of(map(
-                        "id", "core-context",
-                        "name", "Core Context",
-                        "references", map("systems", List.of("app-core")),
+                        "id", "customer-profile-context",
+                        "name", "Customer Profile Context",
+                        "references", map("systems", List.of("crm-customer-service")),
                         "relations", List.of(map(
                                 "type", "downstream",
                                 "targetContextId", "support-context"

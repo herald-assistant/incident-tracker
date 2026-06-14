@@ -19,10 +19,10 @@ class OperationalContextImplementationReadModelBuilderTest {
 
     @Test
     void shouldProjectImplementationMapForBoundedContextWithLegacyAndTargetImplementations() {
-        var model = builder.buildForEntity(sampleCatalog(), "boundedContext", "agreement-context");
+        var model = builder.buildForEntity(sampleCatalog(), "boundedContext", "customer-profile-context");
 
         assertEquals("operational-context.implementation-map", model.contract());
-        assertEquals("agreement-context", model.analysisTarget().id());
+        assertEquals("customer-profile-context", model.analysisTarget().id());
         assertEquals(3, model.implementations().size());
         assertTrue(model.validationFindings().isEmpty());
 
@@ -32,29 +32,29 @@ class OperationalContextImplementationReadModelBuilderTest {
                         Function.identity()
                 ));
 
-        var primary = implementations.get("agreement-service-scope::agreement-service-repo::agreement-module");
+        var primary = implementations.get("crm-customer-service-scope::crm-customer-service-repo::customer-module");
         assertEquals("implementation", primary.implementationKind());
         assertEquals("primary", primary.lifecycleRole());
         assertEquals("active", primary.migrationStatus());
-        assertEquals("agreement-service", primary.systems().get(0).id());
-        assertEquals("agreement-context", primary.boundedContexts().get(0).id());
-        assertEquals("agreement-process", primary.processes().get(0).id());
-        assertEquals("agreement-service-repo", primary.repository().id());
-        assertEquals("agreement-module", primary.module().id());
-        assertEquals("agreement-service-scope", primary.codeSearchScope().id());
-        assertTrue(primary.packagePrefixes().contains("com.example.agreement.process"));
-        assertTrue(primary.sourceRoots().contains("agreement-module/src/main/java"));
-        assertTrue(primary.importantPaths().contains("agreement-module/src/main/java/com/example/agreement"));
-        assertTrue(primary.hints().classHints().contains("AgreementProcessHandler"));
+        assertEquals("crm-customer-service", primary.systems().get(0).id());
+        assertEquals("customer-profile-context", primary.boundedContexts().get(0).id());
+        assertEquals("customer-profile-process", primary.processes().get(0).id());
+        assertEquals("crm-customer-service-repo", primary.repository().id());
+        assertEquals("customer-module", primary.module().id());
+        assertEquals("crm-customer-service-scope", primary.codeSearchScope().id());
+        assertTrue(primary.packagePrefixes().contains("com.example.crm.customer"));
+        assertTrue(primary.sourceRoots().contains("customer-module/src/main/java"));
+        assertTrue(primary.importantPaths().contains("customer-module/src/main/java/com/example/customer"));
+        assertTrue(primary.hints().classHints().contains("CustomerProfileHandler"));
         assertFalse(primary.provenance().sourceRefs().isEmpty());
 
-        var legacy = implementations.get("agreement-legacy-scope::legacy-monolith-repo::legacy-agreement-module");
+        var legacy = implementations.get("customer-legacy-scope::legacy-monolith-repo::legacy-customer-module");
         assertEquals("source-implementation", legacy.lifecycleRole());
         assertEquals("being-replaced", legacy.migrationStatus());
         assertTrue(legacy.systems().stream().anyMatch(system -> system.id().equals("legacy-monolith")));
-        assertEquals("agreement-context", legacy.boundedContexts().get(0).id());
+        assertEquals("customer-profile-context", legacy.boundedContexts().get(0).id());
 
-        var shared = implementations.get("agreement-service-scope::shared-contracts-repo");
+        var shared = implementations.get("crm-customer-service-scope::shared-contracts-repo");
         assertEquals("supporting-code", shared.implementationKind());
         assertEquals("supporting-library", shared.lifecycleRole());
         assertTrue(shared.provenance().warnings().stream()
@@ -63,16 +63,16 @@ class OperationalContextImplementationReadModelBuilderTest {
 
     @Test
     void shouldProjectImplementationMapForSystemAndProcessTargets() {
-        var systemModel = builder.buildForEntity(sampleCatalog(), "system", "agreement-service");
-        var processModel = builder.buildForEntity(sampleCatalog(), "process", "agreement-process");
+        var systemModel = builder.buildForEntity(sampleCatalog(), "system", "crm-customer-service");
+        var processModel = builder.buildForEntity(sampleCatalog(), "process", "customer-profile-process");
 
         assertEquals(1, systemModel.implementations().size());
         assertTrue(systemModel.implementations().stream()
                 .allMatch(implementation -> implementation.systems().stream()
-                        .anyMatch(system -> system.id().equals("agreement-service"))));
+                        .anyMatch(system -> system.id().equals("crm-customer-service"))));
         assertTrue(processModel.implementations().stream()
                 .allMatch(implementation -> implementation.processes().stream()
-                        .anyMatch(process -> process.id().equals("agreement-process"))));
+                        .anyMatch(process -> process.id().equals("customer-profile-process"))));
     }
 
     @Test
@@ -126,47 +126,47 @@ class OperationalContextImplementationReadModelBuilderTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(map(
-                        "id", "agreement-process",
-                        "participants", map("primarySystems", List.of("agreement-service")),
-                        "references", map("boundedContexts", List.of("agreement-context"))
+                        "id", "customer-profile-process",
+                        "participants", map("primarySystems", List.of("crm-customer-service")),
+                        "references", map("boundedContexts", List.of("customer-profile-context"))
                 )),
                 List.of(
-                        map("id", "agreement-service"),
+                        map("id", "crm-customer-service"),
                         map("id", "legacy-monolith"),
                         map("id", "missing-scope-system")
                 ),
                 List.of(),
                 List.of(
                         map(
-                                "id", "agreement-service-repo",
-                                "name", "Agreement Service Repository",
+                                "id", "crm-customer-service-repo",
+                                "name", "CRM Customer Service Repository",
                                 "lifecycleStatus", "active",
                                 "git", map(
                                         "provider", "gitlab",
                                         "group", "Group",
-                                        "project", "agreement-service",
-                                        "projectPath", "Group/agreement-service",
+                                        "project", "crm-customer-service",
+                                        "projectPath", "Group/crm-customer-service",
                                         "defaultBranch", "main"
                                 ),
                                 "sourceLayout", map(
                                         "buildTool", "maven",
                                         "sourceRoots", List.of("src/main/java"),
-                                        "importantPaths", List.of("agreement-module/src/main/java/com/example/agreement")
+                                        "importantPaths", List.of("customer-module/src/main/java/com/example/customer")
                                 ),
-                                "packagePrefixes", List.of("com.example.agreement"),
-                                "classHints", List.of("AgreementApplication"),
+                                "packagePrefixes", List.of("com.example.crm.customer"),
+                                "classHints", List.of("CustomerApplication"),
                                 "modules", List.of(map(
-                                        "id", "agreement-module",
-                                        "name", "Agreement Module",
+                                        "id", "customer-module",
+                                        "name", "Customer Module",
                                         "lifecycleStatus", "active",
-                                        "sourceRoots", List.of("agreement-module/src/main/java"),
-                                        "importantPaths", List.of("agreement-module/src/main/java/com/example/agreement"),
+                                        "sourceRoots", List.of("customer-module/src/main/java"),
+                                        "importantPaths", List.of("customer-module/src/main/java/com/example/customer"),
                                         "source", map(
-                                                "paths", List.of("agreement-module/src/main/java"),
-                                                "packages", List.of("com.example.agreement.process")
+                                                "paths", List.of("customer-module/src/main/java"),
+                                                "packages", List.of("com.example.crm.customer")
                                         ),
                                         "matchSignals", map("strong", map(
-                                                "classHints", List.of("AgreementProcessHandler")
+                                                "classHints", List.of("CustomerProfileHandler")
                                         ))
                                 ))
                         ),
@@ -176,34 +176,34 @@ class OperationalContextImplementationReadModelBuilderTest {
                                 "lifecycleStatus", "being-replaced",
                                 "git", map("projectPath", "Group/legacy-monolith"),
                                 "modules", List.of(map(
-                                        "id", "legacy-agreement-module",
-                                        "name", "Legacy Agreement Module",
+                                        "id", "legacy-customer-module",
+                                        "name", "Legacy Customer Module",
                                         "lifecycleStatus", "being-replaced",
                                         "source", map(
                                                 "paths", List.of("legacy/src/main/java"),
-                                                "packages", List.of("com.example.legacy.agreement")
+                                                "packages", List.of("com.example.legacy.customer")
                                         )
                                 ))
                         ),
                         map(
                                 "id", "shared-contracts-repo",
                                 "name", "Shared Contracts Repository",
-                                "git", map("projectPath", "Group/shared-contracts"),
+                                "git", map("projectPath", "CRM/runtime/crm-shared-contracts"),
                                 "packagePrefixes", List.of("com.example.contracts"),
-                                "classHints", List.of("AgreementContract")
+                                "classHints", List.of("CustomerContract")
                         )
                 ),
                 List.of(
                         map(
-                                "id", "agreement-service-scope",
-                                "name", "Agreement Service Scope",
-                                "target", map("type", "bounded-context", "id", "agreement-context"),
+                                "id", "crm-customer-service-scope",
+                                "name", "CRM Customer Service Scope",
+                                "target", map("type", "bounded-context", "id", "customer-profile-context"),
                                 "repositories", List.of(
                                         map(
-                                                "repoId", "agreement-service-repo",
+                                                "repoId", "crm-customer-service-repo",
                                                 "role", "primary-implementation",
                                                 "priority", 1,
-                                                "moduleIds", List.of("agreement-module"),
+                                                "moduleIds", List.of("customer-module"),
                                                 "reason", "Target service implementation"
                                         ),
                                         map(
@@ -214,53 +214,53 @@ class OperationalContextImplementationReadModelBuilderTest {
                                         )
                                 ),
                                 "hints", map(
-                                        "packagePrefixes", List.of("com.example.agreement"),
-                                        "classHints", List.of("AgreementController"),
-                                        "endpointHints", List.of("/agreements")
+                                        "packagePrefixes", List.of("com.example.crm.customer"),
+                                        "classHints", List.of("CustomerController"),
+                                        "endpointHints", List.of("/crm/customers")
                                 )
                         ),
                         map(
-                                "id", "agreement-legacy-scope",
-                                "name", "Agreement Legacy Scope",
-                                "target", map("type", "bounded-context", "id", "agreement-context"),
+                                "id", "customer-legacy-scope",
+                                "name", "Customer Legacy Scope",
+                                "target", map("type", "bounded-context", "id", "customer-profile-context"),
                                 "repositories", List.of(map(
                                         "repoId", "legacy-monolith-repo",
                                         "role", "legacy-implementation",
                                         "priority", 2,
-                                        "moduleIds", List.of("legacy-agreement-module"),
+                                        "moduleIds", List.of("legacy-customer-module"),
                                         "reason", "Source implementation being replaced"
                                 )),
                                 "hints", map(
-                                        "packagePrefixes", List.of("com.example.legacy.agreement"),
-                                        "classHints", List.of("LegacyAgreementFacade")
+                                        "packagePrefixes", List.of("com.example.legacy.customer"),
+                                        "classHints", List.of("LegacyCustomerFacade")
                                 )
                         ),
                         map(
-                                "id", "agreement-system-scope",
-                                "name", "Agreement System Scope",
-                                "target", map("type", "system", "id", "agreement-service"),
+                                "id", "customer-system-scope",
+                                "name", "Customer System Scope",
+                                "target", map("type", "system", "id", "crm-customer-service"),
                                 "repositories", List.of(map(
-                                        "repoId", "agreement-service-repo",
+                                        "repoId", "crm-customer-service-repo",
                                         "role", "primary-implementation",
                                         "priority", 1,
-                                        "moduleIds", List.of("agreement-module")
+                                        "moduleIds", List.of("customer-module")
                                 ))
                         ),
                         map(
-                                "id", "agreement-process-scope",
-                                "name", "Agreement Process Scope",
-                                "target", map("type", "process", "id", "agreement-process"),
+                                "id", "customer-process-scope",
+                                "name", "Customer Process Scope",
+                                "target", map("type", "process", "id", "customer-profile-process"),
                                 "repositories", List.of(map(
-                                        "repoId", "agreement-service-repo",
+                                        "repoId", "crm-customer-service-repo",
                                         "role", "primary-implementation",
                                         "priority", 1,
-                                        "moduleIds", List.of("agreement-module")
+                                        "moduleIds", List.of("customer-module")
                                 ))
                         )
                 ),
                 List.of(map(
-                        "id", "agreement-context",
-                        "references", map("systems", List.of("agreement-service", "legacy-monolith"))
+                        "id", "customer-profile-context",
+                        "references", map("systems", List.of("crm-customer-service", "legacy-monolith"))
                 )),
                 List.of(),
                 List.of(),

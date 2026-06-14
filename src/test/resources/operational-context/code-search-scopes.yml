@@ -1,0 +1,36 @@
+schemaVersion: 1
+catalogKind: operational-context-code-search-scopes
+
+codeSearchScopes:
+  - id: crm-customer-service-code-search
+    name: CRM Customer Service Code Search Scope
+    scopeType: system
+    lifecycleStatus: active
+    summary: Implementation search scope for the crm-customer-service system.
+    target:
+      type: system
+      id: crm-customer-service
+    useFor: [code-search, incident-analysis]
+    repositories:
+      - repoId: crm-customer-service-repo
+        role: primary-implementation
+        priority: 1
+        moduleIds: [customer-module]
+        reason: Main service repository for crm-customer-service.
+        readFor: [business-flow, runtime-entrypoints]
+      - repoId: crm-customer-shared-repo
+        role: supporting-library
+        priority: 2
+        moduleIds: [customer-shared-module]
+        reason: Shared customer rules are used by crm-customer-service.
+        readFor: [shared-rules]
+    hints:
+      packagePrefixes: [com.example.crm.customer, com.example.crm.shared]
+      classHints: [CustomerNotificationGateway, CustomerRule]
+      endpointHints: [/crm/customers]
+      queueTopicHints: []
+    traversal:
+      rules: [Search crm-customer-service first, then shared customer rules if the class is not found.]
+      expandWhen: [Expand to supporting-library repositories when a referenced class or rule is not implemented in the primary repository.]
+
+gaps: []

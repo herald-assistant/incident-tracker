@@ -17,21 +17,21 @@ class OperationalContextBlastRadiusReadModelBuilderTest {
 
     @Test
     void shouldProjectBlastRadiusFromEndpointToDownstreamFlow() {
-        var model = builder.buildForEntity(sampleCatalog(), "endpoint", "/agreements");
+        var model = builder.buildForEntity(sampleCatalog(), "endpoint", "/crm/customers");
 
         assertEquals("operational-context.blast-radius", model.contract());
         assertEquals("endpoint", model.analysisTarget().type());
-        assertEquals("/agreements", model.analysisTarget().id());
+        assertEquals("/crm/customers", model.analysisTarget().id());
         assertEquals(1, model.impactedFlows().size());
-        assertEquals("agreement-submit-process", model.impactedFlows().get(0).flow().id());
+        assertEquals("customer-profile-update-process", model.impactedFlows().get(0).flow().id());
         assertEquals(4, model.impactedFlows().get(0).impactedSteps().size());
         assertEquals("direct-hit", model.impactedFlows().get(0).impactedSteps().get(0).impactType());
         assertTrue(model.impactedSystems().stream()
                 .anyMatch(system -> system.entity().id().equals("notification-service")));
         assertTrue(model.impactedIntegrations().stream()
-                .anyMatch(integration -> integration.entity().id().equals("notifications-to-external-b")));
+                .anyMatch(integration -> integration.entity().id().equals("notifications-to-crm-provider")));
         assertTrue(model.impactedDataStores().stream()
-                .anyMatch(dataStore -> dataStore.entity().id().equals("agreement-db")));
+                .anyMatch(dataStore -> dataStore.entity().id().equals("customer-profile-db")));
         assertFalse(model.impactedImplementations().isEmpty());
         assertTrue(model.suggestedNextEvidence().stream()
                 .anyMatch(suggestion -> suggestion.contains("code-search scopes")));
@@ -39,13 +39,13 @@ class OperationalContextBlastRadiusReadModelBuilderTest {
 
     @Test
     void shouldProjectBlastRadiusFromCodeSearchScopeTarget() {
-        var model = builder.buildForEntity(sampleCatalog(), "code-search-scope", "agreement-service-scope");
+        var model = builder.buildForEntity(sampleCatalog(), "code-search-scope", "crm-customer-service-scope");
 
         assertEquals("code-search-scope", model.analysisTarget().type());
         assertEquals(1, model.impactedFlows().size());
         assertTrue(model.impactedFlows().get(0).impactedSteps().stream()
                 .anyMatch(step -> step.implementations().stream()
-                        .anyMatch(implementation -> implementation.codeSearchScope().id().equals("agreement-service-scope"))));
+                        .anyMatch(implementation -> implementation.codeSearchScope().id().equals("crm-customer-service-scope"))));
     }
 
     @Test
@@ -61,113 +61,113 @@ class OperationalContextBlastRadiusReadModelBuilderTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(map(
-                        "id", "agreement-submit-process",
-                        "name", "Agreement Submit Process",
+                        "id", "customer-profile-update-process",
+                        "name", "Customer Profile Update Process",
                         "participants", map(
-                                "primarySystems", List.of("agreement-service"),
+                                "primarySystems", List.of("crm-customer-service"),
                                 "supportingSystems", List.of("notification-service"),
-                                "externalSystems", List.of("operator-frontend", "external-system-b"),
-                                "platformComponents", List.of("agreement-db")
+                                "externalSystems", List.of("crm-operator-ui", "notification-provider-b"),
+                                "platformComponents", List.of("customer-profile-db")
                         ),
                         "references", map(
-                                "systems", List.of("operator-frontend", "agreement-service", "notification-service", "external-system-b"),
-                                "boundedContexts", List.of("agreement-process-management", "notifications"),
-                                "integrations", List.of("agreement-to-notifications", "notifications-to-external-b"),
-                                "dataStores", List.of("agreement-db")
+                                "systems", List.of("crm-operator-ui", "crm-customer-service", "notification-service", "notification-provider-b"),
+                                "boundedContexts", List.of("customer-profile-management", "notifications"),
+                                "integrations", List.of("customer-to-notifications", "notifications-to-crm-provider"),
+                                "dataStores", List.of("customer-profile-db")
                         ),
                         "steps", List.of(
                                 map(
                                         "id", "receive-submit",
                                         "name", "Receive Submit Request",
                                         "references", map(
-                                                "systems", List.of("operator-frontend", "agreement-service"),
-                                                "boundedContexts", List.of("agreement-process-management")
+                                                "systems", List.of("crm-operator-ui", "crm-customer-service"),
+                                                "boundedContexts", List.of("customer-profile-management")
                                         ),
                                         "match", map(
-                                                "endpointPrefixes", List.of("/agreements"),
-                                                "classHints", List.of("AgreementSubmitController")
+                                                "endpointPrefixes", List.of("/crm/customers"),
+                                                "classHints", List.of("CustomerProfileController")
                                         )
                                 ),
                                 map(
                                         "id", "persist-state",
                                         "name", "Persist Process State",
                                         "references", map(
-                                                "systems", List.of("agreement-service"),
-                                                "boundedContexts", List.of("agreement-process-management"),
-                                                "dataStores", List.of("agreement-db")
+                                                "systems", List.of("crm-customer-service"),
+                                                "boundedContexts", List.of("customer-profile-management"),
+                                                "dataStores", List.of("customer-profile-db")
                                         ),
-                                        "match", map("tables", List.of("AGREEMENT_PROCESS"))
+                                        "match", map("tables", List.of("CUSTOMER_PROFILE"))
                                 ),
                                 map(
                                         "id", "request-notification",
                                         "name", "Request Notification",
                                         "references", map(
-                                                "systems", List.of("agreement-service", "notification-service"),
-                                                "boundedContexts", List.of("agreement-process-management", "notifications"),
-                                                "integrations", List.of("agreement-to-notifications")
+                                                "systems", List.of("crm-customer-service", "notification-service"),
+                                                "boundedContexts", List.of("customer-profile-management", "notifications"),
+                                                "integrations", List.of("customer-to-notifications")
                                         )
                                 ),
                                 map(
                                         "id", "deliver-external",
                                         "name", "Deliver External Message",
                                         "references", map(
-                                                "systems", List.of("notification-service", "external-system-b"),
+                                                "systems", List.of("notification-service", "notification-provider-b"),
                                                 "boundedContexts", List.of("notifications"),
-                                                "integrations", List.of("notifications-to-external-b")
+                                                "integrations", List.of("notifications-to-crm-provider")
                                         ),
                                         "match", map("topics", List.of("external.notifications"))
                                 )
                         )
                 )),
                 List.of(
-                        map("id", "operator-frontend"),
-                        map("id", "agreement-service"),
+                        map("id", "crm-operator-ui"),
+                        map("id", "crm-customer-service"),
                         map("id", "notification-service"),
-                        map("id", "external-system-b")
+                        map("id", "notification-provider-b")
                 ),
                 List.of(
                         map(
-                                "id", "agreement-to-notifications",
+                                "id", "customer-to-notifications",
                                 "participants", map(
-                                        "source", map("system", "agreement-service", "boundedContext", "agreement-process-management"),
+                                        "source", map("system", "crm-customer-service", "boundedContext", "customer-profile-management"),
                                         "targets", List.of(map("system", "notification-service", "boundedContext", "notifications"))
                                 ),
                                 "transport", map("http", map("endpointPrefixes", List.of("/notifications")))
                         ),
                         map(
-                                "id", "notifications-to-external-b",
+                                "id", "notifications-to-crm-provider",
                                 "participants", map(
                                         "source", map("system", "notification-service", "boundedContext", "notifications"),
-                                        "targets", List.of(map("system", "external-system-b"))
+                                        "targets", List.of(map("system", "notification-provider-b"))
                                 ),
                                 "transport", map("messaging", map("topics", List.of("external.notifications")))
                         )
                 ),
                 List.of(map(
-                        "id", "agreement-service-repo",
-                        "git", map("projectPath", "Group/agreement-service"),
+                        "id", "crm-customer-service-repo",
+                        "git", map("projectPath", "Group/crm-customer-service"),
                         "modules", List.of(map(
-                                "id", "agreement-module",
-                                "sourceRoots", List.of("agreement-module/src/main/java"),
-                                "source", map("packages", List.of("com.example.agreement.process"))
+                                "id", "customer-module",
+                                "sourceRoots", List.of("customer-module/src/main/java"),
+                                "source", map("packages", List.of("com.example.crm.customer"))
                         ))
                 )),
                 List.of(map(
-                        "id", "agreement-service-scope",
-                        "target", map("type", "process", "id", "agreement-submit-process"),
+                        "id", "crm-customer-service-scope",
+                        "target", map("type", "process", "id", "customer-profile-update-process"),
                         "repositories", List.of(map(
-                                "repoId", "agreement-service-repo",
+                                "repoId", "crm-customer-service-repo",
                                 "role", "primary-implementation",
                                 "priority", 1,
-                                "moduleIds", List.of("agreement-module")
+                                "moduleIds", List.of("customer-module")
                         )),
                         "hints", map(
-                                "endpointHints", List.of("/agreements"),
-                                "database", map("tables", List.of("AGREEMENT_PROCESS"))
+                                "endpointHints", List.of("/crm/customers"),
+                                "database", map("tables", List.of("CUSTOMER_PROFILE"))
                         )
                 )),
                 List.of(
-                        map("id", "agreement-process-management"),
+                        map("id", "customer-profile-management"),
                         map("id", "notifications")
                 ),
                 List.of(),

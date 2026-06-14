@@ -17,33 +17,33 @@ class OperationalContextCodeSearchReadModelBuilderTest {
 
     @Test
     void shouldBuildCodeSearchReadModelForSystemTarget() {
-        var model = builder.buildForEntity(sampleCatalog(), "system", "app-core");
+        var model = builder.buildForEntity(sampleCatalog(), "system", "crm-customer-service");
 
         assertEquals("operational-context.code-search", model.contract());
-        assertEquals("app-core", model.analysisTarget().id());
+        assertEquals("crm-customer-service", model.analysisTarget().id());
         assertEquals(1, model.scopes().size());
-        assertEquals("app-core-scope", model.scopes().get(0).scope().id());
+        assertEquals("crm-customer-service-scope", model.scopes().get(0).scope().id());
         assertEquals(2, model.repositories().size());
-        assertEquals("app-repo", model.repositories().get(0).repository().id());
+        assertEquals("crm-customer-service-repo", model.repositories().get(0).repository().id());
         assertEquals("primary-implementation", model.repositories().get(0).role());
-        assertEquals("Group/app", model.repositories().get(0).git().projectPath());
+        assertEquals("CRM/runtime/crm-customer-service-repo", model.repositories().get(0).git().projectPath());
         assertTrue(model.repositories().get(0).modules().stream()
-                .anyMatch(module -> module.id().equals("app-module")));
-        assertTrue(model.aggregatedHints().packagePrefixes().contains("com.example.app"));
-        assertTrue(model.aggregatedHints().classHints().contains("AppController"));
-        assertTrue(model.aggregatedHints().endpointHints().contains("/app"));
-        assertTrue(model.aggregatedHints().databaseHints().tables().contains("APP_TABLE"));
-        assertTrue(model.aggregatedHints().databaseHints().migrations().contains("src/main/resources/db/changelog"));
-        assertTrue(model.aggregatedHints().workflowHints().definitionPaths().contains("flows/app.bpmn"));
+                .anyMatch(module -> module.id().equals("customer-module")));
+        assertTrue(model.aggregatedHints().packagePrefixes().contains("com.example.crm.customer"));
+        assertTrue(model.aggregatedHints().classHints().contains("CustomerController"));
+        assertTrue(model.aggregatedHints().endpointHints().contains("/crm/customers"));
+        assertTrue(model.aggregatedHints().databaseHints().tables().contains("CUSTOMER_PROFILE"));
+        assertTrue(model.aggregatedHints().databaseHints().migrations().contains("src/main/resources/db/changelog/customer"));
+        assertTrue(model.aggregatedHints().workflowHints().definitionPaths().contains("flows/customer-support.bpmn"));
         assertTrue(model.validationFindings().isEmpty());
     }
 
     @Test
     void shouldBuildCodeSearchReadModelForBoundedContextAliasType() {
-        var model = builder.buildForEntity(sampleCatalog(), "boundedContext", "core-context");
+        var model = builder.buildForEntity(sampleCatalog(), "boundedContext", "customer-profile-context");
 
         assertEquals(1, model.scopes().size());
-        assertEquals("core-context-scope", model.scopes().get(0).scope().id());
+        assertEquals("customer-profile-context-scope", model.scopes().get(0).scope().id());
         assertFalse(model.repositories().isEmpty());
     }
 
@@ -51,30 +51,30 @@ class OperationalContextCodeSearchReadModelBuilderTest {
     void shouldUseOnlySemanticScopeTarget() {
         var catalog = OperationalContextDtos.catalogFromRaw(
                 List.of(),
-                List.of(map("id", "core-process")),
-                List.of(map("id", "app-core")),
+                List.of(map("id", "customer-support-process")),
+                List.of(map("id", "crm-customer-service")),
                 List.of(),
                 List.of(map(
-                        "id", "app-repo",
+                        "id", "crm-customer-service-repo",
                         "references", map(
-                                "systems", List.of("app-core"),
-                                "boundedContexts", List.of("core-context"),
-                                "terms", List.of("core-term")
+                                "systems", List.of("crm-customer-service"),
+                                "boundedContexts", List.of("customer-profile-context"),
+                                "terms", List.of("customer-profile-term")
                         )
                 )),
                 List.of(map(
                         "id", "repo-derived-scope",
-                        "target", map("type", "process", "id", "core-process"),
+                        "target", map("type", "process", "id", "customer-support-process"),
                         "repositories", List.of(map(
-                                "repoId", "app-repo",
+                                "repoId", "crm-customer-service-repo",
                                 "role", "primary-implementation",
                                 "priority", 1
                         ))
                 )),
-                List.of(map("id", "core-context")),
+                List.of(map("id", "customer-profile-context")),
                 List.of(new OperationalContextDtos.OperationalContextGlossaryTerm(
-                        "core-term",
-                        "Core term",
+                        "customer-profile-term",
+                        "Customer profile term",
                         null,
                         null,
                         List.of(),
@@ -89,20 +89,20 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 "index"
         );
 
-        var processModel = builder.buildForEntity(catalog, "process", "core-process");
-        var systemModel = builder.buildForEntity(catalog, "system", "app-core");
+        var processModel = builder.buildForEntity(catalog, "process", "customer-support-process");
+        var systemModel = builder.buildForEntity(catalog, "system", "crm-customer-service");
 
         assertEquals("repo-derived-scope", processModel.scopes().get(0).scope().id());
         assertEquals("process", processModel.scopes().get(0).target().type());
-        assertEquals("core-process", processModel.scopes().get(0).target().id());
+        assertEquals("customer-support-process", processModel.scopes().get(0).target().id());
         assertTrue(systemModel.scopes().isEmpty());
     }
 
     @Test
     void shouldResolveScopeDirectly() {
-        var model = builder.buildForEntity(sampleCatalog(), "codeSearchScope", "app-core-scope");
+        var model = builder.buildForEntity(sampleCatalog(), "codeSearchScope", "crm-customer-service-scope");
 
-        assertEquals("app-core-scope", model.analysisTarget().id());
+        assertEquals("crm-customer-service-scope", model.analysisTarget().id());
         assertEquals(1, model.scopes().size());
         assertEquals(2, model.repositories().size());
     }
@@ -121,12 +121,12 @@ class OperationalContextCodeSearchReadModelBuilderTest {
         var catalog = OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
-                List.of(map("id", "app-core")),
+                List.of(map("id", "crm-customer-service")),
                 List.of(),
                 List.of(),
                 List.of(map(
                         "id", "broken-scope",
-                        "target", map("type", "system", "id", "app-core"),
+                        "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
                                 "repoId", "missing-repo",
                                 "role", "primary-implementation"
@@ -139,7 +139,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 "index"
         );
 
-        var model = builder.buildForEntity(catalog, "system", "app-core");
+        var model = builder.buildForEntity(catalog, "system", "crm-customer-service");
 
         assertEquals(1, model.scopes().size());
         assertTrue(model.repositories().isEmpty());
@@ -152,108 +152,108 @@ class OperationalContextCodeSearchReadModelBuilderTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(map(
-                        "id", "core-process",
-                        "participants", map("primarySystems", List.of("app-core"))
+                        "id", "customer-support-process",
+                        "participants", map("primarySystems", List.of("crm-customer-service"))
                 )),
-                List.of(map("id", "app-core"), map("id", "missing-scope-system")),
-                List.of(map("id", "partner-sync")),
+                List.of(map("id", "crm-customer-service"), map("id", "missing-scope-system")),
+                List.of(map("id", "crm-customer-to-notification-sync")),
                 List.of(
                         map(
-                                "id", "app-repo",
-                                "name", "App Repository",
+                                "id", "crm-customer-service-repo",
+                                "name", "CRM Customer Service Repository",
                                 "git", map(
                                         "provider", "gitlab",
-                                        "group", "Group",
-                                        "project", "app",
-                                        "projectPath", "Group/app",
+                                        "group", "CRM/runtime",
+                                        "project", "crm-customer-service-repo",
+                                        "projectPath", "CRM/runtime/crm-customer-service-repo",
                                         "defaultBranch", "main"
                                 ),
-                                "references", map("systems", List.of("app-core")),
+                                "references", map("systems", List.of("crm-customer-service")),
                                 "sourceLayout", map(
                                         "buildTool", "maven",
                                         "sourceRoots", List.of("src/main/java"),
                                         "resourceRoots", List.of("src/main/resources"),
-                                        "databaseMigrationPaths", List.of("src/main/resources/db/changelog"),
-                                        "workflowDefinitionPaths", List.of("flows/app.bpmn")
+                                        "databaseMigrationPaths", List.of("src/main/resources/db/changelog/customer"),
+                                        "workflowDefinitionPaths", List.of("flows/customer-support.bpmn")
                                 ),
-                                "packagePrefixes", List.of("com.example.app"),
-                                "classHints", List.of("AppService"),
-                                "endpointHints", List.of("/app"),
+                                "packagePrefixes", List.of("com.example.crm.customer"),
+                                "classHints", List.of("CustomerService"),
+                                "endpointHints", List.of("/crm/customers"),
                                 "modules", List.of(map(
-                                        "id", "app-module",
-                                        "name", "App Module",
+                                        "id", "customer-module",
+                                        "name", "Customer Module",
                                         "source", map(
-                                                "paths", List.of("app-module/src/main/java"),
-                                                "packages", List.of("com.example.app.module")
+                                                "paths", List.of("customer-module/src/main/java"),
+                                                "packages", List.of("com.example.crm.customer.module")
                                         ),
                                         "matchSignals", map("strong", map(
-                                                "packagePrefixes", List.of("com.example.app.module"),
-                                                "classHints", List.of("AppController")
+                                                "packagePrefixes", List.of("com.example.crm.customer.module"),
+                                                "classHints", List.of("CustomerController")
                                         ))
                                 ))
                         ),
                         map(
-                                "id", "shared-repo",
-                                "name", "Shared Repository",
-                                "git", map("projectPath", "Group/shared"),
-                                "packagePrefixes", List.of("com.example.shared"),
-                                "classHints", List.of("SharedClient")
+                                "id", "crm-customer-shared-repo",
+                                "name", "CRM Customer Shared Repository",
+                                "git", map("projectPath", "CRM/runtime/crm-customer-shared"),
+                                "packagePrefixes", List.of("com.example.crm.shared"),
+                                "classHints", List.of("CustomerLookupClient")
                         )
                 ),
                 List.of(map(
-                        "id", "app-core-scope",
-                        "name", "App Core Scope",
-                        "target", map("type", "system", "id", "app-core"),
+                        "id", "crm-customer-service-scope",
+                        "name", "CRM Customer Service Scope",
+                        "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(
                                 map(
-                                        "repoId", "app-repo",
+                                        "repoId", "crm-customer-service-repo",
                                         "role", "primary-implementation",
                                         "priority", 1,
-                                        "moduleIds", List.of("app-module"),
+                                        "moduleIds", List.of("customer-module"),
                                         "reason", "Main implementation"
                                 ),
                                 map(
-                                        "repoId", "shared-repo",
+                                        "repoId", "crm-customer-shared-repo",
                                         "role", "supporting-library",
                                         "priority", 2,
-                                        "reason", "Shared library"
+                                        "reason", "Shared customer library"
                                 )
                         ),
                         "hints", map(
                                 "packagePrefixes", List.of("com.example.scope"),
                                 "classHints", List.of("ScopeEntryPoint"),
                                 "endpointHints", List.of("/scope"),
-                                "queueTopicHints", List.of("app.queue"),
+                                "queueTopicHints", List.of("crm.customer-profile.events"),
                                 "database", map(
-                                        "schemas", List.of("APP_SCHEMA"),
-                                        "tables", List.of("APP_TABLE"),
-                                        "entities", List.of("AppEntity")
+                                        "schemas", List.of("CRM_SCHEMA"),
+                                        "tables", List.of("CUSTOMER_PROFILE"),
+                                        "entities", List.of("CustomerProfileEntity")
                                 ),
                                 "workflow", map(
-                                        "workflowNames", List.of("AppFlow")
+                                        "workflowNames", List.of("CustomerSupportFlow")
                                 )
                         ),
                         "traversal", map(
-                                "rules", List.of("Read app-repo before shared-repo."),
-                                "expandWhen", List.of("Expand to shared-repo when shared predicates are referenced.")
+                                "rules", List.of("Read crm-customer-service-repo before crm-customer-shared-repo."),
+                                "expandWhen", List.of("Expand to crm-customer-shared-repo when shared customer rules are referenced.")
                         ),
                         "limitations", List.of("Generated clients not included")
                 ), map(
-                        "id", "core-context-scope",
-                        "name", "Core Context Scope",
-                        "target", map("type", "bounded-context", "id", "core-context"),
+                        "id", "customer-profile-context-scope",
+                        "name", "Customer Profile Context Scope",
+                        "target", map("type", "bounded-context", "id", "customer-profile-context"),
                         "repositories", List.of(map(
-                                "repoId", "app-repo",
+                                "repoId", "crm-customer-service-repo",
                                 "role", "primary-implementation",
                                 "priority", 1
                         )),
                         "hints", map(
-                                "packagePrefixes", List.of("com.example.app")
+                                "packagePrefixes", List.of("com.example.crm.customer")
                         )
                 )),
                 List.of(map(
-                        "id", "core-context",
-                        "references", map("systems", List.of("app-core"))
+                        "id", "customer-profile-context",
+                        "references", map("systems", List.of("crm-customer-service"))
                 )),
                 List.of(),
                 List.of(),

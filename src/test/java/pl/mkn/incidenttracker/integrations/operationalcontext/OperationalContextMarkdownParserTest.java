@@ -20,39 +20,39 @@ class OperationalContextMarkdownParserTest {
 
                 ## Terms
 
-                ### TTA
+                ### `customer-360`
 
-                **Term:** TTA
+                **Term:** C360
 
                 **Category:** `process-term`
 
-                **Definition:** Agreement process - handles agreement lifecycle after decision is made.
+                **Definition:** Customer profile process - handles customer profile lifecycle after validation is complete.
 
                 **Local meaning and boundaries**
 
-                - Handles agreement lifecycle after decision is made.
+                - Handles customer profile lifecycle after validation is complete.
 
                 **Aliases**
 
-                - agreement process
-                - agreement
-                - umowa
+                - customer process
+                - customer
+                - customer profile
 
                 **Match signals**
 
                 Exact:
 
-                - `clp.tta.documents.ready`
-                - `clp.tta.process.reopen`
+                - `crm.customer-360.documents.ready`
+                - `crm.customer-360.process.reopen`
 
                 Strong:
 
-                - `/clp/agreement/processhandler/**`
-                - `/clp/agreement/data/**`
+                - `/crm/customers/process/**`
+                - `/crm/customers/data/**`
 
                 Medium:
 
-                - `CLP-AGREEMENT-HikariPool`
+                - `CRM-CUSTOMER-DataSource`
 
                 Weak:
 
@@ -60,55 +60,55 @@ class OperationalContextMarkdownParserTest {
 
                 **Canonical references**
 
-                - tta-context
+                - customer-360-context
 
                 **Not to confuse with**
 
-                - TTY (decision)
-                - TTL (limit)
+                - CPE (profile event)
+                - CST (support ticket)
 
                 ## Gaps
                 - Should not stop the parser.
 
-                ## Collateral Domain Terms
+                ## Customer Domain Terms
 
-                ### Collateral / Zabezpieczenie
+                ### Customer Segment
 
-                **Definition:** A security instrument attached to a credit product.
+                **Definition:** A segment used to route CRM customer handling.
 
                 **Match signals**
 
                 Strong:
 
-                - service `clp-collateral`
-                - endpoints `/clp/collaterals/**`
+                - service `crm-customer-segment`
+                - endpoints `/crm/customer-segments/**`
 
                 **Canonical references**
 
-                - Mortgage
-                - Guarantee
+                - VIP Customer
+                - Standard Customer
                 """;
 
         var terms = parser.parseGlossary(markdown);
 
         assertEquals(2, terms.size());
-        var agreement = terms.get(0);
-        assertEquals("tta", agreement.id());
-        assertEquals("TTA", agreement.term());
-        assertEquals("process-term", agreement.category());
-        assertEquals("Agreement process - handles agreement lifecycle after decision is made.", agreement.definition());
-        assertTrue(agreement.synonyms().contains("agreement process"));
-        assertTrue(agreement.matchSignals().contains("clp.tta.documents.ready"));
-        assertTrue(agreement.matchSignals().contains("/clp/agreement/processhandler/**"));
-        assertTrue(agreement.matchSignals().contains("CLP-AGREEMENT-HikariPool"));
-        assertTrue(agreement.doNotConfuseWith().contains("TTY (decision)"));
+        var customer = terms.get(0);
+        assertEquals("customer-360", customer.id());
+        assertEquals("C360", customer.term());
+        assertEquals("process-term", customer.category());
+        assertEquals("Customer profile process - handles customer profile lifecycle after validation is complete.", customer.definition());
+        assertTrue(customer.synonyms().contains("customer process"));
+        assertTrue(customer.matchSignals().contains("crm.customer-360.documents.ready"));
+        assertTrue(customer.matchSignals().contains("/crm/customers/process/**"));
+        assertTrue(customer.matchSignals().contains("CRM-CUSTOMER-DataSource"));
+        assertTrue(customer.doNotConfuseWith().contains("CPE (profile event)"));
 
-        var collateral = terms.get(1);
-        assertEquals("collateral-zabezpieczenie", collateral.id());
-        assertEquals("Collateral / Zabezpieczenie", collateral.term());
-        assertEquals("Collateral Domain Terms", collateral.category());
-        assertTrue(collateral.matchSignals().contains("service clp-collateral"));
-        assertTrue(collateral.canonicalReferences().contains("Mortgage"));
+        var segment = terms.get(1);
+        assertEquals("customer-segment", segment.id());
+        assertEquals("Customer Segment", segment.term());
+        assertEquals("Customer Domain Terms", segment.category());
+        assertTrue(segment.matchSignals().contains("service crm-customer-segment"));
+        assertTrue(segment.canonicalReferences().contains("VIP Customer"));
     }
 
     @Test
@@ -118,24 +118,24 @@ class OperationalContextMarkdownParserTest {
 
                 ## Terms
 
-                ### `tty`
+                ### `customer-profile-event`
 
-                **Term:** TTY
+                **Term:** CPE
 
                 **Category:** `acronym`
 
-                **Definition:** Credit decision process.
+                **Definition:** Customer profile event process.
 
                 **Match signals**
 
                 Exact:
 
-                - `clp.tty.decision.made`
-                - `clp.tty.process.cancelled`
+                - `crm.customer-profile-event.profile.updated`
+                - `crm.customer-profile-event.process.cancelled`
 
                 Strong:
 
-                - `decision process`
+                - `customer profile update`
 
                 Medium:
 
@@ -143,7 +143,7 @@ class OperationalContextMarkdownParserTest {
 
                 Weak:
 
-                - `TTY`
+                - `CPE`
 
                 **Canonical references**
 
@@ -154,10 +154,10 @@ class OperationalContextMarkdownParserTest {
 
         assertEquals(1, terms.size());
         var term = terms.get(0);
-        assertTrue(term.matchSignals().contains("clp.tty.decision.made"));
-        assertTrue(term.matchSignals().contains("clp.tty.process.cancelled"));
-        assertTrue(term.matchSignals().contains("decision process"));
-        assertTrue(term.matchSignals().contains("TTY"));
+        assertTrue(term.matchSignals().contains("crm.customer-profile-event.profile.updated"));
+        assertTrue(term.matchSignals().contains("crm.customer-profile-event.process.cancelled"));
+        assertTrue(term.matchSignals().contains("customer profile update"));
+        assertTrue(term.matchSignals().contains("CPE"));
         assertFalse(term.matchSignals().contains("Exact:"));
         assertFalse(term.matchSignals().contains("None"));
         assertFalse(term.canonicalReferences().contains("None"));
@@ -174,12 +174,12 @@ class OperationalContextMarkdownParserTest {
 
                 **Route decision**
 
-                - **Candidate teams:** Integration Team
-                - **Partner teams:** Core Team
+                - **Candidate teams:** CRM Integration Team
+                - **Partner teams:** CRM Team
 
                 **Applies when**
 
-                - Evidence points to partner endpoint
+                - Evidence points to notification endpoint
 
                 **Required evidence**
 
@@ -191,9 +191,9 @@ class OperationalContextMarkdownParserTest {
 
                 **Operational context links**
 
-                - `integration:app-core-to-partner-sync`
-                - `system:app-core`
-                - `process:core-process` (primary impact)
+                - `integration:crm-customer-to-notification-sync`
+                - `system:crm-customer-service`
+                - `process:customer-support-process` (primary impact)
                 """;
 
         var rules = parser.parseHandoffRules(markdown);
@@ -201,14 +201,14 @@ class OperationalContextMarkdownParserTest {
         assertEquals(1, rules.size());
         assertEquals("integration-failure", rules.get(0).id());
         assertEquals("External integration failure", rules.get(0).title());
-        assertEquals("Integration Team", rules.get(0).routeTo());
-        assertEquals("Evidence points to partner endpoint", rules.get(0).useWhen().get(0));
+        assertEquals("CRM Integration Team", rules.get(0).routeTo());
+        assertEquals("Evidence points to notification endpoint", rules.get(0).useWhen().get(0));
         assertEquals("endpoint", rules.get(0).requiredEvidence().get(0));
         assertEquals("Verify external call", rules.get(0).expectedFirstAction().get(0));
-        assertEquals("Core Team", rules.get(0).partnerTeams().get(0));
-        assertEquals("app-core", rules.get(0).references().systems().get(0));
-        assertEquals("app-core-to-partner-sync", rules.get(0).references().integrations().get(0));
-        assertEquals("core-process", rules.get(0).references().processes().get(0));
+        assertEquals("CRM Team", rules.get(0).partnerTeams().get(0));
+        assertEquals("crm-customer-service", rules.get(0).references().systems().get(0));
+        assertEquals("crm-customer-to-notification-sync", rules.get(0).references().integrations().get(0));
+        assertEquals("customer-support-process", rules.get(0).references().processes().get(0));
     }
 
     @Test
@@ -219,11 +219,10 @@ class OperationalContextMarkdownParserTest {
             var markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             var rules = parser.parseHandoffRules(markdown);
 
-            assertTrue(rules.size() > 20);
+            assertEquals(2, rules.size());
             assertTrue(rules.stream().anyMatch(rule ->
-                    rule.id().equals("tty-decision-not-received")
-                            && rule.references().systems().contains("clp-agreement-process")
-                            && rule.references().integrations().contains("tty-to-clp-agreement-decision")));
+                    rule.id().equals("integration-external-sync-failure")
+                            && rule.title().equals("External synchronous integration failure")));
         }
     }
 
@@ -236,9 +235,9 @@ class OperationalContextMarkdownParserTest {
             var terms = parser.parseGlossary(markdown);
 
             assertTrue(terms.stream().anyMatch(term ->
-                    term.id().equals("tty")
-                && term.matchSignals().contains("exchange:clp.local.tty.decision.made")));
-        assertTrue(terms.stream().anyMatch(term -> !term.matchSignals().isEmpty()));
+                    term.id().equals("remote-api-error")
+                            && term.matchSignals().contains("RemoteApiError")));
+            assertTrue(terms.stream().anyMatch(term -> !term.matchSignals().isEmpty()));
         }
     }
 }

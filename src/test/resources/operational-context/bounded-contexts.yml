@@ -1,0 +1,48 @@
+schemaVersion: 1
+
+boundedContexts:
+  - id: customer-profile-context
+    name: Customer Profile Context
+    category: supporting-domain
+    purpose: Owns the customer profile semantics.
+    responsibilities:
+      - teamId: crm-team
+        role: context-owner
+    matchSignals:
+      strong:
+        packagePrefixes: [com.example.crm.customer]
+        endpointPrefixes: [/crm/customers]
+        markers: [CRM_CUSTOMER]
+    relations:
+      - targetContextId: notification-context
+        type: conformist
+        via: [crm-customer-to-notification-sync]
+    handoffHints:
+      defaultRouteLabel: crm-team
+      firstResponderTeamIds: [crm-team]
+      requiredEvidence: [correlationId, environment, boundedContext]
+
+  - id: notification-context
+    name: Notification Context
+    category: supporting-domain
+    purpose: Owns outbound CRM notification semantics.
+    responsibilities:
+      - teamId: crm-integration-team
+        role: context-owner
+    matchSignals:
+      strong:
+        endpointPrefixes: [/crm/notifications]
+        markers: [CRM_NOTIFICATION]
+    handoffHints:
+      defaultRouteLabel: crm-integration-team
+      firstResponderTeamIds: [crm-integration-team]
+      requiredEvidence: [correlationId, environment, host, endpoint]
+
+gaps:
+  - id: confirm-customer-profile-context-boundary
+    type: human-confirmation-required
+    severity: medium
+    status: open
+    entityType: bounded-context
+    entityId: customer-profile-context
+    description: Confirm whether Customer Profile Context should include shared customer rule semantics.
