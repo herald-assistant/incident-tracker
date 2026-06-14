@@ -1,12 +1,12 @@
 package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 final class GitLabEndpointUseCaseTraversalState {
@@ -19,8 +19,9 @@ final class GitLabEndpointUseCaseTraversalState {
     private final Map<String, GitLabEndpointUseCaseRelation> relations = new LinkedHashMap<>();
     private final Map<String, GitLabEndpointUseCaseUnresolvedReference> unresolved = new LinkedHashMap<>();
     private final LinkedHashSet<String> limitations = new LinkedHashSet<>();
-    private final ArrayDeque<GitLabEndpointUseCaseTraversalNode> queue = new ArrayDeque<>();
+    private final PriorityQueue<QueuedTraversalNode> queue = new PriorityQueue<>(queuedNodeComparator());
     private final Set<String> visited = new LinkedHashSet<>();
+    private long queueSequence;
     private boolean maxDepthReached;
 
     GitLabEndpointUseCaseTraversalState(
@@ -123,12 +124,13 @@ final class GitLabEndpointUseCaseTraversalState {
             return;
         }
         if (!visited.contains(node.key())) {
-            queue.addLast(node);
+            queue.add(new QueuedTraversalNode(node, traversalPriority(node), queueSequence++));
         }
     }
 
     GitLabEndpointUseCaseTraversalNode poll() {
-        return queue.pollFirst();
+        var queued = queue.poll();
+        return queued != null ? queued.node() : null;
     }
 
     boolean markVisited(GitLabEndpointUseCaseTraversalNode node) {
@@ -206,6 +208,61 @@ final class GitLabEndpointUseCaseTraversalState {
             case MEDIUM -> 2;
             case LOW -> 1;
         };
+    }
+
+    private static Comparator<QueuedTraversalNode> queuedNodeComparator() {
+        return Comparator
+                .comparingInt(QueuedTraversalNode::priority)
+                .thenComparingInt(QueuedTraversalNode::depthRank)
+                .thenComparingLong(QueuedTraversalNode::sequence);
+    }
+
+    private static int traversalPriority(GitLabEndpointUseCaseTraversalNode node) {
+        if (node.depth() == 0) {
+            return 0;
+        }
+        var reason = node.reason() != null ? node.reason().toLowerCase() : "";
+        if (reason.contains("implementation method for injected interface call")) {
+            return 10;
+        }
+        if (reason.contains("method called on injected concrete dependency")) {
+            return 12;
+        }
+        if (reason.contains("domain interface implementation method")) {
+            return 18;
+        }
+        if (reason.contains("domain method called")) {
+            return 25;
+        }
+        if (reason.contains("local helper")) {
+            return node.role() == GitLabEndpointUseCaseFileRole.CONTROLLER ? 20 : 30;
+        }
+        if (reason.contains("mapper method")) {
+            return 60;
+        }
+        if (reason.contains("static helper")) {
+            return 75;
+        }
+        return switch (node.role()) {
+            case CONTROLLER, API_INTERFACE -> 20;
+            case USE_CASE_PORT, USE_CASE_SERVICE -> 22;
+            case DOMAIN_MODEL -> 35;
+            case REPOSITORY_PORT, REPOSITORY_IMPLEMENTATION, SPRING_DATA_REPOSITORY -> 45;
+            case MAPPER -> 60;
+            case WEB_MODEL, PROJECTION -> 70;
+            case CONFIGURATION, EXTERNAL_CLIENT -> 80;
+            case OPENAPI_CONTRACT, UNKNOWN -> 90;
+        };
+    }
+
+    private record QueuedTraversalNode(
+            GitLabEndpointUseCaseTraversalNode node,
+            int priority,
+            long sequence
+    ) {
+        private int depthRank() {
+            return -node.depth();
+        }
     }
 
     private static final class MutableFileCandidate {
