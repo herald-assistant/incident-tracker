@@ -27,7 +27,7 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
             return new InitialAnalysisResponse(
                     "test-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing catalog lookup",
+                    "Billing customer-profile lookup",
                     "Billing Context",
                     "Core Integration Team",
                     "Analiza funkcjonalna: incydent dotyka procesu billingowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
@@ -42,9 +42,9 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
             return new InitialAnalysisResponse(
                     "test-ai-provider",
                     "DATABASE_LOCK",
-                    "Order persistence update",
-                    "Order Management Context",
-                    "Order Persistence Team",
+                    "Customer persistence update",
+                    "Customer Management Context",
+                    "Customer Persistence Team",
                     "Analiza funkcjonalna: incydent dotyka zapisu zamowienia po walidacji domenowej.",
                     "Analiza techniczna: sprawdz zakres transakcji, blokady sesji i ostatnie zmiany w warstwie persistence.",
                     "medium",

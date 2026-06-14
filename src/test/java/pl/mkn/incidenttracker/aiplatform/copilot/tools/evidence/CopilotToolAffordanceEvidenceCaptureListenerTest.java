@@ -56,7 +56,7 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                               "opctx_get_entity(type=codeSearchScope,id=collateral-management-code-search-scope,include=[codeSearch])"
                             ],
                             "suggestedTools": ["opctx_search"],
-                            "reasonToExpand": "Need full repository hint inventory before GitLab search.",
+                            "reasonToExpand": "Need full repository hint customer-profile before GitLab search.",
                             "omittedBecause": ["full codeSearch hints are expanded-only"],
                             "limitations": ["default omits low-signal source refs"],
                             "links": [
@@ -120,7 +120,7 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                 "call-1",
                 "opctx_search",
                 "{}",
-                "{\"status\":\"ok\",\"results\":[{\"id\":\"system/clp-limit-process\"}]}"
+                "{\"status\":\"ok\",\"results\":[{\"id\":\"system/crm-limit-process\"}]}"
         ));
 
         assertTrue(captured.isEmpty());
@@ -139,7 +139,7 @@ class CopilotToolAffordanceEvidenceCaptureListenerTest {
                         "corr-123",
                         "dev3",
                         "main",
-                        "sample/runtime"
+                        "CRM/runtime"
                 ),
                 "sdk-session-1",
                 toolCallId,

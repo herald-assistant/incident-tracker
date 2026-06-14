@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 class GitLabEndpointUseCaseTraversalServiceTest {
 
     private static final String GROUP = "CRM";
-    private static final String PROJECT = "crm-product-service";
+    private static final String PROJECT = "crm-customer-service";
     private static final String BRANCH = "main";
     private static final String SOURCE_PREFIX = "src/main/java";
 
@@ -34,75 +34,75 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
     @Test
     void shouldBuildCompactGetEndpointUseCaseContext() {
-        var files = crmProductSources();
+        var files = crmCustomerSources();
         stubRepository(files);
         var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
 
         var result = traversalService.traverse(
                 session,
-                endpoint("GET /api/products/{productId} -> DataProductController#getProduct", "GET", "getProduct"),
+                endpoint("GET /api/customers/{customerId} -> CustomerController#getCustomer", "GET", "getCustomer"),
                 new GitLabEndpointUseCaseLimits(6, 30, 80, false, false, 0, false)
         );
 
         var byPath = filesByPath(result);
         assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER,
-                byPath.get(path("api/DataProductController.java")).role());
+                byPath.get(path("api/CustomerController.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_PORT,
-                byPath.get(path("domain/ProductRepositoryPort.java")).role());
+                byPath.get(path("domain/CustomerRepositoryPort.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_IMPLEMENTATION,
-                byPath.get(path("adapter/out/ProductQueryRepository.java")).role());
+                byPath.get(path("adapter/out/CustomerQueryRepository.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.MAPPER,
-                byPath.get(path("api/ProductWebModelMapper.java")).role());
+                byPath.get(path("api/CustomerMapper.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.MAPPER,
-                byPath.get(path("api/OverdraftWebModelMapper.java")).role());
+                byPath.get(path("api/CustomerProfileMapper.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.MAPPER,
-                byPath.get(path("api/MultilineWebModelMapper.java")).role());
+                byPath.get(path("api/MultilineModelMapper.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.PROJECTION,
-                byPath.get(path("domain/OverdraftFormView.java")).role());
+                byPath.get(path("domain/CustomerProfileFormView.java")).role());
         assertTrue(byPath.containsKey(path("domain/MultilineFormView.java")), byPath.keySet().toString());
         assertEquals(GitLabEndpointUseCaseFileRole.PROJECTION,
                 byPath.get(path("domain/MultilineFormView.java")).role());
-        assertTrue(byPath.get(path("api/DataProductController.java")).symbols().contains("getProductWebModel"));
+        assertTrue(byPath.get(path("api/CustomerController.java")).symbols().contains("getCustomerModel"));
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.MAPPER_CALL
-                        && relation.to().contains("ProductWebModelMapper#from")));
+                        && relation.to().contains("CustomerMapper#from")));
         assertFalse(result.limits().maxDepthReached());
         assertFalse(result.limits().maxFilesReached());
     }
 
     @Test
     void shouldBuildCompactPutEndpointUseCaseContextWithUseCaseServiceAndDomainMethod() {
-        var files = crmProductSources();
+        var files = crmCustomerSources();
         stubRepository(files);
         var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
 
         var result = traversalService.traverse(
                 session,
-                endpoint("PUT /api/products/{productId} -> DataProductController#updateProduct", "PUT", "updateProduct"),
+                endpoint("PUT /api/customers/{customerId} -> CustomerController#updateCustomer", "PUT", "updateCustomer"),
                 new GitLabEndpointUseCaseLimits(6, 35, 90, false, false, 0, false)
         );
 
         var byPath = filesByPath(result);
         assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_PORT,
-                byPath.get(path("application/UpdateProductPort.java")).role());
+                byPath.get(path("application/UpdateCustomerPort.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
-                byPath.get(path("application/UpdateProductService.java")).role());
+                byPath.get(path("application/UpdateCustomerService.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_IMPLEMENTATION,
-                byPath.get(path("adapter/out/ProductQueryRepository.java")).role());
+                byPath.get(path("adapter/out/CustomerQueryRepository.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_IMPLEMENTATION,
-                byPath.get(path("adapter/out/ProductCommandRepository.java")).role());
+                byPath.get(path("adapter/out/CustomerCommandRepository.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL,
-                byPath.get(path("domain/Product.java")).role());
+                byPath.get(path("domain/Customer.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.MAPPER,
-                byPath.get(path("api/ProductWebModelMapper.java")).role());
-        assertTrue(byPath.get(path("domain/Product.java")).symbols().contains("update"));
-        assertTrue(byPath.get(path("domain/Product.java")).symbols().contains("calculateStatus"));
+                byPath.get(path("api/CustomerMapper.java")).role());
+        assertTrue(byPath.get(path("domain/Customer.java")).symbols().contains("update"));
+        assertTrue(byPath.get(path("domain/Customer.java")).symbols().contains("calculateStatus"));
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
-                        && relation.to().contains("UpdateProductService#update")));
+                        && relation.to().contains("UpdateCustomerService#update")));
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.DOMAIN_METHOD_CALL
-                        && relation.to().contains("Product#update")));
+                        && relation.to().contains("Customer#update")));
         assertFalse(byPath.containsKey(path("domain/DecisionChangeEvent.java")), byPath.keySet().toString());
         assertFalse(byPath.containsKey(path("domain/CreditCaseUpdatedEvent.java")), byPath.keySet().toString());
         assertFalse(result.relations().stream()
@@ -118,55 +118,55 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 PROJECT,
                 BRANCH
         );
-        var controllerPath = "crm-product-service/product-adapter/src/main/java/com/example/crm/product/api/DataProductController.java";
-        var portPath = "crm-product-service/product-application/src/main/java/com/example/crm/product/application/UpdateProductPort.java";
-        var servicePath = "crm-product-service/product-application/src/main/java/com/example/crm/product/application/UpdateProductService.java";
-        var productPath = "crm-product-service/product-domain/src/main/java/com/example/crm/product/domain/Product.java";
+        var controllerPath = "crm-customer-service/customer-adapter/src/main/java/com/example/crm/customer/api/CustomerController.java";
+        var portPath = "crm-customer-service/customer-application/src/main/java/com/example/crm/customer/application/UpdateCustomerPort.java";
+        var servicePath = "crm-customer-service/customer-application/src/main/java/com/example/crm/customer/application/UpdateCustomerService.java";
+        var customerPath = "crm-customer-service/customer-domain/src/main/java/com/example/crm/customer/domain/Customer.java";
         var sources = new LinkedHashMap<String, String>();
         sources.put(controllerPath, """
-                package com.example.crm.product.api;
+                package com.example.crm.customer.api;
 
-                import com.example.crm.product.application.UpdateProductPort;
-                import com.example.crm.product.domain.Product;
+                import com.example.crm.customer.application.UpdateCustomerPort;
+                import com.example.crm.customer.domain.Customer;
                 import lombok.RequiredArgsConstructor;
                 import org.springframework.web.bind.annotation.RestController;
 
                 @RestController
                 @RequiredArgsConstructor
-                class DataProductController {
-                    private final UpdateProductPort updateProductPort;
+                class CustomerController {
+                    private final UpdateCustomerPort updateCustomerPort;
 
-                    public void updateProduct(Product product) {
-                        this.updateProductPort.update(product);
+                    public void updateCustomer(Customer customer) {
+                        this.updateCustomerPort.update(customer);
                     }
                 }
                 """);
         sources.put(portPath, """
-                package com.example.crm.product.application;
+                package com.example.crm.customer.application;
 
-                import com.example.crm.product.domain.Product;
+                import com.example.crm.customer.domain.Customer;
 
-                interface UpdateProductPort {
-                    void update(Product product);
+                interface UpdateCustomerPort {
+                    void update(Customer customer);
                 }
                 """);
         sources.put(servicePath, """
-                package com.example.crm.product.application;
+                package com.example.crm.customer.application;
 
-                import com.example.crm.product.domain.Product;
+                import com.example.crm.customer.domain.Customer;
                 import org.springframework.stereotype.Service;
 
                 @Service
-                class UpdateProductService implements UpdateProductPort {
-                    public void update(Product product) {
-                        product.update();
+                class UpdateCustomerService implements UpdateCustomerPort {
+                    public void update(Customer customer) {
+                        customer.update();
                     }
                 }
                 """);
-        sources.put(productPath, """
-                package com.example.crm.product.domain;
+        sources.put(customerPath, """
+                package com.example.crm.customer.domain;
 
-                public class Product {
+                public class Customer {
                     public void update() {
                     }
                 }
@@ -177,16 +177,16 @@ class GitLabEndpointUseCaseTraversalServiceTest {
         var result = traversalService.traverse(
                 session,
                 new GitLabEndpointUseCaseEndpointContext(
-                        "PUT /api/products/{productId} -> DataProductController#updateProduct",
+                        "PUT /api/customers/{customerId} -> CustomerController#updateCustomer",
                         List.of("PUT"),
-                        "/api/products/{productId}",
+                        "/api/customers/{customerId}",
                         null,
-                        "com.example.crm.product.api.DataProductController",
-                        "updateProduct",
+                        "com.example.crm.customer.api.CustomerController",
+                        "updateCustomer",
                         controllerPath,
                         1,
                         20,
-                        List.of("Product"),
+                        List.of("Customer"),
                         List.of(),
                         List.of(),
                         GitLabEndpointUseCaseConfidence.HIGH,
@@ -199,49 +199,49 @@ class GitLabEndpointUseCaseTraversalServiceTest {
         var byPath = filesByPath(result);
         assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_PORT, byPath.get(portPath).role());
         assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE, byPath.get(servicePath).role());
-        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL, byPath.get(productPath).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL, byPath.get(customerPath).role());
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INJECTED_PORT_CALL
-                        && relation.to().contains("UpdateProductPort#update")));
+                        && relation.to().contains("UpdateCustomerPort#update")));
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
-                        && relation.to().contains("UpdateProductService#update")));
+                        && relation.to().contains("UpdateCustomerService#update")));
     }
 
     @Test
     void shouldRespectMaxDepthLimit() {
-        var files = crmProductSources();
+        var files = crmCustomerSources();
         stubRepository(files);
         var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
 
         var result = traversalService.traverse(
                 session,
-                endpoint("PUT /api/products/{productId} -> DataProductController#updateProduct", "PUT", "updateProduct"),
+                endpoint("PUT /api/customers/{customerId} -> CustomerController#updateCustomer", "PUT", "updateCustomer"),
                 new GitLabEndpointUseCaseLimits(1, 35, 90, false, false, 0, false)
         );
 
         assertTrue(result.limits().maxDepthReached());
-        var product = filesByPath(result).get(path("domain/Product.java"));
-        assertTrue(product == null || !product.symbols().contains("calculateStatus"));
+        var customer = filesByPath(result).get(path("domain/Customer.java"));
+        assertTrue(customer == null || !customer.symbols().contains("calculateStatus"));
     }
 
     private GitLabEndpointUseCaseEndpointContext endpoint(String endpointId, String method, String handlerMethod) {
         return new GitLabEndpointUseCaseEndpointContext(
                 endpointId,
                 List.of(method),
-                "/api/products/{productId}",
+                "/api/customers/{customerId}",
                 null,
-                "com.example.crm.product.api.DataProductController",
+                "com.example.crm.customer.api.CustomerController",
                 handlerMethod,
-                path("api/DataProductController.java"),
+                path("api/CustomerController.java"),
                 1,
                 20,
-                List.of("ProductWebModel"),
-                List.of("ProductWebModel"),
-                List.of("OpenAPI contract src/main/resources/openapi/product-api.yaml"),
+                List.of("CustomerModel"),
+                List.of("CustomerModel"),
+                List.of("OpenAPI contract src/main/resources/openapi/customer-api.yaml"),
                 GitLabEndpointUseCaseConfidence.HIGH,
                 List.of(),
-                List.of("src/main/resources/openapi/product-api.yaml via gitlab_read_repository_file")
+                List.of("src/main/resources/openapi/customer-api.yaml via gitlab_read_repository_file")
         );
     }
 
@@ -290,158 +290,158 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 ));
     }
 
-    private Map<String, String> crmProductSources() {
+    private Map<String, String> crmCustomerSources() {
         var sources = new LinkedHashMap<String, String>();
-        sources.put(path("api/DataProductController.java"), """
-                package com.example.crm.product.api;
+        sources.put(path("api/CustomerController.java"), """
+                package com.example.crm.customer.api;
 
-                import com.example.crm.product.application.UpdateProductPort;
-                import com.example.crm.product.domain.FormView;
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductRepositoryPort;
-                import com.example.crm.product.domain.ProductType;
+                import com.example.crm.customer.application.UpdateCustomerPort;
+                import com.example.crm.customer.domain.FormView;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
+                import com.example.crm.customer.domain.CustomerType;
                 import lombok.RequiredArgsConstructor;
                 import org.springframework.web.bind.annotation.RestController;
 
                 @RestController
                 @RequiredArgsConstructor
-                class DataProductController implements DataProductApi {
-                    private final ProductRepositoryPort.Query productQueryRepository;
-                    private final UpdateProductPort updateProductPort;
+                class CustomerController implements CustomerApi {
+                    private final CustomerRepositoryPort.Query customerQueryRepository;
+                    private final UpdateCustomerPort updateCustomerPort;
 
-                    public ProductWebModel getProduct(String productId) {
-                        return getProductWebModel(productQueryRepository.getProductFormView(productId));
+                    public CustomerModel getCustomer(String customerId) {
+                        return getCustomerModel(customerQueryRepository.getCustomerFormView(customerId));
                     }
 
-                    public ProductWebModel updateProduct(String productId, ProductWebModel webModel) {
-                        Product product = ProductWebModelMapper.INSTANCE.from(webModel);
-                        updateProductPort.update(product);
-                        return getProductWebModel(productQueryRepository.getProductFormView(productId));
+                    public CustomerModel updateCustomer(String customerId, CustomerModel model) {
+                        Customer customer = CustomerMapper.INSTANCE.from(model);
+                        updateCustomerPort.update(customer);
+                        return getCustomerModel(customerQueryRepository.getCustomerFormView(customerId));
                     }
 
-                    private String getTtaId(String productId) {
-                        return productId;
+                    private String getTtaId(String customerId) {
+                        return customerId;
                     }
 
-                    private ProductWebModel getProductWebModel(FormView<ProductType> formView) {
-                        return ProductWebModelMapper.INSTANCE.from(formView);
+                    private CustomerModel getCustomerModel(FormView<CustomerType> formView) {
+                        return CustomerMapper.INSTANCE.from(formView);
                     }
                 }
                 """);
-        sources.put(path("api/DataProductApi.java"), """
-                package com.example.crm.product.api;
+        sources.put(path("api/CustomerApi.java"), """
+                package com.example.crm.customer.api;
 
-                interface DataProductApi {
-                    ProductWebModel getProduct(String productId);
-                    ProductWebModel updateProduct(String productId, ProductWebModel webModel);
+                interface CustomerApi {
+                    CustomerModel getCustomer(String customerId);
+                    CustomerModel updateCustomer(String customerId, CustomerModel model);
                 }
                 """);
-        sources.put(path("api/ProductWebModel.java"), """
-                package com.example.crm.product.api;
+        sources.put(path("api/CustomerModel.java"), """
+                package com.example.crm.customer.api;
 
-                record ProductWebModel(String type) {
+                record CustomerModel(String type) {
                 }
                 """);
-        sources.put(path("api/ProductWebModelMapper.java"), """
-                package com.example.crm.product.api;
+        sources.put(path("api/CustomerMapper.java"), """
+                package com.example.crm.customer.api;
 
-                import com.example.crm.product.domain.FormView;
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductType;
+                import com.example.crm.customer.domain.FormView;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerType;
                 import org.mapstruct.Mapper;
                 import org.mapstruct.factory.Mappers;
 
                 @Mapper
-                interface ProductWebModelMapper {
-                    ProductWebModelMapper INSTANCE = Mappers.getMapper(ProductWebModelMapper.class);
+                interface CustomerMapper {
+                    CustomerMapper INSTANCE = Mappers.getMapper(CustomerMapper.class);
 
-                    default Product from(ProductWebModel webModel) {
-                        return switch (webModel.type()) {
-                            case "OVERDRAFT" -> OverdraftWebModelMapper.INSTANCE.fromOverdraft(webModel);
-                            default -> MultilineWebModelMapper.INSTANCE.fromMultiline(webModel);
+                    default Customer from(CustomerModel model) {
+                        return switch (model.type()) {
+                            case "CUSTOMER_PROFILE" -> CustomerProfileMapper.INSTANCE.fromCustomerProfile(model);
+                            default -> MultilineModelMapper.INSTANCE.fromMultiline(model);
                         };
                     }
 
-                    default ProductWebModel from(FormView<ProductType> formView) {
+                    default CustomerModel from(FormView<CustomerType> formView) {
                         return switch (formView.type()) {
-                            case OVERDRAFT -> OverdraftWebModelMapper.INSTANCE.toWebModel(formView);
-                            case MULTILINE -> MultilineWebModelMapper.INSTANCE.toWebModel(formView);
+                            case CUSTOMER_PROFILE -> CustomerProfileMapper.INSTANCE.toModel(formView);
+                            case MULTILINE -> MultilineModelMapper.INSTANCE.toModel(formView);
                         };
                     }
                 }
                 """);
-        sources.put(path("api/OverdraftWebModelMapper.java"), """
-                package com.example.crm.product.api;
+        sources.put(path("api/CustomerProfileMapper.java"), """
+                package com.example.crm.customer.api;
 
-                import com.example.crm.product.domain.FormView;
-                import com.example.crm.product.domain.Overdraft;
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductType;
+                import com.example.crm.customer.domain.FormView;
+                import com.example.crm.customer.domain.CustomerProfile;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerType;
                 import org.mapstruct.Mapper;
                 import org.mapstruct.factory.Mappers;
 
                 @Mapper
-                interface OverdraftWebModelMapper {
-                    OverdraftWebModelMapper INSTANCE = Mappers.getMapper(OverdraftWebModelMapper.class);
+                interface CustomerProfileMapper {
+                    CustomerProfileMapper INSTANCE = Mappers.getMapper(CustomerProfileMapper.class);
 
-                    default Product fromOverdraft(ProductWebModel webModel) {
-                        return new Overdraft();
+                    default Customer fromCustomerProfile(CustomerModel model) {
+                        return new CustomerProfile();
                     }
 
-                    ProductWebModel toWebModel(com.example.crm.product.domain.OverdraftFormView formView);
+                    CustomerModel toModel(com.example.crm.customer.domain.CustomerProfileFormView formView);
                 }
                 """);
-        sources.put(path("api/MultilineWebModelMapper.java"), """
-                package com.example.crm.product.api;
+        sources.put(path("api/MultilineModelMapper.java"), """
+                package com.example.crm.customer.api;
 
-                import com.example.crm.product.domain.FormView;
-                import com.example.crm.product.domain.Multiline;
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductType;
+                import com.example.crm.customer.domain.FormView;
+                import com.example.crm.customer.domain.Multiline;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerType;
                 import org.mapstruct.Mapper;
                 import org.mapstruct.factory.Mappers;
 
                 @Mapper
-                interface MultilineWebModelMapper {
-                    MultilineWebModelMapper INSTANCE = Mappers.getMapper(MultilineWebModelMapper.class);
+                interface MultilineModelMapper {
+                    MultilineModelMapper INSTANCE = Mappers.getMapper(MultilineModelMapper.class);
 
-                    default Product fromMultiline(ProductWebModel webModel) {
+                    default Customer fromMultiline(CustomerModel model) {
                         return new Multiline();
                     }
 
-                    ProductWebModel toWebModel(com.example.crm.product.domain.MultilineFormView formView);
+                    CustomerModel toModel(com.example.crm.customer.domain.MultilineFormView formView);
                 }
                 """);
-        sources.put(path("application/UpdateProductPort.java"), """
-                package com.example.crm.product.application;
+        sources.put(path("application/UpdateCustomerPort.java"), """
+                package com.example.crm.customer.application;
 
-                import com.example.crm.product.domain.Product;
+                import com.example.crm.customer.domain.Customer;
 
-                interface UpdateProductPort {
-                    void update(Product product);
+                interface UpdateCustomerPort {
+                    void update(Customer customer);
                 }
                 """);
-        sources.put(path("application/UpdateProductService.java"), """
-                package com.example.crm.product.application;
+        sources.put(path("application/UpdateCustomerService.java"), """
+                package com.example.crm.customer.application;
 
-                import com.example.crm.product.domain.CreditCaseUpdatedEvent;
-                import com.example.crm.product.domain.DecisionChangeEvent;
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductRepositoryPort;
+                import com.example.crm.customer.domain.CreditCaseUpdatedEvent;
+                import com.example.crm.customer.domain.DecisionChangeEvent;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
                 import lombok.RequiredArgsConstructor;
                 import org.springframework.context.event.EventListener;
                 import org.springframework.stereotype.Service;
 
                 @Service
                 @RequiredArgsConstructor
-                class UpdateProductService implements UpdateProductPort {
-                    private final ProductRepositoryPort.Query queryRepository;
-                    private final ProductRepositoryPort.Command commandRepository;
+                class UpdateCustomerService implements UpdateCustomerPort {
+                    private final CustomerRepositoryPort.Query queryRepository;
+                    private final CustomerRepositoryPort.Command commandRepository;
 
-                    public void update(Product product) {
-                        Product current = queryRepository.getProductForUpdate(product.productId());
-                        product.update(current);
-                        commandRepository.update(product);
+                    public void update(Customer customer) {
+                        Customer current = queryRepository.getCustomerForUpdate(customer.customerId());
+                        customer.update(current);
+                        commandRepository.update(customer);
                     }
 
                     @EventListener
@@ -455,149 +455,149 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                     }
                 }
                 """);
-        sources.put(path("domain/ProductRepositoryPort.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/CustomerRepositoryPort.java"), """
+                package com.example.crm.customer.domain;
 
-                public interface ProductRepositoryPort {
+                public interface CustomerRepositoryPort {
                     interface Query {
-                        FormView<ProductType> getProductFormView(String productId);
-                        Product getProductForUpdate(String productId);
+                        FormView<CustomerType> getCustomerFormView(String customerId);
+                        Customer getCustomerForUpdate(String customerId);
                     }
 
                     interface Command {
-                        void update(Product product);
+                        void update(Customer customer);
                     }
                 }
                 """);
-        sources.put(path("adapter/out/ProductQueryRepository.java"), """
-                package com.example.crm.product.adapter.out;
+        sources.put(path("adapter/out/CustomerQueryRepository.java"), """
+                package com.example.crm.customer.adapter.out;
 
-                import com.example.crm.product.domain.FormView;
-                import com.example.crm.product.domain.OverdraftFormView;
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductEntity;
-                import com.example.crm.product.domain.ProductRepositoryPort;
-                import com.example.crm.product.domain.ProductType;
+                import com.example.crm.customer.domain.FormView;
+                import com.example.crm.customer.domain.CustomerProfileFormView;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerEntity;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
+                import com.example.crm.customer.domain.CustomerType;
                 import lombok.RequiredArgsConstructor;
                 import org.springframework.data.jpa.repository.JpaRepository;
                 import org.springframework.stereotype.Repository;
 
                 @Repository
                 @RequiredArgsConstructor
-                class ProductQueryRepository implements ProductRepositoryPort.Query {
-                    private final ProductQueryJpaRepository productQueryJpaRepository;
-                    private final OverdraftQueryJpaRepository overdraftQueryJpaRepository;
+                class CustomerQueryRepository implements CustomerRepositoryPort.Query {
+                    private final CustomerQueryJpaRepository customerQueryJpaRepository;
+                    private final CustomerProfileQueryJpaRepository customerProfileQueryJpaRepository;
 
-                    public FormView<ProductType> getProductFormView(String productId) {
-                        productQueryJpaRepository.findByProductId(productId);
-                        return new OverdraftFormView();
+                    public FormView<CustomerType> getCustomerFormView(String customerId) {
+                        customerQueryJpaRepository.findByCustomerId(customerId);
+                        return new CustomerProfileFormView();
                     }
 
-                    public Product getProductForUpdate(String productId) {
-                        productQueryJpaRepository.findByProductId(productId);
-                        return new Product();
+                    public Customer getCustomerForUpdate(String customerId) {
+                        customerQueryJpaRepository.findByCustomerId(customerId);
+                        return new Customer();
                     }
                 }
 
-                interface ProductQueryJpaRepository extends JpaRepository<ProductEntity, Long> {
-                    ProductEntity findByProductId(String productId);
+                interface CustomerQueryJpaRepository extends JpaRepository<CustomerEntity, Long> {
+                    CustomerEntity findByCustomerId(String customerId);
                 }
 
-                interface OverdraftQueryJpaRepository extends JpaRepository<OverdraftFormView, Long> {
+                interface CustomerProfileQueryJpaRepository extends JpaRepository<CustomerProfileFormView, Long> {
                 }
                 """);
-        sources.put(path("adapter/out/ProductCommandRepository.java"), """
-                package com.example.crm.product.adapter.out;
+        sources.put(path("adapter/out/CustomerCommandRepository.java"), """
+                package com.example.crm.customer.adapter.out;
 
-                import com.example.crm.product.domain.Product;
-                import com.example.crm.product.domain.ProductEntity;
-                import com.example.crm.product.domain.ProductRepositoryPort;
+                import com.example.crm.customer.domain.Customer;
+                import com.example.crm.customer.domain.CustomerEntity;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
                 import lombok.RequiredArgsConstructor;
                 import org.springframework.data.jpa.repository.JpaRepository;
                 import org.springframework.stereotype.Repository;
 
                 @Repository
                 @RequiredArgsConstructor
-                class ProductCommandRepository implements ProductRepositoryPort.Command {
-                    private final ProductCommandJpaRepository productCommandJpaRepository;
+                class CustomerCommandRepository implements CustomerRepositoryPort.Command {
+                    private final CustomerCommandJpaRepository customerCommandJpaRepository;
 
-                    public void update(Product product) {
-                        productCommandJpaRepository.save(product);
+                    public void update(Customer customer) {
+                        customerCommandJpaRepository.save(customer);
                     }
                 }
 
-                interface ProductCommandJpaRepository extends JpaRepository<ProductEntity, Long> {
+                interface CustomerCommandJpaRepository extends JpaRepository<CustomerEntity, Long> {
                 }
                 """);
         sources.put(path("domain/FormView.java"), """
-                package com.example.crm.product.domain;
+                package com.example.crm.customer.domain;
 
                 interface FormView<T> {
                     T type();
                 }
                 """);
-        sources.put(path("domain/OverdraftFormView.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/CustomerProfileFormView.java"), """
+                package com.example.crm.customer.domain;
 
-                public class OverdraftFormView implements FormView<ProductType> {
-                    public ProductType type() {
-                        return ProductType.OVERDRAFT;
+                public class CustomerProfileFormView implements FormView<CustomerType> {
+                    public CustomerType type() {
+                        return CustomerType.CUSTOMER_PROFILE;
                     }
                 }
                 """);
         sources.put(path("domain/MultilineFormView.java"), """
-                package com.example.crm.product.domain;
+                package com.example.crm.customer.domain;
 
-                public class MultilineFormView implements FormView<ProductType> {
-                    public ProductType type() {
-                        return ProductType.MULTILINE;
+                public class MultilineFormView implements FormView<CustomerType> {
+                    public CustomerType type() {
+                        return CustomerType.MULTILINE;
                     }
                 }
                 """);
-        sources.put(path("domain/Product.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/Customer.java"), """
+                package com.example.crm.customer.domain;
 
-                public class Product {
-                    public String productId() {
-                        return "product-1";
+                public class Customer {
+                    public String customerId() {
+                        return "customer-1";
                     }
 
-                    public void update(Product current) {
+                    public void update(Customer current) {
                         calculateStatus();
                     }
 
-                    private ProductStatus calculateStatus() {
-                        return ProductStatus.ACTIVE;
+                    private CustomerStatus calculateStatus() {
+                        return CustomerStatus.ACTIVE;
                     }
                 }
                 """);
-        sources.put(path("domain/Overdraft.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/CustomerProfile.java"), """
+                package com.example.crm.customer.domain;
 
-                public class Overdraft extends Product {
+                public class CustomerProfile extends Customer {
                 }
                 """);
         sources.put(path("domain/Multiline.java"), """
-                package com.example.crm.product.domain;
+                package com.example.crm.customer.domain;
 
-                public class Multiline extends Product {
+                public class Multiline extends Customer {
                 }
                 """);
-        sources.put(path("domain/ProductEntity.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/CustomerEntity.java"), """
+                package com.example.crm.customer.domain;
 
-                public class ProductEntity {
+                public class CustomerEntity {
                 }
                 """);
-        sources.put(path("domain/ProductStatus.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/CustomerStatus.java"), """
+                package com.example.crm.customer.domain;
 
-                enum ProductStatus {
+                enum CustomerStatus {
                     ACTIVE
                 }
                 """);
         sources.put(path("domain/DecisionChangeEvent.java"), """
-                package com.example.crm.product.domain;
+                package com.example.crm.customer.domain;
 
                 public class DecisionChangeEvent {
                     public void recalculateDecision() {
@@ -605,34 +605,34 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 }
                 """);
         sources.put(path("domain/CreditCaseUpdatedEvent.java"), """
-                package com.example.crm.product.domain;
+                package com.example.crm.customer.domain;
 
                 public class CreditCaseUpdatedEvent {
                     public void refreshCreditCase() {
                     }
                 }
                 """);
-        sources.put(path("domain/ProductType.java"), """
-                package com.example.crm.product.domain;
+        sources.put(path("domain/CustomerType.java"), """
+                package com.example.crm.customer.domain;
 
-                public enum ProductType {
-                    OVERDRAFT,
+                public enum CustomerType {
+                    CUSTOMER_PROFILE,
                     MULTILINE
                 }
                 """);
-        sources.put("src/main/resources/openapi/product-api.yaml", """
+        sources.put("src/main/resources/openapi/customer-api.yaml", """
                 openapi: 3.0.0
                 paths:
-                  /api/products/{productId}:
+                  /api/customers/{customerId}:
                     get:
-                      operationId: getProduct
+                      operationId: getCustomer
                     put:
-                      operationId: updateProduct
+                      operationId: updateCustomer
                 """);
         return sources;
     }
 
     private String path(String relativePath) {
-        return SOURCE_PREFIX + "/com/example/crm/product/" + relativePath;
+        return SOURCE_PREFIX + "/com/example/crm/customer/" + relativePath;
     }
 }

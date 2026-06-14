@@ -64,7 +64,7 @@ class DeploymentContextEvidenceProviderTest {
         var lookupAttributes = attributesByName(lookupItem);
         assertEquals("2026-04-11T20:57:33.285Z", lookupAttributes.get("incidentStart"));
         assertEquals("2026-04-11T20:57:33.285Z", lookupAttributes.get("incidentEnd"));
-        assertEquals("tenant-alpha-main-uat2", lookupAttributes.get("namespaces"));
+        assertEquals("crm-main-uat2", lookupAttributes.get("namespaces"));
         assertEquals("backend-uat2", lookupAttributes.get("podNames"));
         assertEquals("backend", lookupAttributes.get("containerNames"));
         assertEquals("case-evaluation-service", lookupAttributes.get("serviceNames"));
@@ -100,10 +100,10 @@ class DeploymentContextEvidenceProviderTest {
                         null,
                         "main",
                         null,
-                        "tenant-alpha-main-uat2",
+                        "crm-main-uat2",
                         "backend-uat2",
                         "backend",
-                        "reg.local/tenant-alpha-main-uat2/backend:60-release-candidate-123",
+                        "reg.local/crm-main-uat2/backend:60-release-candidate-123",
                         "test-index",
                         correlationId,
                         false,

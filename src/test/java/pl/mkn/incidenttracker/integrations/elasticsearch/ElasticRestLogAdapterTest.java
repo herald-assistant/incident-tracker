@@ -63,7 +63,7 @@ class ElasticRestLogAdapterTest {
                             },
                             "hits": [
                               {
-                                "_index": ".ds-projects.TENANT-ALPHA.prj000000104201-2026.03.27-000377",
+                                "_index": ".ds-projects.CRM.prj000000104201-2026.03.27-000377",
                                 "_id": "AZ1-Vg6o1WPiTTEp9_tC",
                                 "_source": {
                                   "@timestamp": "2026-04-11T20:57:33.285Z",
@@ -81,14 +81,14 @@ class ElasticRestLogAdapterTest {
                                     "container": {
                                       "name": "backend"
                                     },
-                                    "namespace": "tenant-alpha-main-dev1",
+                                    "namespace": "crm-main-dev1",
                                     "pod": {
                                       "name": "backend-846b75885c-4v4gp"
                                     }
                                   },
                                   "container": {
                                     "image": {
-                                      "name": "reg.local/tenant-alpha-main-dev1/backend:20260409"
+                                      "name": "reg.local/crm-main-dev1/backend:20260409"
                                     }
                                   }
                                 }
@@ -107,7 +107,7 @@ class ElasticRestLogAdapterTest {
         assertEquals("ERROR", result.entries().get(0).level());
         assertEquals("case-evaluation-service", result.entries().get(0).serviceName());
         assertEquals("c.e.synthetic.workflow.WorkflowApiExceptionHandler", result.entries().get(0).className());
-        assertEquals("tenant-alpha-main-dev1", result.entries().get(0).namespace());
+        assertEquals("crm-main-dev1", result.entries().get(0).namespace());
         assertTrue(result.entries().get(0).exceptionTruncated());
         assertEquals(40, result.entries().get(0).exception().length());
 
@@ -161,7 +161,7 @@ class ElasticRestLogAdapterTest {
                             },
                             "hits": [
                               {
-                                "_index": ".ds-projects.TENANT-ALPHA.prj000000104201-2026.03.27-000377",
+                                "_index": ".ds-projects.CRM.prj000000104201-2026.03.27-000377",
                                 "_id": "AZ1929sS-w-FXjZZz8cy",
                                 "_source": {
                                   "@timestamp": "2026-04-11T18:43:24.519Z",

@@ -36,16 +36,16 @@ class GitLabEndpointUseCaseContextServiceTest {
     @Test
     void shouldBuildContextForEndpointId() {
         var endpoint = endpoint(
-                "GET /api/products/{id} -> com.example.crm.ProductController#getProduct",
+                "GET /api/customers/{id} -> com.example.crm.CustomerController#getCustomer",
                 List.of("GET"),
-                "/api/products/{id}",
-                "getProduct"
+                "/api/customers/{id}",
+                "getCustomer"
         );
         when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(endpoint)));
-        stubControllerSource("CRM", "crm-product-service", "release/1", endpoint.filePath());
+        stubControllerSource("CRM", "crm-customer-service", "release/1", endpoint.filePath());
 
         var result = service.buildContext("CRM", "release/1", new GitLabEndpointUseCaseContextRequest(
-                "crm-product-service",
+                "crm-customer-service",
                 endpoint.endpointId(),
                 null,
                 null,
@@ -55,26 +55,26 @@ class GitLabEndpointUseCaseContextServiceTest {
         ));
 
         assertEquals("CRM", result.repository().group());
-        assertEquals("crm-product-service", result.repository().projectName());
+        assertEquals("crm-customer-service", result.repository().projectName());
         assertEquals("release/1", result.repository().branch());
         assertEquals(endpoint.endpointId(), result.endpoint().endpointId());
         assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER, result.files().get(0).role());
-        assertEquals("src/main/java/com/example/crm/ProductController.java", result.files().get(0).path());
-        assertTrue(result.files().get(0).symbols().contains("getProduct"));
+        assertEquals("src/main/java/com/example/crm/CustomerController.java", result.files().get(0).path());
+        assertTrue(result.files().get(0).symbols().contains("getCustomer"));
         assertFalse(result.limits().maxFilesReached());
 
         var endpointRequest = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
         verify(endpointService).listEndpoints(endpointRequest.capture());
         assertEquals("CRM", endpointRequest.getValue().group());
-        assertEquals("crm-product-service", endpointRequest.getValue().projectName());
+        assertEquals("crm-customer-service", endpointRequest.getValue().projectName());
         assertEquals("release/1", endpointRequest.getValue().branch());
         assertNull(endpointRequest.getValue().endpointPathPrefix());
         assertNull(endpointRequest.getValue().httpMethod());
         verify(repositoryPort).readFile(
                 "CRM",
-                "crm-product-service",
+                "crm-customer-service",
                 "release/1",
-                "src/main/java/com/example/crm/ProductController.java",
+                "src/main/java/com/example/crm/CustomerController.java",
                 120_000
         );
     }
@@ -82,50 +82,50 @@ class GitLabEndpointUseCaseContextServiceTest {
     @Test
     void shouldBuildContextForHttpMethodAndPath() {
         var endpoint = endpoint(
-                "PUT /api/products/{id} -> com.example.crm.ProductController#updateProduct",
+                "PUT /api/customers/{id} -> com.example.crm.CustomerController#updateCustomer",
                 List.of("PUT"),
-                "/api/products/{id}",
-                "updateProduct"
+                "/api/customers/{id}",
+                "updateCustomer"
         );
         when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(endpoint)));
-        stubControllerSource("CRM", "crm-product-service", "main", endpoint.filePath());
+        stubControllerSource("CRM", "crm-customer-service", "main", endpoint.filePath());
 
         var result = service.buildContext("CRM", "main", new GitLabEndpointUseCaseContextRequest(
-                "crm-product-service",
+                "crm-customer-service",
                 null,
                 "put",
-                "/api/products/{id}",
+                "/api/customers/{id}",
                 4,
                 10,
                 null
         ));
 
-        assertEquals("updateProduct", result.endpoint().handlerMethod());
+        assertEquals("updateCustomer", result.endpoint().handlerMethod());
         assertTrue(result.files().stream()
-                .anyMatch(file -> file.path().equals("src/main/java/com/example/crm/ProductController.java")
-                        && file.symbols().contains("updateProduct")));
+                .anyMatch(file -> file.path().equals("src/main/java/com/example/crm/CustomerController.java")
+                        && file.symbols().contains("updateCustomer")));
 
         var endpointRequest = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
         verify(endpointService).listEndpoints(endpointRequest.capture());
-        assertEquals("/api/products/{id}", endpointRequest.getValue().endpointPathPrefix());
+        assertEquals("/api/customers/{id}", endpointRequest.getValue().endpointPathPrefix());
         assertEquals("PUT", endpointRequest.getValue().httpMethod());
     }
 
     @Test
     void shouldReturnCompactResultWhenEndpointNotFound() {
         var candidate = endpoint(
-                "GET /api/products/{id}/history -> com.example.crm.ProductController#getHistory",
+                "GET /api/customers/{id}/history -> com.example.crm.CustomerController#getHistory",
                 List.of("GET"),
-                "/api/products/{id}/history",
+                "/api/customers/{id}/history",
                 "getHistory"
         );
         when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(candidate)));
 
         var result = service.buildContext("CRM", "main", new GitLabEndpointUseCaseContextRequest(
-                "crm-product-service",
+                "crm-customer-service",
                 null,
                 "GET",
-                "/api/products/{id}",
+                "/api/customers/{id}",
                 null,
                 null,
                 null
@@ -138,30 +138,30 @@ class GitLabEndpointUseCaseContextServiceTest {
         assertEquals(1, result.unresolved().size());
         assertTrue(result.unresolved().get(0).reason().contains("ENDPOINT_NOT_FOUND"));
         assertTrue(result.suggestedNextReads().get(0)
-                .contains("crm-product-service:src/main/java/com/example/crm/ProductController.java"));
+                .contains("crm-customer-service:src/main/java/com/example/crm/CustomerController.java"));
         verifyNoInteractions(repositoryPort);
     }
 
     @Test
     void shouldReturnCompactResultWhenEndpointIsAmbiguous() {
         var first = endpoint(
-                "GET /api/products/{id} -> com.example.crm.ProductController#getProduct",
+                "GET /api/customers/{id} -> com.example.crm.CustomerController#getCustomer",
                 List.of("GET"),
-                "/api/products/{id}",
-                "getProduct"
+                "/api/customers/{id}",
+                "getCustomer"
         );
         var second = new GitLabRepositoryEndpoint(
-                "GET /api/products/{id} -> com.example.crm.LegacyProductController#getProduct",
+                "GET /api/customers/{id} -> com.example.crm.LegacyCustomerController#getCustomer",
                 List.of("GET"),
-                "/api/products/{id}",
-                "/api/products/{id}",
-                "com.example.crm.LegacyProductController",
-                "getProduct",
-                "src/main/java/com/example/crm/LegacyProductController.java",
+                "/api/customers/{id}",
+                "/api/customers/{id}",
+                "com.example.crm.LegacyCustomerController",
+                "getCustomer",
+                "src/main/java/com/example/crm/LegacyCustomerController.java",
                 1,
                 5,
                 List.of(),
-                List.of("ProductWebModel"),
+                List.of("CustomerModel"),
                 List.of(),
                 "medium",
                 List.of(),
@@ -170,10 +170,10 @@ class GitLabEndpointUseCaseContextServiceTest {
         when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(first, second)));
 
         var result = service.buildContext("CRM", "main", new GitLabEndpointUseCaseContextRequest(
-                "crm-product-service",
+                "crm-customer-service",
                 null,
                 "GET",
-                "/api/products/{id}",
+                "/api/customers/{id}",
                 null,
                 null,
                 null
@@ -190,7 +190,7 @@ class GitLabEndpointUseCaseContextServiceTest {
     @Test
     void shouldReturnInvalidRequestWithoutCallingGitLab() {
         var result = service.buildContext("CRM", "main", new GitLabEndpointUseCaseContextRequest(
-                "crm-product-service",
+                "crm-customer-service",
                 null,
                 null,
                 null,
@@ -220,17 +220,17 @@ class GitLabEndpointUseCaseContextServiceTest {
                         import org.springframework.web.bind.annotation.RestController;
 
                         @RestController
-                        class ProductController {
-                            ProductWebModel getProduct(String id) {
-                                return new ProductWebModel(id);
+                        class CustomerController {
+                            CustomerModel getCustomer(String id) {
+                                return new CustomerModel(id);
                             }
 
-                            ProductWebModel updateProduct(String id) {
-                                return new ProductWebModel(id);
+                            CustomerModel updateCustomer(String id) {
+                                return new CustomerModel(id);
                             }
                         }
 
-                        record ProductWebModel(String id) {
+                        record CustomerModel(String id) {
                         }
                         """, false));
     }
@@ -238,7 +238,7 @@ class GitLabEndpointUseCaseContextServiceTest {
     private GitLabRepositoryEndpointListResult endpointList(List<GitLabRepositoryEndpoint> endpoints) {
         return new GitLabRepositoryEndpointListResult(
                 "CRM",
-                "crm-product-service",
+                "crm-customer-service",
                 "main",
                 null,
                 null,
@@ -261,13 +261,13 @@ class GitLabEndpointUseCaseContextServiceTest {
                 httpMethods,
                 path,
                 path,
-                "com.example.crm.ProductController",
+                "com.example.crm.CustomerController",
                 handlerMethod,
-                "src/main/java/com/example/crm/ProductController.java",
+                "src/main/java/com/example/crm/CustomerController.java",
                 1,
                 5,
-                List.of("ProductWebModel"),
-                List.of("ProductWebModel"),
+                List.of("CustomerModel"),
+                List.of("CustomerModel"),
                 List.of("RestController"),
                 "high",
                 List.of(),

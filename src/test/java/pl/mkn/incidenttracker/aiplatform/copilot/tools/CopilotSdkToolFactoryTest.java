@@ -81,7 +81,7 @@ class CopilotSdkToolFactoryTest {
                 .setSessionId(sessionContext.copilotSessionId())
                 .setToolCallId("tool-call-ctx-1")
                 .setToolName("context_echo")
-                .setArguments(objectMapper.valueToTree(Map.of("projectName", "orders-api")));
+                .setArguments(objectMapper.valueToTree(Map.of("projectName", "crm-customer-api")));
 
         var result = tool.handler().invoke(invocation).join();
 
@@ -90,9 +90,9 @@ class CopilotSdkToolFactoryTest {
         @SuppressWarnings("unchecked")
         var payload = (Map<String, Object>) result;
 
-        assertEquals("orders-api", payload.get("projectName"));
+        assertEquals("crm-customer-api", payload.get("projectName"));
         assertEquals("corr-123", payload.get("correlationId"));
-        assertEquals("sample/runtime", payload.get("gitLabGroup"));
+        assertEquals("CRM/runtime", payload.get("gitLabGroup"));
         assertEquals("release/2026.04", payload.get("gitLabBranch"));
         assertEquals("zt01", payload.get("environment"));
         assertEquals("incident-analysis", payload.get("featureName"));
@@ -113,7 +113,7 @@ class CopilotSdkToolFactoryTest {
                 .setSessionId("analysis-other")
                 .setToolCallId("tool-call-ctx-2")
                 .setToolName("context_echo")
-                .setArguments(objectMapper.valueToTree(Map.of("projectName", "orders-api")));
+                .setArguments(objectMapper.valueToTree(Map.of("projectName", "crm-customer-api")));
 
         var exception = assertThrows(CompletionException.class, () -> tool.handler().invoke(invocation).join());
 
@@ -250,8 +250,8 @@ class CopilotSdkToolFactoryTest {
                 .setToolCallId("tool-call-1")
                 .setToolName("gitlab_read_repository_file_chunk")
                 .setArguments(objectMapper.valueToTree(Map.of(
-                        "projectName", "edge-client-service",
-                        "filePath", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                        "projectName", "crm-customer-client-service",
+                        "filePath", "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                         "startLine", 5,
                         "endLine", 12,
                         "maxCharacters", 4_000,
@@ -265,10 +265,10 @@ class CopilotSdkToolFactoryTest {
         @SuppressWarnings("unchecked")
         var chunkResult = (Map<String, Object>) result;
 
-        assertEquals("sample/runtime", chunkResult.get("group"));
-        assertEquals("edge-client-service", chunkResult.get("projectName"));
+        assertEquals("CRM/runtime", chunkResult.get("group"));
+        assertEquals("crm-customer-client-service", chunkResult.get("projectName"));
         assertEquals("release/2026.04", chunkResult.get("branch"));
-        assertEquals("src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java", chunkResult.get("filePath"));
+        assertEquals("src/main/java/com/example/synthetic/edge/CustomerProfileClient.java", chunkResult.get("filePath"));
         assertEquals(5, chunkResult.get("returnedStartLine"));
         assertEquals(12, chunkResult.get("returnedEndLine"));
         assertEquals(14, chunkResult.get("totalLines"));
@@ -278,7 +278,7 @@ class CopilotSdkToolFactoryTest {
         assertEquals("gitlab", capturedSection.get().provider());
         assertEquals("tool-fetched-code", capturedSection.get().category());
         assertEquals(1, capturedSection.get().items().size());
-        assertTrue(capturedSection.get().items().get(0).title().contains("CatalogGatewayClient.java"));
+        assertTrue(capturedSection.get().items().get(0).title().contains("CustomerProfileClient.java"));
     }
 
     @Test
@@ -300,15 +300,15 @@ class CopilotSdkToolFactoryTest {
                 .setArguments(objectMapper.valueToTree(Map.of(
                         "chunks", List.of(
                                 Map.of(
-                                        "projectName", "edge-client-service",
-                                        "filePath", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                                        "projectName", "crm-customer-client-service",
+                                        "filePath", "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                                         "startLine", 5,
                                         "endLine", 12,
                                         "maxCharacters", 4_000
                                 ),
                                 Map.of(
-                                        "projectName", "ledger-write-service",
-                                        "filePath", "src/main/java/com/example/synthetic/ledger/LedgerTransactionService.java",
+                                        "projectName", "crm-customer-account-service",
+                                        "filePath", "src/main/java/com/example/crm/customer/account/CustomerAccountService.java",
                                         "startLine", 4,
                                         "endLine", 8,
                                         "maxCharacters", 4_000
@@ -328,8 +328,8 @@ class CopilotSdkToolFactoryTest {
         var returnedChunks = (List<Map<String, Object>>) chunksResult.get("chunks");
 
         assertEquals(2, returnedChunks.size());
-        assertEquals("edge-client-service", returnedChunks.get(0).get("projectName"));
-        assertEquals("ledger-write-service", returnedChunks.get(1).get("projectName"));
+        assertEquals("crm-customer-client-service", returnedChunks.get(0).get("projectName"));
+        assertEquals("crm-customer-account-service", returnedChunks.get(1).get("projectName"));
         assertNotNull(capturedSection.get());
         assertEquals("gitlab", capturedSection.get().provider());
         assertEquals("tool-fetched-code", capturedSection.get().category());
@@ -359,7 +359,7 @@ class CopilotSdkToolFactoryTest {
         hiddenContext.put(AgentToolContextKeys.CORRELATION_ID, "corr-123");
         hiddenContext.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
         hiddenContext.put(AgentToolContextKeys.GITLAB_BRANCH, "release/2026.04");
-        hiddenContext.put(AgentToolContextKeys.GITLAB_GROUP, "sample/runtime");
+        hiddenContext.put(AgentToolContextKeys.GITLAB_GROUP, "CRM/runtime");
         hiddenContext.put("featureName", "incident-analysis");
 
         return new CopilotToolSessionContext(

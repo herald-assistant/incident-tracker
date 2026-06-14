@@ -81,7 +81,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
 
     private AnalysisOrchestrator orchestrator(InitialAnalysisProvider initialAnalysisProvider) {
         var gitLabProperties = new GitLabProperties();
-        gitLabProperties.setGroup("sample/runtime");
+        gitLabProperties.setGroup("CRM/runtime");
         var deploymentContextResolver = new DeploymentContextResolver();
 
         return new AnalysisOrchestrator(

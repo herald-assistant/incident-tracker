@@ -139,17 +139,17 @@ class GitLabEndpointUseCaseContextModelTest {
     @Test
     void shouldKeepUnresolvedReferenceListsNullSafe() {
         var unresolved = new GitLabEndpointUseCaseUnresolvedReference(
-                " ProductRepositoryPort.Query ",
+                " CustomerRepositoryPort.Query ",
                 "\\src\\main\\java\\com\\example\\crm\\CustomerController.java",
                 " multiple implementations ",
                 List.of(" implements Query ", " "),
-                List.of(" ProductQueryRepository.java ")
+                List.of(" CustomerQueryRepository.java ")
         );
 
-        assertEquals("ProductRepositoryPort.Query", unresolved.symbol());
+        assertEquals("CustomerRepositoryPort.Query", unresolved.symbol());
         assertEquals("src/main/java/com/example/crm/CustomerController.java", unresolved.ownerPath());
         assertEquals("multiple implementations", unresolved.reason());
         assertEquals(List.of("implements Query"), unresolved.searchedKeywords());
-        assertEquals(List.of("ProductQueryRepository.java"), unresolved.candidates());
+        assertEquals(List.of("CustomerQueryRepository.java"), unresolved.candidates());
     }
 }

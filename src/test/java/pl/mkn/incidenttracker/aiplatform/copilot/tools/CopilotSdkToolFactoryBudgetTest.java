@@ -122,7 +122,7 @@ class CopilotSdkToolFactoryBudgetTest {
                 "corr-123",
                 "zt01",
                 "main",
-                "sample/runtime"
+                "CRM/runtime"
         );
         budgetRegistry.registerSession(context.copilotSessionId());
         return context;

@@ -23,7 +23,7 @@ import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.too
 
 class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
 
-    private static final String FILE_PATH = "src/main/java/pl/mkn/orders/OrderService.java";
+    private static final String FILE_PATH = "src/main/java/com/example/crm/customer/CustomerService.java";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -76,14 +76,14 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
         assertEquals("Czytam caly plik.", attributes.get("reason"));
         assertEquals("full file content", attributes.get("content"));
         assertFalse(attributes.containsKey("startLine"));
-        assertTrue(attributes.get("filePath").contains("OrderService.java"));
+        assertTrue(attributes.get("filePath").contains("CustomerService.java"));
     }
 
     private String fullFileResult(String content) {
         return """
                 {
-                  "group": "sample/runtime",
-                  "projectName": "orders-api",
+                  "group": "CRM/runtime",
+                  "projectName": "crm-customer-api",
                   "branch": "main",
                   "filePath": "%s",
                   "content": "%s",
@@ -95,8 +95,8 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
     private String chunkResult(String content) {
         return """
                 {
-                  "group": "sample/runtime",
-                  "projectName": "orders-api",
+                  "group": "CRM/runtime",
+                  "projectName": "crm-customer-api",
                   "branch": "main",
                   "filePath": "%s",
                   "requestedStartLine": 5,
@@ -127,7 +127,7 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
             String rawResult
     ) {
         listener.onToolInvocationFinished(new CopilotToolInvocationFinishedEvent(
-                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "sample/runtime"),
+                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "CRM/runtime"),
                 sessionId,
                 toolCallId,
                 toolName,

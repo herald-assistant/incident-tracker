@@ -8,7 +8,7 @@ class GitLabEndpointUseCaseTraversalStateTest {
 
     private final GitLabEndpointUseCaseRepositoryContext repository = new GitLabEndpointUseCaseRepositoryContext(
             "CRM",
-            "crm-product-service",
+            "crm-customer-service",
             "main"
     );
 
@@ -17,8 +17,8 @@ class GitLabEndpointUseCaseTraversalStateTest {
         var state = new GitLabEndpointUseCaseTraversalState(repository, null, 5, 20);
 
         state.enqueue(new GitLabEndpointUseCaseTraversalNode(
-                "src/main/java/com/example/ProductWebModelMapper.java",
-                "ProductWebModelMapper",
+                "src/main/java/com/example/CustomerMapper.java",
+                "CustomerMapper",
                 "from",
                 1,
                 1,
@@ -27,8 +27,8 @@ class GitLabEndpointUseCaseTraversalStateTest {
                 "Mapper method called from traversed flow."
         ));
         state.enqueue(new GitLabEndpointUseCaseTraversalNode(
-                "src/main/java/com/example/UpdateProductService.java",
-                "UpdateProductService",
+                "src/main/java/com/example/UpdateCustomerService.java",
+                "UpdateCustomerService",
                 "update",
                 1,
                 1,
@@ -37,8 +37,8 @@ class GitLabEndpointUseCaseTraversalStateTest {
                 "Implementation method for injected interface call."
         ));
 
-        assertEquals("UpdateProductService", state.poll().typeName());
-        assertEquals("ProductWebModelMapper", state.poll().typeName());
+        assertEquals("UpdateCustomerService", state.poll().typeName());
+        assertEquals("CustomerMapper", state.poll().typeName());
     }
 
     @Test

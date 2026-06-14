@@ -39,7 +39,7 @@ class GitLabJavaExternalTypePolicyTest {
 
     @Test
     void shouldKeepLocalGeneratedApiTypesInRepositoryLookupScope() {
-        var decision = policy.classify("com.example.crm.generated.DataProductApi");
+        var decision = policy.classify("com.example.crm.generated.CustomerApi");
 
         assertEquals(GitLabJavaExternalTypeClassification.LOCAL_LOOKUP_FIRST, decision.classification());
         assertEquals("LOCAL_LOOKUP_FIRST", decision.signal());
@@ -50,7 +50,7 @@ class GitLabJavaExternalTypePolicyTest {
     void shouldMarkInternalSharedLibraryMissAsTerminalBoundary() {
         var decision = policy.localLookupMiss(
                 "SharedCustomerPolicy",
-                "pl.centrum24.crm.contract.SharedCustomerPolicy"
+                "com.example.crm.contract.SharedCustomerPolicy"
         );
 
         assertEquals(GitLabJavaExternalTypeClassification.TERMINAL_BOUNDARY, decision.classification());

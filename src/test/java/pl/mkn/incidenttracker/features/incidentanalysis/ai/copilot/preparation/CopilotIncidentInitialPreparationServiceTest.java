@@ -116,7 +116,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("correlationId: timeout-123"));
             assertTrue(prompt.contains("environment: dev3"));
             assertTrue(prompt.contains("gitLabBranch: release/2026.04"));
-            assertTrue(prompt.contains("gitLabGroup: sample/runtime"));
+            assertTrue(prompt.contains("gitLabGroup: CRM/runtime"));
             assertTrue(prompt.contains("Analyze the incident artifacts as the primary source of truth."));
             assertTrue(prompt.contains("Read `00-incident-manifest.json` first"));
             assertTrue(prompt.contains("then read `01-incident-digest.md`"));
@@ -135,7 +135,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 01-incident-digest.md | mimeType=text/markdown>>>"));
             assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 02-elasticsearch-logs.md | mimeType=text/markdown>>>"));
             assertTrue(prompt.contains("\"deliveryMode\" : \"embedded-prompt\""));
-            assertTrue(prompt.contains("Read timed out while calling catalog-service"));
+            assertTrue(prompt.contains("Read timed out while calling crm-customer-profile-service"));
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
@@ -240,9 +240,9 @@ class CopilotIncidentInitialPreparationServiceTest {
             var logsContent = prepared.session().artifactContents().get("02-elasticsearch-logs.md");
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
             assertTrue(logsContent.contains("## itemId: elastic-logs-001"));
-            assertTrue(logsContent.contains("Log entry `1` `ERROR` `billing-service`"));
+            assertTrue(logsContent.contains("Log entry `1` `ERROR` `crm-billing-service`"));
             assertTrue(logsContent.contains("- message:"));
-            assertTrue(logsContent.contains("Read timed out while calling catalog-service"));
+            assertTrue(logsContent.contains("Read timed out while calling crm-customer-profile-service"));
             assertFalse(logsContent.contains("\"provider\""));
 
             var dynatraceContent = prepared.session().artifactContents().get("03-dynatrace-runtime-signals.md");
@@ -256,7 +256,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             var gitLabContent = prepared.session().artifactContents().get("04-gitlab-resolved-code.md");
             assertTrue(gitLabContent.contains("GitLab resolved code references"));
             assertTrue(gitLabContent.contains("## itemId: gitlab-resolved-code-001"));
-            assertTrue(gitLabContent.contains("- repository: `edge-client-service`"));
+            assertTrue(gitLabContent.contains("- repository: `crm-customer-client-service`"));
             assertTrue(gitLabContent.contains("- returned lines: `5-12` of `14`"));
             assertTrue(gitLabContent.contains("```java"));
             assertFalse(gitLabContent.contains("\"content\""));
@@ -292,7 +292,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                     "timeout-123".equals(context.correlationId())
                             && "dev3".equals(context.environment())
                             && "release/2026.04".equals(context.gitLabBranch())
-                            && "sample/runtime".equals(context.gitLabGroup())
+                            && "CRM/runtime".equals(context.gitLabGroup())
                             && context.analysisRunId() != null
                             && !context.analysisRunId().isBlank()
                             && context.copilotSessionId() != null
@@ -406,7 +406,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "corr-123",
                 "dev1",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of()
         );
 
@@ -427,7 +427,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "corr-123",
                 "dev1",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(),
                 new AnalysisAiOptions("gpt-5.3-codex", "high")
         );
@@ -446,7 +446,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "corr-123",
                 "dev1",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of()
         );
 
@@ -471,7 +471,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "corr-123",
                 "dev1",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of()
         );
 
@@ -490,7 +490,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "corr-123",
                 "dev1",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of()
         );
 
@@ -551,18 +551,18 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "timeout-123",
                 "dev3",
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(new AnalysisEvidenceSection(
                         "elasticsearch",
                         "logs",
                         List.of(new AnalysisEvidenceItem(
-                                "billing-service log entry",
+                                "crm-billing-service log entry",
                                 List.of(
                                         new AnalysisEvidenceAttribute("timestamp", "2026-04-11T20:57:33.285Z"),
                                         new AnalysisEvidenceAttribute("level", "ERROR"),
-                                        new AnalysisEvidenceAttribute("serviceName", "billing-service"),
-                                        new AnalysisEvidenceAttribute("className", "com.example.synthetic.BillingService"),
-                                        new AnalysisEvidenceAttribute("message", "Read timed out while calling catalog-service")
+                                        new AnalysisEvidenceAttribute("serviceName", "crm-billing-service"),
+                                        new AnalysisEvidenceAttribute("className", "com.example.synthetic.CustomerBillingService"),
+                                        new AnalysisEvidenceAttribute("message", "Read timed out while calling crm-customer-profile-service")
                                 )
                         ))
                 ), new AnalysisEvidenceSection(
@@ -611,15 +611,15 @@ class CopilotIncidentInitialPreparationServiceTest {
                         "gitlab",
                         "resolved-code",
                         List.of(new AnalysisEvidenceItem(
-                                "edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java around line 8",
+                                "crm-customer-client-service file src/main/java/com/example/synthetic/edge/CustomerProfileClient.java around line 8",
                                 List.of(
                                         new AnalysisEvidenceAttribute("environment", "dev3"),
                                         new AnalysisEvidenceAttribute("branch", "release/2026.04"),
-                                        new AnalysisEvidenceAttribute("group", "sample/runtime"),
-                                        new AnalysisEvidenceAttribute("projectName", "edge-client-service"),
-                                        new AnalysisEvidenceAttribute("filePath", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"),
+                                        new AnalysisEvidenceAttribute("group", "CRM/runtime"),
+                                        new AnalysisEvidenceAttribute("projectName", "crm-customer-client-service"),
+                                        new AnalysisEvidenceAttribute("filePath", "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java"),
                                         new AnalysisEvidenceAttribute("referenceType", "STACKTRACE_SYMBOL"),
-                                        new AnalysisEvidenceAttribute("symbol", "com.example.synthetic.edge.CatalogGatewayClient"),
+                                        new AnalysisEvidenceAttribute("symbol", "com.example.synthetic.edge.CustomerProfileClient"),
                                         new AnalysisEvidenceAttribute("lineNumber", "8"),
                                         new AnalysisEvidenceAttribute("resolveScore", "95"),
                                         new AnalysisEvidenceAttribute("requestedStartLine", "5"),
@@ -630,8 +630,8 @@ class CopilotIncidentInitialPreparationServiceTest {
                                         new AnalysisEvidenceAttribute(
                                                 "content",
                                                 """
-                                                        public class CatalogGatewayClient {
-                                                            CatalogResponse fetchCatalog(String sku) {
+                                                        public class CustomerProfileClient {
+                                                            CustomerProfileResponse fetchCustomerProfile(String sku) {
                                                                 return webClient.get();
                                                             }
                                                         }
@@ -649,14 +649,14 @@ class CopilotIncidentInitialPreparationServiceTest {
                 "timeout-123",
                 "dev3",
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(new AnalysisEvidenceSection(
                         "operational-context",
                         "matched-context",
                         List.of(new AnalysisEvidenceItem(
                                 "Operational context summary",
                                 List.of(
-                                        new AnalysisEvidenceAttribute("team", "Billing Team"),
+                                        new AnalysisEvidenceAttribute("team", "CRM Team"),
                                         new AnalysisEvidenceAttribute("process", "Rozliczenie katalogu")
                                 )
                         ))

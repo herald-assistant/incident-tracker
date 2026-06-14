@@ -29,7 +29,7 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
         var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new InitialAnalysisRequest("corr-json", "zt01", "main", "sample/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-json", "zt01", "main", "CRM/runtime", List.of());
         var preparedRequest = mock(CopilotPreparedSession.class);
 
         when(preparationService.prepare(request)).thenReturn(new CopilotInitialAnalysisPreparation(request, preparedRequest));

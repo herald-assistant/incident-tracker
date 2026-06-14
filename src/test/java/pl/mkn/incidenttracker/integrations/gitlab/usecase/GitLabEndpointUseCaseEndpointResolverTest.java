@@ -31,7 +31,7 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 "getCustomer",
                 "high"
         );
-        when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(endpoint), List.of("inventory limitation")));
+        when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(endpoint), List.of("crm limitation")));
 
         var resolution = resolver.resolve("CRM", "main", new GitLabEndpointUseCaseContextRequest(
                 "crm-customer-service",
@@ -50,7 +50,7 @@ class GitLabEndpointUseCaseEndpointResolverTest {
         assertEquals(endpoint.endpointId(), resolution.endpoint().endpointId());
         assertEquals("getCustomer", resolution.endpoint().handlerMethod());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolution.endpoint().confidence());
-        assertEquals(List.of("inventory limitation", "endpoint limitation"), resolution.limitations());
+        assertEquals(List.of("crm limitation", "endpoint limitation"), resolution.limitations());
         assertEquals(List.of("OpenApiContract"), resolution.endpoint().annotations());
 
         var captor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);

@@ -8,9 +8,9 @@ import java.util.Map;
 public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
     private static final Map<String, String> FILE_CONTENTS = Map.of(
-            repositoryKey("orders-api", "src/main/java/com/example/synthetic/orders/api/OrderController.java"),
+            repositoryKey("crm-customer-api", "src/main/java/com/example/crm/customer/api/CustomerController.java"),
             """
-                    package com.example.synthetic.orders.api;
+                    package com.example.crm.customer.api;
 
                     import jakarta.validation.Valid;
                     import org.springframework.http.ResponseEntity;
@@ -22,66 +22,66 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
                     import org.springframework.web.bind.annotation.RestController;
 
                     @RestController
-                    @RequestMapping("/api/orders")
-                    public class OrderController {
+                    @RequestMapping("/api/customers")
+                    public class CustomerController {
 
-                        @GetMapping("/{orderId}")
-                        public ResponseEntity<OrderResponse> getOrder(@PathVariable String orderId) {
-                            return ResponseEntity.ok(new OrderResponse(orderId));
+                        @GetMapping("/{customerId}")
+                        public ResponseEntity<OrderResponse> getCustomer(@PathVariable String customerId) {
+                            return ResponseEntity.ok(new OrderResponse(customerId));
                         }
 
                         @PostMapping(path = "/")
                         public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest request) {
-                            return new OrderResponse(request.orderId());
+                            return new OrderResponse(request.customerId());
                         }
                     }
                     """,
-            repositoryKey("orders-api", "src/main/java/com/example/synthetic/orders/service/OrderService.java"),
+            repositoryKey("crm-customer-api", "src/main/java/com/example/crm/customer/service/CustomerService.java"),
             """
-                    package com.example.synthetic.orders.service;
+                    package com.example.crm.customer.service;
 
-                    public class OrderService {
+                    public class CustomerService {
                     }
                     """,
-            repositoryKey("edge-client-service", "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"),
+            repositoryKey("crm-customer-client-service", "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java"),
             """
                     package com.example.synthetic.edge;
 
-                    public class CatalogGatewayClient {
+                    public class CustomerProfileClient {
 
-                        public CatalogResponse fetchCatalog(String sku) {
-                            return catalogWebClient.get()
-                                    .uri("/catalog/{sku}", sku)
+                        public CustomerProfileResponse fetchCustomerProfile(String sku) {
+                            return customerProfileWebClient.get()
+                                    .uri("/customer-profile/{sku}", sku)
                                     .retrieve()
-                                    .bodyToMono(CatalogResponse.class)
+                                    .bodyToMono(CustomerProfileResponse.class)
                                     .timeout(Duration.ofSeconds(2))
                                     .block();
                         }
 
                     }
                     """,
-            repositoryKey("ledger-write-service", "src/main/java/com/example/synthetic/ledger/LedgerTransactionService.java"),
+            repositoryKey("crm-customer-account-service", "src/main/java/com/example/crm/customer/account/CustomerAccountService.java"),
             """
-                    package com.example.synthetic.ledger;
+                    package com.example.crm.customer.account;
 
-                    public class LedgerTransactionService {
+                    public class CustomerAccountService {
 
-                        public void updateOrder(Order order) {
+                        public void updateOrder(Customer customer) {
                             transactionTemplate.executeWithoutResult(status -> {
-                                orderRepository.save(order);
+                                customerRepository.save(order);
                                 auditRepository.save(new AuditEntry(order.id()));
                             });
                         }
 
                     }
                     """,
-            repositoryKey("WORKFLOWS/DOCUMENT_WORKFLOW", "src/main/java/com/example/synthetic/workflow/DocumentWorkflowService.java"),
+            repositoryKey("CRM_WORKFLOWS/CUSTOMER_WORKFLOW", "src/main/java/com/example/synthetic/workflow/CustomerWorkflowService.java"),
             """
                     package com.example.synthetic.workflow;
 
-                    public class DocumentWorkflowService {
+                    public class CustomerWorkflowService {
 
-                        public void removeDocuments() {
+                        public void archiveInactiveProfiles() {
                             // synthetic test content for deterministic project resolution
                         }
 
@@ -94,21 +94,21 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
         var candidates = new ArrayList<GitLabRepositoryProjectCandidate>();
         var hints = new LinkedHashSet<>(projectHints);
 
-        if ("TENANT-ALPHA".equals(group)
-                && (hints.contains("document-workflow")
-                || hints.contains("document_workflow")
-                || hints.contains("DOCUMENT_WORKFLOW")
-                || hints.contains("document-workflow"))) {
+        if ("CRM".equals(group)
+                && (hints.contains("crm-customer-workflow")
+                || hints.contains("customer_workflow")
+                || hints.contains("CUSTOMER_WORKFLOW")
+                || hints.contains("crm-customer-workflow"))) {
             candidates.add(new GitLabRepositoryProjectCandidate(
                     group,
-                    "WORKFLOWS/DOCUMENT_WORKFLOW",
-                    "Matched TENANT-ALPHA component hint document_workflow in subgroup project.",
+                    "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
+                    "Matched CRM component hint customer_workflow in subgroup project.",
                     120
             ));
         }
 
         for (var hint : hints) {
-            if ("edge-client-service".equals(hint) || "ledger-write-service".equals(hint)) {
+            if ("crm-customer-client-service".equals(hint) || "crm-customer-account-service".equals(hint)) {
                 candidates.add(new GitLabRepositoryProjectCandidate(
                         group,
                         hint,
@@ -131,41 +131,41 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
         var projectNames = new LinkedHashSet<>(query.projectNames());
         var keywords = query.keywords();
 
-        if (projectNames.contains("billing-service")
-                || projectNames.contains("catalog-service")
-                || projectNames.contains("edge-client-service")
+        if (projectNames.contains("crm-billing-service")
+                || projectNames.contains("crm-customer-profile-service")
+                || projectNames.contains("crm-customer-client-service")
                 || keywords.contains("timeout")) {
             candidates.add(new GitLabRepositoryFileCandidate(
                     query.group(),
-                    "edge-client-service",
+                    "crm-customer-client-service",
                     query.branch(),
-                    "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                    "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                     "Matched timeout-related service and log keywords.",
                     95
             ));
         }
 
-        if (projectNames.contains("ledger-write-service") || keywords.contains("deadlock")) {
+        if (projectNames.contains("crm-customer-account-service") || keywords.contains("deadlock")) {
             candidates.add(new GitLabRepositoryFileCandidate(
                     query.group(),
-                    "ledger-write-service",
+                    "crm-customer-account-service",
                     query.branch(),
-                    "src/main/java/com/example/synthetic/ledger/LedgerTransactionService.java",
+                    "src/main/java/com/example/crm/customer/account/CustomerAccountService.java",
                     "Matched deadlock-related service and log keywords.",
                     93
             ));
         }
 
-        if ((projectNames.contains("document-workflow")
-                || projectNames.contains("document_workflow")
-                || projectNames.contains("WORKFLOWS/DOCUMENT_WORKFLOW"))
-                && (keywords.contains("document") || keywords.contains("agreement"))) {
+        if ((projectNames.contains("crm-customer-workflow")
+                || projectNames.contains("customer_workflow")
+                || projectNames.contains("CRM_WORKFLOWS/CUSTOMER_WORKFLOW"))
+                && (keywords.contains("customer-profile") || keywords.contains("customer"))) {
             candidates.add(new GitLabRepositoryFileCandidate(
                     query.group(),
-                    "WORKFLOWS/DOCUMENT_WORKFLOW",
+                    "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
                     query.branch(),
-                    "src/main/java/com/example/synthetic/workflow/DocumentWorkflowService.java",
-                    "Matched document-workflow component to TENANT-ALPHA agreement repository.",
+                    "src/main/java/com/example/synthetic/workflow/CustomerWorkflowService.java",
+                    "Matched crm-customer-workflow component to CRM customer repository.",
                     96
             ));
         }

@@ -20,7 +20,7 @@ class CopilotIncidentPromptRendererTest {
                 "corr-123",
                 "dev3",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of()
         );
         var policy = new CopilotIncidentToolAccessPolicy(
@@ -65,7 +65,7 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("- correlationId: corr-123"));
         assertTrue(prompt.contains("- environment: dev3"));
         assertTrue(prompt.contains("- gitLabBranch: main"));
-        assertTrue(prompt.contains("- gitLabGroup: sample/runtime"));
+        assertTrue(prompt.contains("- gitLabGroup: CRM/runtime"));
         assertTrue(prompt.contains("Return only valid JSON."));
         assertTrue(prompt.contains("The final answer must start with `{` and end with `}`."));
         assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before the JSON."));

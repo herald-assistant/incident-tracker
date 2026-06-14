@@ -29,40 +29,40 @@ class GitLabJavaDependencyModelBuilderTest {
 
     @Test
     void shouldDetectLombokRequiredArgsConstructorFinalFieldDependencies() {
-        var astFile = astFile("src/main/java/com/example/crm/product/DataProductController.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+                package com.example.crm.customer;
 
                 import lombok.RequiredArgsConstructor;
                 import org.springframework.web.bind.annotation.RestController;
 
                 @RestController
                 @RequiredArgsConstructor
-                class DataProductController {
-                    private final UpdateProductPort updateProductPort;
-                    private final ProductRepositoryPort.Query productQueryRepository;
+                class CustomerController {
+                    private final UpdateCustomerPort updateCustomerPort;
+                    private final CustomerRepositoryPort.Query customerQueryRepository;
                     private final String systemName;
-                    private ProductRepositoryPort.Command commandRepository;
-                    private final ProductRepositoryPort.Command initializedCommandRepository = null;
+                    private CustomerRepositoryPort.Command commandRepository;
+                    private final CustomerRepositoryPort.Command initializedCommandRepository = null;
                 }
                 """);
 
-        var model = builder.build(astFile, "DataProductController");
+        var model = builder.build(astFile, "CustomerController");
 
-        assertEquals("DataProductController", model.bean().simpleName());
+        assertEquals("CustomerController", model.bean().simpleName());
         assertTrue(model.bean().potentialBean());
         assertEquals(List.of("RestController"), model.bean().stereotypeAnnotations());
         assertEquals(2, model.injectedDependencies().size());
         assertDependency(
                 model.injectedDependencies().get(0),
-                "updateProductPort",
-                "UpdateProductPort",
+                "updateCustomerPort",
+                "UpdateCustomerPort",
                 GitLabJavaInjectionSource.LOMBOK_REQUIRED_ARGS,
                 null
         );
         assertDependency(
                 model.injectedDependencies().get(1),
-                "productQueryRepository",
-                "ProductRepositoryPort.Query",
+                "customerQueryRepository",
+                "CustomerRepositoryPort.Query",
                 GitLabJavaInjectionSource.LOMBOK_REQUIRED_ARGS,
                 null
         );
@@ -70,37 +70,37 @@ class GitLabJavaDependencyModelBuilderTest {
 
     @Test
     void shouldDetectConstructorInjectionAndSkipFrameworkValues() {
-        var astFile = astFile("src/main/java/com/example/crm/product/UpdateProductService.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/UpdateCustomerService.java", """
+                package com.example.crm.customer;
 
                 import java.time.Clock;
                 import org.springframework.stereotype.Service;
 
                 @Service
-                class UpdateProductService {
-                    UpdateProductService(ProductRepositoryPort.Query productQueryRepository,
-                                         ProductRepositoryPort.Command productCommandRepository,
+                class UpdateCustomerService {
+                    UpdateCustomerService(CustomerRepositoryPort.Query customerQueryRepository,
+                                         CustomerRepositoryPort.Command customerCommandRepository,
                                          Clock clock) {
                     }
                 }
                 """);
 
-        var model = builder.build(astFile, "UpdateProductService");
+        var model = builder.build(astFile, "UpdateCustomerService");
 
         assertTrue(model.bean().potentialBean());
         assertEquals(List.of("Service"), model.bean().stereotypeAnnotations());
         assertEquals(2, model.injectedDependencies().size());
         assertDependency(
                 model.injectedDependencies().get(0),
-                "productQueryRepository",
-                "ProductRepositoryPort.Query",
+                "customerQueryRepository",
+                "CustomerRepositoryPort.Query",
                 GitLabJavaInjectionSource.CONSTRUCTOR,
                 null
         );
         assertDependency(
                 model.injectedDependencies().get(1),
-                "productCommandRepository",
-                "ProductRepositoryPort.Command",
+                "customerCommandRepository",
+                "CustomerRepositoryPort.Command",
                 GitLabJavaInjectionSource.CONSTRUCTOR,
                 null
         );
@@ -167,34 +167,34 @@ class GitLabJavaDependencyModelBuilderTest {
 
     @Test
     void shouldDetectCustomBeanStereotypes() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
                 @AdapterBean
                 @UseCaseBean
-                class ProductQueryRepository {
+                class CustomerQueryRepository {
                 }
                 """);
 
-        var model = builder.build(astFile, "ProductQueryRepository");
+        var model = builder.build(astFile, "CustomerQueryRepository");
 
         assertTrue(model.bean().potentialBean());
         assertEquals(List.of("AdapterBean", "UseCaseBean"), model.bean().stereotypeAnnotations());
-        assertEquals("com.example.crm.product.ProductQueryRepository", model.bean().qualifiedName());
+        assertEquals("com.example.crm.customer.CustomerQueryRepository", model.bean().qualifiedName());
     }
 
     @Test
     void shouldNotCreateDependencyForPlainNonFinalFields() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
-                class ProductQueryRepository {
-                    private ProductMapper mapper;
-                    private static final ProductMapper STATIC_MAPPER = null;
+                class CustomerQueryRepository {
+                    private CustomerMapper mapper;
+                    private static final CustomerMapper STATIC_MAPPER = null;
                 }
                 """);
 
-        var model = builder.build(astFile, "ProductQueryRepository");
+        var model = builder.build(astFile, "CustomerQueryRepository");
 
         assertTrue(model.injectedDependencies().isEmpty());
         assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, model.confidence());
@@ -202,10 +202,10 @@ class GitLabJavaDependencyModelBuilderTest {
 
     @Test
     void shouldReturnLimitationWhenTypeIsMissing() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
-                class ProductQueryRepository {
+                class CustomerQueryRepository {
                 }
                 """);
 

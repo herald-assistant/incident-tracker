@@ -60,13 +60,13 @@ class GitLabRepositoryEndpointServiceTest {
                         class CustomerDataController implements CustomerDataApi {
 
                           @Override
-                          public ResponseEntity<CustomerWebModel> getCustomer(UUID customerId) {
-                            return ResponseEntity.ok(new CustomerWebModel(customerId));
+                          public ResponseEntity<CustomerModel> getCustomer(UUID customerId) {
+                            return ResponseEntity.ok(new CustomerModel(customerId));
                           }
 
                           @Override
-                          public ResponseEntity<CustomerWebModel> updateCustomer(UUID customerId,
-                                                                                 CustomerWebModel customer) {
+                          public ResponseEntity<CustomerModel> updateCustomer(UUID customerId,
+                                                                                 CustomerModel customer) {
                             return ResponseEntity.ok(customer);
                           }
                         }
@@ -269,7 +269,7 @@ class GitLabRepositoryEndpointServiceTest {
                           interface CustomerSegmentationClient {
 
                             @GetMapping("/crm/customer-segments/active")
-                            List<CustomerSegmentWebModel> getActiveSegments();
+                            List<CustomerSegmentModel> getActiveSegments();
                           }
                         }
                         """,

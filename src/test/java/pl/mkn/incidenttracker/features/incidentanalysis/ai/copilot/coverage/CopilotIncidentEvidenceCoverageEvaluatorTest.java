@@ -31,7 +31,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "src/main/java/com/example/CheckoutService.java",
                 """
                         class CheckoutService {
-                            Order submit(CheckoutCommand command) {
+                            Customer submit(CheckoutCommand command) {
                                 if (command == null) {
                                     throw new IllegalArgumentException("command");
                                 }
@@ -52,7 +52,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "src/main/java/com/example/CheckoutService.java",
                 """
                         class CheckoutService {
-                            Order submit(CheckoutCommand command) {
+                            Customer submit(CheckoutCommand command) {
                                 var validation = validator.validate(command);
                                 return downstreamClient.reserve(validation);
                             }
@@ -71,12 +71,12 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "logs",
                 List.of(item(
                         "error log",
-                        attr("serviceName", "billing-service"),
-                        attr("className", "com.example.BillingService"),
+                        attr("serviceName", "crm-billing-service"),
+                        attr("className", "com.example.CustomerBillingService"),
                         attr("message", "Failed to settle invoice INV-1"),
                         attr("exception", """
                                 java.lang.IllegalStateException: failed
-                                \tat com.example.BillingService.settle(BillingService.java:42)
+                                \tat com.example.CustomerBillingService.settle(CustomerBillingService.java:42)
                                 """)
                 ))
         ))));
@@ -91,7 +91,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "logs",
                 List.of(item(
                         "repository error",
-                        attr("serviceName", "billing-service"),
+                        attr("serviceName", "crm-billing-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
                 ))
         ))));
@@ -105,7 +105,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "corr-123",
                 environment,
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 sections
         );
     }

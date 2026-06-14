@@ -99,7 +99,7 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
                 "corr-123",
                 "dev3",
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(new AnalysisEvidenceSection(
                         "gitlab",
                         "resolved-code",
@@ -113,7 +113,7 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
                                         attr("returnedEndLine", "18"),
                                         attr("content", """
                                                 class CheckoutService {
-                                                    Order submit(CheckoutCommand command) {
+                                                    Customer submit(CheckoutCommand command) {
                                                         if (command == null) {
                                                             throw new IllegalArgumentException("command");
                                                         }

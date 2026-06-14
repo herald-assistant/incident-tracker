@@ -37,16 +37,16 @@ class CopilotInitialAnalysisProviderTest {
                 "timeout-123",
                 "dev3",
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(
                         new AnalysisEvidenceSection(
                                 "elasticsearch",
                                 "logs",
                                 List.of(new AnalysisEvidenceItem(
-                                        "billing-service log entry",
+                                        "crm-billing-service log entry",
                                         List.of(
                                                 new AnalysisEvidenceAttribute("level", "ERROR"),
-                                                new AnalysisEvidenceAttribute("message", "Read timed out while calling catalog-service")
+                                                new AnalysisEvidenceAttribute("message", "Read timed out while calling crm-customer-profile-service")
                                         )
                                 ))
                         ),
@@ -54,7 +54,7 @@ class CopilotInitialAnalysisProviderTest {
                                 "dynatrace",
                                 "traces",
                                 List.of(new AnalysisEvidenceItem(
-                                        "catalog-service GET /inventory",
+                                        "crm-customer-profile-service GET /crm/customers",
                                         List.of(
                                                 new AnalysisEvidenceAttribute("timeoutDetected", "true"),
                                                 new AnalysisEvidenceAttribute("durationMs", "3500")
@@ -65,7 +65,7 @@ class CopilotInitialAnalysisProviderTest {
                                 "gitlab",
                                 "code-changes",
                                 List.of(new AnalysisEvidenceItem(
-                                        "edge-client-service change hint",
+                                        "crm-customer-client-service change hint",
                                         List.of(new AnalysisEvidenceAttribute(
                                                 "summary",
                                                 "HTTP client timeout defaults were changed."
@@ -84,7 +84,7 @@ class CopilotInitialAnalysisProviderTest {
                   "affectedProcess": "Rozliczenie klienta",
                   "affectedBoundedContext": "Billing Context",
                   "affectedTeam": "Core Integration Team",
-                  "functionalAnalysis": "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu inventory.",
+                  "functionalAnalysis": "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu customer-profile.",
                   "technicalAnalysis": "Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.",
                   "confidence": "high",
                   "visibilityLimits": []
@@ -99,7 +99,7 @@ class CopilotInitialAnalysisProviderTest {
                 response.detectedProblem()
         );
         assertEquals(
-                "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu inventory.",
+                "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu customer-profile.",
                 response.functionalAnalysis()
         );
         assertEquals(
@@ -122,7 +122,7 @@ class CopilotInitialAnalysisProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new InitialAnalysisRequest("corr-123", "dev1", "main", "sample/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-123", "dev1", "main", "CRM/runtime", List.of());
         var preparedRequest = mock(CopilotPreparedSession.class);
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
@@ -152,7 +152,7 @@ class CopilotInitialAnalysisProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new InitialAnalysisRequest("corr-456", "dev1", "dev/zephyr", "TENANT-ALPHA", List.of());
+        var request = new InitialAnalysisRequest("corr-456", "dev1", "dev/zephyr", "CRM", List.of());
         var preparedRequest = mock(CopilotPreparedSession.class);
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
@@ -206,7 +206,7 @@ class CopilotInitialAnalysisProviderTest {
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
 
-        var request = new InitialAnalysisRequest("corr-999", "dev1", "main", "sample/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-999", "dev1", "main", "CRM/runtime", List.of());
         var preparedRequest = mock(CopilotPreparedSession.class);
 
         when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));

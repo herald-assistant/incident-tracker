@@ -104,7 +104,7 @@ class AnalysisJobServiceTest {
                 "Analiza funkcjonalna: incydent dotyka procesu billingowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
                 completed.result().functionalAnalysis()
         );
-        assertEquals("Billing catalog lookup", completed.result().affectedProcess());
+        assertEquals("Billing customer-profile lookup", completed.result().affectedProcess());
         assertEquals("Billing Context", completed.result().affectedBoundedContext());
         assertEquals("Core Integration Team", completed.result().affectedTeam());
         assertEquals("COMPLETED", completed.steps().get(5).status());
@@ -413,7 +413,7 @@ class AnalysisJobServiceTest {
 
     private static GitLabProperties gitLabProperties() {
         var properties = new GitLabProperties();
-        properties.setGroup("sample/runtime");
+        properties.setGroup("CRM/runtime");
         return properties;
     }
 
@@ -511,7 +511,7 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "usage-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing catalog lookup",
+                    "Billing customer-profile lookup",
                     "Billing Context",
                     "Core Integration Team",
                     "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
@@ -604,11 +604,11 @@ class AnalysisJobServiceTest {
                     "gitlab",
                     "tool-fetched-code",
                     List.of(new AnalysisEvidenceItem(
-                            "edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                            "crm-customer-client-service file src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                             List.of(
                                     new AnalysisEvidenceAttribute(
                                             "filePath",
-                                            "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"
+                                            "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java"
                                     ),
                                     new AnalysisEvidenceAttribute(
                                             "reason",
@@ -617,7 +617,7 @@ class AnalysisJobServiceTest {
                                     new AnalysisEvidenceAttribute("startLine", "5"),
                                     new AnalysisEvidenceAttribute(
                                             "content",
-                                            "public class CatalogGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}"
+                                            "public class CustomerProfileClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}"
                                     )
                             )
                     ))
@@ -627,7 +627,7 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "blocking-tool-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing catalog lookup",
+                    "Billing customer-profile lookup",
                     "Billing Context",
                     "Core Integration Team",
                     "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
@@ -692,7 +692,7 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "feedback-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing catalog lookup",
+                    "Billing customer-profile lookup",
                     "Billing Context",
                     "Core Integration Team",
                     "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
@@ -742,11 +742,11 @@ class AnalysisJobServiceTest {
                     "gitlab",
                     "tool-fetched-code",
                     List.of(new AnalysisEvidenceItem(
-                            "edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                            "crm-customer-client-service file src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                             List.of(
                                     new AnalysisEvidenceAttribute(
                                             "filePath",
-                                            "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java"
+                                            "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java"
                                     ),
                                     new AnalysisEvidenceAttribute(
                                             "reason",

@@ -72,12 +72,12 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldResolveNestedInterfaceInSameFile() {
-        var path = "src/main/java/com/example/crm/product/ProductRepositoryPort.java";
+        var path = "src/main/java/com/example/crm/customer/CustomerRepositoryPort.java";
         repositoryFiles(path);
         source(path, """
-                package com.example.crm.product;
+                package com.example.crm.customer;
 
-                interface ProductRepositoryPort {
+                interface CustomerRepositoryPort {
                     interface Query {
                     }
 
@@ -87,12 +87,12 @@ class GitLabJavaSourceResolverTest {
                 """);
         var astFile = resolver.astFile(session, path);
 
-        var resolved = resolver.resolveType(session, astFile, "ProductRepositoryPort.Query");
+        var resolved = resolver.resolveType(session, astFile, "CustomerRepositoryPort.Query");
 
         assertEquals(GitLabJavaTypeResolutionKind.NESTED_TYPE, resolved.kind());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolved.confidence());
         assertEquals(path, resolved.filePath());
-        assertEquals("com.example.crm.product.ProductRepositoryPort.Query", resolved.qualifiedName());
+        assertEquals("com.example.crm.customer.CustomerRepositoryPort.Query", resolved.qualifiedName());
         assertEquals(GitLabJavaTypeKind.INTERFACE, resolved.type().kind());
     }
 
@@ -261,29 +261,29 @@ class GitLabJavaSourceResolverTest {
     @Test
     void shouldResolveLocalGeneratedApiInterfaceBeforeTreatingItAsExternal() {
         var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
-        var apiPath = "src/main/java/com/example/crm/generated/DataProductApi.java";
+        var apiPath = "src/main/java/com/example/crm/generated/CustomerApi.java";
         repositoryFiles(controllerPath, apiPath);
         source(controllerPath, """
                 package com.example.crm.customer;
 
-                import com.example.crm.generated.DataProductApi;
+                import com.example.crm.generated.CustomerApi;
 
-                class CustomerController implements DataProductApi {
+                class CustomerController implements CustomerApi {
                 }
                 """);
         source(apiPath, """
                 package com.example.crm.generated;
 
-                interface DataProductApi {
+                interface CustomerApi {
                 }
                 """);
         var astFile = resolver.astFile(session, controllerPath);
 
-        var resolved = resolver.resolveType(session, astFile, "DataProductApi");
+        var resolved = resolver.resolveType(session, astFile, "CustomerApi");
 
         assertEquals(GitLabJavaTypeResolutionKind.EXACT_IMPORT, resolved.kind());
         assertEquals(apiPath, resolved.filePath());
-        assertEquals("com.example.crm.generated.DataProductApi", resolved.qualifiedName());
+        assertEquals("com.example.crm.generated.CustomerApi", resolved.qualifiedName());
     }
 
     @Test
@@ -293,7 +293,7 @@ class GitLabJavaSourceResolverTest {
         source(controllerPath, """
                 package com.example.crm.customer;
 
-                import pl.centrum24.crm.contract.SharedCustomerPolicy;
+                import com.example.crm.contract.SharedCustomerPolicy;
 
                 class CustomerController {
                     private SharedCustomerPolicy sharedCustomerPolicy;
@@ -304,7 +304,7 @@ class GitLabJavaSourceResolverTest {
         var resolved = resolver.resolveType(session, astFile, "SharedCustomerPolicy");
 
         assertEquals(GitLabJavaTypeResolutionKind.EXTERNAL_BOUNDARY, resolved.kind());
-        assertEquals("pl.centrum24.crm.contract.SharedCustomerPolicy", resolved.qualifiedName());
+        assertEquals("com.example.crm.contract.SharedCustomerPolicy", resolved.qualifiedName());
         assertEquals(List.of(
                 "Type looks like internal/shared library class, but no matching source file was found in the selected repository tree."
         ), resolved.limitations());

@@ -60,21 +60,21 @@ class GitLabRepositorySearchControllerTest {
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {
         when(gitLabRepositorySearchService.search(any(GitLabRepositorySearchRequest.class)))
                 .thenReturn(new GitLabRepositorySearchResponse(
-                        "TENANT-ALPHA",
+                        "CRM",
                         "release-candidate",
-                        List.of("document-workflow"),
+                        List.of("crm-customer-workflow"),
                         List.of(new GitLabRepositoryProjectCandidate(
-                                "TENANT-ALPHA",
-                                "WORKFLOWS/DOCUMENT_WORKFLOW",
-                                "Matched agreement process project.",
+                                "CRM",
+                                "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
+                                "Matched customer process project.",
                                 120
                         )),
                         List.of(new GitLabRepositoryFileCandidate(
-                                "TENANT-ALPHA",
-                                "WORKFLOWS/DOCUMENT_WORKFLOW",
+                                "CRM",
+                                "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
                                 "release-candidate",
-                                "src/main/java/com/example/synthetic/workflow/DocumentArchiveService.java",
-                                "Matched document keyword.",
+                                "src/main/java/com/example/synthetic/workflow/CustomerProfileArchiveService.java",
+                                "Matched customer profile keyword.",
                                 95
                         )),
                         "OK"
@@ -84,24 +84,24 @@ class GitLabRepositorySearchControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "correlationId": "agreement-123",
+                                  "correlationId": "customer-123",
                                   "branch": "release-candidate",
-                                  "projectHints": ["document-workflow"],
-                                  "keywords": ["document"]
+                                  "projectHints": ["crm-customer-workflow"],
+                                  "keywords": ["customer-profile"]
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.group").value("TENANT-ALPHA"))
-                .andExpect(jsonPath("$.projectCandidates[0].projectPath").value("WORKFLOWS/DOCUMENT_WORKFLOW"))
-                .andExpect(jsonPath("$.fileCandidates[0].projectName").value("WORKFLOWS/DOCUMENT_WORKFLOW"))
+                .andExpect(jsonPath("$.group").value("CRM"))
+                .andExpect(jsonPath("$.projectCandidates[0].projectPath").value("CRM_WORKFLOWS/CUSTOMER_WORKFLOW"))
+                .andExpect(jsonPath("$.fileCandidates[0].projectName").value("CRM_WORKFLOWS/CUSTOMER_WORKFLOW"))
                 .andExpect(jsonPath("$.message").value("OK"));
 
         verify(gitLabRepositorySearchService).search(new GitLabRepositorySearchRequest(
-                "agreement-123",
+                "customer-123",
                 "release-candidate",
-                List.of("document-workflow"),
+                List.of("crm-customer-workflow"),
                 null,
-                List.of("document")
+                List.of("customer-profile")
         ));
     }
 
@@ -109,30 +109,30 @@ class GitLabRepositorySearchControllerTest {
     void shouldListGitLabRepositoryEndpointsForValidRequest() throws Exception {
         when(gitLabRepositoryEndpointService.listEndpoints(any(GitLabRepositoryEndpointListRequest.class)))
                 .thenReturn(new GitLabRepositoryEndpointListResult(
-                        "TENANT-ALPHA",
-                        "orders-api",
+                        "CRM",
+                        "crm-customer-api",
                         "release-candidate",
-                        "/api/orders",
+                        "/api/customers",
                         "GET",
                         2,
                         2,
                         false,
                         List.of(new GitLabRepositoryEndpoint(
-                                "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                                 List.of("GET"),
-                                "/api/orders/{orderId}",
+                                "/api/customers/{customerId}",
                                 null,
-                                "com.example.orders.OrderController",
-                                "getOrder",
-                                "src/main/java/com/example/orders/OrderController.java",
+                                "com.example.crm.customer.CustomerController",
+                                "getCustomer",
+                                "src/main/java/com/example/crm/customer/CustomerController.java",
                                 17,
                                 19,
-                                List.of("@PathVariable String orderId"),
+                                List.of("@PathVariable String customerId"),
                                 List.of("ResponseEntity<OrderResponse>"),
                                 List.of("RestController", "GetMapping"),
                                 "high",
                                 List.of(),
-                                List.of("orders-api:src/main/java/com/example/orders/OrderController.java lines 17-19 via gitlab_read_repository_file_chunk")
+                                List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java lines 17-19 via gitlab_read_repository_file_chunk")
                         )),
                         List.of()
                 ));
@@ -141,27 +141,27 @@ class GitLabRepositorySearchControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "group": "TENANT-ALPHA",
-                                  "projectName": "orders-api",
+                                  "group": "CRM",
+                                  "projectName": "crm-customer-api",
                                   "branch": "release-candidate",
-                                  "endpointPathPrefix": "/api/orders",
+                                  "endpointPathPrefix": "/api/customers",
                                   "httpMethod": "GET",
                                   "maxScannedFiles": 50
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.group").value("TENANT-ALPHA"))
-                .andExpect(jsonPath("$.projectName").value("orders-api"))
+                .andExpect(jsonPath("$.group").value("CRM"))
+                .andExpect(jsonPath("$.projectName").value("crm-customer-api"))
                 .andExpect(jsonPath("$.candidateFileCount").value(2))
-                .andExpect(jsonPath("$.endpoints[0].path").value("/api/orders/{orderId}"))
-                .andExpect(jsonPath("$.endpoints[0].controllerClass").value("com.example.orders.OrderController"))
-                .andExpect(jsonPath("$.endpoints[0].handlerMethod").value("getOrder"));
+                .andExpect(jsonPath("$.endpoints[0].path").value("/api/customers/{customerId}"))
+                .andExpect(jsonPath("$.endpoints[0].controllerClass").value("com.example.crm.customer.CustomerController"))
+                .andExpect(jsonPath("$.endpoints[0].handlerMethod").value("getCustomer"));
 
         verify(gitLabRepositoryEndpointService).listEndpoints(new GitLabRepositoryEndpointListRequest(
-                "TENANT-ALPHA",
-                "orders-api",
+                "CRM",
+                "crm-customer-api",
                 "release-candidate",
-                "/api/orders",
+                "/api/customers",
                 "GET",
                 50
         ));
@@ -172,21 +172,21 @@ class GitLabRepositorySearchControllerTest {
         when(gitLabEndpointUseCaseContextService.buildContext(any(), any(), any(GitLabEndpointUseCaseContextRequest.class)))
                 .thenReturn(new GitLabEndpointUseCaseContextResult(
                         new GitLabEndpointUseCaseRepositoryContext(
-                                "TENANT-ALPHA",
-                                "orders-api",
+                                "CRM",
+                                "crm-customer-api",
                                 "release-candidate"
                         ),
                         new GitLabEndpointUseCaseEndpointContext(
-                                "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                                 List.of("GET"),
-                                "/api/orders/{orderId}",
-                                "/api/orders/{orderId}",
-                                "com.example.orders.OrderController",
-                                "getOrder",
-                                "src/main/java/com/example/orders/OrderController.java",
+                                "/api/customers/{customerId}",
+                                "/api/customers/{customerId}",
+                                "com.example.crm.customer.CustomerController",
+                                "getCustomer",
+                                "src/main/java/com/example/crm/customer/CustomerController.java",
                                 17,
                                 19,
-                                List.of("@PathVariable String orderId"),
+                                List.of("@PathVariable String customerId"),
                                 List.of("OrderResponse"),
                                 List.of("RestController", "GetMapping"),
                                 GitLabEndpointUseCaseConfidence.HIGH,
@@ -194,23 +194,23 @@ class GitLabRepositorySearchControllerTest {
                                 List.of()
                         ),
                         List.of(new GitLabEndpointUseCaseFileCandidate(
-                                "src/main/java/com/example/orders/OrderController.java",
+                                "src/main/java/com/example/crm/customer/CustomerController.java",
                                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                                 1,
-                                List.of("getOrder"),
+                                List.of("getCustomer"),
                                 "Endpoint handler and local controller flow.",
                                 GitLabEndpointUseCaseConfidence.HIGH
                         )),
                         List.of(new GitLabEndpointUseCaseRelation(
-                                "GET /api/orders/{orderId}",
-                                "com.example.orders.OrderController#getOrder",
+                                "GET /api/customers/{customerId}",
+                                "com.example.crm.customer.CustomerController#getCustomer",
                                 GitLabEndpointUseCaseRelationKind.ENDPOINT_HANDLER,
                                 GitLabEndpointUseCaseConfidence.HIGH,
-                                "Endpoint inventory resolved this handler method."
+                                "Endpoint customer-profile resolved this handler method."
                         )),
                         List.of(),
                         List.of(),
-                        List.of("orders-api:src/main/java/com/example/orders/OrderController.java via gitlab_read_repository_file_outline"),
+                        List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java via gitlab_read_repository_file_outline"),
                         GitLabEndpointUseCaseLimits.defaults(),
                         GitLabEndpointUseCaseConfidence.HIGH
                 ));
@@ -219,28 +219,28 @@ class GitLabRepositorySearchControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "group": "TENANT-ALPHA",
-                                  "projectName": "orders-api",
+                                  "group": "CRM",
+                                  "projectName": "crm-customer-api",
                                   "branch": "release-candidate",
-                                  "endpointId": "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder",
+                                  "endpointId": "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                                   "maxDepth": 4,
                                   "maxFiles": 12,
                                   "reason": "Manualny test kontekstu endpointu."
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.repository.group").value("TENANT-ALPHA"))
-                .andExpect(jsonPath("$.repository.projectName").value("orders-api"))
-                .andExpect(jsonPath("$.endpoint.path").value("/api/orders/{orderId}"))
+                .andExpect(jsonPath("$.repository.group").value("CRM"))
+                .andExpect(jsonPath("$.repository.projectName").value("crm-customer-api"))
+                .andExpect(jsonPath("$.endpoint.path").value("/api/customers/{customerId}"))
                 .andExpect(jsonPath("$.files[0].role").value("CONTROLLER"))
                 .andExpect(jsonPath("$.relations[0].kind").value("ENDPOINT_HANDLER"))
                 .andExpect(jsonPath("$.confidence").value("HIGH"));
 
         verify(gitLabEndpointUseCaseContextService).buildContext(
-                eq("TENANT-ALPHA"),
+                eq("CRM"),
                 eq("release-candidate"),
-                argThat(request -> "orders-api".equals(request.projectName())
-                        && "GET /api/orders/{orderId} -> com.example.orders.OrderController#getOrder".equals(request.endpointId())
+                argThat(request -> "crm-customer-api".equals(request.projectName())
+                        && "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer".equals(request.endpointId())
                         && request.httpMethod() == null
                         && request.endpointPath() == null
                         && request.maxDepth() == 4
@@ -255,12 +255,12 @@ class GitLabRepositorySearchControllerTest {
                 .thenThrow(new GitLabRepositorySearchException(
                         HttpStatus.NOT_FOUND,
                         new GitLabRepositorySearchResponse(
-                                "TENANT-ALPHA",
+                                "CRM",
                                 "HEAD",
-                                List.of("document-workflow"),
+                                List.of("crm-customer-workflow"),
                                 List.of(),
                                 List.of(),
-                                "No GitLab project candidates found for hints: [document-workflow]"
+                                "No GitLab project candidates found for hints: [crm-customer-workflow]"
                         )
                 ));
 
@@ -268,12 +268,12 @@ class GitLabRepositorySearchControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "projectHints": ["document-workflow"]
+                                  "projectHints": ["crm-customer-workflow"]
                                 }
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.group").value("TENANT-ALPHA"))
-                .andExpect(jsonPath("$.message").value("No GitLab project candidates found for hints: [document-workflow]"));
+                .andExpect(jsonPath("$.group").value("CRM"))
+                .andExpect(jsonPath("$.message").value("No GitLab project candidates found for hints: [crm-customer-workflow]"));
     }
 
     @Test

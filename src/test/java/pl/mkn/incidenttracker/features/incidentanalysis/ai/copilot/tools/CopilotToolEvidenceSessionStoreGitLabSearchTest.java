@@ -40,54 +40,54 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                 "{\"reason\":\"Szukam dostepnych repozytoriow.\"}",
                 """
                         {
-                          "group": "sample/runtime",
+                          "group": "CRM/runtime",
                           "branch": "main",
                           "repositories": [
                             {
-                              "repositoryId": "orders-api-repo",
-                              "name": "Orders API",
-                              "summary": "Orders API repository.",
-                              "projectName": "orders-api",
-                              "gitLabPath": "sample/runtime/orders-api",
-                              "aliases": ["orders-api"],
+                              "repositoryId": "crm-customer-api-repo",
+                              "name": "CRM Customers API",
+                              "summary": "CRM customer API repository.",
+                              "projectName": "crm-customer-api",
+                              "gitLabPath": "CRM/runtime/crm-customer-api",
+                              "aliases": ["crm-customer-api"],
                               "repositoryType": "service",
                               "lifecycleStatus": "active",
-                              "systems": ["orders"],
-                              "boundedContexts": ["orders"],
-                              "processes": ["order-process"],
+                              "systems": ["crm"],
+                              "boundedContexts": ["customer"],
+                              "processes": ["customer-process"],
                               "integrations": [],
                               "relatedRepositoryIds": [],
-                              "packagePrefixes": ["pl.mkn.orders"],
-                              "endpointPrefixes": ["/orders"],
-                              "modulePaths": ["orders-api"]
+                              "packagePrefixes": ["com.example.crm.customer"],
+                              "endpointPrefixes": ["/crm/customers"],
+                              "modulePaths": ["crm-customer-api"]
                             }
                           ],
                           "codeSearchScopes": [
                             {
-                              "scopeId": "orders-code-search",
-                              "name": "Orders Code Search Scope",
+                              "scopeId": "crm-code-search",
+                              "name": "CRM Code Search Scope",
                               "scopeType": "system",
                               "lifecycleStatus": "active",
-                              "target": {"type": "system", "id": "orders"},
+                              "target": {"type": "system", "id": "crm"},
                               "useFor": ["code-search", "incident-analysis"],
                               "repositories": [
                                 {
-                                  "repositoryId": "orders-api-repo",
+                                  "repositoryId": "crm-customer-api-repo",
                                   "role": "primary-implementation",
                                   "priority": 1,
-                                  "projectNames": ["orders-api"],
-                                  "moduleIds": ["orders-api"],
-                                  "reason": "Main orders API repository.",
+                                  "projectNames": ["crm-customer-api"],
+                                  "moduleIds": ["crm-customer-api"],
+                                  "reason": "Main customers API repository.",
                                   "readFor": ["runtime-entrypoints"]
                                 }
                               ],
-                              "projectNames": ["orders-api"],
-                              "packagePrefixes": ["pl.mkn.orders"],
-                              "classHints": ["OrderService"],
-                              "endpointHints": ["/orders"],
+                              "projectNames": ["crm-customer-api"],
+                              "packagePrefixes": ["com.example.crm.customer"],
+                              "classHints": ["CustomerService"],
+                              "endpointHints": ["/crm/customers"],
                               "queueTopicHints": [],
                               "traversal": {
-                                "rules": ["Read orders-api-repo first."],
+                                "rules": ["Read crm-customer-api-repo first."],
                                 "expandWhen": []
                               }
                             }
@@ -105,10 +105,10 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                         {
                           "candidates": [
                             {
-                              "group": "sample/runtime",
-                              "projectName": "orders-api",
+                              "group": "CRM/runtime",
+                              "projectName": "crm-customer-api",
                               "branch": "main",
-                              "filePath": "src/main/java/pl/mkn/orders/OrderService.java",
+                              "filePath": "src/main/java/com/example/crm/customer/CustomerService.java",
                               "matchReason": "service keyword",
                               "matchScore": 42
                             }
@@ -124,15 +124,15 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                 "{\"reason\":\"Sprawdzam zarys pliku.\"}",
                 """
                         {
-                          "group": "sample/runtime",
-                          "projectName": "orders-api",
+                          "group": "CRM/runtime",
+                          "projectName": "crm-customer-api",
                           "branch": "main",
-                          "filePath": "src/main/java/pl/mkn/orders/OrderService.java",
-                          "packageName": "pl.mkn.orders",
+                          "filePath": "src/main/java/com/example/crm/customer/CustomerService.java",
+                          "packageName": "com.example.crm.customer",
                           "imports": ["java.time.Duration"],
-                          "classes": ["OrderService"],
+                          "classes": ["CustomerService"],
                           "annotations": ["Service"],
-                          "methodSignatures": ["void handle(Order order)"],
+                          "methodSignatures": ["void handle(Customer customer)"],
                           "inferredRole": "service-or-orchestrator",
                           "truncated": false
                         }
@@ -146,27 +146,27 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                 "{\"reason\":\"Szukam kontekstu przeplywu.\"}",
                 """
                         {
-                          "group": "sample/runtime",
+                          "group": "CRM/runtime",
                           "branch": "main",
                           "groups": [
                             {
                               "role": "repository",
                               "candidates": [
                                 {
-                                  "group": "sample/runtime",
-                                  "projectName": "orders-api",
+                                  "group": "CRM/runtime",
+                                  "projectName": "crm-customer-api",
                                   "branch": "main",
-                                  "filePath": "src/main/java/pl/mkn/orders/OrderRepository.java",
+                                  "filePath": "src/main/java/com/example/crm/customer/CustomerRepository.java",
                                   "matchReason": "repository keyword",
                                   "matchScore": 31,
                                   "inferredRole": "repository",
                                   "recommendedReadStrategy": "chunk",
-                                  "preview": "interface OrderRepository"
+                                  "preview": "interface CustomerRepository"
                                 }
                               ]
                             }
                           ],
-                          "recommendedNextReads": ["orders-api:src/main/java/pl/mkn/orders/OrderRepository.java"]
+                          "recommendedNextReads": ["crm-customer-api:src/main/java/com/example/crm/customer/CustomerRepository.java"]
                         }
                         """
         );
@@ -178,20 +178,20 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                 "{\"reason\":\"Buduje liste plikow dla endpointu.\"}",
                 """
                         {
-                          "group": "sample/runtime",
-                          "projectName": "orders-api",
+                          "group": "CRM/runtime",
+                          "projectName": "crm-customer-api",
                           "branch": "main",
                           "endpoint": {
-                            "endpointId": "GET /api/orders/{orderId} -> pl.mkn.orders.OrderController#getOrder",
+                            "endpointId": "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                             "httpMethods": ["GET"],
-                            "path": "/api/orders/{orderId}",
-                            "pathExpression": "/api/orders/{orderId}",
-                            "controllerClass": "pl.mkn.orders.OrderController",
-                            "handlerMethod": "getOrder",
-                            "filePath": "src/main/java/pl/mkn/orders/OrderController.java",
+                            "path": "/api/customers/{customerId}",
+                            "pathExpression": "/api/customers/{customerId}",
+                            "controllerClass": "com.example.crm.customer.CustomerController",
+                            "handlerMethod": "getCustomer",
+                            "filePath": "src/main/java/com/example/crm/customer/CustomerController.java",
                             "lineStart": 12,
                             "lineEnd": 20,
-                            "requestTypes": ["@PathVariable String orderId"],
+                            "requestTypes": ["@PathVariable String customerId"],
                             "responseTypes": ["OrderResponse"],
                             "annotations": ["RestController", "GetMapping"],
                             "confidence": "HIGH",
@@ -200,26 +200,26 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                           },
                           "files": [
                             {
-                              "path": "src/main/java/pl/mkn/orders/OrderController.java",
+                              "path": "src/main/java/com/example/crm/customer/CustomerController.java",
                               "role": "CONTROLLER",
                               "priority": 1,
-                              "symbols": ["getOrder"],
+                              "symbols": ["getCustomer"],
                               "reason": "Endpoint handler and local controller flow.",
                               "confidence": "HIGH"
                             },
                             {
-                              "path": "src/main/java/pl/mkn/orders/OrderService.java",
+                              "path": "src/main/java/com/example/crm/customer/CustomerService.java",
                               "role": "USE_CASE_SERVICE",
                               "priority": 2,
-                              "symbols": ["findOrder"],
+                              "symbols": ["findCustomer"],
                               "reason": "Direct service dependency.",
                               "confidence": "MEDIUM"
                             }
                           ],
                           "relations": [
                             {
-                              "from": "pl.mkn.orders.OrderController#getOrder",
-                              "to": "pl.mkn.orders.OrderService#findOrder",
+                              "from": "com.example.crm.customer.CustomerController#getCustomer",
+                              "to": "com.example.crm.customer.CustomerService#findCustomer",
                               "kind": "LOCAL_METHOD_CALL",
                               "confidence": "MEDIUM",
                               "reason": "Controller calls service."
@@ -227,17 +227,17 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                           ],
                           "unresolved": [
                             {
-                              "symbol": "OrderMapper",
-                              "ownerPath": "src/main/java/pl/mkn/orders/OrderService.java",
+                              "symbol": "CustomerMapper",
+                              "ownerPath": "src/main/java/com/example/crm/customer/CustomerService.java",
                               "reason": "Implementation not found in narrowed traversal.",
-                              "searchedKeywords": ["OrderMapper"],
+                              "searchedKeywords": ["CustomerMapper"],
                               "candidates": []
                             }
                           ],
                           "limitations": ["Traversal stopped at max depth."],
                           "suggestedNextReads": [
-                            "orders-api:src/main/java/pl/mkn/orders/OrderController.java via gitlab_read_repository_file_outline",
-                            "orders-api:src/main/java/pl/mkn/orders/OrderService.java via gitlab_read_repository_file_outline"
+                            "crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java via gitlab_read_repository_file_outline",
+                            "crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_repository_file_outline"
                           ],
                           "limits": {
                             "maxDepth": 5,
@@ -260,10 +260,10 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                 "{\"reason\":\"Szukam referencji klasy.\"}",
                 """
                         {
-                          "group": "sample/runtime",
+                          "group": "CRM/runtime",
                           "branch": "main",
-                          "searchedClass": "OrderEntity",
-                          "searchKeywords": ["OrderEntity", "ORDER"],
+                          "searchedClass": "CustomerEntity",
+                          "searchKeywords": ["CustomerEntity", "ORDER"],
                           "groups": [],
                           "recommendedNextReads": []
                         }
@@ -282,49 +282,49 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         assertEquals("1", listAttributes.get("repositoryCount"));
         assertEquals("1", listAttributes.get("codeSearchScopeCount"));
         assertEquals("1", listAttributes.get("toolCaptureOrder"));
-        assertTrue(listAttributes.get("repositories").contains("orders-api"));
-        assertTrue(listAttributes.get("codeSearchScopes").contains("orders-code-search"));
+        assertTrue(listAttributes.get("repositories").contains("crm-customer-api"));
+        assertTrue(listAttributes.get("codeSearchScopes").contains("crm-code-search"));
 
         var searchAttributes = attributes(lastSection.items().get(1));
         assertEquals("gitlab_search_repository_candidates", searchAttributes.get("toolName"));
         assertEquals("Szukam kandydatow plikow.", searchAttributes.get("reason"));
         assertEquals("1", searchAttributes.get("candidateCount"));
         assertEquals("2", searchAttributes.get("toolCaptureOrder"));
-        assertTrue(searchAttributes.get("candidates").contains("OrderService.java"));
+        assertTrue(searchAttributes.get("candidates").contains("CustomerService.java"));
 
         var outlineAttributes = attributes(lastSection.items().get(2));
         assertEquals("gitlab_read_repository_file_outline", outlineAttributes.get("toolName"));
-        assertTrue(outlineAttributes.get("classes").contains("OrderService"));
+        assertTrue(outlineAttributes.get("classes").contains("CustomerService"));
         assertEquals("3", outlineAttributes.get("toolCaptureOrder"));
 
         var flowAttributes = attributes(lastSection.items().get(3));
         assertEquals("gitlab_find_flow_context", flowAttributes.get("toolName"));
         assertEquals("1", flowAttributes.get("groupCount"));
         assertEquals("1", flowAttributes.get("recommendedNextReadCount"));
-        assertTrue(flowAttributes.get("groups").contains("OrderRepository.java"));
+        assertTrue(flowAttributes.get("groups").contains("CustomerRepository.java"));
         assertEquals("4", flowAttributes.get("toolCaptureOrder"));
 
         var endpointContextAttributes = attributes(lastSection.items().get(4));
         assertEquals("gitlab_build_endpoint_use_case_context", endpointContextAttributes.get("toolName"));
         assertEquals("Buduje liste plikow dla endpointu.", endpointContextAttributes.get("reason"));
-        assertEquals("orders-api", endpointContextAttributes.get("projectName"));
-        assertEquals("/api/orders/{orderId}", endpointContextAttributes.get("endpointPath"));
-        assertEquals("getOrder", endpointContextAttributes.get("handlerMethod"));
+        assertEquals("crm-customer-api", endpointContextAttributes.get("projectName"));
+        assertEquals("/api/customers/{customerId}", endpointContextAttributes.get("endpointPath"));
+        assertEquals("getCustomer", endpointContextAttributes.get("handlerMethod"));
         assertEquals("2", endpointContextAttributes.get("fileCount"));
         assertEquals("1", endpointContextAttributes.get("relationCount"));
         assertEquals("1", endpointContextAttributes.get("unresolvedCount"));
         assertEquals("2", endpointContextAttributes.get("suggestedNextReadCount"));
         assertEquals("MEDIUM", endpointContextAttributes.get("confidence"));
         assertEquals("5", endpointContextAttributes.get("toolCaptureOrder"));
-        assertTrue(endpointContextAttributes.get("files").contains("OrderController.java"));
-        assertTrue(endpointContextAttributes.get("files").contains("OrderService.java"));
+        assertTrue(endpointContextAttributes.get("files").contains("CustomerController.java"));
+        assertTrue(endpointContextAttributes.get("files").contains("CustomerService.java"));
         assertTrue(endpointContextAttributes.get("relations").contains("LOCAL_METHOD_CALL"));
-        assertTrue(endpointContextAttributes.get("unresolved").contains("OrderMapper"));
+        assertTrue(endpointContextAttributes.get("unresolved").contains("CustomerMapper"));
         assertTrue(endpointContextAttributes.get("suggestedNextReads").contains("gitlab_read_repository_file_outline"));
 
         var classAttributes = attributes(lastSection.items().get(5));
         assertEquals("gitlab_find_class_references", classAttributes.get("toolName"));
-        assertEquals("OrderEntity", classAttributes.get("searchedClass"));
+        assertEquals("CustomerEntity", classAttributes.get("searchedClass"));
         assertEquals("6", classAttributes.get("toolCaptureOrder"));
     }
 
@@ -346,7 +346,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
             String rawResult
     ) {
         listener.onToolInvocationFinished(new CopilotToolInvocationFinishedEvent(
-                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "sample/runtime"),
+                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "CRM/runtime"),
                 sessionId,
                 toolCallId,
                 toolName,

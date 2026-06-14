@@ -46,7 +46,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 "corr-123",
                 "sandbox-a",
                 "release/2026.04",
-                "sample/runtime"
+                "CRM/runtime"
         )).stream().collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
 
         assertSchemaProperties(
@@ -151,7 +151,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 "corr-123",
                 "sandbox-a",
                 "release/2026.04",
-                "sample/runtime"
+                "CRM/runtime"
         );
     }
 

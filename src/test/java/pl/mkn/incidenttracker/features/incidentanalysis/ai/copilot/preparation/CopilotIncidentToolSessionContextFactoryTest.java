@@ -23,7 +23,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
                 "corr-123",
                 "zt01",
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of()
         );
 
@@ -34,7 +34,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertEquals("corr-123", context.hiddenContext().get(AgentToolContextKeys.CORRELATION_ID));
         assertEquals("zt01", context.hiddenContext().get(AgentToolContextKeys.ENVIRONMENT));
         assertEquals("release/2026.04", context.hiddenContext().get(AgentToolContextKeys.GITLAB_BRANCH));
-        assertEquals("sample/runtime", context.hiddenContext().get(AgentToolContextKeys.GITLAB_GROUP));
+        assertEquals("CRM/runtime", context.hiddenContext().get(AgentToolContextKeys.GITLAB_GROUP));
         assertEquals(context.analysisRunId(), context.hiddenContext().get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals(context.copilotSessionId(), context.hiddenContext().get(AgentToolContextKeys.COPILOT_SESSION_ID));
     }
@@ -45,7 +45,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
                 "corr-chat",
                 "prod",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(),
                 List.of(),
                 null,
@@ -61,6 +61,6 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertEquals("corr-chat", context.hiddenContext().get(AgentToolContextKeys.CORRELATION_ID));
         assertEquals("prod", context.hiddenContext().get(AgentToolContextKeys.ENVIRONMENT));
         assertEquals("main", context.hiddenContext().get(AgentToolContextKeys.GITLAB_BRANCH));
-        assertEquals("sample/runtime", context.hiddenContext().get(AgentToolContextKeys.GITLAB_GROUP));
+        assertEquals("CRM/runtime", context.hiddenContext().get(AgentToolContextKeys.GITLAB_GROUP));
     }
 }

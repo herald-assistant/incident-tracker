@@ -214,7 +214,7 @@ class DynatraceRestIncidentAdapterTest {
                 "corr-123",
                 Instant.parse("2026-04-11T20:57:33.285Z"),
                 Instant.parse("2026-04-11T20:57:33.285Z"),
-                java.util.List.of("tenant-alpha-main-dev3"),
+                java.util.List.of("crm-main-dev3"),
                 java.util.List.of("backend-65df9ffbbb-79p7j"),
                 java.util.List.of("backend"),
                 java.util.List.of("case-evaluation-service")

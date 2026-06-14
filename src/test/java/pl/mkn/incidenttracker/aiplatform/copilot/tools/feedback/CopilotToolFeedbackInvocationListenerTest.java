@@ -154,7 +154,7 @@ class CopilotToolFeedbackInvocationListenerTest {
                         "corr-123",
                         "dev3",
                         "main",
-                        "sample/runtime"
+                        "CRM/runtime"
                 ),
                 "sdk-session-1",
                 toolCallId,

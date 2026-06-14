@@ -24,7 +24,7 @@ class CopilotFollowUpArtifactRequestFactoryTest {
                 "corr-123",
                 "zt01",
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(deterministicEvidence),
                 List.of(toolEvidence),
                 null,
@@ -38,7 +38,7 @@ class CopilotFollowUpArtifactRequestFactoryTest {
         assertEquals("corr-123", artifactRequest.correlationId());
         assertEquals("zt01", artifactRequest.environment());
         assertEquals("release/2026.04", artifactRequest.gitLabBranch());
-        assertEquals("sample/runtime", artifactRequest.gitLabGroup());
+        assertEquals("CRM/runtime", artifactRequest.gitLabGroup());
         assertEquals(List.of(deterministicEvidence, toolEvidence), artifactRequest.evidenceSections());
         assertEquals(options, artifactRequest.options());
     }

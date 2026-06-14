@@ -28,41 +28,41 @@ class GitLabJavaInterfaceImplementorResolverTest {
 
     @Test
     void shouldResolveSimplePortImplementation() {
-        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductPort.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/UpdateCustomerPort.java", """
+                package com.example.crm.customer;
 
-                interface UpdateProductPort {
-                    void update(Product product);
+                interface UpdateCustomerPort {
+                    void update(Customer customer);
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductService.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/UpdateCustomerService.java", """
+                package com.example.crm.customer;
 
-                class UpdateProductService implements UpdateProductPort {
-                    public void update(Product product) {
+                class UpdateCustomerService implements UpdateCustomerPort {
+                    public void update(Customer customer) {
                     }
                 }
                 """);
 
-        var resolution = resolver.resolveImplementors(session(), "UpdateProductPort");
+        var resolution = resolver.resolveImplementors(session(), "UpdateCustomerPort");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("UpdateProductPort", resolution.interfaceName());
-        assertTrue(resolution.searchKeywords().contains("implements UpdateProductPort"));
+        assertEquals("UpdateCustomerPort", resolution.interfaceName());
+        assertTrue(resolution.searchKeywords().contains("implements UpdateCustomerPort"));
         assertEquals(1, resolution.candidates().size());
-        assertEquals("UpdateProductService", resolution.candidates().get(0).implementationSimpleName());
-        assertEquals("com.example.crm.product.UpdateProductService", resolution.candidates().get(0).implementationQualifiedName());
-        assertEquals("src/main/java/com/example/crm/product/UpdateProductService.java", resolution.candidates().get(0).filePath());
-        assertEquals(List.of("UpdateProductPort"), resolution.candidates().get(0).implementedTypes());
+        assertEquals("UpdateCustomerService", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals("com.example.crm.customer.UpdateCustomerService", resolution.candidates().get(0).implementationQualifiedName());
+        assertEquals("src/main/java/com/example/crm/customer/UpdateCustomerService.java", resolution.candidates().get(0).filePath());
+        assertEquals(List.of("UpdateCustomerPort"), resolution.candidates().get(0).implementedTypes());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolution.candidates().get(0).confidence());
     }
 
     @Test
     void shouldResolveNestedRepositoryPortImplementation() {
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
+                package com.example.crm.customer;
 
-                interface ProductRepositoryPort {
+                interface CustomerRepositoryPort {
                     interface Query {
                     }
 
@@ -70,186 +70,186 @@ class GitLabJavaInterfaceImplementorResolverTest {
                     }
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
-                class ProductQueryRepository implements ProductRepositoryPort.Query {
+                class CustomerQueryRepository implements CustomerRepositoryPort.Query {
                 }
                 """);
 
-        var resolution = resolver.resolveImplementors(session(), "ProductRepositoryPort.Query");
+        var resolution = resolver.resolveImplementors(session(), "CustomerRepositoryPort.Query");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("ProductQueryRepository", resolution.candidates().get(0).implementationSimpleName());
-        assertEquals(List.of("ProductRepositoryPort.Query"), resolution.candidates().get(0).implementedTypes());
+        assertEquals("CustomerQueryRepository", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals(List.of("CustomerRepositoryPort.Query"), resolution.candidates().get(0).implementedTypes());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolution.candidates().get(0).confidence());
     }
 
     @Test
     void shouldResolveConventionalServiceImplementationBeforeFallbackScan() {
-        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductPort.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/UpdateCustomerPort.java", """
+                package com.example.crm.customer;
 
-                interface UpdateProductPort {
-                    void update(Product product);
+                interface UpdateCustomerPort {
+                    void update(Customer customer);
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductService.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/UpdateCustomerService.java", """
+                package com.example.crm.customer;
 
-                class UpdateProductService implements UpdateProductPort {
-                    public void update(Product product) {
+                class UpdateCustomerService implements UpdateCustomerPort {
+                    public void update(Customer customer) {
                     }
                 }
                 """);
         for (var index = 0; index < 100; index++) {
-            repositoryPort.add("src/main/java/com/example/crm/noise/AgreementService" + index + ".java", """
+            repositoryPort.add("src/main/java/com/example/crm/noise/CustomerService" + index + ".java", """
                     package com.example.crm.noise;
 
-                    class AgreementService%s implements OtherPort {
+                    class CustomerService%s implements OtherPort {
                     }
                     """.formatted(index));
         }
 
         var session = session();
-        var resolution = resolver.resolveImplementors(session, "UpdateProductPort");
+        var resolution = resolver.resolveImplementors(session, "UpdateCustomerPort");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("UpdateProductService", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals("UpdateCustomerService", resolution.candidates().get(0).implementationSimpleName());
         assertEquals(1, session.readFileCount());
     }
 
     @Test
     void shouldResolveNestedCommandRepositoryBeforeFallbackScan() {
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
+                package com.example.crm.customer;
 
-                interface ProductRepositoryPort {
+                interface CustomerRepositoryPort {
                     interface Command {
                     }
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductCommandRepository.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerCommandRepository.java", """
+                package com.example.crm.customer;
 
-                class ProductCommandRepository implements ProductRepositoryPort.Command {
+                class CustomerCommandRepository implements CustomerRepositoryPort.Command {
                 }
                 """);
         for (var index = 0; index < 100; index++) {
-            repositoryPort.add("src/main/java/com/example/crm/noise/ProductService" + index + ".java", """
+            repositoryPort.add("src/main/java/com/example/crm/noise/CustomerService" + index + ".java", """
                     package com.example.crm.noise;
 
-                    class ProductService%s implements OtherPort {
+                    class CustomerService%s implements OtherPort {
                     }
                     """.formatted(index));
         }
 
         var session = session();
-        var resolution = resolver.resolveImplementors(session, "ProductRepositoryPort.Command");
+        var resolution = resolver.resolveImplementors(session, "CustomerRepositoryPort.Command");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("ProductCommandRepository", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals("CustomerCommandRepository", resolution.candidates().get(0).implementationSimpleName());
         assertEquals(1, session.readFileCount());
     }
 
     @Test
     void shouldResolveNestedInterfaceImportedBySimpleName() {
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
+                package com.example.crm.customer;
 
-                interface ProductRepositoryPort {
+                interface CustomerRepositoryPort {
                     interface Query {
                     }
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
-                import com.example.crm.product.ProductRepositoryPort.Query;
+                import com.example.crm.customer.CustomerRepositoryPort.Query;
 
-                class ProductQueryRepository implements Query {
+                class CustomerQueryRepository implements Query {
                 }
                 """);
 
         var resolution = resolver.resolveImplementors(
                 session(),
-                "com.example.crm.product.ProductRepositoryPort.Query"
+                "com.example.crm.customer.CustomerRepositoryPort.Query"
         );
 
         assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("ProductQueryRepository", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals("CustomerQueryRepository", resolution.candidates().get(0).implementationSimpleName());
         assertEquals(List.of("Query"), resolution.candidates().get(0).implementedTypes());
         assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, resolution.candidates().get(0).confidence());
     }
 
     @Test
     void shouldReturnAmbiguousWhenMultipleImplementationsMatch() {
-        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductService.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/UpdateCustomerService.java", """
+                package com.example.crm.customer;
 
-                class UpdateProductService implements UpdateProductPort {
+                class UpdateCustomerService implements UpdateCustomerPort {
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/LegacyUpdateProductService.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/LegacyUpdateCustomerService.java", """
+                package com.example.crm.customer;
 
-                class LegacyUpdateProductService implements UpdateProductPort {
+                class LegacyUpdateCustomerService implements UpdateCustomerPort {
                 }
                 """);
 
-        var resolution = resolver.resolveImplementors(session(), "UpdateProductPort");
+        var resolution = resolver.resolveImplementors(session(), "UpdateCustomerPort");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.AMBIGUOUS, resolution.status());
         assertEquals(2, resolution.candidates().size());
         assertEquals(List.of(
-                        "src/main/java/com/example/crm/product/LegacyUpdateProductService.java",
-                        "src/main/java/com/example/crm/product/UpdateProductService.java"
+                        "src/main/java/com/example/crm/customer/LegacyUpdateCustomerService.java",
+                        "src/main/java/com/example/crm/customer/UpdateCustomerService.java"
                 ),
                 resolution.candidates().stream().map(GitLabJavaImplementorCandidate::filePath).toList());
-        assertEquals(List.of("More than one implementation matched interface UpdateProductPort."),
+        assertEquals(List.of("More than one implementation matched interface UpdateCustomerPort."),
                 resolution.limitations());
     }
 
     @Test
     void shouldReturnNotFoundWhenImplementationIsMissing() {
-        repositoryPort.add("src/main/java/com/example/crm/product/UpdateProductPort.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/UpdateCustomerPort.java", """
+                package com.example.crm.customer;
 
-                interface UpdateProductPort {
+                interface UpdateCustomerPort {
                 }
                 """);
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
-                class ProductQueryRepository implements ProductRepositoryPort.Query {
+                class CustomerQueryRepository implements CustomerRepositoryPort.Query {
                 }
                 """);
 
-        var resolution = resolver.resolveImplementors(session(), "UpdateProductPort");
+        var resolution = resolver.resolveImplementors(session(), "UpdateCustomerPort");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.NOT_FOUND, resolution.status());
         assertTrue(resolution.candidates().isEmpty());
-        assertEquals(List.of("No implementation was found for interface UpdateProductPort."),
+        assertEquals(List.of("No implementation was found for interface UpdateCustomerPort."),
                 resolution.limitations());
     }
 
     @Test
     void shouldFindPackagePrivateImplementationAmongManyTypesInOneFile() {
-        repositoryPort.add("src/main/java/com/example/crm/product/ProductRepositories.java", """
-                package com.example.crm.product;
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositories.java", """
+                package com.example.crm.customer;
 
-                class ProductRepositorySupport {
+                class CustomerRepositorySupport {
                 }
 
-                class ProductCommandRepository implements ProductRepositoryPort.Command {
+                class CustomerCommandRepository implements CustomerRepositoryPort.Command {
                 }
                 """);
 
-        var resolution = resolver.resolveImplementors(session(), "ProductRepositoryPort.Command");
+        var resolution = resolver.resolveImplementors(session(), "CustomerRepositoryPort.Command");
 
         assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("ProductCommandRepository", resolution.candidates().get(0).implementationSimpleName());
-        assertEquals("ProductCommandRepository", resolution.candidates().get(0).implementationRelativeName());
+        assertEquals("CustomerCommandRepository", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals("CustomerCommandRepository", resolution.candidates().get(0).implementationRelativeName());
         assertEquals(GitLabJavaTypeKind.CLASS, resolution.candidates().get(0).implementationKind());
     }
 

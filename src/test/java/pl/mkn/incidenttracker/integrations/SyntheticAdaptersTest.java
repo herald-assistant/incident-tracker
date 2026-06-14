@@ -27,18 +27,18 @@ class SyntheticAdaptersTest {
                 "timeout-123",
                 Instant.parse("2026-04-11T20:57:33.285Z"),
                 Instant.parse("2026-04-11T20:57:33.290Z"),
-                List.of("tenant-alpha-main-dev3"),
+                List.of("crm-main-dev3"),
                 List.of("backend-65df9ffbbb-79p7j"),
                 List.of("backend"),
                 List.of("case-evaluation-service")
         ));
         var fileCandidates = gitLabAdapter.searchCandidateFiles(new GitLabRepositorySearchQuery(
                 "timeout-123",
-                "sample/runtime",
+                "CRM/runtime",
                 "main",
-                List.of("billing-service", "catalog-service"),
-                List.of("GET /inventory", "POST /payment"),
-                List.of("timeout", "inventory", "payment")
+                List.of("crm-billing-service", "crm-customer-profile-service"),
+                List.of("GET /crm/customers", "POST /crm/payments"),
+                List.of("timeout", "customer-profile", "payment")
         ));
 
         assertEquals(2, logEntries.size());
@@ -60,31 +60,31 @@ class SyntheticAdaptersTest {
         assertEquals("service.response.time.p95", incidentEvidence.metrics().get(0).metricLabel());
 
         assertEquals(1, fileCandidates.size());
-        assertEquals("sample/runtime", fileCandidates.get(0).group());
-        assertEquals("edge-client-service", fileCandidates.get(0).projectName());
+        assertEquals("CRM/runtime", fileCandidates.get(0).group());
+        assertEquals("crm-customer-client-service", fileCandidates.get(0).projectName());
         assertEquals("main", fileCandidates.get(0).branch());
-        assertEquals("src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java", fileCandidates.get(0).filePath());
+        assertEquals("src/main/java/com/example/synthetic/edge/CustomerProfileClient.java", fileCandidates.get(0).filePath());
         assertEquals(95, fileCandidates.get(0).matchScore());
 
         var fileContent = gitLabAdapter.readFile(
-                "sample/runtime",
-                "edge-client-service",
+                "CRM/runtime",
+                "crm-customer-client-service",
                 "main",
-                "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 4_000
         );
 
-        assertEquals("sample/runtime", fileContent.group());
-        assertEquals("edge-client-service", fileContent.projectName());
+        assertEquals("CRM/runtime", fileContent.group());
+        assertEquals("crm-customer-client-service", fileContent.projectName());
         assertEquals("main", fileContent.branch());
-        assertEquals("src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java", fileContent.filePath());
+        assertEquals("src/main/java/com/example/synthetic/edge/CustomerProfileClient.java", fileContent.filePath());
         assertFalse(fileContent.truncated());
 
         var fileChunk = gitLabAdapter.readFileChunk(
-                "sample/runtime",
-                "edge-client-service",
+                "CRM/runtime",
+                "crm-customer-client-service",
                 "main",
-                "src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java",
+                "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 5,
                 12,
                 4_000

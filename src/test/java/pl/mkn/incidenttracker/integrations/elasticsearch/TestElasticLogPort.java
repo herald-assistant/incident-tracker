@@ -20,7 +20,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                             "Catalog call timed out",
                             null,
                             "backend",
-                            "r/tenant-alpha-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567"
+                            "r/crm-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567"
                     ),
                     testEntry(
                             "2026-04-11T20:57:33.290Z",
@@ -30,7 +30,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                             "Request timeout exceeded",
                             null,
                             "backend",
-                            "r/tenant-alpha-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567"
+                            "r/crm-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567"
                     )
             );
         }
@@ -47,7 +47,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                                     + "\tat com.example.synthetic.workflowstate.domain.core.ActiveCaseRecordDomainRepository.get(ActiveCaseRecordDomainRepository.java:74)\n"
                                     + "\tat com.example.synthetic.workflowstate.services.core.ActiveCaseRecordQueryService.get(ActiveCaseRecordQueryService.java:69)",
                             "backend",
-                            "r/tenant-alpha-main-dev1/backend:20260411-204903-1-dev-zephyr-89abcdef0123456789abcdef0123456789abcdef"
+                            "r/crm-main-dev1/backend:20260411-204903-1-dev-zephyr-89abcdef0123456789abcdef0123456789abcdef"
                     ),
                     testEntry(
                             "2026-04-11T20:49:03.332Z",
@@ -57,7 +57,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                             "Lock wait too long",
                             null,
                             "backend",
-                            "r/tenant-alpha-main-dev1/backend:20260411-204903-1-dev-zephyr-89abcdef0123456789abcdef0123456789abcdef"
+                            "r/crm-main-dev1/backend:20260411-204903-1-dev-zephyr-89abcdef0123456789abcdef0123456789abcdef"
                     )
             );
         }
@@ -71,7 +71,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                         "CorrelationId " + correlationId + " found in logs",
                         null,
                         "backend",
-                        "r/tenant-alpha-main-dev2/backend:20260411-184324-1-dev-quartz-fedcba9876543210fedcba9876543210fedcba98"
+                        "r/crm-main-dev2/backend:20260411-184324-1-dev-quartz-fedcba9876543210fedcba9876543210fedcba98"
                 ),
                 testEntry(
                         "2026-04-11T18:43:24.525Z",
@@ -81,7 +81,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                         "No strong error pattern found",
                         null,
                         "backend",
-                        "r/tenant-alpha-main-dev2/backend:20260411-184324-1-dev-quartz-fedcba9876543210fedcba9876543210fedcba98"
+                        "r/crm-main-dev2/backend:20260411-184324-1-dev-quartz-fedcba9876543210fedcba9876543210fedcba98"
                 )
         );
     }

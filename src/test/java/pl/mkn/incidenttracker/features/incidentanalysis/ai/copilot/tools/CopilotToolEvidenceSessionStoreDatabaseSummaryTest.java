@@ -87,7 +87,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
                 "{\"reason\":\"Czytam plik.\"}",
                 """
                         {
-                          "group": "sample/runtime",
+                          "group": "CRM/runtime",
                           "projectName": "crm-api",
                           "branch": "main",
                           "filePath": "src/main/java/pl/mkn/crm/CustomerService.java",
@@ -150,7 +150,7 @@ class CopilotToolEvidenceSessionStoreDatabaseSummaryTest {
             String rawResult
     ) {
         return new CopilotToolInvocationFinishedEvent(
-                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "sandbox-a", "main", "sample/runtime"),
+                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "sandbox-a", "main", "CRM/runtime"),
                 sessionId,
                 toolCallId,
                 toolName,

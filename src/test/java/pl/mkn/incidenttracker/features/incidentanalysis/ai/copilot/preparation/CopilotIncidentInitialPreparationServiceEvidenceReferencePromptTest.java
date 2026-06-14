@@ -81,7 +81,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                 "corr-123",
                 "dev3",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(new AnalysisEvidenceSection(
                         "elasticsearch",
                         "logs",

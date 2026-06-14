@@ -57,11 +57,11 @@ class ElasticLogSearchControllerTest {
                                 "EntityNotFoundException",
                                 "https-jsse-nio-8443-exec-10",
                                 "a8cdba8fe9a5ec96",
-                                "tenant-alpha-main-dev1",
+                                "crm-main-dev1",
                                 "backend-846b75885c-4v4gp",
                                 "backend",
                                 null,
-                                ".ds-projects.TENANT-ALPHA.prj000000104201-2026.03.27-000377",
+                                ".ds-projects.CRM.prj000000104201-2026.03.27-000377",
                                 "AZ1-Vg6o1WPiTTEp9_tC",
                                 false,
                                 false

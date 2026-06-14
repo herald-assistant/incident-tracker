@@ -30,34 +30,34 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldResolveEndpointHandlerByQualifiedTypeName() {
-        var astFile = astFile("src/main/java/com/example/crm/product/DataProductController.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+                package com.example.crm.customer;
 
                 import org.springframework.http.ResponseEntity;
 
-                class DataProductController {
-                    public ResponseEntity<ProductWebModel> updateProduct(String ttaId, ProductWebModel webModel) {
-                        return ResponseEntity.ok(webModel);
+                class CustomerController {
+                    public ResponseEntity<CustomerModel> updateCustomer(String ttaId, CustomerModel model) {
+                        return ResponseEntity.ok(model);
                     }
                 }
                 """);
 
         var resolution = locator.resolveMethod(
                 astFile,
-                "com.example.crm.product.DataProductController",
-                "updateProduct",
+                "com.example.crm.customer.CustomerController",
+                "updateCustomer",
                 2
         );
 
         assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolution.confidence());
-        assertEquals("updateProduct", resolution.method().methodName());
-        assertEquals("DataProductController", resolution.method().declaringTypeSimpleName());
-        assertEquals("com.example.crm.product.DataProductController", resolution.method().declaringTypeQualifiedName());
-        assertEquals("ResponseEntity<ProductWebModel>", resolution.method().returnType());
+        assertEquals("updateCustomer", resolution.method().methodName());
+        assertEquals("CustomerController", resolution.method().declaringTypeSimpleName());
+        assertEquals("com.example.crm.customer.CustomerController", resolution.method().declaringTypeQualifiedName());
+        assertEquals("ResponseEntity<CustomerModel>", resolution.method().returnType());
         assertEquals(2, resolution.method().parameterCount());
-        assertEquals(List.of("String", "ProductWebModel"), resolution.method().parameterTypes());
-        assertEquals(List.of("ttaId", "webModel"), resolution.method().parameterNames());
+        assertEquals(List.of("String", "CustomerModel"), resolution.method().parameterTypes());
+        assertEquals(List.of("ttaId", "model"), resolution.method().parameterNames());
         assertTrue(resolution.method().publicMethod());
         assertFalse(resolution.method().privateMethod());
         assertEquals(1, resolution.candidates().size());
@@ -66,33 +66,33 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldResolvePrivateHelperInSameClass() {
-        var astFile = astFile("src/main/java/com/example/crm/product/DataProductController.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+                package com.example.crm.customer;
 
-                class DataProductController {
-                    ProductWebModel getProduct(String ttaId) {
-                        return getProductWebModel(ttaId);
+                class CustomerController {
+                    CustomerModel getCustomer(String ttaId) {
+                        return getCustomerModel(ttaId);
                     }
 
-                    private ProductWebModel getProductWebModel(String ttaId) {
-                        return new ProductWebModel(ttaId);
+                    private CustomerModel getCustomerModel(String ttaId) {
+                        return new CustomerModel(ttaId);
                     }
                 }
                 """);
 
-        var resolution = locator.resolveMethod(astFile, "DataProductController", "getProductWebModel", 1);
+        var resolution = locator.resolveMethod(astFile, "CustomerController", "getCustomerModel", 1);
 
         assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
-        assertEquals("getProductWebModel", resolution.method().methodName());
-        assertEquals("ProductWebModel", resolution.method().returnType());
+        assertEquals("getCustomerModel", resolution.method().methodName());
+        assertEquals("CustomerModel", resolution.method().returnType());
         assertEquals(List.of("private"), resolution.method().modifiers());
         assertTrue(resolution.method().privateMethod());
     }
 
     @Test
     void shouldResolveOverloadByArgumentCount() {
-        var astFile = astFile("src/main/java/com/example/crm/product/CustomerPolicy.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerPolicy.java", """
+                package com.example.crm.customer;
 
                 class CustomerPolicy {
                     Decision apply(String id) {
@@ -114,13 +114,13 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldResolveOverloadByExpectedParameterTypes() {
-        var astFile = astFile("src/main/java/com/example/crm/product/UpdateProductService.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/UpdateCustomerService.java", """
+                package com.example.crm.customer;
 
                 import org.springframework.context.event.EventListener;
 
-                class UpdateProductService {
-                    void update(Product product) {
+                class UpdateCustomerService {
+                    void update(Customer customer) {
                     }
 
                     @EventListener
@@ -133,22 +133,22 @@ class GitLabJavaMethodLocatorTest {
                 }
                 """);
 
-        var resolution = locator.resolveMethod(astFile, "UpdateProductService", "update", 1, List.of("Product"));
+        var resolution = locator.resolveMethod(astFile, "UpdateCustomerService", "update", 1, List.of("Customer"));
 
         assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
-        assertEquals(List.of("Product"), resolution.method().parameterTypes());
+        assertEquals(List.of("Customer"), resolution.method().parameterTypes());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, resolution.confidence());
     }
 
     @Test
     void shouldPreferNonEventListenerOverloadWhenOnlyEventListenersCompete() {
-        var astFile = astFile("src/main/java/com/example/crm/product/UpdateProductService.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/UpdateCustomerService.java", """
+                package com.example.crm.customer;
 
                 import org.springframework.context.event.EventListener;
 
-                class UpdateProductService {
-                    void update(Product product) {
+                class UpdateCustomerService {
+                    void update(Customer customer) {
                     }
 
                     @EventListener
@@ -157,17 +157,17 @@ class GitLabJavaMethodLocatorTest {
                 }
                 """);
 
-        var resolution = locator.resolveMethod(astFile, "UpdateProductService", "update", 1);
+        var resolution = locator.resolveMethod(astFile, "UpdateCustomerService", "update", 1);
 
         assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
-        assertEquals(List.of("Product"), resolution.method().parameterTypes());
+        assertEquals(List.of("Customer"), resolution.method().parameterTypes());
         assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, resolution.confidence());
     }
 
     @Test
     void shouldReturnAmbiguousForOverloadWithoutArgumentCount() {
-        var astFile = astFile("src/main/java/com/example/crm/product/CustomerPolicy.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerPolicy.java", """
+                package com.example.crm.customer;
 
                 class CustomerPolicy {
                     Decision apply(String id) {
@@ -190,17 +190,17 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldResolveDefaultMethodInInterface() {
-        var astFile = astFile("src/main/java/com/example/crm/product/DataProductApi.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerApi.java", """
+                package com.example.crm.customer;
 
-                interface DataProductApi {
-                    default ProductWebModel getProduct(String ttaId) {
+                interface CustomerApi {
+                    default CustomerModel getCustomer(String ttaId) {
                         return null;
                     }
                 }
                 """);
 
-        var resolution = locator.resolveMethod(astFile, "DataProductApi", "getProduct", 1);
+        var resolution = locator.resolveMethod(astFile, "CustomerApi", "getCustomer", 1);
 
         assertEquals(GitLabJavaMethodResolutionStatus.RESOLVED, resolution.status());
         assertEquals(GitLabJavaTypeKind.INTERFACE, resolution.method().declaringTypeKind());
@@ -210,28 +210,28 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldReturnNotFoundWhenMethodDoesNotExist() {
-        var astFile = astFile("src/main/java/com/example/crm/product/DataProductController.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+                package com.example.crm.customer;
 
-                class DataProductController {
-                    ProductWebModel getProduct(String ttaId) {
+                class CustomerController {
+                    CustomerModel getCustomer(String ttaId) {
                         return null;
                     }
                 }
                 """);
 
-        var resolution = locator.resolveMethod(astFile, "DataProductController", "updateProduct", 2);
+        var resolution = locator.resolveMethod(astFile, "CustomerController", "updateCustomer", 2);
 
         assertEquals(GitLabJavaMethodResolutionStatus.NOT_FOUND, resolution.status());
         assertTrue(resolution.candidates().isEmpty());
-        assertEquals(List.of("Method was not found in parsed Java source. Target: DataProductController#updateProduct."),
+        assertEquals(List.of("Method was not found in parsed Java source. Target: CustomerController#updateCustomer."),
                 resolution.limitations());
     }
 
     @Test
     void shouldReturnParseFailedWhenAstFileWasNotParsed() {
         var astFile = new GitLabJavaAstFile(
-                "src/main/java/com/example/crm/product/BrokenController.java",
+                "src/main/java/com/example/crm/customer/BrokenController.java",
                 null,
                 List.of(),
                 List.of(),
@@ -240,7 +240,7 @@ class GitLabJavaMethodLocatorTest {
                 List.of("Could not parse Java source.")
         );
 
-        var resolution = locator.resolveMethod(astFile, "BrokenController", "getProduct", 1);
+        var resolution = locator.resolveMethod(astFile, "BrokenController", "getCustomer", 1);
 
         assertEquals(GitLabJavaMethodResolutionStatus.PARSE_FAILED, resolution.status());
         assertEquals(List.of("Could not parse Java source."), resolution.limitations());

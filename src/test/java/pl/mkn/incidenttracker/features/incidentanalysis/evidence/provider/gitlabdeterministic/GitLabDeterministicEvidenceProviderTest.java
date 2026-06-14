@@ -38,7 +38,7 @@ class GitLabDeterministicEvidenceProviderTest {
     void shouldResolveBranchEnvironmentAndCodeChunkFromEarlierElasticEvidence() {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
-        properties.setGroup("sample/runtime");
+        properties.setGroup("CRM/runtime");
 
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var sourceResolveService = mock(GitLabSourceResolveService.class);
@@ -64,7 +64,7 @@ class GitLabDeterministicEvidenceProviderTest {
         ));
 
         when(repositoryPort.readFileChunk(
-                "sample/runtime",
+                "CRM/runtime",
                 "backend",
                 "dev/zephyr",
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
@@ -72,7 +72,7 @@ class GitLabDeterministicEvidenceProviderTest {
                 94,
                 4_000
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "sample/runtime",
+                "CRM/runtime",
                 "backend",
                 "dev/zephyr",
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
@@ -98,7 +98,7 @@ class GitLabDeterministicEvidenceProviderTest {
         assertEquals("branch", codeItem.attributes().get(1).name());
         assertEquals("dev/zephyr", codeItem.attributes().get(1).value());
         assertEquals("group", codeItem.attributes().get(2).name());
-        assertEquals("sample/runtime", codeItem.attributes().get(2).value());
+        assertEquals("CRM/runtime", codeItem.attributes().get(2).value());
         assertEquals("projectName", codeItem.attributes().get(3).name());
         assertEquals("backend", codeItem.attributes().get(3).value());
         assertTrue(codeItem.attributes().stream().anyMatch(attribute ->
@@ -127,7 +127,7 @@ class GitLabDeterministicEvidenceProviderTest {
     void shouldFallbackToNamespaceBasedDeploymentForUatEnvironment() {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
-        properties.setGroup("sample/runtime");
+        properties.setGroup("CRM/runtime");
 
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var sourceResolveService = mock(GitLabSourceResolveService.class);
@@ -153,7 +153,7 @@ class GitLabDeterministicEvidenceProviderTest {
         ));
 
         when(repositoryPort.readFileChunk(
-                "sample/runtime",
+                "CRM/runtime",
                 "backend",
                 "release-candidate",
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
@@ -161,7 +161,7 @@ class GitLabDeterministicEvidenceProviderTest {
                 94,
                 4_000
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "sample/runtime",
+                "CRM/runtime",
                 "backend",
                 "release-candidate",
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
@@ -193,7 +193,7 @@ class GitLabDeterministicEvidenceProviderTest {
     void shouldResolveNestedGitLabProjectFromContainerNameHintForDeterministicMode() {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
-        properties.setGroup("TENANT-ALPHA");
+        properties.setGroup("CRM");
 
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var sourceResolveService = mock(GitLabSourceResolveService.class);
@@ -204,51 +204,51 @@ class GitLabDeterministicEvidenceProviderTest {
                 deploymentContextResolver,
                 emptyRepositoryProjectPathResolver()
         );
-        var elasticProvider = new ElasticLogEvidenceProvider(agreementProcessElasticPort());
-        var baseContext = AnalysisContext.initialize("agreement-123");
+        var elasticProvider = new ElasticLogEvidenceProvider(customerProcessElasticPort());
+        var baseContext = AnalysisContext.initialize("customer-123");
         var context = baseContext.withSection(elasticProvider.collect(baseContext));
 
         when(repositoryPort.searchProjects(
-                argThat("TENANT-ALPHA"::equals),
-                argThat(projectHints -> projectHints.contains("document-workflow")
-                        && projectHints.contains("document_workflow"))
+                argThat("CRM"::equals),
+                argThat(projectHints -> projectHints.contains("crm-customer-workflow")
+                        && projectHints.contains("customer_workflow"))
         )).thenReturn(List.of(new GitLabRepositoryProjectCandidate(
-                "TENANT-ALPHA",
-                "WORKFLOWS/DOCUMENT_WORKFLOW",
-                "Matched TENANT-ALPHA project path from document_workflow.",
+                "CRM",
+                "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
+                "Matched CRM project path from customer_workflow.",
                 120
         )));
 
         when(sourceResolveService.resolveMatch(argThat((GitLabSourceResolveRequest request) ->
-                request.groupPath().equals("TENANT-ALPHA")
-                        && request.projectPath().equals("WORKFLOWS/DOCUMENT_WORKFLOW")
+                request.groupPath().equals("CRM")
+                        && request.projectPath().equals("CRM_WORKFLOWS/CUSTOMER_WORKFLOW")
                         && request.effectiveRef().equals("release-candidate")
-                        && request.symbol().equals("com.example.synthetic.workflow.DocumentArchiveService")
+                        && request.symbol().equals("com.example.synthetic.workflow.CustomerProfileArchiveService")
         ), any())).thenReturn(new GitLabSourceResolveMatch(
-                "src/main/java/com/example/synthetic/workflow/DocumentArchiveService.java",
+                "src/main/java/com/example/synthetic/workflow/CustomerProfileArchiveService.java",
                 140,
-                java.util.List.of("src/main/java/com/example/synthetic/workflow/DocumentArchiveService.java")
+                java.util.List.of("src/main/java/com/example/synthetic/workflow/CustomerProfileArchiveService.java")
         ));
 
         when(repositoryPort.readFileChunk(
-                "TENANT-ALPHA",
-                "WORKFLOWS/DOCUMENT_WORKFLOW",
+                "CRM",
+                "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
                 "release-candidate",
-                "src/main/java/com/example/synthetic/workflow/DocumentArchiveService.java",
+                "src/main/java/com/example/synthetic/workflow/CustomerProfileArchiveService.java",
                 37,
                 77,
                 4_000
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "TENANT-ALPHA",
-                "WORKFLOWS/DOCUMENT_WORKFLOW",
+                "CRM",
+                "CRM_WORKFLOWS/CUSTOMER_WORKFLOW",
                 "release-candidate",
-                "src/main/java/com/example/synthetic/workflow/DocumentArchiveService.java",
+                "src/main/java/com/example/synthetic/workflow/CustomerProfileArchiveService.java",
                 37,
                 77,
                 37,
                 77,
                 210,
-                "public class DocumentArchiveService {\n    void removeDocuments() {}\n}",
+                "public class CustomerProfileArchiveService {\n    void archiveInactiveProfiles() {}\n}",
                 false
         ));
 
@@ -259,18 +259,18 @@ class GitLabDeterministicEvidenceProviderTest {
         assertEquals(1, section.items().size());
 
         var codeItem = section.items().get(0);
-        assertTrue(codeItem.title().contains("WORKFLOWS/DOCUMENT_WORKFLOW"));
+        assertTrue(codeItem.title().contains("CRM_WORKFLOWS/CUSTOMER_WORKFLOW"));
         assertTrue(codeItem.attributes().stream().anyMatch(attribute ->
                 attribute.name().equals("projectName")
-                        && attribute.value().equals("WORKFLOWS/DOCUMENT_WORKFLOW")
+                        && attribute.value().equals("CRM_WORKFLOWS/CUSTOMER_WORKFLOW")
         ));
         assertTrue(codeItem.attributes().stream().anyMatch(attribute ->
-                attribute.name().equals("content") && attribute.value().contains("DocumentArchiveService")
+                attribute.name().equals("content") && attribute.value().contains("CustomerProfileArchiveService")
         ));
 
         verify(sourceResolveService).resolveMatch(
                 argThat((GitLabSourceResolveRequest request) ->
-                        request.projectPath().equals("WORKFLOWS/DOCUMENT_WORKFLOW")),
+                        request.projectPath().equals("CRM_WORKFLOWS/CUSTOMER_WORKFLOW")),
                 any()
         );
     }
@@ -279,7 +279,7 @@ class GitLabDeterministicEvidenceProviderTest {
     void shouldPreferRepoMapProjectPathForGenericDeploymentProjectHint() {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
-        properties.setGroup("TENANT-ALPHA");
+        properties.setGroup("CRM");
         properties.setMaxCandidateCount(1);
 
         var repositoryPort = mock(GitLabRepositoryPort.class);
@@ -294,7 +294,7 @@ class GitLabDeterministicEvidenceProviderTest {
                         List.of(repoMapEntry(
                                 "case-workflow-repo",
                                 "WORKFLOWS/CASE_BACKEND",
-                                "TENANT-ALPHA",
+                                "CRM",
                                 List.of("backend"),
                                 List.of("case-evaluation-service"),
                                 List.of("backend")
@@ -306,7 +306,7 @@ class GitLabDeterministicEvidenceProviderTest {
         var context = baseContext.withSection(elasticProvider.collect(baseContext));
 
         when(sourceResolveService.resolveMatch(argThat((GitLabSourceResolveRequest request) ->
-                request.groupPath().equals("TENANT-ALPHA")
+                request.groupPath().equals("CRM")
                         && request.projectPath().equals("WORKFLOWS/CASE_BACKEND")
                         && request.effectiveRef().equals("dev/zephyr")
                         && request.symbol().equals("com.example.synthetic.workflowstate.domain.core.ActiveCaseRecordDomainRepository")
@@ -317,7 +317,7 @@ class GitLabDeterministicEvidenceProviderTest {
         ));
 
         when(repositoryPort.readFileChunk(
-                "TENANT-ALPHA",
+                "CRM",
                 "WORKFLOWS/CASE_BACKEND",
                 "dev/zephyr",
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
@@ -325,7 +325,7 @@ class GitLabDeterministicEvidenceProviderTest {
                 94,
                 4_000
         )).thenReturn(new GitLabRepositoryFileChunk(
-                "TENANT-ALPHA",
+                "CRM",
                 "WORKFLOWS/CASE_BACKEND",
                 "dev/zephyr",
                 "src/main/java/com/example/synthetic/workflowstate/domain/core/ActiveCaseRecordDomainRepository.java",
@@ -365,7 +365,7 @@ class GitLabDeterministicEvidenceProviderTest {
     void shouldIgnoreFrameworkStacktraceFramesAndMicroserviceNameAsProjectCandidate() {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
-        properties.setGroup("TENANT-ALPHA");
+        properties.setGroup("CRM");
         properties.setMaxCandidateCount(20);
 
         var repositoryPort = mock(GitLabRepositoryPort.class);
@@ -493,10 +493,10 @@ class GitLabDeterministicEvidenceProviderTest {
                                 """,
                         "main",
                         null,
-                        "tenant-alpha-main-dev1",
+                        "crm-main-dev1",
                         "backend-pod",
                         "backend",
-                        "reg.local/tenant-alpha-main-dev1/backend:20260409-113641-60-dev-zephyr-7fcd60f3b2a0660dc94a039ef4a98e430dd0b597",
+                        "reg.local/crm-main-dev1/backend:20260409-113641-60-dev-zephyr-7fcd60f3b2a0660dc94a039ef4a98e430dd0b597",
                         "test-index",
                         "resp4-like",
                         false,
@@ -540,10 +540,10 @@ class GitLabDeterministicEvidenceProviderTest {
                                 """,
                         "https-jsse-nio-8443-exec-8",
                         "996cb413cc0154a6",
-                        "tenant-alpha-main-uat2",
+                        "crm-main-uat2",
                         "backend-7d547497bf-j44wj",
                         "backend",
-                        "registry.example.internal:9999/TENANT-ALPHA-main/backend:3.11.3",
+                        "registry.example.internal:9999/CRM-main/backend:3.11.3",
                         "test-index",
                         "uat2-like",
                         false,
@@ -571,28 +571,28 @@ class GitLabDeterministicEvidenceProviderTest {
         };
     }
 
-    private static ElasticLogPort agreementProcessElasticPort() {
+    private static ElasticLogPort customerProcessElasticPort() {
         return new ElasticLogPort() {
             @Override
             public java.util.List<ElasticLogEntry> findLogEntries(String correlationId) {
                 return java.util.List.of(new ElasticLogEntry(
                         "2026-04-17T05:26:42.917Z",
                         "ERROR",
-                        "document-workflow",
-                        "c.e.synthetic.workflow.DocumentArchiveService",
-                        "Document cleanup failed",
+                        "crm-customer-workflow",
+                        "c.e.synthetic.workflow.CustomerProfileArchiveService",
+                        "Customer profile archival failed",
                         """
                                 java.lang.IllegalStateException: cleanup failed
-                                \tat com.example.synthetic.workflow.DocumentArchiveService.removeDocuments(DocumentArchiveService.java:57)
+                                \tat com.example.synthetic.workflow.CustomerProfileArchiveService.archiveInactiveProfiles(CustomerProfileArchiveService.java:57)
                                 """,
                         "https-jsse-nio-8443-exec-3",
                         "51214b5e131d8e00",
-                        "tenant-alpha-main-uat2",
-                        "document-workflow-75f8546d4f-gxw9s",
-                        "document-workflow",
-                        "registry.example.internal:9999/TENANT-ALPHA-main/document-workflow:3.8.0",
+                        "crm-main-uat2",
+                        "crm-customer-workflow-75f8546d4f-gxw9s",
+                        "crm-customer-workflow",
+                        "registry.example.internal:9999/CRM-main/crm-customer-workflow:3.8.0",
                         "test-index",
-                        "agreement-123",
+                        "customer-123",
                         false,
                         false
                 ));

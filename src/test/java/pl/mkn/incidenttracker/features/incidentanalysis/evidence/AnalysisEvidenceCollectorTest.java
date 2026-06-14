@@ -237,7 +237,7 @@ class AnalysisEvidenceCollectorTest {
 
     private static GitLabProperties gitLabProperties() {
         var properties = new GitLabProperties();
-        properties.setGroup("sample/runtime");
+        properties.setGroup("CRM/runtime");
         return properties;
     }
 
@@ -295,10 +295,10 @@ class AnalysisEvidenceCollectorTest {
                     null,
                     "main",
                     null,
-                    "tenant-alpha-main-uat1",
+                    "crm-main-uat1",
                     "pod",
                     "backend",
-                    "registry/tenant-alpha-main-uat1/backend:20260411-205733-1-release-candidate-0123456789abcdef0123456789abcdef01234567",
+                    "registry/crm-main-uat1/backend:20260411-205733-1-release-candidate-0123456789abcdef0123456789abcdef01234567",
                     "test-index",
                     "svc-ERROR",
                     false,

@@ -58,7 +58,7 @@ class ElasticLogSearchServiceTest {
                             },
                             "hits": [
                               {
-                                "_index": ".ds-projects.TENANT-ALPHA.prj000000104201-2026.03.27-000377",
+                                "_index": ".ds-projects.CRM.prj000000104201-2026.03.27-000377",
                                 "_id": "AZ1-VqcWw8HLH2XqEH6M",
                                 "_source": {
                                   "@timestamp": "2026-04-11T20:58:21.520Z",
@@ -76,7 +76,7 @@ class ElasticLogSearchServiceTest {
                                     "container": {
                                       "name": "backend"
                                     },
-                                    "namespace": "tenant-alpha-main-dev1",
+                                    "namespace": "crm-main-dev1",
                                     "pod": {
                                       "name": "backend-846b75885c-4v4gp"
                                     }
@@ -96,7 +96,7 @@ class ElasticLogSearchServiceTest {
         assertEquals("logs-*", response.indexPattern());
         assertEquals(200, response.requestedSize());
         assertEquals(1, response.returnedHits());
-        assertEquals("tenant-alpha-main-dev1", response.entries().get(0).namespace());
+        assertEquals("crm-main-dev1", response.entries().get(0).namespace());
 
         serviceFixture.server.verify();
     }

@@ -22,7 +22,7 @@ class CopilotIncidentFollowUpPromptRendererTest {
                 "corr-123",
                 "dev3",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(),
                 List.of(),
                 new AnalysisAiChatAnalysisSnapshot(
@@ -70,7 +70,7 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("- correlationId: corr-123"));
         assertTrue(prompt.contains("- environment: dev3"));
         assertTrue(prompt.contains("- gitLabBranch: main"));
-        assertTrue(prompt.contains("- gitLabGroup: sample/runtime"));
+        assertTrue(prompt.contains("- gitLabGroup: CRM/runtime"));
         assertTrue(prompt.contains("<<<BEGIN LATEST USER MESSAGE>>>"));
         assertTrue(prompt.contains("Zweryfikuj kod"));
         assertTrue(prompt.contains("- detectedProblem: Timeout downstream"));

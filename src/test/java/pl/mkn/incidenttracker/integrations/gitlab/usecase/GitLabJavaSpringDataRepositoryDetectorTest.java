@@ -29,43 +29,43 @@ class GitLabJavaSpringDataRepositoryDetectorTest {
 
     @Test
     void shouldDetectPackagePrivateJpaRepository() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
                 import org.springframework.data.jpa.repository.JpaRepository;
 
-                interface ProductQueryJpaRepository extends JpaRepository<ProductEntity, Long> {
+                interface CustomerQueryJpaRepository extends JpaRepository<CustomerEntity, Long> {
                 }
                 """);
 
-        var detection = detector.detect(astFile, "ProductQueryJpaRepository");
+        var detection = detector.detect(astFile, "CustomerQueryJpaRepository");
 
         assertEquals(GitLabJavaSpringDataRepositoryStatus.DETECTED, detection.status());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, detection.confidence());
-        assertEquals("ProductQueryJpaRepository", detection.repository().simpleName());
-        assertEquals("com.example.crm.product.ProductQueryJpaRepository", detection.repository().qualifiedName());
-        assertEquals("src/main/java/com/example/crm/product/ProductQueryRepository.java", detection.repository().filePath());
+        assertEquals("CustomerQueryJpaRepository", detection.repository().simpleName());
+        assertEquals("com.example.crm.customer.CustomerQueryJpaRepository", detection.repository().qualifiedName());
+        assertEquals("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", detection.repository().filePath());
         assertEquals("JpaRepository", detection.repository().baseInterface());
-        assertEquals("ProductEntity", detection.repository().entityType());
+        assertEquals("CustomerEntity", detection.repository().entityType());
         assertEquals("Long", detection.repository().idType());
         assertTrue(detection.repository().declaredMethodNames().isEmpty());
     }
 
     @Test
     void shouldDetectDeclaredRepositoryMethods() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductQueryRepository.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerQueryRepository.java", """
+                package com.example.crm.customer;
 
-                interface ProductQueryJpaRepository
-                        extends org.springframework.data.jpa.repository.JpaRepository<ProductEntity, Long> {
+                interface CustomerQueryJpaRepository
+                        extends org.springframework.data.jpa.repository.JpaRepository<CustomerEntity, Long> {
 
-                    ProductProjection findProjectionByTtaId(String ttaId);
+                    CustomerProjection findProjectionByTtaId(String ttaId);
 
                     boolean existsByTtaId(String ttaId);
                 }
                 """);
 
-        var detection = detector.detect(astFile, "ProductQueryJpaRepository");
+        var detection = detector.detect(astFile, "CustomerQueryJpaRepository");
 
         assertEquals(GitLabJavaSpringDataRepositoryStatus.DETECTED, detection.status());
         assertEquals("JpaRepository", detection.repository().baseInterface());
@@ -74,41 +74,41 @@ class GitLabJavaSpringDataRepositoryDetectorTest {
 
     @Test
     void shouldDetectCrudRepositoryAndPagingAndSortingRepository() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductRepositories.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerRepositories.java", """
+                package com.example.crm.customer;
 
                 import org.springframework.data.repository.CrudRepository;
                 import org.springframework.data.repository.PagingAndSortingRepository;
 
-                interface ProductCommandJpaRepository extends CrudRepository<ProductEntity, Long> {
+                interface CustomerCommandJpaRepository extends CrudRepository<CustomerEntity, Long> {
                 }
 
-                interface ProductPageJpaRepository extends PagingAndSortingRepository<ProductEntity, Long> {
+                interface CustomerPageJpaRepository extends PagingAndSortingRepository<CustomerEntity, Long> {
                 }
                 """);
 
-        var command = detector.detect(astFile, "ProductCommandJpaRepository");
-        var page = detector.detect(astFile, "ProductPageJpaRepository");
+        var command = detector.detect(astFile, "CustomerCommandJpaRepository");
+        var page = detector.detect(astFile, "CustomerPageJpaRepository");
 
         assertEquals(GitLabJavaSpringDataRepositoryStatus.DETECTED, command.status());
         assertEquals("CrudRepository", command.repository().baseInterface());
-        assertEquals("ProductEntity", command.repository().entityType());
+        assertEquals("CustomerEntity", command.repository().entityType());
         assertEquals(GitLabJavaSpringDataRepositoryStatus.DETECTED, page.status());
         assertEquals("PagingAndSortingRepository", page.repository().baseInterface());
-        assertEquals("ProductEntity", page.repository().entityType());
+        assertEquals("CustomerEntity", page.repository().entityType());
     }
 
     @Test
     void shouldDetectAllRepositoriesInOneFile() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductRepositories.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerRepositories.java", """
+                package com.example.crm.customer;
 
                 import org.springframework.data.jpa.repository.JpaRepository;
 
-                interface ProductQueryJpaRepository extends JpaRepository<ProductEntity, Long> {
+                interface CustomerQueryJpaRepository extends JpaRepository<CustomerEntity, Long> {
                 }
 
-                class ProductRepositorySupport {
+                class CustomerRepositorySupport {
                 }
 
                 interface MultilineQueryJpaRepository extends JpaRepository<MultilineEntity, Long> {
@@ -117,36 +117,36 @@ class GitLabJavaSpringDataRepositoryDetectorTest {
 
         var repositories = detector.detectAll(astFile);
 
-        assertEquals(List.of("ProductQueryJpaRepository", "MultilineQueryJpaRepository"),
+        assertEquals(List.of("CustomerQueryJpaRepository", "MultilineQueryJpaRepository"),
                 repositories.stream().map(GitLabJavaSpringDataRepository::simpleName).toList());
-        assertEquals(List.of("ProductEntity", "MultilineEntity"),
+        assertEquals(List.of("CustomerEntity", "MultilineEntity"),
                 repositories.stream().map(GitLabJavaSpringDataRepository::entityType).toList());
     }
 
     @Test
     void shouldReturnNotSpringDataRepositoryForPlainInterface() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
+                package com.example.crm.customer;
 
-                interface ProductRepositoryPort {
+                interface CustomerRepositoryPort {
                     interface Query {
                     }
                 }
                 """);
 
-        var detection = detector.detect(astFile, "ProductRepositoryPort");
+        var detection = detector.detect(astFile, "CustomerRepositoryPort");
 
         assertEquals(GitLabJavaSpringDataRepositoryStatus.NOT_SPRING_DATA_REPOSITORY, detection.status());
-        assertEquals(List.of("Interface does not extend a supported Spring Data repository base interface. Type: ProductRepositoryPort."),
+        assertEquals(List.of("Interface does not extend a supported Spring Data repository base interface. Type: CustomerRepositoryPort."),
                 detection.limitations());
     }
 
     @Test
     void shouldReturnTypeNotFoundWhenTypeIsMissing() {
-        var astFile = astFile("src/main/java/com/example/crm/product/ProductRepositoryPort.java", """
-                package com.example.crm.product;
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
+                package com.example.crm.customer;
 
-                interface ProductRepositoryPort {
+                interface CustomerRepositoryPort {
                 }
                 """);
 
@@ -159,7 +159,7 @@ class GitLabJavaSpringDataRepositoryDetectorTest {
     @Test
     void shouldReturnParseFailedWhenAstFileWasNotParsed() {
         var astFile = new GitLabJavaAstFile(
-                "src/main/java/com/example/crm/product/BrokenRepository.java",
+                "src/main/java/com/example/crm/customer/BrokenRepository.java",
                 null,
                 List.of(),
                 List.of(),

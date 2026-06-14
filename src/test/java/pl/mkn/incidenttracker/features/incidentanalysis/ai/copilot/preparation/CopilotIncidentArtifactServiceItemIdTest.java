@@ -71,7 +71,7 @@ class CopilotIncidentArtifactServiceItemIdTest {
     }
 
     private InitialAnalysisRequest request(List<AnalysisEvidenceSection> sections) {
-        return new InitialAnalysisRequest("corr-123", "dev3", "main", "sample/runtime", sections);
+        return new InitialAnalysisRequest("corr-123", "dev3", "main", "CRM/runtime", sections);
     }
 
     private AnalysisEvidenceItem item(String title, AnalysisEvidenceAttribute... attributes) {

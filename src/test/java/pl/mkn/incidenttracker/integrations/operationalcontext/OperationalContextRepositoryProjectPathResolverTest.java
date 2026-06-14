@@ -16,31 +16,31 @@ class OperationalContextRepositoryProjectPathResolverTest {
         var resolver = resolver(
                 List.of(system("backend", List.of("backend-repo", "shared-repo"))),
                 List.of(
-                        repository("backend-repo", "TENANT-ALPHA/WORKFLOWS/BACKEND", "TENANT-ALPHA", Map.of()),
-                        repository("shared-repo", "TENANT-ALPHA/LIBS/SHARED", "TENANT-ALPHA", Map.of()),
-                        repository("unrelated-repo", "TENANT-ALPHA/OTHER/UNRELATED", "TENANT-ALPHA", Map.of())
+                        repository("backend-repo", "CRM/WORKFLOWS/BACKEND", "CRM", Map.of()),
+                        repository("shared-repo", "CRM/LIBS/SHARED", "CRM", Map.of()),
+                        repository("unrelated-repo", "CRM/OTHER/UNRELATED", "CRM", Map.of())
                 )
         );
 
         assertEquals(
                 List.of("WORKFLOWS/BACKEND", "LIBS/SHARED"),
-                resolver.resolveProjectPaths("tenant-alpha", List.of("backend", "backend-7d547497bf-j44wj"))
+                resolver.resolveProjectPaths("crm", List.of("backend", "backend-7d547497bf-j44wj"))
         );
     }
 
     @Test
     void shouldNotResolveRepositoryOnlyRuntimeSignalWithoutMatchingSystemId() {
         var resolver = resolver(
-                List.of(system("orders", List.of("orders-repo"))),
+                List.of(system("crm-customer", List.of("crm-customer-repo"))),
                 List.of(repository(
                         "backend-repo",
-                        "TENANT-ALPHA/WORKFLOWS/BACKEND",
-                        "TENANT-ALPHA",
+                        "CRM/WORKFLOWS/BACKEND",
+                        "CRM",
                         Map.of("containerNames", List.of("backend"))
                 ))
         );
 
-        assertEquals(List.of(), resolver.resolveProjectPaths("TENANT-ALPHA", List.of("backend")));
+        assertEquals(List.of(), resolver.resolveProjectPaths("CRM", List.of("backend")));
     }
 
     private static OperationalContextRepositoryProjectPathResolver resolver(

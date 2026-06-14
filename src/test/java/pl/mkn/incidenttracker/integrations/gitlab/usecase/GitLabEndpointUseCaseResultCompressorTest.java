@@ -13,16 +13,16 @@ class GitLabEndpointUseCaseResultCompressorTest {
 
     @Test
     void shouldMergeSortAndSuggestNextReads() {
-        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main");
+        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-customer-service", "main");
         var result = compressor.compress(new GitLabEndpointUseCaseContextResult(
                 repository,
                 null,
                 List.of(
-                        file("src/main/java/com/example/ProductMapper.java", GitLabEndpointUseCaseFileRole.MAPPER, 5,
+                        file("src/main/java/com/example/CustomerMapper.java", GitLabEndpointUseCaseFileRole.MAPPER, 5,
                                 List.of("from"), "mapper call", GitLabEndpointUseCaseConfidence.MEDIUM),
-                        file("src/main/java/com/example/ProductController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
-                                List.of("getProduct"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH),
-                        file("src/main/java/com/example/ProductMapper.java", GitLabEndpointUseCaseFileRole.MAPPER, 5,
+                        file("src/main/java/com/example/CustomerController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
+                                List.of("getCustomer"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH),
+                        file("src/main/java/com/example/CustomerMapper.java", GitLabEndpointUseCaseFileRole.MAPPER, 5,
                                 List.of("toWeb"), "mapper default method", GitLabEndpointUseCaseConfidence.HIGH)
                 ),
                 List.of(),
@@ -34,21 +34,21 @@ class GitLabEndpointUseCaseResultCompressorTest {
         ));
 
         assertEquals(2, result.files().size());
-        assertEquals("src/main/java/com/example/ProductController.java", result.files().get(0).path());
-        assertEquals("src/main/java/com/example/ProductMapper.java", result.files().get(1).path());
+        assertEquals("src/main/java/com/example/CustomerController.java", result.files().get(0).path());
+        assertEquals("src/main/java/com/example/CustomerMapper.java", result.files().get(1).path());
         assertEquals(List.of("from", "toWeb"), result.files().get(1).symbols());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, result.files().get(1).confidence());
         assertEquals(List.of("raw limitation"), result.limitations());
         assertEquals(2, result.suggestedNextReads().size());
         assertTrue(result.suggestedNextReads().get(0)
-                .contains("crm-product-service:src/main/java/com/example/ProductController.java"));
-        assertTrue(result.suggestedNextReads().get(0).contains("symbols: getProduct"));
+                .contains("crm-customer-service:src/main/java/com/example/CustomerController.java"));
+        assertTrue(result.suggestedNextReads().get(0).contains("symbols: getCustomer"));
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, result.confidence());
     }
 
     @Test
     void shouldTruncateFilesAfterPrioritySorting() {
-        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main");
+        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-customer-service", "main");
         var result = compressor.compress(new GitLabEndpointUseCaseContextResult(
                 repository,
                 null,
@@ -85,19 +85,19 @@ class GitLabEndpointUseCaseResultCompressorTest {
 
     @Test
     void shouldPromoteSingleUnresolvedSourceCandidateToSuggestedFile() {
-        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main");
+        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-customer-service", "main");
         var result = compressor.compress(new GitLabEndpointUseCaseContextResult(
                 repository,
                 null,
-                List.of(file("src/main/java/com/example/ProductController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
-                        List.of("updateProduct"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH)),
+                List.of(file("src/main/java/com/example/CustomerController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
+                        List.of("updateCustomer"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH)),
                 List.of(),
                 List.of(new GitLabEndpointUseCaseUnresolvedReference(
-                        "ProductWebModelMapper",
-                        "src/main/java/com/example/ProductController.java",
+                        "CustomerMapper",
+                        "src/main/java/com/example/CustomerController.java",
                         "Source read file limit reached before reading mapper.",
-                        List.of("ProductWebModelMapper"),
-                        List.of("src/main/java/com/example/ProductWebModelMapper.java")
+                        List.of("CustomerMapper"),
+                        List.of("src/main/java/com/example/CustomerMapper.java")
                 )),
                 List.of(),
                 List.of(),
@@ -107,40 +107,40 @@ class GitLabEndpointUseCaseResultCompressorTest {
 
         assertEquals(2, result.files().size());
         var promoted = result.files().get(1);
-        assertEquals("src/main/java/com/example/ProductWebModelMapper.java", promoted.path());
+        assertEquals("src/main/java/com/example/CustomerMapper.java", promoted.path());
         assertEquals(GitLabEndpointUseCaseFileRole.MAPPER, promoted.role());
-        assertEquals(List.of("ProductWebModelMapper"), promoted.symbols());
+        assertEquals(List.of("CustomerMapper"), promoted.symbols());
         assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, promoted.confidence());
         assertTrue(promoted.reason().contains("Exact source candidate was found"));
         assertTrue(result.suggestedNextReads().stream()
-                .anyMatch(read -> read.contains("crm-product-service:src/main/java/com/example/ProductWebModelMapper.java")
-                        && read.contains("symbols: ProductWebModelMapper")));
+                .anyMatch(read -> read.contains("crm-customer-service:src/main/java/com/example/CustomerMapper.java")
+                        && read.contains("symbols: CustomerMapper")));
         assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, result.confidence());
     }
 
     @Test
     void shouldNotPromoteAmbiguousOrNonSourceUnresolvedCandidates() {
-        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-product-service", "main");
+        var repository = new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-customer-service", "main");
         var result = compressor.compress(new GitLabEndpointUseCaseContextResult(
                 repository,
                 null,
-                List.of(file("src/main/java/com/example/ProductController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
-                        List.of("updateProduct"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH)),
+                List.of(file("src/main/java/com/example/CustomerController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
+                        List.of("updateCustomer"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH)),
                 List.of(),
                 List.of(
                         new GitLabEndpointUseCaseUnresolvedReference(
-                                "Product",
-                                "src/main/java/com/example/ProductController.java",
+                                "Customer",
+                                "src/main/java/com/example/CustomerController.java",
                                 "More than one source file matched.",
-                                List.of("Product"),
+                                List.of("Customer"),
                                 List.of(
-                                        "src/main/java/com/example/api/Product.java",
-                                        "src/main/java/com/example/domain/Product.java"
+                                        "src/main/java/com/example/api/Customer.java",
+                                        "src/main/java/com/example/domain/Customer.java"
                                 )
                         ),
                         new GitLabEndpointUseCaseUnresolvedReference(
                                 "ResponseEntity",
-                                "src/main/java/com/example/ProductController.java",
+                                "src/main/java/com/example/CustomerController.java",
                                 "Framework type.",
                                 List.of("ResponseEntity"),
                                 List.of("org.springframework.http.ResponseEntity")
@@ -153,7 +153,7 @@ class GitLabEndpointUseCaseResultCompressorTest {
         ));
 
         assertEquals(1, result.files().size());
-        assertEquals("src/main/java/com/example/ProductController.java", result.files().get(0).path());
+        assertEquals("src/main/java/com/example/CustomerController.java", result.files().get(0).path());
         assertEquals(1, result.suggestedNextReads().size());
     }
 

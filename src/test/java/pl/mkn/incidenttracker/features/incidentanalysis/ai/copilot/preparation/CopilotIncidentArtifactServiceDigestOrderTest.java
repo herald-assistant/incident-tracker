@@ -26,7 +26,7 @@ class CopilotIncidentArtifactServiceDigestOrderTest {
                 "corr-123",
                 "dev3",
                 "main",
-                "sample/runtime",
+                "CRM/runtime",
                 List.of(
                         section("elasticsearch", "logs"),
                         section("deployment-context", "resolved-deployment"),

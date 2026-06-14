@@ -43,7 +43,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "CheckoutService.java around failing method",
                         """
                                 class CheckoutService {
-                                    Order submit(CheckoutCommand command) {
+                                    Customer submit(CheckoutCommand command) {
                                         if (command == null) {
                                             throw new IllegalArgumentException("command");
                                         }
@@ -79,7 +79,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "Flow context upstream and downstream for CheckoutService",
                         """
                                 class CheckoutService {
-                                    Order submit(CheckoutCommand command) {
+                                    Customer submit(CheckoutCommand command) {
                                         validator.validate(command);
                                         return downstreamClient.reserve(command.id());
                                     }
@@ -107,7 +107,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                                 "Flow context upstream and downstream for CheckoutService",
                                 """
                                         class CheckoutService {
-                                            Order submit(CheckoutCommand command) {
+                                            Customer submit(CheckoutCommand command) {
                                                 validator.validate(command);
                                                 return downstreamClient.reserve(command.id());
                                             }
@@ -146,11 +146,11 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 request("dev3", List.of(
                         jpaExceptionSection(),
                         gitLabSection(
-                                "OrderEntity mapping",
+                                "CustomerEntity mapping",
                                 """
                                         @Entity
-                                        @Table(name = "ORDERS")
-                                        class OrderEntity {
+                                        @Table(name = "CUSTOMERS")
+                                        class CustomerEntity {
                                             @Column(name = "BUSINESS_KEY")
                                             private String businessKey;
 
@@ -185,8 +185,8 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "logs",
                         List.of(item(
                                 "truncated log",
-                                attr("serviceName", "billing-service"),
-                                attr("className", "com.example.BillingService"),
+                                attr("serviceName", "crm-billing-service"),
+                                attr("className", "com.example.CustomerBillingService"),
                                 attr("message", "Failed to settle invoice"),
                                 attr("messageTruncated", "true")
                         ))
@@ -276,7 +276,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                                 "CheckoutService.java around failing method",
                                 """
                                         class CheckoutService {
-                                            Order submit(CheckoutCommand command) {
+                                            Customer submit(CheckoutCommand command) {
                                                 return command.toOrder();
                                             }
                                         }
@@ -304,7 +304,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     @Test
     void shouldCreateFollowUpPolicyFromResolvedChatScope() {
         var policy = policyFactory.createForFollowUp(
-                chatRequest("dev3", "sample/runtime", "release/2026.04"),
+                chatRequest("dev3", "CRM/runtime", "release/2026.04"),
                 tools(
                         "elastic_search_logs_by_correlation_id",
                         "elastic_summarize_http_calls_by_path",
@@ -373,7 +373,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "corr-123",
                 environment,
                 "release/2026.04",
-                "sample/runtime",
+                "CRM/runtime",
                 sections
         );
     }
@@ -426,12 +426,12 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "error log",
-                        attr("serviceName", "billing-service"),
-                        attr("className", "com.example.BillingService"),
+                        attr("serviceName", "crm-billing-service"),
+                        attr("className", "com.example.CustomerBillingService"),
                         attr("message", "Failed to settle invoice"),
                         attr("exception", """
                                 java.lang.IllegalStateException: failed
-                                \tat com.example.BillingService.settle(BillingService.java:42)
+                                \tat com.example.CustomerBillingService.settle(CustomerBillingService.java:42)
                                 """)
                 ))
         );
@@ -443,7 +443,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "repository error",
-                        attr("serviceName", "billing-service"),
+                        attr("serviceName", "crm-billing-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
                 ))
         );
