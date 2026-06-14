@@ -85,6 +85,16 @@ class GitLabEndpointUseCaseCodeIndexServiceTest {
         assertTrue(callNames.contains("orderService.create"));
         assertTrue(callNames.contains("auditPublisher.publish"));
         assertTrue(callNames.contains("mapper.toResponse"));
+
+        var createCall = index.methodCallIndex().callsByCaller().get(createMethod.id()).stream()
+                .filter(call -> "orderService.create(request)".equals(call.expression()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(List.of("request"), createCall.arguments());
+        assertTrue(createMethod.localVariables().stream()
+                .anyMatch(variable -> "order".equals(variable.name())
+                        && "var".equals(variable.type())
+                        && "orderService.create(request)".equals(variable.initializer())));
     }
 
     @Test

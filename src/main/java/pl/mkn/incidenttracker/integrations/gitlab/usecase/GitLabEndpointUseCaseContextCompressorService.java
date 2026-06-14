@@ -300,6 +300,9 @@ class GitLabEndpointUseCaseContextCompressorService {
     ) {
         var target = nodeById.get(edge.to());
         var source = nodeById.get(edge.from());
+        if (lombokGeneratedAccessorNode(target)) {
+            return false;
+        }
         return edge.kind() != GitLabEndpointUseCaseEdgeKind.SYNC_CALL
                 || edge.ambiguous()
                 || importantRole(target)
@@ -369,12 +372,21 @@ class GitLabEndpointUseCaseContextCompressorService {
 
     private boolean lowValueCompactNode(GitLabEndpointUseCaseNode node) {
         return node.role() == GitLabEndpointUseCaseRole.CONFIGURATION
+                || lombokGeneratedAccessorNode(node)
                 || node.role() == GitLabEndpointUseCaseRole.UNKNOWN && !node.terminal();
     }
 
     private boolean lowValueEvidenceNode(GitLabEndpointUseCaseNode node) {
         return node.role() == GitLabEndpointUseCaseRole.CONFIGURATION
+                || lombokGeneratedAccessorNode(node)
                 || node.role() == GitLabEndpointUseCaseRole.UNKNOWN && !node.terminal();
+    }
+
+    private boolean lombokGeneratedAccessorNode(GitLabEndpointUseCaseNode node) {
+        return node != null
+                && node.terminal()
+                && StringUtils.hasText(node.terminalReason())
+                && node.terminalReason().startsWith("Lombok generated ");
     }
 
     private java.util.Optional<GitLabEndpointUseCaseNode> rootNode(GitLabEndpointUseCaseGraph graph) {

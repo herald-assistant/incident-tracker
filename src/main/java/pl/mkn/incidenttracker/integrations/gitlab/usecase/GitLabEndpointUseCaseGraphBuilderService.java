@@ -378,10 +378,42 @@ class GitLabEndpointUseCaseGraphBuilderService {
         if (StringUtils.hasText(resolvedCall.targetType())) {
             return resolvedCall.targetType();
         }
+        var candidateType = uniqueCandidateType(resolvedCall.candidates());
+        if (StringUtils.hasText(candidateType)) {
+            return candidateType;
+        }
         if (StringUtils.hasText(resolvedCall.call().receiver())) {
-            return resolvedCall.call().receiver();
+            return normalizeTerminalReceiver(resolvedCall.call().receiver());
         }
         return resolvedCall.call().constructorCall() ? resolvedCall.call().name() : null;
+    }
+
+    private String uniqueCandidateType(List<String> candidates) {
+        var candidateTypes = candidates.stream()
+                .map(this::typeNameFromMethodId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+        return candidateTypes.size() == 1 ? candidateTypes.get(0) : null;
+    }
+
+    private String typeNameFromMethodId(String methodId) {
+        if (!StringUtils.hasText(methodId)) {
+            return null;
+        }
+        var separator = methodId.indexOf('#');
+        return separator > 0 ? methodId.substring(0, separator) : null;
+    }
+
+    private String normalizeTerminalReceiver(String receiver) {
+        if (!StringUtils.hasText(receiver)) {
+            return receiver;
+        }
+        var trimmed = receiver.trim();
+        if (trimmed.endsWith(".INSTANCE")) {
+            return trimmed.substring(0, trimmed.length() - ".INSTANCE".length());
+        }
+        return trimmed;
     }
 
     private GitLabEndpointUseCaseRole roleForType(

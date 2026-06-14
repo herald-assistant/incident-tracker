@@ -242,6 +242,7 @@ class GitLabEndpointUseCaseCodeIndexService {
                         .map(variable -> new GitLabEndpointUseCaseLocalVariableInfo(
                                 variable.getNameAsString(),
                                 inferredVariableType(variableDeclaration, variable.getInitializer().orElse(null)),
+                                variable.getInitializer().map(Expression::toString).orElse(null),
                                 lineStart(variable)
                         )))
                 .toList();
@@ -249,10 +250,16 @@ class GitLabEndpointUseCaseCodeIndexService {
 
     private String inferredVariableType(VariableDeclarationExpr variableDeclaration, Expression initializer) {
         var declaredType = variableDeclaration.getElementType().asString();
-        if (!"var".equals(declaredType) || initializer == null || !initializer.isObjectCreationExpr()) {
+        if (!"var".equals(declaredType) || initializer == null) {
             return declaredType;
         }
-        return initializer.asObjectCreationExpr().getType().asString();
+        if (initializer.isObjectCreationExpr()) {
+            return initializer.asObjectCreationExpr().getType().asString();
+        }
+        if (initializer.isCastExpr()) {
+            return initializer.asCastExpr().getType().asString();
+        }
+        return declaredType;
     }
 
     private List<GitLabEndpointUseCaseMethodCallInfo> methodCalls(
@@ -273,6 +280,7 @@ class GitLabEndpointUseCaseCodeIndexService {
                     call.getScope().map(Expression::toString).orElse(null),
                     call.getNameAsString(),
                     call.getArguments().size(),
+                    call.getArguments().stream().map(Expression::toString).toList(),
                     false,
                     call.toString()
             ));
@@ -285,6 +293,7 @@ class GitLabEndpointUseCaseCodeIndexService {
                     null,
                     objectCreation.getType().asString(),
                     objectCreation.getArguments().size(),
+                    objectCreation.getArguments().stream().map(Expression::toString).toList(),
                     true,
                     objectCreation.toString()
             ));

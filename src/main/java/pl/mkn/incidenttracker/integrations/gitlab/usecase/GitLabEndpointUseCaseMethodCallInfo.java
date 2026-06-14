@@ -1,5 +1,7 @@
 package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
+import java.util.List;
+
 record GitLabEndpointUseCaseMethodCallInfo(
         String callerMethodId,
         String sourcePath,
@@ -7,7 +9,11 @@ record GitLabEndpointUseCaseMethodCallInfo(
         String receiver,
         String name,
         int argumentCount,
+        List<String> arguments,
         boolean constructorCall,
         String expression
 ) {
+    GitLabEndpointUseCaseMethodCallInfo {
+        arguments = arguments != null ? List.copyOf(arguments) : List.of();
+    }
 }

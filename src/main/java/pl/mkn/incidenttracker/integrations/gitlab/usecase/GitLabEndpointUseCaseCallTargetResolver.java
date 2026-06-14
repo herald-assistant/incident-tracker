@@ -29,7 +29,9 @@ class GitLabEndpointUseCaseCallTargetResolver {
         var resolvedCalls = new ArrayList<GitLabEndpointUseCaseResolvedCall>();
 
         for (var call : codeIndex.methodCallIndex().calls()) {
-            resolvedCalls.add(resolveCall(call, context, warnings));
+            var resolvedCall = resolveCall(call, context, warnings);
+            context.registerResolvedCall(resolvedCall);
+            resolvedCalls.add(resolvedCall);
         }
 
         return GitLabEndpointUseCaseCallTargetResolution.from(resolvedCalls, warnings);
@@ -203,7 +205,7 @@ class GitLabEndpointUseCaseCallTargetResolver {
         for (var parentType : parentTypes) {
             candidates.addAll(methodCandidates(parentType, call.name(), call.argumentCount()));
         }
-        return resolvedCandidate(call, candidates, GitLabEndpointUseCaseResolutionKind.SUPER_METHOD, warnings);
+        return resolvedCandidate(call, candidates, GitLabEndpointUseCaseResolutionKind.SUPER_METHOD, context, warnings);
     }
 
     private GitLabEndpointUseCaseResolvedCall resolveMemberReceiver(
@@ -244,6 +246,10 @@ class GitLabEndpointUseCaseCallTargetResolver {
             return terminal(call, GitLabEndpointUseCaseResolutionKind.EXTERNAL_LIBRARY,
                     "Resolved bean type is outside the indexed source snapshot: " + dependency.resolvedBean().type() + ".");
         }
+        var contractResolvedCall = resolveBeanCallThroughContract(call, dependency, targetType, context, warnings);
+        if (contractResolvedCall != null) {
+            return contractResolvedCall;
+        }
         return resolveMethodOnType(
                 call,
                 targetType,
@@ -253,6 +259,42 @@ class GitLabEndpointUseCaseCallTargetResolver {
                 context,
                 warnings
         );
+    }
+
+    private GitLabEndpointUseCaseResolvedCall resolveBeanCallThroughContract(
+            GitLabEndpointUseCaseMethodCallInfo call,
+            GitLabEndpointUseCaseResolvedDependency dependency,
+            GitLabEndpointUseCaseTypeInfo targetType,
+            ResolverContext context,
+            List<GitLabEndpointUseCaseWarning> warnings
+    ) {
+        var contractType = resolveType(dependency.injectionPoint().requiredType(), context);
+        if (contractType == null || contractType.fqn().equals(targetType.fqn())) {
+            return null;
+        }
+
+        var contractCandidates = narrowByArgumentTypes(
+                call,
+                deduplicateMethods(methodCandidates(contractType, call.name(), call.argumentCount())),
+                context
+        );
+        if (contractCandidates.size() != 1) {
+            return null;
+        }
+
+        var contractMethod = contractCandidates.get(0);
+        var implementationCandidates = methodCandidates(targetType, call.name(), call.argumentCount()).stream()
+                .filter(candidate -> sameErasedParameters(candidate, contractMethod))
+                .toList();
+        if (implementationCandidates.size() == 1) {
+            return resolvedCall(call, implementationCandidates.get(0), dependency.resolutionKind());
+        }
+        if (implementationCandidates.size() > 1) {
+            return ambiguous(call, warnings,
+                    "Multiple implementation methods matched interface contract for call '" + call.expression() + "'.",
+                    implementationCandidates.stream().map(GitLabEndpointUseCaseMethodInfo::id).toList());
+        }
+        return null;
     }
 
     private GitLabEndpointUseCaseResolvedCall resolveTypedReceiver(
@@ -354,6 +396,18 @@ class GitLabEndpointUseCaseCallTargetResolver {
                 candidates.addAll(methodCandidates(parentType, methodName, call.argumentCount()));
             }
         }
+        if (candidates.isEmpty()) {
+            var lombokAccessor = lombokAccessor(targetType, call, includeInherited, context);
+            if (lombokAccessor != null) {
+                return terminal(
+                        call,
+                        resolutionKind,
+                        lombokAccessor.declaringType().fqn(),
+                        lombokAccessor.signature(),
+                        lombokAccessor.reason()
+                );
+            }
+        }
 
         var effectiveResolutionKind = resolutionKind;
         if (resolutionKind == GitLabEndpointUseCaseResolutionKind.THIS_METHOD
@@ -361,35 +415,43 @@ class GitLabEndpointUseCaseCallTargetResolver {
                 && candidates.stream().noneMatch(method -> method.id().startsWith(callerType.fqn() + "#"))) {
             effectiveResolutionKind = GitLabEndpointUseCaseResolutionKind.INHERITED_METHOD;
         }
-        return resolvedCandidate(call, candidates, effectiveResolutionKind, warnings);
+        return resolvedCandidate(call, candidates, effectiveResolutionKind, context, warnings);
     }
 
     private GitLabEndpointUseCaseResolvedCall resolvedCandidate(
             GitLabEndpointUseCaseMethodCallInfo call,
             List<GitLabEndpointUseCaseMethodInfo> candidates,
             GitLabEndpointUseCaseResolutionKind resolutionKind,
+            ResolverContext context,
             List<GitLabEndpointUseCaseWarning> warnings
     ) {
-        var distinctCandidates = deduplicateMethods(candidates);
+        var distinctCandidates = narrowByArgumentTypes(call, deduplicateMethods(candidates), context);
         if (distinctCandidates.size() == 1) {
-            var method = distinctCandidates.get(0);
-            return new GitLabEndpointUseCaseResolvedCall(
-                    call,
-                    GitLabEndpointUseCaseCallResolutionStatus.RESOLVED,
-                    resolutionKind,
-                    typeNameFromMethodId(method.id()),
-                    method.id(),
-                    method.signature(),
-                    false,
-                    null,
-                    List.of(method.id())
-            );
+            return resolvedCall(call, distinctCandidates.get(0), resolutionKind);
         }
         if (distinctCandidates.size() > 1) {
             return ambiguous(call, warnings, "Multiple method targets matched call '" + call.expression() + "'.",
                     distinctCandidates.stream().map(GitLabEndpointUseCaseMethodInfo::id).toList());
         }
         return unresolved(call, warnings, "No method target matched call '" + call.expression() + "'.", List.of(call.name()));
+    }
+
+    private GitLabEndpointUseCaseResolvedCall resolvedCall(
+            GitLabEndpointUseCaseMethodCallInfo call,
+            GitLabEndpointUseCaseMethodInfo method,
+            GitLabEndpointUseCaseResolutionKind resolutionKind
+    ) {
+        return new GitLabEndpointUseCaseResolvedCall(
+                call,
+                GitLabEndpointUseCaseCallResolutionStatus.RESOLVED,
+                resolutionKind,
+                typeNameFromMethodId(method.id()),
+                method.id(),
+                method.signature(),
+                false,
+                null,
+                List.of(method.id())
+        );
     }
 
     private GitLabEndpointUseCaseResolvedCall unresolved(
@@ -465,6 +527,26 @@ class GitLabEndpointUseCaseCallTargetResolver {
         );
     }
 
+    private GitLabEndpointUseCaseResolvedCall terminal(
+            GitLabEndpointUseCaseMethodCallInfo call,
+            GitLabEndpointUseCaseResolutionKind resolutionKind,
+            String targetType,
+            String targetMethodSignature,
+            String reason
+    ) {
+        return new GitLabEndpointUseCaseResolvedCall(
+                call,
+                GitLabEndpointUseCaseCallResolutionStatus.TERMINAL,
+                resolutionKind,
+                targetType,
+                null,
+                targetMethodSignature,
+                true,
+                reason,
+                List.of()
+        );
+    }
+
     private List<GitLabEndpointUseCaseMethodInfo> methodCandidates(
             GitLabEndpointUseCaseTypeInfo type,
             String methodName,
@@ -474,6 +556,397 @@ class GitLabEndpointUseCaseCallTargetResolver {
                 .filter(method -> method.name().equals(methodName))
                 .filter(method -> method.parameters().size() == argumentCount)
                 .toList();
+    }
+
+    private List<GitLabEndpointUseCaseMethodInfo> narrowByArgumentTypes(
+            GitLabEndpointUseCaseMethodCallInfo call,
+            List<GitLabEndpointUseCaseMethodInfo> candidates,
+            ResolverContext context
+    ) {
+        if (candidates.size() <= 1 || call.arguments().size() != call.argumentCount()) {
+            return candidates;
+        }
+
+        var callerMethod = context.methodById().get(call.callerMethodId());
+        var callerType = context.typeByMethodId().get(call.callerMethodId());
+        if (callerMethod == null || callerType == null) {
+            return candidates;
+        }
+
+        var argumentTypes = call.arguments().stream()
+                .map(argument -> inferExpressionType(argument, callerType, callerMethod, context, new LinkedHashSet<>()))
+                .toList();
+        if (argumentTypes.stream().noneMatch(StringUtils::hasText)) {
+            return candidates;
+        }
+
+        var scoredCandidates = new ArrayList<ScoredMethodCandidate>();
+        for (var candidate : candidates) {
+            var score = overloadScore(candidate, argumentTypes, context);
+            if (score > 0) {
+                scoredCandidates.add(new ScoredMethodCandidate(candidate, score));
+            }
+        }
+        if (scoredCandidates.isEmpty()) {
+            return candidates;
+        }
+
+        var bestScore = scoredCandidates.stream()
+                .mapToInt(ScoredMethodCandidate::score)
+                .max()
+                .orElse(0);
+        return scoredCandidates.stream()
+                .filter(candidate -> candidate.score() == bestScore)
+                .map(ScoredMethodCandidate::method)
+                .toList();
+    }
+
+    private int overloadScore(
+            GitLabEndpointUseCaseMethodInfo candidate,
+            List<String> argumentTypes,
+            ResolverContext context
+    ) {
+        if (candidate.parameters().size() != argumentTypes.size()) {
+            return 0;
+        }
+
+        var score = 0;
+        var knownArguments = 0;
+        for (var index = 0; index < candidate.parameters().size(); index++) {
+            var argumentType = argumentTypes.get(index);
+            if (!StringUtils.hasText(argumentType)) {
+                continue;
+            }
+            knownArguments++;
+            var parameterType = candidate.parameters().get(index).type();
+            var matchScore = typeMatchScore(argumentType, parameterType, context);
+            if (matchScore == 0) {
+                return 0;
+            }
+            score += matchScore;
+        }
+        return knownArguments > 0 ? score : 0;
+    }
+
+    private int typeMatchScore(String actualType, String expectedType, ResolverContext context) {
+        var actual = normalizeTypeName(actualType);
+        var expected = normalizeTypeName(expectedType);
+        if (!StringUtils.hasText(actual) || !StringUtils.hasText(expected)) {
+            return 0;
+        }
+        if (sameErasedType(actual, expected)) {
+            return 4;
+        }
+        if ("Object".equals(simpleName(expected))) {
+            return 1;
+        }
+        if (isAssignableTo(actual, expected, context)) {
+            return 2;
+        }
+        return 0;
+    }
+
+    private String inferExpressionType(
+            String expression,
+            GitLabEndpointUseCaseTypeInfo callerType,
+            GitLabEndpointUseCaseMethodInfo callerMethod,
+            ResolverContext context,
+            LinkedHashSet<String> visitedExpressions
+    ) {
+        if (!StringUtils.hasText(expression) || !visitedExpressions.add(expression)) {
+            return null;
+        }
+
+        var trimmed = expression.trim();
+        if ("null".equals(trimmed)) {
+            return null;
+        }
+        var castType = castType(trimmed);
+        if (StringUtils.hasText(castType)) {
+            return castType;
+        }
+        var constructedType = constructedType(trimmed);
+        if (StringUtils.hasText(constructedType)) {
+            return constructedType;
+        }
+
+        var resolvedCall = context.resolvedCall(callerMethod.id(), trimmed);
+        if (resolvedCall != null && StringUtils.hasText(resolvedCall.targetMethodId())) {
+            var targetMethod = context.methodById().get(resolvedCall.targetMethodId());
+            if (targetMethod != null && StringUtils.hasText(targetMethod.returnType())) {
+                return targetMethod.returnType();
+            }
+        }
+        if (resolvedCall != null && isLombokGeneratedAccessor(resolvedCall)) {
+            var syntheticReturnType = syntheticReturnType(resolvedCall.targetMethodSignature());
+            if (StringUtils.hasText(syntheticReturnType)) {
+                return syntheticReturnType;
+            }
+        }
+
+        if (isSimpleIdentifier(trimmed)) {
+            var parameter = parameterByName(callerMethod, trimmed);
+            if (parameter != null) {
+                return parameter.type();
+            }
+            var localVariable = localVariableByName(callerMethod, trimmed);
+            if (localVariable != null) {
+                if (StringUtils.hasText(localVariable.type()) && !"var".equals(localVariable.type())) {
+                    return localVariable.type();
+                }
+                if (StringUtils.hasText(localVariable.initializer())) {
+                    return inferExpressionType(
+                            localVariable.initializer(),
+                            callerType,
+                            callerMethod,
+                            context,
+                            visitedExpressions
+                    );
+                }
+            }
+            var field = fieldByName(callerType, trimmed);
+            if (field != null) {
+                return field.type();
+            }
+        }
+
+        return null;
+    }
+
+    private LombokAccessorMatch lombokAccessor(
+            GitLabEndpointUseCaseTypeInfo targetType,
+            GitLabEndpointUseCaseMethodCallInfo call,
+            boolean includeInherited,
+            ResolverContext context
+    ) {
+        var searchTypes = new ArrayList<GitLabEndpointUseCaseTypeInfo>();
+        searchTypes.add(targetType);
+        if (includeInherited) {
+            searchTypes.addAll(parentTypes(targetType, context));
+        }
+
+        for (var candidateType : searchTypes) {
+            var match = lombokAccessorOnType(candidateType, call);
+            if (match != null) {
+                return match;
+            }
+        }
+        return null;
+    }
+
+    private LombokAccessorMatch lombokAccessorOnType(
+            GitLabEndpointUseCaseTypeInfo type,
+            GitLabEndpointUseCaseMethodCallInfo call
+    ) {
+        if (call.argumentCount() == 0) {
+            var getterFieldName = getterFieldName(call.name());
+            if (StringUtils.hasText(getterFieldName)) {
+                var field = fieldByLogicalName(type, getterFieldName);
+                if (field != null && lombokGetterAvailable(type, field)) {
+                    return lombokAccessorMatch(type, call.name() + "():" + field.type(),
+                            "Lombok generated getter for field '" + field.name() + "'.");
+                }
+            }
+        }
+
+        if (call.argumentCount() == 1) {
+            var setterFieldName = setterFieldName(call.name());
+            if (StringUtils.hasText(setterFieldName)) {
+                var field = fieldByLogicalName(type, setterFieldName);
+                if (field != null && lombokSetterAvailable(type, field)) {
+                    return lombokAccessorMatch(type, call.name() + "(" + field.type() + "):void",
+                            "Lombok generated setter for field '" + field.name() + "'.");
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private LombokAccessorMatch lombokAccessorMatch(
+            GitLabEndpointUseCaseTypeInfo type,
+            String signature,
+            String reason
+    ) {
+        return new LombokAccessorMatch(type, signature, reason);
+    }
+
+    private GitLabEndpointUseCaseFieldInfo fieldByLogicalName(
+            GitLabEndpointUseCaseTypeInfo type,
+            String fieldName
+    ) {
+        return type.fields().stream()
+                .filter(field -> field.name().equals(fieldName))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean lombokGetterAvailable(
+            GitLabEndpointUseCaseTypeInfo type,
+            GitLabEndpointUseCaseFieldInfo field
+    ) {
+        return hasAnyAnnotation(type.annotationDetails(), "Getter", "Data", "Value")
+                || hasAnyAnnotation(field.annotationDetails(), "Getter");
+    }
+
+    private boolean lombokSetterAvailable(
+            GitLabEndpointUseCaseTypeInfo type,
+            GitLabEndpointUseCaseFieldInfo field
+    ) {
+        if (field.finalField()) {
+            return false;
+        }
+        return hasAnyAnnotation(type.annotationDetails(), "Setter", "Data")
+                || hasAnyAnnotation(field.annotationDetails(), "Setter");
+    }
+
+    private boolean hasAnyAnnotation(
+            List<GitLabEndpointUseCaseAnnotationInfo> annotations,
+            String... names
+    ) {
+        if (annotations == null || names == null) {
+            return false;
+        }
+        for (var annotation : annotations) {
+            var annotationName = simpleName(annotation.name());
+            for (var name : names) {
+                if (name.equals(annotationName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private String getterFieldName(String methodName) {
+        if (!StringUtils.hasText(methodName)) {
+            return null;
+        }
+        if (methodName.startsWith("get") && methodName.length() > 3) {
+            return lowerFirst(methodName.substring(3));
+        }
+        if (methodName.startsWith("is") && methodName.length() > 2) {
+            return lowerFirst(methodName.substring(2));
+        }
+        return null;
+    }
+
+    private String setterFieldName(String methodName) {
+        if (StringUtils.hasText(methodName) && methodName.startsWith("set") && methodName.length() > 3) {
+            return lowerFirst(methodName.substring(3));
+        }
+        return null;
+    }
+
+    private String lowerFirst(String value) {
+        if (!StringUtils.hasText(value)) {
+            return value;
+        }
+        if (value.length() > 1 && Character.isUpperCase(value.charAt(0)) && Character.isUpperCase(value.charAt(1))) {
+            return value;
+        }
+        return value.substring(0, 1).toLowerCase(java.util.Locale.ROOT) + value.substring(1);
+    }
+
+    private boolean isLombokGeneratedAccessor(GitLabEndpointUseCaseResolvedCall resolvedCall) {
+        return resolvedCall != null
+                && StringUtils.hasText(resolvedCall.terminalReason())
+                && resolvedCall.terminalReason().startsWith("Lombok generated ");
+    }
+
+    private String syntheticReturnType(String signature) {
+        if (!StringUtils.hasText(signature)) {
+            return null;
+        }
+        var separator = signature.lastIndexOf("):");
+        return separator >= 0 ? signature.substring(separator + 2).trim() : null;
+    }
+
+    private boolean sameErasedParameters(
+            GitLabEndpointUseCaseMethodInfo left,
+            GitLabEndpointUseCaseMethodInfo right
+    ) {
+        if (left.parameters().size() != right.parameters().size()) {
+            return false;
+        }
+        for (var index = 0; index < left.parameters().size(); index++) {
+            if (!sameErasedType(left.parameters().get(index).type(), right.parameters().get(index).type())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean sameErasedType(String left, String right) {
+        var normalizedLeft = normalizeTypeName(left);
+        var normalizedRight = normalizeTypeName(right);
+        return StringUtils.hasText(normalizedLeft)
+                && StringUtils.hasText(normalizedRight)
+                && (normalizedLeft.equals(normalizedRight)
+                || simpleName(normalizedLeft).equals(simpleName(normalizedRight)));
+    }
+
+    private boolean isAssignableTo(String actualType, String expectedType, ResolverContext context) {
+        var actual = resolveType(actualType, context);
+        if (actual == null) {
+            return false;
+        }
+        var expected = normalizeTypeName(expectedType);
+        var queue = new ArrayDeque<String>(actual.directParentTypes());
+        var visited = new LinkedHashSet<String>();
+        while (!queue.isEmpty()) {
+            var parentName = normalizeTypeName(queue.removeFirst());
+            if (!StringUtils.hasText(parentName) || !visited.add(parentName)) {
+                continue;
+            }
+            if (sameErasedType(parentName, expected)) {
+                return true;
+            }
+            var parentType = resolveType(parentName, context);
+            if (parentType != null) {
+                queue.addAll(parentType.directParentTypes());
+            }
+        }
+        return false;
+    }
+
+    private String castType(String expression) {
+        if (!expression.startsWith("(")) {
+            return null;
+        }
+        var closingIndex = expression.indexOf(')');
+        if (closingIndex <= 1) {
+            return null;
+        }
+        var candidate = expression.substring(1, closingIndex).trim();
+        return isLikelyTypeName(candidate) ? candidate : null;
+    }
+
+    private String constructedType(String expression) {
+        if (!expression.startsWith("new ")) {
+            return null;
+        }
+        var rest = expression.substring("new ".length()).trim();
+        var parenthesisIndex = rest.indexOf('(');
+        return parenthesisIndex > 0 ? rest.substring(0, parenthesisIndex).trim() : null;
+    }
+
+    private boolean isSimpleIdentifier(String value) {
+        if (!StringUtils.hasText(value) || !Character.isJavaIdentifierStart(value.charAt(0))) {
+            return false;
+        }
+        for (var index = 1; index < value.length(); index++) {
+            if (!Character.isJavaIdentifierPart(value.charAt(index))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isLikelyTypeName(String value) {
+        return StringUtils.hasText(value)
+                && Character.isJavaIdentifierStart(value.charAt(0))
+                && Character.isUpperCase(value.charAt(0));
     }
 
     private List<GitLabEndpointUseCaseTypeInfo> parentTypes(
@@ -658,19 +1131,55 @@ class GitLabEndpointUseCaseCallTargetResolver {
         return separator >= 0 ? methodId.substring(0, separator) : null;
     }
 
+    private record ScoredMethodCandidate(GitLabEndpointUseCaseMethodInfo method, int score) {
+    }
+
+    private record LombokAccessorMatch(
+            GitLabEndpointUseCaseTypeInfo declaringType,
+            String signature,
+            String reason
+    ) {
+    }
+
     private record ResolverContext(
             GitLabEndpointUseCaseCodeIndex codeIndex,
             GitLabEndpointUseCaseSpringBeanRegistry beanRegistry,
             GitLabEndpointUseCaseDependencyResolution dependencyResolution,
             Map<String, GitLabEndpointUseCaseTypeInfo> typeByMethodId,
-            Map<String, GitLabEndpointUseCaseMethodInfo> methodById
+            Map<String, GitLabEndpointUseCaseMethodInfo> methodById,
+            Map<String, GitLabEndpointUseCaseResolvedCall> resolvedCallsByExpression
     ) {
         private ResolverContext(
                 GitLabEndpointUseCaseCodeIndex codeIndex,
                 GitLabEndpointUseCaseSpringBeanRegistry beanRegistry,
                 GitLabEndpointUseCaseDependencyResolution dependencyResolution
         ) {
-            this(codeIndex, beanRegistry, dependencyResolution, typeByMethodId(codeIndex), methodById(codeIndex));
+            this(
+                    codeIndex,
+                    beanRegistry,
+                    dependencyResolution,
+                    typeByMethodId(codeIndex),
+                    methodById(codeIndex),
+                    new LinkedHashMap<>()
+            );
+        }
+
+        private void registerResolvedCall(GitLabEndpointUseCaseResolvedCall resolvedCall) {
+            if (resolvedCall == null || resolvedCall.call() == null) {
+                return;
+            }
+            resolvedCallsByExpression.putIfAbsent(
+                    callKey(resolvedCall.call().callerMethodId(), resolvedCall.call().expression()),
+                    resolvedCall
+            );
+        }
+
+        private GitLabEndpointUseCaseResolvedCall resolvedCall(String callerMethodId, String expression) {
+            return resolvedCallsByExpression.get(callKey(callerMethodId, expression));
+        }
+
+        private static String callKey(String callerMethodId, String expression) {
+            return (callerMethodId != null ? callerMethodId : "") + "|" + (expression != null ? expression : "");
         }
 
         private static Map<String, GitLabEndpointUseCaseTypeInfo> typeByMethodId(

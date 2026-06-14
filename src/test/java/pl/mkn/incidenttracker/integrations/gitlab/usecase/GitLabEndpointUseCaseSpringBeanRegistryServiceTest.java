@@ -149,6 +149,26 @@ class GitLabEndpointUseCaseSpringBeanRegistryServiceTest {
     }
 
     @Test
+    void shouldIndexUseCaseBeanAsComponent() {
+        var registry = registry("""
+                package com.example.orders;
+
+                interface UpdateProductPort {
+                }
+
+                @UseCaseBean
+                class UpdateProductService implements UpdateProductPort {
+                }
+                """);
+
+        var useCaseBean = registry.beansByName().get("updateProductService");
+
+        assertEquals(GitLabEndpointUseCaseSpringBeanSourceKind.COMPONENT, useCaseBean.sourceKind());
+        assertTrue(useCaseBean.stereotypes().contains("UseCaseBean"));
+        assertTrue(registry.candidatesForType("UpdateProductPort").contains(useCaseBean));
+    }
+
+    @Test
     void shouldWarnWhenAssignableParentIsOutsideSnapshot() {
         var registry = registry("""
                 package com.example.orders;

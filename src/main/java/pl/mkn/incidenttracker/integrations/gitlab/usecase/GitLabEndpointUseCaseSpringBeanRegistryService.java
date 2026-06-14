@@ -24,6 +24,7 @@ class GitLabEndpointUseCaseSpringBeanRegistryService {
             "Controller",
             "RestController",
             "Configuration",
+            "UseCaseBean",
             "AdapterBean"
     );
     private static final Set<String> SPRING_DATA_REPOSITORY_TYPES = Set.of(

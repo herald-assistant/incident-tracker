@@ -148,6 +148,37 @@ class GitLabEndpointUseCaseContextServiceTest {
                 .anyMatch(warning -> GitLabEndpointUseCaseWarningCodes.ENDPOINT_NOT_FOUND.equals(warning.code())));
     }
 
+    @Test
+    void shouldBuildClassListForPutEndpointThroughMapperPortUseCaseAndRepository() {
+        var service = service(updateProductSource());
+
+        var result = service.buildContext(
+                "tenant-alpha",
+                "feature/FLOW-1",
+                new GitLabEndpointUseCaseContextRequest(
+                        "orders-api",
+                        null,
+                        "PUT",
+                        "/api/products/123",
+                        null,
+                        GitLabEndpointUseCaseOutputMode.COMPACT,
+                        8,
+                        80,
+                        false,
+                        "Opisuje endpoint update product."
+                )
+        );
+
+        assertNotNull(result.endpoint());
+        assertTrue(hasClassItem(result, "com.example.orders.DataProductController"));
+        assertTrue(hasClassItem(result, "com.example.orders.ProductWebModelMapper"));
+        assertTrue(hasClassItem(result, "com.example.orders.UpdateProductService"));
+        assertTrue(hasClassItem(result, "com.example.orders.ProductCommandRepository"));
+        assertFalse(hasClassItem(result, "updateProductPort"));
+        assertFalse(hasClassItem(result, "ProductWebModelMapper.INSTANCE"));
+        assertTrue(result.useCaseSummary().sideEffects().contains("repository-write"));
+    }
+
     private GitLabEndpointUseCaseContextService service(String source) {
         var repositoryEndpointService = mock(GitLabRepositoryEndpointService.class);
         when(repositoryEndpointService.listEndpoints(any(GitLabRepositoryEndpointListRequest.class)))
@@ -330,5 +361,103 @@ class GitLabEndpointUseCaseContextServiceTest {
                     }
                 }
                 """;
+    }
+
+    private String updateProductSource() {
+        return """
+                package com.example.orders;
+
+                import lombok.RequiredArgsConstructor;
+                import org.mapstruct.Mapper;
+                import org.springframework.web.bind.annotation.PathVariable;
+                import org.springframework.web.bind.annotation.PutMapping;
+                import org.springframework.web.bind.annotation.RequestMapping;
+                import org.springframework.web.bind.annotation.RestController;
+
+                class Product {
+                }
+
+                class ProductWebModel {
+                }
+
+                class ProductUpdatedEvent {
+                }
+
+                class DecisionChangeEvent {
+                }
+
+                class CreditCaseUpdatedEvent {
+                }
+
+                interface FormView {
+                }
+
+                interface UpdateProductPort {
+                    ProductUpdatedEvent update(Product product);
+                }
+
+                interface ProductRepositoryPort {
+                    interface Command {
+                        void update(Product product);
+                    }
+                }
+
+                @AdapterBean
+                class ProductCommandRepository implements ProductRepositoryPort.Command {
+                    public void update(Product product) {
+                    }
+                }
+
+                @UseCaseBean
+                @RequiredArgsConstructor
+                class UpdateProductService implements UpdateProductPort {
+                    private final ProductRepositoryPort.Command productCommandRepository;
+
+                    public ProductUpdatedEvent update(Product product) {
+                        productCommandRepository.update(product);
+                        return new ProductUpdatedEvent();
+                    }
+
+                    public void update(DecisionChangeEvent event) {
+                    }
+
+                    public void update(CreditCaseUpdatedEvent event) {
+                    }
+                }
+
+                @Mapper
+                interface ProductWebModelMapper {
+                    ProductWebModelMapper INSTANCE = null;
+
+                    default ProductWebModel from(FormView formView) {
+                        return new ProductWebModel();
+                    }
+
+                    default Product from(ProductWebModel webModel) {
+                        return new Product();
+                    }
+
+                    default ProductWebModel from(Product product) {
+                        return new ProductWebModel();
+                    }
+                }
+
+                @RestController
+                @RequestMapping("/api/products")
+                @RequiredArgsConstructor
+                class DataProductController {
+                    private final UpdateProductPort updateProductPort;
+
+                    @PutMapping("/{id}")
+                    ProductWebModel updateProduct(@PathVariable String id, ProductWebModel productWebModel) {
+                        updateProductPort.update(ProductWebModelMapper.INSTANCE.from(productWebModel));
+                        return productWebModel;
+                    }
+                }
+                """;
+    }
+
+    private static boolean hasClassItem(GitLabEndpointUseCaseContextResult result, String classFqn) {
+        return result.classList().stream().anyMatch(item -> classFqn.equals(item.classFqn()));
     }
 }

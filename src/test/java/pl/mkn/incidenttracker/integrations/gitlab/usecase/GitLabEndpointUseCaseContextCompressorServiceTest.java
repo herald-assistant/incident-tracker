@@ -72,6 +72,42 @@ class GitLabEndpointUseCaseContextCompressorServiceTest {
     }
 
     @Test
+    void shouldHideLombokGeneratedAccessorsFromCompactClassListAndGraph() {
+        var graph = new GitLabEndpointUseCaseGraph(
+                List.of(
+                        node("com.example.orders.CustomerService#handle(Customer)",
+                                "com.example.orders.CustomerService",
+                                "handle(Customer)",
+                                GitLabEndpointUseCaseRole.SERVICE,
+                                0,
+                                false,
+                                null),
+                        node("terminal:getName",
+                                "com.example.orders.Customer",
+                                "customer.getName()",
+                                GitLabEndpointUseCaseRole.UNKNOWN,
+                                1,
+                                true,
+                                "Lombok generated getter for field 'name'.")
+                ),
+                List.of(edge("com.example.orders.CustomerService#handle(Customer)",
+                        "terminal:getName",
+                        GitLabEndpointUseCaseEdgeKind.SYNC_CALL,
+                        GitLabEndpointUseCaseResolutionKind.DIRECT_METHOD,
+                        "customer.getName()"))
+        );
+
+        var compressed = compressorService.compress(endpoint(), graphBuildResult(graph, List.of(), limits(false, false)),
+                GitLabEndpointUseCaseOutputMode.COMPACT);
+
+        assertTrue(hasClassItem(compressed, "com.example.orders.CustomerService"));
+        assertFalse(hasClassItem(compressed, "com.example.orders.Customer"));
+        assertFalse(hasEdge(compressed.graph(), GitLabEndpointUseCaseEdgeKind.SYNC_CALL));
+        assertTrue(compressed.evidence().stream()
+                .noneMatch(evidence -> evidence.message().contains("Lombok generated getter")));
+    }
+
+    @Test
     void shouldLowerConfidenceWhenLimitsOrResolutionWarningsArePresent() {
         var maxNodesLimited = compressorService.compress(endpoint(),
                 graphBuildResult(graph(), List.of(), limits(false, true)),

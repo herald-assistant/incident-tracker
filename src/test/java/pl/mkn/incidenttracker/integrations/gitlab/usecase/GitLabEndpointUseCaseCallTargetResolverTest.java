@@ -130,6 +130,9 @@ class GitLabEndpointUseCaseCallTargetResolverTest {
                 class ProductWebModel {
                 }
 
+                class Product {
+                }
+
                 interface ProductRepositoryPort {
                     interface Query {
                         FormView getProductFormView(TtaId ttaId, ProductType productType);
@@ -148,6 +151,14 @@ class GitLabEndpointUseCaseCallTargetResolverTest {
                     ProductWebModelMapper INSTANCE = null;
 
                     default ProductWebModel from(FormView formView) {
+                        return new ProductWebModel();
+                    }
+
+                    default Product from(ProductWebModel webModel) {
+                        return new Product();
+                    }
+
+                    default ProductWebModel from(Product product) {
                         return new ProductWebModel();
                     }
                 }
@@ -179,6 +190,92 @@ class GitLabEndpointUseCaseCallTargetResolverTest {
     }
 
     @Test
+    void shouldResolveInjectedPortCallThroughContractWhenImplementationHasOverloadedEventHandlers() {
+        var resolution = resolution("""
+                package com.example.orders;
+
+                import lombok.RequiredArgsConstructor;
+                import org.mapstruct.Mapper;
+                import org.springframework.web.bind.annotation.RestController;
+
+                class Product {
+                }
+
+                class ProductWebModel {
+                }
+
+                class ProductUpdatedEvent {
+                }
+
+                class DecisionChangeEvent {
+                }
+
+                class CreditCaseUpdatedEvent {
+                }
+
+                interface FormView {
+                }
+
+                interface UpdateProductPort {
+                    ProductUpdatedEvent update(Product product);
+                }
+
+                @UseCaseBean
+                class UpdateProductService implements UpdateProductPort {
+                    public ProductUpdatedEvent update(Product product) {
+                        return new ProductUpdatedEvent();
+                    }
+
+                    public void update(DecisionChangeEvent event) {
+                    }
+
+                    public void update(CreditCaseUpdatedEvent event) {
+                    }
+                }
+
+                @Mapper
+                interface ProductWebModelMapper {
+                    ProductWebModelMapper INSTANCE = null;
+
+                    default ProductWebModel from(FormView formView) {
+                        return new ProductWebModel();
+                    }
+
+                    default Product from(ProductWebModel webModel) {
+                        return new Product();
+                    }
+
+                    default ProductWebModel from(Product product) {
+                        return new ProductWebModel();
+                    }
+                }
+
+                @RestController
+                @RequiredArgsConstructor
+                class DataProductController {
+                    private final UpdateProductPort updateProductPort;
+
+                    void updateProduct(ProductWebModel productWebModel) {
+                        updateProductPort.update(ProductWebModelMapper.INSTANCE.from(productWebModel));
+                    }
+                }
+                """);
+
+        assertResolvedCall(
+                resolution,
+                "ProductWebModelMapper.INSTANCE.from(productWebModel)",
+                "com.example.orders.ProductWebModelMapper#from(ProductWebModel)",
+                GitLabEndpointUseCaseResolutionKind.STATIC_METHOD
+        );
+        assertResolvedCall(
+                resolution,
+                "updateProductPort.update(ProductWebModelMapper.INSTANCE.from(productWebModel))",
+                "com.example.orders.UpdateProductService#update(Product)",
+                GitLabEndpointUseCaseResolutionKind.SPRING_BEAN_POLYMORPHIC
+        );
+    }
+
+    @Test
     void shouldResolveParameterReceiverAndReportExternalTerminal() {
         var resolution = resolution("""
                 package com.example.orders;
@@ -206,6 +303,47 @@ class GitLabEndpointUseCaseCallTargetResolverTest {
         var externalCall = callByExpression(resolution, "ResponseEntity.ok(\"done\")");
         assertEquals(GitLabEndpointUseCaseCallResolutionStatus.TERMINAL, externalCall.status());
         assertEquals(GitLabEndpointUseCaseResolutionKind.EXTERNAL_LIBRARY, externalCall.resolutionKind());
+    }
+
+    @Test
+    void shouldTreatLombokGeneratedAccessorsAsKnownTerminalCallsWithoutWarnings() {
+        var resolution = resolution("""
+                package com.example.orders;
+
+                import lombok.Getter;
+                import lombok.Setter;
+                import org.springframework.stereotype.Service;
+
+                @Getter
+                @Setter
+                class Customer {
+                    private String name;
+                    private boolean active;
+                }
+
+                @Service
+                class CustomerService {
+                    void handle(Customer customer) {
+                        customer.getName();
+                        customer.isActive();
+                        customer.setName("Alice");
+                    }
+                }
+                """);
+
+        var getterCall = callByExpression(resolution, "customer.getName()");
+        var booleanGetterCall = callByExpression(resolution, "customer.isActive()");
+        var setterCall = callByExpression(resolution, "customer.setName(\"Alice\")");
+
+        assertEquals(GitLabEndpointUseCaseCallResolutionStatus.TERMINAL, getterCall.status());
+        assertEquals("com.example.orders.Customer", getterCall.targetType());
+        assertEquals("getName():String", getterCall.targetMethodSignature());
+        assertEquals(GitLabEndpointUseCaseCallResolutionStatus.TERMINAL, booleanGetterCall.status());
+        assertEquals("isActive():boolean", booleanGetterCall.targetMethodSignature());
+        assertEquals(GitLabEndpointUseCaseCallResolutionStatus.TERMINAL, setterCall.status());
+        assertEquals("setName(String):void", setterCall.targetMethodSignature());
+        assertTrue(resolution.warnings().stream()
+                .noneMatch(warning -> GitLabEndpointUseCaseWarningCodes.CALL_TARGET_UNRESOLVED.equals(warning.code())));
     }
 
     @Test
