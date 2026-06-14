@@ -12,10 +12,6 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRe
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
-import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
-import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
-import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
-import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseOutputMode;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextPort;
@@ -46,7 +42,6 @@ import java.util.regex.Pattern;
 
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
-import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_ENDPOINTS;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
@@ -87,40 +82,16 @@ public class GitLabMcpTools {
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
-    private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
 
     @Autowired
     public GitLabMcpTools(
             GitLabRepositoryPort gitLabRepositoryPort,
             OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
-            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService
+            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
     ) {
         this.gitLabRepositoryPort = gitLabRepositoryPort;
         this.operationalContextPort = operationalContextPort;
         this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
-        this.gitLabEndpointUseCaseContextService = gitLabEndpointUseCaseContextService;
-    }
-
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
-    ) {
-        this(gitLabRepositoryPort, operationalContextPort, gitLabRepositoryEndpointService, null);
-    }
-
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService
-    ) {
-        this(
-                gitLabRepositoryPort,
-                operationalContextPort,
-                new GitLabRepositoryEndpointService(gitLabRepositoryPort),
-                gitLabEndpointUseCaseContextService
-        );
     }
 
     public GitLabMcpTools(
@@ -130,8 +101,7 @@ public class GitLabMcpTools {
         this(
                 gitLabRepositoryPort,
                 operationalContextPort,
-                new GitLabRepositoryEndpointService(gitLabRepositoryPort),
-                null
+                new GitLabRepositoryEndpointService(gitLabRepositoryPort)
         );
     }
 
@@ -206,7 +176,7 @@ public class GitLabMcpTools {
                     The group and branch are taken from hidden ToolContext. Provide projectName from gitlab_list_available_repositories
                     or another grounded GitLab result. Use endpointPathPrefix/httpMethod to narrow the inventory when the user asks
                     about a concrete endpoint family. The result returns endpointId, HTTP method/path, controller class/method,
-                    file path, line range, request/response type hints and ready input for a later endpoint use-case context tool.
+                    file path, line range, request/response type hints and suggested next reads.
                     """
     )
     public GitLabListRepositoryEndpointsToolResponse listRepositoryEndpoints(
@@ -280,104 +250,6 @@ public class GitLabMcpTools {
                 result.endpoints(),
                 result.limitations()
         );
-    }
-
-    @Tool(
-            name = BUILD_ENDPOINT_USE_CASE_CONTEXT,
-            description = """
-                    Builds a compact, deterministic use-case context for one Spring MVC endpoint in a GitLab repository.
-                    The group and branch are taken from hidden ToolContext. Provide projectName and either endpointId returned
-                    by gitlab_list_repository_endpoints or httpMethod + endpointPath. The result contains repository and endpoint
-                    metadata, method graph, class list, roles, terminal boundaries, warnings, evidence and suggested next reads.
-                    Use this when explaining how an endpoint works, preparing technical/business diagrams, or checking whether
-                    a new requirement belongs to an existing endpoint. It does not return source code.
-                    """
-    )
-    public GitLabEndpointUseCaseContextResult buildEndpointUseCaseContext(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
-            String projectName,
-            @ToolParam(required = false, description = "Endpoint id returned by gitlab_list_repository_endpoints. Preferred when available.")
-            String endpointId,
-            @ToolParam(required = false, description = "HTTP method used when endpointId is not provided, for example GET, POST, PUT or DELETE.")
-            String httpMethod,
-            @ToolParam(required = false, description = "Concrete endpoint path used when endpointId is not provided, for example /api/orders/123/submit.")
-            String endpointPath,
-            @ToolParam(required = false, description = "Optional repository source path prefix or module path. Defaults to src/main/java.")
-            String sourcePathPrefix,
-            @ToolParam(required = false, description = "Output mode: COMPACT, GRAPH, BUSINESS or DEBUG. Defaults to COMPACT.")
-            GitLabEndpointUseCaseOutputMode outputMode,
-            @ToolParam(required = false, description = "Maximum call graph depth. Defaults to 8 and is capped by request validation.")
-            Integer maxDepth,
-            @ToolParam(required = false, description = "Maximum graph nodes. Defaults to 80 and is capped by request validation.")
-            Integer maxNodes,
-            @ToolParam(required = false, description = "Whether async consumers should be expanded. MVP keeps async boundaries terminal by default.")
-            Boolean includeAsyncConsumers,
-            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model buduje kontekst use case endpointu.")
-            String reason,
-            ToolContext toolContext
-    ) {
-        var scope = GitLabToolScope.from(toolContext);
-        if (gitLabEndpointUseCaseContextService == null) {
-            throw new IllegalStateException("GitLab endpoint use case context service is not configured.");
-        }
-
-        log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} sourcePathPrefix={} outputMode={} maxDepth={} maxNodes={} includeAsyncConsumers={}",
-                BUILD_ENDPOINT_USE_CASE_CONTEXT,
-                scope.correlationId(),
-                scope.group(),
-                scope.branch(),
-                scope.environment(),
-                scope.analysisRunId(),
-                scope.copilotSessionId(),
-                scope.toolCallId(),
-                projectName,
-                endpointId,
-                httpMethod,
-                endpointPath,
-                sourcePathPrefix,
-                outputMode,
-                maxDepth,
-                maxNodes,
-                includeAsyncConsumers
-        );
-
-        var result = gitLabEndpointUseCaseContextService.buildContext(
-                scope.group(),
-                scope.branch(),
-                new GitLabEndpointUseCaseContextRequest(
-                        projectName,
-                        endpointId,
-                        httpMethod,
-                        endpointPath,
-                        sourcePathPrefix,
-                        outputMode,
-                        maxDepth,
-                        maxNodes,
-                        includeAsyncConsumers,
-                        reason
-                )
-        );
-
-        log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} endpointMatched={} nodeCount={} edgeCount={} classCount={} warningCount={} confidence={} maxDepthReached={} maxNodesReached={}",
-                BUILD_ENDPOINT_USE_CASE_CONTEXT,
-                scope.correlationId(),
-                result.repository() != null ? result.repository().group() : scope.group(),
-                result.repository() != null ? result.repository().requestedBranch() : scope.branch(),
-                scope.environment(),
-                result.repository() != null ? result.repository().projectName() : projectName,
-                result.endpoint() != null,
-                result.graph().nodes().size(),
-                result.graph().edges().size(),
-                result.classList().size(),
-                result.warnings().size(),
-                result.confidence(),
-                result.limits().maxDepthReached(),
-                result.limits().maxNodesReached()
-        );
-
-        return result;
     }
 
     @Tool(

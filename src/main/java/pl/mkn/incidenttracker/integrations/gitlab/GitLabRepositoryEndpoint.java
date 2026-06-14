@@ -17,7 +17,6 @@ public record GitLabRepositoryEndpoint(
         List<String> annotations,
         String confidence,
         List<String> limitations,
-        GitLabRepositoryEndpointUseCaseInput useCaseContextInput,
         List<String> suggestedNextReads
 ) {
     public GitLabRepositoryEndpoint {

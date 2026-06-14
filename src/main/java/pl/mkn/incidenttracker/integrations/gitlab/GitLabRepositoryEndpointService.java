@@ -359,15 +359,6 @@ public class GitLabRepositoryEndpointService {
                         var lineStart = methodMapping.lineStart();
                         var lineEnd = signature.lineEnd();
                         var confidence = confidence(pathExpression, controller.controllerLike(), inheritedLimitations);
-                        var useCaseInput = new GitLabRepositoryEndpointUseCaseInput(
-                                projectName,
-                                endpointId,
-                                methods,
-                                path,
-                                filePath,
-                                lineStart,
-                                lineEnd
-                        );
 
                         endpoints.add(new GitLabRepositoryEndpoint(
                                 endpointId,
@@ -384,7 +375,6 @@ public class GitLabRepositoryEndpointService {
                                 annotations,
                                 confidence,
                                 List.copyOf(limitations),
-                                useCaseInput,
                                 suggestedNextReads(projectName, filePath, lineStart, lineEnd)
                         ));
                     }
@@ -548,15 +538,6 @@ public class GitLabRepositoryEndpointService {
                 ));
                 var limitations = new ArrayList<String>(operation.limitations());
                 limitations.add("Endpoint mapping resolved from OpenAPI YAML contract, not Java annotations.");
-                var useCaseInput = new GitLabRepositoryEndpointUseCaseInput(
-                        projectName,
-                        endpointId,
-                        List.of(operation.httpMethod()),
-                        operation.path(),
-                        implementation.filePath(),
-                        lineStart,
-                        lineEnd
-                );
 
                 endpoints.add(new GitLabRepositoryEndpoint(
                         endpointId,
@@ -573,7 +554,6 @@ public class GitLabRepositoryEndpointService {
                         annotations,
                         "high",
                         List.copyOf(limitations),
-                        useCaseInput,
                         suggestedNextReads(projectName, operation, implementation)
                 ));
             }
