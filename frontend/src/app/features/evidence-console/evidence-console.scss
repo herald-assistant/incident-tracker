@@ -286,8 +286,7 @@
 }
 
 .context-results__header,
-.context-endpoint,
-.context-file__header {
+.context-endpoint {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -303,20 +302,17 @@
 }
 
 .context-endpoint h4,
-.context-file h4,
 .context-subsection h4 {
   margin: 0;
 }
 
-.context-endpoint h4,
-.context-file h4 {
+.context-endpoint h4 {
   font-family: var(--font-mono);
   font-size: 0.9rem;
   overflow-wrap: anywhere;
 }
 
-.context-endpoint p,
-.context-file p {
+.context-endpoint p {
   margin: 4px 0 0;
   color: var(--text-muted);
   font-size: 0.78rem;
@@ -324,29 +320,10 @@
   overflow-wrap: anywhere;
 }
 
-.context-file-list {
-  display: grid;
-  gap: 10px;
-}
-
-.context-file {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(9, 30, 66, 0.1);
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.context-file__badges,
 .context-chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.context-file__badges {
-  justify-content: flex-end;
 }
 
 .context-chip {
@@ -365,6 +342,73 @@
 .context-subsection {
   display: grid;
   gap: 8px;
+}
+
+.context-subsection--collapsible {
+  padding: 0;
+}
+
+.context-subsection--collapsible summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(9, 30, 66, 0.08);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.context-subsection--collapsible summary:hover,
+.context-subsection--collapsible summary:focus-visible {
+  border-color: rgba(12, 102, 228, 0.18);
+  background: rgba(222, 235, 255, 0.28);
+  outline: none;
+}
+
+.context-subsection--collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.context-subsection--collapsible summary::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-soft);
+  border-bottom: 2px solid var(--text-soft);
+  transform: rotate(-45deg);
+  transition: transform 0.16s ease;
+  flex: 0 0 8px;
+}
+
+.context-subsection--collapsible summary span:first-of-type {
+  flex: 1 1 auto;
+}
+
+.context-subsection--collapsible summary .panel-chip {
+  margin-left: auto;
+}
+
+.context-subsection--collapsible summary:hover::before,
+.context-subsection--collapsible summary:focus-visible::before {
+  border-color: var(--primary);
+}
+
+.context-subsection--collapsible[open] summary {
+  border-color: rgba(12, 102, 228, 0.2);
+  background: rgba(247, 250, 255, 0.94);
+}
+
+.context-subsection--collapsible[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.context-subsection--collapsible .context-list {
+  margin-top: 8px;
 }
 
 .context-list {
@@ -421,8 +465,7 @@
 @media (max-width: 860px) {
   .evidence-tool-section__header,
   .endpoint-results__header,
-  .context-results__header,
-  .context-file__header {
+  .context-results__header {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -440,9 +483,6 @@
     justify-content: flex-start;
   }
 
-  .context-file__badges {
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 640px) {

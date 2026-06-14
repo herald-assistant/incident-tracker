@@ -20,6 +20,8 @@ import {
   EvidenceApiService,
   GitLabEndpointUseCaseContextPayload,
   GitLabEndpointUseCaseContextResponse,
+  GitLabEndpointUseCaseFileCandidate,
+  GitLabEndpointUseCaseRelation,
   GitLabRepositoryEndpoint,
   GitLabRepositoryEndpointsPayload,
   GitLabRepositoryEndpointsResponse,
@@ -36,6 +38,34 @@ interface ToolState {
   message: string;
   responseJson: string;
   response: unknown | null;
+}
+
+interface GitLabUseCaseTreeNode {
+  id: string;
+  label: string;
+  subtitle: string | null;
+  role: string | null;
+  confidence: string | null;
+  relationKind: string | null;
+  relationReason: string | null;
+  relationFrom: string | null;
+  relationTo: string | null;
+  file: GitLabEndpointUseCaseFileCandidate | null;
+  duplicate: boolean;
+  group: boolean;
+  children: GitLabUseCaseTreeNode[];
+}
+
+interface GitLabUseCaseTreeRow {
+  node: GitLabUseCaseTreeNode;
+  depth: number;
+}
+
+interface GitLabUseCaseTree {
+  rows: GitLabUseCaseTreeRow[];
+  unmatchedRelations: GitLabEndpointUseCaseRelation[];
+  linkedFileCount: number;
+  unlinkedFileCount: number;
 }
 
 @Component({
@@ -195,6 +225,22 @@ export class EvidenceConsoleComponent {
   readonly gitLabEndpointUseCaseContextResult = computed(() =>
     this.asGitLabEndpointUseCaseContextResult(this.gitLabEndpointUseCaseContextState().response)
   );
+
+  readonly gitLabUseCaseTree = computed(() =>
+    this.buildGitLabUseCaseTree(this.gitLabEndpointUseCaseContextResult())
+  );
+
+  readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
+
+  readonly selectedGitLabUseCaseTreeNode = computed(() => {
+    const tree = this.gitLabUseCaseTree();
+    if (!tree || tree.rows.length === 0) {
+      return null;
+    }
+
+    const selectedId = this.selectedGitLabUseCaseTreeNodeId();
+    return tree.rows.find((row) => row.node.id === selectedId)?.node ?? tree.rows[0].node;
+  });
 
   submitElastic(event: Event): void {
     event.preventDefault();
@@ -390,6 +436,7 @@ export class EvidenceConsoleComponent {
       reason: this.optionalValue(this.gitLabEndpointUseCaseContextForm.controls.reason.value)
     };
 
+    this.selectedGitLabUseCaseTreeNodeId.set(null);
     this.runRequest(
       this.gitLabEndpointUseCaseContextState,
       this.evidenceApi.buildGitLabEndpointUseCaseContext(payload),
@@ -407,6 +454,7 @@ export class EvidenceConsoleComponent {
       httpMethod: endpoint.httpMethods?.[0] || '',
       endpointPath: endpoint.path || endpoint.pathExpression || ''
     });
+    this.selectedGitLabUseCaseTreeNodeId.set(null);
     this.gitLabEndpointUseCaseContextState.set(
       this.idleState('Endpoint przeniesiony z inventory. Uruchom context builder, aby zbudować listę plików.')
     );
@@ -489,6 +537,48 @@ export class EvidenceConsoleComponent {
       return 'confidence-pill confidence-pill--low';
     }
     return 'confidence-pill';
+  }
+
+  selectGitLabUseCaseTreeNode(node: GitLabUseCaseTreeNode): void {
+    this.selectedGitLabUseCaseTreeNodeId.set(node.id);
+  }
+
+  flowTreeNodeClass(node: GitLabUseCaseTreeNode): string {
+    const classes = ['flow-tree-node'];
+    if (this.selectedGitLabUseCaseTreeNode()?.id === node.id) {
+      classes.push('flow-tree-node--selected');
+    }
+    if (node.group) {
+      classes.push('flow-tree-node--group');
+    }
+    if (node.duplicate) {
+      classes.push('flow-tree-node--duplicate');
+    }
+    if (node.role) {
+      classes.push(`flow-tree-node--${this.cssToken(node.role)}`);
+    }
+    return classes.join(' ');
+  }
+
+  displayRole(role: string | null | undefined): string {
+    return this.displayToken(role) || 'UNKNOWN';
+  }
+
+  displayRelationKind(kind: string | null | undefined): string {
+    return this.displayToken(kind) || 'FLOW';
+  }
+
+  displayPathName(path: string | null | undefined): string {
+    const normalized = this.normalizePath(path);
+    if (!normalized) {
+      return '<unknown-file>';
+    }
+    const lastSlashIndex = normalized.lastIndexOf('/');
+    return lastSlashIndex >= 0 ? normalized.slice(lastSlashIndex + 1) : normalized;
+  }
+
+  treeNodePadding(depth: number): number {
+    return 12 + depth * 26;
   }
 
   private runRequest(
@@ -681,6 +771,504 @@ export class EvidenceConsoleComponent {
 
     const record = response as Partial<GitLabEndpointUseCaseContextResponse>;
     return Array.isArray(record.files) ? (record as GitLabEndpointUseCaseContextResponse) : null;
+  }
+
+  private buildGitLabUseCaseTree(
+    result: GitLabEndpointUseCaseContextResponse | null
+  ): GitLabUseCaseTree | null {
+    if (!result) {
+      return null;
+    }
+
+    const files = (result.files || []).filter((file) => !!this.normalizePath(file.path));
+    const fileByPath = new Map<string, GitLabEndpointUseCaseFileCandidate>();
+    for (const file of files) {
+      const path = this.normalizePath(file.path);
+      if (path) {
+        fileByPath.set(path, file);
+      }
+    }
+
+    const rootKey = 'endpoint';
+    const root: GitLabUseCaseTreeNode = {
+      id: 'endpoint-root',
+      label: this.gitLabEndpointTreeLabel(result),
+      subtitle: this.gitLabEndpointTreeSubtitle(result),
+      role: 'ENTRYPOINT',
+      confidence: result.confidence || null,
+      relationKind: null,
+      relationReason: null,
+      relationFrom: null,
+      relationTo: null,
+      file: null,
+      duplicate: false,
+      group: false,
+      children: []
+    };
+
+    const adjacency = new Map<string, GitLabEndpointUseCaseRelation[]>();
+    const unmatchedRelations: GitLabEndpointUseCaseRelation[] = [];
+
+    for (const relation of result.relations || []) {
+      const fromKey = this.resolveGitLabRelationSource(relation.from, fileByPath, result, rootKey);
+      const toPath = this.resolveGitLabRelationFilePath(relation.to, fileByPath, result);
+      if (!fromKey || !toPath) {
+        unmatchedRelations.push(relation);
+        continue;
+      }
+      if (fromKey === toPath) {
+        continue;
+      }
+      this.addTreeRelation(adjacency, fromKey, relation);
+    }
+
+    const controllerPath = this.resolveGitLabControllerPath(result, fileByPath);
+    if (controllerPath && !this.hasTreeRelation(adjacency, rootKey, controllerPath, fileByPath, result)) {
+      this.addTreeRelation(adjacency, rootKey, {
+        from:
+          result.endpoint?.endpointId ||
+          result.endpoint?.path ||
+          result.endpoint?.pathExpression ||
+          'endpoint',
+        to: this.gitLabEndpointHandlerSymbol(result) || controllerPath,
+        kind: 'ENDPOINT_HANDLER',
+        confidence: result.endpoint?.confidence || result.confidence || null,
+        reason: 'Endpoint handler resolved by endpoint inventory.'
+      });
+    }
+
+    const visited = new Set<string>();
+    const linkedFiles = new Set<string>();
+    root.children = this.treeRelationsFor(adjacency, rootKey, fileByPath, result)
+      .map((relation, index) =>
+        this.buildGitLabFileTreeNode(
+          relation,
+          fileByPath,
+          result,
+          adjacency,
+          visited,
+          linkedFiles,
+          new Set<string>(),
+          `root-${index}`
+        )
+      )
+      .filter((node): node is GitLabUseCaseTreeNode => !!node);
+
+    const unlinkedFiles = files
+      .map((file) => this.normalizePath(file.path))
+      .filter((path): path is string => !!path && !linkedFiles.has(path));
+
+    if (unlinkedFiles.length > 0) {
+      root.children.push({
+        id: 'unlinked-files',
+        label: 'Pozostałe pliki',
+        subtitle: 'Pliki zwrócone przez tool bez jednoznacznej krawędzi w flow.',
+        role: 'FILES',
+        confidence: null,
+        relationKind: null,
+        relationReason: null,
+        relationFrom: null,
+        relationTo: null,
+        file: null,
+        duplicate: false,
+        group: true,
+        children: unlinkedFiles
+          .sort((left, right) => this.compareGitLabFiles(fileByPath.get(left), fileByPath.get(right)))
+          .map((path, index) =>
+            this.fileTreeNode(
+              path,
+              fileByPath.get(path) || null,
+              {
+                kind: 'UNLINKED_FILE',
+                reason: 'File returned by context builder without a matched relation.',
+                from: null,
+                to: path,
+                confidence: fileByPath.get(path)?.confidence || null
+              },
+              `unlinked-${index}`,
+              false,
+              []
+            )
+          )
+      });
+    }
+
+    return {
+      rows: this.flattenGitLabUseCaseTree(root),
+      unmatchedRelations,
+      linkedFileCount: linkedFiles.size,
+      unlinkedFileCount: unlinkedFiles.length
+    };
+  }
+
+  private buildGitLabFileTreeNode(
+    relation: GitLabEndpointUseCaseRelation,
+    fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
+    result: GitLabEndpointUseCaseContextResponse,
+    adjacency: Map<string, GitLabEndpointUseCaseRelation[]>,
+    visited: Set<string>,
+    linkedFiles: Set<string>,
+    pathStack: Set<string>,
+    idSuffix: string
+  ): GitLabUseCaseTreeNode | null {
+    const path = this.resolveGitLabRelationFilePath(relation.to, fileByPath, result);
+    if (!path) {
+      return null;
+    }
+
+    const duplicate = visited.has(path) || pathStack.has(path);
+    const nextStack = new Set(pathStack);
+    nextStack.add(path);
+    linkedFiles.add(path);
+
+    if (!duplicate) {
+      visited.add(path);
+    }
+
+    const children = duplicate
+      ? []
+      : this.treeRelationsFor(adjacency, path, fileByPath, result)
+          .map((childRelation, index) =>
+            this.buildGitLabFileTreeNode(
+              childRelation,
+              fileByPath,
+              result,
+              adjacency,
+              visited,
+              linkedFiles,
+              nextStack,
+              `${idSuffix}-${index}`
+            )
+          )
+          .filter((node): node is GitLabUseCaseTreeNode => !!node);
+
+    return this.fileTreeNode(
+      path,
+      fileByPath.get(path) || null,
+      relation,
+      idSuffix,
+      duplicate,
+      children
+    );
+  }
+
+  private fileTreeNode(
+    path: string,
+    file: GitLabEndpointUseCaseFileCandidate | null,
+    relation: Partial<GitLabEndpointUseCaseRelation>,
+    idSuffix: string,
+    duplicate: boolean,
+    children: GitLabUseCaseTreeNode[]
+  ): GitLabUseCaseTreeNode {
+    return {
+      id: `file:${path}:${idSuffix}`,
+      label: this.displayPathName(path),
+      subtitle: path,
+      role: file?.role || 'UNKNOWN',
+      confidence: file?.confidence || relation.confidence || null,
+      relationKind: relation.kind || null,
+      relationReason: relation.reason || null,
+      relationFrom: relation.from || null,
+      relationTo: relation.to || null,
+      file,
+      duplicate,
+      group: false,
+      children
+    };
+  }
+
+  private treeRelationsFor(
+    adjacency: Map<string, GitLabEndpointUseCaseRelation[]>,
+    key: string,
+    fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
+    result: GitLabEndpointUseCaseContextResponse
+  ): GitLabEndpointUseCaseRelation[] {
+    const seenTargets = new Set<string>();
+    return [...(adjacency.get(key) || [])]
+      .filter((relation) => {
+        const target = this.resolveGitLabRelationFilePath(relation.to, fileByPath, result);
+        if (!target || seenTargets.has(target)) {
+          return false;
+        }
+        seenTargets.add(target);
+        return true;
+      })
+      .sort((left, right) => {
+        const leftPath = this.resolveGitLabRelationFilePath(left.to, fileByPath, result);
+        const rightPath = this.resolveGitLabRelationFilePath(right.to, fileByPath, result);
+        return (
+          this.relationPriority(left.kind) - this.relationPriority(right.kind) ||
+          this.compareGitLabFiles(fileByPath.get(leftPath || ''), fileByPath.get(rightPath || '')) ||
+          (leftPath || '').localeCompare(rightPath || '')
+        );
+      });
+  }
+
+  private addTreeRelation(
+    adjacency: Map<string, GitLabEndpointUseCaseRelation[]>,
+    fromKey: string,
+    relation: GitLabEndpointUseCaseRelation
+  ): void {
+    const relations = adjacency.get(fromKey) || [];
+    relations.push(relation);
+    adjacency.set(fromKey, relations);
+  }
+
+  private hasTreeRelation(
+    adjacency: Map<string, GitLabEndpointUseCaseRelation[]>,
+    fromKey: string,
+    targetPath: string,
+    fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
+    result: GitLabEndpointUseCaseContextResponse
+  ): boolean {
+    return (adjacency.get(fromKey) || []).some(
+      (relation) => this.resolveGitLabRelationFilePath(relation.to, fileByPath, result) === targetPath
+    );
+  }
+
+  private resolveGitLabRelationSource(
+    value: string | null | undefined,
+    fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
+    result: GitLabEndpointUseCaseContextResponse,
+    rootKey: string
+  ): string | null {
+    const normalized = this.normalizeToken(value);
+    if (!normalized) {
+      return null;
+    }
+
+    const endpoint = result.endpoint;
+    const endpointTokens = [endpoint?.endpointId, endpoint?.path, endpoint?.pathExpression]
+      .map((token) => this.normalizeToken(token))
+      .filter((token): token is string => !!token);
+
+    if (endpointTokens.includes(normalized)) {
+      return rootKey;
+    }
+
+    return this.resolveGitLabRelationFilePath(value, fileByPath, result);
+  }
+
+  private resolveGitLabRelationFilePath(
+    value: string | null | undefined,
+    fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
+    result: GitLabEndpointUseCaseContextResponse
+  ): string | null {
+    const normalized = this.normalizePath(value);
+    if (!normalized) {
+      return null;
+    }
+
+    if (fileByPath.has(normalized)) {
+      return normalized;
+    }
+
+    const normalizedLookup = normalized.toLowerCase();
+    for (const path of fileByPath.keys()) {
+      if (normalizedLookup.includes(path.toLowerCase())) {
+        return path;
+      }
+    }
+
+    const endpoint = result.endpoint;
+    const endpointFile = this.normalizePath(endpoint?.filePath);
+    const handlerSymbol = this.normalizeToken(this.gitLabEndpointHandlerSymbol(result));
+    if (endpointFile && handlerSymbol && handlerSymbol === this.normalizeToken(value) && fileByPath.has(endpointFile)) {
+      return endpointFile;
+    }
+
+    let bestPath: string | null = null;
+    let bestScore = 0;
+    for (const [path, file] of fileByPath.entries()) {
+      const score = this.gitLabFileMatchScore(path, file, value);
+      if (score > bestScore) {
+        bestPath = path;
+        bestScore = score;
+      }
+    }
+
+    return bestScore > 0 ? bestPath : null;
+  }
+
+  private gitLabFileMatchScore(
+    path: string,
+    file: GitLabEndpointUseCaseFileCandidate,
+    value: string | null | undefined
+  ): number {
+    const token = this.normalizeToken(value);
+    if (!token) {
+      return 0;
+    }
+
+    const pathToken = path.toLowerCase();
+    const baseName = this.displayPathName(path).replace(/\.java$/i, '').toLowerCase();
+    const typeName = this.relationTypeName(value)?.toLowerCase() || '';
+    const simpleType = typeName.includes('.') ? typeName.slice(typeName.lastIndexOf('.') + 1) : typeName;
+    const methodName = this.relationMethodName(value)?.toLowerCase() || '';
+    const symbols = file.symbols || [];
+    let score = 0;
+
+    if (pathToken === token) {
+      score += 100;
+    }
+    if (typeName && baseName === simpleType) {
+      score += 80;
+    }
+    if (typeName && pathToken.includes(`/${simpleType.toLowerCase()}.java`)) {
+      score += 60;
+    }
+    if (symbols.some((symbol) => this.normalizeToken(symbol) === token)) {
+      score += 90;
+    }
+    if (methodName && symbols.some((symbol) => this.normalizeToken(symbol) === methodName)) {
+      score += 35;
+    }
+    if (symbols.some((symbol) => token.endsWith(`#${this.normalizeToken(symbol)}`))) {
+      score += 30;
+    }
+    if (simpleType && pathToken.includes(simpleType.toLowerCase())) {
+      score += 15;
+    }
+
+    return score;
+  }
+
+  private resolveGitLabControllerPath(
+    result: GitLabEndpointUseCaseContextResponse,
+    fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>
+  ): string | null {
+    const endpointPath = this.normalizePath(result.endpoint?.filePath);
+    if (endpointPath && fileByPath.has(endpointPath)) {
+      return endpointPath;
+    }
+    return (
+      [...fileByPath.entries()].find(([, file]) => file.role === 'CONTROLLER')?.[0] ||
+      [...fileByPath.keys()][0] ||
+      null
+    );
+  }
+
+  private gitLabEndpointTreeLabel(result: GitLabEndpointUseCaseContextResponse): string {
+    const endpoint = result.endpoint;
+    const method = endpoint?.httpMethods?.length ? endpoint.httpMethods.join(', ') : 'ANY';
+    const path = endpoint?.path || endpoint?.pathExpression || endpoint?.endpointId || 'Endpoint';
+    return `${method} ${path}`;
+  }
+
+  private gitLabEndpointTreeSubtitle(result: GitLabEndpointUseCaseContextResponse): string | null {
+    const endpoint = result.endpoint;
+    const handler = [endpoint?.controllerClass, endpoint?.handlerMethod].filter(Boolean).join('#');
+    if (handler) {
+      return handler;
+    }
+    return result.repository?.projectName || null;
+  }
+
+  private gitLabEndpointHandlerSymbol(result: GitLabEndpointUseCaseContextResponse): string | null {
+    const endpoint = result.endpoint;
+    if (!endpoint?.controllerClass && !endpoint?.handlerMethod) {
+      return null;
+    }
+    return [endpoint.controllerClass, endpoint.handlerMethod].filter(Boolean).join('#');
+  }
+
+  private flattenGitLabUseCaseTree(root: GitLabUseCaseTreeNode): GitLabUseCaseTreeRow[] {
+    const rows: GitLabUseCaseTreeRow[] = [];
+    const visit = (node: GitLabUseCaseTreeNode, depth: number): void => {
+      rows.push({ node, depth });
+      for (const child of node.children) {
+        visit(child, depth + 1);
+      }
+    };
+    visit(root, 0);
+    return rows;
+  }
+
+  private compareGitLabFiles(
+    left: GitLabEndpointUseCaseFileCandidate | undefined,
+    right: GitLabEndpointUseCaseFileCandidate | undefined
+  ): number {
+    return (
+      (left?.priority || 99) - (right?.priority || 99) ||
+      this.confidenceRank(right?.confidence) - this.confidenceRank(left?.confidence) ||
+      (left?.path || '').localeCompare(right?.path || '')
+    );
+  }
+
+  private relationPriority(kind: string | null | undefined): number {
+    switch (kind) {
+      case 'ENDPOINT_HANDLER':
+        return 0;
+      case 'INJECTED_PORT_CALL':
+        return 10;
+      case 'INTERFACE_IMPLEMENTATION':
+        return 12;
+      case 'LOCAL_METHOD_CALL':
+        return 20;
+      case 'DOMAIN_METHOD_CALL':
+        return 30;
+      case 'REPOSITORY_CALL':
+      case 'SPRING_DATA_BOUNDARY':
+        return 40;
+      case 'MAPPER_CALL':
+        return 50;
+      case 'STATIC_METHOD_CALL':
+        return 60;
+      case 'EXTERNAL_BOUNDARY':
+      case 'OPENAPI_CONTRACT':
+        return 70;
+      default:
+        return 99;
+    }
+  }
+
+  private confidenceRank(confidence: string | null | undefined): number {
+    switch ((confidence || '').toLowerCase()) {
+      case 'high':
+        return 3;
+      case 'medium':
+        return 2;
+      case 'low':
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  private relationTypeName(value: string | null | undefined): string | null {
+    const token = value?.trim();
+    if (!token) {
+      return null;
+    }
+    const methodIndex = token.lastIndexOf('#');
+    return methodIndex >= 0 ? token.slice(0, methodIndex) : token;
+  }
+
+  private relationMethodName(value: string | null | undefined): string | null {
+    const token = value?.trim();
+    if (!token) {
+      return null;
+    }
+    const methodIndex = token.lastIndexOf('#');
+    return methodIndex >= 0 ? token.slice(methodIndex + 1) : null;
+  }
+
+  private normalizePath(value: string | null | undefined): string | null {
+    const token = value?.trim().replace(/\\/g, '/').replace(/^\/+/, '');
+    return token && token.length > 0 ? token : null;
+  }
+
+  private normalizeToken(value: string | null | undefined): string | null {
+    const token = value?.trim().replace(/\\/g, '/').toLowerCase();
+    return token && token.length > 0 ? token : null;
+  }
+
+  private displayToken(value: string | null | undefined): string {
+    return (value || '').replace(/_/g, ' ').trim();
+  }
+
+  private cssToken(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
 
 }

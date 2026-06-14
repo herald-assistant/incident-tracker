@@ -996,42 +996,125 @@
               </ul>
             }
 
-            @if (contextResult.files.length > 0) {
-              <div class="context-file-list">
-                @for (file of contextResult.files; track file.path || $index) {
-                  <article class="context-file">
-                    <div class="context-file__header">
-                      <div>
-                        <h4>{{ file.path || '&lt;unknown-file&gt;' }}</h4>
-                        <p>{{ file.reason || 'Bez opisu powodu wyboru pliku.' }}</p>
-                      </div>
-                      <div class="context-file__badges">
-                        <span class="panel-chip">{{ file.role || 'UNKNOWN' }}</span>
-                        <span [class]="confidenceClass(file.confidence)">
-                          {{ file.confidence || 'UNKNOWN' }}
-                        </span>
-                      </div>
-                    </div>
+            @if (contextResult.files.length > 0 && gitLabUseCaseTree(); as useCaseTree) {
+              <section class="context-flow">
+                <div class="context-flow__header">
+                  <div>
+                    <p class="tool-status__label">Flow tree</p>
+                    <h4>
+                      {{ useCaseTree.linkedFileCount }} powiązanych ·
+                      {{ useCaseTree.unlinkedFileCount }} poza flow
+                    </h4>
+                  </div>
+                  @if (contextResult.limits.maxDepthReached || contextResult.limits.maxFilesReached) {
+                    <span class="panel-chip panel-chip--warning">limit reached</span>
+                  }
+                </div>
 
-                    @if (file.symbols.length > 0) {
-                      <div class="context-chip-list">
-                        @for (symbol of file.symbols; track symbol) {
-                          <span class="context-chip">{{ symbol }}</span>
-                        }
-                      </div>
+                <div class="context-flow__layout">
+                  <div class="flow-tree" role="tree" aria-label="Endpoint use-case flow tree">
+                    @for (row of useCaseTree.rows; track row.node.id) {
+                      <button
+                        type="button"
+                        [class]="flowTreeNodeClass(row.node)"
+                        [style.padding-left.px]="treeNodePadding(row.depth)"
+                        [attr.aria-level]="row.depth + 1"
+                        role="treeitem"
+                        (click)="selectGitLabUseCaseTreeNode(row.node)"
+                      >
+                        <span class="flow-tree-node__marker"></span>
+                        <span class="flow-tree-node__main">
+                          <span class="flow-tree-node__title">{{ row.node.label }}</span>
+                          @if (row.node.subtitle) {
+                            <span class="flow-tree-node__subtitle">{{ row.node.subtitle }}</span>
+                          }
+                          @if (row.node.relationReason) {
+                            <span class="flow-tree-node__reason">{{ row.node.relationReason }}</span>
+                          }
+                        </span>
+                        <span class="flow-tree-node__badges">
+                          @if (row.node.relationKind) {
+                            <span class="flow-tree-node__edge">
+                              {{ displayRelationKind(row.node.relationKind) }}
+                            </span>
+                          }
+                          <span class="panel-chip">{{ displayRole(row.node.role) }}</span>
+                          @if (row.node.confidence) {
+                            <span [class]="confidenceClass(row.node.confidence)">
+                              {{ row.node.confidence }}
+                            </span>
+                          }
+                          @if (row.node.duplicate) {
+                            <span class="panel-chip">already shown</span>
+                          }
+                        </span>
+                      </button>
                     }
-                  </article>
-                }
-              </div>
+                  </div>
+
+                  @if (selectedGitLabUseCaseTreeNode(); as selectedNode) {
+                    <aside class="flow-node-details">
+                      <div class="flow-node-details__header">
+                        <div>
+                          <p class="tool-status__label">Selected node</p>
+                          <h4>{{ selectedNode.label }}</h4>
+                        </div>
+                        <span class="panel-chip">{{ displayRole(selectedNode.role) }}</span>
+                      </div>
+
+                      @if (selectedNode.subtitle) {
+                        <p class="flow-node-details__path">{{ selectedNode.subtitle }}</p>
+                      }
+
+                      @if (selectedNode.relationKind || selectedNode.relationFrom || selectedNode.relationTo) {
+                        <dl class="flow-node-details__meta">
+                          @if (selectedNode.relationKind) {
+                            <div>
+                              <dt>Relation</dt>
+                              <dd>{{ displayRelationKind(selectedNode.relationKind) }}</dd>
+                            </div>
+                          }
+                          @if (selectedNode.relationFrom) {
+                            <div>
+                              <dt>From</dt>
+                              <dd>{{ selectedNode.relationFrom }}</dd>
+                            </div>
+                          }
+                          @if (selectedNode.relationTo) {
+                            <div>
+                              <dt>To</dt>
+                              <dd>{{ selectedNode.relationTo }}</dd>
+                            </div>
+                          }
+                        </dl>
+                      }
+
+                      @if (selectedNode.file?.reason || selectedNode.relationReason) {
+                        <p class="flow-node-details__reason">
+                          {{ selectedNode.file?.reason || selectedNode.relationReason }}
+                        </p>
+                      }
+
+                      @if (selectedNode.file?.symbols?.length) {
+                        <div class="context-chip-list">
+                          @for (symbol of selectedNode.file?.symbols || []; track symbol) {
+                            <span class="context-chip">{{ symbol }}</span>
+                          }
+                        </div>
+                      }
+                    </aside>
+                  }
+                </div>
+              </section>
             } @else {
               <p class="empty-state">Builder nie zwrócił plików dla podanego endpointu.</p>
             }
 
-            @if (contextResult.relations.length > 0) {
+            @if (gitLabUseCaseTree()?.unmatchedRelations?.length) {
               <section class="context-subsection">
-                <h4>Relacje</h4>
+                <h4>Relacje bez dopasowania do drzewa</h4>
                 <ul class="context-list">
-                  @for (relation of contextResult.relations; track $index) {
+                  @for (relation of gitLabUseCaseTree()?.unmatchedRelations || []; track $index) {
                     <li>
                       <span>{{ relation.kind || 'UNKNOWN' }}</span>
                       {{ relation.from || '?' }} -> {{ relation.to || '?' }}
@@ -1056,14 +1139,17 @@
             }
 
             @if (contextResult.suggestedNextReads.length > 0) {
-              <section class="context-subsection">
-                <h4>Suggested next reads</h4>
+              <details class="context-subsection context-subsection--collapsible">
+                <summary>
+                  <span>Suggested next reads</span>
+                  <span class="panel-chip">{{ contextResult.suggestedNextReads.length }}</span>
+                </summary>
                 <ul class="context-list">
                   @for (read of contextResult.suggestedNextReads; track read) {
                     <li>{{ read }}</li>
                   }
                 </ul>
-              </section>
+              </details>
             }
           </section>
         }
