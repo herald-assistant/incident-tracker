@@ -735,12 +735,12 @@ export class EvidenceConsoleComponent {
   }
 
   private optionalValue(raw: string): string | undefined {
-    const value = raw.trim();
+    const value = String(raw || "").trim();
     return value.length > 0 ? value : undefined;
   }
 
   private optionalNumber(raw: string): number | undefined {
-    const value = raw.trim();
+    const value = String(raw || "").trim();
     if (value.length === 0) {
       return undefined;
     }

@@ -675,7 +675,7 @@ export class DatabaseConsoleComponent {
   }
 
   private optionalValue(raw: string): string | undefined {
-    const value = raw.trim();
+    const value = String(raw || "").trim();
     return value.length > 0 ? value : undefined;
   }
 
