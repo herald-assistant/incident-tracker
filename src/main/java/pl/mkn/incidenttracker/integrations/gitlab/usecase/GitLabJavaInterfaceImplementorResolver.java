@@ -92,11 +92,33 @@ public class GitLabJavaInterfaceImplementorResolver {
             return resolutionFromCandidates(normalizedInterfaceName, searchKeywords, candidates, limitations);
         }
 
+        var permittedCandidates = permittedImplementors(session, normalizedInterfaceName);
+        if (!permittedCandidates.isEmpty()) {
+            return resolutionFromCandidates(normalizedInterfaceName, searchKeywords, permittedCandidates, limitations);
+        }
+
+        var searchedCandidateFiles = searchedCandidateFiles(session, normalizedInterfaceName);
+        var scannedSearchFiles = limitedCandidateFiles(
+                session,
+                searchedCandidateFiles,
+                MAX_FALLBACK_CANDIDATE_FILES,
+                "Interface implementor search lookup",
+                limitations
+        );
+        candidates = implementorsInFiles(session, scannedSearchFiles, normalizedInterfaceName);
+
+        if (!candidates.isEmpty()) {
+            return resolutionFromCandidates(normalizedInterfaceName, searchKeywords, candidates, limitations);
+        }
+
         var scannedExactFilePaths = scannedExactFiles.stream()
                 .map(GitLabRepositoryFile::filePath)
                 .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
         var fallbackCandidateFiles = candidateFiles(session, normalizedInterfaceName).stream()
                 .filter(file -> !scannedExactFilePaths.contains(file.filePath()))
+                .filter(file -> scannedSearchFiles.stream()
+                        .map(GitLabRepositoryFile::filePath)
+                        .noneMatch(file.filePath()::equals))
                 .toList();
         var scannedFallbackFiles = limitedCandidateFiles(
                 session,
@@ -218,6 +240,19 @@ public class GitLabJavaInterfaceImplementorResolver {
                 .sorted(Comparator.comparingInt(ImplementorFileCandidate::score).reversed()
                         .thenComparing(candidate -> candidate.file().filePath()))
                 .map(ImplementorFileCandidate::file)
+                .toList();
+    }
+
+    private List<GitLabRepositoryFile> searchedCandidateFiles(
+            GitLabEndpointUseCaseSourceSession session,
+            String interfaceName
+    ) {
+        return session.searchCandidateFiles(searchKeywords(interfaceName)).stream()
+                .map(candidate -> toRepositoryFile(session, candidate))
+                .filter(file -> isJavaSource(file.filePath()))
+                .filter(file -> !isTestSource(file.filePath()))
+                .distinct()
+                .sorted(Comparator.comparing(GitLabRepositoryFile::filePath))
                 .toList();
     }
 
@@ -372,7 +407,7 @@ public class GitLabJavaInterfaceImplementorResolver {
             if (implementedTypes.isEmpty()) {
                 continue;
             }
-            var bestMatch = bestMatch(implementedTypes, interfaceName);
+            var bestMatch = bestMatch(astFile, implementedTypes, interfaceName);
             if (bestMatch == null) {
                 continue;
             }
@@ -393,6 +428,77 @@ public class GitLabJavaInterfaceImplementorResolver {
         return List.copyOf(candidates);
     }
 
+    private List<GitLabJavaImplementorCandidate> permittedImplementors(
+            GitLabEndpointUseCaseSourceSession session,
+            String interfaceName
+    ) {
+        var interfaceAstFiles = interfaceAstFiles(session, interfaceName);
+        if (interfaceAstFiles.isEmpty()) {
+            return List.of();
+        }
+
+        var candidateFiles = new LinkedHashSet<GitLabRepositoryFile>();
+        for (var astFile : interfaceAstFiles) {
+            var interfaceDeclaration = interfaceDeclaration(astFile, interfaceName);
+            if (interfaceDeclaration == null || interfaceDeclaration.getPermittedTypes().isEmpty()) {
+                continue;
+            }
+            for (var permittedType : interfaceDeclaration.getPermittedTypes()) {
+                var resolved = sourceResolver.resolveType(session, astFile, permittedType.asString());
+                if (resolved.resolved() && StringUtils.hasText(resolved.filePath())) {
+                    candidateFiles.add(new GitLabRepositoryFile(
+                            session.repository().group(),
+                            session.repository().projectName(),
+                            session.repository().branch(),
+                            resolved.filePath()
+                    ));
+                }
+            }
+        }
+
+        if (candidateFiles.isEmpty()) {
+            return List.of();
+        }
+        return implementorsInFiles(session, candidateFiles.stream().toList(), interfaceName);
+    }
+
+    private List<GitLabJavaAstFile> interfaceAstFiles(
+            GitLabEndpointUseCaseSourceSession session,
+            String interfaceName
+    ) {
+        var topLevelName = topLevelTypeName(interfaceName);
+        if (!StringUtils.hasText(topLevelName)) {
+            return List.of();
+        }
+        var suffix = "/" + topLevelName + ".java";
+        return session.listRepositoryFiles().stream()
+                .filter(file -> isJavaSource(file.filePath()))
+                .filter(file -> !isTestSource(file.filePath()))
+                .map(GitLabRepositoryFile::filePath)
+                .filter(path -> path != null && (path.endsWith(suffix) || path.equals(topLevelName + ".java")))
+                .distinct()
+                .sorted()
+                .map(path -> sourceResolver.astFile(session, path))
+                .filter(GitLabJavaAstFile::parsed)
+                .filter(astFile -> interfaceDeclaration(astFile, interfaceName) != null)
+                .toList();
+    }
+
+    private ClassOrInterfaceDeclaration interfaceDeclaration(GitLabJavaAstFile astFile, String interfaceName) {
+        var normalizedInterfaceName = normalizeTypeName(interfaceName);
+        var relativeName = relativeInterfaceName(normalizedInterfaceName);
+        var simpleName = simpleName(normalizedInterfaceName);
+        return astFile.compilationUnit().findAll(ClassOrInterfaceDeclaration.class).stream()
+                .filter(ClassOrInterfaceDeclaration::isInterface)
+                .filter(declaration -> normalizedInterfaceName.equals(declaration.getNameAsString())
+                        || normalizedInterfaceName.equals(relativeTypeName(declaration))
+                        || normalizedInterfaceName.equals(qualifiedTypeName(astFile, declaration))
+                        || relativeName.equals(relativeTypeName(declaration))
+                        || simpleName.equals(declaration.getNameAsString()))
+                .findFirst()
+                .orElse(null);
+    }
+
     private List<GitLabJavaImplementorCandidate> subtypesInFile(
             GitLabEndpointUseCaseSourceSession session,
             String filePath,
@@ -410,7 +516,7 @@ public class GitLabJavaInterfaceImplementorResolver {
             if (extendedTypes.isEmpty()) {
                 continue;
             }
-            var bestMatch = bestMatch(extendedTypes, baseTypeName);
+            var bestMatch = bestMatch(astFile, extendedTypes, baseTypeName);
             if (bestMatch == null) {
                 continue;
             }
@@ -431,15 +537,15 @@ public class GitLabJavaInterfaceImplementorResolver {
         return List.copyOf(candidates);
     }
 
-    private InterfaceMatch bestMatch(List<String> implementedTypes, String interfaceName) {
+    private InterfaceMatch bestMatch(GitLabJavaAstFile astFile, List<String> implementedTypes, String interfaceName) {
         return implementedTypes.stream()
-                .map(implementedType -> match(implementedType, interfaceName))
+                .map(implementedType -> match(astFile, implementedType, interfaceName))
                 .filter(match -> match != null)
                 .max(Comparator.comparing(InterfaceMatch::confidence))
                 .orElse(null);
     }
 
-    private InterfaceMatch match(String implementedType, String interfaceName) {
+    private InterfaceMatch match(GitLabJavaAstFile astFile, String implementedType, String interfaceName) {
         var normalizedImplementedType = normalizeTypeName(implementedType);
         var normalizedInterfaceName = normalizeTypeName(interfaceName);
         var interfaceRelativeName = relativeInterfaceName(normalizedInterfaceName);
@@ -457,12 +563,28 @@ public class GitLabJavaInterfaceImplementorResolver {
             );
         }
         if (implementedSimpleName.equals(interfaceSimpleName)) {
+            if (interfaceRelativeName.contains(".")) {
+                if (implementedTypeQualifiedOrNested) {
+                    return null;
+                }
+                if (!hasNestedInterfaceImport(astFile, normalizedInterfaceName)) {
+                    return null;
+                }
+            }
             return new InterfaceMatch(
                     GitLabEndpointUseCaseConfidence.MEDIUM,
                     "Implementation declares simple-name interface match: " + implementedType + "."
             );
         }
         return null;
+    }
+
+    private boolean hasNestedInterfaceImport(GitLabJavaAstFile astFile, String interfaceName) {
+        var relativeName = relativeInterfaceName(interfaceName);
+        return astFile.imports().stream()
+                .filter(importName -> !importName.endsWith(".*"))
+                .anyMatch(importName -> importName.equals(interfaceName)
+                        || importName.endsWith("." + relativeName));
     }
 
     private List<String> implementedTypes(TypeDeclaration<?> type) {
@@ -809,6 +931,12 @@ public class GitLabJavaInterfaceImplementorResolver {
             }
         }
         return normalized;
+    }
+
+    private String topLevelTypeName(String typeName) {
+        var relativeName = relativeInterfaceName(typeName);
+        var dotIndex = relativeName.indexOf('.');
+        return dotIndex >= 0 ? relativeName.substring(0, dotIndex) : relativeName;
     }
 
     private String simpleName(String typeName) {

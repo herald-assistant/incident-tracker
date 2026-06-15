@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GitLabJavaInterfaceImplementorResolverTest {
@@ -294,6 +295,81 @@ class GitLabJavaInterfaceImplementorResolverTest {
         assertEquals("CustomerQueryRepository", resolution.candidates().get(0).implementationSimpleName());
         assertEquals(List.of("Query"), resolution.candidates().get(0).implementedTypes());
         assertEquals(GitLabEndpointUseCaseConfidence.MEDIUM, resolution.candidates().get(0).confidence());
+    }
+
+    @Test
+    void shouldResolveSealedInterfaceImplementationsFromPermitsBeforeFallbackScan() {
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerConfigurationCache.java", """
+                package com.example.crm.customer;
+
+                sealed interface CustomerConfigurationCache
+                        permits CustomerConfigurationSimpleLocalCache {
+                    CustomerConfiguration newest();
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerConfigurationSimpleLocalCache.java", """
+                package com.example.crm.customer;
+
+                final class CustomerConfigurationSimpleLocalCache implements CustomerConfigurationCache {
+                    public CustomerConfiguration newest() {
+                        return new CustomerConfiguration();
+                    }
+                }
+                """);
+        for (var index = 0; index < 100; index++) {
+            repositoryPort.add("src/main/java/com/example/crm/noise/CustomerConfigurationCacheNoise" + index + ".java", """
+                    package com.example.crm.noise;
+
+                    class CustomerConfigurationCacheNoise%s {
+                    }
+                    """.formatted(index));
+        }
+
+        var resolution = resolver.resolveImplementors(session(), "CustomerConfigurationCache");
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("CustomerConfigurationSimpleLocalCache", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals(List.of("CustomerConfigurationCache"), resolution.candidates().get(0).implementedTypes());
+        assertTrue(resolution.limitations().isEmpty());
+    }
+
+    @Test
+    void shouldRejectDifferentNestedInterfaceWithSameSimpleName() {
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
+                package com.example.crm.customer;
+
+                interface CustomerRepositoryPort {
+                    interface Command {
+                    }
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerDomainCommandRepository.java", """
+                package com.example.crm.customer;
+
+                class CustomerDomainCommandRepository implements CustomerRepositoryPort.Command {
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/OtherRepositoryPort.java", """
+                package com.example.crm.customer;
+
+                interface OtherRepositoryPort {
+                    interface Command {
+                    }
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/OtherDomainCommandRepository.java", """
+                package com.example.crm.customer;
+
+                class OtherDomainCommandRepository implements OtherRepositoryPort.Command {
+                }
+                """);
+
+        var resolution = resolver.resolveImplementors(session(), "CustomerRepositoryPort.Command");
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("CustomerDomainCommandRepository", resolution.candidates().get(0).implementationSimpleName());
+        assertFalse(resolution.candidates().stream()
+                .anyMatch(candidate -> "OtherDomainCommandRepository".equals(candidate.implementationSimpleName())));
     }
 
     @Test

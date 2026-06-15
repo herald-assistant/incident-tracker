@@ -52,11 +52,21 @@
 
           <div class="evidence-intro">
             <div class="evidence-intro__chip-list">
-              <span class="panel-chip">JSON response preview</span>
-              <span class="panel-chip">GitLab repo mapping</span>
-              <span class="panel-chip">GitLab endpoint inventory</span>
-              <span class="panel-chip">Endpoint use-case context</span>
-              <span class="panel-chip">GitLab source resolve</span>
+              <span class="panel-chip" title="Podgląd surowej odpowiedzi JSON zwracanej przez backend.">
+                JSON response preview
+              </span>
+              <span class="panel-chip" title="Manualny test mapowania hintów komponentu na repozytorium GitLaba.">
+                GitLab repo mapping
+              </span>
+              <span class="panel-chip" title="Lista endpointów REST wykrytych w wybranym repozytorium.">
+                GitLab endpoint inventory
+              </span>
+              <span class="panel-chip" title="Kompaktowy kontekst plików i relacji dla konkretnego endpointu.">
+                Endpoint use-case context
+              </span>
+              <span class="panel-chip" title="Rozwiązywanie symbolu klasy lub metody do pliku źródłowego.">
+                GitLab source resolve
+              </span>
             </div>
           </div>
         </div>
@@ -78,7 +88,12 @@
           <p class="section-eyebrow">GitLab evidence</p>
           <h2>GitLab</h2>
         </div>
-        <span class="panel-chip">Repozytoria, endpointy i source resolve</span>
+        <span
+          class="panel-chip"
+          title="Zestaw manualnych testów reusable GitLab capability."
+        >
+          Repozytoria, endpointy i source resolve
+        </span>
       </div>
 
       <div class="tool-grid">
@@ -92,7 +107,12 @@
               w skonfigurowanej grupie GitLaba i jej podgrupach.
             </p>
           </div>
-          <span class="panel-chip route-chip">POST /api/gitlab/repository/search</span>
+          <span
+            class="panel-chip route-chip"
+            [title]="routeChipTooltip('POST /api/gitlab/repository/search')"
+          >
+            POST /api/gitlab/repository/search
+          </span>
         </div>
 
         <form class="tool-form" novalidate (submit)="submitGitLabRepository($event)">
@@ -182,9 +202,17 @@
           </div>
           <div class="tool-status__badges">
             @if (gitLabRepositoryState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ gitLabRepositoryState().statusCode }}</span>
+              <span
+                class="tool-status__code"
+                [title]="httpStatusTooltip(gitLabRepositoryState().statusCode)"
+              >
+                HTTP {{ gitLabRepositoryState().statusCode }}
+              </span>
             }
-            <span [class]="statusPillClass(gitLabRepositoryState().status)">
+            <span
+              [class]="statusPillClass(gitLabRepositoryState().status)"
+              [title]="statusTooltip(gitLabRepositoryState().status)"
+            >
               {{ statusLabel(gitLabRepositoryState().status) }}
             </span>
           </div>
@@ -256,7 +284,12 @@
               metody HTTP, klasy oraz miejsca do kolejnego doczytania kodu.
             </p>
           </div>
-          <span class="panel-chip route-chip">POST /api/gitlab/repository/endpoints</span>
+          <span
+            class="panel-chip route-chip"
+            [title]="routeChipTooltip('POST /api/gitlab/repository/endpoints')"
+          >
+            POST /api/gitlab/repository/endpoints
+          </span>
         </div>
 
         <form class="tool-form" novalidate (submit)="submitGitLabEndpointSearch($event)">
@@ -363,9 +396,17 @@
           </div>
           <div class="tool-status__badges">
             @if (gitLabEndpointState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ gitLabEndpointState().statusCode }}</span>
+              <span
+                class="tool-status__code"
+                [title]="httpStatusTooltip(gitLabEndpointState().statusCode)"
+              >
+                HTTP {{ gitLabEndpointState().statusCode }}
+              </span>
             }
-            <span [class]="statusPillClass(gitLabEndpointState().status)">
+            <span
+              [class]="statusPillClass(gitLabEndpointState().status)"
+              [title]="statusTooltip(gitLabEndpointState().status)"
+            >
               {{ statusLabel(gitLabEndpointState().status) }}
             </span>
           </div>
@@ -379,10 +420,25 @@
                 <h3>{{ endpointResult.endpoints.length }} endpointów</h3>
               </div>
               <div class="endpoint-results__stats">
-                <span class="panel-chip">{{ endpointResult.scannedFileCount }} skanowanych</span>
-                <span class="panel-chip">{{ endpointResult.candidateFileCount }} kandydatów</span>
+                <span
+                  class="panel-chip"
+                  [title]="countChipTooltip('scanned-files', endpointResult.scannedFileCount)"
+                >
+                  {{ endpointResult.scannedFileCount }} skanowanych
+                </span>
+                <span
+                  class="panel-chip"
+                  [title]="countChipTooltip('candidate-files', endpointResult.candidateFileCount)"
+                >
+                  {{ endpointResult.candidateFileCount }} kandydatów
+                </span>
                 @if (endpointResult.scannedFileLimitReached) {
-                  <span class="panel-chip panel-chip--warning">limit skanowania</span>
+                  <span
+                    class="panel-chip panel-chip--warning"
+                    [title]="limitChipTooltip('endpoint-scan')"
+                  >
+                    limit skanowania
+                  </span>
                 }
               </div>
             </div>
@@ -401,7 +457,12 @@
                   <details class="endpoint-card">
                     <summary class="endpoint-card__summary">
                       <div class="endpoint-card__main">
-                        <span class="endpoint-card__method">{{ endpointMethods(endpoint) }}</span>
+                        <span
+                          class="endpoint-card__method"
+                          [title]="endpointMethodTooltip(endpoint.httpMethods)"
+                        >
+                          {{ endpointMethods(endpoint) }}
+                        </span>
                         <div class="endpoint-card__copy">
                           <h4>{{ endpoint.path || endpoint.pathExpression || '&lt;unresolved-path&gt;' }}</h4>
                           <p>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</p>
@@ -522,7 +583,12 @@
               zacząć od przycisku `Użyj do contextu` na wyniku Endpoint Inventory.
             </p>
           </div>
-          <span class="panel-chip route-chip">POST /api/gitlab/repository/endpoint-use-case-context</span>
+          <span
+            class="panel-chip route-chip"
+            [title]="routeChipTooltip('POST /api/gitlab/repository/endpoint-use-case-context')"
+          >
+            POST /api/gitlab/repository/endpoint-use-case-context
+          </span>
         </div>
 
         <form class="tool-form" novalidate (submit)="submitGitLabEndpointUseCaseContext($event)">
@@ -670,11 +736,17 @@
           </div>
           <div class="tool-status__badges">
             @if (gitLabEndpointUseCaseContextState().statusCode !== null) {
-              <span class="tool-status__code">
+              <span
+                class="tool-status__code"
+                [title]="httpStatusTooltip(gitLabEndpointUseCaseContextState().statusCode)"
+              >
                 HTTP {{ gitLabEndpointUseCaseContextState().statusCode }}
               </span>
             }
-            <span [class]="statusPillClass(gitLabEndpointUseCaseContextState().status)">
+            <span
+              [class]="statusPillClass(gitLabEndpointUseCaseContextState().status)"
+              [title]="statusTooltip(gitLabEndpointUseCaseContextState().status)"
+            >
               {{ statusLabel(gitLabEndpointUseCaseContextState().status) }}
             </span>
           </div>
@@ -691,11 +763,17 @@
                 </h3>
               </div>
               <div class="endpoint-results__stats">
-                <span [class]="confidenceClass(contextResult.confidence)">
+                <span
+                  [class]="confidenceClass(contextResult.confidence)"
+                  [title]="confidenceTooltip(contextResult.confidence)"
+                >
                   {{ contextResult.confidence || 'UNKNOWN' }}
                 </span>
                 @if (contextResult.unresolved.length > 0) {
-                  <span class="panel-chip panel-chip--warning">
+                  <span
+                    class="panel-chip panel-chip--warning"
+                    [title]="countChipTooltip('unresolved', contextResult.unresolved.length)"
+                  >
                     {{ contextResult.unresolved.length }} unresolved
                   </span>
                 }
@@ -704,7 +782,10 @@
 
             @if (contextResult.endpoint) {
               <div class="context-endpoint">
-                <span class="endpoint-card__method">
+                <span
+                  class="endpoint-card__method"
+                  [title]="endpointMethodTooltip(contextResult.endpoint.httpMethods)"
+                >
                   {{ contextResult.endpoint.httpMethods.join(', ') || 'ANY' }}
                 </span>
                 <div>
@@ -741,7 +822,12 @@
                     </h4>
                   </div>
                   @if (contextResult.limits.maxDepthReached || contextResult.limits.maxFilesReached) {
-                    <span class="panel-chip panel-chip--warning">limit reached</span>
+                    <span
+                      class="panel-chip panel-chip--warning"
+                      [title]="limitChipTooltip('use-case-context')"
+                    >
+                      limit reached
+                    </span>
                   }
                 </div>
 
@@ -768,18 +854,28 @@
                         </span>
                         <span class="flow-tree-node__badges">
                           @if (row.node.relationKind) {
-                            <span class="flow-tree-node__edge">
+                            <span
+                              class="flow-tree-node__edge"
+                              [title]="relationTooltip(row.node.relationKind, row.node.relationReason)"
+                            >
                               {{ displayRelationKind(row.node.relationKind) }}
                             </span>
                           }
-                          <span class="panel-chip">{{ displayRole(row.node.role) }}</span>
+                          <span class="panel-chip" [title]="roleTooltip(row.node.role)">
+                            {{ displayRole(row.node.role) }}
+                          </span>
                           @if (row.node.confidence) {
-                            <span [class]="confidenceClass(row.node.confidence)">
+                            <span
+                              [class]="confidenceClass(row.node.confidence)"
+                              [title]="confidenceTooltip(row.node.confidence)"
+                            >
                               {{ row.node.confidence }}
                             </span>
                           }
                           @if (row.node.duplicate) {
-                            <span class="panel-chip">already shown</span>
+                            <span class="panel-chip" [title]="duplicateNodeTooltip()">
+                              already shown
+                            </span>
                           }
                         </span>
                       </button>
@@ -793,7 +889,9 @@
                           <p class="tool-status__label">Selected node</p>
                           <h4>{{ selectedNode.label }}</h4>
                         </div>
-                        <span class="panel-chip">{{ displayRole(selectedNode.role) }}</span>
+                        <span class="panel-chip" [title]="roleTooltip(selectedNode.role)">
+                          {{ displayRole(selectedNode.role) }}
+                        </span>
                       </div>
 
                       @if (selectedNode.subtitle) {
@@ -832,7 +930,9 @@
                       @if (selectedNode.file?.symbols?.length) {
                         <div class="context-chip-list">
                           @for (symbol of selectedNode.file?.symbols || []; track symbol) {
-                            <span class="context-chip">{{ symbol }}</span>
+                            <span class="context-chip" [title]="symbolTooltip(symbol)">
+                              {{ symbol }}
+                            </span>
                           }
                         </div>
                       }
@@ -862,7 +962,12 @@
               <details class="context-subsection context-subsection--collapsible">
                 <summary>
                   <span>Unresolved</span>
-                  <span class="panel-chip">{{ contextResult.unresolved.length }}</span>
+                  <span
+                    class="panel-chip"
+                    [title]="countChipTooltip('unresolved', contextResult.unresolved.length)"
+                  >
+                    {{ contextResult.unresolved.length }}
+                  </span>
                 </summary>
                 <ul class="context-list">
                   @for (reference of contextResult.unresolved; track reference.symbol || $index) {
@@ -879,7 +984,12 @@
               <details class="context-subsection context-subsection--collapsible">
                 <summary>
                   <span>Suggested next reads</span>
-                  <span class="panel-chip">{{ contextResult.suggestedNextReads.length }}</span>
+                  <span
+                    class="panel-chip"
+                    [title]="countChipTooltip('suggested-next-reads', contextResult.suggestedNextReads.length)"
+                  >
+                    {{ contextResult.suggestedNextReads.length }}
+                  </span>
                 </summary>
                 <ul class="context-list">
                   @for (read of contextResult.suggestedNextReads; track read) {
@@ -959,7 +1069,12 @@
               pełny wynik i wariant `preview`.
             </p>
           </div>
-          <span class="panel-chip route-chip">POST /api/gitlab/source/resolve</span>
+          <span
+            class="panel-chip route-chip"
+            [title]="routeChipTooltip('POST /api/gitlab/source/resolve')"
+          >
+            POST /api/gitlab/source/resolve
+          </span>
         </div>
 
         <form class="tool-form" novalidate (submit)="submitGitLabSource($event)">
@@ -1059,9 +1174,17 @@
           </div>
           <div class="tool-status__badges">
             @if (gitLabSourceState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ gitLabSourceState().statusCode }}</span>
+              <span
+                class="tool-status__code"
+                [title]="httpStatusTooltip(gitLabSourceState().statusCode)"
+              >
+                HTTP {{ gitLabSourceState().statusCode }}
+              </span>
             }
-            <span [class]="statusPillClass(gitLabSourceState().status)">
+            <span
+              [class]="statusPillClass(gitLabSourceState().status)"
+              [title]="statusTooltip(gitLabSourceState().status)"
+            >
               {{ statusLabel(gitLabSourceState().status) }}
             </span>
           </div>

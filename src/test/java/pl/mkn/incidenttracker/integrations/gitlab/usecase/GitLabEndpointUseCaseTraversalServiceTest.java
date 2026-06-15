@@ -296,6 +296,94 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     }
 
     @Test
+    void shouldTreatLombokBuilderAsGeneratedTerminalCall() {
+        var sources = new LinkedHashMap<String, String>();
+        sources.put(path("api/CustomerController.java"), """
+                package com.example.crm.customer.api;
+
+                import com.example.crm.customer.application.CreateCustomerService;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequiredArgsConstructor
+                class CustomerController {
+                    private final CreateCustomerService createCustomerService;
+
+                    public void createCustomer(String customerId) {
+                        createCustomerService.createCustomer(customerId);
+                    }
+                }
+                """);
+        sources.put(path("application/CreateCustomerService.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerCreateModel;
+                import org.springframework.stereotype.Service;
+
+                @Service
+                class CreateCustomerService {
+                    public void createCustomer(String customerId) {
+                        CustomerCreateModel model = CustomerCreateModel.builder()
+                                .customerId(customerId)
+                                .build();
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerCreateModel.java"), """
+                package com.example.crm.customer.domain;
+
+                import lombok.Builder;
+
+                public class CustomerCreateModel {
+                    private final String customerId;
+
+                    @Builder
+                    public CustomerCreateModel(String customerId) {
+                        this.customerId = customerId;
+                        initializeCustomerId();
+                    }
+
+                    private void initializeCustomerId() {
+                    }
+                }
+                """);
+        stubRepository(sources);
+        var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
+
+        var result = traversalService.traverse(
+                session,
+                new GitLabEndpointUseCaseEndpointContext(
+                        "POST /api/customers -> CustomerController#createCustomer",
+                        List.of("POST"),
+                        "/api/customers",
+                        null,
+                        "com.example.crm.customer.api.CustomerController",
+                        "createCustomer",
+                        path("api/CustomerController.java"),
+                        1,
+                        20,
+                        List.of("String customerId"),
+                        List.of(),
+                        List.of(),
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of(),
+                        List.of()
+                ),
+                new GitLabEndpointUseCaseLimits(5, 20, 40, false, false, 0, false)
+        );
+
+        var byPath = filesByPath(result);
+        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL,
+                byPath.get(path("domain/CustomerCreateModel.java")).role());
+        assertTrue(byPath.get(path("domain/CustomerCreateModel.java")).symbols().contains("builder"));
+        assertFalse(result.unresolved().stream()
+                .anyMatch(reference -> String.valueOf(reference.symbol()).contains("#builder")));
+        assertFalse(result.limitations().stream()
+                .anyMatch(limitation -> limitation.contains("#builder")));
+    }
+
+    @Test
     void shouldRespectMaxDepthLimit() {
         var files = crmCustomerSources();
         stubRepository(files);

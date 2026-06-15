@@ -448,8 +448,32 @@ export class GitLabEvidenceConsoleComponent {
     }
   }
 
+  statusTooltip(status: ToolStateStatus): string {
+    switch (status) {
+      case 'loading':
+        return 'Request do backendu jest w trakcie wykonywania.';
+      case 'success':
+        return 'Backend zwrócił poprawną odpowiedź dla ostatniego wywołania.';
+      case 'error':
+        return 'Ostatnie wywołanie zakończyło się błędem lub backend zwrócił błąd.';
+      default:
+        return 'Tool jest gotowy do ręcznego testu; request nie został jeszcze wysłany.';
+    }
+  }
+
+  httpStatusTooltip(statusCode: number | null): string {
+    return statusCode === null
+      ? 'Kod HTTP odpowiedzi backendu pojawi się po wywołaniu toola.'
+      : `Kod HTTP ${statusCode} zwrócony przez backend dla ostatniego wywołania.`;
+  }
+
   endpointMethods(endpoint: GitLabRepositoryEndpoint): string {
     return endpoint.httpMethods?.length ? endpoint.httpMethods.join(', ') : 'ANY';
+  }
+
+  endpointMethodTooltip(methods: string[] | null | undefined): string {
+    const label = methods?.length ? methods.join(', ') : 'ANY';
+    return `Metoda HTTP endpointu znaleziona w repozytorium: ${label}.`;
   }
 
   confidenceClass(confidence: string | null | undefined): string {
@@ -464,6 +488,19 @@ export class GitLabEvidenceConsoleComponent {
       return 'confidence-pill confidence-pill--low';
     }
     return 'confidence-pill';
+  }
+
+  confidenceTooltip(confidence: string | null | undefined): string {
+    switch ((confidence || '').toLowerCase()) {
+      case 'high':
+        return 'Wysoka pewność: element został dopasowany bezpośrednio z kodu, relacji albo endpoint inventory.';
+      case 'medium':
+        return 'Średnia pewność: element jest przydatnym kandydatem, ale może wymagać ręcznej weryfikacji.';
+      case 'low':
+        return 'Niska pewność: element jest słabym kandydatem i traktuj go jako wskazówkę do sprawdzenia.';
+      default:
+        return 'Brak jednoznacznego poziomu pewności dla tego elementu.';
+    }
   }
 
   selectGitLabUseCaseTreeNode(node: GitLabUseCaseTreeNode): void {
@@ -493,6 +530,123 @@ export class GitLabEvidenceConsoleComponent {
 
   displayRelationKind(kind: string | null | undefined): string {
     return this.displayToken(kind) || 'FLOW';
+  }
+
+  roleTooltip(role: string | null | undefined): string {
+    const label = this.displayRole(role);
+    switch ((role || '').toUpperCase()) {
+      case 'ENTRYPOINT':
+        return `${label}: start drzewa dla wybranego endpointu HTTP.`;
+      case 'FILES':
+        return `${label}: grupa plików zwróconych przez tool bez jednoznacznej krawędzi w flow.`;
+      case 'CONTROLLER':
+        return `${label}: klasa kontrolera obsługująca request HTTP.`;
+      case 'OPENAPI_CONTRACT':
+        return `${label}: kontrakt OpenAPI/YAML użyty do wygenerowania lub opisania API.`;
+      case 'API_INTERFACE':
+        return `${label}: interfejs API, zwykle generowany albo implementowany przez kontroler.`;
+      case 'USE_CASE_PORT':
+        return `${label}: port aplikacyjny, przez który kontroler lub serwis wchodzi w logikę use-case.`;
+      case 'USE_CASE_SERVICE':
+        return `${label}: serwis aplikacyjny zawierający główną logikę use-case.`;
+      case 'REPOSITORY_PORT':
+        return `${label}: port repozytorium używany przez logikę aplikacyjną.`;
+      case 'REPOSITORY_IMPLEMENTATION':
+        return `${label}: implementacja repozytorium albo adapter dostępu do danych.`;
+      case 'SPRING_DATA_REPOSITORY':
+        return `${label}: repozytorium Spring Data tworzone jako bean przez framework.`;
+      case 'MAPPER':
+        return `${label}: mapper konwertujący modele API, domenowe albo persistence.`;
+      case 'DOMAIN_MODEL':
+        return `${label}: model domenowy istotny dla danych przetwarzanych w use-case.`;
+      case 'WEB_MODEL':
+        return `${label}: model requestu albo odpowiedzi wystawiany przez API.`;
+      case 'PROJECTION':
+        return `${label}: projekcja danych używana do odczytu lub mapowania części modelu.`;
+      case 'CONFIGURATION':
+        return `${label}: konfiguracja Springa lub integracji wpływająca na flow.`;
+      case 'EXTERNAL_CLIENT':
+        return `${label}: klient zewnętrznej integracji, np. Feign albo REST client.`;
+      case 'UNKNOWN':
+        return `${label}: tool nie rozpoznał jednoznacznej roli pliku.`;
+      default:
+        return `${label}: rola pliku zwrócona przez context builder.`;
+    }
+  }
+
+  relationTooltip(kind: string | null | undefined, reason: string | null | undefined): string {
+    const base = this.relationKindTooltip(kind);
+    return reason ? `${base} Powód dopasowania: ${reason}` : base;
+  }
+
+  relationKindTooltip(kind: string | null | undefined): string {
+    const label = this.displayRelationKind(kind);
+    switch ((kind || '').toUpperCase()) {
+      case 'ENDPOINT_HANDLER':
+        return `${label}: endpoint inventory wskazało handler HTTP jako początek flow.`;
+      case 'LOCAL_METHOD_CALL':
+        return `${label}: przejście wynika z lokalnego wywołania metody w tej samej klasie lub bliskim kontekście.`;
+      case 'INJECTED_PORT_CALL':
+        return `${label}: kod wywołuje zależność wstrzykniętą przez DI, więc to ważna ścieżka use-case.`;
+      case 'INTERFACE_IMPLEMENTATION':
+        return `${label}: tool znalazł klasę, która może implementować wywoływany interfejs.`;
+      case 'STATIC_METHOD_CALL':
+        return `${label}: przejście wynika z wywołania metody statycznej.`;
+      case 'MAPPER_CALL':
+        return `${label}: flow przechodzi przez mapper konwertujący dane między modelami.`;
+      case 'REPOSITORY_CALL':
+        return `${label}: kod przechodzi do repozytorium lub adaptera dostępu do danych.`;
+      case 'DOMAIN_METHOD_CALL':
+        return `${label}: flow przechodzi przez metodę modelu albo logiki domenowej.`;
+      case 'SPRING_DATA_BOUNDARY':
+        return `${label}: granica repozytorium Spring Data tworzonego jako bean przez framework.`;
+      case 'EXTERNAL_BOUNDARY':
+        return `${label}: granica wyjścia poza analizowany kod, np. integracja z innym systemem.`;
+      case 'OPENAPI_CONTRACT':
+        return `${label}: powiązanie z kontraktem OpenAPI/YAML opisującym endpoint albo model.`;
+      case 'UNKNOWN':
+        return `${label}: tool nie rozpoznał jednoznacznego typu relacji.`;
+      default:
+        return `${label}: relacja między plikami zwrócona przez context builder.`;
+    }
+  }
+
+  routeChipTooltip(route: string): string {
+    return `Endpoint backendowy aplikacji używany przez ten manualny test: ${route}.`;
+  }
+
+  countChipTooltip(kind: string, count: number): string {
+    switch (kind) {
+      case 'scanned-files':
+        return `${count} plików zostało przeskanowanych podczas szukania endpointów.`;
+      case 'candidate-files':
+        return `${count} plików pasowało do heurystyk jako kandydaci do analizy endpointów.`;
+      case 'unresolved':
+        return `${count} referencji nie udało się jednoznacznie rozwiązać do pliku.`;
+      case 'suggested-next-reads':
+        return `${count} dodatkowych plików tool sugeruje doczytać, jeśli AI potrzebuje szerszego kontekstu.`;
+      default:
+        return `${count} elementów w tej kategorii.`;
+    }
+  }
+
+  limitChipTooltip(kind: string): string {
+    switch (kind) {
+      case 'endpoint-scan':
+        return 'Tool zatrzymał skanowanie endpointów na skonfigurowanym limicie plików.';
+      case 'use-case-context':
+        return 'Context builder osiągnął limit głębokości albo maksymalnej liczby plików.';
+      default:
+        return 'Wynik został ograniczony przez limit bezpieczeństwa lub kosztu.';
+    }
+  }
+
+  duplicateNodeTooltip(): string {
+    return 'Ten plik pojawił się już wcześniej w drzewie; wpis jest skrótem, żeby nie powielać gałęzi flow.';
+  }
+
+  symbolTooltip(symbol: string): string {
+    return `Symbol znaleziony w wybranym pliku use-case: ${symbol}.`;
   }
 
   displayPathName(path: string | null | undefined): string {
@@ -1228,7 +1382,10 @@ export class GitLabEvidenceConsoleComponent {
   }
 
   private displayToken(value: string | null | undefined): string {
-    return (value || '').replace(/_/g, ' ').trim();
+    return (value || '')
+      .replace(/_/g, ' ')
+      .replace(/\bIMPLEMENTATION\b/g, 'IMPL')
+      .trim();
   }
 
   private cssToken(value: string): string {

@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
+import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.ClassExpr;
@@ -541,6 +542,9 @@ public class GitLabEndpointUseCaseTraversalService {
                 GitLabEndpointUseCaseConfidence.MEDIUM,
                 "Static call resolved by source lookup."
         );
+        if (isLombokGeneratedStaticCall(session, resolved, methodCall.getNameAsString())) {
+            return true;
+        }
         state.enqueue(new GitLabEndpointUseCaseTraversalNode(
                 resolved.filePath(),
                 resolved.qualifiedName() != null ? resolved.qualifiedName() : scopeText,
@@ -552,6 +556,27 @@ public class GitLabEndpointUseCaseTraversalService {
                 "Static helper called from traversed flow."
         ));
         return true;
+    }
+
+    private boolean isLombokGeneratedStaticCall(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabJavaResolvedType resolved,
+            String methodName
+    ) {
+        if (!"builder".equals(methodName) || resolved == null || !resolved.resolved()) {
+            return false;
+        }
+        var astFile = sourceResolver.astFile(session, resolved.filePath());
+        if (!astFile.parsed()) {
+            return false;
+        }
+        var type = findType(astFile, resolved.qualifiedName() != null ? resolved.qualifiedName() : resolved.requestedName());
+        if (type == null) {
+            return false;
+        }
+        return hasAnnotation(type, "Builder")
+                || immediateConstructors(type).stream().anyMatch(constructor -> hasAnnotation(constructor, "Builder"))
+                || immediateMethods(type).stream().anyMatch(method -> hasAnnotation(method, "Builder"));
     }
 
     private void addInterfaceImplementations(
@@ -1192,7 +1217,19 @@ public class GitLabEndpointUseCaseTraversalService {
                         || normalizeTypeName(typeName).endsWith("." + type.getNameAsString()))
                 .findFirst()
                 .orElse(null);
-        }
+    }
+
+    private List<ConstructorDeclaration> immediateConstructors(TypeDeclaration<?> type) {
+        return type.findAll(ConstructorDeclaration.class).stream()
+                .filter(constructor -> constructor.findAncestor(TypeDeclaration.class).orElse(null) == type)
+                .toList();
+    }
+
+    private List<MethodDeclaration> immediateMethods(TypeDeclaration<?> type) {
+        return type.findAll(MethodDeclaration.class).stream()
+                .filter(method -> method.findAncestor(TypeDeclaration.class).orElse(null) == type)
+                .toList();
+    }
 
     private boolean hasAnnotation(NodeWithAnnotations<?> node, String annotationName) {
         return node.getAnnotations().stream()

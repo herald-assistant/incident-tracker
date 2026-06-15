@@ -40,7 +40,23 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('CustomerService.java');
     expect(compiled.textContent).toContain('CustomerMapper.java');
     expect(compiled.textContent).toContain('INJECTED PORT CALL');
+    expect(compiled.textContent).toContain('INTERFACE IMPL');
+    expect(compiled.textContent).toContain('REPOSITORY IMPL');
+    expect(compiled.textContent).not.toContain('INTERFACE IMPLEMENTATION');
+    expect(compiled.textContent).not.toContain('REPOSITORY IMPLEMENTATION');
     expect(compiled.textContent).toContain('1 poza flow');
+
+    const injectedEdge = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.flow-tree-node__edge')
+    ).find((edge) => edge.textContent?.includes('INJECTED PORT CALL'));
+    const repositoryRole = Array.from(compiled.querySelectorAll<HTMLElement>('.panel-chip')).find(
+      (chip) => chip.textContent?.includes('REPOSITORY IMPL')
+    );
+    const confidencePill = compiled.querySelector<HTMLElement>('.confidence-pill--high');
+
+    expect(injectedEdge?.getAttribute('title') || '').toContain('wstrzykniętą przez DI');
+    expect(repositoryRole?.getAttribute('title') || '').toContain('adapter dostępu do danych');
+    expect(confidencePill?.getAttribute('title') || '').toContain('Wysoka pewność');
   });
 
   it('should expose icon actions for every GitLab JSON response', () => {
@@ -69,6 +85,11 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(copyButtons[1].getAttribute('aria-label')).toContain('endpoint inventory');
     expect(downloadButtons[2].getAttribute('aria-label')).toContain('endpoint use-case context');
     expect(loadButtons[2].getAttribute('aria-label')).toContain('endpoint use-case context');
+
+    const routeChip = compiled.querySelector<HTMLElement>('.route-chip');
+    const statusPill = compiled.querySelector<HTMLElement>('.status-pill');
+    expect(routeChip?.getAttribute('title') || '').toContain('/api/gitlab/repository/search');
+    expect(statusPill?.getAttribute('title') || '').toContain('gotowy do ręcznego testu');
   });
 
   it('should load a downloaded endpoint use-case JSON file into the same card', async () => {
@@ -244,6 +265,14 @@ function buildUseCaseContextResponse(
         confidence: 'MEDIUM'
       },
       {
+        path: 'src/main/java/com/example/crm/customer/adapter/out/CustomerRepository.java',
+        role: 'REPOSITORY_IMPLEMENTATION',
+        priority: 4,
+        symbols: ['getCustomer'],
+        reason: 'Implementation candidate for injected interface.',
+        confidence: 'HIGH'
+      },
+      {
         path: 'src/main/java/com/example/crm/customer/api/CustomerModel.java',
         role: 'WEB_MODEL',
         priority: 7,
@@ -273,6 +302,13 @@ function buildUseCaseContextResponse(
         kind: 'MAPPER_CALL',
         confidence: 'MEDIUM',
         reason: 'Mapper converts domain object to web model.'
+      },
+      {
+        from: 'com.example.crm.customer.application.CustomerService#getCustomer',
+        to: 'com.example.crm.customer.adapter.out.CustomerRepository#getCustomer',
+        kind: 'INTERFACE_IMPLEMENTATION',
+        confidence: 'HIGH',
+        reason: 'Implementation candidate for injected interface.'
       }
     ],
     unresolved: [],

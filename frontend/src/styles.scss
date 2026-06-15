@@ -197,6 +197,16 @@ app-root {
   font-weight: 700;
 }
 
+.panel-chip[title],
+.status-pill[title],
+.tool-status__code[title],
+.endpoint-card__method[title],
+.flow-tree-node__edge[title],
+.context-chip[title],
+.confidence-pill[title] {
+  cursor: help;
+}
+
 .context-flow {
   display: grid;
   gap: 12px;
@@ -350,7 +360,7 @@ app-root {
 }
 
 .flow-tree-node__badges .panel-chip,
-.flow-tree-node__badges .confidence-pill,
+body .flow-tree-node__badges .confidence-pill,
 .flow-tree-node__edge,
 .flow-node-details__header .panel-chip {
   min-height: 22px;
