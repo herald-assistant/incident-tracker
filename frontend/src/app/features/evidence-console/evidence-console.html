@@ -886,7 +886,7 @@
                 class="text-input"
                 type="number"
                 min="1"
-                max="40"
+                max="100"
                 [formControl]="gitLabEndpointUseCaseContextForm.controls.maxFiles"
               />
             </label>
@@ -915,7 +915,7 @@
             controlInvalid(gitLabEndpointUseCaseContextForm.controls.maxDepth) ||
             controlInvalid(gitLabEndpointUseCaseContextForm.controls.maxFiles)
           ) {
-            <p class="form-error">Limity muszą mieścić się w zakresach: depth 1-8, files 1-40.</p>
+            <p class="form-error">Limity muszą mieścić się w zakresach: depth 1-8, files 1-100.</p>
           }
 
           <div class="tool-actions">

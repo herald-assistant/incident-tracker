@@ -166,9 +166,9 @@ export class EvidenceConsoleComponent {
       nonNullable: true,
       validators: [Validators.min(1), Validators.max(8)]
     }),
-    maxFiles: new FormControl('25', {
+    maxFiles: new FormControl('60', {
       nonNullable: true,
-      validators: [Validators.min(1), Validators.max(40)]
+      validators: [Validators.min(1), Validators.max(100)]
     }),
     reason: new FormControl('Manualna weryfikacja kontekstu use-case endpointu.', {
       nonNullable: true

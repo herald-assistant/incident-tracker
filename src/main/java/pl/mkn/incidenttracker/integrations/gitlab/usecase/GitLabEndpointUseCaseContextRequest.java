@@ -11,8 +11,8 @@ public record GitLabEndpointUseCaseContextRequest(
 ) {
     public static final int DEFAULT_MAX_DEPTH = 5;
     public static final int MAX_MAX_DEPTH = 8;
-    public static final int DEFAULT_MAX_FILES = 25;
-    public static final int MAX_MAX_FILES = 40;
+    public static final int DEFAULT_MAX_FILES = 60;
+    public static final int MAX_MAX_FILES = 100;
 
     public GitLabEndpointUseCaseContextRequest {
         projectName = GitLabEndpointUseCaseModelSupport.trimToNull(projectName);
