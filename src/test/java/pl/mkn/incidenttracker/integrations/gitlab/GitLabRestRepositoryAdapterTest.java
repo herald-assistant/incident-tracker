@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.integrations.gitlab;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -269,6 +270,55 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals(10, fileChunk.returnedEndLine());
         assertTrue(fileChunk.content().contains("customerProfileWebClient.get()"));
         assertFalse(fileChunk.truncated());
+
+        server.verify();
+    }
+
+    @Test
+    void shouldReadFileMetadataAndResolveLastModifiedAtFromCommit() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var metadataHeaders = new HttpHeaders();
+        metadataHeaders.add("X-Gitlab-File-Path", "src/main/java/com/example/crm/customer/CustomerController.java");
+        metadataHeaders.add("X-Gitlab-Blob-Id", "blob-customer-controller");
+        metadataHeaders.add("X-Gitlab-Commit-Id", "branch-tip-commit");
+        metadataHeaders.add("X-Gitlab-Last-Commit-Id", "last-file-commit");
+        metadataHeaders.add("X-Gitlab-Content-Sha256", "content-sha-256");
+        metadataHeaders.add("X-Gitlab-Size", "2048");
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/files/src%2Fmain%2Fjava%2Fcom%2Fexample%2Fcrm%2Fcustomer%2FCustomerController.java?ref=release/2026.04"))
+                .andExpect(method(HttpMethod.HEAD))
+                .andRespond(withSuccess().headers(metadataHeaders));
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/commits/last-file-commit?stats=false"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "id": "last-file-commit",
+                          "committed_date": "2026-06-14T10:20:00.000Z"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        var metadata = adapter.readFileMetadata(
+                "CRM/runtime",
+                "crm-customer-api",
+                "release/2026.04",
+                "src/main/java/com/example/crm/customer/CustomerController.java"
+        );
+
+        assertEquals("CRM/runtime", metadata.group());
+        assertEquals("crm-customer-api", metadata.projectName());
+        assertEquals("release/2026.04", metadata.branch());
+        assertEquals("src/main/java/com/example/crm/customer/CustomerController.java", metadata.filePath());
+        assertEquals("blob-customer-controller", metadata.blobId());
+        assertEquals("branch-tip-commit", metadata.commitId());
+        assertEquals("last-file-commit", metadata.lastCommitId());
+        assertEquals("2026-06-14T10:20:00.000Z", metadata.lastModifiedAt());
+        assertEquals("content-sha-256", metadata.contentSha256());
+        assertEquals(2048L, metadata.sizeBytes());
 
         server.verify();
     }

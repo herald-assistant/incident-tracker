@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
@@ -567,6 +568,7 @@ public class GitLabMcpTools {
                         responseFilePath(fileContent, requestedPath),
                         content
                 );
+                var metadata = readFileMetadata(scope, projectName, responseFilePath(fileContent, requestedPath));
 
                 results.add(new GitLabFileContentResult(
                         responseGroup(fileContent, scope.group()),
@@ -577,6 +579,14 @@ public class GitLabMcpTools {
                         fileContent != null && fileContent.truncated(),
                         inferredRole,
                         returnedCharacters,
+                        metadata.sizeBytes(),
+                        metadata.contentSha256(),
+                        metadata.blobId(),
+                        metadata.commitId(),
+                        metadata.lastCommitId(),
+                        metadata.lastModifiedAt(),
+                        metadata.status(),
+                        metadata.error(),
                         null
                 ));
                 returnedFileCount++;
@@ -608,6 +618,14 @@ public class GitLabMcpTools {
                         false,
                         inferRole(requestedPath, null),
                         0,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "SKIPPED",
+                        "File content read failed before metadata lookup.",
                         error
                 ));
             }
@@ -1423,6 +1441,32 @@ public class GitLabMcpTools {
                 : fallbackFilePath;
     }
 
+    private FileMetadataSnapshot readFileMetadata(GitLabToolScope scope, String projectName, String filePath) {
+        try {
+            var metadata = gitLabRepositoryPort.readFileMetadata(
+                    scope.group(),
+                    projectName,
+                    scope.branch(),
+                    filePath
+            );
+            return FileMetadataSnapshot.from(metadata);
+        } catch (RuntimeException exception) {
+            var error = toolErrorMessage(exception);
+            log.warn(
+                    "Tool partial metadata failure [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} reason={}",
+                    READ_REPOSITORY_FILES_BY_PATH,
+                    scope.correlationId(),
+                    scope.group(),
+                    scope.branch(),
+                    scope.environment(),
+                    projectName,
+                    filePath,
+                    error
+            );
+            return FileMetadataSnapshot.failed(error);
+        }
+    }
+
     private String extractPackageName(String content) {
         var matcher = PACKAGE_PATTERN.matcher(content);
         return matcher.find() ? matcher.group(1) : null;
@@ -1599,6 +1643,42 @@ public class GitLabMcpTools {
 
     private static OperationalContextCatalog emptyOperationalContextCatalog() {
         return OperationalContextCatalog.empty();
+    }
+
+    private record FileMetadataSnapshot(
+            Long sizeBytes,
+            String contentSha256,
+            String blobId,
+            String commitId,
+            String lastCommitId,
+            String lastModifiedAt,
+            String status,
+            String error
+    ) {
+        private static FileMetadataSnapshot from(GitLabRepositoryFileMetadata metadata) {
+            if (metadata == null) {
+                return unavailable();
+            }
+
+            return new FileMetadataSnapshot(
+                    metadata.sizeBytes(),
+                    metadata.contentSha256(),
+                    metadata.blobId(),
+                    metadata.commitId(),
+                    metadata.lastCommitId(),
+                    metadata.lastModifiedAt(),
+                    "RESOLVED",
+                    null
+            );
+        }
+
+        private static FileMetadataSnapshot unavailable() {
+            return new FileMetadataSnapshot(null, null, null, null, null, null, "UNAVAILABLE", null);
+        }
+
+        private static FileMetadataSnapshot failed(String error) {
+            return new FileMetadataSnapshot(null, null, null, null, null, null, "FAILED", error);
+        }
     }
 
     record FileOutline(

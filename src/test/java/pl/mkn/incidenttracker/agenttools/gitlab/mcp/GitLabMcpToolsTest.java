@@ -5,6 +5,7 @@ import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
@@ -437,6 +438,23 @@ class GitLabMcpToolsTest {
                 "1234567890",
                 false
         ));
+        when(gitLabRepositoryPort.readFileMetadata(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerService.java"
+        )).thenReturn(new GitLabRepositoryFileMetadata(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerService.java",
+                "blob-service",
+                "commit-service",
+                "last-service",
+                "2026-06-15T11:30:00.000Z",
+                "sha-service",
+                5678L
+        ));
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-api",
@@ -450,6 +468,23 @@ class GitLabMcpToolsTest {
                 "src/main/java/com/example/crm/customer/CustomerRepository.java",
                 "abcde",
                 true
+        ));
+        when(gitLabRepositoryPort.readFileMetadata(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerRepository.java"
+        )).thenReturn(new GitLabRepositoryFileMetadata(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "blob-repository",
+                "commit-repository",
+                "last-repository",
+                "2026-06-16T09:00:00.000Z",
+                "sha-repository",
+                4321L
         ));
 
         var response = tools.readRepositoryFilesByPath(
@@ -480,12 +515,24 @@ class GitLabMcpToolsTest {
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 10
         );
+        verify(gitLabRepositoryPort).readFileMetadata(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerService.java"
+        );
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
                 "src/main/java/com/example/crm/customer/CustomerRepository.java",
                 5
+        );
+        verify(gitLabRepositoryPort).readFileMetadata(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerRepository.java"
         );
         verifyNoMoreInteractions(gitLabRepositoryPort);
 
@@ -501,8 +548,12 @@ class GitLabMcpToolsTest {
         assertTrue(response.totalCharacterLimitReached());
         assertEquals(3, response.files().size());
         assertTrue(response.files().get(0).error().contains("file not found"));
+        assertEquals("SKIPPED", response.files().get(0).metadataStatus());
         assertEquals("service-or-orchestrator", response.files().get(1).inferredRole());
+        assertEquals("last-service", response.files().get(1).lastCommitId());
+        assertEquals("2026-06-15T11:30:00.000Z", response.files().get(1).lastModifiedAt());
         assertEquals("repository", response.files().get(2).inferredRole());
+        assertEquals(4321L, response.files().get(2).sizeBytes());
         assertTrue(response.files().get(2).truncated());
     }
 

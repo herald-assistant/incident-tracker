@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.integrations.gitlab;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -198,6 +199,30 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     @Override
+    public GitLabRepositoryFileMetadata readFileMetadata(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        var metadata = fetchFileMetadata(group, projectName, branch, filePath);
+        var lastModifiedAt = lastModifiedAt(group, projectName, metadata.lastCommitId());
+
+        return new GitLabRepositoryFileMetadata(
+                group,
+                projectName,
+                branch,
+                StringUtils.hasText(metadata.filePath()) ? metadata.filePath() : filePath,
+                metadata.blobId(),
+                metadata.commitId(),
+                metadata.lastCommitId(),
+                lastModifiedAt,
+                metadata.contentSha256(),
+                metadata.sizeBytes()
+        );
+    }
+
+    @Override
     public GitLabRepositoryFileChunk readFileChunk(
             String group,
             String projectName,
@@ -312,6 +337,92 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         return fetchRawFileUncached(group, projectName, branch, filePath);
     }
 
+    private GitLabFileMetadataResponse fetchFileMetadata(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.file-metadata",
+                    Arrays.asList(apiBaseUrl(), group, projectName, branch, filePath),
+                    () -> fetchFileMetadataUncached(group, projectName, branch, filePath)
+            );
+        }
+
+        return fetchFileMetadataUncached(group, projectName, branch, filePath);
+    }
+
+    private GitLabFileMetadataResponse fetchFileMetadataUncached(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        try {
+            var entity = restClient().head()
+                    .uri(fileMetadataUri(group, projectName, branch, filePath))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            return GitLabFileMetadataResponse.fromHeaders(entity.getHeaders(), filePath);
+        } catch (RestClientResponseException exception) {
+            throw new IllegalStateException(
+                    "GitLab file metadata read failed for " + group + "/" + projectName + "@" + branch + " :: " + filePath,
+                    exception
+            );
+        }
+    }
+
+    private String lastModifiedAt(String group, String projectName, String lastCommitId) {
+        if (!StringUtils.hasText(lastCommitId)) {
+            return null;
+        }
+
+        try {
+            var commit = fetchCommitMetadata(group, projectName, lastCommitId);
+            return commit != null ? commit.committedDate() : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private GitLabCommitMetadataResponse fetchCommitMetadata(
+            String group,
+            String projectName,
+            String commitId
+    ) {
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.commit-metadata",
+                    Arrays.asList(apiBaseUrl(), group, projectName, commitId),
+                    () -> fetchCommitMetadataUncached(group, projectName, commitId)
+            );
+        }
+
+        return fetchCommitMetadataUncached(group, projectName, commitId);
+    }
+
+    private GitLabCommitMetadataResponse fetchCommitMetadataUncached(
+            String group,
+            String projectName,
+            String commitId
+    ) {
+        try {
+            return restClient().get()
+                    .uri(commitMetadataUri(group, projectName, commitId))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(GitLabCommitMetadataResponse.class);
+        } catch (RestClientResponseException exception) {
+            throw new IllegalStateException(
+                    "GitLab commit metadata read failed for " + group + "/" + projectName + " :: " + commitId,
+                    exception
+            );
+        }
+    }
+
     private String fetchRawFileUncached(String group, String projectName, String branch, String filePath) {
         try {
             return restClient().get()
@@ -355,6 +466,20 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                 + "/projects/" + encodePathSegment(group + "/" + projectName)
                 + "/repository/files/" + encodePathSegment(filePath)
                 + "/raw?ref=" + encodeQueryParam(branch));
+    }
+
+    private URI fileMetadataUri(String group, String projectName, String branch, String filePath) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/files/" + encodePathSegment(filePath)
+                + "?ref=" + encodeQueryParam(branch));
+    }
+
+    private URI commitMetadataUri(String group, String projectName, String commitId) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/commits/" + encodePathSegment(commitId)
+                + "?stats=false");
     }
 
     private String apiBaseUrl() {
@@ -541,6 +666,50 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
             String path,
             @JsonProperty("path_with_namespace")
             String pathWithNamespace
+    ) {
+    }
+
+    private record GitLabFileMetadataResponse(
+            String filePath,
+            String blobId,
+            String commitId,
+            String lastCommitId,
+            String contentSha256,
+            Long sizeBytes
+    ) {
+        private static GitLabFileMetadataResponse fromHeaders(HttpHeaders headers, String fallbackFilePath) {
+            return new GitLabFileMetadataResponse(
+                    firstHeader(headers, "X-Gitlab-File-Path", fallbackFilePath),
+                    firstHeader(headers, "X-Gitlab-Blob-Id", null),
+                    firstHeader(headers, "X-Gitlab-Commit-Id", null),
+                    firstHeader(headers, "X-Gitlab-Last-Commit-Id", null),
+                    firstHeader(headers, "X-Gitlab-Content-Sha256", null),
+                    parseLong(firstHeader(headers, "X-Gitlab-Size", null))
+            );
+        }
+
+        private static String firstHeader(HttpHeaders headers, String headerName, String fallback) {
+            var value = headers.getFirst(headerName);
+            return StringUtils.hasText(value) ? value : fallback;
+        }
+
+        private static Long parseLong(String value) {
+            if (!StringUtils.hasText(value)) {
+                return null;
+            }
+
+            try {
+                return Long.parseLong(value);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+    }
+
+    private record GitLabCommitMetadataResponse(
+            String id,
+            @JsonProperty("committed_date")
+            String committedDate
     ) {
     }
 

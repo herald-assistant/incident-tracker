@@ -23,6 +23,15 @@ public interface GitLabRepositoryPort {
             int maxCharacters
     );
 
+    default GitLabRepositoryFileMetadata readFileMetadata(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        return null;
+    }
+
     GitLabRepositoryFileChunk readFileChunk(
             String group,
             String projectName,

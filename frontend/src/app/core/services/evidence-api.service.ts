@@ -189,6 +189,14 @@ export interface GitLabRepositoryFileByPathResult {
   truncated: boolean;
   inferredRole?: string | null;
   returnedCharacters: number;
+  sizeBytes?: number | null;
+  contentSha256?: string | null;
+  blobId?: string | null;
+  commitId?: string | null;
+  lastCommitId?: string | null;
+  lastModifiedAt?: string | null;
+  metadataStatus?: string | null;
+  metadataError?: string | null;
   error?: string | null;
 }
 

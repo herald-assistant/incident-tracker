@@ -223,6 +223,8 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('1 pobranych');
     expect(compiled.textContent).toContain('CustomerController.java');
     expect(compiled.textContent).toContain('READ');
+    expect(compiled.textContent).toContain('2026-06-14T10:20:00.000Z');
+    expect(compiled.textContent).toContain('last-customer-controller');
   });
 });
 
@@ -433,6 +435,14 @@ function buildFilesByPathResponse(): GitLabRepositoryFilesByPathResponse {
         truncated: false,
         inferredRole: 'entrypoint',
         returnedCharacters: 27,
+        sizeBytes: 128,
+        contentSha256: 'sha-customer-controller',
+        blobId: 'blob-customer-controller',
+        commitId: 'branch-tip-customer-controller',
+        lastCommitId: 'last-customer-controller',
+        lastModifiedAt: '2026-06-14T10:20:00.000Z',
+        metadataStatus: 'RESOLVED',
+        metadataError: null,
         error: null
       }
     ]

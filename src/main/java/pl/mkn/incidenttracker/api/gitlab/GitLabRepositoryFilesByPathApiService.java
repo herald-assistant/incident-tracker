@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 
 import java.util.ArrayList;
@@ -93,6 +94,14 @@ public class GitLabRepositoryFilesByPathApiService {
                         false,
                         inferRole(filePath, null),
                         0,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "SKIPPED",
+                        "File content read failed before metadata lookup.",
                         error
                 ));
             }
@@ -121,6 +130,7 @@ public class GitLabRepositoryFilesByPathApiService {
             int returnedCharacters
     ) {
         var filePath = responseFilePath(fileContent, requestedFilePath);
+        var metadata = readMetadata(request, filePath);
         return new GitLabRepositoryFileByPathApiResult(
                 responseGroup(fileContent, request.group()),
                 responseProjectName(fileContent, request.projectName()),
@@ -130,8 +140,39 @@ public class GitLabRepositoryFilesByPathApiService {
                 fileContent != null && fileContent.truncated(),
                 inferRole(filePath, content),
                 returnedCharacters,
+                metadata.sizeBytes(),
+                metadata.contentSha256(),
+                metadata.blobId(),
+                metadata.commitId(),
+                metadata.lastCommitId(),
+                metadata.lastModifiedAt(),
+                metadata.status(),
+                metadata.error(),
                 null
         );
+    }
+
+    private FileMetadataSnapshot readMetadata(GitLabRepositoryFilesByPathApiRequest request, String filePath) {
+        try {
+            var metadata = gitLabRepositoryPort.readFileMetadata(
+                    request.group(),
+                    request.projectName(),
+                    request.branch(),
+                    filePath
+            );
+            return FileMetadataSnapshot.from(metadata);
+        } catch (RuntimeException exception) {
+            var error = toolErrorMessage(exception);
+            log.warn(
+                    "GitLab files-by-path metadata read failed. group={} projectName={} branch={} filePath={} reason={}",
+                    request.group(),
+                    request.projectName(),
+                    request.branch(),
+                    filePath,
+                    error
+            );
+            return FileMetadataSnapshot.failed(error);
+        }
     }
 
     private List<String> normalizeRepositoryFilePaths(List<String> filePaths, String projectName) {
@@ -265,5 +306,41 @@ public class GitLabRepositoryFilesByPathApiService {
 
     private String safeValue(String value) {
         return value != null ? value : "";
+    }
+
+    private record FileMetadataSnapshot(
+            Long sizeBytes,
+            String contentSha256,
+            String blobId,
+            String commitId,
+            String lastCommitId,
+            String lastModifiedAt,
+            String status,
+            String error
+    ) {
+        private static FileMetadataSnapshot from(GitLabRepositoryFileMetadata metadata) {
+            if (metadata == null) {
+                return unavailable();
+            }
+
+            return new FileMetadataSnapshot(
+                    metadata.sizeBytes(),
+                    metadata.contentSha256(),
+                    metadata.blobId(),
+                    metadata.commitId(),
+                    metadata.lastCommitId(),
+                    metadata.lastModifiedAt(),
+                    "RESOLVED",
+                    null
+            );
+        }
+
+        private static FileMetadataSnapshot unavailable() {
+            return new FileMetadataSnapshot(null, null, null, null, null, null, "UNAVAILABLE", null);
+        }
+
+        private static FileMetadataSnapshot failed(String error) {
+            return new FileMetadataSnapshot(null, null, null, null, null, null, "FAILED", error);
+        }
     }
 }

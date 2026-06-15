@@ -272,24 +272,40 @@ class GitLabRepositorySearchControllerTest {
                                         "crm-customer-api",
                                         "release-candidate",
                                         "src/main/java/com/example/crm/customer/CustomerController.java",
-                                        "class CustomerController {}",
-                                        false,
-                                        "entrypoint",
-                                        27,
-                                        null
-                                ),
-                                new GitLabRepositoryFileByPathApiResult(
-                                        "CRM",
-                                        "crm-customer-api",
+                                         "class CustomerController {}",
+                                         false,
+                                         "entrypoint",
+                                         27,
+                                         128L,
+                                         "sha-controller",
+                                         "blob-controller",
+                                         "commit-controller",
+                                         "last-controller",
+                                         "2026-06-14T10:20:00.000Z",
+                                         "RESOLVED",
+                                         null,
+                                         null
+                                 ),
+                                 new GitLabRepositoryFileByPathApiResult(
+                                         "CRM",
+                                         "crm-customer-api",
                                         "release-candidate",
                                         "src/main/java/com/example/crm/customer/CustomerService.java",
-                                        "class CustomerService {}",
-                                        false,
-                                        "service-or-orchestrator",
-                                        27,
-                                        null
-                                )
-                        )
+                                         "class CustomerService {}",
+                                         false,
+                                         "service-or-orchestrator",
+                                         27,
+                                         256L,
+                                         "sha-service",
+                                         "blob-service",
+                                         "commit-service",
+                                         "last-service",
+                                         "2026-06-15T11:30:00.000Z",
+                                         "RESOLVED",
+                                         null,
+                                         null
+                                 )
+                         )
                 ));
 
         mockMvc.perform(post("/api/gitlab/repository/files/by-path")
@@ -312,7 +328,9 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.projectName").value("crm-customer-api"))
                 .andExpect(jsonPath("$.returnedFileCount").value(2))
                 .andExpect(jsonPath("$.files[0].filePath").value("src/main/java/com/example/crm/customer/CustomerController.java"))
-                .andExpect(jsonPath("$.files[0].inferredRole").value("entrypoint"));
+                .andExpect(jsonPath("$.files[0].inferredRole").value("entrypoint"))
+                .andExpect(jsonPath("$.files[0].lastCommitId").value("last-controller"))
+                .andExpect(jsonPath("$.files[0].lastModifiedAt").value("2026-06-14T10:20:00.000Z"));
 
         verify(gitLabRepositoryFilesByPathApiService).readFiles(argThat(request ->
                 "CRM".equals(request.group())

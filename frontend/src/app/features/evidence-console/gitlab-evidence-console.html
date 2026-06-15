@@ -497,10 +497,37 @@
                         <span>{{ file.projectName || filesResult.projectName }}</span>
                         <span>{{ file.branch || filesResult.branch }}</span>
                         <span>{{ file.group || filesResult.group }}</span>
+                        @if (file.lastModifiedAt) {
+                          <span title="Data commita, który ostatnio zmienił ten plik.">
+                            changed {{ file.lastModifiedAt }}
+                          </span>
+                        }
+                        @if (file.lastCommitId) {
+                          <span title="SHA ostatniego commita modyfikującego plik.">
+                            last commit {{ file.lastCommitId }}
+                          </span>
+                        }
+                        @if (file.sizeBytes !== null && file.sizeBytes !== undefined) {
+                          <span title="Rozmiar pliku według GitLaba.">{{ file.sizeBytes }} bytes</span>
+                        }
+                        @if (file.contentSha256) {
+                          <span title="SHA256 contentu pliku według GitLaba.">
+                            sha256 {{ file.contentSha256 }}
+                          </span>
+                        }
+                        @if (file.metadataStatus && file.metadataStatus !== 'RESOLVED') {
+                          <span title="Status pobierania metadanych pliku z GitLaba.">
+                            metadata {{ file.metadataStatus }}
+                          </span>
+                        }
                       </div>
 
                       @if (file.error) {
                         <p class="form-error">{{ file.error }}</p>
+                      }
+
+                      @if (file.metadataError) {
+                        <p class="form-error">{{ file.metadataError }}</p>
                       }
 
                       @if (file.content) {
