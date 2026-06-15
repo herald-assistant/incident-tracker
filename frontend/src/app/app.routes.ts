@@ -2,7 +2,8 @@ import { Routes } from '@angular/router';
 
 import { AnalysisConsoleComponent } from './features/analysis-console/analysis-console';
 import { DatabaseConsoleComponent } from './features/database-console/database-console';
-import { EvidenceConsoleComponent } from './features/evidence-console/evidence-console';
+import { ElasticEvidenceConsoleComponent } from './features/evidence-console/elastic-evidence-console';
+import { GitLabEvidenceConsoleComponent } from './features/evidence-console/gitlab-evidence-console';
 
 export const routes: Routes = [
   {
@@ -16,13 +17,11 @@ export const routes: Routes = [
   },
   {
     path: 'elastic',
-    component: EvidenceConsoleComponent,
-    data: { integration: 'elastic' }
+    component: ElasticEvidenceConsoleComponent
   },
   {
     path: 'gitlab',
-    component: EvidenceConsoleComponent,
-    data: { integration: 'gitlab' }
+    component: GitLabEvidenceConsoleComponent
   },
   {
     path: 'database',

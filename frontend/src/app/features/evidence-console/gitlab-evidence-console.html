@@ -40,36 +40,6 @@
 
   <main class="workspace">
     <section class="hero-card evidence-hero">
-      @if (activeIntegration() === 'elastic') {
-        <div class="hero-main">
-          <div class="hero-copy">
-            <p class="section-eyebrow">Manualne testy integracji</p>
-            <h2>Elastic</h2>
-            <p class="hero-description">
-              Widok służy do ręcznego odpalania helper endpointów Elastica. Każda karta wysyła
-              request do backendu i pokazuje sformatowaną odpowiedź JSON w polu tekstowym.
-            </p>
-          </div>
-
-          <div class="evidence-intro">
-            <div class="evidence-intro__chip-list">
-              <span class="panel-chip">JSON response preview</span>
-              <span class="panel-chip">Elastic log search</span>
-              <span class="panel-chip">Elastic HTTP compare</span>
-              <span class="panel-chip">HTTP call logs</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="hero-side-panel">
-          <p class="panel-title">Przydatne scenariusze</p>
-          <ul class="mini-list">
-            <li>czy `correlationId` zwraca oczekiwane logi z Elastica</li>
-            <li>czy podobne wywołania HTTP na tym samym path kończą się 200/400/500</li>
-            <li>czy konkretny path/status/metoda dają dobry przykład do analizy kontraktu</li>
-          </ul>
-        </div>
-      } @else {
         <div class="hero-main">
           <div class="hero-copy">
             <p class="section-eyebrow">Manualne testy integracji</p>
@@ -100,339 +70,8 @@
             <li>czy symbol klasy rozwiązuje się do pliku i preview kodu</li>
           </ul>
         </div>
-      }
     </section>
 
-    @if (activeIntegration() === 'elastic') {
-      <section class="evidence-tool-section evidence-tool-section--elastic">
-      <div class="evidence-tool-section__header">
-        <div>
-          <p class="section-eyebrow">Elastic evidence</p>
-          <h2>Elasticsearch</h2>
-        </div>
-        <span class="panel-chip">Logi i diagnostyka HTTP</span>
-      </div>
-
-      <div class="tool-grid">
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Elasticsearch</p>
-            <h2>Log Search</h2>
-            <p class="field-hint">
-              Najprostszy helper: podajesz tylko `correlationId`, a backend używa swojej
-              konfiguracji połączenia i limitów odpowiedzi.
-            </p>
-          </div>
-          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/search</span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitElastic($event)">
-          <div class="form-grid form-grid--single">
-            <label class="form-field">
-              <span class="field-label">Correlation ID</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. timeout-123"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticForm.controls.correlationId"
-              />
-            </label>
-          </div>
-
-          @if (controlInvalid(elasticForm.controls.correlationId)) {
-            <p class="form-error">Pole `correlationId` jest wymagane.</p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="elasticState().status === 'loading'"
-            >
-              <span class="button-label">Uruchom Elastic</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="elasticState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ elasticState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (elasticState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ elasticState().statusCode }}</span>
-            }
-            <span [class]="statusPillClass(elasticState().status)">
-              {{ statusLabel(elasticState().status) }}
-            </span>
-          </div>
-        </div>
-
-        <label class="field-label" for="elasticJsonResponse">JSON response</label>
-        <textarea
-          id="elasticJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="elasticState().responseJson"
-        ></textarea>
-      </article>
-
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Elasticsearch</p>
-            <h2>HTTP Call Summary</h2>
-            <p class="field-hint">
-              Porównuje podobne wywołania HTTP po path prefixie w ostatnim oknie czasu. Przydaje
-              się, gdy bieżący request kończy się 500, a trzeba znaleźć podobne 200/400 do analizy
-              danych lub kontraktu.
-            </p>
-          </div>
-          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/http-calls/summary</span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitElasticHttpSummary($event)">
-          <div class="form-grid">
-            <label class="form-field form-field--wide">
-              <span class="field-label">Path prefix / pattern</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. /external/path/"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpSummaryForm.controls.pathPattern"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Method</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. GET"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpSummaryForm.controls.method"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Service</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. backend"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpSummaryForm.controls.serviceName"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Time window days</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="30"
-                [formControl]="elasticHttpSummaryForm.controls.timeWindowDays"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Sample size</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="1000"
-                [formControl]="elasticHttpSummaryForm.controls.sampleSize"
-              />
-            </label>
-          </div>
-
-          @if (controlInvalid(elasticHttpSummaryForm.controls.pathPattern)) {
-            <p class="form-error">Pole `pathPattern` jest wymagane.</p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="elasticHttpSummaryState().status === 'loading'"
-            >
-              <span class="button-label">Porównaj HTTP calls</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="elasticHttpSummaryState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ elasticHttpSummaryState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (elasticHttpSummaryState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ elasticHttpSummaryState().statusCode }}</span>
-            }
-            <span [class]="statusPillClass(elasticHttpSummaryState().status)">
-              {{ statusLabel(elasticHttpSummaryState().status) }}
-            </span>
-          </div>
-        </div>
-
-        <label class="field-label" for="elasticHttpSummaryJsonResponse">JSON response</label>
-        <textarea
-          id="elasticHttpSummaryJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="elasticHttpSummaryState().responseJson"
-        ></textarea>
-      </article>
-
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Elasticsearch</p>
-            <h2>HTTP Call Logs</h2>
-            <p class="field-hint">
-              Pobiera logi dla wybranego przykładu z summary: po `correlationId` albo po konkretnym
-              path/status/metodzie. Poziom szczegółowości steruje tym, czy odpowiedź ma być krótka,
-              kompaktowa czy pełna.
-            </p>
-          </div>
-          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/http-calls/fetch</span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitElasticHttpLogs($event)">
-          <div class="form-grid">
-            <label class="form-field">
-              <span class="field-label">Correlation ID</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. sample-success-corr"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpLogsForm.controls.correlationId"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Path</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. /external/path/125"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpLogsForm.controls.path"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Status</span>
-              <input
-                class="text-input"
-                type="number"
-                min="100"
-                max="599"
-                placeholder="opcjonalnie, np. 200"
-                [formControl]="elasticHttpLogsForm.controls.status"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Method</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. GET"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpLogsForm.controls.method"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Time window days</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="30"
-                [formControl]="elasticHttpLogsForm.controls.timeWindowDays"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Size</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="200"
-                [formControl]="elasticHttpLogsForm.controls.size"
-              />
-            </label>
-
-            <label class="form-field form-field--wide">
-              <span class="field-label">Detail level</span>
-              <select class="text-input" [formControl]="elasticHttpLogsForm.controls.detailLevel">
-                <option value="SUMMARY">SUMMARY</option>
-                <option value="COMPACT">COMPACT</option>
-                <option value="FULL">FULL</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="elasticHttpLogsState().status === 'loading'"
-            >
-              <span class="button-label">Pobierz HTTP logs</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="elasticHttpLogsState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ elasticHttpLogsState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (elasticHttpLogsState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ elasticHttpLogsState().statusCode }}</span>
-            }
-            <span [class]="statusPillClass(elasticHttpLogsState().status)">
-              {{ statusLabel(elasticHttpLogsState().status) }}
-            </span>
-          </div>
-        </div>
-
-        <label class="field-label" for="elasticHttpLogsJsonResponse">JSON response</label>
-        <textarea
-          id="elasticHttpLogsJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="elasticHttpLogsState().responseJson"
-        ></textarea>
-      </article>
-      </div>
-      </section>
-    }
-
-    @if (activeIntegration() === 'gitlab') {
       <section class="evidence-tool-section evidence-tool-section--gitlab">
       <div class="evidence-tool-section__header">
         <div>
@@ -463,7 +102,7 @@
               <input
                 class="text-input"
                 type="text"
-                placeholder="opcjonalnie, np. agreement-123"
+                placeholder="opcjonalnie, np. customer-123"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="gitLabRepositoryForm.controls.correlationId"
@@ -489,7 +128,7 @@
               <textarea
                 class="text-input text-input--textarea"
                 rows="4"
-                placeholder="np. agreement-process"
+                placeholder="np. crm-customer-service"
                 spellcheck="false"
                 [formControl]="gitLabRepositoryForm.controls.projectHints"
               ></textarea>
@@ -501,7 +140,7 @@
               <textarea
                 class="text-input text-input--textarea"
                 rows="4"
-                placeholder="np. POST /agreements"
+                placeholder="np. GET /crm/customers/{customerId}"
                 spellcheck="false"
                 [formControl]="gitLabRepositoryForm.controls.operationNames"
               ></textarea>
@@ -513,7 +152,7 @@
               <textarea
                 class="text-input text-input--textarea"
                 rows="4"
-                placeholder="np. document, agreement"
+                placeholder="np. customer, segment"
                 spellcheck="false"
                 [formControl]="gitLabRepositoryForm.controls.keywords"
               ></textarea>
@@ -1198,7 +837,7 @@
               <input
                 class="text-input"
                 type="text"
-                placeholder="np. BANKING/PROCESSES"
+                placeholder="np. CRM/CUSTOMER"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="gitLabSourceForm.controls.groupPath"
@@ -1210,7 +849,7 @@
               <input
                 class="text-input"
                 type="text"
-                placeholder="np. CREDIT_AGREEMENT_PROCESS"
+                placeholder="np. crm-customer-service"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="gitLabSourceForm.controls.projectPath"
@@ -1234,7 +873,7 @@
               <input
                 class="text-input"
                 type="text"
-                placeholder="np. pl.mkn.agreement.DocumentRemovalService"
+                placeholder="np. com.example.crm.customer.CustomerService"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="gitLabSourceForm.controls.symbol"
@@ -1295,6 +934,6 @@
       </article>
       </div>
       </section>
-    }
   </main>
 </div>
+

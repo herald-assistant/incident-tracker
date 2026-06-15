@@ -2,34 +2,25 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
-
+import { provideRouter } from '@angular/router';
 import { GitLabEndpointUseCaseContextResponse } from '../../core/services/evidence-api.service';
-import { EvidenceConsoleComponent } from './evidence-console';
+import { GitLabEvidenceConsoleComponent } from './gitlab-evidence-console';
 
-describe('EvidenceConsoleComponent', () => {
+describe('GitLabEvidenceConsoleComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [EvidenceConsoleComponent],
+      imports: [GitLabEvidenceConsoleComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideLocationMocks(),
-        provideRouter([]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            data: of({ integration: 'gitlab' }),
-            snapshot: { data: { integration: 'gitlab' } }
-          }
-        }
+        provideRouter([])
       ]
     }).compileComponents();
   });
 
   it('should render endpoint use-case context as flow tree', () => {
-    const fixture = TestBed.createComponent(EvidenceConsoleComponent);
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
 
     fixture.componentInstance.gitLabEndpointUseCaseContextState.set({
       status: 'success',
@@ -146,3 +137,4 @@ function buildUseCaseContextResponse(): GitLabEndpointUseCaseContextResponse {
     confidence: 'HIGH'
   };
 }
+

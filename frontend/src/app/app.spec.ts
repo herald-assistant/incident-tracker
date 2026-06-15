@@ -51,7 +51,7 @@ describe('App', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
+    expect(compiled.querySelector('app-elastic-evidence-console')).not.toBeNull();
     expect(compiled.textContent).toContain('HTTP Call Summary');
     expect(compiled.textContent).not.toContain('Endpoint Inventory');
   });
@@ -66,7 +66,7 @@ describe('App', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-evidence-console')).not.toBeNull();
+    expect(compiled.querySelector('app-gitlab-evidence-console')).not.toBeNull();
     expect(compiled.textContent).toContain('Endpoint Inventory');
     expect(compiled.textContent).toContain('Endpoint Use Case Context');
     expect(compiled.textContent).not.toContain('HTTP Call Summary');
