@@ -165,8 +165,17 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(endpointCard).toBeTruthy();
     expect(endpointCard?.hasAttribute('open')).toBe(false);
     expect(main?.textContent).toContain('/crm/customers/{customerId}');
+    expect(main?.textContent).toContain('Pobranie profilu klienta CRM');
     expect(main?.textContent).toContain('CustomerController#getCustomer');
     expect(contextButton?.textContent).toContain('Użyj do contextu');
+
+    endpointCard?.setAttribute('open', '');
+    fixture.detectChanges();
+
+    expect(endpointCard?.textContent).toContain('OPENAPI YAML');
+    expect(endpointCard?.textContent).toContain('getCustomer');
+    expect(endpointCard?.textContent).toContain('customerId');
+    expect(endpointCard?.textContent).toContain('Identyfikator klienta CRM');
   });
 });
 
@@ -204,6 +213,29 @@ function buildEndpointInventoryResponse(): GitLabRepositoryEndpointsResponse {
         requestTypes: [],
         responseTypes: ['CustomerModel'],
         annotations: ['GetMapping'],
+        documentation: {
+          source: 'OPENAPI_YAML',
+          summary: 'Pobranie profilu klienta CRM',
+          description: 'Zwraca podstawowe dane klienta oraz status relacji z firmą.',
+          operationId: 'getCustomer',
+          tags: ['Customer'],
+          parameters: [
+            {
+              name: 'customerId',
+              in: 'path',
+              required: true,
+              type: 'string(uuid)',
+              description: 'Identyfikator klienta CRM'
+            },
+            {
+              name: 'includeInactive',
+              in: 'query',
+              required: false,
+              type: 'boolean',
+              description: 'Czy dołączyć nieaktywne relacje klienta.'
+            }
+          ]
+        },
         confidence: 'HIGH',
         limitations: [],
         suggestedNextReads: []

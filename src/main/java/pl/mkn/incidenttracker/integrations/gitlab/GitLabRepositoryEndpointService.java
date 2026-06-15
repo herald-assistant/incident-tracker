@@ -1,14 +1,19 @@
 package pl.mkn.incidenttracker.integrations.gitlab;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.YamlMapFactoryBean;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -21,6 +26,12 @@ public class GitLabRepositoryEndpointService {
     private static final int MAX_OPENAPI_FILE_CHARACTERS = 260_000;
     private static final int MAX_OPENAPI_FILES = 30;
     private static final int MAX_SIGNATURE_LINES = 8;
+    private static final int MAX_DOCUMENTATION_TEXT_LENGTH = 700;
+    private static final int MAX_PARAMETER_DESCRIPTION_LENGTH = 360;
+
+    private static final String DOCUMENTATION_SOURCE_OPENAPI_YAML = "OPENAPI_YAML";
+    private static final String DOCUMENTATION_SOURCE_JAVA_OPENAPI_ANNOTATION = "JAVA_OPENAPI_ANNOTATION";
+    private static final String DOCUMENTATION_SOURCE_SPRING_SIGNATURE = "SPRING_SIGNATURE";
 
     private static final Set<String> SOURCE_FILE_SUFFIXES = Set.of(".java");
     private static final Set<String> OPENAPI_FILE_SUFFIXES = Set.of(".yaml", ".yml");
@@ -203,6 +214,7 @@ public class GitLabRepositoryEndpointService {
                     .formatted(scannedOpenApiFiles.size(), openApiFiles.size()));
         }
 
+        endpoints = new ArrayList<>(mergeOpenApiDocumentation(endpoints, openApiOperations));
         endpoints.addAll(openApiBackedEndpoints(projectName, openApiOperations, controllerImplementations, endpoints));
 
         if (repositoryFiles.isEmpty()) {
@@ -351,6 +363,7 @@ public class GitLabRepositoryEndpointService {
                         var lineStart = methodMapping.lineStart();
                         var lineEnd = signature.lineEnd();
                         var confidence = confidence(pathExpression, controller.controllerLike(), inheritedLimitations);
+                        var documentation = documentationFromJavaAnnotations(methodAnnotationBlocks, signature);
 
                         endpoints.add(new GitLabRepositoryEndpoint(
                                 endpointId,
@@ -365,6 +378,7 @@ public class GitLabRepositoryEndpointService {
                                 signature.parameters(),
                                 responseTypes(signature.responseType()),
                                 annotations,
+                                documentation,
                                 confidence,
                                 List.copyOf(limitations),
                                 suggestedNextReads(projectName, filePath, lineStart, lineEnd)
@@ -375,6 +389,230 @@ public class GitLabRepositoryEndpointService {
         }
 
         return List.copyOf(endpoints);
+    }
+
+    private GitLabRepositoryEndpointDocumentation documentationFromJavaAnnotations(
+            List<AnnotationBlock> methodAnnotationBlocks,
+            MethodSignature signature
+    ) {
+        var summary = (String) null;
+        var description = (String) null;
+        var operationId = (String) null;
+        var tags = new ArrayList<String>();
+        var hasOpenApiAnnotation = false;
+
+        for (var block : methodAnnotationBlocks != null ? methodAnnotationBlocks : List.<AnnotationBlock>of()) {
+            var annotationName = annotationName(block.text());
+            if ("Operation".equals(annotationName)) {
+                hasOpenApiAnnotation = true;
+                summary = firstText(summary, annotationStringAttribute(block.text(), "summary"));
+                description = firstText(description, annotationStringAttribute(block.text(), "description"));
+                operationId = firstText(operationId, annotationStringAttribute(block.text(), "operationId"));
+                tags.addAll(annotationStringListAttribute(block.text(), "tags"));
+            } else if ("Parameter".equals(annotationName)) {
+                hasOpenApiAnnotation = true;
+            }
+        }
+
+        var parameters = methodParameterDocumentations(signature.parameters());
+        var source = hasOpenApiAnnotation
+                ? DOCUMENTATION_SOURCE_JAVA_OPENAPI_ANNOTATION
+                : parameters.isEmpty() ? null : DOCUMENTATION_SOURCE_SPRING_SIGNATURE;
+        var documentation = new GitLabRepositoryEndpointDocumentation(
+                source,
+                abbreviate(summary, MAX_DOCUMENTATION_TEXT_LENGTH),
+                abbreviate(description, MAX_DOCUMENTATION_TEXT_LENGTH),
+                operationId,
+                tags,
+                parameters
+        );
+        return documentation.empty() ? null : documentation;
+    }
+
+    private List<GitLabRepositoryEndpointParameterDocumentation> methodParameterDocumentations(
+            List<String> parameters
+    ) {
+        var documented = new ArrayList<GitLabRepositoryEndpointParameterDocumentation>();
+        for (var parameter : parameters != null ? parameters : List.<String>of()) {
+            var documentation = methodParameterDocumentation(parameter);
+            if (documentation == null) {
+                continue;
+            }
+            var existingIndex = existingParameterIndex(documented, documentation);
+            if (existingIndex >= 0) {
+                documented.set(existingIndex, documented.get(existingIndex).merge(documentation));
+            } else {
+                documented.add(documentation);
+            }
+        }
+        return List.copyOf(documented);
+    }
+
+    private GitLabRepositoryEndpointParameterDocumentation methodParameterDocumentation(String parameterText) {
+        if (!StringUtils.hasText(parameterText) || annotationSegment(parameterText, "RequestHeader") != null) {
+            return null;
+        }
+
+        var pathVariableAnnotation = annotationSegment(parameterText, "PathVariable");
+        var requestParamAnnotation = annotationSegment(parameterText, "RequestParam");
+        var parameterAnnotation = annotationSegment(parameterText, "Parameter");
+        var in = (String) null;
+        if (pathVariableAnnotation != null) {
+            in = "path";
+        } else if (requestParamAnnotation != null) {
+            in = "query";
+        } else if (parameterAnnotation != null) {
+            in = javaParameterIn(parameterAnnotation);
+        }
+
+        if (!"path".equals(in) && !"query".equals(in)) {
+            return null;
+        }
+
+        var name = firstText(
+                parameterBindingName(pathVariableAnnotation),
+                parameterBindingName(requestParamAnnotation)
+        );
+        name = firstText(name, annotationStringAttribute(parameterAnnotation, "name"));
+        name = firstText(name, javaParameterName(parameterText));
+        if (!StringUtils.hasText(name)) {
+            return null;
+        }
+
+        var required = "path".equals(in);
+        if (!required && requestParamAnnotation != null) {
+            required = booleanAttribute(requestParamAnnotation, "required", true);
+        }
+        if (!required && parameterAnnotation != null) {
+            required = booleanAttribute(parameterAnnotation, "required", false);
+        }
+        return new GitLabRepositoryEndpointParameterDocumentation(
+                name,
+                in,
+                required,
+                javaParameterType(parameterText),
+                abbreviate(annotationStringAttribute(parameterAnnotation, "description"), MAX_PARAMETER_DESCRIPTION_LENGTH)
+        );
+    }
+
+    private String javaParameterIn(String parameterAnnotation) {
+        var rawValue = annotationRawAttribute(parameterAnnotation, "in");
+        if (!StringUtils.hasText(rawValue)) {
+            return null;
+        }
+        if (rawValue.toUpperCase(Locale.ROOT).contains("PATH")) {
+            return "path";
+        }
+        if (rawValue.toUpperCase(Locale.ROOT).contains("QUERY")) {
+            return "query";
+        }
+        return null;
+    }
+
+    private String parameterBindingName(String annotationText) {
+        if (!StringUtils.hasText(annotationText)) {
+            return null;
+        }
+        return firstText(
+                annotationStringAttribute(annotationText, "name"),
+                firstText(
+                        annotationStringAttribute(annotationText, "value"),
+                        annotationDefaultStringAttribute(annotationText)
+                )
+        );
+    }
+
+    private String annotationSegment(String text, String simpleName) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        var matcher = Pattern.compile("@(?:[A-Za-z_$][\\w$]*\\.)*"
+                + Pattern.quote(simpleName)
+                + "\\b\\s*(\\([^)]*\\))?").matcher(text);
+        return matcher.find() ? matcher.group() : null;
+    }
+
+    private String annotationStringAttribute(String annotationText, String attributeName) {
+        var expression = annotationRawAttribute(annotationText, attributeName);
+        if (!StringUtils.hasText(expression)) {
+            return null;
+        }
+        var matcher = STRING_LITERAL_PATTERN.matcher(expression);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private List<String> annotationStringListAttribute(String annotationText, String attributeName) {
+        var expression = annotationRawAttribute(annotationText, attributeName);
+        if (!StringUtils.hasText(expression)) {
+            return List.of();
+        }
+        var values = new ArrayList<String>();
+        var matcher = STRING_LITERAL_PATTERN.matcher(expression);
+        while (matcher.find()) {
+            values.add(matcher.group(1));
+        }
+        return deduplicate(values);
+    }
+
+    private String annotationDefaultStringAttribute(String annotationText) {
+        if (!StringUtils.hasText(annotationText)) {
+            return null;
+        }
+        var open = annotationText.indexOf('(');
+        var close = annotationText.lastIndexOf(')');
+        if (open < 0 || close <= open) {
+            return null;
+        }
+        var arguments = annotationText.substring(open + 1, close).trim();
+        if (arguments.contains("=")) {
+            return null;
+        }
+        var matcher = STRING_LITERAL_PATTERN.matcher(arguments);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private String annotationRawAttribute(String annotationText, String attributeName) {
+        if (!StringUtils.hasText(annotationText) || !StringUtils.hasText(attributeName)) {
+            return null;
+        }
+        var matcher = Pattern.compile("\\b"
+                + Pattern.quote(attributeName)
+                + "\\s*=\\s*(\\{[^}]*}|\"[^\"]*\"|[A-Za-z_$][\\w$.]*)").matcher(annotationText);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private boolean booleanAttribute(String annotationText, String attributeName, boolean defaultValue) {
+        var rawValue = annotationRawAttribute(annotationText, attributeName);
+        return StringUtils.hasText(rawValue) ? Boolean.parseBoolean(rawValue) : defaultValue;
+    }
+
+    private String javaParameterName(String parameterText) {
+        var cleaned = stripJavaParameterAnnotations(parameterText);
+        if (!StringUtils.hasText(cleaned)) {
+            return null;
+        }
+        var tokens = cleaned.split("\\s+");
+        return tokens.length > 0 ? tokens[tokens.length - 1].trim() : null;
+    }
+
+    private String javaParameterType(String parameterText) {
+        var cleaned = stripJavaParameterAnnotations(parameterText);
+        if (!StringUtils.hasText(cleaned)) {
+            return null;
+        }
+        var tokens = new ArrayList<>(List.of(cleaned.split("\\s+")));
+        tokens.removeIf(token -> METHOD_MODIFIERS.contains(token));
+        if (tokens.size() < 2) {
+            return null;
+        }
+        tokens.remove(tokens.size() - 1);
+        return String.join(" ", tokens);
+    }
+
+    private String stripJavaParameterAnnotations(String parameterText) {
+        return parameterText
+                .replaceAll("@(?:[A-Za-z_$][\\w$]*\\.)*[A-Za-z_$][\\w$]*\\s*(\\([^)]*\\))?", "")
+                .trim();
     }
 
     private List<ControllerImplementation> parseControllerImplementations(String filePath, String content) {
@@ -544,6 +782,7 @@ public class GitLabRepositoryEndpointService {
                         implementation.signature().parameters(),
                         responseTypes(implementation.signature().responseType()),
                         annotations,
+                        operation.documentation(),
                         "high",
                         List.copyOf(limitations),
                         suggestedNextReads(projectName, operation, implementation)
@@ -601,90 +840,280 @@ public class GitLabRepositoryEndpointService {
             return List.of();
         }
 
-        var lines = content.lines().toList();
+        var limitations = new ArrayList<String>(inheritedLimitations != null ? inheritedLimitations : List.of());
+        var document = parseYamlDocument(filePath, content, limitations);
+        var paths = asMap(document.get("paths"));
+        if (paths.isEmpty()) {
+            return List.of();
+        }
+
         var operations = new ArrayList<OpenApiOperation>();
-        var limitations = inheritedLimitations != null ? inheritedLimitations : List.<String>of();
-        var inPaths = false;
-        var pathsIndent = -1;
-        var currentPath = (String) null;
-        var currentPathLine = 0;
-        var currentOperation = (OpenApiOperationBuilder) null;
-        var collectingTags = false;
-        var tagsIndent = -1;
+        var lines = content.lines().toList();
 
-        for (int index = 0; index < lines.size(); index++) {
-            var rawLine = lines.get(index);
-            var trimmedLine = rawLine.trim();
-            if (!StringUtils.hasText(trimmedLine) || trimmedLine.startsWith("#")) {
+        for (var pathEntry : paths.entrySet()) {
+            var path = String.valueOf(pathEntry.getKey());
+            if (!StringUtils.hasText(path) || !path.startsWith("/")) {
+                continue;
+            }
+            var pathItem = asMap(pathEntry.getValue());
+            if (pathItem.isEmpty()) {
                 continue;
             }
 
-            var indent = leadingSpaces(rawLine);
-            if (!inPaths) {
-                if ("paths:".equals(trimmedLine)) {
-                    inPaths = true;
-                    pathsIndent = indent;
+            var pathParameters = openApiParameters(pathItem.get("parameters"), document);
+            for (var operationEntry : pathItem.entrySet()) {
+                var method = String.valueOf(operationEntry.getKey()).toUpperCase(Locale.ROOT);
+                if (!HTTP_METHODS.contains(method)) {
+                    continue;
                 }
-                continue;
-            }
-
-            if (indent <= pathsIndent && !"paths:".equals(trimmedLine)) {
-                addOpenApiOperation(operations, currentOperation, limitations);
-                currentOperation = null;
-                break;
-            }
-
-            if (indent == pathsIndent + 2 && isOpenApiPathKey(trimmedLine)) {
-                addOpenApiOperation(operations, currentOperation, limitations);
-                currentOperation = null;
-                currentPath = yamlKey(trimmedLine);
-                currentPathLine = index + 1;
-                collectingTags = false;
-                continue;
-            }
-
-            if (currentPath != null && indent == pathsIndent + 4 && isOpenApiHttpMethodKey(trimmedLine)) {
-                addOpenApiOperation(operations, currentOperation, limitations);
-                currentOperation = new OpenApiOperationBuilder(
-                        filePath,
-                        currentPath,
-                        yamlKey(trimmedLine).toUpperCase(Locale.ROOT),
-                        currentPathLine
+                var operation = asMap(operationEntry.getValue());
+                if (operation.isEmpty()) {
+                    continue;
+                }
+                var operationParameters = new ArrayList<GitLabRepositoryEndpointParameterDocumentation>();
+                operationParameters.addAll(pathParameters);
+                operationParameters.addAll(openApiParameters(operation.get("parameters"), document));
+                var operationId = textValue(operation.get("operationId"));
+                var tags = stringList(operation.get("tags"));
+                var documentation = new GitLabRepositoryEndpointDocumentation(
+                        DOCUMENTATION_SOURCE_OPENAPI_YAML,
+                        abbreviate(textValue(operation.get("summary")), MAX_DOCUMENTATION_TEXT_LENGTH),
+                        abbreviate(textValue(operation.get("description")), MAX_DOCUMENTATION_TEXT_LENGTH),
+                        operationId,
+                        tags,
+                        operationParameters
                 );
-                collectingTags = false;
-                continue;
-            }
-
-            if (currentOperation == null || indent <= pathsIndent + 4) {
-                collectingTags = false;
-                continue;
-            }
-
-            if (trimmedLine.startsWith("operationId:")) {
-                currentOperation.operationId(yamlValue(trimmedLine));
-                collectingTags = false;
-                continue;
-            }
-
-            if (trimmedLine.startsWith("tags:")) {
-                var inlineTags = inlineYamlList(trimmedLine);
-                currentOperation.addTags(inlineTags);
-                collectingTags = inlineTags.isEmpty();
-                tagsIndent = indent;
-                continue;
-            }
-
-            if (collectingTags) {
-                if (indent > tagsIndent && trimmedLine.startsWith("-")) {
-                    currentOperation.addTag(yamlListItem(trimmedLine));
-                } else {
-                    collectingTags = false;
-                }
+                operations.add(new OpenApiOperation(
+                        filePath,
+                        path,
+                        method,
+                        operationId,
+                        tags,
+                        openApiOperationLineStart(lines, path, method),
+                        documentation,
+                        limitations
+                ));
             }
         }
 
-        addOpenApiOperation(operations, currentOperation, limitations);
         return List.copyOf(operations);
+    }
+
+    private Map<String, Object> parseYamlDocument(
+            String filePath,
+            String content,
+            List<String> limitations
+    ) {
+        var factoryBean = new YamlMapFactoryBean();
+        factoryBean.setResources(new ByteArrayResource(content.getBytes(StandardCharsets.UTF_8), filePath));
+        try {
+            factoryBean.afterPropertiesSet();
+            var document = factoryBean.getObject();
+            return document != null ? document : Map.of();
+        } catch (RuntimeException exception) {
+            limitations.add("Could not parse OpenAPI YAML structure from " + filePath + ": " + safeMessage(exception));
+            return Map.of();
+        }
+    }
+
+    private List<GitLabRepositoryEndpoint> mergeOpenApiDocumentation(
+            List<GitLabRepositoryEndpoint> endpoints,
+            List<OpenApiOperation> openApiOperations
+    ) {
+        if (endpoints.isEmpty() || openApiOperations.isEmpty()) {
+            return endpoints;
+        }
+
+        var operationsByKey = new LinkedHashMap<String, OpenApiOperation>();
+        for (var operation : openApiOperations) {
+            operationsByKey.put(endpointDocumentationKey(operation.httpMethod(), operation.path()), operation);
+        }
+
+        return endpoints.stream()
+                .map(endpoint -> {
+                    var documentation = endpoint.documentation();
+                    for (var method : endpoint.httpMethods()) {
+                        var operation = operationsByKey.get(endpointDocumentationKey(method, endpoint.path()));
+                        if (operation == null || operation.documentation() == null) {
+                            continue;
+                        }
+                        documentation = documentation == null
+                                ? operation.documentation()
+                                : documentation.merge(operation.documentation());
+                    }
+                    return documentation == endpoint.documentation() ? endpoint : endpoint.withDocumentation(documentation);
+                })
+                .toList();
+    }
+
+    private String endpointDocumentationKey(String httpMethod, String path) {
+        return (StringUtils.hasText(httpMethod) ? httpMethod.trim().toUpperCase(Locale.ROOT) : "")
+                + " "
+                + (StringUtils.hasText(path) ? path.trim() : "");
+    }
+
+    private List<GitLabRepositoryEndpointParameterDocumentation> openApiParameters(
+            Object rawParameters,
+            Map<String, Object> document
+    ) {
+        if (!(rawParameters instanceof List<?> parameters)) {
+            return List.of();
+        }
+
+        var parsed = new ArrayList<GitLabRepositoryEndpointParameterDocumentation>();
+        for (var rawParameter : parameters) {
+            var parameter = openApiParameter(rawParameter, document);
+            if (parameter == null) {
+                continue;
+            }
+            var existingIndex = existingParameterIndex(parsed, parameter);
+            if (existingIndex >= 0) {
+                parsed.set(existingIndex, parsed.get(existingIndex).merge(parameter));
+            } else {
+                parsed.add(parameter);
+            }
+        }
+        return List.copyOf(parsed);
+    }
+
+    private GitLabRepositoryEndpointParameterDocumentation openApiParameter(
+            Object rawParameter,
+            Map<String, Object> document
+    ) {
+        var parameter = asMap(rawParameter);
+        if (parameter.containsKey("$ref")) {
+            parameter = resolveOpenApiRef(textValue(parameter.get("$ref")), document);
+        }
+        if (parameter.isEmpty()) {
+            return null;
+        }
+
+        var in = textValue(parameter.get("in"));
+        if (!"path".equalsIgnoreCase(in) && !"query".equalsIgnoreCase(in)) {
+            return null;
+        }
+
+        var name = textValue(parameter.get("name"));
+        if (!StringUtils.hasText(name)) {
+            return null;
+        }
+
+        return new GitLabRepositoryEndpointParameterDocumentation(
+                name,
+                in.toLowerCase(Locale.ROOT),
+                booleanValue(parameter.get("required")) || "path".equalsIgnoreCase(in),
+                schemaType(parameter.get("schema")),
+                abbreviate(textValue(parameter.get("description")), MAX_PARAMETER_DESCRIPTION_LENGTH)
+        );
+    }
+
+    private int existingParameterIndex(
+            List<GitLabRepositoryEndpointParameterDocumentation> parameters,
+            GitLabRepositoryEndpointParameterDocumentation candidate
+    ) {
+        for (var index = 0; index < parameters.size(); index++) {
+            if (parameters.get(index).sameParameter(candidate)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private Map<String, Object> resolveOpenApiRef(String ref, Map<String, Object> document) {
+        if (!StringUtils.hasText(ref) || !ref.startsWith("#/")) {
+            return Map.of();
+        }
+
+        Object current = document;
+        for (var segment : ref.substring(2).split("/")) {
+            if (!(current instanceof Map<?, ?> map)) {
+                return Map.of();
+            }
+            current = map.get(segment.replace("~1", "/").replace("~0", "~"));
+        }
+        return asMap(current);
+    }
+
+    private String schemaType(Object rawSchema) {
+        var schema = asMap(rawSchema);
+        if (schema.isEmpty()) {
+            return null;
+        }
+        var type = textValue(schema.get("type"));
+        if (StringUtils.hasText(type)) {
+            var format = textValue(schema.get("format"));
+            return StringUtils.hasText(format) ? type + "(" + format + ")" : type;
+        }
+        var ref = textValue(schema.get("$ref"));
+        if (!StringUtils.hasText(ref)) {
+            return null;
+        }
+        var slashIndex = ref.lastIndexOf('/');
+        return slashIndex >= 0 ? ref.substring(slashIndex + 1) : ref;
+    }
+
+    private int openApiOperationLineStart(List<String> lines, String path, String httpMethod) {
+        var pathLineIndex = -1;
+        var pathIndent = -1;
+        for (var index = 0; index < lines.size(); index++) {
+            var rawLine = lines.get(index);
+            var trimmedLine = rawLine.trim();
+            if (pathLineIndex < 0) {
+                if (path.equals(yamlKey(trimmedLine))) {
+                    pathLineIndex = index;
+                    pathIndent = leadingSpaces(rawLine);
+                }
+                continue;
+            }
+            var indent = leadingSpaces(rawLine);
+            if (indent <= pathIndent && StringUtils.hasText(trimmedLine)) {
+                return pathLineIndex + 1;
+            }
+            if (HTTP_METHODS.contains(yamlKey(trimmedLine).toUpperCase(Locale.ROOT))
+                    && httpMethod.equalsIgnoreCase(yamlKey(trimmedLine))) {
+                return index + 1;
+            }
+        }
+        return pathLineIndex >= 0 ? pathLineIndex + 1 : 1;
+    }
+
+    private Map<String, Object> asMap(Object value) {
+        if (!(value instanceof Map<?, ?> map)) {
+            return Map.of();
+        }
+        var result = new LinkedHashMap<String, Object>();
+        for (var entry : map.entrySet()) {
+            if (entry.getKey() != null) {
+                result.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
+        return result;
+    }
+
+    private List<String> stringList(Object value) {
+        if (value instanceof List<?> list) {
+            return deduplicate(list.stream()
+                    .map(this::textValue)
+                    .filter(StringUtils::hasText)
+                    .toList());
+        }
+        var text = textValue(value);
+        return StringUtils.hasText(text) ? List.of(text) : List.of();
+    }
+
+    private String textValue(Object value) {
+        return value != null && StringUtils.hasText(String.valueOf(value)) ? String.valueOf(value).trim() : null;
+    }
+
+    private String firstText(String left, String right) {
+        return StringUtils.hasText(left) ? left : StringUtils.hasText(right) ? right : null;
+    }
+
+    private boolean booleanValue(Object value) {
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        return value != null && Boolean.parseBoolean(String.valueOf(value));
     }
 
     private void addOpenApiOperation(
@@ -702,6 +1131,14 @@ public class GitLabRepositoryEndpointService {
                 builder.operationId(),
                 builder.tags(),
                 builder.lineStart(),
+                new GitLabRepositoryEndpointDocumentation(
+                        DOCUMENTATION_SOURCE_OPENAPI_YAML,
+                        null,
+                        null,
+                        builder.operationId(),
+                        builder.tags(),
+                        List.of()
+                ),
                 inheritedLimitations
         ));
     }
@@ -906,7 +1343,45 @@ public class GitLabRepositoryEndpointService {
         if (!StringUtils.hasText(parameters)) {
             return List.of();
         }
-        return deduplicate(List.of(parameters.split("\\s*,\\s*")));
+        return deduplicate(splitTopLevelParameters(parameters));
+    }
+
+    private List<String> splitTopLevelParameters(String parameters) {
+        var result = new ArrayList<String>();
+        var current = new StringBuilder();
+        var parenthesisDepth = 0;
+        var angleDepth = 0;
+        var inString = false;
+
+        for (var index = 0; index < parameters.length(); index++) {
+            var character = parameters.charAt(index);
+            if (character == '"' && (index == 0 || parameters.charAt(index - 1) != '\\')) {
+                inString = !inString;
+            }
+            if (!inString) {
+                if (character == '(') {
+                    parenthesisDepth++;
+                } else if (character == ')' && parenthesisDepth > 0) {
+                    parenthesisDepth--;
+                } else if (character == '<') {
+                    angleDepth++;
+                } else if (character == '>' && angleDepth > 0) {
+                    angleDepth--;
+                } else if (character == ',' && parenthesisDepth == 0 && angleDepth == 0) {
+                    if (StringUtils.hasText(current.toString())) {
+                        result.add(current.toString().trim());
+                    }
+                    current.setLength(0);
+                    continue;
+                }
+            }
+            current.append(character);
+        }
+
+        if (StringUtils.hasText(current.toString())) {
+            result.add(current.toString().trim());
+        }
+        return List.copyOf(result);
     }
 
     private List<String> responseTypes(String responseType) {
@@ -1394,10 +1869,12 @@ public class GitLabRepositoryEndpointService {
             String operationId,
             List<String> tags,
             int lineStart,
+            GitLabRepositoryEndpointDocumentation documentation,
             List<String> limitations
     ) {
         private OpenApiOperation {
             tags = tags != null ? List.copyOf(tags) : List.of();
+            documentation = documentation != null && !documentation.empty() ? documentation : null;
             limitations = limitations != null ? List.copyOf(limitations) : List.of();
         }
     }

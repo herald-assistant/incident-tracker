@@ -49,7 +49,7 @@ class CopilotToolBudgetPolicyTest {
         properties.setMaxGitlabReadFileCalls(0);
         var guard = guard(properties);
 
-        var decision = guard.beforeInvocation("analysis-run-1", "gitlab_read_repository_file", "{}");
+        var decision = guard.beforeInvocation("analysis-run-1", "gitlab_read_repository_files_by_path", "{}");
 
         assertTrue(decision.denied());
         assertTrue(decision.reason().contains("GitLab full file read budget exceeded"));

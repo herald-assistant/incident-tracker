@@ -413,6 +413,100 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldReadRepositoryFilesByPathUsingSessionScopeAndRespectLimits() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.readFile(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/MissingCustomerService.java",
+                10
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFile(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerService.java",
+                10
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerService.java",
+                "1234567890",
+                false
+        ));
+        when(gitLabRepositoryPort.readFile(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                5
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "abcde",
+                true
+        ));
+
+        var response = tools.readRepositoryFilesByPath(
+                "crm-customer-api",
+                List.of(
+                        "/src/main/java/com/example/crm/customer/MissingCustomerService.java",
+                        "crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_repository_file_outline",
+                        "\\src\\main\\java\\com\\example\\crm\\customer\\CustomerRepository.java",
+                        "src/main/java/com/example/crm/customer/CustomerMapper.java"
+                ),
+                10,
+                15,
+                "Czytam liste plikow z kontekstu endpointu.",
+                gitLabToolContext()
+        );
+
+        verify(gitLabRepositoryPort).readFile(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/MissingCustomerService.java",
+                10
+        );
+        verify(gitLabRepositoryPort).readFile(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerService.java",
+                10
+        );
+        verify(gitLabRepositoryPort).readFile(
+                "CRM/backend",
+                "crm-customer-api",
+                "feature/INC-123",
+                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                5
+        );
+        verifyNoMoreInteractions(gitLabRepositoryPort);
+
+        assertEquals("CRM/backend", response.group());
+        assertEquals("crm-customer-api", response.projectName());
+        assertEquals("feature/INC-123", response.branch());
+        assertEquals(4, response.requestedFileCount());
+        assertEquals(3, response.processedFileCount());
+        assertEquals(2, response.returnedFileCount());
+        assertEquals(1, response.failedFileCount());
+        assertEquals(15, response.totalReturnedCharacters());
+        assertFalse(response.fileCountTruncated());
+        assertTrue(response.totalCharacterLimitReached());
+        assertEquals(3, response.files().size());
+        assertTrue(response.files().get(0).error().contains("file not found"));
+        assertEquals("service-or-orchestrator", response.files().get(1).inferredRole());
+        assertEquals("repository", response.files().get(2).inferredRole());
+        assertTrue(response.files().get(2).truncated());
+    }
+
+    @Test
     void shouldDelegateReadRepositoryFileChunkUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = new GitLabMcpTools(gitLabRepositoryPort);

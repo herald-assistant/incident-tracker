@@ -162,6 +162,7 @@ public class GitLabEndpointUseCaseEndpointResolver {
                 endpoint.requestTypes(),
                 endpoint.responseTypes(),
                 endpoint.annotations(),
+                endpoint.documentation(),
                 GitLabEndpointUseCaseConfidence.from(endpoint.confidence()),
                 endpoint.limitations(),
                 endpoint.suggestedNextReads()

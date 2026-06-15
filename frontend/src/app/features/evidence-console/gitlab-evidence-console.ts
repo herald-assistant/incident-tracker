@@ -19,6 +19,7 @@ import {
   GitLabEndpointUseCaseFileCandidate,
   GitLabEndpointUseCaseRelation,
   GitLabRepositoryEndpoint,
+  GitLabRepositoryEndpointParameterDocumentation,
   GitLabRepositoryEndpointsPayload,
   GitLabRepositoryEndpointsResponse,
   GitLabRepositorySearchPayload,
@@ -474,6 +475,35 @@ export class GitLabEvidenceConsoleComponent {
   endpointMethodTooltip(methods: string[] | null | undefined): string {
     const label = methods?.length ? methods.join(', ') : 'ANY';
     return `Metoda HTTP endpointu znaleziona w repozytorium: ${label}.`;
+  }
+
+  documentationSourceLabel(source: string | null | undefined): string {
+    return this.displayToken(source) || 'DOCUMENTATION';
+  }
+
+  documentationSourceTooltip(source: string | null | undefined): string {
+    switch ((source || '').toUpperCase()) {
+      case 'OPENAPI_YAML':
+        return 'Dokumentacja odczytana z pliku OpenAPI YAML w repozytorium.';
+      case 'JAVA_OPENAPI_ANNOTATION':
+        return 'Dokumentacja odczytana z adnotacji OpenAPI przy metodzie kontrolera.';
+      case 'SPRING_SIGNATURE':
+        return 'Dokumentacja parametrów odtworzona z adnotacji Spring MVC w sygnaturze metody.';
+      case 'JAVA_OPENAPI_ANNOTATION+OPENAPI_YAML':
+      case 'OPENAPI_YAML+JAVA_OPENAPI_ANNOTATION':
+        return 'Dokumentacja scalona z adnotacji OpenAPI w Javie oraz pliku OpenAPI YAML.';
+      default:
+        return 'Źródło dokumentacji endpointu zwrócone przez backend.';
+    }
+  }
+
+  parameterDocumentationTooltip(
+    parameter: GitLabRepositoryEndpointParameterDocumentation
+  ): string {
+    const location = parameter.in || 'parameter';
+    const required = parameter.required ? 'wymagany' : 'opcjonalny';
+    const type = parameter.type ? ` Typ: ${parameter.type}.` : '';
+    return `${parameter.name || 'Parametr'}: ${required} parametr ${location}.${type}`;
   }
 
   confidenceClass(confidence: string | null | undefined): string {

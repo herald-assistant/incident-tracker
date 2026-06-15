@@ -21,6 +21,7 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkResult;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileContentResult;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextCandidate;
@@ -31,6 +32,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRep
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunkToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFilesByPathToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolScope;
 
@@ -52,6 +54,7 @@ import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPO
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
 
 @Component
@@ -61,9 +64,11 @@ public class GitLabMcpTools {
     private static final int DEFAULT_MAX_CHARACTERS = 4_000;
     private static final int DEFAULT_OUTLINE_MAX_CHARACTERS = 30_000;
     private static final int DEFAULT_MAX_TOTAL_CHUNK_CHARACTERS = 20_000;
+    private static final int DEFAULT_MAX_TOTAL_FILE_CHARACTERS = 60_000;
     private static final int DEFAULT_MAX_FILES_PER_ROLE = 5;
     private static final int MAX_FILES_PER_ROLE = 10;
     private static final int MAX_BATCH_CHUNKS = 8;
+    private static final int MAX_BATCH_FILES_BY_PATH = 100;
     private static final int MAX_IMPORTS = 40;
     private static final int MAX_CLASSES = 20;
     private static final int MAX_ANNOTATIONS = 40;
@@ -484,6 +489,159 @@ public class GitLabMcpTools {
                 responseFilePath(fileContent, filePath),
                 fileContent != null ? fileContent.content() : null,
                 fileContent != null && fileContent.truncated()
+        );
+    }
+
+    @Tool(
+            name = READ_REPOSITORY_FILES_BY_PATH,
+            description = """
+                    Read several full files from one GitLab repository by exact repository file paths in the current fixed session group and branch.
+                    Use after gitlab_build_endpoint_use_case_context when the model has a grounded list of relevant files and needs their source
+                    content for functional/technical endpoint interpretation. The server enforces maximum files and total characters.
+                    """
+    )
+    public GitLabReadRepositoryFilesByPathToolResponse readRepositoryFilesByPath(
+            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            String projectName,
+            @ToolParam(description = "Exact repository file paths. Maximum 100 distinct paths are processed.")
+            List<String> filePaths,
+            @ToolParam(required = false, description = "Maximum characters returned per file. Defaults to 4000.")
+            Integer maxCharactersPerFile,
+            @ToolParam(required = false, description = "Maximum total characters returned across all files. Defaults to 60000.")
+            Integer maxTotalCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta te pliki.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = GitLabToolScope.from(toolContext);
+        var requestedFilePaths = normalizeRepositoryFilePaths(filePaths, projectName);
+        var processedFilePaths = requestedFilePaths.stream()
+                .limit(MAX_BATCH_FILES_BY_PATH)
+                .toList();
+        var effectiveMaxCharactersPerFile = normalizePositiveLimit(maxCharactersPerFile, DEFAULT_MAX_CHARACTERS);
+        var effectiveMaxTotalCharacters = normalizePositiveLimit(maxTotalCharacters, DEFAULT_MAX_TOTAL_FILE_CHARACTERS);
+
+        log.info(
+                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} requestedFileCount={} processedFileCount={} filePaths={} maxCharactersPerFile={} maxTotalCharacters={}",
+                READ_REPOSITORY_FILES_BY_PATH,
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                projectName,
+                requestedFilePaths.size(),
+                processedFilePaths.size(),
+                abbreviateList(processedFilePaths),
+                effectiveMaxCharactersPerFile,
+                effectiveMaxTotalCharacters
+        );
+
+        var remainingCharacters = effectiveMaxTotalCharacters;
+        var totalReturnedCharacters = 0;
+        var returnedFileCount = 0;
+        var failedFileCount = 0;
+        var totalCharacterLimitReached = false;
+        var results = new ArrayList<GitLabFileContentResult>();
+
+        for (var requestedPath : processedFilePaths) {
+            if (remainingCharacters <= 0) {
+                totalCharacterLimitReached = true;
+                break;
+            }
+
+            var effectiveFileMaxCharacters = Math.min(effectiveMaxCharactersPerFile, remainingCharacters);
+            try {
+                var fileContent = gitLabRepositoryPort.readFile(
+                        scope.group(),
+                        projectName,
+                        scope.branch(),
+                        requestedPath,
+                        effectiveFileMaxCharacters
+                );
+                var content = fileContent != null ? fileContent.content() : null;
+                var returnedCharacters = safeLength(content);
+                var inferredRole = inferRole(
+                        responseFilePath(fileContent, requestedPath),
+                        content
+                );
+
+                results.add(new GitLabFileContentResult(
+                        responseGroup(fileContent, scope.group()),
+                        responseProjectName(fileContent, projectName),
+                        responseBranch(fileContent, scope.branch()),
+                        responseFilePath(fileContent, requestedPath),
+                        content,
+                        fileContent != null && fileContent.truncated(),
+                        inferredRole,
+                        returnedCharacters,
+                        null
+                ));
+                returnedFileCount++;
+                totalReturnedCharacters += returnedCharacters;
+                remainingCharacters -= returnedCharacters;
+                if (remainingCharacters <= 0) {
+                    totalCharacterLimitReached = true;
+                }
+            } catch (RuntimeException exception) {
+                failedFileCount++;
+                var error = toolErrorMessage(exception);
+                log.warn(
+                        "Tool partial failure [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} reason={}",
+                        READ_REPOSITORY_FILES_BY_PATH,
+                        scope.correlationId(),
+                        scope.group(),
+                        scope.branch(),
+                        scope.environment(),
+                        projectName,
+                        requestedPath,
+                        error
+                );
+                results.add(new GitLabFileContentResult(
+                        scope.group(),
+                        projectName,
+                        scope.branch(),
+                        requestedPath,
+                        null,
+                        false,
+                        inferRole(requestedPath, null),
+                        0,
+                        error
+                ));
+            }
+        }
+
+        log.info(
+                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} requestedFileCount={} processedFileCount={} returnedFileCount={} failedFileCount={} totalReturnedCharacters={} fileCountTruncated={} totalCharacterLimitReached={}",
+                READ_REPOSITORY_FILES_BY_PATH,
+                scope.correlationId(),
+                scope.group(),
+                scope.branch(),
+                scope.environment(),
+                projectName,
+                requestedFilePaths.size(),
+                results.size(),
+                returnedFileCount,
+                failedFileCount,
+                totalReturnedCharacters,
+                requestedFilePaths.size() > MAX_BATCH_FILES_BY_PATH,
+                totalCharacterLimitReached
+        );
+
+        return new GitLabReadRepositoryFilesByPathToolResponse(
+                scope.group(),
+                projectName,
+                scope.branch(),
+                requestedFilePaths.size(),
+                results.size(),
+                returnedFileCount,
+                failedFileCount,
+                totalReturnedCharacters,
+                requestedFilePaths.size() > MAX_BATCH_FILES_BY_PATH,
+                totalCharacterLimitReached,
+                List.copyOf(results)
         );
     }
 
@@ -1142,6 +1300,48 @@ public class GitLabMcpTools {
         return values != null ? values : List.of();
     }
 
+    private List<String> normalizeRepositoryFilePaths(List<String> filePaths, String projectName) {
+        var normalizedPaths = new LinkedHashSet<String>();
+
+        for (var filePath : defaultList(filePaths)) {
+            var normalizedPath = normalizeRepositoryFilePath(filePath, projectName);
+            if (StringUtils.hasText(normalizedPath)) {
+                normalizedPaths.add(normalizedPath);
+            }
+        }
+
+        return List.copyOf(normalizedPaths);
+    }
+
+    private String normalizeRepositoryFilePath(String filePath, String projectName) {
+        if (!StringUtils.hasText(filePath)) {
+            return null;
+        }
+
+        var normalizedPath = filePath.trim().replace('\\', '/');
+        var nextReadHintIndex = normalizedPath.indexOf(" via gitlab_");
+        if (nextReadHintIndex > 0) {
+            normalizedPath = normalizedPath.substring(0, nextReadHintIndex).trim();
+        }
+        var lineHintIndex = normalizedPath.indexOf(" lines ");
+        if (lineHintIndex > 0) {
+            normalizedPath = normalizedPath.substring(0, lineHintIndex).trim();
+        }
+        var projectSeparatorIndex = normalizedPath.indexOf(':');
+        if (projectSeparatorIndex > 0 && projectSeparatorIndex + 1 < normalizedPath.length()) {
+            var candidateProjectName = normalizedPath.substring(0, projectSeparatorIndex).trim();
+            var candidateFilePath = normalizedPath.substring(projectSeparatorIndex + 1).trim();
+            if (StringUtils.hasText(candidateFilePath)
+                    && (candidateProjectName.equals(projectName) || candidateFilePath.startsWith("src/"))) {
+                normalizedPath = candidateFilePath;
+            }
+        }
+        while (normalizedPath.startsWith("/")) {
+            normalizedPath = normalizedPath.substring(1);
+        }
+        return normalizedPath;
+    }
+
     private List<String> limitList(List<String> values, int maxItems) {
         if (values.size() <= maxItems) {
             return List.copyOf(values);
@@ -1380,6 +1580,17 @@ public class GitLabMcpTools {
         return normalized.length() > maxCharacters
                 ? normalized.substring(0, maxCharacters) + "..."
                 : normalized;
+    }
+
+    private String toolErrorMessage(RuntimeException exception) {
+        if (exception == null) {
+            return null;
+        }
+
+        var message = StringUtils.hasText(exception.getMessage())
+                ? exception.getMessage()
+                : exception.getClass().getSimpleName();
+        return exception.getClass().getSimpleName() + ": " + abbreviate(message, PREVIEW_MAX_CHARACTERS);
     }
 
     private String safeValue(String value) {

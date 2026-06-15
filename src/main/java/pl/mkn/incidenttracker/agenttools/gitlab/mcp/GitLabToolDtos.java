@@ -91,6 +91,19 @@ public final class GitLabToolDtos {
     ) {
     }
 
+    public record GitLabFileContentResult(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            String content,
+            boolean truncated,
+            String inferredRole,
+            int returnedCharacters,
+            String error
+    ) {
+    }
+
     public record GitLabListAvailableRepositoriesToolResponse(
             String group,
             String branch,
@@ -267,6 +280,24 @@ public final class GitLabToolDtos {
             boolean chunkCountTruncated,
             boolean totalCharacterLimitReached
     ) {
+    }
+
+    public record GitLabReadRepositoryFilesByPathToolResponse(
+            String group,
+            String projectName,
+            String branch,
+            int requestedFileCount,
+            int processedFileCount,
+            int returnedFileCount,
+            int failedFileCount,
+            int totalReturnedCharacters,
+            boolean fileCountTruncated,
+            boolean totalCharacterLimitReached,
+            List<GitLabFileContentResult> files
+    ) {
+        public GitLabReadRepositoryFilesByPathToolResponse {
+            files = files != null ? List.copyOf(files) : List.of();
+        }
     }
 
     public record GitLabReadRepositoryFileChunkToolResponse(

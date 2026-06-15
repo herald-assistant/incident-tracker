@@ -100,12 +100,13 @@ class CopilotIncidentInitialPreparationServiceTest {
                             "gitlab_list_available_repositories",
                             "gitlab_read_repository_file_chunk",
                             "gitlab_read_repository_file_chunks",
+                            "gitlab_read_repository_files_by_path",
                             "gitlab_read_repository_file_outline",
                             "skill"
                     ),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
-            assertEquals(6, prepared.session().sessionConfig().getTools().size());
+            assertEquals(7, prepared.session().sessionConfig().getTools().size());
             assertEquals(1, prepared.session().sessionConfig().getSkillDirectories().size());
             assertTrue(prepared.session().sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.session().sessionConfig().getOnPermissionRequest());

@@ -465,6 +465,11 @@
                         </span>
                         <div class="endpoint-card__copy">
                           <h4>{{ endpoint.path || endpoint.pathExpression || '&lt;unresolved-path&gt;' }}</h4>
+                          @if (endpoint.documentation?.summary) {
+                            <p class="endpoint-card__summary-text">
+                              {{ endpoint.documentation?.summary }}
+                            </p>
+                          }
                           <p>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</p>
                         </div>
                         <button
@@ -488,6 +493,77 @@
                           <span>confidence {{ endpoint.confidence }}</span>
                         }
                       </div>
+
+                      @if (endpoint.documentation) {
+                        <div class="endpoint-documentation">
+                          <div class="endpoint-documentation__header">
+                            @if (endpoint.documentation.source) {
+                              <span
+                                class="panel-chip"
+                                [title]="documentationSourceTooltip(endpoint.documentation.source)"
+                              >
+                                {{ documentationSourceLabel(endpoint.documentation.source) }}
+                              </span>
+                            }
+                            @if (endpoint.documentation.operationId) {
+                              <span
+                                class="panel-chip"
+                                title="OperationId z dokumentacji OpenAPI, przydatne do powiązania z wygenerowanymi interfejsami."
+                              >
+                                {{ endpoint.documentation.operationId }}
+                              </span>
+                            }
+                          </div>
+
+                          @if (endpoint.documentation.summary) {
+                            <p class="endpoint-documentation__summary">
+                              {{ endpoint.documentation.summary }}
+                            </p>
+                          }
+                          @if (endpoint.documentation.description) {
+                            <p class="endpoint-documentation__description">
+                              {{ endpoint.documentation.description }}
+                            </p>
+                          }
+
+                          @if ((endpoint.documentation.tags || []).length > 0) {
+                            <div class="context-chip-list">
+                              @for (tag of endpoint.documentation.tags || []; track tag) {
+                                <span class="context-chip" title="Tag z dokumentacji OpenAPI endpointu.">
+                                  {{ tag }}
+                                </span>
+                              }
+                            </div>
+                          }
+
+                          @if ((endpoint.documentation.parameters || []).length > 0) {
+                            <div class="endpoint-documentation__parameters">
+                              @for (parameter of endpoint.documentation.parameters || []; track parameter.in + ':' + parameter.name) {
+                                <div class="endpoint-parameter">
+                                  <span
+                                    class="panel-chip"
+                                    [title]="parameterDocumentationTooltip(parameter)"
+                                  >
+                                    {{ parameter.in || 'param' }}
+                                  </span>
+                                  <span class="endpoint-parameter__name">{{ parameter.name }}</span>
+                                  @if (parameter.type) {
+                                    <span class="endpoint-parameter__type">{{ parameter.type }}</span>
+                                  }
+                                  <span class="endpoint-parameter__required">
+                                    {{ parameter.required ? 'required' : 'optional' }}
+                                  </span>
+                                  @if (parameter.description) {
+                                    <span class="endpoint-parameter__description">
+                                      {{ parameter.description }}
+                                    </span>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
 
                       @if (endpoint.requestTypes.length > 0 || endpoint.responseTypes.length > 0) {
                         <div class="endpoint-card__meta">

@@ -23,6 +23,15 @@ class CopilotIncidentToolDescriptionCustomizerTest {
     }
 
     @Test
+    void shouldAppendGuidanceForGitLabFilesByPathRead() {
+        var description = customizer.customize("gitlab_read_repository_files_by_path", "Read files by path.");
+
+        assertTrue(description.contains("grounded file list"));
+        assertTrue(description.contains("gitlab_build_endpoint_use_case_context"));
+        assertTrue(description.contains("Pass only files that are relevant"));
+    }
+
+    @Test
     void shouldAppendGuidanceForRawSql() {
         var description = customizer.customize("db_execute_readonly_sql", "Executes SQL.");
 

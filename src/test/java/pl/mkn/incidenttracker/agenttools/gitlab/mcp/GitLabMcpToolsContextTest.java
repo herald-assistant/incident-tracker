@@ -29,6 +29,7 @@ class GitLabMcpToolsContextTest {
         assertTrue(toolNames.contains("gitlab_build_endpoint_use_case_context"));
         assertTrue(toolNames.contains("gitlab_find_class_references"));
         assertTrue(toolNames.contains("gitlab_read_repository_file"));
+        assertTrue(toolNames.contains("gitlab_read_repository_files_by_path"));
         assertTrue(toolNames.contains("gitlab_read_repository_file_chunk"));
         assertTrue(toolNames.contains("gitlab_find_flow_context"));
         assertTrue(toolNames.contains("gitlab_read_repository_file_outline"));

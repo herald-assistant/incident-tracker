@@ -32,6 +32,7 @@ public record CopilotIncidentToolAccessPolicy(
             GitLabToolNames.FIND_FLOW_CONTEXT,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS,
+            GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH,
             GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE
     );
 

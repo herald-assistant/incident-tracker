@@ -102,7 +102,7 @@ public class CopilotToolBudgetState {
         if (isGitLabSearchTool(toolName)) {
             gitLabSearchCalls++;
         }
-        if (GitLabToolNames.READ_REPOSITORY_FILE.equals(toolName)) {
+        if (isGitLabFullFileReadTool(toolName)) {
             gitLabReadFileCalls++;
         }
         if (isGitLabChunkTool(toolName)) {
@@ -165,7 +165,7 @@ public class CopilotToolBudgetState {
                             properties.getMaxGitlabSearchCalls()
                     );
                 }
-                if (GitLabToolNames.READ_REPOSITORY_FILE.equals(toolName)) {
+                if (isGitLabFullFileReadTool(toolName)) {
                     addIfLimitExceeded(
                             exceeded,
                             "GitLab full file read budget exceeded",
@@ -273,6 +273,11 @@ public class CopilotToolBudgetState {
     private boolean isGitLabChunkTool(String toolName) {
         return GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(toolName)
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(toolName);
+    }
+
+    private boolean isGitLabFullFileReadTool(String toolName) {
+        return GitLabToolNames.READ_REPOSITORY_FILE.equals(toolName)
+                || GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH.equals(toolName);
     }
 
     private boolean isRawSqlTool(String toolName) {

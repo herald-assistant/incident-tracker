@@ -79,6 +79,39 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
         assertTrue(attributes.get("filePath").contains("CustomerService.java"));
     }
 
+    @Test
+    void shouldCaptureGitLabFilesByPathAsFetchedCodeItems() {
+        var registry = toolEvidenceSessionStore(objectMapper);
+        var toolEvidenceListener = gitLabToolEvidenceListener(registry);
+        var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
+        registry.registerSession("session-1", capturedSection::set);
+
+        capture(
+                toolEvidenceListener,
+                "session-1",
+                "tool-call-files-1",
+                "gitlab_read_repository_files_by_path",
+                "{\"reason\":\"Czytam pliki endpointu.\"}",
+                filesByPathResult()
+        );
+
+        var section = capturedSection.get();
+        assertEquals("gitlab", section.provider());
+        assertEquals("tool-fetched-code", section.category());
+        assertEquals(2, section.items().size());
+        assertEquals(
+                "src/main/java/com/example/crm/customer/CustomerController.java",
+                attributes(section, 0).get("filePath")
+        );
+        assertEquals("class CustomerController {}", attributes(section, 0).get("content"));
+        assertEquals("Czytam pliki endpointu.", attributes(section, 0).get("reason"));
+        assertEquals(
+                "src/main/java/com/example/crm/customer/CustomerService.java",
+                attributes(section, 1).get("filePath")
+        );
+        assertFalse(attributes(section, 0).containsKey("startLine"));
+    }
+
     private String fullFileResult(String content) {
         return """
                 {
@@ -110,8 +143,64 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
                 """.formatted(FILE_PATH, content);
     }
 
+    private String filesByPathResult() {
+        return """
+                {
+                  "group": "CRM/runtime",
+                  "projectName": "crm-customer-api",
+                  "branch": "main",
+                  "requestedFileCount": 3,
+                  "processedFileCount": 3,
+                  "returnedFileCount": 2,
+                  "failedFileCount": 1,
+                  "totalReturnedCharacters": 50,
+                  "fileCountTruncated": false,
+                  "totalCharacterLimitReached": false,
+                  "files": [
+                    {
+                      "group": "CRM/runtime",
+                      "projectName": "crm-customer-api",
+                      "branch": "main",
+                      "filePath": "src/main/java/com/example/crm/customer/CustomerController.java",
+                      "content": "class CustomerController {}",
+                      "truncated": false,
+                      "inferredRole": "entrypoint",
+                      "returnedCharacters": 27,
+                      "error": null
+                    },
+                    {
+                      "group": "CRM/runtime",
+                      "projectName": "crm-customer-api",
+                      "branch": "main",
+                      "filePath": "src/main/java/com/example/crm/customer/Missing.java",
+                      "content": null,
+                      "truncated": false,
+                      "inferredRole": "other",
+                      "returnedCharacters": 0,
+                      "error": "IllegalStateException: file not found"
+                    },
+                    {
+                      "group": "CRM/runtime",
+                      "projectName": "crm-customer-api",
+                      "branch": "main",
+                      "filePath": "src/main/java/com/example/crm/customer/CustomerService.java",
+                      "content": "class CustomerService {}",
+                      "truncated": false,
+                      "inferredRole": "service-or-orchestrator",
+                      "returnedCharacters": 23,
+                      "error": null
+                    }
+                  ]
+                }
+                """;
+    }
+
     private Map<String, String> attributes(AnalysisEvidenceSection section) {
-        return section.items().get(0).attributes().stream()
+        return attributes(section, 0);
+    }
+
+    private Map<String, String> attributes(AnalysisEvidenceSection section, int itemIndex) {
+        return section.items().get(itemIndex).attributes().stream()
                 .collect(Collectors.toMap(
                         attribute -> attribute.name(),
                         attribute -> attribute.value()

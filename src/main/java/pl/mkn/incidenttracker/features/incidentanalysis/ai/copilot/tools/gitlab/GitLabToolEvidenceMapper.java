@@ -20,6 +20,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRep
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileOutlineToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFilesByPathToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
 import pl.mkn.incidenttracker.common.JsonPayloadReader;
 
@@ -35,6 +36,7 @@ import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPO
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
 
 @Component
@@ -60,6 +62,7 @@ public class GitLabToolEvidenceMapper {
 
         return switch (toolName) {
             case READ_REPOSITORY_FILE,
+                 READ_REPOSITORY_FILES_BY_PATH,
                  READ_REPOSITORY_FILE_CHUNK,
                  READ_REPOSITORY_FILE_CHUNKS,
                  READ_REPOSITORY_FILE_OUTLINE,
@@ -82,6 +85,12 @@ public class GitLabToolEvidenceMapper {
     ) {
         return switch (toolName) {
             case READ_REPOSITORY_FILE -> captureGitLabFile(toolCallId, rawArguments, rawResult, sessionEvidence);
+            case READ_REPOSITORY_FILES_BY_PATH -> captureGitLabFilesByPath(
+                    toolCallId,
+                    rawArguments,
+                    rawResult,
+                    sessionEvidence
+            );
             case READ_REPOSITORY_FILE_CHUNK -> captureGitLabFileChunk(toolCallId, rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(toolCallId, rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, sessionEvidence);
@@ -143,6 +152,49 @@ public class GitLabToolEvidenceMapper {
             );
         } catch (JsonProcessingException exception) {
             log.warn("Failed to parse GitLab tool file result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
+    private AnalysisEvidenceSection captureGitLabFilesByPath(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFilesByPathToolResponse.class);
+            var reason = toolReason(rawArguments);
+            AnalysisEvidenceSection updatedSection = null;
+
+            for (var file : safeList(response.files())) {
+                if (file == null || StringUtils.hasText(file.error())) {
+                    continue;
+                }
+
+                updatedSection = sessionEvidence.upsertItem(
+                        GITLAB_PROVIDER,
+                        GITLAB_FETCHED_CODE_CATEGORY,
+                        gitLabFileKey(file.group(), file.projectName(), file.branch(), file.filePath()),
+                        GITLAB_FILE_ORDER_NAMESPACE,
+                        GITLAB_FILE_FALLBACK_KEY,
+                        buildGitLabFileItem(
+                                file.projectName(),
+                                file.filePath(),
+                                reason,
+                                toolCallId,
+                                READ_REPOSITORY_FILES_BY_PATH,
+                                rawArguments,
+                                file.content(),
+                                null
+                        ),
+                        this::keepExistingGitLabFileItem
+                );
+            }
+
+            return updatedSection;
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab tool files-by-path result. reason={}", exception.getMessage(), exception);
             return null;
         }
     }

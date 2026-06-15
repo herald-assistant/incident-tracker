@@ -94,11 +94,35 @@ class GitLabRepositoryEndpointServiceTest {
                             get:
                               tags:
                                 - CustomerData
+                              summary: Pobranie klienta CRM
+                              description: Zwraca dane klienta na potrzeby widoku profilu.
                               operationId: getCustomer
+                              parameters:
+                                - name: customerId
+                                  in: path
+                                  required: true
+                                  description: Identyfikator klienta CRM.
+                                  schema:
+                                    type: string
+                                    format: uuid
                             put:
                               tags:
                                 - CustomerData
+                              summary: Aktualizacja klienta CRM
                               operationId: updateCustomer
+                              parameters:
+                                - name: customerId
+                                  in: path
+                                  required: true
+                                  schema:
+                                    type: string
+                                    format: uuid
+                                - name: dryRun
+                                  in: query
+                                  required: false
+                                  description: Weryfikuje zmianę bez zapisu.
+                                  schema:
+                                    type: boolean
                         """,
                 false
         ));
@@ -120,10 +144,73 @@ class GitLabRepositoryEndpointServiceTest {
         assertTrue(result.endpoints().get(0).annotations().contains("Implements CustomerDataApi"));
         assertTrue(result.endpoints().get(0).limitations()
                 .contains("Endpoint mapping resolved from OpenAPI YAML contract, not Java annotations."));
+        assertEquals("OPENAPI_YAML", result.endpoints().get(0).documentation().source());
+        assertEquals("Pobranie klienta CRM", result.endpoints().get(0).documentation().summary());
+        assertEquals("Zwraca dane klienta na potrzeby widoku profilu.",
+                result.endpoints().get(0).documentation().description());
+        assertEquals("customerId", result.endpoints().get(0).documentation().parameters().get(0).name());
+        assertEquals("path", result.endpoints().get(0).documentation().parameters().get(0).in());
+        assertEquals("string(uuid)", result.endpoints().get(0).documentation().parameters().get(0).type());
         assertTrue(result.endpoints().get(0).suggestedNextReads().stream()
                 .anyMatch(nextRead -> nextRead.contains(yamlFile.filePath())));
         assertEquals("PUT /api/crm/customers/{customerId} -> com.example.crm.customer.adapter.in.rest.CustomerDataController#updateCustomer",
                 result.endpoints().get(1).endpointId());
+        assertEquals(2, result.endpoints().get(1).documentation().parameters().size());
+        assertEquals(false, result.endpoints().get(1).documentation().parameters().get(1).required());
+    }
+
+    @Test
+    void shouldReturnOpenApiAnnotationDocumentationForControllerEndpoint() {
+        var endpoints = service.parseEndpointFile(
+                "crm-customer-service",
+                "src/main/java/com/example/crm/customer/api/CustomerController.java",
+                """
+                        package com.example.crm.customer.api;
+
+                        import io.swagger.v3.oas.annotations.Operation;
+                        import io.swagger.v3.oas.annotations.Parameter;
+                        import io.swagger.v3.oas.annotations.enums.ParameterIn;
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.PathVariable;
+                        import org.springframework.web.bind.annotation.RequestMapping;
+                        import org.springframework.web.bind.annotation.RequestParam;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        @RestController
+                        @RequestMapping("/api/crm/customers")
+                        public class CustomerController {
+
+                          @Operation(
+                              summary = "Pobranie klienta",
+                              description = "Zwraca klienta wraz z aktywnym segmentem CRM.",
+                              operationId = "getCustomer",
+                              tags = {"Customer"})
+                          @GetMapping("/{customerId}")
+                          CustomerResponse getCustomer(
+                              @Parameter(description = "Identyfikator klienta.", in = ParameterIn.PATH)
+                              @PathVariable("customerId") String customerId,
+                              @RequestParam(name = "includeInactive", required = false) boolean includeInactive) {
+                            return new CustomerResponse(customerId);
+                          }
+                        }
+                        """,
+                List.of()
+        );
+
+        assertEquals(1, endpoints.size());
+        var documentation = endpoints.get(0).documentation();
+        assertEquals("JAVA_OPENAPI_ANNOTATION", documentation.source());
+        assertEquals("Pobranie klienta", documentation.summary());
+        assertEquals("Zwraca klienta wraz z aktywnym segmentem CRM.", documentation.description());
+        assertEquals("getCustomer", documentation.operationId());
+        assertEquals(List.of("Customer"), documentation.tags());
+        assertEquals(2, documentation.parameters().size());
+        assertEquals("customerId", documentation.parameters().get(0).name());
+        assertEquals("path", documentation.parameters().get(0).in());
+        assertEquals("Identyfikator klienta.", documentation.parameters().get(0).description());
+        assertEquals("includeInactive", documentation.parameters().get(1).name());
+        assertEquals("query", documentation.parameters().get(1).in());
+        assertEquals(false, documentation.parameters().get(1).required());
     }
 
     @Test

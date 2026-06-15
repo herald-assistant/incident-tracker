@@ -63,6 +63,23 @@ export interface GitLabEndpointUseCaseContextPayload {
   reason?: string;
 }
 
+export interface GitLabRepositoryEndpointParameterDocumentation {
+  name?: string | null;
+  in?: string | null;
+  required: boolean;
+  type?: string | null;
+  description?: string | null;
+}
+
+export interface GitLabRepositoryEndpointDocumentation {
+  source?: string | null;
+  summary?: string | null;
+  description?: string | null;
+  operationId?: string | null;
+  tags: string[];
+  parameters: GitLabRepositoryEndpointParameterDocumentation[];
+}
+
 export interface GitLabRepositoryEndpoint {
   endpointId: string;
   httpMethods: string[];
@@ -76,6 +93,7 @@ export interface GitLabRepositoryEndpoint {
   requestTypes: string[];
   responseTypes: string[];
   annotations: string[];
+  documentation?: GitLabRepositoryEndpointDocumentation | null;
   confidence?: string | null;
   limitations: string[];
   suggestedNextReads: string[];
@@ -100,6 +118,7 @@ export interface GitLabEndpointUseCaseEndpointContext {
   requestTypes: string[];
   responseTypes: string[];
   annotations: string[];
+  documentation?: GitLabRepositoryEndpointDocumentation | null;
   confidence?: string | null;
   limitations: string[];
   suggestedNextReads: string[];

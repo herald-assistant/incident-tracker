@@ -39,6 +39,8 @@ class CopilotSdkToolFactoryDescriptionTest {
         assertTrue(descriptionsByName.get("gitlab_read_repository_file").contains("Expensive."));
         assertTrue(descriptionsByName.get("gitlab_read_repository_file")
                 .contains("Prefer gitlab_read_repository_file_chunk"));
+        assertTrue(descriptionsByName.get("gitlab_read_repository_files_by_path")
+                .contains("grounded file list"));
         assertTrue(descriptionsByName.get("gitlab_list_available_repositories")
                 .contains("Use returned projectName values"));
         assertTrue(descriptionsByName.get("gitlab_search_repository_candidates")

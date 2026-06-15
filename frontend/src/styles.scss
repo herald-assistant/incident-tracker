@@ -487,6 +487,12 @@ body .flow-tree-node__badges .confidence-pill,
   overflow-wrap: anywhere;
 }
 
+.endpoint-card__summary-text {
+  color: var(--text-main) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 700;
+}
+
 .endpoint-card__details {
   display: grid;
   gap: 7px;
@@ -506,6 +512,71 @@ body .flow-tree-node__badges .confidence-pill,
 
 .endpoint-card__meta span {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.endpoint-documentation {
+  display: grid;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid rgba(9, 30, 66, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.endpoint-documentation__header,
+.endpoint-documentation__parameters,
+.endpoint-parameter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.endpoint-documentation__header,
+.endpoint-documentation__parameters {
+  gap: 6px;
+}
+
+.endpoint-documentation__summary,
+.endpoint-documentation__description {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.endpoint-documentation__description {
+  color: var(--text-muted);
+}
+
+.endpoint-parameter {
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background: rgba(9, 30, 66, 0.04);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.endpoint-parameter__name {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-weight: 800;
+}
+
+.endpoint-parameter__type {
+  font-family: var(--font-mono);
+}
+
+.endpoint-parameter__required {
+  font-weight: 800;
+}
+
+.endpoint-parameter__description {
+  flex-basis: 100%;
   overflow-wrap: anywhere;
 }
 

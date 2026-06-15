@@ -59,6 +59,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
                         "gitlab_read_repository_file_chunk",
+                        "gitlab_read_repository_files_by_path",
                         "gitlab_read_repository_file_outline"
                 )
         );
@@ -69,6 +70,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("gitlab_find_class_references"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_repository_files_by_path"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_outline"));
     }
 
@@ -123,6 +125,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "gitlab_find_flow_context",
                         "gitlab_read_repository_file_chunk",
                         "gitlab_read_repository_file_chunks",
+                        "gitlab_read_repository_files_by_path",
                         "gitlab_read_repository_file_outline",
                         "db_find_tables"
                 )
@@ -134,6 +137,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("gitlab_list_available_repositories"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunks"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_repository_files_by_path"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_outline"));
         assertFalse(policy.availableToolNames().contains("gitlab_search_repository_candidates"));
         assertFalse(policy.availableToolNames().contains("gitlab_read_repository_file"));

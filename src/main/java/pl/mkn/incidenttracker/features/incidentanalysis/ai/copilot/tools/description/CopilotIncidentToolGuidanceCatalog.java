@@ -72,6 +72,15 @@ public class CopilotIncidentToolGuidanceCatalog {
                     )
             ),
             Map.entry(
+                    GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH,
+                    List.of(
+                            "Use after a grounded file list, especially from gitlab_build_endpoint_use_case_context.",
+                            "Pass only files that are relevant to the current endpoint/use case question.",
+                            "Prefer categories or roles from the prior context result instead of reading every returned file.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
+            Map.entry(
                     GitLabToolNames.LIST_REPOSITORY_ENDPOINTS,
                     List.of(
                             "Use when the user or follow-up asks about a concrete HTTP endpoint, endpoint family or whether a requirement belongs to an existing endpoint.",

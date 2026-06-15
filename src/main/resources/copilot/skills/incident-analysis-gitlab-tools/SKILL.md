@@ -261,8 +261,10 @@ Preferowana kolejnosc:
 4. `gitlab_find_class_references` dla ugruntowanej klasy, entity, repository,
    DTO, mappera, validatora albo klienta,
 5. `gitlab_find_flow_context` dla direct collaborators i broader flow,
-6. outline/chunk/chunks przed full file,
-7. full file tylko gdy krotki plik albo chunk nie wystarcza.
+6. `gitlab_read_repository_files_by_path` tylko dla ugruntowanej listy sciezek
+   plikow, np. po wyniku `gitlab_build_endpoint_use_case_context`,
+7. outline/chunk/chunks przed pojedynczym full file,
+8. pojedynczy full file tylko gdy krotki plik albo chunk nie wystarcza.
 
 Szukaj po evidence, nie po ciekawosci:
 
