@@ -1139,6 +1139,15 @@
                 </h3>
               </div>
               <div class="endpoint-results__stats">
+                <button
+                  class="secondary-button secondary-button--compact"
+                  type="button"
+                  title="Przepisuje wszystkie pliki z wyniku Endpoint Use Case Context do formularza Read Repository Files By Path."
+                  [disabled]="contextResult.files.length === 0"
+                  (click)="useUseCaseFilesForRead()"
+                >
+                  <span class="button-label">Użyj plików do read</span>
+                </button>
                 <span
                   [class]="confidenceClass(contextResult.confidence)"
                   [title]="confidenceTooltip(contextResult.confidence)"

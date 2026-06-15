@@ -43,6 +43,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('INJECTED PORT CALL');
     expect(compiled.textContent).toContain('INTERFACE IMPL');
     expect(compiled.textContent).toContain('REPOSITORY IMPL');
+    expect(compiled.textContent).toContain('Użyj plików do read');
     expect(compiled.textContent).not.toContain('INTERFACE IMPLEMENTATION');
     expect(compiled.textContent).not.toContain('REPOSITORY IMPLEMENTATION');
     expect(compiled.textContent).toContain('1 poza flow');
