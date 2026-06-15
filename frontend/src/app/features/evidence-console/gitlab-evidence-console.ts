@@ -24,8 +24,14 @@ import {
   GitLabRepositorySearchPayload,
   GitLabSourceResolvePayload
 } from '../../core/services/evidence-api.service';
+import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 
 type ToolStateStatus = 'idle' | 'loading' | 'success' | 'error';
+type GitLabJsonResponseKey =
+  | 'repository-search'
+  | 'endpoint-inventory'
+  | 'endpoint-use-case-context'
+  | 'source-resolve';
 
 interface ToolState {
   status: ToolStateStatus;
@@ -180,6 +186,7 @@ export class GitLabEvidenceConsoleComponent {
   );
 
   readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
+  readonly copiedJsonResponseKey = signal<GitLabJsonResponseKey | null>(null);
 
   readonly selectedGitLabUseCaseTreeNode = computed(() => {
     const tree = this.gitLabUseCaseTree();
@@ -347,6 +354,68 @@ export class GitLabEvidenceConsoleComponent {
       payload,
       `Wysyłamy request do ${preview ? '/api/gitlab/source/resolve/preview' : '/api/gitlab/source/resolve'}...`
     );
+  }
+
+  async copyJsonResponse(key: GitLabJsonResponseKey, responseJson: string): Promise<void> {
+    const copied = await copyTextToClipboard(responseJson);
+    if (!copied) {
+      return;
+    }
+
+    this.copiedJsonResponseKey.set(key);
+    window.setTimeout(() => {
+      if (this.copiedJsonResponseKey() === key) {
+        this.copiedJsonResponseKey.set(null);
+      }
+    }, 1600);
+  }
+
+  downloadJsonResponse(key: GitLabJsonResponseKey, responseJson: string): void {
+    const blob = new Blob([responseJson], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = this.gitLabJsonResponseFileName(key);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async loadJsonResponseFile(key: GitLabJsonResponseKey, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const state = this.stateForJsonResponseKey(key);
+    try {
+      const text = await this.readFileText(file);
+      const response = JSON.parse(text) as unknown;
+      state.set({
+        status: 'success',
+        statusCode: null,
+        message: `Załadowano odpowiedź JSON z pliku ${file.name}.`,
+        response,
+        responseJson: this.toFormattedJson(response)
+      });
+      if (key === 'endpoint-use-case-context') {
+        this.selectedGitLabUseCaseTreeNodeId.set(null);
+      }
+    } catch {
+      state.set(
+        this.errorStateFromPayload({
+          code: 'INVALID_JSON_FILE',
+          message: `Nie udało się załadować poprawnego JSON z pliku ${file.name}.`
+        })
+      );
+    } finally {
+      if (input) {
+        input.value = '';
+      }
+    }
   }
 
   controlInvalid(control: AbstractControl<unknown, unknown>): boolean {
@@ -609,6 +678,43 @@ export class GitLabEvidenceConsoleComponent {
   private toFormattedJson(value: unknown): string {
     const formatted = JSON.stringify(value, null, 2);
     return formatted === undefined ? 'null' : formatted;
+  }
+
+  private gitLabJsonResponseFileName(key: GitLabJsonResponseKey): string {
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/\.\d{3}Z$/, 'Z')
+      .replace(/[-:]/g, '')
+      .replace('T', '-');
+    const safeKey = key.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `gitlab-${safeKey}-${timestamp}.json`;
+  }
+
+  private stateForJsonResponseKey(key: GitLabJsonResponseKey): WritableSignal<ToolState> {
+    switch (key) {
+      case 'endpoint-inventory':
+        return this.gitLabEndpointState;
+      case 'endpoint-use-case-context':
+        return this.gitLabEndpointUseCaseContextState;
+      case 'source-resolve':
+        return this.gitLabSourceState;
+      default:
+        return this.gitLabRepositoryState;
+    }
+  }
+
+  private readFileText(file: File): Promise<string> {
+    const fileWithText = file as File & { text?: () => Promise<string> };
+    if (typeof fileWithText.text === 'function') {
+      return fileWithText.text();
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('File read failed.'));
+      reader.readAsText(file);
+    });
   }
 
   private asGitLabEndpointResult(response: unknown): GitLabRepositoryEndpointsResponse | null {

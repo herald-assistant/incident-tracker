@@ -159,6 +159,56 @@
   font-size: 0.78rem;
 }
 
+.json-response-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.json-response-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.json-response-panel__header .field-label {
+  margin-bottom: 0;
+}
+
+.json-response-panel__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.json-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(12, 102, 228, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.json-icon-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(12, 102, 228, 0.42);
+}
+
+.json-icon-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.14);
+}
+
+.json-icon-button .material-symbols-outlined {
+  font-size: 19px;
+}
+
 .json-output {
   width: 100%;
   min-height: 260px;
@@ -215,65 +265,6 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.endpoint-list {
-  display: grid;
-  gap: 10px;
-}
-
-.endpoint-card {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(9, 30, 66, 0.1);
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.endpoint-card__main {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-}
-
-.endpoint-card__method {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 64px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(12, 102, 228, 0.1);
-  color: var(--primary);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.endpoint-card h4 {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.92rem;
-}
-
-.endpoint-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
-.endpoint-card__meta span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.endpoint-card__actions {
-  display: flex;
-  justify-content: flex-start;
 }
 
 .context-results {
@@ -513,15 +504,7 @@
     overflow-wrap: anywhere;
   }
 
-  .endpoint-card__main {
-    grid-template-columns: 1fr;
-  }
-
   .context-endpoint {
     flex-direction: column;
-  }
-
-  .endpoint-card__method {
-    justify-self: flex-start;
   }
 }

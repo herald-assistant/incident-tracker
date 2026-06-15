@@ -190,14 +190,60 @@
           </div>
         </div>
 
-        <label class="field-label" for="gitlabRepositoryJsonResponse">JSON response</label>
-        <textarea
-          id="gitlabRepositoryJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="gitLabRepositoryState().responseJson"
-        ></textarea>
+        <div class="json-response-panel">
+          <div class="json-response-panel__header">
+            <label class="field-label" for="gitlabRepositoryJsonResponse">JSON response</label>
+            <div class="json-response-panel__actions">
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Kopiuj JSON repository search do schowka"
+                title="Kopiuj JSON"
+                (click)="copyJsonResponse('repository-search', gitLabRepositoryState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{
+                    copiedJsonResponseKey() === 'repository-search'
+                      ? 'task_alt'
+                      : 'content_copy'
+                  }}
+                </span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Pobierz JSON repository search"
+                title="Pobierz JSON"
+                (click)="downloadJsonResponse('repository-search', gitLabRepositoryState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Załaduj JSON repository search z pliku"
+                title="Załaduj JSON"
+                (click)="repositorySearchJsonFileInput.click()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              </button>
+              <input
+                #repositorySearchJsonFileInput
+                hidden
+                type="file"
+                accept="application/json,.json"
+                (change)="loadJsonResponseFile('repository-search', $event)"
+              />
+            </div>
+          </div>
+          <textarea
+            id="gitlabRepositoryJsonResponse"
+            class="json-output"
+            readonly
+            spellcheck="false"
+            [value]="gitLabRepositoryState().responseJson"
+          ></textarea>
+        </div>
       </article>
 
       <article class="analysis-card tool-card">
@@ -352,53 +398,56 @@
             @if (endpointResult.endpoints.length > 0) {
               <div class="endpoint-list">
                 @for (endpoint of endpointResult.endpoints; track endpoint.endpointId) {
-                  <article class="endpoint-card">
-                    <div class="endpoint-card__main">
-                      <span class="endpoint-card__method">{{ endpointMethods(endpoint) }}</span>
-                      <div>
-                        <h4>{{ endpoint.path || endpoint.pathExpression || '&lt;unresolved-path&gt;' }}</h4>
-                        <p>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</p>
+                  <details class="endpoint-card">
+                    <summary class="endpoint-card__summary">
+                      <div class="endpoint-card__main">
+                        <span class="endpoint-card__method">{{ endpointMethods(endpoint) }}</span>
+                        <div class="endpoint-card__copy">
+                          <h4>{{ endpoint.path || endpoint.pathExpression || '&lt;unresolved-path&gt;' }}</h4>
+                          <p>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</p>
+                        </div>
+                        <button
+                          class="secondary-button secondary-button--compact endpoint-card__context-button"
+                          type="button"
+                          (click)="$event.preventDefault(); $event.stopPropagation(); useEndpointForContext(endpoint)"
+                        >
+                          <span class="button-label">Użyj do contextu</span>
+                        </button>
+                        <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
+                          expand_more
+                        </span>
                       </div>
-                    </div>
+                    </summary>
 
-                    <div class="endpoint-card__meta">
-                      <span>{{ endpoint.filePath }}</span>
-                      <span>lines {{ endpoint.lineStart }}-{{ endpoint.lineEnd }}</span>
-                      @if (endpoint.confidence) {
-                        <span>confidence {{ endpoint.confidence }}</span>
+                    <div class="endpoint-card__details">
+                      <div class="endpoint-card__meta">
+                        <span>{{ endpoint.filePath }}</span>
+                        <span>lines {{ endpoint.lineStart }}-{{ endpoint.lineEnd }}</span>
+                        @if (endpoint.confidence) {
+                          <span>confidence {{ endpoint.confidence }}</span>
+                        }
+                      </div>
+
+                      @if (endpoint.requestTypes.length > 0 || endpoint.responseTypes.length > 0) {
+                        <div class="endpoint-card__meta">
+                          @if (endpoint.requestTypes.length > 0) {
+                            <span>Request: {{ endpoint.requestTypes.join(', ') }}</span>
+                          }
+                          @if (endpoint.responseTypes.length > 0) {
+                            <span>Response: {{ endpoint.responseTypes.join(', ') }}</span>
+                          }
+                        </div>
+                      }
+
+                      @if (endpoint.limitations.length > 0) {
+                        <ul class="endpoint-card__limitations">
+                          @for (limitation of endpoint.limitations; track limitation) {
+                            <li>{{ limitation }}</li>
+                          }
+                        </ul>
                       }
                     </div>
-
-                    @if (endpoint.requestTypes.length > 0 || endpoint.responseTypes.length > 0) {
-                      <div class="endpoint-card__meta">
-                        @if (endpoint.requestTypes.length > 0) {
-                          <span>Request: {{ endpoint.requestTypes.join(', ') }}</span>
-                        }
-                        @if (endpoint.responseTypes.length > 0) {
-                          <span>Response: {{ endpoint.responseTypes.join(', ') }}</span>
-                        }
-                      </div>
-                    }
-
-                    @if (endpoint.limitations.length > 0) {
-                      <ul class="endpoint-card__limitations">
-                        @for (limitation of endpoint.limitations; track limitation) {
-                          <li>{{ limitation }}</li>
-                        }
-                      </ul>
-                    }
-
-                    <div class="endpoint-card__actions">
-                      <button
-                        class="secondary-button secondary-button--compact"
-                        type="button"
-                        (click)="useEndpointForContext(endpoint)"
-                      >
-                        <span class="button-label">Użyj do contextu</span>
-                      </button>
-                    </div>
-
-                  </article>
+                  </details>
                 }
               </div>
             } @else {
@@ -407,14 +456,60 @@
           </section>
         }
 
-        <label class="field-label" for="gitlabEndpointJsonResponse">JSON response</label>
-        <textarea
-          id="gitlabEndpointJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="gitLabEndpointState().responseJson"
-        ></textarea>
+        <div class="json-response-panel">
+          <div class="json-response-panel__header">
+            <label class="field-label" for="gitlabEndpointJsonResponse">JSON response</label>
+            <div class="json-response-panel__actions">
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Kopiuj JSON endpoint inventory do schowka"
+                title="Kopiuj JSON"
+                (click)="copyJsonResponse('endpoint-inventory', gitLabEndpointState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{
+                    copiedJsonResponseKey() === 'endpoint-inventory'
+                      ? 'task_alt'
+                      : 'content_copy'
+                  }}
+                </span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Pobierz JSON endpoint inventory"
+                title="Pobierz JSON"
+                (click)="downloadJsonResponse('endpoint-inventory', gitLabEndpointState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Załaduj JSON endpoint inventory z pliku"
+                title="Załaduj JSON"
+                (click)="endpointInventoryJsonFileInput.click()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              </button>
+              <input
+                #endpointInventoryJsonFileInput
+                hidden
+                type="file"
+                accept="application/json,.json"
+                (change)="loadJsonResponseFile('endpoint-inventory', $event)"
+              />
+            </div>
+          </div>
+          <textarea
+            id="gitlabEndpointJsonResponse"
+            class="json-output"
+            readonly
+            spellcheck="false"
+            [value]="gitLabEndpointState().responseJson"
+          ></textarea>
+        </div>
       </article>
 
       <article class="analysis-card tool-card">
@@ -764,8 +859,11 @@
             }
 
             @if (contextResult.unresolved.length > 0) {
-              <section class="context-subsection">
-                <h4>Unresolved</h4>
+              <details class="context-subsection context-subsection--collapsible">
+                <summary>
+                  <span>Unresolved</span>
+                  <span class="panel-chip">{{ contextResult.unresolved.length }}</span>
+                </summary>
                 <ul class="context-list">
                   @for (reference of contextResult.unresolved; track reference.symbol || $index) {
                     <li>
@@ -774,7 +872,7 @@
                     </li>
                   }
                 </ul>
-              </section>
+              </details>
             }
 
             @if (contextResult.suggestedNextReads.length > 0) {
@@ -793,16 +891,62 @@
           </section>
         }
 
-        <label class="field-label" for="gitlabEndpointUseCaseContextJsonResponse">
-          JSON response
-        </label>
-        <textarea
-          id="gitlabEndpointUseCaseContextJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="gitLabEndpointUseCaseContextState().responseJson"
-        ></textarea>
+        <div class="json-response-panel">
+          <div class="json-response-panel__header">
+            <label class="field-label" for="gitlabEndpointUseCaseContextJsonResponse">
+              JSON response
+            </label>
+            <div class="json-response-panel__actions">
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Kopiuj JSON endpoint use-case context do schowka"
+                title="Kopiuj JSON"
+                (click)="copyJsonResponse('endpoint-use-case-context', gitLabEndpointUseCaseContextState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{
+                    copiedJsonResponseKey() === 'endpoint-use-case-context'
+                      ? 'task_alt'
+                      : 'content_copy'
+                  }}
+                </span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Pobierz JSON endpoint use-case context"
+                title="Pobierz JSON"
+                (click)="downloadJsonResponse('endpoint-use-case-context', gitLabEndpointUseCaseContextState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Załaduj JSON endpoint use-case context z pliku"
+                title="Załaduj JSON"
+                (click)="endpointUseCaseContextJsonFileInput.click()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              </button>
+              <input
+                #endpointUseCaseContextJsonFileInput
+                hidden
+                type="file"
+                accept="application/json,.json"
+                (change)="loadJsonResponseFile('endpoint-use-case-context', $event)"
+              />
+            </div>
+          </div>
+          <textarea
+            id="gitlabEndpointUseCaseContextJsonResponse"
+            class="json-output"
+            readonly
+            spellcheck="false"
+            [value]="gitLabEndpointUseCaseContextState().responseJson"
+          ></textarea>
+        </div>
       </article>
 
       <article class="analysis-card tool-card">
@@ -923,14 +1067,56 @@
           </div>
         </div>
 
-        <label class="field-label" for="gitlabSourceJsonResponse">JSON response</label>
-        <textarea
-          id="gitlabSourceJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="gitLabSourceState().responseJson"
-        ></textarea>
+        <div class="json-response-panel">
+          <div class="json-response-panel__header">
+            <label class="field-label" for="gitlabSourceJsonResponse">JSON response</label>
+            <div class="json-response-panel__actions">
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Kopiuj JSON source resolve do schowka"
+                title="Kopiuj JSON"
+                (click)="copyJsonResponse('source-resolve', gitLabSourceState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{ copiedJsonResponseKey() === 'source-resolve' ? 'task_alt' : 'content_copy' }}
+                </span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Pobierz JSON source resolve"
+                title="Pobierz JSON"
+                (click)="downloadJsonResponse('source-resolve', gitLabSourceState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Załaduj JSON source resolve z pliku"
+                title="Załaduj JSON"
+                (click)="sourceResolveJsonFileInput.click()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              </button>
+              <input
+                #sourceResolveJsonFileInput
+                hidden
+                type="file"
+                accept="application/json,.json"
+                (change)="loadJsonResponseFile('source-resolve', $event)"
+              />
+            </div>
+          </div>
+          <textarea
+            id="gitlabSourceJsonResponse"
+            class="json-output"
+            readonly
+            spellcheck="false"
+            [value]="gitLabSourceState().responseJson"
+          ></textarea>
+        </div>
       </article>
       </div>
       </section>
