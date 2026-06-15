@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 public class GitLabEndpointUseCaseTraversalService {
 
     private static final Pattern YAML_PATH_PATTERN = Pattern.compile("([\\w./-]+\\.ya?ml)");
+    private static final Pattern TYPE_TOKEN_PATTERN = Pattern.compile("\\b[A-Z][A-Za-z0-9_]*\\b");
     private static final Set<String> TERMINAL_STATIC_SCOPES = Set.of(
             "Assert",
             "CollectionUtils",
@@ -98,7 +99,8 @@ public class GitLabEndpointUseCaseTraversalService {
         }
 
         state.addLimitations(endpoint.limitations());
-        addOpenApiContractFiles(state, endpoint);
+        var openApiContractPaths = addOpenApiContractFiles(state, endpoint);
+        addOpenApiGeneratedModelSymbols(state, endpoint, openApiContractPaths);
         var handlerSymbol = symbol(endpoint.controllerClass(), endpoint.handlerMethod());
         state.addFile(
                 endpoint.filePath(),
@@ -514,7 +516,9 @@ public class GitLabEndpointUseCaseTraversalService {
             return false;
         }
         var scopeText = scope.toString();
-        if (!looksLikeTypeName(scopeText) || TERMINAL_STATIC_SCOPES.contains(simpleName(scopeText))) {
+        if (isConstantLike(scopeText)
+                || !looksLikeTypeName(scopeText)
+                || TERMINAL_STATIC_SCOPES.contains(simpleName(scopeText))) {
             return false;
         }
         var resolved = addResolvedType(
@@ -653,13 +657,8 @@ public class GitLabEndpointUseCaseTraversalService {
             return;
         }
         if (implementors.status() == GitLabJavaImplementorResolutionStatus.AMBIGUOUS) {
-            state.addUnresolved(
-                    interfaceType.requestedName(),
-                    interfaceType.filePath(),
-                    "More than one implementation matched domain interface variable.",
-                    implementors.searchKeywords(),
-                    implementors.candidates().stream().map(GitLabJavaImplementorCandidate::filePath).distinct().toList()
-            );
+            state.addLimitation("More than one implementation matched domain interface variable "
+                    + interfaceType.requestedName() + "; all candidates are traversed best-effort.");
         }
         var interfaceParameterTypes = interfaceMethodParameterTypes(session, interfaceType, methodCall);
         for (var candidate : implementors.candidates()) {
@@ -689,6 +688,68 @@ public class GitLabEndpointUseCaseTraversalService {
                     role,
                     candidate.confidence(),
                     "Domain interface implementation method called from traversed flow."
+            ));
+            addDomainSubtypeOverrides(session, state, node, methodCall, interfaceParameterTypes, candidate);
+        }
+    }
+
+    private void addDomainSubtypeOverrides(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabEndpointUseCaseTraversalState state,
+            GitLabEndpointUseCaseTraversalNode node,
+            MethodCallExpr methodCall,
+            List<String> interfaceParameterTypes,
+            GitLabJavaImplementorCandidate baseCandidate
+    ) {
+        var subtypes = implementorResolver.resolveSubtypes(session, baseCandidate);
+        state.addLimitations(subtypes.limitations());
+        if (subtypes.candidates().isEmpty()) {
+            return;
+        }
+
+        var baseSymbol = symbol(baseCandidate.implementationQualifiedName(), methodCall.getNameAsString());
+        for (var subtype : subtypes.candidates()) {
+            var subtypeAstFile = sourceResolver.astFile(session, subtype.filePath());
+            if (!subtypeAstFile.parsed()) {
+                continue;
+            }
+            var resolution = methodLocator.resolveMethod(
+                    subtypeAstFile,
+                    subtype.implementationQualifiedName(),
+                    methodCall.getNameAsString(),
+                    methodCall.getArguments().size(),
+                    interfaceParameterTypes
+            );
+            if (resolution.status() == GitLabJavaMethodResolutionStatus.NOT_FOUND
+                    || resolution.status() == GitLabJavaMethodResolutionStatus.INVALID_REQUEST
+                    || resolution.status() == GitLabJavaMethodResolutionStatus.PARSE_FAILED) {
+                continue;
+            }
+            var role = roleForTypeName(subtype.implementationQualifiedName(), subtype.filePath());
+            state.addFile(
+                    subtype.filePath(),
+                    role,
+                    methodCall.getNameAsString(),
+                    "Subtype overrides domain interface method through " + baseCandidate.implementationSimpleName() + ".",
+                    subtype.confidence()
+            );
+            state.addRelation(
+                    baseSymbol,
+                    symbol(subtype.implementationQualifiedName(), methodCall.getNameAsString()),
+                    GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION,
+                    subtype.confidence(),
+                    "Subtype override candidate for domain interface method call."
+            );
+            state.enqueue(new GitLabEndpointUseCaseTraversalNode(
+                    subtype.filePath(),
+                    subtype.implementationQualifiedName(),
+                    methodCall.getNameAsString(),
+                    methodCall.getArguments().size(),
+                    interfaceParameterTypes,
+                    node.depth() + 1,
+                    role,
+                    subtype.confidence(),
+                    "Domain subtype override method called from traversed flow."
             ));
         }
     }
@@ -727,6 +788,9 @@ public class GitLabEndpointUseCaseTraversalService {
             GitLabEndpointUseCaseConfidence confidence
     ) {
         if (isTerminalValueType(typeName)) {
+            return null;
+        }
+        if (isConstantLike(typeName)) {
             return null;
         }
         var resolved = sourceResolver.resolveType(session, context, typeName);
@@ -1039,17 +1103,19 @@ public class GitLabEndpointUseCaseTraversalService {
                 .toList();
     }
 
-    private void addOpenApiContractFiles(
+    private List<String> addOpenApiContractFiles(
             GitLabEndpointUseCaseTraversalState state,
             GitLabEndpointUseCaseEndpointContext endpoint
     ) {
         var hints = new java.util.ArrayList<String>();
         hints.addAll(endpoint.annotations());
         hints.addAll(endpoint.suggestedNextReads());
+        var paths = new java.util.LinkedHashSet<String>();
         for (var hint : hints) {
             var matcher = YAML_PATH_PATTERN.matcher(hint);
             while (matcher.find()) {
                 var path = matcher.group(1);
+                paths.add(path);
                 state.addFile(
                         path,
                         GitLabEndpointUseCaseFileRole.OPENAPI_CONTRACT,
@@ -1066,6 +1132,51 @@ public class GitLabEndpointUseCaseTraversalService {
                 );
             }
         }
+        return paths.stream().toList();
+    }
+
+    private void addOpenApiGeneratedModelSymbols(
+            GitLabEndpointUseCaseTraversalState state,
+            GitLabEndpointUseCaseEndpointContext endpoint,
+            List<String> openApiContractPaths
+    ) {
+        if (openApiContractPaths == null || openApiContractPaths.isEmpty()) {
+            return;
+        }
+        var generatedTypes = generatedContractTypes(endpoint);
+        if (generatedTypes.isEmpty()) {
+            return;
+        }
+        for (var path : openApiContractPaths) {
+            for (var generatedType : generatedTypes) {
+                state.addFile(
+                        path,
+                        GitLabEndpointUseCaseFileRole.OPENAPI_CONTRACT,
+                        generatedType,
+                        "Generated request/response model declared by OpenAPI YAML contract.",
+                        GitLabEndpointUseCaseConfidence.MEDIUM
+                );
+            }
+        }
+        state.addLimitation("Request/response web models are generated from OpenAPI YAML contract: "
+                + String.join(", ", generatedTypes) + ".");
+    }
+
+    private List<String> generatedContractTypes(GitLabEndpointUseCaseEndpointContext endpoint) {
+        var values = new java.util.ArrayList<String>();
+        values.addAll(endpoint.requestTypes());
+        values.addAll(endpoint.responseTypes());
+        var result = new java.util.LinkedHashSet<String>();
+        for (var value : values) {
+            var matcher = TYPE_TOKEN_PATTERN.matcher(value);
+            while (matcher.find()) {
+                var token = matcher.group();
+                if (!isTerminalValueType(token) && roleForTypeName(token, null) == GitLabEndpointUseCaseFileRole.WEB_MODEL) {
+                    result.add(token);
+                }
+            }
+        }
+        return result.stream().toList();
     }
 
     private boolean isFeignClient(GitLabJavaAstFile astFile, String typeName) {
@@ -1153,6 +1264,14 @@ public class GitLabEndpointUseCaseTraversalService {
         var normalized = normalizeTypeName(value);
         var simpleName = simpleName(normalized);
         return StringUtils.hasText(simpleName) && Character.isUpperCase(simpleName.charAt(0));
+    }
+
+    private boolean isConstantLike(String value) {
+        var simpleName = simpleName(value);
+        return StringUtils.hasText(simpleName)
+                && simpleName.length() > 1
+                && simpleName.equals(simpleName.toUpperCase(java.util.Locale.ROOT))
+                && simpleName.matches("[A-Z][A-Z0-9_]*");
     }
 
     private boolean isTerminalValueType(String typeName) {

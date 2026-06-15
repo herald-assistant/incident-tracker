@@ -2,8 +2,10 @@ package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFile;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -109,6 +112,90 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 .anyMatch(relation -> relation.to().contains("DecisionChangeEvent#")));
         assertFalse(result.relations().stream()
                 .anyMatch(relation -> relation.to().contains("CreditCaseUpdatedEvent#")));
+    }
+
+    @Test
+    void shouldTraverseDomainInterfaceImplementationAndSubtypeOverrides() {
+        var sources = domainInterfaceSources();
+        stubRepository(sources);
+        var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
+
+        var result = traversalService.traverse(
+                session,
+                new GitLabEndpointUseCaseEndpointContext(
+                        "PUT /api/customers/{customerId} -> CustomerController#updateCustomer",
+                        List.of("PUT"),
+                        "/api/customers/{customerId}",
+                        null,
+                        "com.example.crm.customer.api.CustomerController",
+                        "updateCustomer",
+                        path("api/CustomerController.java"),
+                        1,
+                        20,
+                        List.of("CustomerModel model"),
+                        List.of("CustomerModel"),
+                        List.of("OpenAPI contract src/main/resources/openapi/customer-api.yaml"),
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of(),
+                        List.of("src/main/resources/openapi/customer-api.yaml via gitlab_read_repository_file")
+                ),
+                new GitLabEndpointUseCaseLimits(7, 35, 80, false, false, 0, false)
+        );
+
+        var byPath = filesByPath(result);
+        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL,
+                byPath.get(path("domain/CustomerModel.java")).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL,
+                byPath.get(path("domain/CivilLawCustomerModel.java")).role());
+        assertTrue(byPath.get(path("domain/CustomerModel.java")).symbols().contains("update"));
+        assertTrue(byPath.get(path("domain/CivilLawCustomerModel.java")).symbols().contains("update"));
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
+                        && relation.to().contains("CustomerModel#update")));
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
+                        && relation.to().contains("CivilLawCustomerModel#update")));
+        assertFalse(result.unresolved().stream()
+                .anyMatch(reference -> "UpdateCustomer".equals(reference.symbol())
+                        || String.valueOf(reference.symbol()).endsWith(".UpdateCustomer")));
+    }
+
+    @Test
+    void shouldMapGeneratedOpenApiWebModelToYamlContractInsteadOfJavaSource() {
+        var sources = generatedOpenApiModelSources();
+        stubRepository(sources);
+        var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
+
+        var result = traversalService.traverse(
+                session,
+                new GitLabEndpointUseCaseEndpointContext(
+                        "PUT /api/customers/{customerId} -> CustomerController#updateCustomer",
+                        List.of("PUT"),
+                        "/api/customers/{customerId}",
+                        null,
+                        "com.example.crm.customer.api.CustomerController",
+                        "updateCustomer",
+                        path("api/CustomerController.java"),
+                        1,
+                        20,
+                        List.of("CustomerWebModel customerWebModel"),
+                        List.of("CustomerWebModel"),
+                        List.of("OpenAPI contract src/main/resources/openapi/customer-api.yaml"),
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of("Endpoint mapping resolved from OpenAPI YAML contract, not Java annotations."),
+                        List.of("src/main/resources/openapi/customer-api.yaml via gitlab_read_repository_file")
+                ),
+                new GitLabEndpointUseCaseLimits(5, 20, 40, false, false, 0, false)
+        );
+
+        var byPath = filesByPath(result);
+        var contract = byPath.get("src/main/resources/openapi/customer-api.yaml");
+        assertEquals(GitLabEndpointUseCaseFileRole.OPENAPI_CONTRACT, contract.role());
+        assertTrue(contract.symbols().contains("CustomerWebModel"));
+        assertFalse(result.unresolved().stream()
+                .anyMatch(reference -> String.valueOf(reference.symbol()).contains("CustomerWebModel")));
+        assertTrue(result.limitations().stream()
+                .anyMatch(limitation -> limitation.contains("CustomerWebModel")));
     }
 
     @Test
@@ -278,6 +365,26 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 content,
                 false
         )));
+        when(repositoryPort.searchCandidateFiles(any(GitLabRepositorySearchQuery.class)))
+                .thenAnswer(invocation -> {
+                    GitLabRepositorySearchQuery query = invocation.getArgument(0);
+                    var keywords = query.keywords() != null ? query.keywords() : List.<String>of();
+                    var projectNames = query.projectNames() != null ? query.projectNames() : List.<String>of();
+                    if (keywords.isEmpty()) {
+                        return List.of();
+                    }
+                    return sources.entrySet().stream()
+                            .filter(entry -> keywords.stream().anyMatch(keyword -> entry.getValue().contains(keyword)))
+                            .map(entry -> new GitLabRepositoryFileCandidate(
+                                    query.group(),
+                                    projectNames.isEmpty() ? repository.projectName() : projectNames.get(0),
+                                    query.branch(),
+                                    entry.getKey(),
+                                    "matched test keyword",
+                                    100
+                            ))
+                            .toList();
+                });
     }
 
     private Map<String, GitLabEndpointUseCaseFileCandidate> filesByPath(GitLabEndpointUseCaseContextResult result) {
@@ -628,6 +735,213 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                       operationId: getCustomer
                     put:
                       operationId: updateCustomer
+                """);
+        return sources;
+    }
+
+    private Map<String, String> domainInterfaceSources() {
+        var sources = new LinkedHashMap<String, String>();
+        sources.put(path("api/CustomerController.java"), """
+                package com.example.crm.customer.api;
+
+                import com.example.crm.customer.application.UpdateCustomerPort;
+                import com.example.crm.customer.domain.CustomerModel;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequiredArgsConstructor
+                class CustomerController {
+                    private final UpdateCustomerPort updateCustomerPort;
+
+                    public CustomerModel updateCustomer(CustomerModel model) {
+                        updateCustomerPort.update(model);
+                        return model;
+                    }
+                }
+                """);
+        sources.put(path("application/UpdateCustomerPort.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerModel;
+
+                interface UpdateCustomerPort {
+                    void update(CustomerModel model);
+                }
+                """);
+        sources.put(path("application/UpdateCustomerService.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerModel;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
+                import com.example.crm.customer.domain.behaviour.UpdateCustomer;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Service;
+
+                @Service
+                @RequiredArgsConstructor
+                class UpdateCustomerService implements UpdateCustomerPort {
+                    private final CustomerRepositoryPort.Query queryRepository;
+                    private final CustomerRepositoryPort.Command commandRepository;
+
+                    public void update(CustomerModel model) {
+                        UpdateCustomer current = queryRepository.getCustomerForUpdate(model.customerId());
+                        current.update(model);
+                        commandRepository.save((CustomerModel) current);
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerRepositoryPort.java"), """
+                package com.example.crm.customer.domain;
+
+                import com.example.crm.customer.domain.behaviour.UpdateCustomer;
+
+                public interface CustomerRepositoryPort {
+                    interface Query {
+                        UpdateCustomer getCustomerForUpdate(String customerId);
+                    }
+
+                    interface Command {
+                        void save(CustomerModel customer);
+                    }
+                }
+                """);
+        sources.put(path("adapter/out/CustomerQueryRepository.java"), """
+                package com.example.crm.customer.adapter.out;
+
+                import com.example.crm.customer.domain.CustomerModel;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
+                import com.example.crm.customer.domain.behaviour.UpdateCustomer;
+                import org.springframework.stereotype.Repository;
+
+                @Repository
+                class CustomerQueryRepository implements CustomerRepositoryPort.Query {
+                    public UpdateCustomer getCustomerForUpdate(String customerId) {
+                        return new CustomerModel();
+                    }
+                }
+                """);
+        sources.put(path("adapter/out/CustomerCommandRepository.java"), """
+                package com.example.crm.customer.adapter.out;
+
+                import com.example.crm.customer.domain.CustomerModel;
+                import com.example.crm.customer.domain.CustomerRepositoryPort;
+                import org.springframework.stereotype.Repository;
+
+                @Repository
+                class CustomerCommandRepository implements CustomerRepositoryPort.Command {
+                    public void save(CustomerModel customer) {
+                    }
+                }
+                """);
+        sources.put(path("domain/behaviour/UpdateCustomer.java"), """
+                package com.example.crm.customer.domain.behaviour;
+
+                import com.example.crm.customer.domain.CustomerModel;
+
+                public interface UpdateCustomer {
+                    void update(CustomerModel formMappedModel);
+                }
+                """);
+        sources.put(path("domain/CustomerModel.java"), """
+                package com.example.crm.customer.domain;
+
+                import com.example.crm.customer.domain.behaviour.UpdateCustomer;
+
+                public class CustomerModel implements UpdateCustomer {
+                    public String customerId() {
+                        return "customer-1";
+                    }
+
+                    public void update(CustomerModel formMappedModel) {
+                    }
+                }
+                """);
+        sources.put(path("domain/CivilLawCustomerModel.java"), """
+                package com.example.crm.customer.domain;
+
+                public class CivilLawCustomerModel extends CustomerModel {
+                    @Override
+                    public void update(CustomerModel formMappedModel) {
+                        calculateStatus();
+                    }
+
+                    private CustomerStatus calculateStatus() {
+                        return CustomerStatus.ACTIVE;
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerStatus.java"), """
+                package com.example.crm.customer.domain;
+
+                enum CustomerStatus {
+                    ACTIVE
+                }
+                """);
+        sources.put("src/main/resources/openapi/customer-api.yaml", """
+                openapi: 3.0.0
+                paths:
+                  /api/customers/{customerId}:
+                    put:
+                      operationId: updateCustomer
+                """);
+        return sources;
+    }
+
+    private Map<String, String> generatedOpenApiModelSources() {
+        var sources = new LinkedHashMap<String, String>();
+        sources.put(path("api/CustomerController.java"), """
+                package com.example.crm.customer.api;
+
+                import com.example.crm.customer.application.UpdateCustomerPort;
+                import com.example.crm.customer.generated.CustomerWebModel;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequiredArgsConstructor
+                class CustomerController {
+                    private final UpdateCustomerPort updateCustomerPort;
+
+                    public CustomerWebModel updateCustomer(CustomerWebModel customerWebModel) {
+                        updateCustomerPort.update(customerWebModel.customerId());
+                        return customerWebModel;
+                    }
+                }
+                """);
+        sources.put(path("application/UpdateCustomerPort.java"), """
+                package com.example.crm.customer.application;
+
+                interface UpdateCustomerPort {
+                    void update(String customerId);
+                }
+                """);
+        sources.put(path("application/UpdateCustomerService.java"), """
+                package com.example.crm.customer.application;
+
+                import org.springframework.stereotype.Service;
+
+                @Service
+                class UpdateCustomerService implements UpdateCustomerPort {
+                    public void update(String customerId) {
+                    }
+                }
+                """);
+        sources.put("src/main/resources/openapi/customer-api.yaml", """
+                openapi: 3.0.0
+                paths:
+                  /api/customers/{customerId}:
+                    put:
+                      operationId: updateCustomer
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              $ref: '#/components/schemas/CustomerWebModel'
+                components:
+                  schemas:
+                    CustomerWebModel:
+                      type: object
                 """);
         return sources;
     }

@@ -120,6 +120,120 @@ class GitLabJavaInterfaceImplementorResolverTest {
     }
 
     @Test
+    void shouldResolveDomainInterfaceImplementedByDerivedModelName() {
+        repositoryPort.add("src/main/java/com/example/crm/customer/behaviour/UpdateCustomer.java", """
+                package com.example.crm.customer.behaviour;
+
+                interface UpdateCustomer {
+                    void update(CustomerModel customerModel);
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerModel.java", """
+                package com.example.crm.customer;
+
+                import com.example.crm.customer.behaviour.UpdateCustomer;
+
+                class CustomerModel implements UpdateCustomer {
+                    public void update(CustomerModel customerModel) {
+                    }
+                }
+                """);
+        for (var index = 0; index < 100; index++) {
+            repositoryPort.add("src/main/java/com/example/crm/noise/UpdateCustomerNoise" + index + ".java", """
+                    package com.example.crm.noise;
+
+                    class UpdateCustomerNoise%s {
+                    }
+                    """.formatted(index));
+        }
+
+        var resolution = resolver.resolveImplementors(
+                session(),
+                "com.example.crm.customer.behaviour.UpdateCustomer"
+        );
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("CustomerModel", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals("com.example.crm.customer.CustomerModel", resolution.candidates().get(0).implementationQualifiedName());
+        assertEquals(List.of("UpdateCustomer"), resolution.candidates().get(0).implementedTypes());
+    }
+
+    @Test
+    void shouldResolveSubtypesExtendingDomainModel() {
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerModel.java", """
+                package com.example.crm.customer;
+
+                class CustomerModel {
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/CivilLawCustomerModel.java", """
+                package com.example.crm.customer;
+
+                class CivilLawCustomerModel extends CustomerModel {
+                    void update(CustomerModel customerModel) {
+                    }
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/CustomerModelMapper.java", """
+                package com.example.crm.customer;
+
+                class CustomerModelMapper {
+                }
+                """);
+
+        var resolution = resolver.resolveSubtypes(
+                session(),
+                "com.example.crm.customer.CustomerModel"
+        );
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("CivilLawCustomerModel", resolution.candidates().get(0).implementationSimpleName());
+        assertEquals(List.of("CustomerModel"), resolution.candidates().get(0).implementedTypes());
+    }
+
+    @Test
+    void shouldResolveSubtypesByExtendsSyntaxWhenFileNameDoesNotContainBaseTypeName() {
+        repositoryPort.add("src/main/java/com/example/crm/customer/BaseCustomerData.java", """
+                package com.example.crm.customer;
+
+                class BaseCustomerData {
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/CorporateCustomer.java", """
+                package com.example.crm.customer;
+
+                class CorporateCustomer extends BaseCustomerData {
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/IndividualCustomer.java", """
+                package com.example.crm.customer;
+
+                class IndividualCustomer extends BaseCustomerData {
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/crm/customer/BaseCustomerDataMapper.java", """
+                package com.example.crm.customer;
+
+                class BaseCustomerDataMapper {
+                }
+                """);
+
+        var resolution = resolver.resolveSubtypes(
+                session(),
+                "com.example.crm.customer.BaseCustomerData"
+        );
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.AMBIGUOUS, resolution.status());
+        assertEquals(List.of("CorporateCustomer", "IndividualCustomer"),
+                resolution.candidates().stream()
+                        .map(GitLabJavaImplementorCandidate::implementationSimpleName)
+                        .sorted()
+                        .toList());
+        assertTrue(resolution.candidates().stream()
+                .allMatch(candidate -> candidate.implementedTypes().equals(List.of("BaseCustomerData"))));
+    }
+
+    @Test
     void shouldResolveNestedCommandRepositoryBeforeFallbackScan() {
         repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
                 package com.example.crm.customer;
@@ -280,7 +394,22 @@ class GitLabJavaInterfaceImplementorResolverTest {
 
         @Override
         public List<GitLabRepositoryFileCandidate> searchCandidateFiles(GitLabRepositorySearchQuery query) {
-            return List.of();
+            var keywords = query.keywords() != null ? query.keywords() : List.<String>of();
+            var projectNames = query.projectNames() != null ? query.projectNames() : List.<String>of();
+            if (keywords.isEmpty()) {
+                return List.of();
+            }
+            return files.entrySet().stream()
+                    .filter(entry -> keywords.stream().anyMatch(keyword -> entry.getValue().contains(keyword)))
+                    .map(entry -> new GitLabRepositoryFileCandidate(
+                            query.group(),
+                            projectNames.isEmpty() ? "crm-customer-service" : projectNames.get(0),
+                            query.branch(),
+                            entry.getKey(),
+                            "matched test keyword",
+                            100
+                    ))
+                    .toList();
         }
 
         @Override

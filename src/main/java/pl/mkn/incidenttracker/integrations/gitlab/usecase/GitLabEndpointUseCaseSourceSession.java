@@ -6,7 +6,9 @@ import com.github.javaparser.ParseStart;
 import com.github.javaparser.Providers;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFile;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -30,6 +32,7 @@ public final class GitLabEndpointUseCaseSourceSession {
     private final Map<String, GitLabEndpointUseCaseSourceFile> sourceFiles = new HashMap<>();
     private final Map<String, GitLabEndpointUseCaseParsedSourceFile> parsedSourceFiles = new HashMap<>();
     private final Map<String, List<GitLabRepositoryFile>> repositoryFiles = new HashMap<>();
+    private final Map<String, List<GitLabRepositoryFileCandidate>> repositorySearches = new HashMap<>();
     private int readFileCount;
     private boolean readFileLimitReached;
 
@@ -75,6 +78,32 @@ public final class GitLabEndpointUseCaseSourceSession {
 
     public List<GitLabRepositoryFile> listRepositoryFiles() {
         return listRepositoryFiles(null);
+    }
+
+    public List<GitLabRepositoryFileCandidate> searchCandidateFiles(List<String> keywords) {
+        var normalizedKeywords = keywords != null
+                ? keywords.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList()
+                : List.<String>of();
+        if (normalizedKeywords.isEmpty()) {
+            return List.of();
+        }
+
+        var cacheKey = cacheKey("search", String.join("\u001F", normalizedKeywords));
+        return repositorySearches.computeIfAbsent(cacheKey, ignored -> {
+            var result = repositoryPort.searchCandidateFiles(new GitLabRepositorySearchQuery(
+                    null,
+                    repository.group(),
+                    repository.branch(),
+                    List.of(repository.projectName()),
+                    List.of(),
+                    normalizedKeywords
+            ));
+            return result != null ? List.copyOf(result) : List.of();
+        });
     }
 
     public GitLabEndpointUseCaseSourceFile readFile(String path) {
