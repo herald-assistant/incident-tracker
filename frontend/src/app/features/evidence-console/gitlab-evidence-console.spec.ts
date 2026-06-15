@@ -5,7 +5,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
   GitLabEndpointUseCaseContextResponse,
-  GitLabRepositoryEndpointsResponse
+  GitLabRepositoryEndpointsResponse,
+  GitLabRepositoryFilesByPathResponse
 } from '../../core/services/evidence-api.service';
 import { GitLabEvidenceConsoleComponent } from './gitlab-evidence-console';
 
@@ -74,17 +75,18 @@ describe('GitLabEvidenceConsoleComponent', () => {
       '.json-icon-button[aria-label^="Załaduj JSON"]'
     );
 
-    expect(copyButtons).toHaveLength(4);
-    expect(downloadButtons).toHaveLength(4);
-    expect(loadButtons).toHaveLength(4);
+    expect(copyButtons).toHaveLength(5);
+    expect(downloadButtons).toHaveLength(5);
+    expect(loadButtons).toHaveLength(5);
     expect(copyButtons[0].textContent).toContain('content_copy');
     expect(downloadButtons[0].textContent).toContain('download');
     expect(loadButtons[0].textContent).toContain('upload_file');
     expect(compiled.textContent).not.toContain('Kopiuj JSON');
     expect(compiled.textContent).not.toContain('Załaduj JSON');
-    expect(copyButtons[1].getAttribute('aria-label')).toContain('endpoint inventory');
-    expect(downloadButtons[2].getAttribute('aria-label')).toContain('endpoint use-case context');
-    expect(loadButtons[2].getAttribute('aria-label')).toContain('endpoint use-case context');
+    expect(actionWithLabel(copyButtons, 'endpoint inventory')).toBeTruthy();
+    expect(actionWithLabel(downloadButtons, 'endpoint use-case context')).toBeTruthy();
+    expect(actionWithLabel(loadButtons, 'endpoint use-case context')).toBeTruthy();
+    expect(actionWithLabel(copyButtons, 'repository files by path')).toBeTruthy();
 
     const routeChip = compiled.querySelector<HTMLElement>('.route-chip');
     const statusPill = compiled.querySelector<HTMLElement>('.status-pill');
@@ -177,6 +179,50 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(endpointCard?.textContent).toContain('customerId');
     expect(endpointCard?.textContent).toContain('Identyfikator klienta CRM');
   });
+
+  it('should populate files-by-path form from endpoint use-case context', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.gitLabEndpointUseCaseContextState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildUseCaseContextResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    fixture.componentInstance.useUseCaseFilesForRead();
+    fixture.detectChanges();
+
+    const form = fixture.componentInstance.gitLabRepositoryFilesByPathForm;
+    expect(form.controls.group.value).toBe('CRM');
+    expect(form.controls.projectName.value).toBe('crm-customer-service');
+    expect(form.controls.branch.value).toBe('main');
+    expect(form.controls.filePaths.value).toContain(
+      'src/main/java/com/example/crm/customer/api/CustomerController.java'
+    );
+    expect(form.controls.filePaths.value).toContain(
+      'src/main/java/com/example/crm/customer/application/CustomerService.java'
+    );
+  });
+
+  it('should render files-by-path response below endpoint use-case context', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.gitLabRepositoryFilesByPathState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildFilesByPathResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Read Repository Files By Path');
+    expect(compiled.textContent).toContain('1 pobranych');
+    expect(compiled.textContent).toContain('CustomerController.java');
+    expect(compiled.textContent).toContain('READ');
+  });
 });
 
 function fileInputChangeEvent(file: File): Event {
@@ -187,6 +233,10 @@ function fileInputChangeEvent(file: File): Event {
     value: [file]
   });
   return { target: input } as unknown as Event;
+}
+
+function actionWithLabel(actions: NodeListOf<Element>, label: string): Element | undefined {
+  return [...actions].find((action) => action.getAttribute('aria-label')?.includes(label));
 }
 
 function buildEndpointInventoryResponse(): GitLabRepositoryEndpointsResponse {
@@ -357,6 +407,34 @@ function buildUseCaseContextResponse(
     },
     confidence: 'HIGH',
     ...overrides
+  };
+}
+
+function buildFilesByPathResponse(): GitLabRepositoryFilesByPathResponse {
+  return {
+    group: 'CRM',
+    projectName: 'crm-customer-service',
+    branch: 'main',
+    requestedFileCount: 1,
+    processedFileCount: 1,
+    returnedFileCount: 1,
+    failedFileCount: 0,
+    totalReturnedCharacters: 27,
+    fileCountTruncated: false,
+    totalCharacterLimitReached: false,
+    files: [
+      {
+        group: 'CRM',
+        projectName: 'crm-customer-service',
+        branch: 'main',
+        filePath: 'src/main/java/com/example/crm/customer/api/CustomerController.java',
+        content: 'class CustomerController {}',
+        truncated: false,
+        inferredRole: 'entrypoint',
+        returnedCharacters: 27,
+        error: null
+      }
+    ]
   };
 }
 

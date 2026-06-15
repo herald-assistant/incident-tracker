@@ -23,6 +23,7 @@ public class GitLabRepositorySearchController {
     private final GitLabRepositorySearchService gitLabRepositorySearchService;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
+    private final GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
 
     @PostMapping("/search")
     public GitLabRepositorySearchResponse search(@Valid @RequestBody GitLabRepositorySearchRequest request) {
@@ -45,6 +46,13 @@ public class GitLabRepositorySearchController {
                 request.branch(),
                 request.toUseCaseRequest()
         );
+    }
+
+    @PostMapping("/files/by-path")
+    public GitLabRepositoryFilesByPathApiResponse readFilesByPath(
+            @Valid @RequestBody GitLabRepositoryFilesByPathApiRequest request
+    ) {
+        return gitLabRepositoryFilesByPathApiService.readFiles(request);
     }
 
 }

@@ -22,6 +22,8 @@ import {
   GitLabRepositoryEndpointParameterDocumentation,
   GitLabRepositoryEndpointsPayload,
   GitLabRepositoryEndpointsResponse,
+  GitLabRepositoryFilesByPathPayload,
+  GitLabRepositoryFilesByPathResponse,
   GitLabRepositorySearchPayload,
   GitLabSourceResolvePayload
 } from '../../core/services/evidence-api.service';
@@ -32,6 +34,7 @@ type GitLabJsonResponseKey =
   | 'repository-search'
   | 'endpoint-inventory'
   | 'endpoint-use-case-context'
+  | 'repository-files-by-path'
   | 'source-resolve';
 
 interface ToolState {
@@ -140,6 +143,33 @@ export class GitLabEvidenceConsoleComponent {
     })
   });
 
+  readonly gitLabRepositoryFilesByPathForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    filePaths: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    maxCharactersPerFile: new FormControl('4000', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(120000)]
+    }),
+    maxTotalCharacters: new FormControl('60000', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(500000)]
+    })
+  });
+
   readonly gitLabSourceForm = new FormGroup({
     gitlabBaseUrl: new FormControl('', {
       nonNullable: true,
@@ -170,6 +200,9 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabEndpointUseCaseContextState = signal<ToolState>(
     this.idleState('Wybierz endpoint z inventory albo uzupełnij selector, aby zbudować listę plików use-case.')
   );
+  readonly gitLabRepositoryFilesByPathState = signal<ToolState>(
+    this.idleState('Przenieś listę plików z use-case contextu albo wklej pełne path ręcznie.')
+  );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
   );
@@ -184,6 +217,10 @@ export class GitLabEvidenceConsoleComponent {
 
   readonly gitLabUseCaseTree = computed(() =>
     this.buildGitLabUseCaseTree(this.gitLabEndpointUseCaseContextResult())
+  );
+
+  readonly gitLabRepositoryFilesByPathResult = computed(() =>
+    this.asGitLabRepositoryFilesByPathResult(this.gitLabRepositoryFilesByPathState().response)
   );
 
   readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
@@ -311,6 +348,42 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
+  submitGitLabRepositoryFilesByPath(event: Event): void {
+    event.preventDefault();
+
+    const filePaths = this.toList(this.gitLabRepositoryFilesByPathForm.controls.filePaths.value);
+    if (this.gitLabRepositoryFilesByPathForm.invalid || filePaths.length === 0) {
+      this.gitLabRepositoryFilesByPathForm.markAllAsTouched();
+      this.gitLabRepositoryFilesByPathState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName, branch i co najmniej jeden file path.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabRepositoryFilesByPathPayload = {
+      group: this.gitLabRepositoryFilesByPathForm.controls.group.value.trim(),
+      projectName: this.gitLabRepositoryFilesByPathForm.controls.projectName.value.trim(),
+      branch: this.gitLabRepositoryFilesByPathForm.controls.branch.value.trim(),
+      filePaths,
+      maxCharactersPerFile: this.optionalNumber(
+        this.gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile.value
+      ),
+      maxTotalCharacters: this.optionalNumber(
+        this.gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters.value
+      )
+    };
+
+    this.runRequest(
+      this.gitLabRepositoryFilesByPathState,
+      this.evidenceApi.readGitLabRepositoryFilesByPath(payload),
+      payload,
+      'Wysyłamy request do /api/gitlab/repository/files/by-path...'
+    );
+  }
+
   useEndpointForContext(endpoint: GitLabRepositoryEndpoint): void {
     this.gitLabEndpointUseCaseContextForm.patchValue({
       group: this.gitLabEndpointForm.controls.group.value,
@@ -323,6 +396,29 @@ export class GitLabEvidenceConsoleComponent {
     this.selectedGitLabUseCaseTreeNodeId.set(null);
     this.gitLabEndpointUseCaseContextState.set(
       this.idleState('Endpoint przeniesiony z inventory. Uruchom context builder, aby zbudować listę plików.')
+    );
+  }
+
+  useUseCaseFilesForRead(): void {
+    const context = this.gitLabEndpointUseCaseContextResult();
+    const filePaths = (context?.files || [])
+      .map((file) => this.normalizePath(file.path))
+      .filter((path): path is string => !!path);
+
+    this.gitLabRepositoryFilesByPathForm.patchValue({
+      group:
+        context?.repository?.group ||
+        this.gitLabEndpointUseCaseContextForm.controls.group.value,
+      projectName:
+        context?.repository?.projectName ||
+        this.gitLabEndpointUseCaseContextForm.controls.projectName.value,
+      branch:
+        context?.repository?.branch ||
+        this.gitLabEndpointUseCaseContextForm.controls.branch.value,
+      filePaths: [...new Set(filePaths)].join('\n')
+    });
+    this.gitLabRepositoryFilesByPathState.set(
+      this.idleState('Lista plików została przeniesiona z use-case contextu. Uruchom odczyt, aby pobrać content.')
     );
   }
 
@@ -651,6 +747,8 @@ export class GitLabEvidenceConsoleComponent {
         return `${count} plików zostało przeskanowanych podczas szukania endpointów.`;
       case 'candidate-files':
         return `${count} plików pasowało do heurystyk jako kandydaci do analizy endpointów.`;
+      case 'processed-files':
+        return `${count} plików zostało przetworzonych w batchowym odczycie po path.`;
       case 'unresolved':
         return `${count} referencji nie udało się jednoznacznie rozwiązać do pliku.`;
       case 'suggested-next-reads':
@@ -666,6 +764,8 @@ export class GitLabEvidenceConsoleComponent {
         return 'Tool zatrzymał skanowanie endpointów na skonfigurowanym limicie plików.';
       case 'use-case-context':
         return 'Context builder osiągnął limit głębokości albo maksymalnej liczby plików.';
+      case 'repository-files-by-path':
+        return 'Batchowy odczyt plików zatrzymał się na limicie liczby plików albo łącznej liczbie znaków.';
       default:
         return 'Wynik został ograniczony przez limit bezpieczeństwa lub kosztu.';
     }
@@ -880,6 +980,8 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabEndpointState;
       case 'endpoint-use-case-context':
         return this.gitLabEndpointUseCaseContextState;
+      case 'repository-files-by-path':
+        return this.gitLabRepositoryFilesByPathState;
       case 'source-resolve':
         return this.gitLabSourceState;
       default:
@@ -919,6 +1021,19 @@ export class GitLabEvidenceConsoleComponent {
 
     const record = response as Partial<GitLabEndpointUseCaseContextResponse>;
     return Array.isArray(record.files) ? (record as GitLabEndpointUseCaseContextResponse) : null;
+  }
+
+  private asGitLabRepositoryFilesByPathResult(
+    response: unknown
+  ): GitLabRepositoryFilesByPathResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabRepositoryFilesByPathResponse>;
+    return Array.isArray(record.files) && typeof record.returnedFileCount === 'number'
+      ? (record as GitLabRepositoryFilesByPathResponse)
+      : null;
   }
 
   private buildGitLabUseCaseTree(

@@ -63,6 +63,15 @@ export interface GitLabEndpointUseCaseContextPayload {
   reason?: string;
 }
 
+export interface GitLabRepositoryFilesByPathPayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  filePaths: string[];
+  maxCharactersPerFile?: number;
+  maxTotalCharacters?: number;
+}
+
 export interface GitLabRepositoryEndpointParameterDocumentation {
   name?: string | null;
   in?: string | null;
@@ -171,6 +180,32 @@ export interface GitLabEndpointUseCaseContextResponse {
   confidence?: string | null;
 }
 
+export interface GitLabRepositoryFileByPathResult {
+  group?: string | null;
+  projectName?: string | null;
+  branch?: string | null;
+  filePath?: string | null;
+  content?: string | null;
+  truncated: boolean;
+  inferredRole?: string | null;
+  returnedCharacters: number;
+  error?: string | null;
+}
+
+export interface GitLabRepositoryFilesByPathResponse {
+  group: string;
+  projectName: string;
+  branch: string;
+  requestedFileCount: number;
+  processedFileCount: number;
+  returnedFileCount: number;
+  failedFileCount: number;
+  totalReturnedCharacters: number;
+  fileCountTruncated: boolean;
+  totalCharacterLimitReached: boolean;
+  files: GitLabRepositoryFileByPathResult[];
+}
+
 export interface GitLabRepositoryEndpointsResponse {
   group: string;
   projectName: string;
@@ -225,6 +260,15 @@ export class EvidenceApiService {
   ): Observable<GitLabEndpointUseCaseContextResponse> {
     return this.http.post<GitLabEndpointUseCaseContextResponse>(
       '/api/gitlab/repository/endpoint-use-case-context',
+      payload
+    );
+  }
+
+  readGitLabRepositoryFilesByPath(
+    payload: GitLabRepositoryFilesByPathPayload
+  ): Observable<GitLabRepositoryFilesByPathResponse> {
+    return this.http.post<GitLabRepositoryFilesByPathResponse>(
+      '/api/gitlab/repository/files/by-path',
       payload
     );
   }

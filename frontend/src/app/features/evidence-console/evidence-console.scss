@@ -44,6 +44,14 @@
   gap: 16px;
 }
 
+.tool-card--files-by-path {
+  order: 3;
+}
+
+.tool-card--source-resolve {
+  order: 4;
+}
+
 .tool-form {
   display: grid;
   gap: 14px;
@@ -228,6 +236,15 @@
   outline: none;
   border-color: rgba(12, 102, 228, 0.32);
   box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.08);
+}
+
+.source-output {
+  min-height: 0;
+  max-height: 360px;
+  margin: 0;
+  overflow: auto;
+  resize: none;
+  white-space: pre;
 }
 
 .toggle-row {

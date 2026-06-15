@@ -56,6 +56,9 @@ class GitLabRepositorySearchControllerTest {
     @MockitoBean
     private GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
 
+    @MockitoBean
+    private GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
+
     @Test
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {
         when(gitLabRepositorySearchService.search(any(GitLabRepositorySearchRequest.class)))
@@ -250,6 +253,78 @@ class GitLabRepositorySearchControllerTest {
     }
 
     @Test
+    void shouldReadRepositoryFilesByPathForValidRequest() throws Exception {
+        when(gitLabRepositoryFilesByPathApiService.readFiles(any(GitLabRepositoryFilesByPathApiRequest.class)))
+                .thenReturn(new GitLabRepositoryFilesByPathApiResponse(
+                        "CRM",
+                        "crm-customer-api",
+                        "release-candidate",
+                        2,
+                        2,
+                        2,
+                        0,
+                        54,
+                        false,
+                        false,
+                        List.of(
+                                new GitLabRepositoryFileByPathApiResult(
+                                        "CRM",
+                                        "crm-customer-api",
+                                        "release-candidate",
+                                        "src/main/java/com/example/crm/customer/CustomerController.java",
+                                        "class CustomerController {}",
+                                        false,
+                                        "entrypoint",
+                                        27,
+                                        null
+                                ),
+                                new GitLabRepositoryFileByPathApiResult(
+                                        "CRM",
+                                        "crm-customer-api",
+                                        "release-candidate",
+                                        "src/main/java/com/example/crm/customer/CustomerService.java",
+                                        "class CustomerService {}",
+                                        false,
+                                        "service-or-orchestrator",
+                                        27,
+                                        null
+                                )
+                        )
+                ));
+
+        mockMvc.perform(post("/api/gitlab/repository/files/by-path")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "CRM",
+                                  "projectName": "crm-customer-api",
+                                  "branch": "release-candidate",
+                                  "filePaths": [
+                                    "src/main/java/com/example/crm/customer/CustomerController.java",
+                                    "src/main/java/com/example/crm/customer/CustomerService.java"
+                                  ],
+                                  "maxCharactersPerFile": 4000,
+                                  "maxTotalCharacters": 60000
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.group").value("CRM"))
+                .andExpect(jsonPath("$.projectName").value("crm-customer-api"))
+                .andExpect(jsonPath("$.returnedFileCount").value(2))
+                .andExpect(jsonPath("$.files[0].filePath").value("src/main/java/com/example/crm/customer/CustomerController.java"))
+                .andExpect(jsonPath("$.files[0].inferredRole").value("entrypoint"));
+
+        verify(gitLabRepositoryFilesByPathApiService).readFiles(argThat(request ->
+                "CRM".equals(request.group())
+                        && "crm-customer-api".equals(request.projectName())
+                        && "release-candidate".equals(request.branch())
+                        && request.filePaths().size() == 2
+                        && request.maxCharactersPerFile() == 4000
+                        && request.maxTotalCharacters() == 60000
+        ));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenGitLabSearchFindsNoCandidates() throws Exception {
         when(gitLabRepositorySearchService.search(any(GitLabRepositorySearchRequest.class)))
                 .thenThrow(new GitLabRepositorySearchException(
@@ -329,6 +404,27 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"));
 
         verifyNoInteractions(gitLabEndpointUseCaseContextService);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidFilesByPathRequest() throws Exception {
+        mockMvc.perform(post("/api/gitlab/repository/files/by-path")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "",
+                                  "projectName": "",
+                                  "branch": "",
+                                  "filePaths": [],
+                                  "maxCharactersPerFile": 0,
+                                  "maxTotalCharacters": 0
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+
+        verifyNoInteractions(gitLabRepositoryFilesByPathApiService);
     }
 
 }

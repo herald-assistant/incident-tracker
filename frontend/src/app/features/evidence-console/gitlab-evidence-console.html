@@ -274,6 +274,306 @@
         </div>
       </article>
 
+      <article class="analysis-card tool-card tool-card--files-by-path">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">GitLab</p>
+            <h2>Read Repository Files By Path</h2>
+            <p class="field-hint">
+              Pobiera content plików po pełnych path z repozytorium. Najczęściej używaj po
+              `Endpoint Use Case Context`, żeby zweryfikować klasy zwrócone jako flow endpointu.
+            </p>
+          </div>
+          <span
+            class="panel-chip route-chip"
+            [title]="routeChipTooltip('POST /api/gitlab/repository/files/by-path')"
+          >
+            POST /api/gitlab/repository/files/by-path
+          </span>
+        </div>
+
+        <form class="tool-form" novalidate (submit)="submitGitLabRepositoryFilesByPath($event)">
+          <div class="form-grid">
+            <label class="form-field">
+              <span class="field-label">Group</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. TENANT-ALPHA"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryFilesByPathForm.controls.group"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Project Name</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. orders-api"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryFilesByPathForm.controls.projectName"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Branch / Ref</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="HEAD"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryFilesByPathForm.controls.branch"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Max chars / file</span>
+              <input
+                class="text-input"
+                type="number"
+                min="1"
+                max="120000"
+                [formControl]="gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile"
+              />
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Max total chars</span>
+              <input
+                class="text-input"
+                type="number"
+                min="1"
+                max="500000"
+                [formControl]="gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters"
+              />
+            </label>
+
+            <label class="form-field form-field--wide">
+              <span class="field-label">File paths</span>
+              <textarea
+                class="text-input text-input--textarea"
+                rows="8"
+                placeholder="src/main/java/com/example/crm/customer/CustomerController.java"
+                spellcheck="false"
+                [formControl]="gitLabRepositoryFilesByPathForm.controls.filePaths"
+              ></textarea>
+              <span class="field-hint">
+                Oddzielaj ścieżki przecinkiem albo nową linią. Obsługiwany jest też format
+                `project:path via gitlab_...`.
+              </span>
+            </label>
+          </div>
+
+          @if (
+            controlInvalid(gitLabRepositoryFilesByPathForm.controls.group) ||
+            controlInvalid(gitLabRepositoryFilesByPathForm.controls.projectName) ||
+            controlInvalid(gitLabRepositoryFilesByPathForm.controls.branch) ||
+            controlInvalid(gitLabRepositoryFilesByPathForm.controls.filePaths)
+          ) {
+            <p class="form-error">Pola `group`, `projectName`, `branch` i `filePaths` są wymagane.</p>
+          }
+
+          @if (
+            controlInvalid(gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile) ||
+            controlInvalid(gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters)
+          ) {
+            <p class="form-error">
+              Limity muszą mieścić się w zakresach: per file 1-120000, total 1-500000.
+            </p>
+          }
+
+          <div class="tool-actions">
+            <button
+              class="secondary-button"
+              type="button"
+              [disabled]="!(gitLabEndpointUseCaseContextResult()?.files?.length)"
+              (click)="useUseCaseFilesForRead()"
+            >
+              <span class="button-label">Użyj plików z contextu</span>
+            </button>
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="gitLabRepositoryFilesByPathState().status === 'loading'"
+            >
+              <span class="button-label">Pobierz pliki</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="tool-status" [attr.data-status]="gitLabRepositoryFilesByPathState().status">
+          <div>
+            <p class="tool-status__label">Status wywołania</p>
+            <p class="tool-status__message">{{ gitLabRepositoryFilesByPathState().message }}</p>
+          </div>
+          <div class="tool-status__badges">
+            @if (gitLabRepositoryFilesByPathState().statusCode !== null) {
+              <span
+                class="tool-status__code"
+                [title]="httpStatusTooltip(gitLabRepositoryFilesByPathState().statusCode)"
+              >
+                HTTP {{ gitLabRepositoryFilesByPathState().statusCode }}
+              </span>
+            }
+            <span
+              [class]="statusPillClass(gitLabRepositoryFilesByPathState().status)"
+              [title]="statusTooltip(gitLabRepositoryFilesByPathState().status)"
+            >
+              {{ statusLabel(gitLabRepositoryFilesByPathState().status) }}
+            </span>
+          </div>
+        </div>
+
+        @if (gitLabRepositoryFilesByPathResult(); as filesResult) {
+          <section class="context-results">
+            <div class="context-results__header">
+              <div>
+                <p class="tool-status__label">Repository files</p>
+                <h3>
+                  {{ filesResult.returnedFileCount }} pobranych ·
+                  {{ filesResult.failedFileCount }} błędów
+                </h3>
+              </div>
+              <div class="endpoint-results__stats">
+                <span
+                  class="panel-chip"
+                  [title]="countChipTooltip('processed-files', filesResult.processedFileCount)"
+                >
+                  {{ filesResult.processedFileCount }} processed
+                </span>
+                <span
+                  class="panel-chip"
+                  title="Łączna liczba znaków zwrócona przez backend dla pobranych plików."
+                >
+                  {{ filesResult.totalReturnedCharacters }} chars
+                </span>
+                @if (filesResult.fileCountTruncated || filesResult.totalCharacterLimitReached) {
+                  <span
+                    class="panel-chip panel-chip--warning"
+                    [title]="limitChipTooltip('repository-files-by-path')"
+                  >
+                    limit reached
+                  </span>
+                }
+              </div>
+            </div>
+
+            @if (filesResult.files.length > 0) {
+              <div class="endpoint-list">
+                @for (file of filesResult.files; track file.filePath || $index) {
+                  <details class="endpoint-card">
+                    <summary class="endpoint-card__summary">
+                      <div class="endpoint-card__main">
+                        <span
+                          class="endpoint-card__method"
+                          [title]="file.error ? 'Odczyt pliku zakończył się błędem.' : 'Plik został odczytany z GitLaba.'"
+                        >
+                          {{ file.error ? 'ERROR' : 'READ' }}
+                        </span>
+                        <div class="endpoint-card__copy">
+                          <h4>{{ file.filePath || 'unknown file' }}</h4>
+                          <p>
+                            {{ file.inferredRole || 'other' }} ·
+                            {{ file.returnedCharacters || 0 }} chars
+                          </p>
+                        </div>
+                        @if (file.truncated) {
+                          <span class="panel-chip panel-chip--warning" title="Content pliku został ucięty limitem znaków.">
+                            truncated
+                          </span>
+                        }
+                        <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
+                          expand_more
+                        </span>
+                      </div>
+                    </summary>
+
+                    <div class="endpoint-card__details">
+                      <div class="endpoint-card__meta">
+                        <span>{{ file.projectName || filesResult.projectName }}</span>
+                        <span>{{ file.branch || filesResult.branch }}</span>
+                        <span>{{ file.group || filesResult.group }}</span>
+                      </div>
+
+                      @if (file.error) {
+                        <p class="form-error">{{ file.error }}</p>
+                      }
+
+                      @if (file.content) {
+                        <pre class="json-output source-output">{{ file.content }}</pre>
+                      }
+                    </div>
+                  </details>
+                }
+              </div>
+            } @else {
+              <p class="empty-state">Backend nie zwrócił żadnych plików dla podanych ścieżek.</p>
+            }
+          </section>
+        }
+
+        <div class="json-response-panel">
+          <div class="json-response-panel__header">
+            <label class="field-label" for="gitlabRepositoryFilesByPathJsonResponse">
+              JSON response
+            </label>
+            <div class="json-response-panel__actions">
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Kopiuj JSON repository files by path do schowka"
+                title="Kopiuj JSON"
+                (click)="copyJsonResponse('repository-files-by-path', gitLabRepositoryFilesByPathState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{
+                    copiedJsonResponseKey() === 'repository-files-by-path'
+                      ? 'task_alt'
+                      : 'content_copy'
+                  }}
+                </span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Pobierz JSON repository files by path"
+                title="Pobierz JSON"
+                (click)="downloadJsonResponse('repository-files-by-path', gitLabRepositoryFilesByPathState().responseJson)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              </button>
+              <button
+                class="json-icon-button"
+                type="button"
+                aria-label="Załaduj JSON repository files by path z pliku"
+                title="Załaduj JSON"
+                (click)="repositoryFilesByPathJsonFileInput.click()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              </button>
+              <input
+                #repositoryFilesByPathJsonFileInput
+                hidden
+                type="file"
+                accept="application/json,.json"
+                (change)="loadJsonResponseFile('repository-files-by-path', $event)"
+              />
+            </div>
+          </div>
+          <textarea
+            id="gitlabRepositoryFilesByPathJsonResponse"
+            class="json-output"
+            readonly
+            spellcheck="false"
+            [value]="gitLabRepositoryFilesByPathState().responseJson"
+          ></textarea>
+        </div>
+      </article>
+
       <article class="analysis-card tool-card">
         <div class="section-heading">
           <div>
@@ -1135,7 +1435,7 @@
         </div>
       </article>
 
-      <article class="analysis-card tool-card">
+      <article class="analysis-card tool-card tool-card--source-resolve">
         <div class="section-heading">
           <div>
             <p class="section-eyebrow">GitLab</p>
