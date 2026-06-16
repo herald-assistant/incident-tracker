@@ -497,15 +497,6 @@
 }
 
 @media (max-width: 640px) {
-  .topbar-nav {
-    flex-wrap: wrap;
-    border-radius: 18px;
-  }
-
-  .topbar-link {
-    flex: 1 1 132px;
-  }
-
   .form-grid {
     grid-template-columns: 1fr;
   }

@@ -8,7 +8,6 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { ApiErrorResponse } from '../../core/models/analysis.models';
@@ -367,7 +366,7 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
 
 @Component({
   selector: 'app-database-console',
-  imports: [ReactiveFormsModule, RouterLink, RouterLinkActive],
+  imports: [ReactiveFormsModule],
   templateUrl: './database-console.html',
   styleUrl: './database-console.scss'
 })

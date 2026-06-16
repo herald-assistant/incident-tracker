@@ -76,6 +76,8 @@ Na dzisiaj projekt ma:
 - endpoint shared/operator API `GET /analysis/ai/options`, ktory zwraca
   katalog modeli i dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby
   frontend nie trzymal lokalnej listy modeli,
+- endpoint shared/operator API `GET /api/ui/config`, ktory zwraca runtime
+  konfiguracje brandu UI z fallbackiem `Team Delivery Workspace`,
 - shared/operator API `GET /api/auth/github/status`,
   `GET /api/auth/github/start`, `GET /api/auth/github/callback` i
   `POST /api/auth/github/logout` dla autoryzacji Copilot SDK w trybach
@@ -128,6 +130,11 @@ Na dzisiaj projekt ma:
   Shared/operator API z katalogiem modeli AI dla UI. Backend pobiera go z
   Copilot SDK i zwraca `reasoningEffort` tylko dla modeli, ktore SDK opisuje
   jako wspierajace te ustawienia. Endpoint nie jest krokiem incident job flow.
+- `GET /api/ui/config`
+  Shared/operator API konfiguracji brandu UI. Gdy `app.ui.title` nie ma
+  tekstu, frontend pokazuje tylko `Team Delivery Workspace`; gdy property jest
+  ustawione, wartosc property jest tytulem, a `Team Delivery Workspace`
+  podtytulem.
 - `GET /api/auth/github/status`
   Shared/operator API statusu autoryzacji Copilota. W `LOCAL_TOKEN` pokazuje
   lokalny token jako backendowy tryb dev, a w `GITHUB_APP` tworzy backendowa
@@ -193,6 +200,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Shared/operator API dla katalogu modeli i endpointu
   `GET /analysis/ai/options`. Implementacja endpointu mapuje platformowy
   katalog modeli Copilota na obecne DTO aplikacji.
+- `pl.mkn.incidenttracker.api.uiconfig`
+  Shared/operator API runtime konfiguracji brandu UI dla Angulara. Nie jest
+  czescia incident job flow.
 - `pl.mkn.incidenttracker.api.githubauth`
   Shared/operator API autoryzacji GitHub dla UI oraz backendowa operator
   session cookie. Ten pakiet zna request HTTP, ale nie przechowuje tokenow w

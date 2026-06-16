@@ -58,7 +58,7 @@ export function parseImportedAnalysis(payload: unknown): {
     jobPayload = envelopePayload['job'];
   } else if (!looksLikeAnalysisJob(payloadObject)) {
     throw new Error(
-      'Nie rozpoznano formatu importu. Wybierz plik wyeksportowany z Incident Tracker.'
+      'Nie rozpoznano formatu importu. Wybierz plik wyeksportowany z Team Delivery Workspace.'
     );
   }
 

@@ -11,7 +11,6 @@ import {
   viewChild
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -64,8 +63,6 @@ type SelectOption = {
   selector: 'app-analysis-console',
   imports: [
     ReactiveFormsModule,
-    RouterLink,
-    RouterLinkActive,
     AnalysisOverviewCardComponent,
     AnalysisStepsPanelComponent,
     MarkdownContentComponent,

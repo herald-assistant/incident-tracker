@@ -4,7 +4,6 @@ import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 
 import {
@@ -681,8 +680,6 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
     NgTemplateOutlet,
     MatIconModule,
     MatTooltipModule,
-    RouterLink,
-    RouterLinkActive,
     AiApiPreviewPanelComponent,
     ContextCatalogTableComponent,
     ContextEntityDrawerComponent,

@@ -1,0 +1,54 @@
+<div class="app-shell">
+  <aside class="app-shell__sidebar" aria-label="Main navigation">
+    <app-brand></app-brand>
+
+    <nav class="app-shell__nav" aria-label="Workspace sections">
+      @for (group of navGroups; track group.label) {
+        <section class="app-shell__nav-group">
+          <p class="app-shell__nav-heading">{{ group.label }}</p>
+
+          <div class="app-shell__nav-list">
+            @for (item of group.items; track item.label) {
+              @if (item.disabled) {
+                <button
+                  class="app-shell__nav-item app-shell__nav-item--disabled"
+                  type="button"
+                  disabled
+                  [attr.aria-label]="item.label + ' coming soon'"
+                  title="Coming soon"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+                  <span>{{ item.label }}</span>
+                  <small>Soon</small>
+                </button>
+              } @else {
+                <a
+                  class="app-shell__nav-item"
+                  [routerLink]="item.route"
+                  routerLinkActive="app-shell__nav-item--active"
+                  [routerLinkActiveOptions]="{ exact: item.exact || false }"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            }
+          </div>
+        </section>
+      }
+    </nav>
+  </aside>
+
+  <div class="app-shell__workspace">
+    <header class="app-shell__topbar">
+      <div>
+        <p class="app-shell__breadcrumb">{{ section() }}</p>
+        <h1>{{ title() }}</h1>
+      </div>
+    </header>
+
+    <main class="app-shell__content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

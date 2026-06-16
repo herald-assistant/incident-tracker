@@ -8,7 +8,6 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
@@ -28,7 +27,7 @@ interface ToolState {
 }
 @Component({
   selector: 'app-elastic-evidence-console',
-  imports: [ReactiveFormsModule, RouterLink, RouterLinkActive],
+  imports: [ReactiveFormsModule],
   templateUrl: './elastic-evidence-console.html',
   styleUrl: './evidence-console.scss'
 })

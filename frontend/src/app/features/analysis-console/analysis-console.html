@@ -1,53 +1,19 @@
 <div class="page-shell" [class.analysis-console--active]="hasActiveState()">
-  <header class="topbar">
-    <div class="brand-lockup">
-      <div class="brand-mark">IR</div>
-      <div>
-        <p class="brand-eyebrow">Incident Diagnostics</p>
-        <h1 class="brand-title">Incident Tracker</h1>
-      </div>
-    </div>
-    <div class="topbar-actions">
-      <div class="auth-status-badge">{{ authBadgeText() }}</div>
-      <nav class="topbar-nav" aria-label="Widoki aplikacji">
-        <a
-          class="topbar-link"
-          routerLink="/"
-          routerLinkActive="topbar-link--active"
-          [routerLinkActiveOptions]="{ exact: true }"
-        >
-          Analysis
-        </a>
-        <a class="topbar-link" routerLink="/elastic" routerLinkActive="topbar-link--active">
-          Elastic
-        </a>
-        <a class="topbar-link" routerLink="/gitlab" routerLinkActive="topbar-link--active">
-          GitLab
-        </a>
-        <a class="topbar-link" routerLink="/database" routerLinkActive="topbar-link--active">
-          Database
-        </a>
-        <a
-          class="topbar-link"
-          routerLink="/operational-context"
-          routerLinkActive="topbar-link--active"
-        >
-          Operational Context
-        </a>
-      </nav>
-    </div>
-  </header>
-
   <main class="workspace">
     <section class="hero-card">
       <div class="hero-main">
         <div class="hero-copy">
-          <p class="section-eyebrow">Analiza incydentów</p>
-          <h2>Szybko identyfikuj przyczynę incydentu na podstawie correlationId.</h2>
-          <p class="hero-description">
-            Narzędzie zbiera dane diagnostyczne, śledzi postęp analizy i prezentuje logi,
-            sygnały runtime z Dynatrace, odniesienia do kodu oraz wynik końcowy w jednym widoku.
-          </p>
+          <div class="analysis-view-heading">
+            <div>
+              <p class="section-eyebrow">Analiza incydentów</p>
+              <h2>Szybko identyfikuj przyczynę incydentu na podstawie correlationId.</h2>
+              <p class="hero-description">
+                Narzędzie zbiera dane diagnostyczne, śledzi postęp analizy i prezentuje logi,
+                sygnały runtime z Dynatrace, odniesienia do kodu oraz wynik końcowy w jednym widoku.
+              </p>
+            </div>
+            <div class="auth-status-badge">{{ authBadgeText() }}</div>
+          </div>
         </div>
 
         <form class="analysis-form analysis-form--inline" novalidate (submit)="submit($event)">

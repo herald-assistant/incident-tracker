@@ -8,7 +8,6 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Observable } from 'rxjs';
 
 import { ApiErrorResponse } from '../../core/models/analysis.models';
@@ -75,7 +74,7 @@ interface GitLabUseCaseTree {
 
 @Component({
   selector: 'app-gitlab-evidence-console',
-  imports: [ReactiveFormsModule, RouterLink, RouterLinkActive],
+  imports: [ReactiveFormsModule],
   templateUrl: './gitlab-evidence-console.html',
   styleUrl: './evidence-console.scss'
 })
