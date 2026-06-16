@@ -919,9 +919,26 @@ GET /api/operational-context/read-model/blast-radius?type=...&id=...
 - flow read model,
 - blast-radius read model.
 
-Frontend route `/operational-context` pokazuje katalog i detail drawer.
+Frontend route `/operational-context` jest widokiem `Tool Workbench /
+Operational Context`. Pozostaje shared context/catalog capability, a nie
+elementem sekcji `Platform`.
+
+UI pokazuje:
+
+- kompaktowy status strip katalogu,
+- zakladki katalogowe i Signal Resolver,
+- listy encji dla systems, repositories, code-search scopes, processes,
+  integrations, bounded contexts, teams, glossary i handoff rules,
+- `Validation` jako inbox utrzymaniowy z filtrami i kopiowaniem maintenance
+  targetu,
+- `Open Questions` jako inbox utrzymaniowy z filtrami i kopiowaniem
+  maintenance targetu,
+- prawy detail drawer.
+
 Detail drawer doczytuje projekcje read modelu rownolegle z detalem encji, aby
-UI pokazywalo pelny kontekst bez recznej redundancji w YAML.
+UI pokazywalo pelny kontekst bez recznej redundancji w YAML. Drawer ma stale
+akcje `Copy`, `Open raw` i `Close`; szczegoly encji, read modele i raw preview
+nie powinny byc modalem blokujacym prace operatora.
 
 ## Incident analysis jako pierwszy konsument
 

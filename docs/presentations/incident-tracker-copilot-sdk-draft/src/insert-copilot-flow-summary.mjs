@@ -89,7 +89,7 @@ function topRail(section) {
 
 function footer(slideNo) {
   return row({ width: fill, height: hug, align: "center", gap: 24 }, [
-    t("Incident Tracker · AI tooling philosophy", 18, C.muted),
+    t("Team Delivery Workspace · AI tooling philosophy", 18, C.muted),
     t(String(slideNo).padStart(2, "0"), 18, C.muted, {
       width: fixed(44),
       bold: true,

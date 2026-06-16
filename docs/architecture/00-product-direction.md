@@ -12,10 +12,40 @@ polaczenie:
 - sesji AI uruchamianych przez wspolna platforme,
 - feature-specific kontraktow wyniku i workflow operatora.
 
+Product-facing nazwa workspace'u w UI to `Team Delivery Workspace`. Ta nazwa
+ma podkreslac, ze narzedzie wspiera codzienna prace calego zespolu
+wytworczego, a nie tylko role analityczne. UI i nawigacja maja isc w kierunku
+skills/capabilities-based organization: feature'y sa miejscem pracy nad
+konkretnym rezultatem, reusable tools sa zapleczem diagnostycznym, a ustawienia
+platformy dotycza samego workspace'u.
+
 Pierwszym produkcyjnym feature'em jest analiza incydentu po `correlationId`.
 Nazwa repo i czesc publicznych URL-i nadal odzwierciedlaja ten start, ale nie
 definiuja juz granicy architektury. Kierunek produktu jest szerszy: jedna
 platforma analityczna ma obslugiwac wiele sposobow zadawania pytan o system.
+
+## Framing UI
+
+Glowny shell UI jest zorganizowany wokol trzech grup:
+
+- `Analysis Features` - dedykowane feature'y pracy operatora/zespolu, na razie
+  `Incident Analysis` jako pierwszy dostepny feature oraz przyszle miejsca na
+  Flow Explorer, Functional Logic i Data Diagnostics.
+- `Tool Workbench` - operator-facing laboratorium reusable capability:
+  Elastic Logs, GitLab Source, Database Tools i Operational Context. Te widoki
+  sluza do testow, debugowania i recznego zebrania inputu; nie sa osobnymi
+  feature'ami produktowymi ani nie powinny niesc logiki incydentu.
+- `Platform` - customizacja Team Delivery Workspace: parametryzacja workspace'u,
+  personalizacja, autentykacja, konfiguracja modeli i inne ustawienia
+  platformy.
+
+Topbar jest kontekstowy: pokazuje aktualny widok, breadcrumb i ewentualny
+skompresowany `capabilityInfo` pod ikona info. Nie jest glowna nawigacja.
+
+V1 UI ma byc jasny, prosty, korporacyjny i roboczy. Nie projektujemy
+marketingowych hero, dekoracyjnych gradientow ani duzych kart opisowych jako
+dominujacej kompozycji. Funkcjonalnosc i czytelnosc zlozonych analiz sa
+wazniejsze niz efekt "cool".
 
 ## Planowane rodziny feature'ow
 

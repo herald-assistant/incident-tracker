@@ -45,6 +45,9 @@ Na dzisiaj projekt ma:
 
 - zrodlowa aplikacje Angular w katalogu `frontend/`, ktora po buildzie
   produkcyjnym zapisuje bundle do `src/main/resources/static`,
+- wspolny shell UI `Team Delivery Workspace` z lewym sidebarem, kontekstowym
+  topbarem i grupami nawigacji `Analysis Features`, `Tool Workbench` oraz
+  `Platform`,
 - ekran `GET /` serwowany przez Spring Boot z mozliwoscia importu i eksportu
   zapisu zakonczonej analizy jako JSON,
 - w ekranie `GET /` widok promptu przygotowanego dla AI, mozliwy do skopiowania
@@ -59,14 +62,13 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
-- ekran `GET /elastic` do recznego testowania helper endpointow Elastica,
-- ekran `GET /gitlab` do recznego testowania helper endpointow GitLaba, w tym
-  repository search, endpoint inventory i source resolve,
-- ekran `GET /database` do recznego testowania shared/operator endpointow nad
-  `DatabaseToolService` z jawnym operatorskim `environment`,
-- ekran `GET /operational-context` do utrzymania katalogu systemow, repozytoriow,
-  procesow, integracji, bounded contexts, zespolow, glossary, handoff rules,
-  validation findings i open questions,
+- ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /database` i
+  `GET /operational-context` do recznego testowania, debugowania i zbierania
+  inputu z reusable capability bez przenoszenia logiki incident analysis do
+  tych widokow,
+- ekran `GET /operational-context` w Tool Workbench do utrzymania katalogu
+  systemow, repozytoriow, procesow, integracji, bounded contexts, zespolow,
+  glossary, handoff rules, validation findings i open questions,
 - glowne job-based API: `POST /analysis/jobs` i
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
@@ -99,22 +101,24 @@ Na dzisiaj projekt ma:
 ## Glowne entrypointy HTTP
 
 - `GET /`
-  Angularowy ekran operacyjny do uruchamiania analizy z pola `correlationId`.
+  Angularowy ekran `Analysis Features / Incident Analysis` do uruchamiania
+  analizy z pola `correlationId`.
 - `GET /elastic`
-  Angularowy ekran pomocniczy do recznego testowania helper endpointow
-  Elastica oraz podgladu odpowiedzi JSON.
+  Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
+  helper endpointow Elastica oraz podgladu request/response JSON.
 - `GET /gitlab`
-  Angularowy ekran pomocniczy do recznego testowania helper endpointow
-  GitLaba oraz podgladu odpowiedzi JSON. Legacy route `GET /evidence`
+  Angularowy ekran `Tool Workbench / GitLab Source` do recznego testowania
+  helper endpointow GitLaba oraz podgladu request/response JSON. Legacy route
+  `GET /evidence`
   przekierowuje w Angularze do `/elastic`.
 - `GET /database`
-  Angularowy ekran pomocniczy do recznego testowania Database tools przez
-  shared/operator endpointy `/api/database/*`.
+  Angularowy ekran `Tool Workbench / Database Tools` do recznego testowania
+  Database tools przez shared/operator endpointy `/api/database/*`.
 - `GET /operational-context`
-  Angularowy ekran utrzymaniowy dla curated operational context: katalogu
-  systemow, repozytoriow, code-search scopes, procesow, integracji,
-  bounded contexts, zespolow, glossary, handoff rules, validation findings i
-  open questions.
+  Angularowy ekran `Tool Workbench / Operational Context` dla curated
+  operational context: katalogu systemow, repozytoriow, code-search scopes,
+  procesow, integracji, bounded contexts, zespolow, glossary, handoff rules,
+  validation findings i open questions.
 - `POST /analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
@@ -346,6 +350,36 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 
+## Aktualny model UI
+
+UI jest product-facing workspace'em `Team Delivery Workspace`, a nie juz
+nawigacja wokol nazwy repo albo jednego feature'a. Widoczny tytul workspace'u
+pochodzi z `GET /api/ui/config`: jezeli `app.ui.title` nie jest ustawione, UI
+pokazuje tylko `Team Delivery Workspace`; jezeli jest ustawione, property jest
+glownym tytulem, a `Team Delivery Workspace` podtytulem.
+
+Shell Angulara ma:
+
+- lewy sidebar jako glowna nawigacje,
+- zwijany rail ikonowy o stalej szerokosci dla pracy na szerszym ekranie,
+- kontekstowy topbar z breadcrumbem i tytulem aktualnego widoku,
+- ikone info w topbarze dla skompresowanego `capabilityInfo` ekranow
+  Workbench,
+- jasny motyw oparty o tokeny CSS i przygotowany do przyszlych wariantow.
+
+Znaczenie grup UI:
+
+- `Analysis Features` - pionowe feature'y produktowe. `Incident Analysis` jest
+  pierwszym dostepnym feature'em; Flow Explorer, Functional Logic i Data
+  Diagnostics sa placeholders dla przyszlych feature'ow.
+- `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
+  GitLab, Database i Operational Context sa analysis-independent i nie
+  eksponuja incidentowego `analysisRunId`; DB/GitLab scope dla AI pozostaje
+  feature-owned hidden `ToolContext`.
+- `Platform` - konfiguracja samego Team Delivery Workspace: workspace
+  settings, personalizacja, autentykacja i modele AI. V1 pokazuje te pozycje
+  jako disabled placeholders, dopoki nie powstana ich dedykowane widoki.
+
 ## Aktualny model runtime
 
 - Elasticsearch dziala przez rzeczywisty adapter REST do Kibana proxy.
@@ -517,9 +551,17 @@ Ten endpoint jest analysis-independent i nie zmienia glownego job flow analizy.
 Incidentowy scope DB dla AI pozostaje feature-owned i jest przekazywany przez
 hidden `ToolContext`, nie przez Workbench API.
 
-## Dodatkowy use case Operational Context console
+Layout Workbench jest celowo dwustrefowy: lewy panel zawiera wspolny scope i
+liste elementow do testu, a glowna przestrzen pokazuje formularz wybranego
+elementu oraz wynik pod formularzem dopiero po wykonaniu requestu. Nie uzywamy
+stalego trzykolumnowego ukladu dla response, bo wyniki JSON potrafia byc
+szerokie i zlozone. `Request preview` jest zwijalny i po otrzymaniu odpowiedzi
+domyslnie mniej dominujacy niz `JSON response`.
 
-To jest operator-facing flow utrzymaniowy dla reusable katalogu systemow:
+## Dodatkowy use case Operational Context workbench
+
+To jest operator-facing flow utrzymaniowy w `Tool Workbench` dla reusable
+katalogu systemow:
 
 1. frontend route `/operational-context` pobiera dane z
    `/api/operational-context/*`,
@@ -532,3 +574,9 @@ To jest operator-facing flow utrzymaniowy dla reusable katalogu systemow:
 
 To nie jest osobny krok incident job flow. To shared/operator powierzchnia do
 utrzymania jakosci katalogu, ktory ma byc reusable poza analiza incydentow.
+
+UI `/operational-context` pokazuje kompaktowy status katalogu, zakladki
+katalogowe, Signal Resolver, listy encji, inbox `Validation`, inbox
+`Open Questions` oraz prawy detail drawer. Drawer ma stale akcje `Copy`,
+`Open raw` i `Close`; szczegoly encji i raw preview nie powinny byc modalem
+blokujacym prace.

@@ -25,6 +25,44 @@ Konsekwencje:
   naprawde platform mechanics, reusable capability, shared/operator API czy
   tylko logika konkretnego feature'a.
 
+## 0a. UI jest Team Delivery Workspace
+
+Product-facing UI nazywa workspace `Team Delivery Workspace`. Technicznie repo
+nadal rozwija platforme do AI-augmented system analysis, ale UI nie powinien
+brzmiec jak narzedzie tylko dla analitykow ani jak pojedynczy incident tracker.
+Ma wspierac caly zespol wytworczy i sposob pracy oparty o skills/capabilities,
+a nie role-based organization.
+
+Decyzje:
+
+- `app.ui.title` parametryzuje glowny tytul UI.
+- Gdy `app.ui.title` nie ma tekstu, frontend pokazuje tylko
+  `Team Delivery Workspace`.
+- Gdy `app.ui.title` jest ustawione, jego wartosc jest tytulem, a
+  `Team Delivery Workspace` podtytulem.
+- Glowna nawigacja jest w lewym sidebarze, a topbar pozostaje kontekstowy.
+- Sidebar ma grupy `Analysis Features`, `Tool Workbench` i `Platform`.
+- `Analysis Features` zawiera dedykowane feature'y produktowe; na teraz
+  aktywny jest `Incident Analysis`.
+- `Tool Workbench` zawiera reusable capability do testow i debugowania:
+  `Elastic Logs`, `GitLab Source`, `Database Tools` i `Operational Context`.
+- `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
+  capability, a nie jako element sekcji `Platform`.
+- `Platform` dotyczy customizacji Team Delivery Workspace: workspace settings,
+  personalizacji, autentykacji, konfiguracji modeli i podobnych ustawien.
+
+Konsekwencje UI:
+
+- Nie dodajemy marketingowych hero do narzedzi codziennej pracy.
+- Jeden ekran ma miec jeden dominujacy primary action.
+- Workbench nie dostaje stalego trzykolumnowego layoutu dla response; wynik
+  toola jest renderowany szeroko pod formularzem.
+- Workbench endpointy i payloady pozostaja analysis-independent. Nie eksponuja
+  `analysisRunId` ani incidentowego session scope'u.
+- Statyczny opis capability w Workbench mieszka w topbarze pod ikona info, a
+  nie w lokalnych `workbench-header` cards.
+- Jasny motyw jest defaultem V1; tokeny CSS maja pozwalac na przyszle style.
+
 ## 1. Publiczny request analizy pozostaje minimalny
 
 `POST /analysis/jobs` jest publicznym startem analizy. Przyjmuje

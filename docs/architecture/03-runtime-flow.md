@@ -70,9 +70,9 @@ chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
 
 Pozostale shared/operator wejscia, np. `/api/database/*`,
 `/api/operational-context/*`, GitLab/Elasticsearch helper endpoints i route'y
-`/database`, `/operational-context`, `/elastic`, `/gitlab`, nie sa krokami
-incident runtime flow. To osobne fasady nad reusable capability albo widoki
-utrzymaniowe dla operatora.
+Tool Workbench (`/database`, `/operational-context`, `/elastic`, `/gitlab`),
+nie sa krokami incident runtime flow. To osobne fasady nad reusable capability
+albo widoki utrzymaniowe dla operatora.
 
 ## 2. Orkiestracja wysokiego poziomu
 
@@ -629,6 +629,13 @@ rozwijanych szczegolach wpisu.
 
 Async flow zapisuje prepared prompt przed wykonaniem AI. Dzieki temu prompt
 jest dostepny nawet wtedy, gdy execution failuje.
+
+UI jest osadzony w shellu `Team Delivery Workspace`. `Incident Analysis` jest
+pierwszym feature'em w grupie `Analysis Features`; ekrany `/elastic`,
+`/gitlab`, `/database` i `/operational-context` sa `Tool Workbench`, czyli
+analysis-independent widokami helper capability. Te route'y moga pomagac
+operatorowi w recznym debugowaniu albo zbieraniu inputu, ale nie zmieniaja
+publicznego requestu `POST /analysis/jobs` ani hidden scope'u sesji AI.
 
 `toolEvidenceSections` oraz `aiActivityEvents` sa osobnymi polami job response
 i moga byc aktualizowane podczas sesji AI przez listenery. Sa jednak jednym

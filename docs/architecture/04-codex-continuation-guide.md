@@ -69,6 +69,10 @@ Przy nowej sesji najlepiej zaczac od:
 - `ui`
 - `frontend/`
 - `frontend/src/app`
+- `frontend/AGENTS.md`
+- `frontend/src/app/AGENTS.md`
+- lokalne `AGENTS.md` pod frontendowymi obszarami, gdy zmiana dotyczy
+  shell'a, feature screens albo Operational Context Workbench
 - `src/main/resources/copilot/skills`
 - `src/main/resources/operational-context`
 - `src/main/resources/static`
@@ -259,6 +263,17 @@ Startowy ekran jest dzisiaj zrodlowo utrzymywany w `frontend/` jako aplikacja
 Angular.
 Produkcjny build zapisuje `index.html`, `js`, `css` i assets do
 `src/main/resources/static`, skad frontend jest serwowany przez Spring Boot.
+Product-facing shell to `Team Delivery Workspace`. Przed wieksza zmiana UI
+przeczytaj `frontend/AGENTS.md` i najblizszy lokalny `AGENTS.md` w
+`frontend/src/app`. Widoczna nawigacja ma trzy grupy:
+
+- `Analysis Features` dla dedykowanych feature'ow, na teraz
+  `Incident Analysis`,
+- `Tool Workbench` dla analysis-independent capability: Elastic Logs,
+  GitLab Source, Database Tools i Operational Context,
+- `Platform` dla customizacji workspace'u: settings, personalizacja,
+  autentykacja i modele.
+
 Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
 Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
@@ -294,6 +309,8 @@ route `/gitlab` sluzy do recznego odpalania helper endpointow GitLaba, route
 `/database` sluzy do recznego testowania endpointow nad `DatabaseToolService`
 z jawnym operatorskim `environment`, a route `/operational-context` sluzy do
 utrzymania katalogu systemow, repozytoriow, procesow, integracji i handoffu.
+Te route'y sa `Tool Workbench`, a nie feature'y produktowe ani element
+`Platform`.
 Takie endpointy traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
