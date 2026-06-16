@@ -85,6 +85,9 @@ byc zaktualizowany przed dalsza implementacja.
 - Kontrolka zwijania/rozwijania uzywa ikony Material Symbols `dock_to_right`.
   Po zwinieciu osobna kontrolka znika, a jej role przejmuje `main-logo.png`,
   ktore na hover/focus zmienia sie wizualnie w ikone `dock_to_right`.
+- Sidebar icon rail ma miec stabilny rytm pionowy podczas zwijania i
+  rozwijania: ikony i itemy maja stale wymiary, a naglowki grup w trybie
+  zwinietym sa ukryte bez zamiany na separatory zmieniajace wysokosc layoutu.
 - Pusty stan `Incident Analysis` przed startem analizy nie pokazuje statusowego
   kickera `Gotowe`, zeby nie sugerowac zakonczonego wyniku.
 - Domyslny uklad dla wszystkich ekranow `Tool Workbench` nie jest
@@ -106,6 +109,19 @@ byc zaktualizowany przed dalsza implementacja.
 - `Database Tools` jest pierwszym referencyjnym ekranem dla layoutu Tool
   Workbench; `Elastic Logs` ma uzywac tego samego wzorca z dopasowaniem do
   wlasnych endpointow i formularzy.
+- Lokalne `workbench-header` na ekranach `Database Tools`, `Elastic Logs` i
+  `GitLab Source` zostaja usuniete, bo duplikuja topbar i zabieraja cenna
+  przestrzen robocza.
+- Statyczne informacje capability dla Tool Workbench sa prezentowane w
+  `app-shell__topbar` przez ikone `info` i jasny custom tooltip. Tooltip
+  pokazuje skompresowany opis, etykiety `Reusable przez AI` / `Readonly`,
+  endpointy, wymagany scope, reuse przez AI i guardrails.
+- Dynamiczny status requestu toola pozostaje przy formularzu/wyniku, nie w
+  topbarze, zeby shell nie udawal stanu aktywnego toola bez lokalnego kontekstu
+  komponentu.
+- Budzety Angular build zostaly zwiekszone 4x:
+  `initial maximumWarning=5200kB`, `initial maximumError=8MB`,
+  `anyComponentStyle maximumWarning=32kB`, `anyComponentStyle maximumError=64kB`.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -391,6 +407,8 @@ Zakres:
   `Usage` w pasku kontekstu runu.
 - [x] Dopracowac kolorystyke, przewijanie i zwiezlosc tooltipa `Usage`.
 - [x] Dodac zwijany lewy sidebar z ikonowym trybem nawigacji.
+- [x] Ustabilizowac pionowy rytm ikon w sidebarze podczas zwijania i
+  rozwijania.
 - [x] Usunac kicker `Gotowe` z pustego stanu ekranu analizy.
 
 Weryfikacja:
@@ -428,6 +446,11 @@ Zakres:
   takie same ikonowe akcje kopiowania i pobierania jak GitLab JSON response.
 - [x] Ustawic `Database Tools`: request preview i response JSON jako zwijalne
   panele, z requestem domyslnie zwinietym po otrzymaniu wyniku.
+- [x] Usunac lokalny `workbench-header` z `Database Tools`, `Elastic Logs` i
+  `GitLab Source`.
+- [x] Przeniesc statyczne metadane capability Tool Workbench do route data i
+  pokazac je przez ikone `info` w `app-shell__topbar`.
+- [x] Zwiekszyc Angular build budgets 4x.
 
 Weryfikacja:
 
@@ -476,6 +499,14 @@ Weryfikacja:
   session scope'u; nie pokazuje tez `correlationId` w manualnym Workbench.
 - [x] `GitLab Source`: `npm test -- --watch=false`.
 - [x] `GitLab Source`: `npm run build`.
+- [x] Tool Workbench: lokalne header cards nie sa renderowane na
+  `Database Tools`, `Elastic Logs` ani `GitLab Source`.
+- [x] Tool Workbench: topbar pokazuje ikone info z capability context dla
+  `Database Tools`, `Elastic Logs` i `GitLab Source`.
+- [x] Tool Workbench: `npm test -- --watch=false` po przeniesieniu capability
+  contextu do shell'a.
+- [x] Tool Workbench: `npm run build` po przeniesieniu capability contextu do
+  shell'a.
 - [ ] `GitLab Source`: browser check desktop bez poziomego overflow.
 - [ ] finalny browser check dla wszystkich ekranow Tool Workbench.
 
@@ -553,15 +584,12 @@ Zakres:
 
 Najblizszy proponowany krok do zatwierdzenia:
 
-`Krok 5d: decyzja o wspolnych elementach Tool Workbench`.
+`Krok 6: Operational Context Catalog polish`.
 
 Proponowany zakres:
 
-- przejrzec powtarzajace sie elementy `Database Tools`, `Elastic Logs` i
-  `GitLab Source`,
-- zdecydowac, czy wyciagamy teraz male wspolne elementy albo style Workbench,
-  np. header capability, lista tooli, panele JSON, akcje copy/download,
-- jesli zatwierdzimy ekstrakcje, zrobic ja bez zmiany UX i bez ruszania
-  kontraktow backendowych,
-- jesli ekstrakcja okaze sie zbyt kosztowna na teraz, zostawic layouty jako
-  stabilny wzorzec i przejsc do `Krok 6: Operational Context Catalog polish`.
+- ustawic widok jako `Operational Context Catalog`, a nie zwykly tool,
+- zachowac obecne API `/api/operational-context/*`,
+- dopasowac katalog do aktualnego shell'a, tokenow i prostego roboczego stylu,
+- uporzadkowac zakladki, detail drawer, Validation i Open Questions bez
+  zmiany modelu danych.
