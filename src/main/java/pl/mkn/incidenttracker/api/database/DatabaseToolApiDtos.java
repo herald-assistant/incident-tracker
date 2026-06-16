@@ -9,26 +9,24 @@ import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDto
 
 public final class DatabaseToolApiDtos {
 
-    private static final String MANUAL_RUN_REFERENCE = "database-console";
+    private static final String WORKBENCH_REFERENCE = "database-workbench";
 
     private DatabaseToolApiDtos() {
     }
 
     public record DatabaseToolScopeRequest(
-            String correlationId,
             @NotBlank(message = "environment must not be blank")
-            String environment,
-            String analysisRunId
+            String environment
     ) {
 
-        DbCapabilityScope toCapabilityScope(String toolName) {
+        DbCapabilityScope toCapabilityScope(String operationName) {
             return new DbCapabilityScope(
-                    defaultText(correlationId, "manual-database-console"),
+                    WORKBENCH_REFERENCE,
                     environment.trim(),
-                    defaultText(analysisRunId, MANUAL_RUN_REFERENCE),
-                    MANUAL_RUN_REFERENCE,
+                    WORKBENCH_REFERENCE,
+                    WORKBENCH_REFERENCE,
                     null,
-                    toolName
+                    operationName
             );
         }
     }
@@ -157,7 +155,4 @@ public final class DatabaseToolApiDtos {
     ) {
     }
 
-    private static String defaultText(String value, String defaultValue) {
-        return value != null && !value.isBlank() ? value.trim() : defaultValue;
-    }
 }

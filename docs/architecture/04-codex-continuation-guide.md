@@ -375,10 +375,11 @@ Oba przyjmuja tylko `correlationId`.
 
 Database ma shared/operator console endpointy pod `/api/database/*`, ktore
 deleguja do `integrations.database.DatabaseToolService`. Request helpera niesie
-manualny scope operatora (`environment`, opcjonalnie `correlationId`), ale
-glowny publiczny start analizy nadal nie przyjmuje DB scope'u. DB service nadal
-egzekwuje configured environments, allowliste schematow, typed filters,
-masking/limiting i blokade raw SQL.
+tylko neutralny scope integracji (`environment`) oraz payload konkretnej
+operacji. Nie przyjmuje `correlationId`, `analysisRunId` ani innych pol
+incident/session scope'u; te wartosci istnieja tylko w feature-owned hidden
+ToolContext dla sesji AI. DB service nadal egzekwuje configured environments,
+allowliste schematow, typed filters, masking/limiting i blokade raw SQL.
 
 ### Pipeline metadata
 

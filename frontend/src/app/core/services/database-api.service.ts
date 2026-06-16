@@ -3,9 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export interface DatabaseToolScopePayload {
-  correlationId?: string;
   environment: string;
-  analysisRunId?: string;
 }
 
 @Injectable({

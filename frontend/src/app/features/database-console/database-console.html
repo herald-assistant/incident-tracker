@@ -1,174 +1,277 @@
 <div class="page-shell database-console">
   <main class="database-workspace">
-    <section class="hero-card database-hero">
-      <div class="hero-main">
-        <div class="hero-copy">
-          <p class="section-eyebrow">Manualne testy Database tools</p>
-          <h2>Uruchamiaj te same capability, z których korzysta DatabaseToolService.</h2>
-          <p class="hero-description">
-            Wspólny scope operatora trafia do cienkich endpointów `/api/database/*`, a payload JSON
-            jest przekazywany dalej do typed DB tools.
+    <section class="analysis-card workbench-header">
+      <div class="workbench-header__top">
+        <div class="workbench-header__copy">
+          <p class="section-eyebrow">Tool Workbench</p>
+          <h2>Database Tools</h2>
+          <p>
+            Ręczne uruchamianie typed DB capability z tym samym zakresem i guardrailami,
+            których używa warstwa AI.
           </p>
         </div>
 
-        <div class="database-hero__chips">
-          <span class="panel-chip">Discovery</span>
-          <span class="panel-chip">Metadata</span>
-          <span class="panel-chip">Typed filters</span>
-          <span class="panel-chip">Readonly guardrails</span>
+        <div class="workbench-header__status">
+          <span class="panel-chip">Reusable przez AI</span>
+          <span class="panel-chip">Readonly</span>
+          <span [class]="statusPillClass(state().status)">
+            {{ statusLabel(state().status) }}
+          </span>
         </div>
       </div>
 
-      <div class="hero-side-panel">
-        <p class="panel-title">Scope requestu</p>
-        <ul class="mini-list">
-          <li>`environment` wybiera skonfigurowane połączenie i schematy</li>
-          <li>`correlationId` jest opcjonalnym kontekstem audytu</li>
-          <li>raw SQL zadziała tylko przy backendowym `rawSqlEnabled=true`</li>
-        </ul>
-      </div>
+      <details class="workbench-details">
+        <summary>
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Szczegóły capability
+        </summary>
+
+        <dl class="workbench-meta-grid">
+          <div>
+            <dt>Endpoint</dt>
+            <dd>POST /api/database/*</dd>
+          </div>
+          <div>
+            <dt>Wymagany scope</dt>
+            <dd>environment wybiera skonfigurowane połączenie i dozwolone schematy</dd>
+          </div>
+          <div>
+            <dt>Reusable przez AI</dt>
+            <dd>Tak, ale scope sesji AI pochodzi z hidden ToolContext poza tym API</dd>
+          </div>
+          <div>
+            <dt>Guardrails</dt>
+            <dd>configured environments, allowlista schematów, typed filters, masking i limity</dd>
+          </div>
+        </dl>
+      </details>
     </section>
 
     <form class="database-layout" novalidate (submit)="submit($event)">
-      <aside class="analysis-card database-sidebar">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Scope</p>
-            <h2>Środowisko</h2>
+      <aside class="analysis-card database-tool-panel">
+        <section class="database-scope-section" aria-labelledby="databaseScopeTitle">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Shared scope</p>
+              <h2 id="databaseScopeTitle">Zakres wywołań</h2>
+            </div>
           </div>
-        </div>
 
-        <div class="database-scope-grid">
-          <label class="form-field">
-            <span class="field-label">Environment</span>
-            <input
-              class="text-input"
-              type="text"
-              placeholder="np. sandbox-1 albo sandbox-a"
-              autocomplete="off"
-              spellcheck="false"
-              [formControl]="scopeForm.controls.environment"
-            />
-          </label>
+          <div class="database-scope-grid">
+            <label class="form-field">
+              <span class="field-label">Environment</span>
+              <input
+                class="text-input"
+                type="text"
+                placeholder="np. sandbox-1"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="scopeForm.controls.environment"
+              />
+            </label>
 
-          <label class="form-field">
-            <span class="field-label">Correlation ID</span>
-            <input
-              class="text-input"
-              type="text"
-              placeholder="opcjonalnie"
-              autocomplete="off"
-              spellcheck="false"
-              [formControl]="scopeForm.controls.correlationId"
-            />
-          </label>
+          </div>
 
-          <label class="form-field">
-            <span class="field-label">Analysis Run ID</span>
-            <input
-              class="text-input"
-              type="text"
-              placeholder="opcjonalnie"
-              autocomplete="off"
-              spellcheck="false"
-              [formControl]="scopeForm.controls.analysisRunId"
-            />
-          </label>
-        </div>
+          @if (controlInvalid(scopeForm.controls.environment)) {
+            <p class="form-error">Pole `environment` jest wymagane.</p>
+          }
+        </section>
 
-        @if (controlInvalid(scopeForm.controls.environment)) {
-          <p class="form-error">Pole `environment` jest wymagane.</p>
-        }
-
-        <div class="database-tool-picker">
-          <label class="form-field">
-            <span class="field-label">Tool</span>
-            <select class="select-input" [formControl]="toolControl">
-              @for (tool of tools; track tool.key) {
-                <option [value]="tool.key">{{ tool.label }}</option>
-              }
-            </select>
-          </label>
+        <section class="database-tool-section" aria-labelledby="databaseToolsTitle">
+          <div class="section-heading database-tool-section__heading">
+            <div>
+              <p class="section-eyebrow">Tools</p>
+              <h2 id="databaseToolsTitle">Element do testu</h2>
+            </div>
+            <span class="panel-chip">{{ tools.length }}</span>
+          </div>
 
           <div class="database-tool-list" aria-label="Database tools">
-            @for (tool of tools; track tool.key) {
-              <button
-                type="button"
-                [class]="toolButtonClass(tool)"
-                (click)="selectTool(tool.key, true)"
-              >
-                <span>{{ tool.label }}</span>
-                <small>{{ tool.category }}</small>
-              </button>
+            @for (group of toolGroups; track group.category) {
+              <section class="database-tool-group">
+                <p class="database-tool-group__title">{{ group.category }}</p>
+                @for (tool of group.tools; track tool.key) {
+                  <button
+                    type="button"
+                    [class]="toolButtonClass(tool)"
+                    [attr.aria-pressed]="tool.key === selectedToolKey()"
+                    (click)="selectTool(tool.key, true)"
+                  >
+                    <span class="database-tool-button__content">
+                      <span>{{ tool.label }}</span>
+                      <small>{{ tool.endpoint }}</small>
+                    </span>
+                    <span
+                      class="database-tool-button__state"
+                      [attr.data-status]="toolStateStatus(tool)"
+                      aria-hidden="true"
+                    ></span>
+                  </button>
+                }
+              </section>
             }
           </div>
-        </div>
+        </section>
       </aside>
 
-      <section class="analysis-card database-runner">
-        <div class="section-heading database-runner__header">
-          <div>
-            <p class="section-eyebrow">{{ selectedTool().category }}</p>
-            <h2>{{ selectedTool().label }}</h2>
-            <p class="field-hint">{{ selectedTool().summary }}</p>
+      <section class="database-main">
+        <article class="analysis-card database-runner">
+          <div class="section-heading database-runner__header">
+            <div>
+              <p class="section-eyebrow">{{ selectedTool().category }}</p>
+              <h2>{{ selectedTool().label }}</h2>
+              <p class="field-hint">{{ selectedTool().summary }}</p>
+            </div>
+            <span class="panel-chip route-chip">POST /api/database/{{ selectedTool().endpoint }}</span>
           </div>
-          <span class="panel-chip route-chip">POST /api/database/{{ selectedTool().endpoint }}</span>
-        </div>
 
-        @if (selectedTool().payloadRequired) {
-          <label class="form-field" for="databasePayload">
-            <span class="field-label">Request payload JSON</span>
-            <textarea
-              id="databasePayload"
-              class="json-editor"
-              spellcheck="false"
-              [formControl]="payloadControl"
-            ></textarea>
-          </label>
-
-          <div class="database-runner__actions">
-            <button class="secondary-button" type="button" (click)="resetPayload()">
-              Przywróć przykład
-            </button>
-            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
-              <span class="button-label">Uruchom tool</span>
-            </button>
-          </div>
-        } @else {
-          <div class="empty-state">
-            Ten tool używa tylko scope requestu. Kliknij uruchomienie, żeby pobrać konfigurację DB.
-          </div>
+          @if (selectedTool().payloadRequired) {
+            <label class="form-field" for="databasePayload">
+              <span class="field-label">Request payload JSON</span>
+              <textarea
+                id="databasePayload"
+                class="json-editor"
+                spellcheck="false"
+                [formControl]="payloadControl"
+              ></textarea>
+            </label>
+          } @else {
+            <div class="payload-placeholder">
+              <span class="material-symbols-outlined" aria-hidden="true">rule_settings</span>
+              <p>Ten endpoint używa tylko wspólnego scope z lewego panelu.</p>
+            </div>
+          }
 
           <div class="database-runner__actions">
-            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
-              <span class="button-label">Pobierz scope</span>
-            </button>
-          </div>
-        }
-
-        <div class="tool-status" [attr.data-status]="state().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ state().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (state().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ state().statusCode }}</span>
+            @if (selectedTool().payloadRequired) {
+              <button class="secondary-button" type="button" (click)="resetPayload()">
+                <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                <span>Reset payload</span>
+              </button>
             }
-            <span [class]="statusPillClass(state().status)">
-              {{ statusLabel(state().status) }}
-            </span>
+            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              <span class="button-label">Run request</span>
+            </button>
           </div>
-        </div>
+        </article>
 
-        <label class="field-label" for="databaseJsonResponse">JSON response</label>
-        <textarea
-          id="databaseJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="state().responseJson"
-        ></textarea>
+        @if (hasResult()) {
+          <article class="analysis-card database-result">
+            <div class="database-result__header">
+              <div>
+                <p class="section-eyebrow">Result</p>
+                <h2>Ostatni wynik</h2>
+              </div>
+            </div>
+
+            <div class="tool-status" [attr.data-status]="state().status">
+              <div>
+                <p class="tool-status__label">{{ state().endpoint || 'Manual validation' }}</p>
+                <p class="tool-status__message">{{ state().message }}</p>
+              </div>
+              <div class="tool-status__badges">
+                @if (state().statusCode !== null) {
+                  <span class="tool-status__code">HTTP {{ state().statusCode }}</span>
+                }
+                @if (state().durationMs !== null) {
+                  <span class="tool-status__code">{{ durationLabel(state().durationMs) }}</span>
+                }
+                <span [class]="statusPillClass(state().status)">
+                  {{ statusLabel(state().status) }}
+                </span>
+              </div>
+            </div>
+
+            @if (state().requestJson) {
+              <details class="json-response-panel database-json-panel database-json-panel--request">
+                <summary class="json-response-panel__header">
+                  <span class="json-response-panel__title">
+                    <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                      chevron_right
+                    </span>
+                    <span class="field-label">Request preview</span>
+                  </span>
+                  <div class="json-response-panel__actions">
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Kopiuj request preview do schowka"
+                      title="Kopiuj JSON"
+                      (click)="$event.stopPropagation(); copyJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">
+                        {{ copiedJsonPayloadKey() === 'request' ? 'task_alt' : 'content_copy' }}
+                      </span>
+                    </button>
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Pobierz request preview do pliku JSON"
+                      title="Pobierz JSON"
+                      (click)="$event.stopPropagation(); downloadJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                    </button>
+                  </div>
+                </summary>
+                <textarea
+                  id="databaseRequestPreview"
+                  class="json-output"
+                  aria-label="Request preview"
+                  readonly
+                  spellcheck="false"
+                  [value]="state().requestJson"
+                ></textarea>
+              </details>
+            }
+
+            <details class="json-response-panel database-json-panel" open>
+              <summary class="json-response-panel__header">
+                <span class="json-response-panel__title">
+                  <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                    chevron_right
+                  </span>
+                  <span class="field-label">JSON response</span>
+                </span>
+                <div class="json-response-panel__actions">
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Kopiuj JSON response do schowka"
+                    title="Kopiuj JSON"
+                    (click)="$event.stopPropagation(); copyJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedJsonPayloadKey() === 'response' ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Pobierz JSON response do pliku"
+                    title="Pobierz JSON"
+                    (click)="$event.stopPropagation(); downloadJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                  </button>
+                </div>
+              </summary>
+              <textarea
+                id="databaseJsonResponse"
+                class="json-output"
+                aria-label="JSON response"
+                readonly
+                spellcheck="false"
+                [value]="state().responseJson"
+              ></textarea>
+            </details>
+          </article>
+        }
       </section>
     </form>
   </main>

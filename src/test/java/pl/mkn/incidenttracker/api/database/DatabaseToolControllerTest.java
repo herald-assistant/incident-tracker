@@ -14,9 +14,6 @@ import java.util.List;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames.COUNT_ROWS;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames.FIND_TABLES;
-import static pl.mkn.incidenttracker.agenttools.database.DatabaseToolNames.GET_SCOPE;
 import static pl.mkn.incidenttracker.integrations.database.DatabaseCapabilityDtos.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,6 +21,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(DatabaseToolController.class)
 class DatabaseToolControllerTest {
+
+    private static final String GET_SCOPE_OPERATION = "database.scope";
+    private static final String FIND_TABLES_OPERATION = "database.tables.search";
+    private static final String COUNT_ROWS_OPERATION = "database.rows.count";
 
     @Autowired
     private MockMvc mockMvc;
@@ -33,7 +34,7 @@ class DatabaseToolControllerTest {
 
     @Test
     void shouldReturnDatabaseScopeForManualEnvironment() throws Exception {
-        var scope = scope(GET_SCOPE);
+        var scope = scope(GET_SCOPE_OPERATION);
         when(databaseToolService.getScope(scope))
                 .thenReturn(new DbScopeResult(
                         "sandbox-a",
@@ -50,7 +51,6 @@ class DatabaseToolControllerTest {
                         .content("""
                                 {
                                   "scope": {
-                                    "correlationId": "corr-123",
                                     "environment": "sandbox-a"
                                   }
                                 }
@@ -66,7 +66,7 @@ class DatabaseToolControllerTest {
     @Test
     void shouldDelegateFindTablesWithTypedRequest() throws Exception {
         var request = new DbFindTablesRequest("crm-service", "CUSTOMER_PROFILE", "CustomerProfileEntity", 10);
-        when(databaseToolService.findTables(scope(FIND_TABLES), request))
+        when(databaseToolService.findTables(scope(FIND_TABLES_OPERATION), request))
                 .thenReturn(new DbTableSearchResult(
                         "sandbox-a",
                         "oracle-dev",
@@ -93,7 +93,6 @@ class DatabaseToolControllerTest {
                         .content("""
                                 {
                                   "scope": {
-                                    "correlationId": "corr-123",
                                     "environment": "sandbox-a"
                                   },
                                   "request": {
@@ -109,7 +108,7 @@ class DatabaseToolControllerTest {
                 .andExpect(jsonPath("$.candidates[0].schema").value("CRM_APP"))
                 .andExpect(jsonPath("$.candidates[0].tableName").value("CUSTOMER_INTERACTION"));
 
-        verify(databaseToolService).findTables(scope(FIND_TABLES), request);
+        verify(databaseToolService).findTables(scope(FIND_TABLES_OPERATION), request);
     }
 
     @Test
@@ -118,7 +117,7 @@ class DatabaseToolControllerTest {
                 new DbTableRef("CRM_APP", "CUSTOMER_INTERACTION"),
                 List.of(new DbFilter("STATUS", DbOperator.EQ, List.of("ACTIVE")))
         );
-        when(databaseToolService.countRows(scope(COUNT_ROWS), request))
+        when(databaseToolService.countRows(scope(COUNT_ROWS_OPERATION), request))
                 .thenThrow(new IllegalArgumentException("Oracle table is outside allowed scope."));
 
         mockMvc.perform(post("/api/database/rows/count")
@@ -126,7 +125,6 @@ class DatabaseToolControllerTest {
                         .content("""
                                 {
                                   "scope": {
-                                    "correlationId": "corr-123",
                                     "environment": "sandbox-a"
                                   },
                                   "request": {
@@ -156,7 +154,6 @@ class DatabaseToolControllerTest {
                         .content("""
                                 {
                                   "scope": {
-                                    "correlationId": "corr-123",
                                     "environment": " "
                                   }
                                 }
@@ -170,10 +167,10 @@ class DatabaseToolControllerTest {
 
     private DbCapabilityScope scope(String toolName) {
         return new DbCapabilityScope(
-                "corr-123",
+                "database-workbench",
                 "sandbox-a",
-                "database-console",
-                "database-console",
+                "database-workbench",
+                "database-workbench",
                 null,
                 toolName
         );

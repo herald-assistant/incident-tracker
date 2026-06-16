@@ -193,7 +193,6 @@ flowchart LR
 | `aiplatform -> agenttools` | 6 | oczekiwane | Platformowy hidden `ToolContext` i budget runtime uzywaja keys/nazw z `agenttools`, bez importu capability implementations. |
 | `aiplatform -> shared` | 11 | oczekiwane | Platformowy run request, prepared session, user-visible usage i tool evidence store niosa neutralny model evidence/usage jako runtime DTO. |
 | `agenttools -> integrations` | 20 | oczekiwane | Przeniesione wrappery Elasticsearch, GitLab, Database i Operational Context MCP deleguja do `integrations`. |
-| `api -> agenttools` | 1 | oczekiwane | Shared/operator helper API moze importowac neutralne nazwy/kontrakty tool capability bez zaleznosci od feature'a. |
 | `api -> aiplatform` | 16 | oczekiwane | `api.aioptions` mapuje platformowy katalog modeli Copilota na kontrakt endpointu `GET /analysis/ai/options`; shared/operator API moze korzystac z platformowych fasad. |
 | `api -> integrations` | 60 | oczekiwane | Shared/operator endpointy Elasticsearch/GitLab deleguja do `integrations`, a globalny handler HTTP mapuje wyniki/wyjatki helper endpointow. |
 | `api -> features` | 3 | oczekiwane technicznie | Globalny handler HTTP mapuje wyjatki incident job API i `AnalysisDataNotFoundException` z incident flow. Nie traktowac tego jako wzorca dla shared/operator API, ktore nie powinno orkiestrowac feature'ow. |

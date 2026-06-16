@@ -87,6 +87,22 @@ byc zaktualizowany przed dalsza implementacja.
   ktore na hover/focus zmienia sie wizualnie w ikone `dock_to_right`.
 - Pusty stan `Incident Analysis` przed startem analizy nie pokazuje statusowego
   kickera `Gotowe`, zeby nie sugerowac zakonczonego wyniku.
+- Domyslny uklad dla wszystkich ekranow `Tool Workbench` nie jest
+  trzykolumnowy. Wyniki tooli moga byc szerokie i zlozone, wiec response musi
+  dostac glowna szerokosc robocza pod formularzem.
+- Workbench i jego shared/operator endpointy sa analysis-independent. Widoki
+  Workbench nie eksponuja `correlationId`, `analysisRunId` ani incidentowego
+  session scope'u; taki scope nalezy do feature-owned hidden `ToolContext` dla
+  sesji AI, a nie do manualnego API integracji.
+- Scrollbary w calej aplikacji maja byc delikatne i zgodne z light theme:
+  transparentny track, cienki zaokraglony thumb z tokenow CSS, bez natywnych
+  strzalek i bez ciezkiego guttera psujacego karty.
+- Panele `Request preview` i `JSON response` w Tool Workbench maja uzywac
+  spojnego wzorca akcji z GitLab: ikonowe `content_copy` i `download`,
+  z feedbackiem `task_alt` po skopiowaniu.
+- `Request preview` i `JSON response` w Tool Workbench sa zwijalne. Po
+  wykonaniu requestu `JSON response` jest domyslnie rozwiniety, a mniej istotny
+  `Request preview` domyslnie zwiniety.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -162,15 +178,28 @@ Widok ma byc narzedziowy:
 
 Elastic, GitLab i Database powinny dojsc do wspolnego szablonu:
 
-- lewy panel: scope i wybor toola,
-- srodek: request builder, formularz albo payload JSON, primary `Run tool`,
-- prawy panel albo drawer: response JSON, status HTTP, timing i copy actions,
+- gorny naglowek na pelna szerokosc:
+  - krotki tytul i najwazniejsza akcja/status,
+  - zwijane szczegoly capability, inicjalnie zwiniete,
+  - metadane: endpointy, scope, AI reusable, guardrails,
+- lewy panel roboczy:
+  - lista elementow/tooli do testowania,
+  - wspolne wartosci scope i parametry uzywane przez kilka elementow,
+- glowna przestrzen robocza:
+  - u gory formularz albo payload aktualnie wybranego elementu,
+  - primary `Run request` albo inna nazwa akcji pasujaca do operacji integracji,
+  - wynik pod formularzem dopiero po wykonaniu requestu,
+  - response JSON/status/timing/copy actions w tej samej szerokiej przestrzeni,
 - kazdy tool pokazuje:
   - endpoint,
   - wymagany scope,
   - czy capability jest reusable przez AI,
   - ograniczenia bezpieczenstwa,
   - ostatni wynik.
+
+Nie projektujemy Tool Workbench jako stalego ukladu trzykolumnowego ani jako
+domyslnego drawer-first UI. Drawery zostaja opcja dla szczegolow/raw preview,
+ale nie dla glownego wyniku testowanego toola w V1.
 
 Tool Workbench ma wygladac jak laboratorium operatora, a nie osobny produktowy
 feature.
@@ -216,7 +245,7 @@ Drawer powinien miec stale akcje: `Copy`, `Open raw`, `Close`.
 ### Przyciski i statusy
 
 - Jeden primary action na widok albo sekcje robocza: `Run analysis`,
-  `Run tool`, `Search`.
+  `Run request`, `Search`.
 - Secondary dla import/export/reset/copy.
 - Icon-only dla kopiowania, rozwijania, odswiezania i zamykania drawerow.
 - Statusy jako pill/chip: `Ready`, `Running`, `Completed`, `Failed`,
@@ -376,25 +405,48 @@ Cel: ujednolicic Elastic, GitLab i Database jako narzedzia operatorskie.
 
 Zakres:
 
-- [ ] Zdefiniowac wspolne komponenty/layout workbench:
-  - scope panel,
-  - tool picker,
-  - request builder,
-  - response panel/drawer,
-  - status panel.
-- [ ] Przebudowac `Database Tools` na wspolny wzorzec jako pierwszy ekran.
+- [x] Zdefiniowac pierwszy wariant layoutu workbench na `Database Tools`:
+  - full-width header z inicjalnie zwinietymi szczegolami capability,
+  - lewy panel wyboru toola/elementu i wspolnego scope,
+  - glowny workspace z formularzem wybranego elementu,
+  - wynik renderowany pod formularzem dopiero po wykonaniu requestu,
+  - status/timing/copy actions w sekcji wyniku.
+- [x] Przebudowac `Database Tools` na wspolny wzorzec jako pierwszy ekran.
+- [ ] Wyciagnac wspolne komponenty dopiero po drugim ekranie, jesli wzorzec
+  zacznie sie stabilnie powtarzac bez nadmiarowych roznic.
 - [ ] Przebudowac `Elastic Logs`.
 - [ ] Przebudowac `GitLab Source`.
 - [ ] Dla kazdego toola pokazac endpoint, scope, AI reusable capability,
   guardrails i last result.
+- [ ] Nie wprowadzac stalej trzeciej kolumny dla response w V1.
 - [ ] Nie zmieniac kontraktow backendowych helper endpointow.
+- [x] Wprowadzic globalny, delikatny styl scrollbarow dla calej aplikacji.
+- [x] Uspojnic `Database Tools`: `Request preview` i `JSON response` maja
+  takie same ikonowe akcje kopiowania i pobierania jak GitLab JSON response.
+- [x] Ustawic `Database Tools`: request preview i response JSON jako zwijalne
+  panele, z requestem domyslnie zwinietym po otrzymaniu wyniku.
 
 Weryfikacja:
 
 - [ ] kazdy obecny tool request nadal dziala,
-- [ ] JSON request/response jest kopiowalny i czytelny,
-- [ ] status HTTP i blad sa widoczne,
-- [ ] testy FE i browser check.
+- [x] `Database Tools`: JSON request/response jest kopiowalny i czytelny.
+- [x] `Database Tools`: status HTTP, timing i blad walidacji sa widoczne.
+- [x] `Database Tools`: wynik nie renderuje sie przed pierwsza akcja.
+- [x] `Database Tools`: UI i publiczny payload Workbench nie eksponuja
+  `correlationId` ani `analysisRunId`.
+- [x] `Database Tools`: backend API uzywa neutralnego `environment` scope'u i
+  nie importuje nazw tooli z `agenttools`.
+- [x] `Database Tools`: browser check desktop/mobile bez poziomego overflow.
+- [x] `Database Tools`: lewy panel scrolluje cala karte bez ciezkiego guttera.
+- [x] `Database Tools`: request preview i response JSON sa kopiowalne oraz
+  pobieralne do pliku przez spojne ikonowe akcje.
+- [x] `Database Tools`: request preview nie zajmuje miejsca po wyniku, dopoki
+  operator go recznie nie rozwinie.
+- [x] `Database Tools`: `npm test -- --watch=false`.
+- [x] `Database Tools`: `npm run build`.
+- [ ] `Elastic Logs`: JSON request/response jest kopiowalny i czytelny.
+- [ ] `GitLab Source`: JSON request/response jest kopiowalny i czytelny.
+- [ ] finalny browser check dla wszystkich ekranow Tool Workbench.
 
 ### Krok 6: Operational Context Catalog polish
 
@@ -470,15 +522,14 @@ Zakres:
 
 Najblizszy proponowany krok do zatwierdzenia:
 
-`Krok 5: Tool Workbench layout`.
+`Krok 5b: Elastic Logs Workbench layout`.
 
-Przed implementacja trzeba zatwierdzic:
+Proponowany zakres:
 
-- od ktorego widoku zaczynamy wspolny workbench pattern: rekomendacja
-  `Database Tools`,
-- dokladny podzial na scope panel, request builder i response panel/drawer,
-- czy response JSON ma w Krok 5 zostac panelem w layoucie, czy prawym drawerem,
-- ktore metadane toola pokazujemy jako stale: endpoint, scope, AI reusable,
-  guardrails, last result,
-- czy przebudowujemy wszystkie trzy widoki w jednym kroku, czy po jednym
-  ekranie na zatwierdzenie.
+- przebudowac `/elastic` wedlug wzorca sprawdzonego na `Database Tools`,
+- zostawic obecne endpointy i payloady Elastica bez zmian,
+- header full-width z inicjalnie zwinietymi metadanymi capability,
+- lewy panel ze scope/wartosciami wspolnymi i wyborem elementu testowego,
+- glowny formularz u gory, wynik JSON/status/timing/copy pod formularzem po
+  wykonaniu requestu,
+- bez stalej trzeciej kolumny i bez drawer-first response.

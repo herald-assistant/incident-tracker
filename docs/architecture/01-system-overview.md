@@ -501,19 +501,21 @@ Ten endpoint nie jest czescia glownego job flow analizy. Sluzy operatorowi do
 manualnej weryfikacji tej samej capability, ktora jest wystawiona AI jako
 `gitlab_list_repository_endpoints`.
 
-## Dodatkowy use case Database tool console
+## Dodatkowy use case Database workbench console
 
 To jest osobny, pomocniczy flow diagnostyczno-testowy:
 
-1. klient podaje operatorski `environment` oraz opcjonalny `correlationId`,
-2. endpoint `/api/database/*` buduje manualny `DbCapabilityScope`,
-3. request narzedzia jest przekazywany bezposrednio do `DatabaseToolService`,
+1. klient podaje operatorski `environment` jako neutralny scope integracji,
+2. endpoint `/api/database/*` buduje techniczny scope workbench bez
+   przyjmowania `correlationId`, `analysisRunId` ani incident/session scope'u,
+3. request operacji jest przekazywany bezposrednio do `DatabaseToolService`,
 4. integracja DB nadal egzekwuje configured environment, allowliste schematow,
    typed filters, masking/limiting i blokade raw SQL,
 5. frontend `/database` pokazuje payload requestu, status HTTP i odpowiedz JSON.
 
-Ten endpoint nie zmienia glownego job flow analizy i nie przywraca recznego DB
-scope'u do `POST /analysis/jobs`.
+Ten endpoint jest analysis-independent i nie zmienia glownego job flow analizy.
+Incidentowy scope DB dla AI pozostaje feature-owned i jest przekazywany przez
+hidden `ToolContext`, nie przez Workbench API.
 
 ## Dodatkowy use case Operational Context console
 

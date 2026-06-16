@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal, WritableSignal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -15,8 +15,10 @@ import {
   DatabaseApiService,
   DatabaseToolScopePayload
 } from '../../core/services/database-api.service';
+import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 
 type ToolStateStatus = 'idle' | 'loading' | 'success' | 'error';
+type DatabaseJsonPayloadKey = 'request' | 'response';
 
 type DatabaseToolKey =
   | 'scope'
@@ -38,7 +40,10 @@ interface ToolState {
   status: ToolStateStatus;
   statusCode: number | null;
   message: string;
+  endpoint: string;
+  requestJson: string;
   responseJson: string;
+  durationMs: number | null;
 }
 
 interface DatabaseToolDefinition {
@@ -49,6 +54,11 @@ interface DatabaseToolDefinition {
   summary: string;
   payloadRequired: boolean;
   examplePayload: unknown;
+}
+
+interface DatabaseToolGroup {
+  category: string;
+  tools: DatabaseToolDefinition[];
 }
 
 const DATABASE_TOOLS: DatabaseToolDefinition[] = [
@@ -364,6 +374,19 @@ const DATABASE_TOOLS: DatabaseToolDefinition[] = [
   }
 ];
 
+const DATABASE_TOOL_GROUPS = DATABASE_TOOLS.reduce<DatabaseToolGroup[]>((groups, tool) => {
+  const existingGroup = groups.find((group) => group.category === tool.category);
+  if (existingGroup) {
+    existingGroup.tools.push(tool);
+  } else {
+    groups.push({
+      category: tool.category,
+      tools: [tool]
+    });
+  }
+  return groups;
+}, []);
+
 @Component({
   selector: 'app-database-console',
   imports: [ReactiveFormsModule],
@@ -375,41 +398,34 @@ export class DatabaseConsoleComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly tools = DATABASE_TOOLS;
+  readonly toolGroups = DATABASE_TOOL_GROUPS;
   readonly selectedToolKey = signal<DatabaseToolKey>('scope');
+  readonly copiedJsonPayloadKey = signal<DatabaseJsonPayloadKey | null>(null);
   readonly selectedTool = computed(
     () => this.tools.find((tool) => tool.key === this.selectedToolKey()) ?? this.tools[0]
   );
+  readonly toolStates = signal<Record<DatabaseToolKey, ToolState>>(this.createInitialToolStates());
+  readonly state = computed(() => this.toolStates()[this.selectedToolKey()]);
+  readonly hasResult = computed(() => this.state().status !== 'idle');
 
   readonly scopeForm = new FormGroup({
     environment: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required]
-    }),
-    correlationId: new FormControl('', { nonNullable: true }),
-    analysisRunId: new FormControl('', { nonNullable: true })
+    })
   });
 
-  readonly toolControl = new FormControl<DatabaseToolKey>('scope', { nonNullable: true });
   readonly payloadControl = new FormControl(this.toFormattedJson(this.tools[0].examplePayload), {
     nonNullable: true
   });
 
-  readonly state = signal<ToolState>(
-    this.idleState('Wybierz environment, tool i uruchom request do DatabaseToolService.')
-  );
-
-  constructor() {
-    this.toolControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((toolKey) => this.selectTool(toolKey, true));
-  }
-
   submit(event: Event): void {
     event.preventDefault();
+    const selectedTool = this.selectedTool();
 
     if (this.scopeForm.invalid) {
       this.scopeForm.markAllAsTouched();
-      this.state.set(
+      this.setCurrentToolState(
         this.errorStateFromPayload({
           code: 'VALIDATION_ERROR',
           message: 'Uzupełnij environment dla ręcznego scope DB.'
@@ -418,10 +434,9 @@ export class DatabaseConsoleComponent {
       return;
     }
 
-    const selectedTool = this.selectedTool();
     const parsedPayload = this.parsePayload(selectedTool);
     if (parsedPayload.failed) {
-      this.state.set(
+      this.setCurrentToolState(
         this.errorStateFromPayload({
           code: 'INVALID_JSON',
           message: parsedPayload.message
@@ -448,9 +463,6 @@ export class DatabaseConsoleComponent {
     }
 
     this.selectedToolKey.set(nextTool.key);
-    if (this.toolControl.value !== nextTool.key) {
-      this.toolControl.setValue(nextTool.key, { emitEvent: false });
-    }
     if (resetPayload) {
       this.resetPayload();
     }
@@ -496,6 +508,54 @@ export class DatabaseConsoleComponent {
       : 'database-tool-button';
   }
 
+  toolStateStatus(tool: DatabaseToolDefinition): ToolStateStatus {
+    return this.toolStates()[tool.key]?.status ?? 'idle';
+  }
+
+  durationLabel(durationMs: number | null): string {
+    if (durationMs === null) {
+      return 'n/a';
+    }
+
+    if (durationMs < 1000) {
+      return `${durationMs} ms`;
+    }
+
+    return `${(durationMs / 1000).toFixed(1)} s`;
+  }
+
+  async copyJsonPayload(key: DatabaseJsonPayloadKey, value: string): Promise<void> {
+    if (!value) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(value);
+    if (!copied) {
+      return;
+    }
+
+    this.copiedJsonPayloadKey.set(key);
+    window.setTimeout(() => {
+      if (this.copiedJsonPayloadKey() === key) {
+        this.copiedJsonPayloadKey.set(null);
+      }
+    }, 1600);
+  }
+
+  downloadJsonPayload(key: DatabaseJsonPayloadKey, value: string): void {
+    if (!value) {
+      return;
+    }
+
+    const blob = new Blob([value], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = this.databaseJsonPayloadFileName(key);
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   private parsePayload(
     selectedTool: DatabaseToolDefinition
   ): { failed: false; value: unknown } | { failed: true; message: string } {
@@ -520,9 +580,7 @@ export class DatabaseConsoleComponent {
 
   private scopePayload(): DatabaseToolScopePayload {
     return {
-      environment: this.scopeForm.controls.environment.value.trim(),
-      correlationId: this.optionalValue(this.scopeForm.controls.correlationId.value),
-      analysisRunId: this.optionalValue(this.scopeForm.controls.analysisRunId.value)
+      environment: this.scopeForm.controls.environment.value.trim()
     };
   }
 
@@ -536,46 +594,75 @@ export class DatabaseConsoleComponent {
     const requestPreview = selectedTool.payloadRequired
       ? { scope, request: requestPayload }
       : { scope };
+    const requestJson = this.toFormattedJson({
+      endpoint,
+      method: 'POST',
+      body: requestPreview
+    });
+    const startedAt = Date.now();
 
-    this.state.set({
+    this.setToolState(selectedTool.key, {
       status: 'loading',
       statusCode: null,
       message: `Wysyłamy request do ${endpoint}...`,
+      endpoint,
+      requestJson,
       responseJson: this.toFormattedJson({
         status: 'WAITING',
         endpoint,
         request: requestPreview
-      })
+      }),
+      durationMs: null
     });
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
-        this.state.set({
+        this.setToolState(selectedTool.key, {
           status: 'success',
           statusCode: 200,
           message: 'Backend zwrócił odpowiedź JSON z DatabaseToolService.',
-          responseJson: this.toFormattedJson(response)
+          endpoint,
+          requestJson,
+          responseJson: this.toFormattedJson(response),
+          durationMs: Date.now() - startedAt
         });
       },
-      error: (error) => this.state.set(this.toErrorState(error))
+      error: (error) =>
+        this.setToolState(
+          selectedTool.key,
+          this.toErrorState(error, endpoint, requestJson, Date.now() - startedAt)
+        )
     });
   }
 
-  private toErrorState(error: unknown): ToolState {
+  private toErrorState(
+    error: unknown,
+    endpoint = '',
+    requestJson = '',
+    durationMs: number | null = null
+  ): ToolState {
     if (error instanceof HttpErrorResponse) {
       const payload = this.normalizeErrorPayload(error.error, error.status, error.message);
       return {
         status: 'error',
         statusCode: error.status || null,
         message: payload.message,
-        responseJson: this.toFormattedJson(payload.body)
+        endpoint,
+        requestJson,
+        responseJson: this.toFormattedJson(payload.body),
+        durationMs
       };
     }
 
-    return this.errorStateFromPayload({
-      code: 'REQUEST_FAILED',
-      message: error instanceof Error ? error.message : 'Request zakończył się błędem.'
-    });
+    return this.errorStateFromPayload(
+      {
+        code: 'REQUEST_FAILED',
+        message: error instanceof Error ? error.message : 'Request zakończył się błędem.'
+      },
+      endpoint,
+      requestJson,
+      durationMs
+    );
   }
 
   private normalizeErrorPayload(
@@ -653,12 +740,20 @@ export class DatabaseConsoleComponent {
     };
   }
 
-  private errorStateFromPayload(payload: { code: string; message: string }): ToolState {
+  private errorStateFromPayload(
+    payload: { code: string; message: string },
+    endpoint = '',
+    requestJson = '',
+    durationMs: number | null = null
+  ): ToolState {
     return {
       status: 'error',
       statusCode: null,
       message: payload.message,
-      responseJson: this.toFormattedJson(payload)
+      endpoint,
+      requestJson,
+      responseJson: this.toFormattedJson(payload),
+      durationMs
     };
   }
 
@@ -667,19 +762,42 @@ export class DatabaseConsoleComponent {
       status: 'idle',
       statusCode: null,
       message,
-      responseJson: this.toFormattedJson({
-        message
-      })
+      endpoint: '',
+      requestJson: '',
+      responseJson: '',
+      durationMs: null
     };
   }
 
-  private optionalValue(raw: string): string | undefined {
-    const value = String(raw || "").trim();
-    return value.length > 0 ? value : undefined;
+  private createInitialToolStates(): Record<DatabaseToolKey, ToolState> {
+    return this.tools.reduce(
+      (states, tool) => ({
+        ...states,
+        [tool.key]: this.idleState('Wybierz scope, payload i uruchom request.')
+      }),
+      {} as Record<DatabaseToolKey, ToolState>
+    );
+  }
+
+  private setCurrentToolState(state: ToolState): void {
+    this.setToolState(this.selectedToolKey(), state);
+  }
+
+  private setToolState(toolKey: DatabaseToolKey, state: ToolState): void {
+    this.toolStates.update((states) => ({
+      ...states,
+      [toolKey]: state
+    }));
   }
 
   private toFormattedJson(value: unknown): string {
     const formatted = JSON.stringify(value, null, 2);
     return formatted === undefined ? 'null' : formatted;
+  }
+
+  private databaseJsonPayloadFileName(key: DatabaseJsonPayloadKey): string {
+    const safeEndpoint = this.selectedTool().endpoint.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `database-${safeEndpoint}-${key}-${timestamp}.json`;
   }
 }
