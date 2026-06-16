@@ -1,13 +1,17 @@
-<div class="app-shell" [class.app-shell--sidebar-collapsed]="sidebarCollapsed()">
+<div
+  class="app-shell"
+  [class.app-shell--sidebar-collapsed]="sidebarCollapsed()"
+  [class.app-shell--sidebar-expanding]="sidebarExpanding()"
+>
   <aside class="app-shell__sidebar" aria-label="Main navigation">
     <div class="app-shell__sidebar-header">
-      @if (sidebarCollapsed()) {
+      @if (sidebarRailMode()) {
         <button
           class="app-shell__brand-toggle"
           type="button"
           aria-label="Rozwiń panel nawigacji"
           title="Rozwiń panel nawigacji"
-          aria-expanded="false"
+          [attr.aria-expanded]="!sidebarRailMode()"
           (click)="toggleSidebar()"
         >
           <img
@@ -64,7 +68,7 @@
                   routerLinkActive="app-shell__nav-item--active"
                   [routerLinkActiveOptions]="{ exact: item.exact || false }"
                   [attr.aria-label]="item.label"
-                  [attr.title]="sidebarCollapsed() ? item.label : null"
+                  [attr.title]="sidebarRailMode() ? item.label : null"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
                   <span class="app-shell__nav-label">{{ item.label }}</span>

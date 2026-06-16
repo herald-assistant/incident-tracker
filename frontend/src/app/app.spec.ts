@@ -88,10 +88,17 @@ describe('App', () => {
 
     brandToggle?.click();
     fixture.detectChanges();
+
+    expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
+    expect(shell?.classList.contains('app-shell--sidebar-expanding')).toBe(true);
+    expect(compiled.querySelector('.app-shell__brand-toggle')).not.toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve, 190));
+    fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
+    expect(shell?.classList.contains('app-shell--sidebar-expanding')).toBe(false);
     expect(compiled.querySelector('.app-shell__brand-toggle')).toBeNull();
     expect(compiled.querySelector('.app-shell__sidebar-toggle')).not.toBeNull();
     expect(window.localStorage.getItem('team-delivery-workspace.sidebar.collapsed')).toBe('false');

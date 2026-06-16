@@ -202,7 +202,8 @@
   font-size: 20px;
 }
 
-.app-shell--sidebar-collapsed .app-shell__sidebar {
+.app-shell--sidebar-collapsed .app-shell__sidebar,
+.app-shell--sidebar-expanding .app-shell__sidebar {
   gap: 10px;
   padding: 12px 9px;
 }
@@ -212,16 +213,28 @@
   justify-items: center;
 }
 
-.app-shell--sidebar-collapsed .app-shell__nav {
+.app-shell--sidebar-expanding .app-shell__sidebar-header {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.app-shell--sidebar-collapsed .app-shell__nav,
+.app-shell--sidebar-expanding .app-shell__nav {
   gap: 14px;
 }
 
-.app-shell--sidebar-collapsed .app-shell__nav-group {
+.app-shell--sidebar-collapsed .app-shell__nav-group,
+.app-shell--sidebar-expanding .app-shell__nav-group {
   justify-items: center;
   gap: 6px;
 }
 
-.app-shell--sidebar-collapsed .app-shell__nav-heading {
+.app-shell--sidebar-expanding .app-shell__nav-group {
+  justify-items: start;
+}
+
+.app-shell--sidebar-collapsed .app-shell__nav-heading,
+.app-shell--sidebar-expanding .app-shell__nav-heading {
   width: 28px;
   height: 1px;
   margin: 2px 0;
@@ -232,11 +245,17 @@
   line-height: 1px;
 }
 
-.app-shell--sidebar-collapsed .app-shell__nav-list {
+.app-shell--sidebar-collapsed .app-shell__nav-list,
+.app-shell--sidebar-expanding .app-shell__nav-list {
   justify-items: center;
 }
 
-.app-shell--sidebar-collapsed .app-shell__nav-item {
+.app-shell--sidebar-expanding .app-shell__nav-list {
+  justify-items: start;
+}
+
+.app-shell--sidebar-collapsed .app-shell__nav-item,
+.app-shell--sidebar-expanding .app-shell__nav-item {
   grid-template-columns: 1fr;
   justify-items: center;
   width: 40px;
@@ -245,7 +264,9 @@
 }
 
 .app-shell--sidebar-collapsed .app-shell__nav-label,
-.app-shell--sidebar-collapsed .app-shell__nav-badge {
+.app-shell--sidebar-collapsed .app-shell__nav-badge,
+.app-shell--sidebar-expanding .app-shell__nav-label,
+.app-shell--sidebar-expanding .app-shell__nav-badge {
   display: none;
 }
 
@@ -472,7 +493,8 @@
   }
 
   .app-shell__sidebar-header,
-  .app-shell--sidebar-collapsed .app-shell__sidebar-header {
+  .app-shell--sidebar-collapsed .app-shell__sidebar-header,
+  .app-shell--sidebar-expanding .app-shell__sidebar-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -505,7 +527,8 @@
     white-space: nowrap;
   }
 
-  .app-shell--sidebar-collapsed .app-shell__nav-heading {
+  .app-shell--sidebar-collapsed .app-shell__nav-heading,
+  .app-shell--sidebar-expanding .app-shell__nav-heading {
     width: auto;
     height: auto;
     margin: 0;
@@ -516,12 +539,14 @@
     line-height: normal;
   }
 
-  .app-shell--sidebar-collapsed .app-shell__nav-list {
+  .app-shell--sidebar-collapsed .app-shell__nav-list,
+  .app-shell--sidebar-expanding .app-shell__nav-list {
     display: flex;
     gap: 6px;
   }
 
-  .app-shell--sidebar-collapsed .app-shell__nav-item {
+  .app-shell--sidebar-collapsed .app-shell__nav-item,
+  .app-shell--sidebar-expanding .app-shell__nav-item {
     width: auto;
     min-width: 152px;
     grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -530,7 +555,9 @@
   }
 
   .app-shell--sidebar-collapsed .app-shell__nav-label,
-  .app-shell--sidebar-collapsed .app-shell__nav-badge {
+  .app-shell--sidebar-collapsed .app-shell__nav-badge,
+  .app-shell--sidebar-expanding .app-shell__nav-label,
+  .app-shell--sidebar-expanding .app-shell__nav-badge {
     display: inline;
   }
 

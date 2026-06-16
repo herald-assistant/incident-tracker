@@ -48,6 +48,7 @@ const DEFAULT_CONTEXT: RouteContext = {
   capabilityInfo: null
 };
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'team-delivery-workspace.sidebar.collapsed';
+const SIDEBAR_EXPAND_CONTENT_DELAY_MS = 170;
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -88,9 +89,12 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly routeContext = signal<RouteContext>(DEFAULT_CONTEXT);
+  private sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly navGroups = NAV_GROUPS;
   readonly sidebarCollapsed = signal(readSidebarCollapsedPreference());
+  readonly sidebarExpanding = signal(false);
+  readonly sidebarRailMode = computed(() => this.sidebarCollapsed() || this.sidebarExpanding());
   readonly section = computed(() => this.routeContext().section);
   readonly title = computed(() => this.routeContext().title);
   readonly capabilityInfo = computed(() => this.routeContext().capabilityInfo);
@@ -107,8 +111,22 @@ export class AppShellComponent {
 
   protected toggleSidebar(): void {
     const collapsed = !this.sidebarCollapsed();
-    this.sidebarCollapsed.set(collapsed);
-    writeSidebarCollapsedPreference(collapsed);
+    this.clearSidebarExpandTimer();
+
+    if (collapsed) {
+      this.sidebarExpanding.set(false);
+      this.sidebarCollapsed.set(true);
+      writeSidebarCollapsedPreference(true);
+      return;
+    }
+
+    this.sidebarExpanding.set(true);
+    this.sidebarCollapsed.set(false);
+    writeSidebarCollapsedPreference(false);
+    this.sidebarExpandTimer = setTimeout(() => {
+      this.sidebarExpanding.set(false);
+      this.sidebarExpandTimer = null;
+    }, SIDEBAR_EXPAND_CONTENT_DELAY_MS);
   }
 
   private updateRouteContext(): void {
@@ -137,6 +155,15 @@ export class AppShellComponent {
     }
 
     this.routeContext.set({ section, title, capabilityInfo });
+  }
+
+  private clearSidebarExpandTimer(): void {
+    if (this.sidebarExpandTimer === null) {
+      return;
+    }
+
+    clearTimeout(this.sidebarExpandTimer);
+    this.sidebarExpandTimer = null;
   }
 }
 

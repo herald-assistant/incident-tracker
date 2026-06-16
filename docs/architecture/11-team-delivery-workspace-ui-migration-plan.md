@@ -85,9 +85,11 @@ byc zaktualizowany przed dalsza implementacja.
 - Kontrolka zwijania/rozwijania uzywa ikony Material Symbols `dock_to_right`.
   Po zwinieciu osobna kontrolka znika, a jej role przejmuje `main-logo.png`,
   ktore na hover/focus zmienia sie wizualnie w ikone `dock_to_right`.
-- Sidebar icon rail ma miec stabilny rytm pionowy podczas zwijania i
-  rozwijania: ikony i itemy maja stale wymiary, a naglowki grup w trybie
-  zwinietym sa ukryte bez zamiany na separatory zmieniajace wysokosc layoutu.
+- Finalny wyglad sidebaru w trybie rozwinietym i zwinietym zostaje bez
+  dodatkowych pustych placeholderow. Problemem do rozwiazania jest sam moment
+  rozwijania: podczas animacji szerokosci sidebar pozostaje chwilowo w trybie
+  raila, a pelny brand, headingi i teksty nawigacji pojawiaja sie dopiero po
+  zakonczeniu przejscia.
 - Pusty stan `Incident Analysis` przed startem analizy nie pokazuje statusowego
   kickera `Gotowe`, zeby nie sugerowac zakonczonego wyniku.
 - Domyslny uklad dla wszystkich ekranow `Tool Workbench` nie jest
@@ -407,8 +409,9 @@ Zakres:
   `Usage` w pasku kontekstu runu.
 - [x] Dopracowac kolorystyke, przewijanie i zwiezlosc tooltipa `Usage`.
 - [x] Dodac zwijany lewy sidebar z ikonowym trybem nawigacji.
-- [x] Ustabilizowac pionowy rytm ikon w sidebarze podczas zwijania i
-  rozwijania.
+- [x] Dodac stan przejsciowy `app-shell--sidebar-expanding`, ktory opoznia
+  pokazanie pelnego brandu, headingow i tekstow nawigacji do zakonczenia
+  animacji rozwijania.
 - [x] Usunac kicker `Gotowe` z pustego stanu ekranu analizy.
 
 Weryfikacja:
