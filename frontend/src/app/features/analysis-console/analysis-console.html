@@ -202,7 +202,9 @@
     <section #responsePanel class="incident-workspace__body" aria-live="polite">
       @if (!job() && !transportError()) {
         <section class="analysis-placeholder-workspace">
-          <p class="placeholder-kicker">{{ placeholderKicker() }}</p>
+          @if (placeholderMode() === 'loading') {
+            <p class="placeholder-kicker">Trwa</p>
+          }
           <h2>{{ placeholderTitle() }}</h2>
           <p>{{ placeholderDescription() }}</p>
         </section>

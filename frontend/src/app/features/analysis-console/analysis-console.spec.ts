@@ -30,6 +30,20 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(analysisApi.getAiModelOptions).toHaveBeenCalledTimes(1);
   });
 
+  it('should not show a ready kicker before analysis starts', async () => {
+    const { fixture } = await createComponent(localStatus());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Tutaj pojawi się przebieg analizy.');
+    expect(compiled.textContent).not.toContain('Gotowe');
+    expect(compiled.querySelector('.analysis-placeholder-workspace .placeholder-kicker')).toBeNull();
+  });
+
   it('should show GitHub connect CTA and skip model options when disconnected', async () => {
     const { fixture, analysisApi } = await createComponent(disconnectedStatus());
 

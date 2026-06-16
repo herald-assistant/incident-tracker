@@ -34,6 +34,7 @@ const DEFAULT_CONTEXT: RouteContext = {
   section: 'Analysis Features',
   title: 'Incident Analysis'
 };
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'team-delivery-workspace.sidebar.collapsed';
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -76,6 +77,7 @@ export class AppShellComponent {
   private readonly routeContext = signal<RouteContext>(DEFAULT_CONTEXT);
 
   readonly navGroups = NAV_GROUPS;
+  readonly sidebarCollapsed = signal(readSidebarCollapsedPreference());
   readonly section = computed(() => this.routeContext().section);
   readonly title = computed(() => this.routeContext().title);
 
@@ -87,6 +89,12 @@ export class AppShellComponent {
         takeUntilDestroyed()
       )
       .subscribe(() => this.updateRouteContext());
+  }
+
+  protected toggleSidebar(): void {
+    const collapsed = !this.sidebarCollapsed();
+    this.sidebarCollapsed.set(collapsed);
+    writeSidebarCollapsedPreference(collapsed);
   }
 
   private updateRouteContext(): void {
@@ -110,5 +118,21 @@ export class AppShellComponent {
     }
 
     this.routeContext.set({ section, title });
+  }
+}
+
+function readSidebarCollapsedPreference(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeSidebarCollapsedPreference(collapsed: boolean): void {
+  try {
+    window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
+  } catch {
+    // Layout preference persistence is optional.
   }
 }

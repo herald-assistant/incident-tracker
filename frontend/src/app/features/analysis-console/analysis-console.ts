@@ -238,9 +238,6 @@ export class AnalysisConsoleComponent {
     }
     return 'Możesz dopytać o wynik, poprosić o weryfikację w repo lub DB albo wygenerować raport.';
   });
-  readonly placeholderKicker = computed(() =>
-    this.placeholderMode() === 'loading' ? 'Trwa' : 'Gotowe'
-  );
   readonly placeholderTitle = computed(() =>
     this.placeholderMode() === 'loading'
       ? 'Uruchamiamy analizę...'

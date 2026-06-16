@@ -79,6 +79,14 @@ byc zaktualizowany przed dalsza implementacja.
 - Tooltip `Usage` ma byc jasnym panelem informacyjnym zgodnym z light theme,
   miec limit wysokosci z przewijaniem i zwiezly breakdown, zeby nie przykrywal
   ani nie ucinal dlugich danych.
+- Lewy sidebar ma miec tryb zwijany do ikonowego raila o szerokosci `60px`.
+  W trybie zwinietym nawigacja pozostaje klikalna, aktywny ekran jest nadal
+  oznaczony, a etykiety sa dostepne przez `aria-label`/tooltip.
+- Kontrolka zwijania/rozwijania uzywa ikony Material Symbols `dock_to_right`.
+  Po zwinieciu osobna kontrolka znika, a jej role przejmuje `main-logo.png`,
+  ktore na hover/focus zmienia sie wizualnie w ikone `dock_to_right`.
+- Pusty stan `Incident Analysis` przed startem analizy nie pokazuje statusowego
+  kickera `Gotowe`, zeby nie sugerowac zakonczonego wyniku.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -350,6 +358,8 @@ Zakres:
 - [x] Przywrocic szczegolowy tooltip kosztow i tokenow dla kompaktowego itemu
   `Usage` w pasku kontekstu runu.
 - [x] Dopracowac kolorystyke, przewijanie i zwiezlosc tooltipa `Usage`.
+- [x] Dodac zwijany lewy sidebar z ikonowym trybem nawigacji.
+- [x] Usunac kicker `Gotowe` z pustego stanu ekranu analizy.
 
 Weryfikacja:
 

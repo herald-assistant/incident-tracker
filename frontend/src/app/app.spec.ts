@@ -10,6 +10,8 @@ import { routes } from './app.routes';
 
 describe('App', () => {
   beforeEach(async () => {
+    window.localStorage.removeItem('team-delivery-workspace.sidebar.collapsed');
+
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
@@ -39,6 +41,59 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-analysis-console')).not.toBeNull();
+  });
+
+  it('should collapse the left navigation into an icon rail', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const shell = compiled.querySelector('.app-shell');
+    const toggle = compiled.querySelector(
+      '.app-shell__sidebar-toggle'
+    ) as HTMLButtonElement | null;
+    const toggleIcon = toggle?.querySelector('.material-symbols-outlined');
+    const incidentLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Incident Analysis"]'
+    );
+
+    expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
+    expect(toggle?.getAttribute('aria-label')).toBe('Zwiń panel nawigacji');
+    expect(toggleIcon?.textContent?.trim()).toBe('dock_to_right');
+    expect(incidentLink?.getAttribute('title')).toBeNull();
+
+    toggle?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(true);
+    expect(compiled.querySelector('.app-shell__sidebar-toggle')).toBeNull();
+    const brandToggle = compiled.querySelector(
+      '.app-shell__brand-toggle'
+    ) as HTMLButtonElement | null;
+    expect(brandToggle?.getAttribute('aria-label')).toBe('Rozwiń panel nawigacji');
+    expect(brandToggle?.querySelector('.app-shell__brand-toggle-logo')).not.toBeNull();
+    expect(brandToggle?.querySelector('.app-shell__brand-toggle-icon')?.textContent?.trim()).toBe(
+      'dock_to_right'
+    );
+    expect(incidentLink?.getAttribute('title')).toBe('Incident Analysis');
+    expect(window.localStorage.getItem('team-delivery-workspace.sidebar.collapsed')).toBe('true');
+
+    brandToggle?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
+    expect(compiled.querySelector('.app-shell__brand-toggle')).toBeNull();
+    expect(compiled.querySelector('.app-shell__sidebar-toggle')).not.toBeNull();
+    expect(window.localStorage.getItem('team-delivery-workspace.sidebar.collapsed')).toBe('false');
   });
 
   it('should render the elastic console shell on the elastic route', async () => {

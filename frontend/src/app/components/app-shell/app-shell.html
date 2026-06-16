@@ -1,6 +1,42 @@
-<div class="app-shell">
+<div class="app-shell" [class.app-shell--sidebar-collapsed]="sidebarCollapsed()">
   <aside class="app-shell__sidebar" aria-label="Main navigation">
-    <app-brand></app-brand>
+    <div class="app-shell__sidebar-header">
+      @if (sidebarCollapsed()) {
+        <button
+          class="app-shell__brand-toggle"
+          type="button"
+          aria-label="Rozwiń panel nawigacji"
+          title="Rozwiń panel nawigacji"
+          aria-expanded="false"
+          (click)="toggleSidebar()"
+        >
+          <img
+            class="app-shell__brand-toggle-logo"
+            src="assets/brand/main-logo.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <span
+            class="material-symbols-outlined app-shell__brand-toggle-icon"
+            aria-hidden="true"
+          >
+            dock_to_right
+          </span>
+        </button>
+      } @else {
+        <app-brand></app-brand>
+        <button
+          class="app-shell__sidebar-toggle"
+          type="button"
+          aria-label="Zwiń panel nawigacji"
+          title="Zwiń panel nawigacji"
+          aria-expanded="true"
+          (click)="toggleSidebar()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">dock_to_right</span>
+        </button>
+      }
+    </div>
 
     <nav class="app-shell__nav" aria-label="Workspace sections">
       @for (group of navGroups; track group.label) {
@@ -15,11 +51,11 @@
                   type="button"
                   disabled
                   [attr.aria-label]="item.label + ' coming soon'"
-                  title="Coming soon"
+                  [attr.title]="item.label + ' - coming soon'"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
-                  <span>{{ item.label }}</span>
-                  <small>Soon</small>
+                  <span class="app-shell__nav-label">{{ item.label }}</span>
+                  <small class="app-shell__nav-badge">Soon</small>
                 </button>
               } @else {
                 <a
@@ -27,9 +63,11 @@
                   [routerLink]="item.route"
                   routerLinkActive="app-shell__nav-item--active"
                   [routerLinkActiveOptions]="{ exact: item.exact || false }"
+                  [attr.aria-label]="item.label"
+                  [attr.title]="sidebarCollapsed() ? item.label : null"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
-                  <span>{{ item.label }}</span>
+                  <span class="app-shell__nav-label">{{ item.label }}</span>
                 </a>
               }
             }

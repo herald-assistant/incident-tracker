@@ -2,10 +2,12 @@
   <div class="brand-mark" aria-hidden="true">
     <img class="brand-mark__image" src="assets/brand/main-logo.png" alt="" />
   </div>
-  <div>
-    @if (subtitle(); as currentSubtitle) {
-      <p class="brand-eyebrow">{{ currentSubtitle }}</p>
-    }
-    <h1 class="brand-title">{{ title() }}</h1>
-  </div>
+  @if (!compact()) {
+    <div>
+      @if (subtitle(); as currentSubtitle) {
+        <p class="brand-eyebrow">{{ currentSubtitle }}</p>
+      }
+      <h1 class="brand-title">{{ title() }}</h1>
+    </div>
+  }
 </div>
