@@ -1,61 +1,63 @@
-<div class="page-shell evidence-console">
-  <main class="workspace">
-    <section class="hero-card evidence-hero">
-        <div class="hero-main">
-          <div class="hero-copy">
-            <p class="section-eyebrow">Manualne testy integracji</p>
-            <h2>Elastic</h2>
-            <p class="hero-description">
-              Widok służy do ręcznego odpalania helper endpointów Elastica. Każda karta wysyła
-              request do backendu i pokazuje sformatowaną odpowiedź JSON w polu tekstowym.
-            </p>
-          </div>
-
-          <div class="evidence-intro">
-            <div class="evidence-intro__chip-list">
-              <span class="panel-chip">JSON response preview</span>
-              <span class="panel-chip">Elastic log search</span>
-              <span class="panel-chip">Elastic HTTP compare</span>
-              <span class="panel-chip">HTTP call logs</span>
-            </div>
-          </div>
+<div class="page-shell elastic-console">
+  <main class="elastic-workspace">
+    <section class="analysis-card workbench-header">
+      <div class="workbench-header__top">
+        <div class="workbench-header__copy">
+          <p class="section-eyebrow">Tool Workbench</p>
+          <h2>Elastic Logs</h2>
+          <p>
+            Ręczne testowanie helper API dla Elasticsearch/Kibana. Widok jest operatorskim
+            zapleczem do debugowania logów i przygotowania inputu, bez logiki konkretnej analizy.
+          </p>
         </div>
 
-        <div class="hero-side-panel">
-          <p class="panel-title">Przydatne scenariusze</p>
-          <ul class="mini-list">
-            <li>czy `correlationId` zwraca oczekiwane logi z Elastica</li>
-            <li>czy podobne wywołania HTTP na tym samym path kończą się 200/400/500</li>
-            <li>czy konkretny path/status/metoda dają dobry przykład do analizy kontraktu</li>
-          </ul>
+        <div class="workbench-header__status">
+          <span class="panel-chip">Reusable przez AI</span>
+          <span class="panel-chip">Readonly</span>
+          <span [class]="statusPillClass(state().status)">
+            {{ statusLabel(state().status) }}
+          </span>
         </div>
-    </section>
-
-      <section class="evidence-tool-section evidence-tool-section--elastic">
-      <div class="evidence-tool-section__header">
-        <div>
-          <p class="section-eyebrow">Elastic evidence</p>
-          <h2>Elasticsearch</h2>
-        </div>
-        <span class="panel-chip">Logi i diagnostyka HTTP</span>
       </div>
 
-      <div class="tool-grid">
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Elasticsearch</p>
-            <h2>Log Search</h2>
-            <p class="field-hint">
-              Najprostszy helper: podajesz tylko `correlationId`, a backend używa swojej
-              konfiguracji połączenia i limitów odpowiedzi.
-            </p>
-          </div>
-          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/search</span>
-        </div>
+      <details class="workbench-details">
+        <summary>
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Szczegóły capability
+        </summary>
 
-        <form class="tool-form" novalidate (submit)="submitElastic($event)">
-          <div class="form-grid form-grid--single">
+        <dl class="workbench-meta-grid">
+          <div>
+            <dt>Endpointy</dt>
+            <dd>POST /api/elasticsearch/logs/*</dd>
+          </div>
+          <div>
+            <dt>Wymagany scope</dt>
+            <dd>log correlationId albo HTTP path/status/metoda oraz okno czasu</dd>
+          </div>
+          <div>
+            <dt>Reusable przez AI</dt>
+            <dd>Tak, ale sesja AI dostaje zakres przez feature-owned policy i ToolContext</dd>
+          </div>
+          <div>
+            <dt>Guardrails</dt>
+            <dd>Kibana space, index pattern, auth, readonly query i limity po stronie backendu</dd>
+          </div>
+        </dl>
+      </details>
+    </section>
+
+    <form class="elastic-layout" novalidate (submit)="submit($event)">
+      <aside class="analysis-card elastic-tool-panel">
+        <section class="elastic-scope-section" aria-labelledby="elasticScopeTitle">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Shared scope</p>
+              <h2 id="elasticScopeTitle">Zakres wywołań</h2>
+            </div>
+          </div>
+
+          <div class="elastic-scope-grid">
             <label class="form-field">
               <span class="field-label">Correlation ID</span>
               <input
@@ -64,88 +66,18 @@
                 placeholder="np. timeout-123"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="elasticForm.controls.correlationId"
-              />
-            </label>
-          </div>
-
-          @if (controlInvalid(elasticForm.controls.correlationId)) {
-            <p class="form-error">Pole `correlationId` jest wymagane.</p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="elasticState().status === 'loading'"
-            >
-              <span class="button-label">Uruchom Elastic</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="elasticState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ elasticState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (elasticState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ elasticState().statusCode }}</span>
-            }
-            <span [class]="statusPillClass(elasticState().status)">
-              {{ statusLabel(elasticState().status) }}
-            </span>
-          </div>
-        </div>
-
-        <label class="field-label" for="elasticJsonResponse">JSON response</label>
-        <textarea
-          id="elasticJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="elasticState().responseJson"
-        ></textarea>
-      </article>
-
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Elasticsearch</p>
-            <h2>HTTP Call Summary</h2>
-            <p class="field-hint">
-              Porównuje podobne wywołania HTTP po path prefixie w ostatnim oknie czasu. Przydaje
-              się, gdy bieżący request kończy się 500, a trzeba znaleźć podobne 200/400 do analizy
-              danych lub kontraktu.
-            </p>
-          </div>
-          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/http-calls/summary</span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitElasticHttpSummary($event)">
-          <div class="form-grid">
-            <label class="form-field form-field--wide">
-              <span class="field-label">Path prefix / pattern</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. /external/path/"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpSummaryForm.controls.pathPattern"
+                [formControl]="scopeForm.controls.correlationId"
               />
             </label>
 
             <label class="form-field">
-              <span class="field-label">Method</span>
+              <span class="field-label">Time window days</span>
               <input
                 class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. GET"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpSummaryForm.controls.method"
+                type="number"
+                min="1"
+                max="30"
+                [formControl]="scopeForm.controls.timeWindowDays"
               />
             </label>
 
@@ -157,206 +89,316 @@
                 placeholder="opcjonalnie, np. backend"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="elasticHttpSummaryForm.controls.serviceName"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Time window days</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="30"
-                [formControl]="elasticHttpSummaryForm.controls.timeWindowDays"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Sample size</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="1000"
-                [formControl]="elasticHttpSummaryForm.controls.sampleSize"
+                [formControl]="scopeForm.controls.serviceName"
               />
             </label>
           </div>
 
-          @if (controlInvalid(elasticHttpSummaryForm.controls.pathPattern)) {
-            <p class="form-error">Pole `pathPattern` jest wymagane.</p>
+          @if (correlationIdMissingForSelectedTool()) {
+            <p class="form-error">Pole `correlationId` jest wymagane dla Log Search.</p>
+          }
+        </section>
+
+        <section class="elastic-tool-section" aria-labelledby="elasticToolsTitle">
+          <div class="section-heading elastic-tool-section__heading">
+            <div>
+              <p class="section-eyebrow">Tools</p>
+              <h2 id="elasticToolsTitle">Element do testu</h2>
+            </div>
+            <span class="panel-chip">{{ tools.length }}</span>
+          </div>
+
+          <div class="elastic-tool-list" aria-label="Elastic tools">
+            @for (group of toolGroups; track group.category) {
+              <section class="elastic-tool-group">
+                <p class="elastic-tool-group__title">{{ group.category }}</p>
+                @for (tool of group.tools; track tool.key) {
+                  <button
+                    type="button"
+                    [class]="toolButtonClass(tool)"
+                    [attr.aria-pressed]="tool.key === selectedToolKey()"
+                    (click)="selectTool(tool.key)"
+                  >
+                    <span class="elastic-tool-button__content">
+                      <span>{{ tool.label }}</span>
+                      <small>{{ tool.endpoint }}</small>
+                    </span>
+                    <span
+                      class="elastic-tool-button__state"
+                      [attr.data-status]="toolStateStatus(tool)"
+                      aria-hidden="true"
+                    ></span>
+                  </button>
+                }
+              </section>
+            }
+          </div>
+        </section>
+      </aside>
+
+      <section class="elastic-main">
+        <article class="analysis-card elastic-runner">
+          <div class="section-heading elastic-runner__header">
+            <div>
+              <p class="section-eyebrow">{{ selectedTool().category }}</p>
+              <h2>{{ selectedTool().label }}</h2>
+              <p class="field-hint">{{ selectedTool().summary }}</p>
+            </div>
+            <span class="panel-chip route-chip">
+              POST /api/elasticsearch/{{ selectedTool().endpoint }}
+            </span>
+          </div>
+
+          @switch (selectedToolKey()) {
+            @case ('logSearch') {
+              <div class="payload-placeholder">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <p>
+                  Ten endpoint używa `correlationId` ze wspólnego scope i zwraca surowy podgląd
+                  logów z helper API.
+                </p>
+              </div>
+            }
+
+            @case ('httpSummary') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Path prefix / pattern</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. /external/path/"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="httpSummaryForm.controls.pathPattern"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Method</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie, np. GET"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="httpSummaryForm.controls.method"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Sample size</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="1000"
+                    [formControl]="httpSummaryForm.controls.sampleSize"
+                  />
+                </label>
+              </div>
+
+              @if (controlInvalid(httpSummaryForm.controls.pathPattern)) {
+                <p class="form-error">Pole `pathPattern` jest wymagane.</p>
+              }
+            }
+
+            @case ('httpLogs') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie, np. /external/path/125"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="httpLogsForm.controls.path"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Status</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="100"
+                    max="599"
+                    placeholder="opcjonalnie, np. 200"
+                    [formControl]="httpLogsForm.controls.status"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Method</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie, np. GET"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="httpLogsForm.controls.method"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Size</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="200"
+                    [formControl]="httpLogsForm.controls.size"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Detail level</span>
+                  <select class="text-input" [formControl]="httpLogsForm.controls.detailLevel">
+                    <option value="SUMMARY">SUMMARY</option>
+                    <option value="COMPACT">COMPACT</option>
+                    <option value="FULL">FULL</option>
+                  </select>
+                </label>
+              </div>
+
+              @if (httpLogsMissingInputForSelectedTool()) {
+                <p class="form-error">
+                  Podaj path albo uzupełnij `correlationId` we wspólnym scope.
+                </p>
+              }
+            }
           }
 
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="elasticHttpSummaryState().status === 'loading'"
-            >
-              <span class="button-label">Porównaj HTTP calls</span>
+          <div class="elastic-runner__actions">
+            <button class="secondary-button" type="button" (click)="resetSelectedFields()">
+              <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+              <span>Reset fields</span>
+            </button>
+            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              <span class="button-label">Run request</span>
             </button>
           </div>
-        </form>
+        </article>
 
-        <div class="tool-status" [attr.data-status]="elasticHttpSummaryState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ elasticHttpSummaryState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (elasticHttpSummaryState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ elasticHttpSummaryState().statusCode }}</span>
+        @if (hasResult()) {
+          <article class="analysis-card elastic-result">
+            <div class="elastic-result__header">
+              <div>
+                <p class="section-eyebrow">Result</p>
+                <h2>Ostatni wynik</h2>
+              </div>
+            </div>
+
+            <div class="tool-status" [attr.data-status]="state().status">
+              <div>
+                <p class="tool-status__label">{{ state().endpoint || 'Manual validation' }}</p>
+                <p class="tool-status__message">{{ state().message }}</p>
+              </div>
+              <div class="tool-status__badges">
+                @if (state().statusCode !== null) {
+                  <span class="tool-status__code">HTTP {{ state().statusCode }}</span>
+                }
+                @if (state().durationMs !== null) {
+                  <span class="tool-status__code">{{ durationLabel(state().durationMs) }}</span>
+                }
+                <span [class]="statusPillClass(state().status)">
+                  {{ statusLabel(state().status) }}
+                </span>
+              </div>
+            </div>
+
+            @if (state().requestJson) {
+              <details class="json-response-panel elastic-json-panel elastic-json-panel--request">
+                <summary class="json-response-panel__header">
+                  <span class="json-response-panel__title">
+                    <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                      chevron_right
+                    </span>
+                    <span class="field-label">Request preview</span>
+                  </span>
+                  <div class="json-response-panel__actions">
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Kopiuj request preview do schowka"
+                      title="Kopiuj JSON"
+                      (click)="$event.stopPropagation(); copyJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">
+                        {{ copiedJsonPayloadKey() === 'request' ? 'task_alt' : 'content_copy' }}
+                      </span>
+                    </button>
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Pobierz request preview do pliku JSON"
+                      title="Pobierz JSON"
+                      (click)="$event.stopPropagation(); downloadJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                    </button>
+                  </div>
+                </summary>
+                <textarea
+                  id="elasticRequestPreview"
+                  class="json-output"
+                  aria-label="Request preview"
+                  readonly
+                  spellcheck="false"
+                  [value]="state().requestJson"
+                ></textarea>
+              </details>
             }
-            <span [class]="statusPillClass(elasticHttpSummaryState().status)">
-              {{ statusLabel(elasticHttpSummaryState().status) }}
-            </span>
-          </div>
-        </div>
 
-        <label class="field-label" for="elasticHttpSummaryJsonResponse">JSON response</label>
-        <textarea
-          id="elasticHttpSummaryJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="elasticHttpSummaryState().responseJson"
-        ></textarea>
-      </article>
-
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Elasticsearch</p>
-            <h2>HTTP Call Logs</h2>
-            <p class="field-hint">
-              Pobiera logi dla wybranego przykładu z summary: po `correlationId` albo po konkretnym
-              path/status/metodzie. Poziom szczegółowości steruje tym, czy odpowiedź ma być krótka,
-              kompaktowa czy pełna.
-            </p>
-          </div>
-          <span class="panel-chip route-chip">POST /api/elasticsearch/logs/http-calls/fetch</span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitElasticHttpLogs($event)">
-          <div class="form-grid">
-            <label class="form-field">
-              <span class="field-label">Correlation ID</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. sample-success-corr"
-                autocomplete="off"
+            <details class="json-response-panel elastic-json-panel" open>
+              <summary class="json-response-panel__header">
+                <span class="json-response-panel__title">
+                  <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                    chevron_right
+                  </span>
+                  <span class="field-label">JSON response</span>
+                </span>
+                <div class="json-response-panel__actions">
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Kopiuj JSON response do schowka"
+                    title="Kopiuj JSON"
+                    (click)="$event.stopPropagation(); copyJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedJsonPayloadKey() === 'response' ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Pobierz JSON response do pliku"
+                    title="Pobierz JSON"
+                    (click)="$event.stopPropagation(); downloadJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                  </button>
+                </div>
+              </summary>
+              <textarea
+                id="elasticJsonResponse"
+                class="json-output"
+                aria-label="JSON response"
+                readonly
                 spellcheck="false"
-                [formControl]="elasticHttpLogsForm.controls.correlationId"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Path</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. /external/path/125"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpLogsForm.controls.path"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Status</span>
-              <input
-                class="text-input"
-                type="number"
-                min="100"
-                max="599"
-                placeholder="opcjonalnie, np. 200"
-                [formControl]="elasticHttpLogsForm.controls.status"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Method</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. GET"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="elasticHttpLogsForm.controls.method"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Time window days</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="30"
-                [formControl]="elasticHttpLogsForm.controls.timeWindowDays"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Size</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="200"
-                [formControl]="elasticHttpLogsForm.controls.size"
-              />
-            </label>
-
-            <label class="form-field form-field--wide">
-              <span class="field-label">Detail level</span>
-              <select class="text-input" [formControl]="elasticHttpLogsForm.controls.detailLevel">
-                <option value="SUMMARY">SUMMARY</option>
-                <option value="COMPACT">COMPACT</option>
-                <option value="FULL">FULL</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="elasticHttpLogsState().status === 'loading'"
-            >
-              <span class="button-label">Pobierz HTTP logs</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="elasticHttpLogsState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ elasticHttpLogsState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (elasticHttpLogsState().statusCode !== null) {
-              <span class="tool-status__code">HTTP {{ elasticHttpLogsState().statusCode }}</span>
-            }
-            <span [class]="statusPillClass(elasticHttpLogsState().status)">
-              {{ statusLabel(elasticHttpLogsState().status) }}
-            </span>
-          </div>
-        </div>
-
-        <label class="field-label" for="elasticHttpLogsJsonResponse">JSON response</label>
-        <textarea
-          id="elasticHttpLogsJsonResponse"
-          class="json-output"
-          readonly
-          spellcheck="false"
-          [value]="elasticHttpLogsState().responseJson"
-        ></textarea>
-      </article>
-      </div>
+                [value]="state().responseJson"
+              ></textarea>
+            </details>
+          </article>
+        }
       </section>
+    </form>
   </main>
 </div>
-

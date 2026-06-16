@@ -103,6 +103,9 @@ byc zaktualizowany przed dalsza implementacja.
 - `Request preview` i `JSON response` w Tool Workbench sa zwijalne. Po
   wykonaniu requestu `JSON response` jest domyslnie rozwiniety, a mniej istotny
   `Request preview` domyslnie zwiniety.
+- `Database Tools` jest pierwszym referencyjnym ekranem dla layoutu Tool
+  Workbench; `Elastic Logs` ma uzywac tego samego wzorca z dopasowaniem do
+  wlasnych endpointow i formularzy.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -414,12 +417,12 @@ Zakres:
 - [x] Przebudowac `Database Tools` na wspolny wzorzec jako pierwszy ekran.
 - [ ] Wyciagnac wspolne komponenty dopiero po drugim ekranie, jesli wzorzec
   zacznie sie stabilnie powtarzac bez nadmiarowych roznic.
-- [ ] Przebudowac `Elastic Logs`.
-- [ ] Przebudowac `GitLab Source`.
-- [ ] Dla kazdego toola pokazac endpoint, scope, AI reusable capability,
+- [x] Przebudowac `Elastic Logs`.
+- [x] Przebudowac `GitLab Source`.
+- [x] Dla kazdego toola pokazac endpoint, scope, AI reusable capability,
   guardrails i last result.
-- [ ] Nie wprowadzac stalej trzeciej kolumny dla response w V1.
-- [ ] Nie zmieniac kontraktow backendowych helper endpointow.
+- [x] Nie wprowadzac stalej trzeciej kolumny dla response w V1.
+- [x] Nie zmieniac kontraktow backendowych helper endpointow.
 - [x] Wprowadzic globalny, delikatny styl scrollbarow dla calej aplikacji.
 - [x] Uspojnic `Database Tools`: `Request preview` i `JSON response` maja
   takie same ikonowe akcje kopiowania i pobierania jak GitLab JSON response.
@@ -444,8 +447,36 @@ Weryfikacja:
   operator go recznie nie rozwinie.
 - [x] `Database Tools`: `npm test -- --watch=false`.
 - [x] `Database Tools`: `npm run build`.
-- [ ] `Elastic Logs`: JSON request/response jest kopiowalny i czytelny.
-- [ ] `GitLab Source`: JSON request/response jest kopiowalny i czytelny.
+- [x] `Elastic Logs`: JSON request/response jest kopiowalny i czytelny.
+- [x] `Elastic Logs`: wynik nie renderuje sie przed pierwsza akcja.
+- [x] `Elastic Logs`: header capability jest full-width i szczegoly sa
+  inicjalnie zwiniete.
+- [x] `Elastic Logs`: lewy panel zawiera wspolny scope i liste elementow do
+  testu, a formularz aktywnego elementu jest w glownej przestrzeni.
+- [x] `Elastic Logs`: request preview jest domyslnie zwiniety po wyniku, a
+  JSON response domyslnie rozwiniety.
+- [x] `Elastic Logs`: status HTTP, timing i blad requestu sa widoczne w sekcji
+  wyniku.
+- [x] `Elastic Logs`: UI nie dodaje `analysisRunId` ani incidentowego session
+  scope'u; zostawia istniejace helper payloady Elastica bez zmian.
+- [x] `Elastic Logs`: browser check desktop bez poziomego overflow.
+- [x] `Elastic Logs`: `npm test -- --watch=false`.
+- [x] `Elastic Logs`: `npm run build`.
+- [x] `GitLab Source`: JSON request/response jest kopiowalny i czytelny.
+- [x] `GitLab Source`: wynik nie renderuje sie przed pierwsza akcja.
+- [x] `GitLab Source`: header capability jest full-width i szczegoly sa
+  inicjalnie zwiniete.
+- [x] `GitLab Source`: lewy panel zawiera wspolny scope i liste elementow do
+  testu, a formularz aktywnego elementu jest w glownej przestrzeni.
+- [x] `GitLab Source`: request preview jest domyslnie zwiniety po wyniku, a
+  JSON response domyslnie rozwiniety.
+- [x] `GitLab Source`: status HTTP, timing i blad requestu sa widoczne w sekcji
+  wyniku.
+- [x] `GitLab Source`: UI nie eksponuje `analysisRunId` ani incidentowego
+  session scope'u; nie pokazuje tez `correlationId` w manualnym Workbench.
+- [x] `GitLab Source`: `npm test -- --watch=false`.
+- [x] `GitLab Source`: `npm run build`.
+- [ ] `GitLab Source`: browser check desktop bez poziomego overflow.
 - [ ] finalny browser check dla wszystkich ekranow Tool Workbench.
 
 ### Krok 6: Operational Context Catalog polish
@@ -522,14 +553,15 @@ Zakres:
 
 Najblizszy proponowany krok do zatwierdzenia:
 
-`Krok 5b: Elastic Logs Workbench layout`.
+`Krok 5d: decyzja o wspolnych elementach Tool Workbench`.
 
 Proponowany zakres:
 
-- przebudowac `/elastic` wedlug wzorca sprawdzonego na `Database Tools`,
-- zostawic obecne endpointy i payloady Elastica bez zmian,
-- header full-width z inicjalnie zwinietymi metadanymi capability,
-- lewy panel ze scope/wartosciami wspolnymi i wyborem elementu testowego,
-- glowny formularz u gory, wynik JSON/status/timing/copy pod formularzem po
-  wykonaniu requestu,
-- bez stalej trzeciej kolumny i bez drawer-first response.
+- przejrzec powtarzajace sie elementy `Database Tools`, `Elastic Logs` i
+  `GitLab Source`,
+- zdecydowac, czy wyciagamy teraz male wspolne elementy albo style Workbench,
+  np. header capability, lista tooli, panele JSON, akcje copy/download,
+- jesli zatwierdzimy ekstrakcje, zrobic ja bez zmiany UX i bez ruszania
+  kontraktow backendowych,
+- jesli ekstrakcja okaze sie zbyt kosztowna na teraz, zostawic layouty jako
+  stabilny wzorzec i przejsc do `Krok 6: Operational Context Catalog polish`.

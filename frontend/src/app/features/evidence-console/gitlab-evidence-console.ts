@@ -35,13 +35,31 @@ type GitLabJsonResponseKey =
   | 'endpoint-use-case-context'
   | 'repository-files-by-path'
   | 'source-resolve';
+type GitLabToolKey = GitLabJsonResponseKey;
+type GitLabJsonPayloadKey = 'request' | 'response';
 
 interface ToolState {
   status: ToolStateStatus;
   statusCode: number | null;
   message: string;
+  endpoint?: string;
+  requestJson?: string;
   responseJson: string;
   response: unknown | null;
+  durationMs?: number | null;
+}
+
+interface GitLabToolDefinition {
+  key: GitLabToolKey;
+  label: string;
+  category: string;
+  endpoint: string;
+  summary: string;
+}
+
+interface GitLabToolGroup {
+  category: string;
+  tools: GitLabToolDefinition[];
 }
 
 interface GitLabUseCaseTreeNode {
@@ -72,15 +90,89 @@ interface GitLabUseCaseTree {
   unlinkedFileCount: number;
 }
 
+const GITLAB_TOOLS: GitLabToolDefinition[] = [
+  {
+    key: 'repository-search',
+    label: 'Repository Search',
+    category: 'Discovery',
+    endpoint: '/api/gitlab/repository/search',
+    summary:
+      'Testuje mapowanie project hints na repozytoria oraz opcjonalne wyszukiwanie kandydatów plików.'
+  },
+  {
+    key: 'endpoint-inventory',
+    label: 'Endpoint Inventory',
+    category: 'Repository structure',
+    endpoint: '/api/gitlab/repository/endpoints',
+    summary:
+      'Skanuje repozytorium i zwraca endpointy Spring REST wraz z dokumentacją i ograniczeniami.'
+  },
+  {
+    key: 'endpoint-use-case-context',
+    label: 'Endpoint Use Case Context',
+    category: 'Repository structure',
+    endpoint: '/api/gitlab/repository/endpoint-use-case-context',
+    summary:
+      'Buduje listę plików, relacji i ograniczeń widoczności dla konkretnego endpointu.'
+  },
+  {
+    key: 'repository-files-by-path',
+    label: 'Read Repository Files By Path',
+    category: 'Source content',
+    endpoint: '/api/gitlab/repository/files/by-path',
+    summary:
+      'Pobiera treść konkretnych plików po ścieżkach z repozytorium i branch/ref.'
+  },
+  {
+    key: 'source-resolve',
+    label: 'Source Resolve',
+    category: 'Source content',
+    endpoint: '/api/gitlab/source/resolve',
+    summary:
+      'Rozwiązuje symbol klasy lub metody do pliku źródłowego w konkretnym repozytorium.'
+  }
+];
+
+const GITLAB_TOOL_GROUPS = GITLAB_TOOLS.reduce<GitLabToolGroup[]>((groups, tool) => {
+  const existingGroup = groups.find((group) => group.category === tool.category);
+  if (existingGroup) {
+    existingGroup.tools.push(tool);
+  } else {
+    groups.push({
+      category: tool.category,
+      tools: [tool]
+    });
+  }
+  return groups;
+}, []);
+
 @Component({
   selector: 'app-gitlab-evidence-console',
   imports: [ReactiveFormsModule],
   templateUrl: './gitlab-evidence-console.html',
-  styleUrl: './evidence-console.scss'
+  styleUrls: ['./gitlab-evidence-console.scss', './gitlab-evidence-result.scss']
 })
 export class GitLabEvidenceConsoleComponent {
   private readonly evidenceApi = inject(EvidenceApiService);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly tools = GITLAB_TOOLS;
+  readonly toolGroups = GITLAB_TOOL_GROUPS;
+  readonly selectedToolKey = signal<GitLabToolKey>('repository-search');
+  readonly selectedTool = computed(
+    () => this.tools.find((tool) => tool.key === this.selectedToolKey()) ?? this.tools[0]
+  );
+  readonly state = computed(() => this.stateForJsonResponseKey(this.selectedToolKey())());
+  readonly hasResult = computed(() => this.state().status !== 'idle');
+  readonly copiedJsonPayloadKey = signal<GitLabJsonPayloadKey | null>(null);
+
+  readonly scopeForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true }),
+    projectName: new FormControl('', { nonNullable: true }),
+    branch: new FormControl('HEAD', { nonNullable: true }),
+    gitlabBaseUrl: new FormControl('', { nonNullable: true })
+  });
+
   readonly gitLabRepositoryForm = new FormGroup({
     correlationId: new FormControl('', { nonNullable: true }),
     branch: new FormControl('', { nonNullable: true }),
@@ -235,8 +327,129 @@ export class GitLabEvidenceConsoleComponent {
     return tree.rows.find((row) => row.node.id === selectedId)?.node ?? tree.rows[0].node;
   });
 
-  submitGitLabRepository(event: Event): void {
+  submit(event: Event): void {
     event.preventDefault();
+
+    switch (this.selectedToolKey()) {
+      case 'endpoint-inventory':
+        this.submitGitLabEndpointSearch();
+        return;
+      case 'endpoint-use-case-context':
+        this.submitGitLabEndpointUseCaseContext();
+        return;
+      case 'repository-files-by-path':
+        this.submitGitLabRepositoryFilesByPath();
+        return;
+      case 'source-resolve':
+        this.submitGitLabSource();
+        return;
+      default:
+        this.submitGitLabRepository();
+    }
+  }
+
+  selectTool(toolKey: GitLabToolKey): void {
+    if (this.tools.some((tool) => tool.key === toolKey)) {
+      this.selectedToolKey.set(toolKey);
+    }
+  }
+
+  resetSelectedFields(): void {
+    switch (this.selectedToolKey()) {
+      case 'endpoint-inventory':
+        this.gitLabEndpointForm.patchValue({
+          endpointPathPrefix: '',
+          httpMethod: '',
+          maxScannedFiles: '120'
+        });
+        return;
+      case 'endpoint-use-case-context':
+        this.gitLabEndpointUseCaseContextForm.patchValue({
+          endpointId: '',
+          httpMethod: '',
+          endpointPath: '',
+          maxDepth: '5',
+          maxFiles: '60',
+          reason: 'Manualna weryfikacja kontekstu use-case endpointu.'
+        });
+        return;
+      case 'repository-files-by-path':
+        this.gitLabRepositoryFilesByPathForm.patchValue({
+          filePaths: '',
+          maxCharactersPerFile: '4000',
+          maxTotalCharacters: '60000'
+        });
+        return;
+      case 'source-resolve':
+        this.gitLabSourceForm.patchValue({
+          groupPath: '',
+          projectPath: '',
+          ref: 'HEAD',
+          symbol: '',
+          preview: true
+        });
+        return;
+      default:
+        this.gitLabRepositoryForm.patchValue({
+          projectHints: '',
+          operationNames: '',
+          keywords: ''
+        });
+    }
+  }
+
+  toolButtonClass(tool: GitLabToolDefinition): string {
+    return tool.key === this.selectedToolKey()
+      ? 'gitlab-tool-button gitlab-tool-button--active'
+      : 'gitlab-tool-button';
+  }
+
+  toolStateStatus(tool: GitLabToolDefinition): ToolStateStatus {
+    return this.stateForJsonResponseKey(tool.key)().status;
+  }
+
+  repositoryScopeMissingForSelectedTool(): boolean {
+    if (!this.usesRepositoryScope(this.selectedToolKey())) {
+      return false;
+    }
+    return (
+      this.scopeForm.controls.group.value.trim().length === 0 ||
+      this.scopeForm.controls.projectName.value.trim().length === 0 ||
+      this.scopeForm.controls.branch.value.trim().length === 0
+    ) && (
+      this.scopeForm.controls.group.touched ||
+      this.scopeForm.controls.projectName.touched ||
+      this.scopeForm.controls.branch.touched
+    );
+  }
+
+  sourceBaseUrlMissingForSelectedTool(): boolean {
+    return (
+      this.selectedToolKey() === 'source-resolve' &&
+      this.scopeForm.controls.gitlabBaseUrl.value.trim().length === 0 &&
+      this.scopeForm.controls.gitlabBaseUrl.touched
+    );
+  }
+
+  selectedEndpointLabel(): string {
+    if (this.selectedToolKey() !== 'source-resolve') {
+      return this.selectedTool().endpoint;
+    }
+    return this.gitLabSourceForm.controls.preview.value
+      ? '/api/gitlab/source/resolve/preview'
+      : '/api/gitlab/source/resolve';
+  }
+
+  durationLabel(durationMs: number | null | undefined): string {
+    if (durationMs === null || durationMs === undefined) {
+      return 'n/a';
+    }
+
+    return durationMs < 1000 ? `${durationMs} ms` : `${(durationMs / 1000).toFixed(1)} s`;
+  }
+
+  submitGitLabRepository(event?: Event): void {
+    event?.preventDefault();
 
     if (this.gitLabRepositoryForm.invalid) {
       this.gitLabRepositoryForm.markAllAsTouched();
@@ -250,8 +463,8 @@ export class GitLabEvidenceConsoleComponent {
     }
 
     const payload: GitLabRepositorySearchPayload = {
-      correlationId: this.optionalValue(this.gitLabRepositoryForm.controls.correlationId.value),
-      branch: this.optionalValue(this.gitLabRepositoryForm.controls.branch.value),
+      correlationId: undefined,
+      branch: this.optionalValue(this.scopeForm.controls.branch.value),
       projectHints: this.toList(this.gitLabRepositoryForm.controls.projectHints.value),
       operationNames: this.toList(this.gitLabRepositoryForm.controls.operationNames.value),
       keywords: this.toList(this.gitLabRepositoryForm.controls.keywords.value)
@@ -261,12 +474,21 @@ export class GitLabEvidenceConsoleComponent {
       this.gitLabRepositoryState,
       this.evidenceApi.searchGitLabRepository(payload),
       payload,
-      'Wysyłamy request do /api/gitlab/repository/search...'
+      '/api/gitlab/repository/search'
     );
   }
 
-  submitGitLabEndpointSearch(event: Event): void {
-    event.preventDefault();
+  submitGitLabEndpointSearch(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabEndpointForm)) {
+      this.gitLabEndpointState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
 
     if (this.gitLabEndpointForm.invalid) {
       this.gitLabEndpointForm.markAllAsTouched();
@@ -294,12 +516,21 @@ export class GitLabEvidenceConsoleComponent {
       this.gitLabEndpointState,
       this.evidenceApi.listGitLabRepositoryEndpoints(payload),
       payload,
-      'Wysyłamy request do /api/gitlab/repository/endpoints...'
+      '/api/gitlab/repository/endpoints'
     );
   }
 
-  submitGitLabEndpointUseCaseContext(event: Event): void {
-    event.preventDefault();
+  submitGitLabEndpointUseCaseContext(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabEndpointUseCaseContextForm)) {
+      this.gitLabEndpointUseCaseContextState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
 
     const endpointId = this.optionalValue(
       this.gitLabEndpointUseCaseContextForm.controls.endpointId.value
@@ -343,12 +574,21 @@ export class GitLabEvidenceConsoleComponent {
       this.gitLabEndpointUseCaseContextState,
       this.evidenceApi.buildGitLabEndpointUseCaseContext(payload),
       payload,
-      'Wysyłamy request do /api/gitlab/repository/endpoint-use-case-context...'
+      '/api/gitlab/repository/endpoint-use-case-context'
     );
   }
 
-  submitGitLabRepositoryFilesByPath(event: Event): void {
-    event.preventDefault();
+  submitGitLabRepositoryFilesByPath(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabRepositoryFilesByPathForm)) {
+      this.gitLabRepositoryFilesByPathState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
 
     const filePaths = this.toList(this.gitLabRepositoryFilesByPathForm.controls.filePaths.value);
     if (this.gitLabRepositoryFilesByPathForm.invalid || filePaths.length === 0) {
@@ -379,15 +619,17 @@ export class GitLabEvidenceConsoleComponent {
       this.gitLabRepositoryFilesByPathState,
       this.evidenceApi.readGitLabRepositoryFilesByPath(payload),
       payload,
-      'Wysyłamy request do /api/gitlab/repository/files/by-path...'
+      '/api/gitlab/repository/files/by-path'
     );
   }
 
   useEndpointForContext(endpoint: GitLabRepositoryEndpoint): void {
+    this.selectedToolKey.set('endpoint-use-case-context');
+    this.syncRepositoryScope(this.gitLabEndpointUseCaseContextForm);
     this.gitLabEndpointUseCaseContextForm.patchValue({
-      group: this.gitLabEndpointForm.controls.group.value,
-      projectName: this.gitLabEndpointForm.controls.projectName.value,
-      branch: this.gitLabEndpointForm.controls.branch.value,
+      group: this.scopeForm.controls.group.value,
+      projectName: this.scopeForm.controls.projectName.value,
+      branch: this.scopeForm.controls.branch.value,
       endpointId: endpoint.endpointId,
       httpMethod: endpoint.httpMethods?.[0] || '',
       endpointPath: endpoint.path || endpoint.pathExpression || ''
@@ -404,16 +646,24 @@ export class GitLabEvidenceConsoleComponent {
       .map((file) => this.normalizePath(file.path))
       .filter((path): path is string => !!path);
 
+    this.selectedToolKey.set('repository-files-by-path');
+
+    this.scopeForm.patchValue({
+      group: context?.repository?.group || this.scopeForm.controls.group.value,
+      projectName: context?.repository?.projectName || this.scopeForm.controls.projectName.value,
+      branch: context?.repository?.branch || this.scopeForm.controls.branch.value
+    });
+
     this.gitLabRepositoryFilesByPathForm.patchValue({
       group:
         context?.repository?.group ||
-        this.gitLabEndpointUseCaseContextForm.controls.group.value,
+        this.scopeForm.controls.group.value,
       projectName:
         context?.repository?.projectName ||
-        this.gitLabEndpointUseCaseContextForm.controls.projectName.value,
+        this.scopeForm.controls.projectName.value,
       branch:
         context?.repository?.branch ||
-        this.gitLabEndpointUseCaseContextForm.controls.branch.value,
+        this.scopeForm.controls.branch.value,
       filePaths: [...new Set(filePaths)].join('\n')
     });
     this.gitLabRepositoryFilesByPathState.set(
@@ -421,10 +671,16 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
-  submitGitLabSource(event: Event): void {
-    event.preventDefault();
+  submitGitLabSource(event?: Event): void {
+    event?.preventDefault();
+    this.gitLabSourceForm.controls.gitlabBaseUrl.setValue(
+      this.scopeForm.controls.gitlabBaseUrl.value.trim()
+    );
 
     if (this.gitLabSourceForm.invalid) {
+      if (this.scopeForm.controls.gitlabBaseUrl.value.trim().length === 0) {
+        this.scopeForm.controls.gitlabBaseUrl.markAsTouched();
+      }
       this.gitLabSourceForm.markAllAsTouched();
       this.gitLabSourceState.set(
         this.errorStateFromPayload({
@@ -448,8 +704,40 @@ export class GitLabEvidenceConsoleComponent {
       this.gitLabSourceState,
       this.evidenceApi.resolveGitLabSource(payload, preview),
       payload,
-      `Wysyłamy request do ${preview ? '/api/gitlab/source/resolve/preview' : '/api/gitlab/source/resolve'}...`
+      preview ? '/api/gitlab/source/resolve/preview' : '/api/gitlab/source/resolve'
     );
+  }
+
+  async copyJsonPayload(key: GitLabJsonPayloadKey, value: string | undefined): Promise<void> {
+    if (!value) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(value);
+    if (!copied) {
+      return;
+    }
+
+    this.copiedJsonPayloadKey.set(key);
+    window.setTimeout(() => {
+      if (this.copiedJsonPayloadKey() === key) {
+        this.copiedJsonPayloadKey.set(null);
+      }
+    }, 1600);
+  }
+
+  downloadJsonPayload(key: GitLabJsonPayloadKey, value: string | undefined): void {
+    if (!value) {
+      return;
+    }
+
+    const blob = new Blob([value], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = this.gitLabJsonPayloadFileName(key);
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   async copyJsonResponse(key: GitLabJsonResponseKey, responseJson: string): Promise<void> {
@@ -458,10 +746,14 @@ export class GitLabEvidenceConsoleComponent {
       return;
     }
 
+    this.copiedJsonPayloadKey.set('response');
     this.copiedJsonResponseKey.set(key);
     window.setTimeout(() => {
       if (this.copiedJsonResponseKey() === key) {
         this.copiedJsonResponseKey.set(null);
+      }
+      if (this.copiedJsonPayloadKey() === 'response') {
+        this.copiedJsonPayloadKey.set(null);
       }
     }, 1600);
   }
@@ -490,12 +782,16 @@ export class GitLabEvidenceConsoleComponent {
     try {
       const text = await this.readFileText(file);
       const response = JSON.parse(text) as unknown;
+      this.selectedToolKey.set(key);
       state.set({
         status: 'success',
         statusCode: null,
         message: `Załadowano odpowiedź JSON z pliku ${file.name}.`,
+        endpoint: '',
+        requestJson: '',
         response,
-        responseJson: this.toFormattedJson(response)
+        responseJson: this.toFormattedJson(response),
+        durationMs: null
       });
       if (key === 'endpoint-use-case-context') {
         this.selectedGitLabUseCaseTreeNodeId.set(null);
@@ -795,17 +1091,28 @@ export class GitLabEvidenceConsoleComponent {
     state: WritableSignal<ToolState>,
     request$: Observable<unknown>,
     payload: unknown,
-    loadingMessage: string
+    endpoint: string
   ): void {
+    const requestJson = this.toFormattedJson({
+      endpoint,
+      method: 'POST',
+      body: payload
+    });
+    const startedAt = Date.now();
+
     state.set({
       status: 'loading',
       statusCode: null,
-      message: loadingMessage,
+      message: `Wysyłamy request do ${endpoint}...`,
+      endpoint,
+      requestJson,
       response: null,
       responseJson: this.toFormattedJson({
         status: 'WAITING',
+        endpoint,
         request: payload
-      })
+      }),
+      durationMs: null
     });
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -813,31 +1120,47 @@ export class GitLabEvidenceConsoleComponent {
         state.set({
           status: 'success',
           statusCode: 200,
-          message: 'Backend zwrócił odpowiedź JSON.',
+          message: 'Backend zwrócił odpowiedź JSON z GitLab helper API.',
+          endpoint,
+          requestJson,
           response,
-          responseJson: this.toFormattedJson(response)
+          responseJson: this.toFormattedJson(response),
+          durationMs: Date.now() - startedAt
         });
       },
-      error: (error) => state.set(this.toErrorState(error))
+      error: (error) => state.set(this.toErrorState(error, endpoint, requestJson, Date.now() - startedAt))
     });
   }
 
-  private toErrorState(error: unknown): ToolState {
+  private toErrorState(
+    error: unknown,
+    endpoint = '',
+    requestJson = '',
+    durationMs: number | null = null
+  ): ToolState {
     if (error instanceof HttpErrorResponse) {
       const payload = this.normalizeErrorPayload(error.error, error.status, error.message);
       return {
         status: 'error',
         statusCode: error.status || null,
         message: payload.message,
+        endpoint,
+        requestJson,
         response: null,
-        responseJson: this.toFormattedJson(payload.body)
+        responseJson: this.toFormattedJson(payload.body),
+        durationMs
       };
     }
 
-    return this.errorStateFromPayload({
-      code: 'REQUEST_FAILED',
-      message: error instanceof Error ? error.message : 'Request zakończył się błędem.'
-    });
+    return this.errorStateFromPayload(
+      {
+        code: 'REQUEST_FAILED',
+        message: error instanceof Error ? error.message : 'Request zakończył się błędem.'
+      },
+      endpoint,
+      requestJson,
+      durationMs
+    );
   }
 
   private normalizeErrorPayload(
@@ -915,13 +1238,21 @@ export class GitLabEvidenceConsoleComponent {
     };
   }
 
-  private errorStateFromPayload(payload: { code: string; message: string }): ToolState {
+  private errorStateFromPayload(
+    payload: { code: string; message: string },
+    endpoint = '',
+    requestJson = '',
+    durationMs: number | null = null
+  ): ToolState {
     return {
       status: 'error',
       statusCode: null,
       message: payload.message,
+      endpoint,
+      requestJson,
       response: null,
-      responseJson: this.toFormattedJson(payload)
+      responseJson: this.toFormattedJson(payload),
+      durationMs
     };
   }
 
@@ -930,11 +1261,43 @@ export class GitLabEvidenceConsoleComponent {
       status: 'idle',
       statusCode: null,
       message,
+      endpoint: '',
+      requestJson: '',
       response: null,
-      responseJson: this.toFormattedJson({
-        message
-      })
+      responseJson: '',
+      durationMs: null
     };
+  }
+
+  private syncRepositoryScope(form: {
+    patchValue(value: { group: string; projectName: string; branch: string }): void;
+  }): boolean {
+    const group = this.scopeForm.controls.group.value.trim();
+    const projectName = this.scopeForm.controls.projectName.value.trim();
+    const branch = this.scopeForm.controls.branch.value.trim();
+
+    form.patchValue({
+      group,
+      projectName,
+      branch
+    });
+
+    if (!group || !projectName || !branch) {
+      this.scopeForm.controls.group.markAsTouched();
+      this.scopeForm.controls.projectName.markAsTouched();
+      this.scopeForm.controls.branch.markAsTouched();
+      return false;
+    }
+
+    return true;
+  }
+
+  private usesRepositoryScope(toolKey: GitLabToolKey): boolean {
+    return (
+      toolKey === 'endpoint-inventory' ||
+      toolKey === 'endpoint-use-case-context' ||
+      toolKey === 'repository-files-by-path'
+    );
   }
 
   private toList(raw: string): string[] {
@@ -971,6 +1334,15 @@ export class GitLabEvidenceConsoleComponent {
       .replace('T', '-');
     const safeKey = key.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     return `gitlab-${safeKey}-${timestamp}.json`;
+  }
+
+  private gitLabJsonPayloadFileName(key: GitLabJsonPayloadKey): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const safeEndpoint = this.selectedEndpointLabel()
+      .replace(/^\/api\/gitlab\//, '')
+      .replace(/[^a-z0-9]+/gi, '-')
+      .toLowerCase();
+    return `gitlab-${safeEndpoint}-${key}-${timestamp}.json`;
   }
 
   private stateForJsonResponseKey(key: GitLabJsonResponseKey): WritableSignal<ToolState> {

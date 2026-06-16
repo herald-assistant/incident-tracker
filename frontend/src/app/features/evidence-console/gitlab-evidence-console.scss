@@ -1,0 +1,396 @@
+:host {
+  display: block;
+}
+
+.gitlab-workspace,
+.gitlab-scope-section,
+.gitlab-tool-section,
+.gitlab-runner,
+.gitlab-main,
+.gitlab-result,
+.gitlab-scope-grid,
+.gitlab-tool-list,
+.endpoint-results,
+.context-results,
+.context-flow,
+.endpoint-list,
+.flow-tree,
+.flow-node-details,
+.context-list,
+.flow-node-details__meta {
+  display: grid;
+  gap: 16px;
+}
+
+.gitlab-workspace {
+  margin-top: 16px;
+}
+
+.workbench-header {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.workbench-header__top,
+.gitlab-result__header,
+.tool-status,
+.endpoint-results__header,
+.context-results__header,
+.context-flow__header,
+.context-endpoint,
+.flow-node-details__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workbench-header__copy,
+.gitlab-tool-button__content,
+.flow-tree-node__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workbench-header__copy h2,
+.gitlab-result__header h2,
+.endpoint-results h3,
+.context-results h3,
+.context-flow h4,
+.flow-node-details h4 {
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+
+.workbench-header__copy h2,
+.gitlab-result__header h2 {
+  font-size: 1.18rem;
+}
+
+.workbench-header__copy p:not(.section-eyebrow) {
+  max-width: 820px;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.workbench-header__status,
+.tool-status__badges,
+.endpoint-results__stats,
+.endpoint-card__meta,
+.context-chip-list,
+.flow-tree-node__badges,
+.json-response-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workbench-header__status,
+.tool-status__badges,
+.endpoint-results__stats,
+.flow-tree-node__badges {
+  justify-content: flex-end;
+}
+
+.workbench-details {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.workbench-details summary,
+.json-response-panel__header,
+.endpoint-card__summary,
+.context-subsection--collapsible summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.workbench-details summary,
+.json-response-panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workbench-details summary {
+  color: var(--primary-dark);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.workbench-details summary::-webkit-details-marker,
+.json-response-panel__header::-webkit-details-marker,
+.endpoint-card__summary::-webkit-details-marker,
+.context-subsection--collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.workbench-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 0;
+}
+
+.workbench-meta-grid div,
+.endpoint-results,
+.context-results,
+.flow-node-details,
+.endpoint-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.workbench-meta-grid div,
+.endpoint-results,
+.context-results,
+.flow-node-details {
+  padding: 12px;
+}
+
+.workbench-meta-grid div,
+.flow-node-details {
+  background: var(--surface-alt);
+}
+
+.workbench-meta-grid dt,
+.tool-status__label,
+.flow-node-details__meta dt {
+  margin: 0 0 4px;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.workbench-meta-grid dd,
+.flow-node-details__meta dd {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.gitlab-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.gitlab-tool-panel {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 18px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.form-grid--stacked {
+  grid-template-columns: 1fr;
+}
+
+.text-input--textarea {
+  min-height: 104px;
+  resize: vertical;
+  font-family: var(--font-mono);
+}
+
+.gitlab-tool-group {
+  display: grid;
+  gap: 7px;
+}
+
+.gitlab-tool-group__title {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.gitlab-tool-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gitlab-tool-button:hover,
+.gitlab-tool-button:focus-visible,
+.gitlab-tool-button--active,
+.flow-tree-node:hover,
+.flow-tree-node:focus-visible,
+.flow-tree-node--selected {
+  border-color: rgba(12, 102, 228, 0.42);
+  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
+  outline: none;
+}
+
+.gitlab-tool-button--active {
+  background: #eff6ff;
+  color: var(--primary-dark);
+}
+
+.gitlab-tool-button__content span,
+.flow-tree-node__title {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.gitlab-tool-button__content small,
+.flow-tree-node__subtitle,
+.flow-tree-node__reason,
+.endpoint-card__copy p,
+.context-endpoint p,
+.flow-node-details__path {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.gitlab-tool-button__state {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c7d1df;
+}
+
+.gitlab-tool-button__state[data-status='loading'] {
+  background: var(--primary);
+}
+
+.gitlab-tool-button__state[data-status='success'] {
+  background: var(--success-text);
+}
+
+.gitlab-tool-button__state[data-status='error'] {
+  background: var(--danger-text);
+}
+
+.gitlab-runner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.gitlab-runner__actions .primary-button,
+.gitlab-runner__actions .secondary-button,
+.toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-row {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.toggle-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+@media (max-width: 1180px) {
+  .workbench-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gitlab-layout {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  }
+
+  .context-flow__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .workbench-header__top,
+  .gitlab-result__header,
+  .tool-status,
+  .endpoint-results__header,
+  .context-results__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .workbench-header__status,
+  .gitlab-runner__actions,
+  .tool-status__badges,
+  .endpoint-results__stats {
+    justify-content: flex-start;
+  }
+
+  .gitlab-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gitlab-tool-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .workbench-meta-grid,
+  .form-grid,
+  .endpoint-card__main,
+  .flow-tree-node {
+    grid-template-columns: 1fr;
+  }
+
+  .gitlab-runner__actions .primary-button,
+  .gitlab-runner__actions .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .json-response-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .json-output {
+    min-height: 260px;
+  }
+}

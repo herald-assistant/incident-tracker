@@ -26,6 +26,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
   it('should render endpoint use-case context as flow tree', () => {
     const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
 
+    fixture.componentInstance.selectedToolKey.set('endpoint-use-case-context');
     fixture.componentInstance.gitLabEndpointUseCaseContextState.set({
       status: 'success',
       statusCode: 200,
@@ -61,38 +62,47 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(confidencePill?.getAttribute('title') || '').toContain('Wysoka pewność');
   });
 
-  it('should expose icon actions for every GitLab JSON response', () => {
+  it('should expose workbench actions only for selected GitLab result', () => {
     const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const copyButtons = compiled.querySelectorAll(
-      '.json-icon-button[aria-label^="Kopiuj JSON"]'
-    );
-    const downloadButtons = compiled.querySelectorAll(
-      '.json-icon-button[aria-label^="Pobierz JSON"]'
-    );
-    const loadButtons = compiled.querySelectorAll(
-      '.json-icon-button[aria-label^="Załaduj JSON"]'
-    );
-
-    expect(copyButtons).toHaveLength(5);
-    expect(downloadButtons).toHaveLength(5);
-    expect(loadButtons).toHaveLength(5);
-    expect(copyButtons[0].textContent).toContain('content_copy');
-    expect(downloadButtons[0].textContent).toContain('download');
-    expect(loadButtons[0].textContent).toContain('upload_file');
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(5);
+    expect(compiled.querySelector('.gitlab-result')).toBeFalsy();
+    expect(compiled.querySelector('details.workbench-details')?.hasAttribute('open')).toBe(false);
     expect(compiled.textContent).not.toContain('Kopiuj JSON');
     expect(compiled.textContent).not.toContain('Załaduj JSON');
-    expect(actionWithLabel(copyButtons, 'endpoint inventory')).toBeTruthy();
-    expect(actionWithLabel(downloadButtons, 'endpoint use-case context')).toBeTruthy();
-    expect(actionWithLabel(loadButtons, 'endpoint use-case context')).toBeTruthy();
-    expect(actionWithLabel(copyButtons, 'repository files by path')).toBeTruthy();
 
     const routeChip = compiled.querySelector<HTMLElement>('.route-chip');
     const statusPill = compiled.querySelector<HTMLElement>('.status-pill');
     expect(routeChip?.getAttribute('title') || '').toContain('/api/gitlab/repository/search');
     expect(statusPill?.getAttribute('title') || '').toContain('gotowy do ręcznego testu');
+
+    fixture.componentInstance.gitLabRepositoryState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      endpoint: '/api/gitlab/repository/search',
+      requestJson: '{"request":true}',
+      response: { ok: true },
+      responseJson: '{"ok":true}',
+      durationMs: 12
+    });
+    fixture.detectChanges();
+
+    const copyButtons = compiled.querySelectorAll('.json-icon-button[aria-label^="Kopiuj"]');
+    const downloadButtons = compiled.querySelectorAll('.json-icon-button[aria-label^="Pobierz"]');
+    const loadButtons = compiled.querySelectorAll('.json-icon-button[aria-label^="Załaduj"]');
+
+    expect(compiled.querySelector('.gitlab-result')).toBeTruthy();
+    expect(copyButtons).toHaveLength(2);
+    expect(downloadButtons).toHaveLength(2);
+    expect(loadButtons).toHaveLength(1);
+    expect(copyButtons[0].textContent).toContain('content_copy');
+    expect(downloadButtons[0].textContent).toContain('download');
+    expect(loadButtons[0].textContent).toContain('upload_file');
+    expect(compiled.querySelector('details.gitlab-json-panel--request')?.hasAttribute('open')).toBe(false);
+    expect(compiled.querySelector('details.gitlab-json-panel:not(.gitlab-json-panel--request)')?.hasAttribute('open')).toBe(true);
   });
 
   it('should load a downloaded endpoint use-case JSON file into the same card', async () => {
@@ -120,6 +130,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
 
   it('should render unresolved use-case references as collapsed details', () => {
     const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.selectedToolKey.set('endpoint-use-case-context');
     fixture.componentInstance.gitLabEndpointUseCaseContextState.set({
       status: 'success',
       statusCode: 200,
@@ -151,6 +162,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
 
   it('should render endpoint inventory cards as collapsed compact details', () => {
     const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.selectedToolKey.set('endpoint-inventory');
     fixture.componentInstance.gitLabEndpointState.set({
       status: 'success',
       statusCode: 200,
@@ -209,6 +221,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
 
   it('should render files-by-path response below endpoint use-case context', () => {
     const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.selectedToolKey.set('repository-files-by-path');
     fixture.componentInstance.gitLabRepositoryFilesByPathState.set({
       status: 'success',
       statusCode: 200,
@@ -236,10 +249,6 @@ function fileInputChangeEvent(file: File): Event {
     value: [file]
   });
   return { target: input } as unknown as Event;
-}
-
-function actionWithLabel(actions: NodeListOf<Element>, label: string): Element | undefined {
-  return [...actions].find((action) => action.getAttribute('aria-label')?.includes(label));
 }
 
 function buildEndpointInventoryResponse(): GitLabRepositoryEndpointsResponse {

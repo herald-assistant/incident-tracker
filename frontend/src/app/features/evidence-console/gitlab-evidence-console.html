@@ -1,281 +1,85 @@
-<div class="page-shell evidence-console">
-  <main class="workspace">
-    <section class="hero-card evidence-hero">
-        <div class="hero-main">
-          <div class="hero-copy">
-            <p class="section-eyebrow">Manualne testy integracji</p>
-            <h2>GitLab</h2>
-            <p class="hero-description">
-              Widok służy do ręcznej weryfikacji capability GitLaba: mapowania repozytoriów,
-              listowania endpointów REST i rozwiązywania symboli do plików źródłowych.
-            </p>
-          </div>
-
-          <div class="evidence-intro">
-            <div class="evidence-intro__chip-list">
-              <span class="panel-chip" title="Podgląd surowej odpowiedzi JSON zwracanej przez backend.">
-                JSON response preview
-              </span>
-              <span class="panel-chip" title="Manualny test mapowania hintów komponentu na repozytorium GitLaba.">
-                GitLab repo mapping
-              </span>
-              <span class="panel-chip" title="Lista endpointów REST wykrytych w wybranym repozytorium.">
-                GitLab endpoint inventory
-              </span>
-              <span class="panel-chip" title="Kompaktowy kontekst plików i relacji dla konkretnego endpointu.">
-                Endpoint use-case context
-              </span>
-              <span class="panel-chip" title="Rozwiązywanie symbolu klasy lub metody do pliku źródłowego.">
-                GitLab source resolve
-              </span>
-            </div>
-          </div>
+<div class="page-shell gitlab-console">
+  <main class="gitlab-workspace">
+    <section class="analysis-card workbench-header">
+      <div class="workbench-header__top">
+        <div class="workbench-header__copy">
+          <p class="section-eyebrow">Tool Workbench</p>
+          <h2>GitLab Source</h2>
+          <p>
+            Ręczne testowanie GitLab helper API: repo discovery, endpoint inventory, use-case
+            context, odczyt plików i source resolve. Widok jest zapleczem integracji, nie logiką
+            pojedynczego feature'a.
+          </p>
         </div>
 
-        <div class="hero-side-panel">
-          <p class="panel-title">Przydatne scenariusze</p>
-          <ul class="mini-list">
-            <li>czy hint komponentu mapuje się na właściwe repozytorium GitLaba</li>
-            <li>czy repozytorium wystawia oczekiwane endpointy REST</li>
-            <li>czy endpoint zwraca właściwą listę plików do analizy use-case</li>
-            <li>czy symbol klasy rozwiązuje się do pliku i preview kodu</li>
-          </ul>
+        <div class="workbench-header__status">
+          <span class="panel-chip">Reusable przez AI</span>
+          <span class="panel-chip">Readonly</span>
+          <span [class]="statusPillClass(state().status)" [title]="statusTooltip(state().status)">
+            {{ statusLabel(state().status) }}
+          </span>
         </div>
-    </section>
-
-      <section class="evidence-tool-section evidence-tool-section--gitlab">
-      <div class="evidence-tool-section__header">
-        <div>
-          <p class="section-eyebrow">GitLab evidence</p>
-          <h2>GitLab</h2>
-        </div>
-        <span
-          class="panel-chip"
-          title="Zestaw manualnych testów reusable GitLab capability."
-        >
-          Repozytoria, endpointy i source resolve
-        </span>
       </div>
 
-      <div class="tool-grid">
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
+      <details class="workbench-details">
+        <summary>
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Szczegóły capability
+        </summary>
+
+        <dl class="workbench-meta-grid">
           <div>
-            <p class="section-eyebrow">GitLab</p>
-            <h2>Repository Search</h2>
-            <p class="field-hint">
-              Testuje mapowanie `component -> repo` i opcjonalne wyszukiwanie kandydatów plików
-              w skonfigurowanej grupie GitLaba i jej podgrupach.
-            </p>
+            <dt>Endpointy</dt>
+            <dd>POST /api/gitlab/*</dd>
           </div>
-          <span
-            class="panel-chip route-chip"
-            [title]="routeChipTooltip('POST /api/gitlab/repository/search')"
-          >
-            POST /api/gitlab/repository/search
-          </span>
-        </div>
+          <div>
+            <dt>Wymagany scope</dt>
+            <dd>group, projectName, branch/ref albo source resolve base URL i symbol</dd>
+          </div>
+          <div>
+            <dt>Reusable przez AI</dt>
+            <dd>Tak, ale sesja AI dostaje scope przez feature-owned hidden ToolContext</dd>
+          </div>
+          <div>
+            <dt>Guardrails</dt>
+            <dd>configured GitLab auth, readonly REST calls, scan limits i character budgets</dd>
+          </div>
+        </dl>
+      </details>
+    </section>
 
-        <form class="tool-form" novalidate (submit)="submitGitLabRepository($event)">
-          <div class="form-grid">
+    <form class="gitlab-layout" novalidate (submit)="submit($event)">
+      <aside class="analysis-card gitlab-tool-panel">
+        <section class="gitlab-scope-section" aria-labelledby="gitlabScopeTitle">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Shared scope</p>
+              <h2 id="gitlabScopeTitle">Zakres wywołań</h2>
+            </div>
+          </div>
+
+          <div class="gitlab-scope-grid">
             <label class="form-field">
-              <span class="field-label">Correlation ID</span>
+              <span class="field-label">Group</span>
               <input
                 class="text-input"
                 type="text"
-                placeholder="opcjonalnie, np. customer-123"
+                placeholder="np. CRM"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="gitLabRepositoryForm.controls.correlationId"
+                [formControl]="scopeForm.controls.group"
               />
             </label>
 
             <label class="form-field">
-              <span class="field-label">Branch</span>
+              <span class="field-label">Project name</span>
               <input
                 class="text-input"
                 type="text"
-                placeholder="opcjonalnie, np. release-candidate"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabRepositoryForm.controls.branch"
-              />
-            </label>
-          </div>
-
-          <div class="form-grid form-grid--stacked">
-            <label class="form-field">
-              <span class="field-label">Project Hints</span>
-              <textarea
-                class="text-input text-input--textarea"
-                rows="4"
                 placeholder="np. crm-customer-service"
-                spellcheck="false"
-                [formControl]="gitLabRepositoryForm.controls.projectHints"
-              ></textarea>
-              <span class="field-hint">Oddzielaj wartości przecinkiem albo nową linią.</span>
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Operation Names</span>
-              <textarea
-                class="text-input text-input--textarea"
-                rows="4"
-                placeholder="np. GET /crm/customers/{customerId}"
-                spellcheck="false"
-                [formControl]="gitLabRepositoryForm.controls.operationNames"
-              ></textarea>
-              <span class="field-hint">Opcjonalne. Puste pole zwraca tylko kandydatów repozytoriów.</span>
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Keywords</span>
-              <textarea
-                class="text-input text-input--textarea"
-                rows="4"
-                placeholder="np. customer, segment"
-                spellcheck="false"
-                [formControl]="gitLabRepositoryForm.controls.keywords"
-              ></textarea>
-              <span class="field-hint">Opcjonalne. Przydaje się do ręcznego testowania rankingu plików.</span>
-            </label>
-          </div>
-
-          @if (controlInvalid(gitLabRepositoryForm.controls.projectHints)) {
-            <p class="form-error">Pole `projectHints` jest wymagane.</p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="gitLabRepositoryState().status === 'loading'"
-            >
-              <span class="button-label">Uruchom GitLab Search</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="gitLabRepositoryState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ gitLabRepositoryState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (gitLabRepositoryState().statusCode !== null) {
-              <span
-                class="tool-status__code"
-                [title]="httpStatusTooltip(gitLabRepositoryState().statusCode)"
-              >
-                HTTP {{ gitLabRepositoryState().statusCode }}
-              </span>
-            }
-            <span
-              [class]="statusPillClass(gitLabRepositoryState().status)"
-              [title]="statusTooltip(gitLabRepositoryState().status)"
-            >
-              {{ statusLabel(gitLabRepositoryState().status) }}
-            </span>
-          </div>
-        </div>
-
-        <div class="json-response-panel">
-          <div class="json-response-panel__header">
-            <label class="field-label" for="gitlabRepositoryJsonResponse">JSON response</label>
-            <div class="json-response-panel__actions">
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Kopiuj JSON repository search do schowka"
-                title="Kopiuj JSON"
-                (click)="copyJsonResponse('repository-search', gitLabRepositoryState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">
-                  {{
-                    copiedJsonResponseKey() === 'repository-search'
-                      ? 'task_alt'
-                      : 'content_copy'
-                  }}
-                </span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Pobierz JSON repository search"
-                title="Pobierz JSON"
-                (click)="downloadJsonResponse('repository-search', gitLabRepositoryState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Załaduj JSON repository search z pliku"
-                title="Załaduj JSON"
-                (click)="repositorySearchJsonFileInput.click()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              </button>
-              <input
-                #repositorySearchJsonFileInput
-                hidden
-                type="file"
-                accept="application/json,.json"
-                (change)="loadJsonResponseFile('repository-search', $event)"
-              />
-            </div>
-          </div>
-          <textarea
-            id="gitlabRepositoryJsonResponse"
-            class="json-output"
-            readonly
-            spellcheck="false"
-            [value]="gitLabRepositoryState().responseJson"
-          ></textarea>
-        </div>
-      </article>
-
-      <article class="analysis-card tool-card tool-card--files-by-path">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">GitLab</p>
-            <h2>Read Repository Files By Path</h2>
-            <p class="field-hint">
-              Pobiera content plików po pełnych path z repozytorium. Najczęściej używaj po
-              `Endpoint Use Case Context`, żeby zweryfikować klasy zwrócone jako flow endpointu.
-            </p>
-          </div>
-          <span
-            class="panel-chip route-chip"
-            [title]="routeChipTooltip('POST /api/gitlab/repository/files/by-path')"
-          >
-            POST /api/gitlab/repository/files/by-path
-          </span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitGitLabRepositoryFilesByPath($event)">
-          <div class="form-grid">
-            <label class="form-field">
-              <span class="field-label">Group</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. TENANT-ALPHA"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="gitLabRepositoryFilesByPathForm.controls.group"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Project Name</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. orders-api"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabRepositoryFilesByPathForm.controls.projectName"
+                [formControl]="scopeForm.controls.projectName"
               />
             </label>
 
@@ -287,1171 +91,10 @@
                 placeholder="HEAD"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="gitLabRepositoryFilesByPathForm.controls.branch"
+                [formControl]="scopeForm.controls.branch"
               />
             </label>
 
-            <label class="form-field">
-              <span class="field-label">Max chars / file</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="120000"
-                [formControl]="gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Max total chars</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="500000"
-                [formControl]="gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters"
-              />
-            </label>
-
-            <label class="form-field form-field--wide">
-              <span class="field-label">File paths</span>
-              <textarea
-                class="text-input text-input--textarea"
-                rows="8"
-                placeholder="src/main/java/com/example/crm/customer/CustomerController.java"
-                spellcheck="false"
-                [formControl]="gitLabRepositoryFilesByPathForm.controls.filePaths"
-              ></textarea>
-              <span class="field-hint">
-                Oddzielaj ścieżki przecinkiem albo nową linią. Obsługiwany jest też format
-                `project:path via gitlab_...`.
-              </span>
-            </label>
-          </div>
-
-          @if (
-            controlInvalid(gitLabRepositoryFilesByPathForm.controls.group) ||
-            controlInvalid(gitLabRepositoryFilesByPathForm.controls.projectName) ||
-            controlInvalid(gitLabRepositoryFilesByPathForm.controls.branch) ||
-            controlInvalid(gitLabRepositoryFilesByPathForm.controls.filePaths)
-          ) {
-            <p class="form-error">Pola `group`, `projectName`, `branch` i `filePaths` są wymagane.</p>
-          }
-
-          @if (
-            controlInvalid(gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile) ||
-            controlInvalid(gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters)
-          ) {
-            <p class="form-error">
-              Limity muszą mieścić się w zakresach: per file 1-120000, total 1-500000.
-            </p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="secondary-button"
-              type="button"
-              [disabled]="!(gitLabEndpointUseCaseContextResult()?.files?.length)"
-              (click)="useUseCaseFilesForRead()"
-            >
-              <span class="button-label">Użyj plików z contextu</span>
-            </button>
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="gitLabRepositoryFilesByPathState().status === 'loading'"
-            >
-              <span class="button-label">Pobierz pliki</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="gitLabRepositoryFilesByPathState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ gitLabRepositoryFilesByPathState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (gitLabRepositoryFilesByPathState().statusCode !== null) {
-              <span
-                class="tool-status__code"
-                [title]="httpStatusTooltip(gitLabRepositoryFilesByPathState().statusCode)"
-              >
-                HTTP {{ gitLabRepositoryFilesByPathState().statusCode }}
-              </span>
-            }
-            <span
-              [class]="statusPillClass(gitLabRepositoryFilesByPathState().status)"
-              [title]="statusTooltip(gitLabRepositoryFilesByPathState().status)"
-            >
-              {{ statusLabel(gitLabRepositoryFilesByPathState().status) }}
-            </span>
-          </div>
-        </div>
-
-        @if (gitLabRepositoryFilesByPathResult(); as filesResult) {
-          <section class="context-results">
-            <div class="context-results__header">
-              <div>
-                <p class="tool-status__label">Repository files</p>
-                <h3>
-                  {{ filesResult.returnedFileCount }} pobranych ·
-                  {{ filesResult.failedFileCount }} błędów
-                </h3>
-              </div>
-              <div class="endpoint-results__stats">
-                <span
-                  class="panel-chip"
-                  [title]="countChipTooltip('processed-files', filesResult.processedFileCount)"
-                >
-                  {{ filesResult.processedFileCount }} processed
-                </span>
-                <span
-                  class="panel-chip"
-                  title="Łączna liczba znaków zwrócona przez backend dla pobranych plików."
-                >
-                  {{ filesResult.totalReturnedCharacters }} chars
-                </span>
-                @if (filesResult.fileCountTruncated || filesResult.totalCharacterLimitReached) {
-                  <span
-                    class="panel-chip panel-chip--warning"
-                    [title]="limitChipTooltip('repository-files-by-path')"
-                  >
-                    limit reached
-                  </span>
-                }
-              </div>
-            </div>
-
-            @if (filesResult.files.length > 0) {
-              <div class="endpoint-list">
-                @for (file of filesResult.files; track file.filePath || $index) {
-                  <details class="endpoint-card">
-                    <summary class="endpoint-card__summary">
-                      <div class="endpoint-card__main">
-                        <span
-                          class="endpoint-card__method"
-                          [title]="file.error ? 'Odczyt pliku zakończył się błędem.' : 'Plik został odczytany z GitLaba.'"
-                        >
-                          {{ file.error ? 'ERROR' : 'READ' }}
-                        </span>
-                        <div class="endpoint-card__copy">
-                          <h4>{{ file.filePath || 'unknown file' }}</h4>
-                          <p>
-                            {{ file.inferredRole || 'other' }} ·
-                            {{ file.returnedCharacters || 0 }} chars
-                          </p>
-                        </div>
-                        @if (file.truncated) {
-                          <span class="panel-chip panel-chip--warning" title="Content pliku został ucięty limitem znaków.">
-                            truncated
-                          </span>
-                        }
-                        <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
-                          expand_more
-                        </span>
-                      </div>
-                    </summary>
-
-                    <div class="endpoint-card__details">
-                      <div class="endpoint-card__meta">
-                        <span>{{ file.projectName || filesResult.projectName }}</span>
-                        <span>{{ file.branch || filesResult.branch }}</span>
-                        <span>{{ file.group || filesResult.group }}</span>
-                        @if (file.lastModifiedAt) {
-                          <span title="Data commita, który ostatnio zmienił ten plik.">
-                            changed {{ file.lastModifiedAt }}
-                          </span>
-                        }
-                        @if (file.lastCommitId) {
-                          <span title="SHA ostatniego commita modyfikującego plik.">
-                            last commit {{ file.lastCommitId }}
-                          </span>
-                        }
-                        @if (file.sizeBytes !== null && file.sizeBytes !== undefined) {
-                          <span title="Rozmiar pliku według GitLaba.">{{ file.sizeBytes }} bytes</span>
-                        }
-                        @if (file.contentSha256) {
-                          <span title="SHA256 contentu pliku według GitLaba.">
-                            sha256 {{ file.contentSha256 }}
-                          </span>
-                        }
-                        @if (file.metadataStatus && file.metadataStatus !== 'RESOLVED') {
-                          <span title="Status pobierania metadanych pliku z GitLaba.">
-                            metadata {{ file.metadataStatus }}
-                          </span>
-                        }
-                      </div>
-
-                      @if (file.error) {
-                        <p class="form-error">{{ file.error }}</p>
-                      }
-
-                      @if (file.metadataError) {
-                        <p class="form-error">{{ file.metadataError }}</p>
-                      }
-
-                      @if (file.content) {
-                        <pre class="json-output source-output">{{ file.content }}</pre>
-                      }
-                    </div>
-                  </details>
-                }
-              </div>
-            } @else {
-              <p class="empty-state">Backend nie zwrócił żadnych plików dla podanych ścieżek.</p>
-            }
-          </section>
-        }
-
-        <div class="json-response-panel">
-          <div class="json-response-panel__header">
-            <label class="field-label" for="gitlabRepositoryFilesByPathJsonResponse">
-              JSON response
-            </label>
-            <div class="json-response-panel__actions">
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Kopiuj JSON repository files by path do schowka"
-                title="Kopiuj JSON"
-                (click)="copyJsonResponse('repository-files-by-path', gitLabRepositoryFilesByPathState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">
-                  {{
-                    copiedJsonResponseKey() === 'repository-files-by-path'
-                      ? 'task_alt'
-                      : 'content_copy'
-                  }}
-                </span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Pobierz JSON repository files by path"
-                title="Pobierz JSON"
-                (click)="downloadJsonResponse('repository-files-by-path', gitLabRepositoryFilesByPathState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Załaduj JSON repository files by path z pliku"
-                title="Załaduj JSON"
-                (click)="repositoryFilesByPathJsonFileInput.click()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              </button>
-              <input
-                #repositoryFilesByPathJsonFileInput
-                hidden
-                type="file"
-                accept="application/json,.json"
-                (change)="loadJsonResponseFile('repository-files-by-path', $event)"
-              />
-            </div>
-          </div>
-          <textarea
-            id="gitlabRepositoryFilesByPathJsonResponse"
-            class="json-output"
-            readonly
-            spellcheck="false"
-            [value]="gitLabRepositoryFilesByPathState().responseJson"
-          ></textarea>
-        </div>
-      </article>
-
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">GitLab</p>
-            <h2>Endpoint Inventory</h2>
-            <p class="field-hint">
-              Przeszukuje repozytorium pod kątem kontrolerów Spring MVC/REST i zwraca ścieżki,
-              metody HTTP, klasy oraz miejsca do kolejnego doczytania kodu.
-            </p>
-          </div>
-          <span
-            class="panel-chip route-chip"
-            [title]="routeChipTooltip('POST /api/gitlab/repository/endpoints')"
-          >
-            POST /api/gitlab/repository/endpoints
-          </span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitGitLabEndpointSearch($event)">
-          <div class="form-grid">
-            <label class="form-field">
-              <span class="field-label">Group</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. TENANT-ALPHA"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointForm.controls.group"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Project Name</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. orders-api"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointForm.controls.projectName"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Branch / Ref</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="HEAD"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointForm.controls.branch"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">HTTP Method</span>
-              <select class="text-input" [formControl]="gitLabEndpointForm.controls.httpMethod">
-                <option value="">All</option>
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="PATCH">PATCH</option>
-                <option value="DELETE">DELETE</option>
-              </select>
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Endpoint Path Prefix</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. /api/orders"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointForm.controls.endpointPathPrefix"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Max Scanned Files</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="250"
-                [formControl]="gitLabEndpointForm.controls.maxScannedFiles"
-              />
-            </label>
-          </div>
-
-          @if (
-            controlInvalid(gitLabEndpointForm.controls.group) ||
-            controlInvalid(gitLabEndpointForm.controls.projectName) ||
-            controlInvalid(gitLabEndpointForm.controls.branch)
-          ) {
-            <p class="form-error">Pola `group`, `projectName` i `branch` są wymagane.</p>
-          }
-
-          @if (controlInvalid(gitLabEndpointForm.controls.maxScannedFiles)) {
-            <p class="form-error">Pole `maxScannedFiles` musi mieścić się w zakresie 1-250.</p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="gitLabEndpointState().status === 'loading'"
-            >
-              <span class="button-label">Szukaj endpointów</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="gitLabEndpointState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ gitLabEndpointState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (gitLabEndpointState().statusCode !== null) {
-              <span
-                class="tool-status__code"
-                [title]="httpStatusTooltip(gitLabEndpointState().statusCode)"
-              >
-                HTTP {{ gitLabEndpointState().statusCode }}
-              </span>
-            }
-            <span
-              [class]="statusPillClass(gitLabEndpointState().status)"
-              [title]="statusTooltip(gitLabEndpointState().status)"
-            >
-              {{ statusLabel(gitLabEndpointState().status) }}
-            </span>
-          </div>
-        </div>
-
-        @if (gitLabEndpointResult(); as endpointResult) {
-          <section class="endpoint-results">
-            <div class="endpoint-results__header">
-              <div>
-                <p class="tool-status__label">Znalezione endpointy</p>
-                <h3>{{ endpointResult.endpoints.length }} endpointów</h3>
-              </div>
-              <div class="endpoint-results__stats">
-                <span
-                  class="panel-chip"
-                  [title]="countChipTooltip('scanned-files', endpointResult.scannedFileCount)"
-                >
-                  {{ endpointResult.scannedFileCount }} skanowanych
-                </span>
-                <span
-                  class="panel-chip"
-                  [title]="countChipTooltip('candidate-files', endpointResult.candidateFileCount)"
-                >
-                  {{ endpointResult.candidateFileCount }} kandydatów
-                </span>
-                @if (endpointResult.scannedFileLimitReached) {
-                  <span
-                    class="panel-chip panel-chip--warning"
-                    [title]="limitChipTooltip('endpoint-scan')"
-                  >
-                    limit skanowania
-                  </span>
-                }
-              </div>
-            </div>
-
-            @if (endpointResult.limitations.length > 0) {
-              <ul class="endpoint-results__limitations">
-                @for (limitation of endpointResult.limitations; track limitation) {
-                  <li>{{ limitation }}</li>
-                }
-              </ul>
-            }
-
-            @if (endpointResult.endpoints.length > 0) {
-              <div class="endpoint-list">
-                @for (endpoint of endpointResult.endpoints; track endpoint.endpointId) {
-                  <details class="endpoint-card">
-                    <summary class="endpoint-card__summary">
-                      <div class="endpoint-card__main">
-                        <span
-                          class="endpoint-card__method"
-                          [title]="endpointMethodTooltip(endpoint.httpMethods)"
-                        >
-                          {{ endpointMethods(endpoint) }}
-                        </span>
-                        <div class="endpoint-card__copy">
-                          <h4>{{ endpoint.path || endpoint.pathExpression || '&lt;unresolved-path&gt;' }}</h4>
-                          @if (endpoint.documentation?.summary) {
-                            <p class="endpoint-card__summary-text">
-                              {{ endpoint.documentation?.summary }}
-                            </p>
-                          }
-                          <p>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</p>
-                        </div>
-                        <button
-                          class="secondary-button secondary-button--compact endpoint-card__context-button"
-                          type="button"
-                          (click)="$event.preventDefault(); $event.stopPropagation(); useEndpointForContext(endpoint)"
-                        >
-                          <span class="button-label">Użyj do contextu</span>
-                        </button>
-                        <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
-                          expand_more
-                        </span>
-                      </div>
-                    </summary>
-
-                    <div class="endpoint-card__details">
-                      <div class="endpoint-card__meta">
-                        <span>{{ endpoint.filePath }}</span>
-                        <span>lines {{ endpoint.lineStart }}-{{ endpoint.lineEnd }}</span>
-                        @if (endpoint.confidence) {
-                          <span>confidence {{ endpoint.confidence }}</span>
-                        }
-                      </div>
-
-                      @if (endpoint.documentation) {
-                        <div class="endpoint-documentation">
-                          <div class="endpoint-documentation__header">
-                            @if (endpoint.documentation.source) {
-                              <span
-                                class="panel-chip"
-                                [title]="documentationSourceTooltip(endpoint.documentation.source)"
-                              >
-                                {{ documentationSourceLabel(endpoint.documentation.source) }}
-                              </span>
-                            }
-                            @if (endpoint.documentation.operationId) {
-                              <span
-                                class="panel-chip"
-                                title="OperationId z dokumentacji OpenAPI, przydatne do powiązania z wygenerowanymi interfejsami."
-                              >
-                                {{ endpoint.documentation.operationId }}
-                              </span>
-                            }
-                          </div>
-
-                          @if (endpoint.documentation.summary) {
-                            <p class="endpoint-documentation__summary">
-                              {{ endpoint.documentation.summary }}
-                            </p>
-                          }
-                          @if (endpoint.documentation.description) {
-                            <p class="endpoint-documentation__description">
-                              {{ endpoint.documentation.description }}
-                            </p>
-                          }
-
-                          @if ((endpoint.documentation.tags || []).length > 0) {
-                            <div class="context-chip-list">
-                              @for (tag of endpoint.documentation.tags || []; track tag) {
-                                <span class="context-chip" title="Tag z dokumentacji OpenAPI endpointu.">
-                                  {{ tag }}
-                                </span>
-                              }
-                            </div>
-                          }
-
-                          @if ((endpoint.documentation.parameters || []).length > 0) {
-                            <div class="endpoint-documentation__parameters">
-                              @for (parameter of endpoint.documentation.parameters || []; track parameter.in + ':' + parameter.name) {
-                                <div class="endpoint-parameter">
-                                  <span
-                                    class="panel-chip"
-                                    [title]="parameterDocumentationTooltip(parameter)"
-                                  >
-                                    {{ parameter.in || 'param' }}
-                                  </span>
-                                  <span class="endpoint-parameter__name">{{ parameter.name }}</span>
-                                  @if (parameter.type) {
-                                    <span class="endpoint-parameter__type">{{ parameter.type }}</span>
-                                  }
-                                  <span class="endpoint-parameter__required">
-                                    {{ parameter.required ? 'required' : 'optional' }}
-                                  </span>
-                                  @if (parameter.description) {
-                                    <span class="endpoint-parameter__description">
-                                      {{ parameter.description }}
-                                    </span>
-                                  }
-                                </div>
-                              }
-                            </div>
-                          }
-                        </div>
-                      }
-
-                      @if (endpoint.requestTypes.length > 0 || endpoint.responseTypes.length > 0) {
-                        <div class="endpoint-card__meta">
-                          @if (endpoint.requestTypes.length > 0) {
-                            <span>Request: {{ endpoint.requestTypes.join(', ') }}</span>
-                          }
-                          @if (endpoint.responseTypes.length > 0) {
-                            <span>Response: {{ endpoint.responseTypes.join(', ') }}</span>
-                          }
-                        </div>
-                      }
-
-                      @if (endpoint.limitations.length > 0) {
-                        <ul class="endpoint-card__limitations">
-                          @for (limitation of endpoint.limitations; track limitation) {
-                            <li>{{ limitation }}</li>
-                          }
-                        </ul>
-                      }
-                    </div>
-                  </details>
-                }
-              </div>
-            } @else {
-              <p class="empty-state">Backend nie zwrócił endpointów dla podanych filtrów.</p>
-            }
-          </section>
-        }
-
-        <div class="json-response-panel">
-          <div class="json-response-panel__header">
-            <label class="field-label" for="gitlabEndpointJsonResponse">JSON response</label>
-            <div class="json-response-panel__actions">
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Kopiuj JSON endpoint inventory do schowka"
-                title="Kopiuj JSON"
-                (click)="copyJsonResponse('endpoint-inventory', gitLabEndpointState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">
-                  {{
-                    copiedJsonResponseKey() === 'endpoint-inventory'
-                      ? 'task_alt'
-                      : 'content_copy'
-                  }}
-                </span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Pobierz JSON endpoint inventory"
-                title="Pobierz JSON"
-                (click)="downloadJsonResponse('endpoint-inventory', gitLabEndpointState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Załaduj JSON endpoint inventory z pliku"
-                title="Załaduj JSON"
-                (click)="endpointInventoryJsonFileInput.click()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              </button>
-              <input
-                #endpointInventoryJsonFileInput
-                hidden
-                type="file"
-                accept="application/json,.json"
-                (change)="loadJsonResponseFile('endpoint-inventory', $event)"
-              />
-            </div>
-          </div>
-          <textarea
-            id="gitlabEndpointJsonResponse"
-            class="json-output"
-            readonly
-            spellcheck="false"
-            [value]="gitLabEndpointState().responseJson"
-          ></textarea>
-        </div>
-      </article>
-
-      <article class="analysis-card tool-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">GitLab</p>
-            <h2>Endpoint Use Case Context</h2>
-            <p class="field-hint">
-              Buduje kompaktową listę plików, symboli i relacji dla konkretnego endpointu. Najwygodniej
-              zacząć od przycisku `Użyj do contextu` na wyniku Endpoint Inventory.
-            </p>
-          </div>
-          <span
-            class="panel-chip route-chip"
-            [title]="routeChipTooltip('POST /api/gitlab/repository/endpoint-use-case-context')"
-          >
-            POST /api/gitlab/repository/endpoint-use-case-context
-          </span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitGitLabEndpointUseCaseContext($event)">
-          <div class="form-grid">
-            <label class="form-field">
-              <span class="field-label">Group</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. TENANT-ALPHA"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.group"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Project Name</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. orders-api"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.projectName"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Branch / Ref</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="HEAD"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.branch"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">HTTP Method</span>
-              <select
-                class="text-input"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.httpMethod"
-              >
-                <option value="">From endpointId</option>
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="PATCH">PATCH</option>
-                <option value="DELETE">DELETE</option>
-              </select>
-            </label>
-
-            <label class="form-field form-field--wide">
-              <span class="field-label">Endpoint ID</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. GET /api/orders/{orderId} -> com.example.OrderController#getOrder"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointId"
-              />
-              <span class="field-hint">Jeśli `endpointId` jest uzupełniony, builder użyje go przed method/path.</span>
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Endpoint Path</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. /api/orders/{orderId}"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointPath"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Max Depth</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="8"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.maxDepth"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Max Files</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="100"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.maxFiles"
-              />
-            </label>
-
-            <label class="form-field form-field--wide">
-              <span class="field-label">Reason</span>
-              <input
-                class="text-input"
-                type="text"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabEndpointUseCaseContextForm.controls.reason"
-              />
-            </label>
-          </div>
-
-          @if (
-            controlInvalid(gitLabEndpointUseCaseContextForm.controls.group) ||
-            controlInvalid(gitLabEndpointUseCaseContextForm.controls.projectName) ||
-            controlInvalid(gitLabEndpointUseCaseContextForm.controls.branch)
-          ) {
-            <p class="form-error">Pola `group`, `projectName` i `branch` są wymagane.</p>
-          }
-
-          @if (
-            controlInvalid(gitLabEndpointUseCaseContextForm.controls.maxDepth) ||
-            controlInvalid(gitLabEndpointUseCaseContextForm.controls.maxFiles)
-          ) {
-            <p class="form-error">Limity muszą mieścić się w zakresach: depth 1-8, files 1-100.</p>
-          }
-
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="gitLabEndpointUseCaseContextState().status === 'loading'"
-            >
-              <span class="button-label">Buduj context endpointu</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="tool-status" [attr.data-status]="gitLabEndpointUseCaseContextState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ gitLabEndpointUseCaseContextState().message }}</p>
-          </div>
-          <div class="tool-status__badges">
-            @if (gitLabEndpointUseCaseContextState().statusCode !== null) {
-              <span
-                class="tool-status__code"
-                [title]="httpStatusTooltip(gitLabEndpointUseCaseContextState().statusCode)"
-              >
-                HTTP {{ gitLabEndpointUseCaseContextState().statusCode }}
-              </span>
-            }
-            <span
-              [class]="statusPillClass(gitLabEndpointUseCaseContextState().status)"
-              [title]="statusTooltip(gitLabEndpointUseCaseContextState().status)"
-            >
-              {{ statusLabel(gitLabEndpointUseCaseContextState().status) }}
-            </span>
-          </div>
-        </div>
-
-        @if (gitLabEndpointUseCaseContextResult(); as contextResult) {
-          <section class="context-results">
-            <div class="context-results__header">
-              <div>
-                <p class="tool-status__label">Use-case context</p>
-                <h3>
-                  {{ contextResult.files.length }} plików ·
-                  {{ contextResult.relations.length }} relacji
-                </h3>
-              </div>
-              <div class="endpoint-results__stats">
-                <button
-                  class="secondary-button secondary-button--compact"
-                  type="button"
-                  title="Przepisuje wszystkie pliki z wyniku Endpoint Use Case Context do formularza Read Repository Files By Path."
-                  [disabled]="contextResult.files.length === 0"
-                  (click)="useUseCaseFilesForRead()"
-                >
-                  <span class="button-label">Użyj plików do read</span>
-                </button>
-                <span
-                  [class]="confidenceClass(contextResult.confidence)"
-                  [title]="confidenceTooltip(contextResult.confidence)"
-                >
-                  {{ contextResult.confidence || 'UNKNOWN' }}
-                </span>
-                @if (contextResult.unresolved.length > 0) {
-                  <span
-                    class="panel-chip panel-chip--warning"
-                    [title]="countChipTooltip('unresolved', contextResult.unresolved.length)"
-                  >
-                    {{ contextResult.unresolved.length }} unresolved
-                  </span>
-                }
-              </div>
-            </div>
-
-            @if (contextResult.endpoint) {
-              <div class="context-endpoint">
-                <span
-                  class="endpoint-card__method"
-                  [title]="endpointMethodTooltip(contextResult.endpoint.httpMethods)"
-                >
-                  {{ contextResult.endpoint.httpMethods.join(', ') || 'ANY' }}
-                </span>
-                <div>
-                  <h4>
-                    {{
-                      contextResult.endpoint.path ||
-                        contextResult.endpoint.pathExpression ||
-                        '&lt;unresolved-path&gt;'
-                    }}
-                  </h4>
-                  <p>
-                    {{ contextResult.endpoint.controllerClass }}#{{ contextResult.endpoint.handlerMethod }}
-                  </p>
-                </div>
-              </div>
-            }
-
-            @if (contextResult.limitations.length > 0) {
-              <ul class="endpoint-results__limitations">
-                @for (limitation of contextResult.limitations; track limitation) {
-                  <li>{{ limitation }}</li>
-                }
-              </ul>
-            }
-
-            @if (contextResult.files.length > 0 && gitLabUseCaseTree(); as useCaseTree) {
-              <section class="context-flow">
-                <div class="context-flow__header">
-                  <div>
-                    <p class="tool-status__label">Flow tree</p>
-                    <h4>
-                      {{ useCaseTree.linkedFileCount }} powiązanych ·
-                      {{ useCaseTree.unlinkedFileCount }} poza flow
-                    </h4>
-                  </div>
-                  @if (contextResult.limits.maxDepthReached || contextResult.limits.maxFilesReached) {
-                    <span
-                      class="panel-chip panel-chip--warning"
-                      [title]="limitChipTooltip('use-case-context')"
-                    >
-                      limit reached
-                    </span>
-                  }
-                </div>
-
-                <div class="context-flow__layout">
-                  <div class="flow-tree" role="tree" aria-label="Endpoint use-case flow tree">
-                    @for (row of useCaseTree.rows; track row.node.id) {
-                      <button
-                        type="button"
-                        [class]="flowTreeNodeClass(row.node)"
-                        [style.padding-left.px]="treeNodePadding(row.depth)"
-                        [attr.aria-level]="row.depth + 1"
-                        role="treeitem"
-                        (click)="selectGitLabUseCaseTreeNode(row.node)"
-                      >
-                        <span class="flow-tree-node__marker"></span>
-                        <span class="flow-tree-node__main">
-                          <span class="flow-tree-node__title">{{ row.node.label }}</span>
-                          @if (row.node.subtitle) {
-                            <span class="flow-tree-node__subtitle">{{ row.node.subtitle }}</span>
-                          }
-                          @if (row.node.relationReason) {
-                            <span class="flow-tree-node__reason">{{ row.node.relationReason }}</span>
-                          }
-                        </span>
-                        <span class="flow-tree-node__badges">
-                          @if (row.node.relationKind) {
-                            <span
-                              class="flow-tree-node__edge"
-                              [title]="relationTooltip(row.node.relationKind, row.node.relationReason)"
-                            >
-                              {{ displayRelationKind(row.node.relationKind) }}
-                            </span>
-                          }
-                          <span class="panel-chip" [title]="roleTooltip(row.node.role)">
-                            {{ displayRole(row.node.role) }}
-                          </span>
-                          @if (row.node.confidence) {
-                            <span
-                              [class]="confidenceClass(row.node.confidence)"
-                              [title]="confidenceTooltip(row.node.confidence)"
-                            >
-                              {{ row.node.confidence }}
-                            </span>
-                          }
-                          @if (row.node.duplicate) {
-                            <span class="panel-chip" [title]="duplicateNodeTooltip()">
-                              already shown
-                            </span>
-                          }
-                        </span>
-                      </button>
-                    }
-                  </div>
-
-                  @if (selectedGitLabUseCaseTreeNode(); as selectedNode) {
-                    <aside class="flow-node-details">
-                      <div class="flow-node-details__header">
-                        <div>
-                          <p class="tool-status__label">Selected node</p>
-                          <h4>{{ selectedNode.label }}</h4>
-                        </div>
-                        <span class="panel-chip" [title]="roleTooltip(selectedNode.role)">
-                          {{ displayRole(selectedNode.role) }}
-                        </span>
-                      </div>
-
-                      @if (selectedNode.subtitle) {
-                        <p class="flow-node-details__path">{{ selectedNode.subtitle }}</p>
-                      }
-
-                      @if (selectedNode.relationKind || selectedNode.relationFrom || selectedNode.relationTo) {
-                        <dl class="flow-node-details__meta">
-                          @if (selectedNode.relationKind) {
-                            <div>
-                              <dt>Relation</dt>
-                              <dd>{{ displayRelationKind(selectedNode.relationKind) }}</dd>
-                            </div>
-                          }
-                          @if (selectedNode.relationFrom) {
-                            <div>
-                              <dt>From</dt>
-                              <dd>{{ selectedNode.relationFrom }}</dd>
-                            </div>
-                          }
-                          @if (selectedNode.relationTo) {
-                            <div>
-                              <dt>To</dt>
-                              <dd>{{ selectedNode.relationTo }}</dd>
-                            </div>
-                          }
-                        </dl>
-                      }
-
-                      @if (selectedNode.file?.reason || selectedNode.relationReason) {
-                        <p class="flow-node-details__reason">
-                          {{ selectedNode.file?.reason || selectedNode.relationReason }}
-                        </p>
-                      }
-
-                      @if (selectedNode.file?.symbols?.length) {
-                        <div class="context-chip-list">
-                          @for (symbol of selectedNode.file?.symbols || []; track symbol) {
-                            <span class="context-chip" [title]="symbolTooltip(symbol)">
-                              {{ symbol }}
-                            </span>
-                          }
-                        </div>
-                      }
-                    </aside>
-                  }
-                </div>
-              </section>
-            } @else {
-              <p class="empty-state">Builder nie zwrócił plików dla podanego endpointu.</p>
-            }
-
-            @if (gitLabUseCaseTree()?.unmatchedRelations?.length) {
-              <section class="context-subsection">
-                <h4>Relacje bez dopasowania do drzewa</h4>
-                <ul class="context-list">
-                  @for (relation of gitLabUseCaseTree()?.unmatchedRelations || []; track $index) {
-                    <li>
-                      <span>{{ relation.kind || 'UNKNOWN' }}</span>
-                      {{ relation.from || '?' }} -> {{ relation.to || '?' }}
-                    </li>
-                  }
-                </ul>
-              </section>
-            }
-
-            @if (contextResult.unresolved.length > 0) {
-              <details class="context-subsection context-subsection--collapsible">
-                <summary>
-                  <span>Unresolved</span>
-                  <span
-                    class="panel-chip"
-                    [title]="countChipTooltip('unresolved', contextResult.unresolved.length)"
-                  >
-                    {{ contextResult.unresolved.length }}
-                  </span>
-                </summary>
-                <ul class="context-list">
-                  @for (reference of contextResult.unresolved; track reference.symbol || $index) {
-                    <li>
-                      <span>{{ reference.symbol || 'unknown' }}</span>
-                      {{ reference.reason || 'Brak powodu.' }}
-                    </li>
-                  }
-                </ul>
-              </details>
-            }
-
-            @if (contextResult.suggestedNextReads.length > 0) {
-              <details class="context-subsection context-subsection--collapsible">
-                <summary>
-                  <span>Suggested next reads</span>
-                  <span
-                    class="panel-chip"
-                    [title]="countChipTooltip('suggested-next-reads', contextResult.suggestedNextReads.length)"
-                  >
-                    {{ contextResult.suggestedNextReads.length }}
-                  </span>
-                </summary>
-                <ul class="context-list">
-                  @for (read of contextResult.suggestedNextReads; track read) {
-                    <li>{{ read }}</li>
-                  }
-                </ul>
-              </details>
-            }
-          </section>
-        }
-
-        <div class="json-response-panel">
-          <div class="json-response-panel__header">
-            <label class="field-label" for="gitlabEndpointUseCaseContextJsonResponse">
-              JSON response
-            </label>
-            <div class="json-response-panel__actions">
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Kopiuj JSON endpoint use-case context do schowka"
-                title="Kopiuj JSON"
-                (click)="copyJsonResponse('endpoint-use-case-context', gitLabEndpointUseCaseContextState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">
-                  {{
-                    copiedJsonResponseKey() === 'endpoint-use-case-context'
-                      ? 'task_alt'
-                      : 'content_copy'
-                  }}
-                </span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Pobierz JSON endpoint use-case context"
-                title="Pobierz JSON"
-                (click)="downloadJsonResponse('endpoint-use-case-context', gitLabEndpointUseCaseContextState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Załaduj JSON endpoint use-case context z pliku"
-                title="Załaduj JSON"
-                (click)="endpointUseCaseContextJsonFileInput.click()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              </button>
-              <input
-                #endpointUseCaseContextJsonFileInput
-                hidden
-                type="file"
-                accept="application/json,.json"
-                (change)="loadJsonResponseFile('endpoint-use-case-context', $event)"
-              />
-            </div>
-          </div>
-          <textarea
-            id="gitlabEndpointUseCaseContextJsonResponse"
-            class="json-output"
-            readonly
-            spellcheck="false"
-            [value]="gitLabEndpointUseCaseContextState().responseJson"
-          ></textarea>
-        </div>
-      </article>
-
-      <article class="analysis-card tool-card tool-card--source-resolve">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">GitLab</p>
-            <h2>Source Resolve</h2>
-            <p class="field-hint">
-              Ręczny test rozwiązywania symbolu do pliku w repozytorium GitLaba. Możesz przełączać
-              pełny wynik i wariant `preview`.
-            </p>
-          </div>
-          <span
-            class="panel-chip route-chip"
-            [title]="routeChipTooltip('POST /api/gitlab/source/resolve')"
-          >
-            POST /api/gitlab/source/resolve
-          </span>
-        </div>
-
-        <form class="tool-form" novalidate (submit)="submitGitLabSource($event)">
-          <div class="form-grid">
             <label class="form-field">
               <span class="field-label">GitLab Base URL</span>
               <input
@@ -1460,162 +103,794 @@
                 placeholder="np. https://gitlab.example.com"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="gitLabSourceForm.controls.gitlabBaseUrl"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Group Path</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. CRM/CUSTOMER"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabSourceForm.controls.groupPath"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Project Path</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. crm-customer-service"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabSourceForm.controls.projectPath"
-              />
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Ref</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="HEAD"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabSourceForm.controls.ref"
-              />
-            </label>
-
-            <label class="form-field form-field--wide">
-              <span class="field-label">Symbol</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. com.example.crm.customer.CustomerService"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="gitLabSourceForm.controls.symbol"
+                [formControl]="scopeForm.controls.gitlabBaseUrl"
               />
             </label>
           </div>
 
-          <label class="toggle-row">
-            <input type="checkbox" [formControl]="gitLabSourceForm.controls.preview" />
-            <span>Użyj `/resolve/preview` zamiast pełnego `/resolve`</span>
-          </label>
-
-          @if (
-            controlInvalid(gitLabSourceForm.controls.gitlabBaseUrl) ||
-            controlInvalid(gitLabSourceForm.controls.groupPath) ||
-            controlInvalid(gitLabSourceForm.controls.projectPath) ||
-            controlInvalid(gitLabSourceForm.controls.symbol)
-          ) {
-            <p class="form-error">
-              Pola `gitlabBaseUrl`, `groupPath`, `projectPath` i `symbol` są wymagane.
-            </p>
+          @if (repositoryScopeMissingForSelectedTool()) {
+            <p class="form-error">Pola `group`, `projectName` i `branch` są wymagane.</p>
           }
 
-          <div class="tool-actions">
-            <button
-              class="primary-button"
-              type="submit"
-              [disabled]="gitLabSourceState().status === 'loading'"
-            >
-              <span class="button-label">Uruchom Source Resolve</span>
-            </button>
-          </div>
-        </form>
+          @if (sourceBaseUrlMissingForSelectedTool()) {
+            <p class="form-error">Pole `GitLab Base URL` jest wymagane dla Source Resolve.</p>
+          }
+        </section>
 
-        <div class="tool-status" [attr.data-status]="gitLabSourceState().status">
-          <div>
-            <p class="tool-status__label">Status wywołania</p>
-            <p class="tool-status__message">{{ gitLabSourceState().message }}</p>
+        <section class="gitlab-tool-section" aria-labelledby="gitlabToolsTitle">
+          <div class="section-heading gitlab-tool-section__heading">
+            <div>
+              <p class="section-eyebrow">Tools</p>
+              <h2 id="gitlabToolsTitle">Element do testu</h2>
+            </div>
+            <span class="panel-chip">{{ tools.length }}</span>
           </div>
-          <div class="tool-status__badges">
-            @if (gitLabSourceState().statusCode !== null) {
-              <span
-                class="tool-status__code"
-                [title]="httpStatusTooltip(gitLabSourceState().statusCode)"
-              >
-                HTTP {{ gitLabSourceState().statusCode }}
-              </span>
+
+          <div class="gitlab-tool-list" aria-label="GitLab tools">
+            @for (group of toolGroups; track group.category) {
+              <section class="gitlab-tool-group">
+                <p class="gitlab-tool-group__title">{{ group.category }}</p>
+                @for (tool of group.tools; track tool.key) {
+                  <button
+                    type="button"
+                    [class]="toolButtonClass(tool)"
+                    [attr.aria-pressed]="tool.key === selectedToolKey()"
+                    (click)="selectTool(tool.key)"
+                  >
+                    <span class="gitlab-tool-button__content">
+                      <span>{{ tool.label }}</span>
+                      <small>{{ tool.endpoint.replace('/api/gitlab/', '') }}</small>
+                    </span>
+                    <span
+                      class="gitlab-tool-button__state"
+                      [attr.data-status]="toolStateStatus(tool)"
+                      aria-hidden="true"
+                    ></span>
+                  </button>
+                }
+              </section>
             }
-            <span
-              [class]="statusPillClass(gitLabSourceState().status)"
-              [title]="statusTooltip(gitLabSourceState().status)"
-            >
-              {{ statusLabel(gitLabSourceState().status) }}
+          </div>
+        </section>
+      </aside>
+
+      <section class="gitlab-main">
+        <article class="analysis-card gitlab-runner">
+          <div class="section-heading gitlab-runner__header">
+            <div>
+              <p class="section-eyebrow">{{ selectedTool().category }}</p>
+              <h2>{{ selectedTool().label }}</h2>
+              <p class="field-hint">{{ selectedTool().summary }}</p>
+            </div>
+            <span class="panel-chip route-chip" [title]="routeChipTooltip(selectedEndpointLabel())">
+              POST {{ selectedEndpointLabel() }}
             </span>
           </div>
-        </div>
 
-        <div class="json-response-panel">
-          <div class="json-response-panel__header">
-            <label class="field-label" for="gitlabSourceJsonResponse">JSON response</label>
-            <div class="json-response-panel__actions">
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Kopiuj JSON source resolve do schowka"
-                title="Kopiuj JSON"
-                (click)="copyJsonResponse('source-resolve', gitLabSourceState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">
-                  {{ copiedJsonResponseKey() === 'source-resolve' ? 'task_alt' : 'content_copy' }}
-                </span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Pobierz JSON source resolve"
-                title="Pobierz JSON"
-                (click)="downloadJsonResponse('source-resolve', gitLabSourceState().responseJson)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              </button>
-              <button
-                class="json-icon-button"
-                type="button"
-                aria-label="Załaduj JSON source resolve z pliku"
-                title="Załaduj JSON"
-                (click)="sourceResolveJsonFileInput.click()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              </button>
-              <input
-                #sourceResolveJsonFileInput
-                hidden
-                type="file"
-                accept="application/json,.json"
-                (change)="loadJsonResponseFile('source-resolve', $event)"
-              />
-            </div>
+          @switch (selectedToolKey()) {
+            @case ('repository-search') {
+              <div class="form-grid form-grid--stacked">
+                <label class="form-field">
+                  <span class="field-label">Project Hints</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="4"
+                    placeholder="np. crm-customer-service"
+                    spellcheck="false"
+                    [formControl]="gitLabRepositoryForm.controls.projectHints"
+                  ></textarea>
+                  <span class="field-hint">Oddzielaj wartości przecinkiem albo nową linią.</span>
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Operation Names</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="4"
+                    placeholder="np. GET /crm/customers/{customerId}"
+                    spellcheck="false"
+                    [formControl]="gitLabRepositoryForm.controls.operationNames"
+                  ></textarea>
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Keywords</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="4"
+                    placeholder="np. customer, segment"
+                    spellcheck="false"
+                    [formControl]="gitLabRepositoryForm.controls.keywords"
+                  ></textarea>
+                </label>
+              </div>
+
+              @if (controlInvalid(gitLabRepositoryForm.controls.projectHints)) {
+                <p class="form-error">Pole `projectHints` jest wymagane.</p>
+              }
+            }
+
+            @case ('endpoint-inventory') {
+              <div class="form-grid">
+                <label class="form-field">
+                  <span class="field-label">Endpoint path prefix</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie, np. /crm/customers"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabEndpointForm.controls.endpointPathPrefix"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">HTTP method</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie, np. GET"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabEndpointForm.controls.httpMethod"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max scanned files</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="250"
+                    [formControl]="gitLabEndpointForm.controls.maxScannedFiles"
+                  />
+                </label>
+              </div>
+
+              @if (controlInvalid(gitLabEndpointForm.controls.maxScannedFiles)) {
+                <p class="form-error">Limit skanowania musi mieścić się w zakresie 1-250.</p>
+              }
+            }
+
+            @case ('endpoint-use-case-context') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Endpoint ID</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. GET /crm/customers/{customerId} -> CustomerController#getCustomer"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointId"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">HTTP method</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. GET"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabEndpointUseCaseContextForm.controls.httpMethod"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Endpoint path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. /crm/customers/{customerId}"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointPath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max depth</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="8"
+                    [formControl]="gitLabEndpointUseCaseContextForm.controls.maxDepth"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max files</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    [formControl]="gitLabEndpointUseCaseContextForm.controls.maxFiles"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Reason</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabEndpointUseCaseContextForm.controls.reason"
+                  />
+                </label>
+              </div>
+            }
+
+            @case ('repository-files-by-path') {
+              <div class="form-grid">
+                <label class="form-field">
+                  <span class="field-label">Max chars / file</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="120000"
+                    [formControl]="gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max total chars</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="500000"
+                    [formControl]="gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">File paths</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="8"
+                    placeholder="src/main/java/com/example/crm/customer/CustomerController.java"
+                    spellcheck="false"
+                    [formControl]="gitLabRepositoryFilesByPathForm.controls.filePaths"
+                  ></textarea>
+                </label>
+              </div>
+            }
+
+            @case ('source-resolve') {
+              <div class="form-grid">
+                <label class="form-field">
+                  <span class="field-label">Group Path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. CRM/CUSTOMER"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabSourceForm.controls.groupPath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Project Path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. crm-customer-service"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabSourceForm.controls.projectPath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Ref</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="HEAD"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabSourceForm.controls.ref"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Symbol</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. com.example.crm.customer.CustomerService"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabSourceForm.controls.symbol"
+                  />
+                </label>
+              </div>
+
+              <label class="toggle-row">
+                <input type="checkbox" [formControl]="gitLabSourceForm.controls.preview" />
+                <span>Użyj `/resolve/preview` zamiast pełnego `/resolve`</span>
+              </label>
+            }
+          }
+
+          <div class="gitlab-runner__actions">
+            <button class="secondary-button" type="button" (click)="resetSelectedFields()">
+              <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+              <span>Reset fields</span>
+            </button>
+            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              <span class="button-label">Run request</span>
+            </button>
           </div>
-          <textarea
-            id="gitlabSourceJsonResponse"
-            class="json-output"
-            readonly
-            spellcheck="false"
-            [value]="gitLabSourceState().responseJson"
-          ></textarea>
-        </div>
-      </article>
-      </div>
+        </article>
+
+        @if (hasResult()) {
+          <article class="analysis-card gitlab-result">
+            <div class="gitlab-result__header">
+              <div>
+                <p class="section-eyebrow">Result</p>
+                <h2>Ostatni wynik</h2>
+              </div>
+            </div>
+
+            <div class="tool-status" [attr.data-status]="state().status">
+              <div>
+                <p class="tool-status__label">{{ state().endpoint || 'Manual validation' }}</p>
+                <p class="tool-status__message">{{ state().message }}</p>
+              </div>
+              <div class="tool-status__badges">
+                @if (state().statusCode !== null) {
+                  <span class="tool-status__code" [title]="httpStatusTooltip(state().statusCode)">
+                    HTTP {{ state().statusCode }}
+                  </span>
+                }
+                @if (state().durationMs !== null && state().durationMs !== undefined) {
+                  <span class="tool-status__code">{{ durationLabel(state().durationMs) }}</span>
+                }
+                <span [class]="statusPillClass(state().status)" [title]="statusTooltip(state().status)">
+                  {{ statusLabel(state().status) }}
+                </span>
+              </div>
+            </div>
+
+            @if (selectedToolKey() === 'endpoint-inventory' && gitLabEndpointResult(); as endpointResult) {
+              <section class="endpoint-results">
+                <div class="endpoint-results__header">
+                  <div>
+                    <p class="tool-status__label">Endpoint Inventory</p>
+                    <h3>{{ endpointResult.endpoints.length }} endpoints</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    <span class="panel-chip" [title]="countChipTooltip('scanned-files', endpointResult.scannedFileCount)">
+                      {{ endpointResult.scannedFileCount }} scanned
+                    </span>
+                    <span class="panel-chip" [title]="countChipTooltip('candidate-files', endpointResult.candidateFileCount)">
+                      {{ endpointResult.candidateFileCount }} candidates
+                    </span>
+                    @if (endpointResult.scannedFileLimitReached) {
+                      <span class="panel-chip panel-chip--warning" [title]="limitChipTooltip('endpoint-scan')">
+                        limit reached
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                @if (endpointResult.endpoints.length > 0) {
+                  <div class="endpoint-list">
+                    @for (endpoint of endpointResult.endpoints; track endpoint.endpointId) {
+                      <details class="endpoint-card">
+                        <summary class="endpoint-card__summary">
+                          <div class="endpoint-card__main">
+                            <span class="endpoint-card__method" [title]="endpointMethodTooltip(endpoint.httpMethods)">
+                              {{ endpointMethods(endpoint) }}
+                            </span>
+                            <div class="endpoint-card__copy">
+                              <h4>{{ endpoint.path || endpoint.pathExpression || endpoint.endpointId }}</h4>
+                              <p>
+                                {{ endpoint.documentation?.summary || 'Endpoint handler' }} ·
+                                {{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}
+                              </p>
+                            </div>
+                            @if (endpoint.confidence) {
+                              <span [class]="confidenceClass(endpoint.confidence)" [title]="confidenceTooltip(endpoint.confidence)">
+                                {{ endpoint.confidence }}
+                              </span>
+                            }
+                            <button
+                              class="secondary-button secondary-button--compact endpoint-card__context-button"
+                              type="button"
+                              (click)="$event.stopPropagation(); useEndpointForContext(endpoint)"
+                            >
+                              Użyj do contextu
+                            </button>
+                            <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
+                              expand_more
+                            </span>
+                          </div>
+                        </summary>
+
+                        <div class="endpoint-card__details">
+                          <div class="endpoint-card__meta">
+                            <span>{{ endpoint.controllerClass }}#{{ endpoint.handlerMethod }}</span>
+                            <span>{{ endpoint.filePath }}:{{ endpoint.lineStart }}-{{ endpoint.lineEnd }}</span>
+                            @if (endpoint.documentation?.source) {
+                              <span [title]="documentationSourceTooltip(endpoint.documentation?.source)">
+                                {{ documentationSourceLabel(endpoint.documentation?.source) }}
+                              </span>
+                            }
+                            @if (endpoint.documentation?.operationId) {
+                              <span>{{ endpoint.documentation?.operationId }}</span>
+                            }
+                          </div>
+
+                          @if (endpoint.documentation?.description) {
+                            <p>{{ endpoint.documentation?.description }}</p>
+                          }
+
+                          @if (endpoint.documentation?.parameters?.length) {
+                            <ul class="context-list">
+                              @for (parameter of endpoint.documentation?.parameters || []; track parameter.name) {
+                                <li [title]="parameterDocumentationTooltip(parameter)">
+                                  <span>{{ parameter.name || 'parameter' }}</span>
+                                  {{ parameter.description || parameter.type || parameter.in }}
+                                </li>
+                              }
+                            </ul>
+                          }
+                        </div>
+                      </details>
+                    }
+                  </div>
+                } @else {
+                  <p class="empty-state">Inventory nie zwróciło endpointów dla podanego scope.</p>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'endpoint-use-case-context' && gitLabEndpointUseCaseContextResult(); as contextResult) {
+              <section class="context-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Endpoint Use Case Context</p>
+                    <h3>{{ contextResult.files.length }} plików · {{ contextResult.relations.length }} relacji</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    <button
+                      class="secondary-button secondary-button--compact"
+                      type="button"
+                      [disabled]="!contextResult.files.length"
+                      (click)="useUseCaseFilesForRead()"
+                    >
+                      Użyj plików do read
+                    </button>
+                    @if (contextResult.unresolved.length > 0) {
+                      <span class="panel-chip panel-chip--warning" [title]="countChipTooltip('unresolved', contextResult.unresolved.length)">
+                        {{ contextResult.unresolved.length }} unresolved
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                @if (contextResult.endpoint) {
+                  <div class="context-endpoint">
+                    <span class="endpoint-card__method" [title]="endpointMethodTooltip(contextResult.endpoint.httpMethods)">
+                      {{ contextResult.endpoint.httpMethods.join(', ') || 'ANY' }}
+                    </span>
+                    <div>
+                      <h4>{{ contextResult.endpoint.path || contextResult.endpoint.pathExpression || contextResult.endpoint.endpointId }}</h4>
+                      <p>{{ contextResult.endpoint.controllerClass }}#{{ contextResult.endpoint.handlerMethod }}</p>
+                    </div>
+                  </div>
+                }
+
+                @if (contextResult.files.length > 0 && gitLabUseCaseTree(); as useCaseTree) {
+                  <section class="context-flow">
+                    <div class="context-flow__header">
+                      <div>
+                        <p class="tool-status__label">Flow tree</p>
+                        <h4>
+                          {{ useCaseTree.linkedFileCount }} powiązanych ·
+                          {{ useCaseTree.unlinkedFileCount }} poza flow
+                        </h4>
+                      </div>
+                      @if (contextResult.limits.maxDepthReached || contextResult.limits.maxFilesReached) {
+                        <span class="panel-chip panel-chip--warning" [title]="limitChipTooltip('use-case-context')">
+                          limit reached
+                        </span>
+                      }
+                    </div>
+
+                    <div class="context-flow__layout">
+                      <div class="flow-tree" role="tree" aria-label="Endpoint use-case flow tree">
+                        @for (row of useCaseTree.rows; track row.node.id) {
+                          <button
+                            type="button"
+                            [class]="flowTreeNodeClass(row.node)"
+                            [style.padding-left.px]="treeNodePadding(row.depth)"
+                            [attr.aria-level]="row.depth + 1"
+                            role="treeitem"
+                            (click)="selectGitLabUseCaseTreeNode(row.node)"
+                          >
+                            <span class="flow-tree-node__marker"></span>
+                            <span class="flow-tree-node__main">
+                              <span class="flow-tree-node__title">{{ row.node.label }}</span>
+                              @if (row.node.subtitle) {
+                                <span class="flow-tree-node__subtitle">{{ row.node.subtitle }}</span>
+                              }
+                              @if (row.node.relationReason) {
+                                <span class="flow-tree-node__reason">{{ row.node.relationReason }}</span>
+                              }
+                            </span>
+                            <span class="flow-tree-node__badges">
+                              @if (row.node.relationKind) {
+                                <span class="flow-tree-node__edge" [title]="relationTooltip(row.node.relationKind, row.node.relationReason)">
+                                  {{ displayRelationKind(row.node.relationKind) }}
+                                </span>
+                              }
+                              <span class="panel-chip" [title]="roleTooltip(row.node.role)">
+                                {{ displayRole(row.node.role) }}
+                              </span>
+                              @if (row.node.confidence) {
+                                <span [class]="confidenceClass(row.node.confidence)" [title]="confidenceTooltip(row.node.confidence)">
+                                  {{ row.node.confidence }}
+                                </span>
+                              }
+                            </span>
+                          </button>
+                        }
+                      </div>
+
+                      @if (selectedGitLabUseCaseTreeNode(); as selectedNode) {
+                        <aside class="flow-node-details">
+                          <div class="flow-node-details__header">
+                            <div>
+                              <p class="tool-status__label">Selected node</p>
+                              <h4>{{ selectedNode.label }}</h4>
+                            </div>
+                            <span class="panel-chip" [title]="roleTooltip(selectedNode.role)">
+                              {{ displayRole(selectedNode.role) }}
+                            </span>
+                          </div>
+
+                          @if (selectedNode.subtitle) {
+                            <p class="flow-node-details__path">{{ selectedNode.subtitle }}</p>
+                          }
+
+                          @if (selectedNode.relationKind || selectedNode.relationFrom || selectedNode.relationTo) {
+                            <dl class="flow-node-details__meta">
+                              @if (selectedNode.relationKind) {
+                                <div>
+                                  <dt>Relation</dt>
+                                  <dd>{{ displayRelationKind(selectedNode.relationKind) }}</dd>
+                                </div>
+                              }
+                              @if (selectedNode.relationFrom) {
+                                <div>
+                                  <dt>From</dt>
+                                  <dd>{{ selectedNode.relationFrom }}</dd>
+                                </div>
+                              }
+                              @if (selectedNode.relationTo) {
+                                <div>
+                                  <dt>To</dt>
+                                  <dd>{{ selectedNode.relationTo }}</dd>
+                                </div>
+                              }
+                            </dl>
+                          }
+
+                          @if (selectedNode.file?.symbols?.length) {
+                            <div class="context-chip-list">
+                              @for (symbol of selectedNode.file?.symbols || []; track symbol) {
+                                <span class="context-chip" [title]="symbolTooltip(symbol)">{{ symbol }}</span>
+                              }
+                            </div>
+                          }
+                        </aside>
+                      }
+                    </div>
+                  </section>
+                } @else {
+                  <p class="empty-state">Builder nie zwrócił plików dla podanego endpointu.</p>
+                }
+
+                @if (contextResult.unresolved.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible">
+                    <summary>
+                      <span>Unresolved</span>
+                      <span class="panel-chip" [title]="countChipTooltip('unresolved', contextResult.unresolved.length)">
+                        {{ contextResult.unresolved.length }}
+                      </span>
+                    </summary>
+                    <ul class="context-list">
+                      @for (reference of contextResult.unresolved; track reference.symbol || $index) {
+                        <li>
+                          <span>{{ reference.symbol || 'unknown' }}</span>
+                          {{ reference.reason || 'Brak powodu.' }}
+                        </li>
+                      }
+                    </ul>
+                  </details>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'repository-files-by-path' && gitLabRepositoryFilesByPathResult(); as filesResult) {
+              <section class="context-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Repository files</p>
+                    <h3>{{ filesResult.returnedFileCount }} pobranych · {{ filesResult.failedFileCount }} błędów</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    <span class="panel-chip" [title]="countChipTooltip('processed-files', filesResult.processedFileCount)">
+                      {{ filesResult.processedFileCount }} processed
+                    </span>
+                    <span class="panel-chip">{{ filesResult.totalReturnedCharacters }} chars</span>
+                  </div>
+                </div>
+
+                @if (filesResult.files.length > 0) {
+                  <div class="endpoint-list">
+                    @for (file of filesResult.files; track file.filePath || $index) {
+                      <details class="endpoint-card">
+                        <summary class="endpoint-card__summary">
+                          <div class="endpoint-card__main">
+                            <span class="endpoint-card__method">{{ file.error ? 'ERROR' : 'READ' }}</span>
+                            <div class="endpoint-card__copy">
+                              <h4>{{ file.filePath || 'unknown file' }}</h4>
+                              <p>{{ file.inferredRole || 'other' }} · {{ file.returnedCharacters || 0 }} chars</p>
+                            </div>
+                            @if (file.truncated) {
+                              <span class="panel-chip panel-chip--warning">truncated</span>
+                            }
+                            <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
+                              expand_more
+                            </span>
+                          </div>
+                        </summary>
+
+                        <div class="endpoint-card__details">
+                          <div class="endpoint-card__meta">
+                            <span>{{ file.projectName || filesResult.projectName }}</span>
+                            <span>{{ file.branch || filesResult.branch }}</span>
+                            <span>{{ file.group || filesResult.group }}</span>
+                            @if (file.lastModifiedAt) {
+                              <span>changed {{ file.lastModifiedAt }}</span>
+                            }
+                            @if (file.lastCommitId) {
+                              <span>last commit {{ file.lastCommitId }}</span>
+                            }
+                          </div>
+
+                          @if (file.error) {
+                            <p class="form-error">{{ file.error }}</p>
+                          } @else if (file.content) {
+                            <textarea class="json-output source-output" readonly spellcheck="false" [value]="file.content"></textarea>
+                          }
+                        </div>
+                      </details>
+                    }
+                  </div>
+                }
+              </section>
+            }
+
+            @if (state().requestJson) {
+              <details class="json-response-panel gitlab-json-panel gitlab-json-panel--request">
+                <summary class="json-response-panel__header">
+                  <span class="json-response-panel__title">
+                    <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                      chevron_right
+                    </span>
+                    <span class="field-label">Request preview</span>
+                  </span>
+                  <div class="json-response-panel__actions">
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Kopiuj request preview do schowka"
+                      title="Kopiuj JSON"
+                      (click)="$event.stopPropagation(); copyJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">
+                        {{ copiedJsonPayloadKey() === 'request' ? 'task_alt' : 'content_copy' }}
+                      </span>
+                    </button>
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Pobierz request preview do pliku JSON"
+                      title="Pobierz JSON"
+                      (click)="$event.stopPropagation(); downloadJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                    </button>
+                  </div>
+                </summary>
+                <textarea
+                  id="gitlabRequestPreview"
+                  class="json-output"
+                  aria-label="Request preview"
+                  readonly
+                  spellcheck="false"
+                  [value]="state().requestJson"
+                ></textarea>
+              </details>
+            }
+
+            <details class="json-response-panel gitlab-json-panel" open>
+              <summary class="json-response-panel__header">
+                <span class="json-response-panel__title">
+                  <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                    chevron_right
+                  </span>
+                  <span class="field-label">JSON response</span>
+                </span>
+                <div class="json-response-panel__actions">
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Kopiuj JSON response do schowka"
+                    title="Kopiuj JSON"
+                    (click)="$event.stopPropagation(); copyJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedJsonPayloadKey() === 'response' ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Pobierz JSON response do pliku"
+                    title="Pobierz JSON"
+                    (click)="$event.stopPropagation(); downloadJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                  </button>
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    aria-label="Załaduj JSON response z pliku"
+                    title="Załaduj JSON"
+                    (click)="$event.stopPropagation(); gitLabResponseFileInput.click()"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+                  </button>
+                  <input
+                    #gitLabResponseFileInput
+                    hidden
+                    type="file"
+                    accept="application/json,.json"
+                    (change)="loadJsonResponseFile(selectedToolKey(), $event)"
+                  />
+                </div>
+              </summary>
+              <textarea
+                id="gitlabJsonResponse"
+                class="json-output"
+                aria-label="JSON response"
+                readonly
+                spellcheck="false"
+                [value]="state().responseJson"
+              ></textarea>
+            </details>
+          </article>
+        }
       </section>
+    </form>
   </main>
 </div>
-

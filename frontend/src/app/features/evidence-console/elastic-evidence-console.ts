@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, WritableSignal, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -9,6 +9,7 @@ import {
   Validators
 } from '@angular/forms';
 import { Observable } from 'rxjs';
+
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
   ElasticHttpCallLogsPayload,
@@ -17,151 +18,182 @@ import {
   ElasticLogSearchPayload,
   EvidenceApiService
 } from '../../core/services/evidence-api.service';
+import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
+
 type ToolStateStatus = 'idle' | 'loading' | 'success' | 'error';
+type ElasticToolKey = 'logSearch' | 'httpSummary' | 'httpLogs';
+type ElasticJsonPayloadKey = 'request' | 'response';
+
 interface ToolState {
   status: ToolStateStatus;
   statusCode: number | null;
   message: string;
+  endpoint: string;
+  requestJson: string;
   responseJson: string;
-  response: unknown | null;
+  durationMs: number | null;
 }
+
+interface ElasticToolDefinition {
+  key: ElasticToolKey;
+  label: string;
+  category: string;
+  endpoint: string;
+  summary: string;
+}
+
+interface ElasticToolGroup {
+  category: string;
+  tools: ElasticToolDefinition[];
+}
+
+const ELASTIC_TOOLS: ElasticToolDefinition[] = [
+  {
+    key: 'logSearch',
+    label: 'Log Search',
+    category: 'Logs',
+    endpoint: 'logs/search',
+    summary:
+      'Wyszukuje logi po correlationId. Backend dobiera Kibana space, index pattern, auth i limity z konfiguracji.'
+  },
+  {
+    key: 'httpSummary',
+    label: 'HTTP Call Summary',
+    category: 'HTTP diagnostics',
+    endpoint: 'logs/http-calls/summary',
+    summary:
+      'Porównuje podobne wywołania HTTP po path prefixie w wybranym oknie czasu.'
+  },
+  {
+    key: 'httpLogs',
+    label: 'HTTP Call Logs',
+    category: 'HTTP diagnostics',
+    endpoint: 'logs/http-calls/fetch',
+    summary:
+      'Pobiera logi dla konkretnego correlationId albo przykładu HTTP path/status/metoda.'
+  }
+];
+
+const ELASTIC_TOOL_GROUPS = ELASTIC_TOOLS.reduce<ElasticToolGroup[]>((groups, tool) => {
+  const existingGroup = groups.find((group) => group.category === tool.category);
+  if (existingGroup) {
+    existingGroup.tools.push(tool);
+  } else {
+    groups.push({
+      category: tool.category,
+      tools: [tool]
+    });
+  }
+  return groups;
+}, []);
+
 @Component({
   selector: 'app-elastic-evidence-console',
   imports: [ReactiveFormsModule],
   templateUrl: './elastic-evidence-console.html',
-  styleUrl: './evidence-console.scss'
+  styleUrl: './elastic-evidence-console.scss'
 })
 export class ElasticEvidenceConsoleComponent {
   private readonly evidenceApi = inject(EvidenceApiService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly elasticForm = new FormGroup({
-    correlationId: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required]
-    })
+
+  readonly tools = ELASTIC_TOOLS;
+  readonly toolGroups = ELASTIC_TOOL_GROUPS;
+  readonly selectedToolKey = signal<ElasticToolKey>('logSearch');
+  readonly copiedJsonPayloadKey = signal<ElasticJsonPayloadKey | null>(null);
+  readonly selectedTool = computed(
+    () => this.tools.find((tool) => tool.key === this.selectedToolKey()) ?? this.tools[0]
+  );
+  readonly toolStates = signal<Record<ElasticToolKey, ToolState>>(this.createInitialToolStates());
+  readonly state = computed(() => this.toolStates()[this.selectedToolKey()]);
+  readonly hasResult = computed(() => this.state().status !== 'idle');
+
+  readonly scopeForm = new FormGroup({
+    correlationId: new FormControl('', { nonNullable: true }),
+    timeWindowDays: new FormControl('7', { nonNullable: true }),
+    serviceName: new FormControl('', { nonNullable: true })
   });
 
-  readonly elasticHttpSummaryForm = new FormGroup({
+  readonly httpSummaryForm = new FormGroup({
     pathPattern: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required]
     }),
     method: new FormControl('', { nonNullable: true }),
-    serviceName: new FormControl('', { nonNullable: true }),
-    timeWindowDays: new FormControl('7', { nonNullable: true }),
     sampleSize: new FormControl('300', { nonNullable: true })
   });
 
-  readonly elasticHttpLogsForm = new FormGroup({
-    correlationId: new FormControl('', { nonNullable: true }),
+  readonly httpLogsForm = new FormGroup({
     path: new FormControl('', { nonNullable: true }),
     status: new FormControl('', { nonNullable: true }),
     method: new FormControl('', { nonNullable: true }),
-    timeWindowDays: new FormControl('7', { nonNullable: true }),
     size: new FormControl('50', { nonNullable: true }),
     detailLevel: new FormControl<ElasticLogDetailLevel>('COMPACT', { nonNullable: true })
   });
-  readonly elasticState = signal<ToolState>(
-    this.idleState('Podaj correlationId i uruchom helper Elastica.')
-  );
-  readonly elasticHttpSummaryState = signal<ToolState>(
-    this.idleState('Podaj path prefix, aby porównać podobne wywołania HTTP w Elasticu.')
-  );
-  readonly elasticHttpLogsState = signal<ToolState>(
-    this.idleState('Podaj correlationId albo konkretny path, aby pobrać logi wywołania HTTP.')
-  );
-  submitElastic(event: Event): void {
+
+  submit(event: Event): void {
     event.preventDefault();
 
-    if (this.elasticForm.invalid) {
-      this.elasticForm.markAllAsTouched();
-      this.elasticState.set(
-        this.errorStateFromPayload({
-          code: 'VALIDATION_ERROR',
-          message: 'Uzupełnij correlationId, aby wywołać endpoint Elastica.'
-        })
-      );
-      return;
+    switch (this.selectedToolKey()) {
+      case 'httpSummary':
+        this.submitElasticHttpSummary();
+        return;
+      case 'httpLogs':
+        this.submitElasticHttpLogs();
+        return;
+      default:
+        this.submitElasticLogSearch();
     }
-
-    const payload: ElasticLogSearchPayload = {
-      correlationId: this.elasticForm.controls.correlationId.value.trim()
-    };
-
-    this.runRequest(
-      this.elasticState,
-      this.evidenceApi.searchElasticLogs(payload),
-      payload,
-      'Wysyłamy request do /api/elasticsearch/logs/search...'
-    );
   }
 
-  submitElasticHttpSummary(event: Event): void {
-    event.preventDefault();
-
-    if (this.elasticHttpSummaryForm.invalid) {
-      this.elasticHttpSummaryForm.markAllAsTouched();
-      this.elasticHttpSummaryState.set(
-        this.errorStateFromPayload({
-          code: 'VALIDATION_ERROR',
-          message: 'Podaj path prefix dla porównania wywołań HTTP.'
-        })
-      );
-      return;
+  selectTool(toolKey: ElasticToolKey): void {
+    if (this.tools.some((tool) => tool.key === toolKey)) {
+      this.selectedToolKey.set(toolKey);
     }
-
-    const payload: ElasticHttpCallSummaryPayload = {
-      pathPattern: this.elasticHttpSummaryForm.controls.pathPattern.value.trim(),
-      method: this.optionalValue(this.elasticHttpSummaryForm.controls.method.value),
-      serviceName: this.optionalValue(this.elasticHttpSummaryForm.controls.serviceName.value),
-      timeWindowDays: this.optionalNumber(this.elasticHttpSummaryForm.controls.timeWindowDays.value),
-      sampleSize: this.optionalNumber(this.elasticHttpSummaryForm.controls.sampleSize.value)
-    };
-
-    this.runRequest(
-      this.elasticHttpSummaryState,
-      this.evidenceApi.summarizeElasticHttpCalls(payload),
-      payload,
-      'Wysyłamy request do /api/elasticsearch/logs/http-calls/summary...'
-    );
   }
 
-  submitElasticHttpLogs(event: Event): void {
-    event.preventDefault();
-
-    const correlationId = this.optionalValue(this.elasticHttpLogsForm.controls.correlationId.value);
-    const path = this.optionalValue(this.elasticHttpLogsForm.controls.path.value);
-
-    if (!correlationId && !path) {
-      this.elasticHttpLogsForm.markAllAsTouched();
-      this.elasticHttpLogsState.set(
-        this.errorStateFromPayload({
-          code: 'VALIDATION_ERROR',
-          message: 'Podaj correlationId albo path, aby pobrać logi wywołania HTTP.'
-        })
-      );
-      return;
+  resetSelectedFields(): void {
+    switch (this.selectedToolKey()) {
+      case 'httpSummary':
+        this.httpSummaryForm.reset({
+          pathPattern: '',
+          method: '',
+          sampleSize: '300'
+        });
+        return;
+      case 'httpLogs':
+        this.httpLogsForm.reset({
+          path: '',
+          status: '',
+          method: '',
+          size: '50',
+          detailLevel: 'COMPACT'
+        });
+        return;
+      default:
+        this.scopeForm.controls.correlationId.reset('');
     }
-
-    const payload: ElasticHttpCallLogsPayload = {
-      correlationId,
-      path,
-      status: this.optionalNumber(this.elasticHttpLogsForm.controls.status.value),
-      method: this.optionalValue(this.elasticHttpLogsForm.controls.method.value),
-      timeWindowDays: this.optionalNumber(this.elasticHttpLogsForm.controls.timeWindowDays.value),
-      size: this.optionalNumber(this.elasticHttpLogsForm.controls.size.value),
-      detailLevel: this.elasticHttpLogsForm.controls.detailLevel.value
-    };
-
-    this.runRequest(
-      this.elasticHttpLogsState,
-      this.evidenceApi.fetchElasticHttpCallLogs(payload),
-      payload,
-      'Wysyłamy request do /api/elasticsearch/logs/http-calls/fetch...'
-    );
   }
+
   controlInvalid(control: AbstractControl<unknown, unknown>): boolean {
     return control.invalid && (control.dirty || control.touched);
+  }
+
+  correlationIdMissingForSelectedTool(): boolean {
+    return (
+      this.selectedToolKey() === 'logSearch' &&
+      this.scopeForm.controls.correlationId.value.trim().length === 0 &&
+      (this.scopeForm.controls.correlationId.dirty || this.scopeForm.controls.correlationId.touched)
+    );
+  }
+
+  httpLogsMissingInputForSelectedTool(): boolean {
+    return (
+      this.selectedToolKey() === 'httpLogs' &&
+      this.scopeForm.controls.correlationId.value.trim().length === 0 &&
+      this.httpLogsForm.controls.path.value.trim().length === 0 &&
+      (this.scopeForm.controls.correlationId.touched || this.httpLogsForm.controls.path.touched)
+    );
   }
 
   statusLabel(status: ToolStateStatus): string {
@@ -190,53 +222,214 @@ export class ElasticEvidenceConsoleComponent {
     }
   }
 
+  toolButtonClass(tool: ElasticToolDefinition): string {
+    return tool.key === this.selectedToolKey()
+      ? 'elastic-tool-button elastic-tool-button--active'
+      : 'elastic-tool-button';
+  }
+
+  toolStateStatus(tool: ElasticToolDefinition): ToolStateStatus {
+    return this.toolStates()[tool.key]?.status ?? 'idle';
+  }
+
+  durationLabel(durationMs: number | null): string {
+    if (durationMs === null) {
+      return 'n/a';
+    }
+
+    return durationMs < 1000 ? `${durationMs} ms` : `${(durationMs / 1000).toFixed(1)} s`;
+  }
+
+  async copyJsonPayload(key: ElasticJsonPayloadKey, value: string): Promise<void> {
+    if (!value) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(value);
+    if (!copied) {
+      return;
+    }
+
+    this.copiedJsonPayloadKey.set(key);
+    window.setTimeout(() => {
+      if (this.copiedJsonPayloadKey() === key) {
+        this.copiedJsonPayloadKey.set(null);
+      }
+    }, 1600);
+  }
+
+  downloadJsonPayload(key: ElasticJsonPayloadKey, value: string): void {
+    if (!value) {
+      return;
+    }
+
+    const blob = new Blob([value], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = this.elasticJsonPayloadFileName(key);
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private submitElasticLogSearch(): void {
+    const correlationId = this.scopeForm.controls.correlationId.value.trim();
+
+    if (!correlationId) {
+      this.scopeForm.controls.correlationId.markAsTouched();
+      this.setCurrentToolState(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij correlationId, aby wywołać endpoint Elastica.'
+        })
+      );
+      return;
+    }
+
+    const payload: ElasticLogSearchPayload = { correlationId };
+
+    this.runRequest(
+      this.evidenceApi.searchElasticLogs(payload),
+      this.selectedTool(),
+      payload
+    );
+  }
+
+  private submitElasticHttpSummary(): void {
+    if (this.httpSummaryForm.invalid) {
+      this.httpSummaryForm.markAllAsTouched();
+      this.setCurrentToolState(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj path prefix dla porównania wywołań HTTP.'
+        })
+      );
+      return;
+    }
+
+    const payload: ElasticHttpCallSummaryPayload = {
+      pathPattern: this.httpSummaryForm.controls.pathPattern.value.trim(),
+      method: this.optionalValue(this.httpSummaryForm.controls.method.value),
+      serviceName: this.optionalValue(this.scopeForm.controls.serviceName.value),
+      timeWindowDays: this.optionalNumber(this.scopeForm.controls.timeWindowDays.value),
+      sampleSize: this.optionalNumber(this.httpSummaryForm.controls.sampleSize.value)
+    };
+
+    this.runRequest(
+      this.evidenceApi.summarizeElasticHttpCalls(payload),
+      this.selectedTool(),
+      payload
+    );
+  }
+
+  private submitElasticHttpLogs(): void {
+    const correlationId = this.optionalValue(this.scopeForm.controls.correlationId.value);
+    const path = this.optionalValue(this.httpLogsForm.controls.path.value);
+
+    if (!correlationId && !path) {
+      this.scopeForm.controls.correlationId.markAsTouched();
+      this.httpLogsForm.controls.path.markAsTouched();
+      this.setCurrentToolState(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj correlationId albo path, aby pobrać logi wywołania HTTP.'
+        })
+      );
+      return;
+    }
+
+    const payload: ElasticHttpCallLogsPayload = {
+      correlationId,
+      path,
+      status: this.optionalNumber(this.httpLogsForm.controls.status.value),
+      method: this.optionalValue(this.httpLogsForm.controls.method.value),
+      timeWindowDays: this.optionalNumber(this.scopeForm.controls.timeWindowDays.value),
+      size: this.optionalNumber(this.httpLogsForm.controls.size.value),
+      detailLevel: this.httpLogsForm.controls.detailLevel.value
+    };
+
+    this.runRequest(
+      this.evidenceApi.fetchElasticHttpCallLogs(payload),
+      this.selectedTool(),
+      payload
+    );
+  }
+
   private runRequest(
-    state: WritableSignal<ToolState>,
     request$: Observable<unknown>,
-    payload: unknown,
-    loadingMessage: string
+    selectedTool: ElasticToolDefinition,
+    payload: unknown
   ): void {
-    state.set({
+    const endpoint = `/api/elasticsearch/${selectedTool.endpoint}`;
+    const requestJson = this.toFormattedJson({
+      endpoint,
+      method: 'POST',
+      body: payload
+    });
+    const startedAt = Date.now();
+
+    this.setToolState(selectedTool.key, {
       status: 'loading',
       statusCode: null,
-      message: loadingMessage,
-      response: null,
+      message: `Wysyłamy request do ${endpoint}...`,
+      endpoint,
+      requestJson,
       responseJson: this.toFormattedJson({
         status: 'WAITING',
+        endpoint,
         request: payload
-      })
+      }),
+      durationMs: null
     });
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
-        state.set({
+        this.setToolState(selectedTool.key, {
           status: 'success',
           statusCode: 200,
-          message: 'Backend zwrócił odpowiedź JSON.',
-          response,
-          responseJson: this.toFormattedJson(response)
+          message: 'Backend zwrócił odpowiedź JSON z Elasticsearch helper API.',
+          endpoint,
+          requestJson,
+          responseJson: this.toFormattedJson(response),
+          durationMs: Date.now() - startedAt
         });
       },
-      error: (error) => state.set(this.toErrorState(error))
+      error: (error) =>
+        this.setToolState(
+          selectedTool.key,
+          this.toErrorState(error, endpoint, requestJson, Date.now() - startedAt)
+        )
     });
   }
 
-  private toErrorState(error: unknown): ToolState {
+  private toErrorState(
+    error: unknown,
+    endpoint = '',
+    requestJson = '',
+    durationMs: number | null = null
+  ): ToolState {
     if (error instanceof HttpErrorResponse) {
       const payload = this.normalizeErrorPayload(error.error, error.status, error.message);
       return {
         status: 'error',
         statusCode: error.status || null,
         message: payload.message,
-        response: null,
-        responseJson: this.toFormattedJson(payload.body)
+        endpoint,
+        requestJson,
+        responseJson: this.toFormattedJson(payload.body),
+        durationMs
       };
     }
 
-    return this.errorStateFromPayload({
-      code: 'REQUEST_FAILED',
-      message: error instanceof Error ? error.message : 'Request zakończył się błędem.'
-    });
+    return this.errorStateFromPayload(
+      {
+        code: 'REQUEST_FAILED',
+        message: error instanceof Error ? error.message : 'Request zakończył się błędem.'
+      },
+      endpoint,
+      requestJson,
+      durationMs
+    );
   }
 
   private normalizeErrorPayload(
@@ -314,13 +507,20 @@ export class ElasticEvidenceConsoleComponent {
     };
   }
 
-  private errorStateFromPayload(payload: { code: string; message: string }): ToolState {
+  private errorStateFromPayload(
+    payload: { code: string; message: string },
+    endpoint = '',
+    requestJson = '',
+    durationMs: number | null = null
+  ): ToolState {
     return {
       status: 'error',
       statusCode: null,
       message: payload.message,
-      response: null,
-      responseJson: this.toFormattedJson(payload)
+      endpoint,
+      requestJson,
+      responseJson: this.toFormattedJson(payload),
+      durationMs
     };
   }
 
@@ -329,20 +529,41 @@ export class ElasticEvidenceConsoleComponent {
       status: 'idle',
       statusCode: null,
       message,
-      response: null,
-      responseJson: this.toFormattedJson({
-        message
-      })
+      endpoint: '',
+      requestJson: '',
+      responseJson: '',
+      durationMs: null
     };
   }
 
+  private createInitialToolStates(): Record<ElasticToolKey, ToolState> {
+    return this.tools.reduce(
+      (states, tool) => ({
+        ...states,
+        [tool.key]: this.idleState('Wybierz zakres, element testowy i uruchom request.')
+      }),
+      {} as Record<ElasticToolKey, ToolState>
+    );
+  }
+
+  private setCurrentToolState(state: ToolState): void {
+    this.setToolState(this.selectedToolKey(), state);
+  }
+
+  private setToolState(toolKey: ElasticToolKey, state: ToolState): void {
+    this.toolStates.update((states) => ({
+      ...states,
+      [toolKey]: state
+    }));
+  }
+
   private optionalValue(raw: string): string | undefined {
-    const value = String(raw || "").trim();
+    const value = String(raw || '').trim();
     return value.length > 0 ? value : undefined;
   }
 
   private optionalNumber(raw: string): number | undefined {
-    const value = String(raw || "").trim();
+    const value = String(raw || '').trim();
     if (value.length === 0) {
       return undefined;
     }
@@ -353,5 +574,11 @@ export class ElasticEvidenceConsoleComponent {
   private toFormattedJson(value: unknown): string {
     const formatted = JSON.stringify(value, null, 2);
     return formatted === undefined ? 'null' : formatted;
+  }
+
+  private elasticJsonPayloadFileName(key: ElasticJsonPayloadKey): string {
+    const safeEndpoint = this.selectedTool().endpoint.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `elastic-${safeEndpoint}-${key}-${timestamp}.json`;
   }
 }
