@@ -13,8 +13,9 @@ Produktowy framing:
 - incident analysis jest pierwszym dostepnym feature'em,
 - Elastic, GitLab i Database sa czescia Tool Workbench, czyli zaplecza do
   testow, debugowania i recznego zebrania inputu,
-- Operational Context jest katalogiem platformowym i capability wspolna dla
-  feature'ow oraz tools,
+- Operational Context zostaje w Tool Workbench jako shared context/catalog
+  capability do testow, walidacji i recznego zebrania inputu dla feature'ow
+  oraz tools,
 - UI ma wspierac skills/capabilities, a nie role-based organization,
 - layout ma byc prosty, spokojny, korporacyjny i gesty informacyjnie, bez
   marketingowego hero.
@@ -49,13 +50,16 @@ byc zaktualizowany przed dalsza implementacja.
   - `Analysis Features`
   - `Tool Workbench`
   - `Platform`
+- `Operational Context` zostaje w grupie `Tool Workbench`.
+- `Platform` dotyczy customizacji Team Delivery Workspace: parametryzacji,
+  personalizacji, autentykacji, konfiguracji modeli i ustawien workspace'u.
 - Topbar ma byc kontekstowy, a nie glowna nawigacja.
 - V1 ma zachowac jasny motyw, ale style maja byc przygotowane pod kolejne
   motywy przez tokeny CSS.
 - V1 zachowuje obecne URL-e: `/`, `/elastic`, `/gitlab`, `/database`,
   `/operational-context`.
-- Pozycje platformowe `AI Models`, `GitHub Auth` i `Settings` sa w Krok 2
-  disabled/nav placeholders.
+- Pozycje platformowe `Workspace Settings`, `Personalization`,
+  `Authentication` i `AI Models` sa w V1 disabled/nav placeholders.
 - Status GitHub/Copilot zostaje na razie w widoku `Incident Analysis`; shell
   ma tylko kontekst widoku: breadcrumb i tytul.
 - Krok 3 dodaje mechanizm przyszlych motywow przez `:root[data-theme='light']`,
@@ -131,10 +135,10 @@ byc zaktualizowany przed dalsza implementacja.
   `/operational-context`) i zmienia tylko shell/nawigacje, czy od razu dodaje
   docelowe aliasy typu `/skills/incident-analysis` i `/workbench/elastic`.
   Rekomendacja V1: zachowac obecne URL-e.
-- Czy platformowe pozycje `AI Models`, `GitHub Auth`, `Settings` maja byc
-  w V1 tylko disabled/nav placeholders, czy maja dostac proste strony.
-  Rekomendacja V1: disabled/nav placeholders poza GitHub auth statusem w
-  topbarze.
+- Czy platformowe pozycje `Workspace Settings`, `Personalization`,
+  `Authentication` i `AI Models` maja dostac proste strony w V1.
+  Rekomendacja V1: disabled/nav placeholders, dopoki nie projektujemy
+  konfiguracji workspace'u.
 
 ## Docelowa struktura UI
 
@@ -167,9 +171,10 @@ Docelowo wszystkie widoki korzystaja ze wspolnego shell'a aplikacji:
 
 `Platform`
 
+- `Workspace Settings` - V1 disabled albo prosty widok pozniej.
+- `Personalization` - V1 disabled albo prosty widok pozniej.
+- `Authentication` - V1 disabled albo prosty widok pozniej.
 - `AI Models` - V1 disabled albo prosty widok pozniej.
-- `GitHub Auth` - status i akcje w topbarze; osobny widok opcjonalny.
-- `Settings` - V1 disabled.
 
 ### Incident Analysis
 
@@ -227,8 +232,11 @@ feature.
 
 ### Operational Context
 
-Operational Context jest katalogiem platformowym. Widok ma miec tytul:
-`Operational Context Catalog`.
+Operational Context pozostaje w Tool Workbench jako shared context/catalog
+capability. Nie jest czescia zakladki Platform, poniewaz Platform dotyczy
+customizacji samego Team Delivery Workspace.
+
+Widok roboczy moze pozostac pod tytulem `Operational Context`.
 
 Zakladki:
 
@@ -513,24 +521,28 @@ Weryfikacja:
 - [ ] `GitLab Source`: browser check desktop bez poziomego overflow.
 - [ ] finalny browser check dla wszystkich ekranow Tool Workbench.
 
-### Krok 6: Operational Context Catalog polish
+### Krok 6: Operational Context Workbench polish
 
-Cel: ustawic Operational Context jako katalog platformowy, nie zwykly tool.
+Cel: dopracowac Operational Context jako Tool Workbench capability dla katalogu
+i neutralnych `opctx_*` tools, bez przenoszenia go do sekcji Platform.
 
 Zakres:
 
-- [ ] Zmienic tytul widoku na `Operational Context Catalog`.
-- [ ] Dopasowac widok do shell'a i nowych tokenow.
-- [ ] Utrzymac zakladki katalogowe i detail drawer.
-- [ ] Uporzadkowac Validation i Open Questions jako inbox utrzymaniowy.
-- [ ] Zachowac obecne API `/api/operational-context/*`.
+- [x] Utrzymac `Operational Context` w topbarze jako widok sekcji
+  `Tool Workbench`.
+- [x] Dodac `Operational Context` capability info w topbarze przez ikone
+  `info`, tak jak dla pozostalych ekranow Workbench.
+- [x] Dopasowac widok do shell'a i nowych tokenow.
+- [x] Utrzymac zakladki katalogowe i detail drawer.
+- [x] Uporzadkowac Validation i Open Questions jako inbox utrzymaniowy.
+- [x] Zachowac obecne API `/api/operational-context/*`.
 
 Weryfikacja:
 
-- [ ] summary, search, tabs i detail drawer dzialaja,
-- [ ] validation/open questions filtry dzialaja,
-- [ ] copy maintenance target dziala,
-- [ ] testy FE i browser check.
+- [x] summary, search, tabs i detail drawer dzialaja,
+- [x] validation/open questions filtry dzialaja,
+- [x] copy maintenance target dziala,
+- [x] testy FE i browser check.
 
 ### Krok 7: Platform navigation i placeholdery
 
@@ -539,12 +551,17 @@ implementacji.
 
 Zakres:
 
-- [ ] Ustalic, ktore pozycje platformowe sa disabled w V1.
+- [x] Ustalic, ze `Platform` dotyczy customizacji Team Delivery Workspace:
+  parametryzacji, personalizacji, autentykacji, konfiguracji modeli i ustawien
+  workspace'u.
+- [x] Zmienic placeholdery w sidebarze na `Workspace Settings`,
+  `Personalization`, `Authentication` i `AI Models`.
 - [ ] GitHub/Copilot auth zostawic jako status i akcje w topbarze albo dodac
   prosty widok, jesli zostanie zatwierdzony.
 - [ ] AI Models zostawic jako disabled albo dodac prosty read-only widok
   katalogu modeli, jesli zostanie zatwierdzony.
-- [ ] Settings zostawic disabled.
+- [ ] Workspace Settings, Personalization i Authentication zostawic disabled
+  albo dodac proste widoki, jesli zostanie zatwierdzone.
 
 Weryfikacja:
 
@@ -587,12 +604,13 @@ Zakres:
 
 Najblizszy proponowany krok do zatwierdzenia:
 
-`Krok 6: Operational Context Catalog polish`.
+`Krok 7: Platform navigation i placeholdery`.
 
 Proponowany zakres:
 
-- ustawic widok jako `Operational Context Catalog`, a nie zwykly tool,
-- zachowac obecne API `/api/operational-context/*`,
-- dopasowac katalog do aktualnego shell'a, tokenow i prostego roboczego stylu,
-- uporzadkowac zakladki, detail drawer, Validation i Open Questions bez
-  zmiany modelu danych.
+- potwierdzic, czy `Workspace Settings`, `Personalization`, `Authentication`
+  i `AI Models` pozostaja w V1 disabled placeholders,
+- albo zaprojektowac bardzo proste pierwsze strony Platform bez logiki
+  backendowej,
+- utrzymac jasny podzial: `Platform` konfiguruje Team Delivery Workspace, a
+  `Tool Workbench` pozostaje miejscem pracy z reusable capabilities.

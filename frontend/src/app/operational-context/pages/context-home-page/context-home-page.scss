@@ -17,10 +17,10 @@
 
 .context-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
-  padding: 16px 18px;
+  padding: 12px 14px;
 }
 
 .context-toolbar h2,
@@ -38,7 +38,7 @@
 .status-strip {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
 }
 
@@ -51,34 +51,54 @@
   color: var(--danger-text);
 }
 
+.context-toolbar__note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.context-toolbar__note .material-symbols-outlined {
+  width: 20px;
+  height: 20px;
+  color: var(--primary-dark);
+  font-size: 20px;
+  line-height: 20px;
+}
+
 .context-tabs {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   overflow-x: auto;
-  padding: 8px;
+  padding: 5px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.88);
+  background: #eef4fb;
 }
 
 .context-tabs button {
   flex: 0 0 auto;
-  min-height: 38px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 10px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .context-tabs button.context-tab--active {
-  border-color: rgba(12, 102, 228, 0.22);
-  background: var(--primary-soft);
+  border-color: var(--border);
+  background: #fff;
   color: var(--primary-dark);
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.08);
 }
 
 .context-panel {
@@ -204,6 +224,104 @@
   color: var(--text-main);
   font: inherit;
   font-size: 0.82rem;
+}
+
+.maintenance-inbox {
+  display: grid;
+  gap: 10px;
+}
+
+.maintenance-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-main);
+  text-align: left;
+}
+
+.maintenance-card[role='button'] {
+  cursor: pointer;
+}
+
+.maintenance-card[role='button']:hover,
+.maintenance-card[role='button']:focus-visible {
+  border-color: rgba(12, 102, 228, 0.34);
+  background: #fbfdff;
+}
+
+.maintenance-card[role='button']:focus-visible {
+  outline: 3px solid rgba(12, 102, 228, 0.14);
+  outline-offset: 2px;
+}
+
+.maintenance-card__main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+}
+
+.maintenance-card__main h3,
+.maintenance-card__body p {
+  margin: 0;
+}
+
+.maintenance-card__main h3 {
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.maintenance-card__meta {
+  margin: 0 0 3px;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.maintenance-card__body {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(180px, 0.9fr) minmax(220px, 1fr);
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.maintenance-card__body--compact {
+  grid-template-columns: minmax(220px, 1fr) minmax(120px, 0.35fr);
+}
+
+.maintenance-card__body section {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.maintenance-card__body section > span,
+.maintenance-target > span {
+  color: var(--text-soft);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.maintenance-card__body p {
+  color: var(--text-muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.maintenance-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
 .catalog-scroll {
@@ -413,7 +531,19 @@
     grid-template-columns: 1fr;
   }
 
-  .status-strip {
+  .status-strip,
+  .context-toolbar__note {
+    justify-content: flex-start;
+  }
+
+  .maintenance-card,
+  .maintenance-card__body,
+  .maintenance-card__body--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .maintenance-card__actions {
+    grid-column: 1 / -1;
     justify-content: flex-start;
   }
 }

@@ -1,18 +1,20 @@
 <div class="page-shell operational-context">
   <main class="context-workspace">
-    <section class="context-toolbar">
-      <div>
-        <p class="section-eyebrow">Operational Context</p>
-        <h2>Searchable operational catalogue</h2>
-      </div>
-
+    <section class="context-toolbar" aria-label="Operational context status">
       <div class="status-strip">
         <span class="status-pill" [attr.data-status]="statusLabel()">{{ statusText() }}</span>
         @if (summary(); as currentSummary) {
+          <span class="panel-chip">Systems {{ currentSummary.systems }}</span>
+          <span class="panel-chip">Repos {{ currentSummary.repositories }}</span>
           <span class="panel-chip">Errors {{ currentSummary.validationFindings['error'] || 0 }}</span>
           <span class="panel-chip">Warnings {{ currentSummary.validationFindings['warning'] || 0 }}</span>
           <span class="panel-chip">Open questions {{ currentSummary.openQuestions }}</span>
         }
+      </div>
+
+      <div class="context-toolbar__note">
+        <span class="material-symbols-outlined" aria-hidden="true">hub</span>
+        <span>Readonly context/catalog capability for feature and tool grounding.</span>
       </div>
     </section>
 
@@ -216,62 +218,67 @@
               </select>
             </label>
           </div>
-          <div class="validation-table">
-            <div class="validation-table__header" role="row">
-              @for (column of validationColumns; track column.label) {
-                <span
-                  class="table-header-tip"
-                  role="columnheader"
+          <div class="maintenance-inbox" aria-label="Validation findings inbox">
+            @if (!validationRows().length) {
+              <div class="catalog-table__empty">No validation findings.</div>
+            } @else {
+              @for (finding of validationRows(); track finding.id) {
+                <article
+                  class="maintenance-card"
+                  role="button"
                   tabindex="0"
-                  [matTooltip]="column.tooltip"
-                  matTooltipClass="analysis-log-tooltip"
-                  [matTooltipShowDelay]="150"
+                  (click)="openEntity({ type: finding.entityType, id: finding.entityId })"
+                  (keydown.enter)="openEntity({ type: finding.entityType, id: finding.entityId })"
                 >
-                  {{ column.label }}
-                </span>
+                  <div class="maintenance-card__main">
+                    <span [class]="validationStatusClass(finding.severity)">{{ finding.severity }}</span>
+                    <div>
+                      <p class="maintenance-card__meta">
+                        {{ finding.category }} · {{ finding.entityType }}/{{ finding.entityId }}
+                      </p>
+                      <h3>{{ finding.title }}</h3>
+                    </div>
+                  </div>
+
+                  <div class="maintenance-card__body">
+                    <section>
+                      <span>Suggested fix</span>
+                      <p>{{ finding.suggestedFix }}</p>
+                    </section>
+                    <section>
+                      <span>Impact</span>
+                      <p>{{ finding.impact }}</p>
+                    </section>
+                    <section class="maintenance-target">
+                      <span>Target</span>
+                      <strong>{{ firstSourceRef(finding)?.file || 'unknown source' }}</strong>
+                      @if (firstSourceRef(finding)?.path) {
+                        <small>{{ firstSourceRef(finding)?.path }}</small>
+                      }
+                    </section>
+                  </div>
+
+                  <div class="maintenance-card__actions">
+                    <button
+                      type="button"
+                      class="icon-action"
+                      [attr.aria-label]="'Copy maintenance target for ' + finding.id"
+                      (click)="copyMaintenanceTarget($event, validationMaintenanceTarget(finding), 'validation:' + finding.id)"
+                    >
+                      <mat-icon fontSet="material-symbols-outlined">
+                        {{ copiedMaintenanceTarget() === 'validation:' + finding.id ? 'task_alt' : 'content_copy' }}
+                      </mat-icon>
+                    </button>
+                    <button
+                      type="button"
+                      class="secondary-button secondary-button--compact"
+                      (click)="$event.stopPropagation(); openEntity({ type: finding.entityType, id: finding.entityId })"
+                    >
+                      Open
+                    </button>
+                  </div>
+                </article>
               }
-            </div>
-            @for (finding of validationRows(); track finding.id) {
-              <div
-                class="validation-table__row"
-                role="button"
-                tabindex="0"
-                (click)="openEntity({ type: finding.entityType, id: finding.entityId })"
-                (keydown.enter)="openEntity({ type: finding.entityType, id: finding.entityId })"
-              >
-                <span [class]="validationStatusClass(finding.severity)">{{ finding.severity }}</span>
-                <span>{{ finding.category }}</span>
-                <span>{{ finding.entityType }}/{{ finding.entityId }}</span>
-                <strong>{{ finding.title }}</strong>
-                <span>{{ finding.suggestedFix }}</span>
-                <span>{{ finding.impact }}</span>
-                <span class="maintenance-target">
-                  <strong>{{ firstSourceRef(finding)?.file || 'unknown source' }}</strong>
-                  @if (firstSourceRef(finding)?.path) {
-                    <small>{{ firstSourceRef(finding)?.path }}</small>
-                  }
-                  <small>{{ finding.entityType }}/{{ finding.entityId }}</small>
-                </span>
-                <span class="maintenance-actions">
-                  <button
-                    type="button"
-                    class="icon-action"
-                    [attr.aria-label]="'Copy maintenance target for ' + finding.id"
-                    (click)="copyMaintenanceTarget($event, validationMaintenanceTarget(finding), 'validation:' + finding.id)"
-                  >
-                    <mat-icon fontSet="material-symbols-outlined">
-                      {{ copiedMaintenanceTarget() === 'validation:' + finding.id ? 'task_alt' : 'content_copy' }}
-                    </mat-icon>
-                  </button>
-                  <button
-                    type="button"
-                    class="secondary-button secondary-button--compact"
-                    (click)="$event.stopPropagation(); openEntity({ type: finding.entityType, id: finding.entityId })"
-                  >
-                    Open
-                  </button>
-                </span>
-              </div>
             }
           </div>
         </section>
@@ -322,35 +329,35 @@
               </select>
             </label>
           </div>
-          <div class="question-table">
-            <div class="question-table__header" role="row">
-              @for (column of openQuestionColumns; track column.label) {
-                <span
-                  class="table-header-tip"
-                  role="columnheader"
-                  tabindex="0"
-                  [matTooltip]="column.tooltip"
-                  matTooltipClass="analysis-log-tooltip"
-                  [matTooltipShowDelay]="150"
-                >
-                  {{ column.label }}
-                </span>
-              }
-            </div>
+          <div class="maintenance-inbox" aria-label="Open questions inbox">
             @if (!openQuestionRows().length) {
               <div class="catalog-table__empty">No open questions.</div>
             } @else {
               @for (question of openQuestionRows(); track question.id) {
-                <div class="question-table__row">
-                  <strong>{{ question.question }}</strong>
-                  <span class="maintenance-target">
-                    <strong>{{ question.sourceFile || 'unknown source' }}</strong>
-                    <small>{{ openQuestionEntityLabel(question) }}</small>
-                  </span>
-                  <span>{{ openQuestionEntityLabel(question) }}</span>
-                  <span [class]="validationStatusClass(question.severity)">{{ question.severity }}</span>
-                  <span>{{ question.status }}</span>
-                  <span class="maintenance-actions">
+                <article class="maintenance-card maintenance-card--question">
+                  <div class="maintenance-card__main">
+                    <span [class]="validationStatusClass(question.severity)">{{ question.severity }}</span>
+                    <div>
+                      <p class="maintenance-card__meta">
+                        {{ question.status }} · {{ openQuestionEntityLabel(question) }}
+                      </p>
+                      <h3>{{ question.question }}</h3>
+                    </div>
+                  </div>
+
+                  <div class="maintenance-card__body maintenance-card__body--compact">
+                    <section class="maintenance-target">
+                      <span>Source</span>
+                      <strong>{{ question.sourceFile || 'unknown source' }}</strong>
+                      <small>{{ openQuestionEntityLabel(question) }}</small>
+                    </section>
+                    <section>
+                      <span>Status</span>
+                      <p>{{ question.status }}</p>
+                    </section>
+                  </div>
+
+                  <div class="maintenance-card__actions">
                     <button
                       type="button"
                       class="icon-action"
@@ -370,8 +377,8 @@
                         Open
                       </button>
                     }
-                  </span>
-                </div>
+                  </div>
+                </article>
               }
             }
           </div>

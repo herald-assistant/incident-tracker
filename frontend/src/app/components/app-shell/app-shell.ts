@@ -72,9 +72,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Platform',
     items: [
-      { label: 'AI Models', icon: 'model_training', disabled: true },
-      { label: 'GitHub Auth', icon: 'account_circle', disabled: true },
-      { label: 'Settings', icon: 'settings', disabled: true }
+      { label: 'Workspace Settings', icon: 'tune', disabled: true },
+      { label: 'Personalization', icon: 'palette', disabled: true },
+      { label: 'Authentication', icon: 'admin_panel_settings', disabled: true },
+      { label: 'AI Models', icon: 'model_training', disabled: true }
     ]
   }
 ];

@@ -112,7 +112,27 @@ export const routes: Routes = [
         path: 'operational-context',
         data: {
           section: 'Tool Workbench',
-          title: 'Operational Context'
+          title: 'Operational Context',
+          capabilityInfo: {
+            description:
+              'Manualne przegladanie i walidacja Operational Context jako reusable capability dla featureow i tooli, bez logiki konkretnej analizy.',
+            badges: ['Reusable przez AI', 'Catalog'],
+            meta: [
+              { label: 'Endpointy', value: 'GET /api/operational-context/*' },
+              {
+                label: 'Wymagany scope',
+                value: 'Konfiguracja katalogu operational-context z zasobow aplikacji'
+              },
+              {
+                label: 'Reusable przez AI',
+                value: 'Tak, przez neutralne opctx_* tools bez incidentowego inputu'
+              },
+              {
+                label: 'Guardrails',
+                value: 'Readonly catalog view, walidacja katalogu i jawne open questions'
+              }
+            ]
+          }
         },
         loadChildren: () =>
           import('./operational-context/operational-context.routes').then(

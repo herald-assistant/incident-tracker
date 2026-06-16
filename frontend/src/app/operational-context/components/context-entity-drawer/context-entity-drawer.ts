@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import {
@@ -6,6 +6,7 @@ import {
   OperationalContextEntityDetailDto,
   OperationalContextReadModelProfile
 } from '../../models/operational-context.models';
+import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
 import { AiApiPreviewPanelComponent } from '../ai-api-preview-panel/ai-api-preview-panel';
 import { WhyPopoverComponent } from '../why-popover/why-popover';
 
@@ -23,6 +24,7 @@ export class ContextEntityDrawerComponent {
   readonly aiApiPreviewProfile = input<OperationalContextReadModelProfile>('default');
   readonly aiApiPreviewProfileChange = output<OperationalContextReadModelProfile>();
   readonly closeDrawer = output<void>();
+  readonly copiedEntity = signal(false);
 
   protected fieldEntries(fields: Record<string, unknown>): Array<{ key: string; value: string }> {
     return Object.entries(fields || {}).map(([key, value]) => ({
@@ -39,5 +41,21 @@ export class ContextEntityDrawerComponent {
       return JSON.stringify(value);
     }
     return value === null || value === undefined ? '' : String(value);
+  }
+
+  protected async copyEntityDetail(): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(JSON.stringify(detail, null, 2));
+    this.copiedEntity.set(copied);
+  }
+
+  protected openRawSource(): void {
+    globalThis.document
+      ?.getElementById('operational-context-raw-source')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

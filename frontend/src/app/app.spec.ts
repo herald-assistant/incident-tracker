@@ -186,5 +186,9 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-context-home-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'GET /api/operational-context/*'
+    );
   });
 });

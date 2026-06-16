@@ -18,8 +18,11 @@ import { OperationalContextApiService } from '../../services/operational-context
 import { ContextHomePageComponent } from './context-home-page';
 
 describe('ContextHomePageComponent', () => {
+  const navigatorClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+
   afterEach(() => {
     vi.restoreAllMocks();
+    restoreNavigatorClipboard(navigatorClipboardDescriptor);
   });
 
   it('should render empty catalogue state', async () => {
@@ -72,6 +75,9 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('opctx_get_entity');
     expect(fixture.nativeElement.textContent).toContain('include=[relations]');
     expect(fixture.nativeElement.textContent).toContain('API links');
+    expect(fixture.nativeElement.textContent).toContain('Copy');
+    expect(fixture.nativeElement.textContent).toContain('Open raw');
+    expect(fixture.nativeElement.textContent).toContain('Close');
   });
 
   it('should reload AI API preview when switching profile', async () => {
@@ -210,6 +216,19 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('$.systems[0].owner');
     expect(fixture.nativeElement.textContent).toContain('system/app-core');
     expect(fixture.nativeElement.textContent).toContain('code-search-scopes.yml');
+    expect(fixture.nativeElement.querySelector('.maintenance-card')).not.toBeNull();
+
+    const writeText = vi.fn(() => Promise.resolve());
+    installNavigatorClipboard({ writeText });
+    const copyButton = fixture.nativeElement.querySelector(
+      '.maintenance-card .icon-action'
+    ) as HTMLButtonElement;
+    copyButton.click();
+    await fixture.whenStable();
+
+    expect(writeText).toHaveBeenCalledWith(
+      'systems.yml $.systems[0].owner | system/app-core | ownership'
+    );
 
     component.validationCategoryControl.setValue('ownership');
     component.validationSourceFileControl.setValue('systems.yml');
@@ -234,6 +253,7 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('systems.yml');
     expect(fixture.nativeElement.textContent).toContain('system/app-core');
     expect(fixture.nativeElement.textContent).toContain('glossary.md');
+    expect(fixture.nativeElement.querySelector('.maintenance-card--question')).not.toBeNull();
 
     component.questionSourceFileControl.setValue('systems.yml');
     component.questionEntityTypeControl.setValue('system');
@@ -649,4 +669,22 @@ function aiApiPreviewRequest(
       validationFindings: []
     })
   };
+}
+
+function installNavigatorClipboard(clipboard: Partial<Clipboard>): void {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: clipboard
+  });
+}
+
+function restoreNavigatorClipboard(
+  descriptor: PropertyDescriptor | undefined
+): void {
+  if (descriptor) {
+    Object.defineProperty(navigator, 'clipboard', descriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(navigator, 'clipboard');
 }
