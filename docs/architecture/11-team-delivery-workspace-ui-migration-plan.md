@@ -58,6 +58,12 @@ byc zaktualizowany przed dalsza implementacja.
   disabled/nav placeholders.
 - Status GitHub/Copilot zostaje na razie w widoku `Incident Analysis`; shell
   ma tylko kontekst widoku: breadcrumb i tytul.
+- Krok 3 dodaje mechanizm przyszlych motywow przez `:root[data-theme='light']`,
+  ale V1 nadal ma tylko jasny motyw.
+- Stare zmienne CSS (`--primary`, `--surface`, `--border` itd.) zostaja jako
+  aliasy kompatybilnosci wskazujace na nowe tokeny `--color-*`.
+- Globalne tlo aplikacji w V1 jest spokojnym kolorem, bez dekoracyjnego
+  gradientu.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -293,21 +299,21 @@ Cel: ustabilizowac wizualny fundament przed przebudowa ekranow.
 
 Zakres:
 
-- [ ] Dodac docelowe tokeny `--color-*` w `styles.scss`.
-- [ ] Zachowac kompatybilne aliasy dla obecnych zmiennych, zeby nie robic
+- [x] Dodac docelowe tokeny `--color-*` w `styles.scss`.
+- [x] Zachowac kompatybilne aliasy dla obecnych zmiennych, zeby nie robic
   big-bang rewrite.
-- [ ] Uspokoic tlo aplikacji: bez dekoracyjnych gradientow jako glownego tla.
-- [ ] Ujednolicic radius glownych kontrolek do `6px`/`8px`, zostawiajac
+- [x] Uspokoic tlo aplikacji: bez dekoracyjnych gradientow jako glownego tla.
+- [x] Ujednolicic radius glownych kontrolek do `6px`/`8px`, zostawiajac
   wieksze radiusy tylko tam, gdzie sa uzasadnione.
-- [ ] Ujednolicic buttony, chipy, inputy, selecty i status pills.
-- [ ] Przygotowac `data-theme` albo podobny mechanizm pod przyszle motywy,
+- [x] Ujednolicic buttony, chipy, inputy, selecty i status pills.
+- [x] Przygotowac `data-theme` albo podobny mechanizm pod przyszle motywy,
   bez dodawania ciemnego motywu w V1.
 
 Weryfikacja:
 
-- [ ] wizualny check glownych widokow,
-- [ ] mobile/desktop check,
-- [ ] testy FE/build.
+- [x] wizualny check glownych widokow,
+- [x] mobile/desktop check,
+- [x] testy FE/build.
 
 ### Krok 4: Incident Analysis jako widok roboczy
 
@@ -433,13 +439,12 @@ Zakres:
 
 Najblizszy proponowany krok do zatwierdzenia:
 
-`Krok 3: Tokeny stylu i spokojny light theme`.
+`Krok 4: Incident Analysis jako widok roboczy`.
 
 Przed implementacja trzeba zatwierdzic:
 
-- zakres tokenow `--color-*` i kompatybilnych aliasow dla obecnych zmiennych,
-- czy w Krok 3 usuwamy globalne dekoracyjne gradienty tla aplikacji,
-- jak agresywnie normalizujemy radiusy i style kart bez przebudowy
-  poszczegolnych ekranow,
-- czy przygotowujemy tylko mechanizm przyszlych motywow, bez dodawania
-  drugiego motywu.
+- czy usuwamy hero-card z pierwszego viewportu w calosci,
+- docelowy ksztalt kompaktowego panelu startu analizy,
+- ktore fakty runu maja wejsc do paska kontekstu po uruchomieniu joba,
+- czy follow-up chat w Krok 4 ma byc dolnym panelem, czy prawa zakladka,
+- jak daleko porzadkujemy dwukolumnowy workspace bez zmiany kontraktow API.

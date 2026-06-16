@@ -1,26 +1,55 @@
-:root {
-  --page-background: #f4f5f7;
-  --surface: #ffffff;
-  --surface-alt: #f7faff;
-  --surface-soft: #f0f6ff;
-  --border: #d8e0eb;
-  --border-strong: #b8c6d8;
-  --text-main: #172b4d;
-  --text-muted: #5e6c84;
-  --text-soft: #6b778c;
-  --primary: #0c66e4;
-  --primary-dark: #0747a6;
-  --primary-soft: #deebff;
-  --success-soft: #e3fcef;
-  --success-text: #216e4e;
-  --danger-soft: #ffebe6;
-  --danger-text: #ae2e24;
-  --shadow-soft: 0 24px 64px rgba(9, 30, 66, 0.08);
-  --shadow-card: 0 14px 36px rgba(9, 30, 66, 0.09);
-  --radius-xl: 26px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-sm: 12px;
+:root,
+:root[data-theme='light'] {
+  --color-bg: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8fbff;
+  --color-surface-muted: #eef4fb;
+  --color-border: #d8e0eb;
+  --color-border-strong: #b8c6d8;
+  --color-text: #172b4d;
+  --color-muted: #5e6c84;
+  --color-muted-strong: #44546f;
+  --color-soft: #6b778c;
+  --color-primary: #0c66e4;
+  --color-primary-dark: #0747a6;
+  --color-primary-soft: #deebff;
+  --color-success: #216e4e;
+  --color-success-soft: #e3fcef;
+  --color-warning: #b76e00;
+  --color-warning-soft: #fff4d6;
+  --color-danger: #ae2e24;
+  --color-danger-soft: #ffebe6;
+  --color-ai: #6554c0;
+  --color-ai-soft: #f5f3ff;
+  --focus-ring: 0 0 0 3px rgba(12, 102, 228, 0.14);
+
+  --page-background: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-alt: var(--color-surface-alt);
+  --surface-soft: var(--color-surface-muted);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --text-main: var(--color-text);
+  --text-muted: var(--color-muted);
+  --text-soft: var(--color-soft);
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-dark);
+  --primary-soft: var(--color-primary-soft);
+  --success-soft: var(--color-success-soft);
+  --success-text: var(--color-success);
+  --warning-soft: var(--color-warning-soft);
+  --warning-text: var(--color-warning);
+  --danger-soft: var(--color-danger-soft);
+  --danger-text: var(--color-danger);
+  --ai-soft: var(--color-ai-soft);
+  --ai-text: var(--color-ai);
+
+  --shadow-soft: 0 10px 28px rgba(9, 30, 66, 0.06);
+  --shadow-card: 0 4px 14px rgba(9, 30, 66, 0.08);
+  --radius-xl: 8px;
+  --radius-lg: 8px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
   --font-sans: "Aptos", "Segoe UI Variable Text", "Trebuchet MS", sans-serif;
   --font-mono: "Consolas", "SFMono-Regular", monospace;
 }
@@ -40,9 +69,7 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
   color: var(--text-main);
-  background:
-    radial-gradient(circle at top left, rgba(12, 102, 228, 0.12), transparent 28%),
-    linear-gradient(180deg, #f8fbff 0%, var(--page-background) 62%, #edf2f8 100%);
+  background: var(--page-background);
 }
 
 .material-symbols-outlined {
@@ -79,10 +106,9 @@ app-root {
 .hero-card,
 .analysis-card,
 .response-panel {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(184, 198, 216, 0.72);
+  background: var(--surface);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
 }
 
 .topbar {
@@ -132,14 +158,14 @@ app-root {
 }
 
 .topbar-link--active {
-  background: #fff;
+  background: var(--surface);
   color: var(--primary-dark);
-  box-shadow: 0 10px 24px rgba(9, 30, 66, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .topbar-link:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.14);
+  box-shadow: var(--focus-ring);
 }
 
 .brand-lockup {
@@ -194,7 +220,8 @@ app-root {
 .auth-status-badge,
 .panel-chip {
   padding: 8px 12px;
-  border-radius: 999px;
+  border: 1px solid rgba(12, 102, 228, 0.18);
+  border-radius: var(--radius-md);
   background: var(--primary-soft);
   color: var(--primary-dark);
   font-size: 0.82rem;
@@ -857,37 +884,37 @@ body .flow-tree-node__badges .confidence-pill,
 
 .text-input {
   width: 100%;
-  padding: 14px 16px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-main);
   font: inherit;
-  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .select-input {
   width: 100%;
-  min-height: 48px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-main);
   font: inherit;
-  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .text-input::placeholder {
-  color: #8993a4;
+  color: var(--text-soft);
 }
 
 .text-input:focus,
 .select-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.16);
-  transform: translateY(-1px);
+  box-shadow: var(--focus-ring);
 }
 
 .primary-button {
@@ -896,57 +923,61 @@ body .flow-tree-node__badges .confidence-pill,
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-width: 136px;
-  padding: 0 20px;
+  min-width: 128px;
+  min-height: 44px;
+  padding: 0 16px;
   border: 0;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  background: var(--primary);
   color: #fff;
   font: inherit;
   font-weight: 700;
-  box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+  transition: background-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
 }
 
 .primary-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  background: var(--primary-dark);
+}
+
+.primary-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .primary-button:disabled {
   cursor: wait;
-  opacity: 0.92;
+  opacity: 0.7;
 }
 
 .secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
-  padding: 0 16px;
+  min-height: 44px;
+  padding: 0 14px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface);
   color: var(--text-main);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   transition:
-    transform 140ms ease,
     border-color 140ms ease,
     background-color 140ms ease,
     color 140ms ease;
 }
 
 .secondary-button:hover {
-  transform: translateY(-1px);
   border-color: rgba(12, 102, 228, 0.38);
+  background: var(--surface-alt);
 }
 
 .secondary-button:focus-visible {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.14);
+  box-shadow: var(--focus-ring);
 }
 
 .secondary-button--accent {
@@ -960,7 +991,7 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .button-label {
-  padding: 14px 0;
+  padding: 12px 0;
 }
 
 .button-spinner {
@@ -1384,8 +1415,9 @@ body .flow-tree-node__badges .confidence-pill,
 
 .status-pill {
   align-self: flex-start;
-  padding: 8px 12px;
-  border-radius: 999px;
+  padding: 7px 10px;
+  border: 1px solid rgba(33, 110, 78, 0.18);
+  border-radius: var(--radius-md);
   background: var(--success-soft);
   color: var(--success-text);
   font-size: 0.8rem;
@@ -1393,21 +1425,25 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .status-pill--queued {
-  background: #f1f2f4;
-  color: #44546f;
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--color-muted-strong);
 }
 
 .status-pill--running {
+  border-color: rgba(12, 102, 228, 0.18);
   background: var(--primary-soft);
   color: var(--primary-dark);
 }
 
 .status-pill--done {
+  border-color: rgba(33, 110, 78, 0.18);
   background: var(--success-soft);
   color: var(--success-text);
 }
 
 .status-pill--error {
+  border-color: rgba(174, 46, 36, 0.18);
   background: var(--danger-soft);
   color: var(--danger-text);
 }
@@ -1418,7 +1454,7 @@ body .flow-tree-node__badges .confidence-pill,
   align-items: center;
   gap: 6px 10px;
   border: 1px solid rgba(12, 102, 228, 0.18);
-  background: #f8fbff;
+  background: var(--surface-alt);
   color: var(--primary-dark);
   line-height: 1.2;
   cursor: help;

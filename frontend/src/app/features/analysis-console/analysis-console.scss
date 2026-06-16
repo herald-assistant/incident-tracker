@@ -3,9 +3,9 @@
 }
 
 .auth-status-badge {
-  border-color: rgba(17, 24, 39, 0.14);
-  background: #f8fafc;
-  color: #0f172a;
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-muted-strong);
 }
 
 .analysis-view-heading {
@@ -25,25 +25,25 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(174, 46, 36, 0.22);
   border-radius: 8px;
-  background: #fff7ed;
+  background: var(--warning-soft);
 }
 
 .github-auth-panel--connected {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: rgba(33, 110, 78, 0.22);
+  background: var(--success-soft);
 }
 
 .github-auth-panel__title {
   margin: 0;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-main);
 }
 
 .github-auth-panel__description {
   margin: 4px 0 0;
-  color: #4b5563;
+  color: var(--text-muted);
   font-size: 0.92rem;
 }
 
@@ -57,7 +57,7 @@
 }
 
 .select-input--loading {
-  color: #4b5563;
+  color: var(--text-muted);
 }
 
 .select-loader {
@@ -68,7 +68,7 @@
   height: 14px;
   margin-top: -7px;
   border: 2px solid rgba(12, 102, 228, 0.24);
-  border-top-color: #0c66e4;
+  border-top-color: var(--primary);
   border-radius: 50%;
   pointer-events: none;
   animation: spin 0.9s linear infinite;
