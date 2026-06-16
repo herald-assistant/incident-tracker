@@ -144,6 +144,32 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.querySelector('.analysis-form__header')).toBeNull();
   });
 
+  it('should expose detailed usage cost breakdown on the compact run context item', async () => {
+    const { fixture } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    component.job.set(completedJobWithUsage());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const runContextItems = Array.from(
+      fixture.nativeElement.querySelectorAll('.analysis-run-context__item')
+    ) as HTMLElement[];
+    const usageItem = runContextItems.find((item) => item.textContent?.includes('Usage'));
+    const tooltip = usageItem?.getAttribute('aria-label') ?? '';
+
+    expect(usageItem).not.toBeUndefined();
+    expect(usageItem?.textContent).toContain('2 820 tokens');
+    expect(usageItem?.classList.contains('analysis-run-context__item--with-tooltip')).toBe(true);
+    expect(usageItem?.getAttribute('tabindex')).toBe('0');
+    expect(tooltip).toContain('Szacowany koszt analizy AI');
+    expect(tooltip).toContain('Nowy input: 1 800');
+    expect(tooltip).toContain('Cache read: 300');
+    expect(tooltip).toContain('Odpowiedź AI: 420');
+    expect(tooltip).toContain('Model SDK: gpt-5.4');
+  });
+
   it('should show auth CTA after auth-required job error', async () => {
     const { fixture, analysisApi } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
@@ -413,6 +439,30 @@ function completedJob(): AnalysisJobStateSnapshot {
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
       prompt: 'Prepared prompt without tokens.',
       usage: null
+    }
+  };
+}
+
+function completedJobWithUsage(): AnalysisJobStateSnapshot {
+  const job = completedJob();
+  return {
+    ...job,
+    result: {
+      ...job.result!,
+      usage: {
+        inputTokens: 2100,
+        outputTokens: 420,
+        cacheReadTokens: 300,
+        cacheWriteTokens: 0,
+        totalTokens: 2820,
+        cost: 0.0123,
+        apiDurationMs: 2430,
+        apiCallCount: 2,
+        model: 'gpt-5.4',
+        contextTokenLimit: 128000,
+        contextCurrentTokens: 9200,
+        contextMessages: 6
+      }
     }
   };
 }

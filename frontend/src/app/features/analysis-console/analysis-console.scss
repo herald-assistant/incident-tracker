@@ -80,6 +80,21 @@
   background: var(--color-surface-alt);
 }
 
+.analysis-run-context__item--with-tooltip {
+  cursor: help;
+}
+
+.analysis-run-context__item--with-tooltip:hover,
+.analysis-run-context__item--with-tooltip:focus-visible {
+  border-color: rgba(12, 102, 228, 0.42);
+  background: #eef5ff;
+}
+
+.analysis-run-context__item--with-tooltip:focus-visible {
+  outline: 2px solid rgba(12, 102, 228, 0.28);
+  outline-offset: 2px;
+}
+
 .analysis-run-context__label {
   color: var(--text-soft);
   font-size: 0.64rem;

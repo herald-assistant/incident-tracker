@@ -22,7 +22,17 @@
             {{ statusLabel(currentJob.status) }}
           </span>
           @for (item of runContextItems(currentJob); track item.label) {
-            <div class="analysis-run-context__item">
+            <div
+              class="analysis-run-context__item"
+              [class.analysis-run-context__item--with-tooltip]="item.tooltip"
+              [matTooltip]="item.tooltip || ''"
+              [matTooltipDisabled]="!item.tooltip"
+              matTooltipPosition="above"
+              matTooltipClass="analysis-token-tooltip"
+              [matTooltipShowDelay]="120"
+              [attr.tabindex]="item.tooltip ? 0 : null"
+              [attr.aria-label]="item.tooltip ? item.tooltip : null"
+            >
               <span class="analysis-run-context__label">{{ item.label }}</span>
               <span class="analysis-run-context__value">{{ item.value }}</span>
             </div>

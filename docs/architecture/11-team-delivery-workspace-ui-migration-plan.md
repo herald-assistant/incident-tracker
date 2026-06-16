@@ -73,6 +73,12 @@ byc zaktualizowany przed dalsza implementacja.
 - Po zakonczeniu analizy albo wczytaniu rezultatu z pliku panele
   `Przebieg analizy` oraz `Tok dzialania AI` sa domyslnie zwiniete, ale nadal
   mozna je recznie rozwinac.
+- `Usage` w pasku kontekstu runu pozostaje kompaktowym itemem z ellipsis, ale
+  musi miec tooltip ze szczegolami tokenow, estymacji kosztu, credits, modelu i
+  kontekstu sesji.
+- Tooltip `Usage` ma byc jasnym panelem informacyjnym zgodnym z light theme,
+  miec limit wysokosci z przewijaniem i zwiezly breakdown, zeby nie przykrywal
+  ani nie ucinal dlugich danych.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -341,6 +347,9 @@ Zakres:
 - [x] Usunac prezentacje `analysis-stepper__step-meta` z naglowkow krokow.
 - [x] Domyslnie zwijac przebieg analizy i tok dzialania AI po finalnym wyniku
   albo imporcie rezultatu z pliku.
+- [x] Przywrocic szczegolowy tooltip kosztow i tokenow dla kompaktowego itemu
+  `Usage` w pasku kontekstu runu.
+- [x] Dopracowac kolorystyke, przewijanie i zwiezlosc tooltipa `Usage`.
 
 Weryfikacja:
 

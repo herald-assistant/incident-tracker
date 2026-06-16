@@ -11,8 +11,10 @@ import {
   viewChild
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
+  AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
   AnalysisAiToolFeedback,
   ApiErrorResponse,
@@ -44,6 +46,11 @@ import {
   normalizeAnalysisJob,
   parseImportedAnalysis
 } from '../../core/utils/analysis-import-export.utils';
+import {
+  AnalysisAiCostEstimate,
+  estimateAnalysisAiCost,
+  GITHUB_AI_CREDIT_USD
+} from '../../core/utils/analysis-ai-usage-cost.utils';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../components/markdown-content/markdown-content';
@@ -61,11 +68,17 @@ type SelectOption = {
   label: string;
   disabled?: boolean;
 };
+type RunContextItem = {
+  label: string;
+  value: string;
+  tooltip?: string;
+};
 
 @Component({
   selector: 'app-analysis-console',
   imports: [
     ReactiveFormsModule,
+    MatTooltipModule,
     AnalysisFinalResultComponent,
     AnalysisStepsPanelComponent,
     MarkdownContentComponent,
@@ -565,7 +578,7 @@ export class AnalysisConsoleComponent {
     return buildJobBannerMessage(job);
   }
 
-  protected runContextItems(job: AnalysisJobStateSnapshot): Array<{ label: string; value: string }> {
+  protected runContextItems(job: AnalysisJobStateSnapshot): RunContextItem[] {
     return [
       { label: 'Correlation ID', value: job.correlationId || 'n/a' },
       { label: 'Analysis ID', value: valueOrFallback(job.analysisId) },
@@ -573,7 +586,11 @@ export class AnalysisConsoleComponent {
       { label: 'Branch', value: valueOrFallback(job.gitLabBranch) },
       { label: 'Model', value: job.aiModel || 'default backend' },
       { label: 'Reasoning', value: job.reasoningEffort || 'default backend' },
-      { label: 'Usage', value: this.usageSummary(job) }
+      {
+        label: 'Usage',
+        value: this.usageSummary(job),
+        tooltip: this.usageTooltip(job)
+      }
     ];
   }
 
@@ -815,10 +832,20 @@ export class AnalysisConsoleComponent {
       return 'not-available';
     }
 
-    const tokens = Math.round(usage.totalTokens).toLocaleString('pl-PL');
+    const tokens = formatTokenCount(usage.totalTokens);
     const cost =
       typeof usage.cost === 'number' && usage.cost > 0 ? ` / $${usage.cost.toFixed(4)}` : '';
     return `${tokens} tokens${cost}`;
+  }
+
+  private usageTooltip(job: AnalysisJobStateSnapshot): string {
+    const usage = job.result?.usage ?? null;
+    const estimate = estimateAnalysisAiCost(usage);
+    if (!usage || !estimate) {
+      return '';
+    }
+
+    return buildUsageTooltip(usage, estimate);
   }
 
   private preparedPromptText(job: AnalysisJobStateSnapshot | null): string {
@@ -981,6 +1008,119 @@ export class AnalysisConsoleComponent {
       block: 'start'
     });
   }
+}
+
+function buildUsageTooltip(
+  usage: AnalysisAiUsage,
+  estimate: AnalysisAiCostEstimate
+): string {
+  const lines = [
+    'Szacowany koszt analizy AI',
+    '',
+    `Tokens: ${formatTokenCount(usage.totalTokens)}`,
+    `Credits: ${formatCredits(estimate.credits)}`,
+    `Cost: ${formatDollars(estimate.dollars)}`,
+    '',
+    'Breakdown:',
+    `Nowy input: ${formatTokenCount(
+      estimate.newInputTokens
+    )} tokens × ${formatUsdRate(estimate.inputUsdPerMillion)} / 1M`,
+    `Cache read: ${formatTokenCount(
+      estimate.cachedInputTokens
+    )} tokenów × ${formatUsdRate(
+      estimate.cachedInputUsdPerMillion
+    )} / 1M`,
+    `Odpowiedź AI: ${formatTokenCount(estimate.outputTokens)} tokenów × ${formatUsdRate(
+      estimate.outputUsdPerMillion
+    )} / 1M`
+  ];
+
+  if (estimate.cacheWriteTokens > 0) {
+    if (estimate.cacheWriteUsdPerMillion !== null) {
+      lines.push(
+        `Zapis do cache: ${formatTokenCount(estimate.cacheWriteTokens)} tokenów × ${formatUsdRate(
+          estimate.cacheWriteUsdPerMillion
+        )} / 1M`
+      );
+    } else {
+      lines.push(
+        `Zapis do cache: ${formatTokenCount(
+          estimate.cacheWriteTokens
+        )} tokenów bez osobnej stawki cache-write.`
+      );
+    }
+  }
+
+  lines.push('');
+  lines.push(
+    `Pricing: ${estimate.pricingModel}${
+      estimate.usedFallbackPricing ? ' (fallback)' : ''
+    } · 1 credit = ${formatDollars(GITHUB_AI_CREDIT_USD)}`
+  );
+
+  if (usage.apiCallCount > 0) {
+    lines.push(`Wywołania modelu: ${formatTokenCount(usage.apiCallCount)}`);
+  }
+
+  if (usage.apiDurationMs > 0) {
+    lines.push(`Czas API: ${formatDurationMs(usage.apiDurationMs)}`);
+  }
+
+  if (usage.model) {
+    lines.push(`Model SDK: ${usage.model}`);
+  }
+
+  if (usage.contextCurrentTokens !== null && usage.contextTokenLimit !== null) {
+    lines.push(
+      `Kontekst sesji: ${formatTokenCount(
+        usage.contextCurrentTokens
+      )} / ${formatTokenCount(
+        usage.contextTokenLimit
+      )} tokenów`
+    );
+  }
+
+  if (usage.contextMessages !== null) {
+    lines.push(`Wiadomości w sesji: ${formatTokenCount(usage.contextMessages)}`);
+  }
+
+  lines.push('');
+  lines.push('Estymacja operacyjna, nie faktura.');
+
+  return lines.join('\n');
+}
+
+function formatTokenCount(value: number | null | undefined): string {
+  return String(Math.round(Number(value ?? 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+function formatCredits(value: number): string {
+  return new Intl.NumberFormat('pl-PL', {
+    minimumFractionDigits: value < 10 ? 2 : 1,
+    maximumFractionDigits: value < 10 ? 2 : 1
+  }).format(value);
+}
+
+function formatDollars(value: number): string {
+  return `$${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)}`;
+}
+
+function formatUsdRate(value: number): string {
+  return `$${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: value < 1 ? 3 : 2,
+    maximumFractionDigits: 3
+  }).format(value)}`;
+}
+
+function formatDurationMs(value: number): string {
+  if (value >= 1000) {
+    return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value / 1000)} s`;
+  }
+
+  return `${formatTokenCount(value)} ms`;
 }
 
 function toolFeedbackUsefulnessLabel(value: string): string {
