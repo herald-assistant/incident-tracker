@@ -79,10 +79,59 @@
 
   <div class="app-shell__workspace">
     <header class="app-shell__topbar">
-      <div>
+      <div class="app-shell__title-block">
         <p class="app-shell__breadcrumb">{{ section() }}</p>
         <h1>{{ title() }}</h1>
       </div>
+
+      @if (capabilityInfo(); as info) {
+        <div class="app-shell__topbar-actions">
+          <div class="app-shell__info">
+            <button
+              class="app-shell__info-trigger"
+              type="button"
+              aria-label="Pokaż informacje o capability"
+              aria-describedby="appShellCapabilityInfo"
+              title="Informacje o capability"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </button>
+
+            <section
+              id="appShellCapabilityInfo"
+              class="app-shell__info-tooltip"
+              role="tooltip"
+            >
+              <div class="app-shell__info-copy">
+                <p class="app-shell__info-kicker">Capability context</p>
+                <h2>{{ title() }}</h2>
+                @if (info.description) {
+                  <p>{{ info.description }}</p>
+                }
+              </div>
+
+              @if (info.badges.length > 0) {
+                <div class="app-shell__info-badges" aria-label="Capability labels">
+                  @for (badge of info.badges; track badge) {
+                    <span>{{ badge }}</span>
+                  }
+                </div>
+              }
+
+              @if (info.meta.length > 0) {
+                <dl class="app-shell__info-meta">
+                  @for (item of info.meta; track item.label) {
+                    <div>
+                      <dt>{{ item.label }}</dt>
+                      <dd>{{ item.value }}</dd>
+                    </div>
+                  }
+                </dl>
+              }
+            </section>
+          </div>
+        </div>
+      }
     </header>
 
     <main class="app-shell__content">

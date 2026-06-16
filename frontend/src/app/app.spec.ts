@@ -41,6 +41,7 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-analysis-console')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -107,6 +108,11 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-elastic-evidence-console')).not.toBeNull();
+    expect(compiled.querySelector('.workbench-header')).toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'POST /api/elasticsearch/logs/*'
+    );
     expect(compiled.textContent).toContain('HTTP Call Summary');
     expect(compiled.textContent).not.toContain('Endpoint Inventory');
   });
@@ -122,6 +128,11 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-gitlab-evidence-console')).not.toBeNull();
+    expect(compiled.querySelector('.workbench-header')).toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'POST /api/gitlab/*'
+    );
     expect(compiled.textContent).toContain('Endpoint Inventory');
     expect(compiled.textContent).toContain('Endpoint Use Case Context');
     expect(compiled.textContent).not.toContain('HTTP Call Summary');
@@ -150,6 +161,11 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-database-console')).not.toBeNull();
+    expect(compiled.querySelector('.workbench-header')).toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'POST /api/database/*'
+    );
   });
 
   it('should render the operational context shell on the operational context route', async () => {

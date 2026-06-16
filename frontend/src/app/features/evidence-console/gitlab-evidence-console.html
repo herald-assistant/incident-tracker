@@ -1,53 +1,5 @@
 <div class="page-shell gitlab-console">
   <main class="gitlab-workspace">
-    <section class="analysis-card workbench-header">
-      <div class="workbench-header__top">
-        <div class="workbench-header__copy">
-          <p class="section-eyebrow">Tool Workbench</p>
-          <h2>GitLab Source</h2>
-          <p>
-            Ręczne testowanie GitLab helper API: repo discovery, endpoint inventory, use-case
-            context, odczyt plików i source resolve. Widok jest zapleczem integracji, nie logiką
-            pojedynczego feature'a.
-          </p>
-        </div>
-
-        <div class="workbench-header__status">
-          <span class="panel-chip">Reusable przez AI</span>
-          <span class="panel-chip">Readonly</span>
-          <span [class]="statusPillClass(state().status)" [title]="statusTooltip(state().status)">
-            {{ statusLabel(state().status) }}
-          </span>
-        </div>
-      </div>
-
-      <details class="workbench-details">
-        <summary>
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Szczegóły capability
-        </summary>
-
-        <dl class="workbench-meta-grid">
-          <div>
-            <dt>Endpointy</dt>
-            <dd>POST /api/gitlab/*</dd>
-          </div>
-          <div>
-            <dt>Wymagany scope</dt>
-            <dd>group, projectName, branch/ref albo source resolve base URL i symbol</dd>
-          </div>
-          <div>
-            <dt>Reusable przez AI</dt>
-            <dd>Tak, ale sesja AI dostaje scope przez feature-owned hidden ToolContext</dd>
-          </div>
-          <div>
-            <dt>Guardrails</dt>
-            <dd>configured GitLab auth, readonly REST calls, scan limits i character budgets</dd>
-          </div>
-        </dl>
-      </details>
-    </section>
-
     <form class="gitlab-layout" novalidate (submit)="submit($event)">
       <aside class="analysis-card gitlab-tool-panel">
         <section class="gitlab-scope-section" aria-labelledby="gitlabScopeTitle">

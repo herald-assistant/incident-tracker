@@ -68,15 +68,13 @@ describe('GitLabEvidenceConsoleComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(5);
+    expect(compiled.querySelector('.workbench-header')).toBeNull();
     expect(compiled.querySelector('.gitlab-result')).toBeFalsy();
-    expect(compiled.querySelector('details.workbench-details')?.hasAttribute('open')).toBe(false);
     expect(compiled.textContent).not.toContain('Kopiuj JSON');
     expect(compiled.textContent).not.toContain('Załaduj JSON');
 
     const routeChip = compiled.querySelector<HTMLElement>('.route-chip');
-    const statusPill = compiled.querySelector<HTMLElement>('.status-pill');
     expect(routeChip?.getAttribute('title') || '').toContain('/api/gitlab/repository/search');
-    expect(statusPill?.getAttribute('title') || '').toContain('gotowy do ręcznego testu');
 
     fixture.componentInstance.gitLabRepositoryState.set({
       status: 'success',

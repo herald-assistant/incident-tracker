@@ -1,52 +1,5 @@
 <div class="page-shell elastic-console">
   <main class="elastic-workspace">
-    <section class="analysis-card workbench-header">
-      <div class="workbench-header__top">
-        <div class="workbench-header__copy">
-          <p class="section-eyebrow">Tool Workbench</p>
-          <h2>Elastic Logs</h2>
-          <p>
-            Ręczne testowanie helper API dla Elasticsearch/Kibana. Widok jest operatorskim
-            zapleczem do debugowania logów i przygotowania inputu, bez logiki konkretnej analizy.
-          </p>
-        </div>
-
-        <div class="workbench-header__status">
-          <span class="panel-chip">Reusable przez AI</span>
-          <span class="panel-chip">Readonly</span>
-          <span [class]="statusPillClass(state().status)">
-            {{ statusLabel(state().status) }}
-          </span>
-        </div>
-      </div>
-
-      <details class="workbench-details">
-        <summary>
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Szczegóły capability
-        </summary>
-
-        <dl class="workbench-meta-grid">
-          <div>
-            <dt>Endpointy</dt>
-            <dd>POST /api/elasticsearch/logs/*</dd>
-          </div>
-          <div>
-            <dt>Wymagany scope</dt>
-            <dd>log correlationId albo HTTP path/status/metoda oraz okno czasu</dd>
-          </div>
-          <div>
-            <dt>Reusable przez AI</dt>
-            <dd>Tak, ale sesja AI dostaje zakres przez feature-owned policy i ToolContext</dd>
-          </div>
-          <div>
-            <dt>Guardrails</dt>
-            <dd>Kibana space, index pattern, auth, readonly query i limity po stronie backendu</dd>
-          </div>
-        </dl>
-      </details>
-    </section>
-
     <form class="elastic-layout" novalidate (submit)="submit($event)">
       <aside class="analysis-card elastic-tool-panel">
         <section class="elastic-scope-section" aria-labelledby="elasticScopeTitle">

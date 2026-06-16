@@ -29,7 +29,27 @@ export const routes: Routes = [
         component: ElasticEvidenceConsoleComponent,
         data: {
           section: 'Tool Workbench',
-          title: 'Elastic Logs'
+          title: 'Elastic Logs',
+          capabilityInfo: {
+            description:
+              'Manualne testowanie helper API dla Elasticsearch/Kibana. Widok sluzy do debugowania logow i przygotowania inputu bez logiki konkretnej analizy.',
+            badges: ['Reusable przez AI', 'Readonly'],
+            meta: [
+              { label: 'Endpointy', value: 'POST /api/elasticsearch/logs/*' },
+              {
+                label: 'Wymagany scope',
+                value: 'correlationId albo HTTP path/status/metoda oraz okno czasu'
+              },
+              {
+                label: 'Reusable przez AI',
+                value: 'Tak, ale sesja AI dostaje zakres przez feature-owned policy i ToolContext'
+              },
+              {
+                label: 'Guardrails',
+                value: 'Kibana space, index pattern, auth, readonly query i backendowe limity'
+              }
+            ]
+          }
         }
       },
       {
@@ -37,7 +57,27 @@ export const routes: Routes = [
         component: GitLabEvidenceConsoleComponent,
         data: {
           section: 'Tool Workbench',
-          title: 'GitLab Source'
+          title: 'GitLab Source',
+          capabilityInfo: {
+            description:
+              'Manualne testowanie GitLab helper API: repo discovery, endpoint inventory, use-case context, odczyt plikow i source resolve.',
+            badges: ['Reusable przez AI', 'Readonly'],
+            meta: [
+              { label: 'Endpointy', value: 'POST /api/gitlab/*' },
+              {
+                label: 'Wymagany scope',
+                value: 'group, projectName, branch/ref albo source resolve base URL i symbol'
+              },
+              {
+                label: 'Reusable przez AI',
+                value: 'Tak, ale sesja AI dostaje scope przez feature-owned hidden ToolContext'
+              },
+              {
+                label: 'Guardrails',
+                value: 'configured GitLab auth, readonly REST calls, scan limits i character budgets'
+              }
+            ]
+          }
         }
       },
       {
@@ -45,7 +85,27 @@ export const routes: Routes = [
         component: DatabaseConsoleComponent,
         data: {
           section: 'Tool Workbench',
-          title: 'Database Tools'
+          title: 'Database Tools',
+          capabilityInfo: {
+            description:
+              'Manualne uruchamianie typed DB capability z tym samym zakresem i guardrailami, ktorych uzywa warstwa AI.',
+            badges: ['Reusable przez AI', 'Readonly'],
+            meta: [
+              { label: 'Endpointy', value: 'POST /api/database/*' },
+              {
+                label: 'Wymagany scope',
+                value: 'environment wybiera skonfigurowane polaczenie i dozwolone schematy'
+              },
+              {
+                label: 'Reusable przez AI',
+                value: 'Tak, ale scope sesji AI pochodzi z hidden ToolContext poza tym API'
+              },
+              {
+                label: 'Guardrails',
+                value: 'configured environments, allowlista schematow, typed filters, masking i limity'
+              }
+            ]
+          }
         }
       },
       {

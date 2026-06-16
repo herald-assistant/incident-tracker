@@ -28,11 +28,24 @@ type NavGroup = {
 type RouteContext = {
   section: string;
   title: string;
+  capabilityInfo: RouteCapabilityInfo | null;
+};
+
+type RouteCapabilityInfo = {
+  description: string;
+  badges: string[];
+  meta: RouteCapabilityMetaItem[];
+};
+
+type RouteCapabilityMetaItem = {
+  label: string;
+  value: string;
 };
 
 const DEFAULT_CONTEXT: RouteContext = {
   section: 'Analysis Features',
-  title: 'Incident Analysis'
+  title: 'Incident Analysis',
+  capabilityInfo: null
 };
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'team-delivery-workspace.sidebar.collapsed';
 
@@ -80,6 +93,7 @@ export class AppShellComponent {
   readonly sidebarCollapsed = signal(readSidebarCollapsedPreference());
   readonly section = computed(() => this.routeContext().section);
   readonly title = computed(() => this.routeContext().title);
+  readonly capabilityInfo = computed(() => this.routeContext().capabilityInfo);
 
   constructor() {
     this.updateRouteContext();
@@ -101,11 +115,13 @@ export class AppShellComponent {
     let route: ActivatedRoute | null = this.activatedRoute;
     let section = DEFAULT_CONTEXT.section;
     let title = DEFAULT_CONTEXT.title;
+    let capabilityInfo: RouteCapabilityInfo | null = DEFAULT_CONTEXT.capabilityInfo;
 
     while (route) {
       const data = route.snapshot?.data ?? {};
       const routeSection = data['section'];
       const routeTitle = data['title'];
+      const routeCapabilityInfo = normalizeCapabilityInfo(data['capabilityInfo']);
 
       if (typeof routeSection === 'string' && routeSection.trim()) {
         section = routeSection;
@@ -113,12 +129,54 @@ export class AppShellComponent {
       if (typeof routeTitle === 'string' && routeTitle.trim()) {
         title = routeTitle;
       }
+      if (routeCapabilityInfo) {
+        capabilityInfo = routeCapabilityInfo;
+      }
 
       route = route.firstChild;
     }
 
-    this.routeContext.set({ section, title });
+    this.routeContext.set({ section, title, capabilityInfo });
   }
+}
+
+function normalizeCapabilityInfo(value: unknown): RouteCapabilityInfo | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as {
+    description?: unknown;
+    badges?: unknown;
+    meta?: unknown;
+  };
+  const description = typeof candidate.description === 'string' ? candidate.description.trim() : '';
+  const badges = Array.isArray(candidate.badges)
+    ? candidate.badges.filter(
+        (badge): badge is string => typeof badge === 'string' && badge.trim().length > 0
+      )
+    : [];
+  const meta = Array.isArray(candidate.meta)
+    ? candidate.meta
+        .map((item): RouteCapabilityMetaItem | null => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+
+          const metaCandidate = item as { label?: unknown; value?: unknown };
+          const label = typeof metaCandidate.label === 'string' ? metaCandidate.label.trim() : '';
+          const metaValue = typeof metaCandidate.value === 'string' ? metaCandidate.value.trim() : '';
+
+          return label && metaValue ? { label, value: metaValue } : null;
+        })
+        .filter((item): item is RouteCapabilityMetaItem => item !== null)
+    : [];
+
+  if (!description && badges.length === 0 && meta.length === 0) {
+    return null;
+  }
+
+  return { description, badges, meta };
 }
 
 function readSidebarCollapsedPreference(): boolean {

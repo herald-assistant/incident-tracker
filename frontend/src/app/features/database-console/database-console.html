@@ -1,52 +1,5 @@
 <div class="page-shell database-console">
   <main class="database-workspace">
-    <section class="analysis-card workbench-header">
-      <div class="workbench-header__top">
-        <div class="workbench-header__copy">
-          <p class="section-eyebrow">Tool Workbench</p>
-          <h2>Database Tools</h2>
-          <p>
-            Ręczne uruchamianie typed DB capability z tym samym zakresem i guardrailami,
-            których używa warstwa AI.
-          </p>
-        </div>
-
-        <div class="workbench-header__status">
-          <span class="panel-chip">Reusable przez AI</span>
-          <span class="panel-chip">Readonly</span>
-          <span [class]="statusPillClass(state().status)">
-            {{ statusLabel(state().status) }}
-          </span>
-        </div>
-      </div>
-
-      <details class="workbench-details">
-        <summary>
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Szczegóły capability
-        </summary>
-
-        <dl class="workbench-meta-grid">
-          <div>
-            <dt>Endpoint</dt>
-            <dd>POST /api/database/*</dd>
-          </div>
-          <div>
-            <dt>Wymagany scope</dt>
-            <dd>environment wybiera skonfigurowane połączenie i dozwolone schematy</dd>
-          </div>
-          <div>
-            <dt>Reusable przez AI</dt>
-            <dd>Tak, ale scope sesji AI pochodzi z hidden ToolContext poza tym API</dd>
-          </div>
-          <div>
-            <dt>Guardrails</dt>
-            <dd>configured environments, allowlista schematów, typed filters, masking i limity</dd>
-          </div>
-        </dl>
-      </details>
-    </section>
-
     <form class="database-layout" novalidate (submit)="submit($event)">
       <aside class="analysis-card database-tool-panel">
         <section class="database-scope-section" aria-labelledby="databaseScopeTitle">
