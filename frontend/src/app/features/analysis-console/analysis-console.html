@@ -1,110 +1,59 @@
-<div class="page-shell" [class.analysis-console--active]="hasActiveState()">
-  <main class="workspace">
-    <section class="hero-card">
-      <div class="hero-main">
-        <div class="hero-copy">
-          <div class="analysis-view-heading">
-            <div>
-              <p class="section-eyebrow">Analiza incydentów</p>
-              <h2>Szybko identyfikuj przyczynę incydentu na podstawie correlationId.</h2>
-              <p class="hero-description">
-                Narzędzie zbiera dane diagnostyczne, śledzi postęp analizy i prezentuje logi,
-                sygnały runtime z Dynatrace, odniesienia do kodu oraz wynik końcowy w jednym widoku.
-              </p>
-            </div>
-            <div class="auth-status-badge">{{ authBadgeText() }}</div>
-          </div>
+<div class="page-shell analysis-console-page">
+  <main class="incident-workspace">
+    <section class="analysis-start-panel" aria-labelledby="incident-analysis-title">
+      <div class="analysis-start-panel__header">
+        <div>
+          <p class="section-eyebrow">Incident Analysis</p>
+          <h2 id="incident-analysis-title">Analysis workspace</h2>
+          @if (!hasActiveState()) {
+            <p class="analysis-start-panel__description">
+              Start from correlationId, then keep the final result, evidence trace and follow-up in
+              one working view.
+            </p>
+          }
         </div>
 
-        <form class="analysis-form analysis-form--inline" novalidate (submit)="submit($event)">
-          @if (!hasActiveState()) {
-            <div class="analysis-form__header">
-              <div>
-                <label class="field-label" for="correlationId">Correlation ID</label>
-                <p class="field-hint">
-                  Postęp, zebrane dane i wynik końcowy pojawią się poniżej zaraz po starcie analizy.
-                </p>
-              </div>
-              <p class="analysis-actions__hint">
-                {{ analysisActionsHint() }}
-              </p>
+        <div class="auth-status-badge">{{ authBadgeText() }}</div>
+      </div>
+
+      @if (job(); as currentJob) {
+        <div class="analysis-run-context" aria-label="Analysis run context">
+          <span [attr.class]="'status-pill ' + statusClass(currentJob.status)">
+            {{ statusLabel(currentJob.status) }}
+          </span>
+          @for (item of runContextItems(currentJob); track item.label) {
+            <div class="analysis-run-context__item">
+              <span class="analysis-run-context__label">{{ item.label }}</span>
+              <span class="analysis-run-context__value">{{ item.value }}</span>
             </div>
           }
-
-          <div class="analysis-settings">
-            <label class="field-control" for="aiModel">
-              <span class="field-label">Model AI</span>
-              <span class="select-loading-control">
-                <select
-                  id="aiModel"
-                  class="select-input"
-                  [class.select-input--loading]="isAiModelOptionsLoading()"
-                  [formControl]="aiModelControl"
-                  [attr.aria-busy]="isAiModelOptionsLoading()"
-                  (change)="onAiModelChanged()"
-                >
-                  @for (option of aiModelOptions(); track option.value) {
-                    <option [value]="option.value" [disabled]="option.disabled">
-                      {{ option.label }}
-                    </option>
-                  }
-                </select>
-                @if (isAiModelOptionsLoading()) {
-                  <span class="select-loader" aria-hidden="true"></span>
-                }
-              </span>
-            </label>
-
-            <label class="field-control" for="reasoningEffort">
-              <span class="field-label">Reasoning effort</span>
-              <span class="select-loading-control">
-                <select
-                  id="reasoningEffort"
-                  class="select-input"
-                  [class.select-input--loading]="isAiModelOptionsLoading()"
-                  [formControl]="reasoningEffortControl"
-                  [attr.aria-busy]="isAiModelOptionsLoading()"
-                  (change)="clearFormError()"
-                >
-                  @for (option of reasoningEffortOptions(); track option.value) {
-                    <option [value]="option.value" [disabled]="option.disabled">
-                      {{ option.label }}
-                    </option>
-                  }
-                </select>
-                @if (isAiModelOptionsLoading()) {
-                  <span class="select-loader" aria-hidden="true"></span>
-                }
-              </span>
-            </label>
+        </div>
+      } @else if (placeholderMode() === 'loading') {
+        <div class="analysis-run-context analysis-run-context--starting">
+          <span class="status-pill status-pill--running">Starting</span>
+          <div class="analysis-run-context__item">
+            <span class="analysis-run-context__label">Correlation ID</span>
+            <span class="analysis-run-context__value">{{ loadingCorrelationId() }}</span>
           </div>
+        </div>
+      }
 
-          @if (githubAuthStatus()?.mode === 'GITHUB_APP') {
-            <div
-              class="github-auth-panel"
-              [class.github-auth-panel--connected]="githubAuthStatus()?.connected"
-            >
-              <div>
-                <p class="github-auth-panel__title">{{ authPanelTitle() }}</p>
-                <p class="github-auth-panel__description">{{ authPanelDescription() }}</p>
-              </div>
-              @if (githubAuthStatus()?.connected) {
-                <button class="secondary-button" type="button" (click)="logoutGithub()">
-                  Rozłącz
-                </button>
-              } @else {
-                <button class="primary-button" type="button" (click)="connectGithub()">
-                  {{ authActionLabel() }}
-                </button>
-              }
+      <form class="analysis-start-form" novalidate (submit)="submit($event)">
+        @if (!hasActiveState()) {
+          <div class="analysis-form__header analysis-start-form__intro">
+            <div>
+              <label class="field-label" for="correlationId">Correlation ID</label>
+              <p class="field-hint">Run a new analysis or import an exported result.</p>
             </div>
-          }
+            <p class="analysis-actions__hint">
+              {{ analysisActionsHint() }}
+            </p>
+          </div>
+        }
 
-          @if (githubAuthError()) {
-            <p class="form-error">{{ githubAuthError() }}</p>
-          }
-
-          <div class="analysis-toolbar">
+        <div class="analysis-start-grid">
+          <label class="field-control analysis-start-grid__correlation" for="correlationId">
+            <span class="field-label">Correlation ID</span>
             <input
               id="correlationId"
               class="text-input"
@@ -116,75 +65,141 @@
               [formControl]="correlationIdControl"
               (input)="clearFormError()"
             />
+          </label>
 
-            <div class="analysis-toolbar__buttons">
-              <button
-                class="primary-button"
-                type="submit"
-                [disabled]="isLoading() || isAnalysisBlockedByAuth()"
-                [class.is-loading]="isLoading()"
-                [attr.aria-busy]="isLoading()"
+          <label class="field-control" for="aiModel">
+            <span class="field-label">Model AI</span>
+            <span class="select-loading-control">
+              <select
+                id="aiModel"
+                class="select-input"
+                [class.select-input--loading]="isAiModelOptionsLoading()"
+                [formControl]="aiModelControl"
+                [attr.aria-busy]="isAiModelOptionsLoading()"
+                (change)="onAiModelChanged()"
               >
-                <span class="button-label">Analizuj</span>
-                <span class="button-spinner" aria-hidden="true"></span>
-              </button>
+                @for (option of aiModelOptions(); track option.value) {
+                  <option [value]="option.value" [disabled]="option.disabled">
+                    {{ option.label }}
+                  </option>
+                }
+              </select>
+              @if (isAiModelOptionsLoading()) {
+                <span class="select-loader" aria-hidden="true"></span>
+              }
+            </span>
+          </label>
 
-              <input
-                #importFileInput
-                type="file"
-                accept=".json,application/json"
-                hidden
-                (change)="importAnalysis($event)"
-              />
+          <label class="field-control" for="reasoningEffort">
+            <span class="field-label">Reasoning effort</span>
+            <span class="select-loading-control">
+              <select
+                id="reasoningEffort"
+                class="select-input"
+                [class.select-input--loading]="isAiModelOptionsLoading()"
+                [formControl]="reasoningEffortControl"
+                [attr.aria-busy]="isAiModelOptionsLoading()"
+                (change)="clearFormError()"
+              >
+                @for (option of reasoningEffortOptions(); track option.value) {
+                  <option [value]="option.value" [disabled]="option.disabled">
+                    {{ option.label }}
+                  </option>
+                }
+              </select>
+              @if (isAiModelOptionsLoading()) {
+                <span class="select-loader" aria-hidden="true"></span>
+              }
+            </span>
+          </label>
+
+          <div class="analysis-start-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="isLoading() || isAnalysisBlockedByAuth()"
+              [class.is-loading]="isLoading()"
+              [attr.aria-busy]="isLoading()"
+            >
+              <span class="button-label">Run analysis</span>
+              <span class="button-spinner" aria-hidden="true"></span>
+            </button>
+
+            <input
+              #importFileInput
+              type="file"
+              accept=".json,application/json"
+              hidden
+              (change)="importAnalysis($event)"
+            />
+            <button class="secondary-button" type="button" (click)="triggerImport(importFileInput)">
+              Import
+            </button>
+
+            @if (exportState()) {
+              <button
+                class="secondary-button secondary-button--accent"
+                type="button"
+                (click)="exportAnalysis()"
+              >
+                Export
+              </button>
+            }
+
+            @if (canCopyPreparedPrompt(job())) {
               <button
                 class="secondary-button"
                 type="button"
-                (click)="triggerImport(importFileInput)"
+                (click)="copyPreparedPrompt(job())"
               >
-                Importuj wynik
+                {{ copiedPreparedPrompt() ? 'Copied' : 'Copy prompt' }}
               </button>
-
-              @if (exportState()) {
-                <button
-                  class="secondary-button secondary-button--accent"
-                  type="button"
-                  (click)="exportAnalysis()"
-                >
-                  Eksportuj wynik
-                </button>
-              }
-            </div>
+            }
           </div>
+        </div>
 
-          @if (formError()) {
-            <p class="form-error">{{ formError() }}</p>
-          }
-        </form>
-      </div>
+        @if (githubAuthStatus()?.mode === 'GITHUB_APP') {
+          <div
+            class="github-auth-panel"
+            [class.github-auth-panel--connected]="githubAuthStatus()?.connected"
+          >
+            <div>
+              <p class="github-auth-panel__title">{{ authPanelTitle() }}</p>
+              <p class="github-auth-panel__description">{{ authPanelDescription() }}</p>
+            </div>
+            @if (githubAuthStatus()?.connected) {
+              <button class="secondary-button" type="button" (click)="logoutGithub()">
+                Rozłącz
+              </button>
+            } @else {
+              <button class="primary-button" type="button" (click)="connectGithub()">
+                {{ authActionLabel() }}
+              </button>
+            }
+          </div>
+        }
 
-      <div class="hero-side-panel">
-        <p class="panel-title">Zakres analizy</p>
-        <ul class="mini-list">
-          <li>logi i sygnały runtime powiązane z correlationId</li>
-          <li>odniesienia do kodu i dane z repozytorium</li>
-          <li>diagnoza AI i rekomendowany kolejny krok</li>
-        </ul>
-      </div>
+        @if (githubAuthError()) {
+          <p class="form-error">{{ githubAuthError() }}</p>
+        }
+
+        @if (formError()) {
+          <p class="form-error">{{ formError() }}</p>
+        }
+      </form>
     </section>
 
-    <section #responsePanel class="response-panel" aria-live="polite">
+    <section #responsePanel class="incident-workspace__body" aria-live="polite">
       @if (!job() && !transportError()) {
-        <div class="response-placeholder">
+        <section class="analysis-placeholder-workspace">
           <p class="placeholder-kicker">{{ placeholderKicker() }}</p>
           <h2>{{ placeholderTitle() }}</h2>
-          <p>
-            {{ placeholderDescription() }}
-          </p>
-        </div>
+          <p>{{ placeholderDescription() }}</p>
+        </section>
       }
 
       @if (transportError(); as error) {
-        <div class="response-error">
+        <section class="response-error analysis-error-panel">
           <div class="response-header">
             <div>
               <p class="response-kicker">Błąd</p>
@@ -198,180 +213,203 @@
               <li>{{ detail }}</li>
             }
           </ul>
-        </div>
+        </section>
       }
 
       @if (job(); as currentJob) {
-        <div class="response-content">
-          <app-analysis-overview-card [job]="currentJob"></app-analysis-overview-card>
-          <app-analysis-steps-panel
-            [steps]="currentJob.steps"
-            [evidenceSections]="currentJob.evidenceSections"
-            [toolEvidenceSections]="currentJob.toolEvidenceSections"
-            [aiActivityEvents]="currentJob.aiActivityEvents"
-            [toolFeedback]="currentJob.toolFeedback"
-            [preparedPrompt]="currentJob.preparedPrompt"
-            [result]="currentJob.result"
-          ></app-analysis-steps-panel>
-
-          <details class="analysis-chat panel-card collapsible-panel" open>
-            <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
-              <div>
-                <p class="section-eyebrow">Chat</p>
-                <h3>Kontynuacja analizy</h3>
-              </div>
-              <p class="analysis-chat__hint collapsible-panel__hint">{{ chatHint() }}</p>
-              <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-                expand_more
-              </span>
-            </summary>
-
-            <div class="analysis-chat__body collapsible-panel__body">
-              <div class="analysis-chat__messages" aria-live="polite">
-                @if (!currentJob.chatMessages.length) {
-                  <div class="empty-state">
-                    Po zakończeniu analizy możesz dopytać AI o wynik albo zlecić dodatkową weryfikację.
+        <div class="analysis-workspace-grid">
+          <div class="analysis-workspace-main">
+            @if (currentJob.result) {
+              <app-analysis-final-result
+                [result]="currentJob.result"
+                [status]="currentJob.status"
+              ></app-analysis-final-result>
+            } @else {
+              <section class="panel-card analysis-result-placeholder">
+                <div class="panel-card__header panel-card__header--compact">
+                  <div>
+                    <p class="section-eyebrow">Result</p>
+                    <h3>Analysis in progress</h3>
                   </div>
-                } @else {
-                  @for (message of currentJob.chatMessages; track message.id) {
-                    <article
-                      #chatMessageElement
-                      class="chat-message"
-                      [class.chat-message--user]="message.role === 'USER'"
-                      [class.chat-message--assistant]="message.role === 'ASSISTANT'"
-                      [class.chat-message--failed]="message.status === 'FAILED'"
-                    >
-                      <div class="chat-message__header">
-                        <div class="chat-message__identity">
-                          <strong>{{ chatMessageTitle(message) }}</strong>
-                          <span>{{ chatMessageMeta(message) }}</span>
+                  <span [attr.class]="'status-pill ' + statusClass(currentJob.status)">
+                    {{ statusLabel(currentJob.status) }}
+                  </span>
+                </div>
+                <p>{{ jobBannerMessage(currentJob) }}</p>
+              </section>
+            }
+
+            <section class="analysis-trace-section" aria-label="Evidence, timeline and AI activity">
+              <app-analysis-steps-panel
+                [steps]="currentJob.steps"
+                [evidenceSections]="currentJob.evidenceSections"
+                [toolEvidenceSections]="currentJob.toolEvidenceSections"
+                [aiActivityEvents]="currentJob.aiActivityEvents"
+                [toolFeedback]="currentJob.toolFeedback"
+                [preparedPrompt]="currentJob.preparedPrompt"
+                [result]="currentJob.result"
+              ></app-analysis-steps-panel>
+            </section>
+
+            <details class="analysis-chat panel-card collapsible-panel">
+              <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
+                <div>
+                  <p class="section-eyebrow">Follow-up</p>
+                  <h3>Kontynuacja analizy</h3>
+                </div>
+                <p class="analysis-chat__hint collapsible-panel__hint">{{ chatHint() }}</p>
+                <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+                  expand_more
+                </span>
+              </summary>
+
+              <div class="analysis-chat__body collapsible-panel__body">
+                <div class="analysis-chat__messages" aria-live="polite">
+                  @if (!currentJob.chatMessages.length) {
+                    <div class="empty-state">
+                      Po zakończeniu analizy możesz dopytać AI o wynik albo zlecić dodatkową weryfikację.
+                    </div>
+                  } @else {
+                    @for (message of currentJob.chatMessages; track message.id) {
+                      <article
+                        #chatMessageElement
+                        class="chat-message"
+                        [class.chat-message--user]="message.role === 'USER'"
+                        [class.chat-message--assistant]="message.role === 'ASSISTANT'"
+                        [class.chat-message--failed]="message.status === 'FAILED'"
+                      >
+                        <div class="chat-message__header">
+                          <div class="chat-message__identity">
+                            <strong>{{ chatMessageTitle(message) }}</strong>
+                            <span>{{ chatMessageMeta(message) }}</span>
+                          </div>
+                          @if (canCopyChatMessage(message)) {
+                            <button
+                              class="chat-message__copy-button"
+                              type="button"
+                              data-clipboard-exclude
+                              [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
+                              [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
+                              (click)="copyChatMessage(chatMessageElement, message)"
+                            >
+                              <span class="material-symbols-outlined" aria-hidden="true">
+                                {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
+                              </span>
+                            </button>
+                          } @else if (isLastPendingAssistantMessage(message, currentJob.chatMessages)) {
+                            <span
+                              class="chat-message__copy-loader"
+                              data-clipboard-exclude
+                              aria-label="AI przygotowuje odpowiedź"
+                              title="AI przygotowuje odpowiedź"
+                            ></span>
+                          }
                         </div>
-                        @if (canCopyChatMessage(message)) {
-                          <button
-                            class="chat-message__copy-button"
-                            type="button"
-                            data-clipboard-exclude
-                            [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
-                            [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
-                            (click)="copyChatMessage(chatMessageElement, message)"
-                          >
-                            <span class="material-symbols-outlined" aria-hidden="true">
-                              {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
-                            </span>
-                          </button>
-                        } @else if (isLastPendingAssistantMessage(message, currentJob.chatMessages)) {
-                          <span
-                            class="chat-message__copy-loader"
-                            data-clipboard-exclude
-                            aria-label="AI przygotowuje odpowiedź"
-                            title="AI przygotowuje odpowiedź"
-                          ></span>
+
+                        <div class="chat-message__body">
+                          @if (message.status === 'IN_PROGRESS') {
+                            <p class="chat-message__pending">
+                              AI analizuje polecenie i w razie potrzeby korzysta z dostępnych narzędzi.
+                            </p>
+                          } @else if (message.status === 'FAILED') {
+                            <p class="chat-message__error">
+                              {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
+                            </p>
+                          } @else if (message.role === 'ASSISTANT') {
+                            <app-markdown-content [content]="message.content"></app-markdown-content>
+                          } @else {
+                            <p class="chat-message__text">{{ message.content }}</p>
+                          }
+                        </div>
+
+                        @if (message.toolEvidenceSections.length > 0) {
+                          <details class="chat-message__evidence">
+                            <summary>Dane pobrane w tej odpowiedzi</summary>
+                            <div class="chat-message__evidence-sections">
+                              @for (section of message.toolEvidenceSections; track section.provider + section.category) {
+                                <section class="chat-evidence-section">
+                                  <h4>{{ evidenceSectionTitle(section) }}</h4>
+                                  @for (item of section.items; track item.title + $index) {
+                                    <details class="chat-evidence-item">
+                                      <summary>{{ item.title }}</summary>
+                                      <div class="attribute-list">
+                                        @for (attribute of item.attributes; track attribute.name + $index) {
+                                          <div class="attribute-row attribute-row--block">
+                                            <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+                                            <pre class="attribute-block">{{ attribute.value }}</pre>
+                                          </div>
+                                        }
+                                      </div>
+                                    </details>
+                                  }
+                                </section>
+                              }
+                            </div>
+                          </details>
                         }
-                      </div>
 
-                      <div class="chat-message__body">
-                        @if (message.status === 'IN_PROGRESS') {
-                          <p class="chat-message__pending">
-                            AI analizuje polecenie i w razie potrzeby korzysta z dostępnych narzędzi.
-                          </p>
-                        } @else if (message.status === 'FAILED') {
-                          <p class="chat-message__error">
-                            {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
-                          </p>
-                        } @else if (message.role === 'ASSISTANT') {
-                          <app-markdown-content [content]="message.content"></app-markdown-content>
-                        } @else {
-                          <p class="chat-message__text">{{ message.content }}</p>
+                        @if (message.toolFeedback.length > 0) {
+                          <details class="chat-message__tool-feedback">
+                            <summary>Feedback jakości tooli</summary>
+                            <div class="chat-tool-feedback-list">
+                              @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
+                                <article class="chat-tool-feedback">
+                                  <div class="chat-tool-feedback__header">
+                                    <strong>{{ toolFeedbackTarget(feedback) }}</strong>
+                                    <span>{{ toolFeedbackMeta(feedback) }}</span>
+                                  </div>
+                                  <p>{{ feedback.summaryForOperator }}</p>
+                                  @if (feedback.suggestedImprovement) {
+                                    <p class="chat-tool-feedback__suggestion">
+                                      {{ feedback.suggestedImprovement }}
+                                    </p>
+                                  }
+                                </article>
+                              }
+                            </div>
+                          </details>
                         }
-                      </div>
-
-                      @if (message.toolEvidenceSections.length > 0) {
-                        <details class="chat-message__evidence">
-                          <summary>Dane pobrane w tej odpowiedzi</summary>
-                          <div class="chat-message__evidence-sections">
-                            @for (section of message.toolEvidenceSections; track section.provider + section.category) {
-                              <section class="chat-evidence-section">
-                                <h4>{{ evidenceSectionTitle(section) }}</h4>
-                                @for (item of section.items; track item.title + $index) {
-                                  <details class="chat-evidence-item">
-                                    <summary>{{ item.title }}</summary>
-                                    <div class="attribute-list">
-                                      @for (attribute of item.attributes; track attribute.name + $index) {
-                                        <div class="attribute-row attribute-row--block">
-                                          <span class="attribute-name">{{ attribute.name | attributeName }}</span>
-                                          <pre class="attribute-block">{{ attribute.value }}</pre>
-                                        </div>
-                                      }
-                                    </div>
-                                  </details>
-                                }
-                              </section>
-                            }
-                          </div>
-                        </details>
-                      }
-
-                      @if (message.toolFeedback.length > 0) {
-                        <details class="chat-message__tool-feedback">
-                          <summary>Feedback jakości tooli</summary>
-                          <div class="chat-tool-feedback-list">
-                            @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
-                              <article class="chat-tool-feedback">
-                                <div class="chat-tool-feedback__header">
-                                  <strong>{{ toolFeedbackTarget(feedback) }}</strong>
-                                  <span>{{ toolFeedbackMeta(feedback) }}</span>
-                                </div>
-                                <p>{{ feedback.summaryForOperator }}</p>
-                                @if (feedback.suggestedImprovement) {
-                                  <p class="chat-tool-feedback__suggestion">
-                                    {{ feedback.suggestedImprovement }}
-                                  </p>
-                                }
-                              </article>
-                            }
-                          </div>
-                        </details>
-                      }
-                    </article>
+                      </article>
+                    }
                   }
-                }
-              </div>
-
-              <form class="analysis-chat__form" novalidate (submit)="submitChat($event)">
-                <label class="field-label" for="analysisChatMessage">Wiadomość do AI</label>
-                <textarea
-                  id="analysisChatMessage"
-                  class="chat-input"
-                  rows="4"
-                  placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
-                  [formControl]="chatMessageControl"
-                  (input)="clearChatError()"
-                ></textarea>
-
-                <div class="analysis-chat__actions">
-                  <button
-                    class="primary-button"
-                    type="submit"
-                    [disabled]="!canUseChat() || isChatSubmitting()"
-                    [class.is-loading]="isChatSubmitting()"
-                    [attr.aria-busy]="isChatSubmitting()"
-                  >
-                    <span class="button-label">Wyślij</span>
-                    <span class="button-spinner" aria-hidden="true"></span>
-                  </button>
                 </div>
 
-                @if (chatError()) {
-                  <p class="form-error">{{ chatError() }}</p>
-                }
-                @if (chatNeedsGithubAuth()) {
-                  <button class="secondary-button secondary-button--accent" type="button" (click)="connectGithub()">
-                    {{ authActionLabel() }}
-                  </button>
-                }
-              </form>
-            </div>
-          </details>
+                <form class="analysis-chat__form" novalidate (submit)="submitChat($event)">
+                  <label class="field-label" for="analysisChatMessage">Wiadomość do AI</label>
+                  <textarea
+                    id="analysisChatMessage"
+                    class="chat-input"
+                    rows="4"
+                    placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
+                    [formControl]="chatMessageControl"
+                    (input)="clearChatError()"
+                  ></textarea>
+
+                  <div class="analysis-chat__actions">
+                    <button
+                      class="primary-button"
+                      type="submit"
+                      [disabled]="!canUseChat() || isChatSubmitting()"
+                      [class.is-loading]="isChatSubmitting()"
+                      [attr.aria-busy]="isChatSubmitting()"
+                    >
+                      <span class="button-label">Wyślij</span>
+                      <span class="button-spinner" aria-hidden="true"></span>
+                    </button>
+                  </div>
+
+                  @if (chatError()) {
+                    <p class="form-error">{{ chatError() }}</p>
+                  }
+                  @if (chatNeedsGithubAuth()) {
+                    <button class="secondary-button secondary-button--accent" type="button" (click)="connectGithub()">
+                      {{ authActionLabel() }}
+                    </button>
+                  }
+                </form>
+              </div>
+            </details>
+          </div>
         </div>
       }
     </section>

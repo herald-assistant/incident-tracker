@@ -538,6 +538,8 @@ export class AnalysisStepsPanelComponent {
   private readonly selectedStepKey = signal<string | null>(null);
   private readonly copiedLogRowKey = signal<string | null>(null);
   private readonly copiedPromptStepKey = signal<string | null>(null);
+  protected readonly progressPanelOpen = signal(true);
+  protected readonly aiWorkflowPanelOpen = signal(true);
   private readonly selectedCopilotWorkKinds = signal<ReadonlySet<AiWorkItemKind>>(
     new Set(COPILOT_WORK_ITEM_KINDS)
   );
@@ -651,6 +653,15 @@ export class AnalysisStepsPanelComponent {
       },
       { allowSignalWrites: true }
     );
+
+    effect(
+      () => {
+        const openPanelsByDefault = this.result() === null;
+        this.progressPanelOpen.set(openPanelsByDefault);
+        this.aiWorkflowPanelOpen.set(openPanelsByDefault);
+      },
+      { allowSignalWrites: true }
+    );
   }
 
   protected onSelectedIndexChange(index: number): void {
@@ -677,6 +688,14 @@ export class AnalysisStepsPanelComponent {
       selectedKinds.add(kind);
     }
     this.selectedCopilotWorkKinds.set(selectedKinds);
+  }
+
+  protected onProgressPanelToggle(event: Event): void {
+    this.progressPanelOpen.set((event.target as HTMLDetailsElement).open);
+  }
+
+  protected onAiWorkflowPanelToggle(event: Event): void {
+    this.aiWorkflowPanelOpen.set((event.target as HTMLDetailsElement).open);
   }
 
   protected async copyLogDetails(row: ElasticsearchLogRowView): Promise<void> {

@@ -240,8 +240,12 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const progressPanel = compiled.querySelector('details.panel-card--progress');
-    const copilotPanel = compiled.querySelector('details.ai-workflow-panel');
+    const progressPanel = compiled.querySelector(
+      'details.panel-card--progress'
+    ) as HTMLDetailsElement | null;
+    const copilotPanel = compiled.querySelector(
+      'details.ai-workflow-panel'
+    ) as HTMLDetailsElement | null;
     const timelineEntries = Array.from(compiled.querySelectorAll('.ai-work-item'));
     const runtimePayload =
       compiled.querySelector('.ai-work-item--runtime .ai-work-item__technical pre')
@@ -255,6 +259,8 @@ describe('AnalysisStepsPanelComponent', () => {
 
     expect(progressPanel).not.toBeNull();
     expect(copilotPanel).not.toBeNull();
+    expect(progressPanel?.open).toBe(true);
+    expect(copilotPanel?.open).toBe(true);
     expect(compiled.textContent).toContain('Przebieg pracy Copilota');
     expect(compiled.textContent).toContain('Tok działania AI');
     expect(compiled.textContent).toContain('Najpierw analizuję stack trace i brakujący kontekst kodu.');
@@ -271,6 +277,41 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
     expect(runtimePayload).toContain('"currentTokens": 9200');
     expect(runtimePayload).toContain('"messagesLength": 6');
+  });
+
+  it('should collapse progress and Copilot workflow when a final result is available', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('aiActivityEvents', buildAiActivityEvents());
+    fixture.componentRef.setInput('result', buildAnalysisResult());
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const progressPanel = compiled.querySelector(
+      'details.panel-card--progress'
+    ) as HTMLDetailsElement | null;
+    const copilotPanel = compiled.querySelector(
+      'details.ai-workflow-panel'
+    ) as HTMLDetailsElement | null;
+
+    expect(progressPanel).not.toBeNull();
+    expect(copilotPanel).not.toBeNull();
+    expect(progressPanel?.open).toBe(false);
+    expect(copilotPanel?.open).toBe(false);
+
+    progressPanel!.open = true;
+    progressPanel!.dispatchEvent(new Event('toggle'));
+    copilotPanel!.open = true;
+    copilotPanel!.dispatchEvent(new Event('toggle'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(progressPanel?.open).toBe(true);
+    expect(copilotPanel?.open).toBe(true);
   });
 
   it('should filter Copilot workflow items by selected event kind', async () => {

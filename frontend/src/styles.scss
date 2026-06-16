@@ -1761,8 +1761,7 @@ body .flow-tree-node__badges .confidence-pill,
   min-width: 0;
 }
 
-.analysis-stepper__step-label,
-.analysis-stepper__step-meta {
+.analysis-stepper__step-label {
   display: block;
 }
 
@@ -1770,25 +1769,6 @@ body .flow-tree-node__badges .confidence-pill,
   font-size: 0.92rem;
   font-weight: 700;
   line-height: 1.3;
-}
-
-.analysis-stepper__step-meta {
-  margin-top: 3px;
-  color: var(--text-soft);
-  font-size: 0.79rem;
-  line-height: 1.35;
-}
-
-.analysis-stepper .mat-step-header:has(.mat-step-icon-state-done) .analysis-stepper__step-meta {
-  color: rgba(28, 61, 46, 0.78);
-}
-
-.analysis-stepper .mat-step-header:has(.mat-step-icon-state-running) .analysis-stepper__step-meta {
-  color: rgba(23, 43, 77, 0.74);
-}
-
-.analysis-stepper .mat-step-header:has(.mat-step-icon-state-error) .analysis-stepper__step-meta {
-  color: rgba(126, 38, 30, 0.76);
 }
 
 .analysis-stepper__icon {

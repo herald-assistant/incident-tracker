@@ -27,21 +27,24 @@ import { AnalysisApiService } from '../../core/services/analysis-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import {
   buildAnalysisActionsHint,
+  buildJobBannerMessage,
   defaultErrorMessage,
   formatDateTime,
   formatEvidenceSectionTitle,
   formatStatus,
   hasInProgressChat,
-  isTerminalStatus
+  isTerminalStatus,
+  statusClassName,
+  valueOrFallback
 } from '../../core/utils/analysis-display.utils';
-import { copyElementToClipboard } from '../../core/utils/clipboard.utils';
+import { copyElementToClipboard, copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import {
   buildExportEnvelope,
   buildExportFileName,
   normalizeAnalysisJob,
   parseImportedAnalysis
 } from '../../core/utils/analysis-import-export.utils';
-import { AnalysisOverviewCardComponent } from '../../components/analysis-overview-card/analysis-overview-card';
+import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../components/markdown-content/markdown-content';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
@@ -63,7 +66,7 @@ type SelectOption = {
   selector: 'app-analysis-console',
   imports: [
     ReactiveFormsModule,
-    AnalysisOverviewCardComponent,
+    AnalysisFinalResultComponent,
     AnalysisStepsPanelComponent,
     MarkdownContentComponent,
     AttributeNamePipe
@@ -105,6 +108,7 @@ export class AnalysisConsoleComponent {
   readonly githubReauthRequiredByError = signal(false);
   readonly chatNeedsGithubAuth = signal(false);
   readonly copiedChatMessageId = signal<string | null>(null);
+  readonly copiedPreparedPrompt = signal(false);
 
   readonly aiModelOptions = computed<SelectOption[]>(() => {
     if (this.isAiModelOptionsLoading()) {
@@ -240,12 +244,14 @@ export class AnalysisConsoleComponent {
   private activeAnalysisId: string | null = null;
   private pollHandle: number | null = null;
   private chatCopyFeedbackHandle: number | null = null;
+  private promptCopyFeedbackHandle: number | null = null;
 
   constructor() {
     this.loadGithubAuthStatus();
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
       this.clearChatCopyFeedback();
+      this.clearPromptCopyFeedback();
     });
   }
 
@@ -547,6 +553,55 @@ export class AnalysisConsoleComponent {
       .join(' · ');
   }
 
+  protected statusLabel(status: string): string {
+    return formatStatus(status);
+  }
+
+  protected statusClass(status: string): string {
+    return statusClassName(status);
+  }
+
+  protected jobBannerMessage(job: AnalysisJobStateSnapshot): string {
+    return buildJobBannerMessage(job);
+  }
+
+  protected runContextItems(job: AnalysisJobStateSnapshot): Array<{ label: string; value: string }> {
+    return [
+      { label: 'Correlation ID', value: job.correlationId || 'n/a' },
+      { label: 'Analysis ID', value: valueOrFallback(job.analysisId) },
+      { label: 'Environment', value: valueOrFallback(job.environment) },
+      { label: 'Branch', value: valueOrFallback(job.gitLabBranch) },
+      { label: 'Model', value: job.aiModel || 'default backend' },
+      { label: 'Reasoning', value: job.reasoningEffort || 'default backend' },
+      { label: 'Usage', value: this.usageSummary(job) }
+    ];
+  }
+
+  protected canCopyPreparedPrompt(job: AnalysisJobStateSnapshot | null): boolean {
+    return Boolean(this.preparedPromptText(job));
+  }
+
+  protected async copyPreparedPrompt(job: AnalysisJobStateSnapshot | null): Promise<void> {
+    const prompt = this.preparedPromptText(job);
+    if (!prompt) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(prompt);
+    if (!copied) {
+      this.formError.set('Nie udało się skopiować promptu do schowka.');
+      return;
+    }
+
+    this.formError.set('');
+    this.copiedPreparedPrompt.set(true);
+    this.clearPromptCopyFeedback();
+    this.promptCopyFeedbackHandle = window.setTimeout(() => {
+      this.copiedPreparedPrompt.set(false);
+      this.promptCopyFeedbackHandle = null;
+    }, 1600);
+  }
+
   protected async copyChatMessage(
     messageElement: HTMLElement,
     message: AnalysisChatMessageResponse
@@ -622,6 +677,13 @@ export class AnalysisConsoleComponent {
       this.chatCopyFeedbackHandle = null;
     }
     this.copiedChatMessageId.set(null);
+  }
+
+  private clearPromptCopyFeedback(): void {
+    if (this.promptCopyFeedbackHandle !== null) {
+      window.clearTimeout(this.promptCopyFeedbackHandle);
+      this.promptCopyFeedbackHandle = null;
+    }
   }
 
   private loadGithubAuthStatus(): void {
@@ -745,6 +807,22 @@ export class AnalysisConsoleComponent {
     if (currentEffort && !availableEfforts.includes(currentEffort)) {
       this.reasoningEffortControl.setValue('', { emitEvent: false });
     }
+  }
+
+  private usageSummary(job: AnalysisJobStateSnapshot): string {
+    const usage = job.result?.usage;
+    if (!usage || !usage.totalTokens) {
+      return 'not-available';
+    }
+
+    const tokens = Math.round(usage.totalTokens).toLocaleString('pl-PL');
+    const cost =
+      typeof usage.cost === 'number' && usage.cost > 0 ? ` / $${usage.cost.toFixed(4)}` : '';
+    return `${tokens} tokens${cost}`;
+  }
+
+  private preparedPromptText(job: AnalysisJobStateSnapshot | null): string {
+    return job?.preparedPrompt || job?.result?.prompt || '';
   }
 
   private reasoningEffortsForModel(modelId: string): string[] {

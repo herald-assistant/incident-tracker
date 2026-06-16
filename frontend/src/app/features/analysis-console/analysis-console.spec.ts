@@ -218,7 +218,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     ) as HTMLDetailsElement | null;
 
     expect(chatPanel).not.toBeNull();
-    expect(chatPanel?.open).toBe(true);
+    expect(chatPanel?.open).toBe(false);
     expect(chatPanel?.querySelector('summary')?.textContent).toContain('Kontynuacja analizy');
     expect(copyButtons).toHaveLength(2);
     expect(copyButtons[0].textContent).toContain('content_copy');

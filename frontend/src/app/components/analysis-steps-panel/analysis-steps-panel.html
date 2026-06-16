@@ -175,7 +175,11 @@
     }
   </ng-template>
 
-<details class="panel-card panel-card--progress collapsible-panel" open>
+<details
+  class="panel-card panel-card--progress collapsible-panel"
+  [open]="progressPanelOpen()"
+  (toggle)="onProgressPanelToggle($event)"
+>
   <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
     <div>
       <p class="section-eyebrow">Przebieg</p>
@@ -239,7 +243,6 @@
           <ng-template matStepLabel>
             <span class="analysis-stepper__step-content">
               <span class="analysis-stepper__step-label">{{ step.label }}</span>
-              <span class="analysis-stepper__step-meta">{{ step.headerMeta }}</span>
             </span>
           </ng-template>
 
@@ -1408,7 +1411,11 @@
 </details>
 
 @if (copilotWorkItems().length > 0) {
-  <details class="panel-card ai-workflow-panel collapsible-panel" open>
+  <details
+    class="panel-card ai-workflow-panel collapsible-panel"
+    [open]="aiWorkflowPanelOpen()"
+    (toggle)="onAiWorkflowPanelToggle($event)"
+  >
     <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
       <div>
         <p class="section-eyebrow">Przebieg pracy Copilota</p>

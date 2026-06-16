@@ -64,6 +64,15 @@ byc zaktualizowany przed dalsza implementacja.
   aliasy kompatybilnosci wskazujace na nowe tokeny `--color-*`.
 - Globalne tlo aplikacji w V1 jest spokojnym kolorem, bez dekoracyjnego
   gradientu.
+- Docelowy brand uzywa obrazka `assets/brand/main-logo.png`; nie wracamy do
+  tekstowego znaku `AI`.
+- Krok 4a zmienia Incident Analysis z dwoch kolumn na czytelniczy uklad:
+  finalny wynik ma pelna szerokosc, a trace/evidence/AI activity ida pod wynik.
+- `analysis-stepper__step-meta` nie jest prezentowane w naglowkach krokow,
+  poniewaz rozpychalo stepper i pogarszalo czytelnosc.
+- Po zakonczeniu analizy albo wczytaniu rezultatu z pliku panele
+  `Przebieg analizy` oraz `Tok dzialania AI` sa domyslnie zwiniete, ale nadal
+  mozna je recznie rozwinac.
 
 ## Decyzje do zatwierdzenia podczas implementacji
 
@@ -129,9 +138,9 @@ Widok ma byc narzedziowy:
   - model,
   - tokeny/koszt,
 - glowna przestrzen robocza:
-  - szeroka kolumna: finalny wynik i sekcje `Functional analysis`,
-    `Technical analysis`, `Visibility limits`,
-  - prawa kolumna: kroki, coverage, AI/tool activity,
+  - finalny wynik i sekcje `Functional analysis`, `Technical analysis`,
+    `Visibility limits` na pelnej szerokosci,
+  - kroki, coverage i AI/tool activity pod wynikiem jako sekcje zwijane,
 - follow-up chat jako dolny panel albo prawa zakladka, domyslnie mniej
   dominujacy niz finalny wynik i trace.
 
@@ -321,23 +330,26 @@ Cel: przestawic pierwszy feature z hero na codzienny workspace.
 
 Zakres:
 
-- [ ] Usunac hero-card jako pierwszy viewport.
-- [ ] Zbudowac kompaktowy panel startu analizy.
-- [ ] Po starcie joba pokazac pasek kontekstu z faktami runu.
-- [ ] Uporzadkowac wynik w dwukolumnowym workspace:
-  - wynik i sekcje finalne po lewej,
-  - kroki, coverage i AI/tool activity po prawej.
-- [ ] Zmienic follow-up chat na mniej dominujacy panel.
-- [ ] Zachowac obecne kontrakty API i runtime behavior.
+- [x] Usunac hero-card jako pierwszy viewport.
+- [x] Zbudowac kompaktowy panel startu analizy.
+- [x] Po starcie joba pokazac pasek kontekstu z faktami runu.
+- [x] Uporzadkowac wynik w czytelnym workspace:
+  - wynik i sekcje finalne na pelnej szerokosci,
+  - kroki, coverage i AI/tool activity pod wynikiem.
+- [x] Zmienic follow-up chat na mniej dominujacy panel.
+- [x] Zachowac obecne kontrakty API i runtime behavior.
+- [x] Usunac prezentacje `analysis-stepper__step-meta` z naglowkow krokow.
+- [x] Domyslnie zwijac przebieg analizy i tok dzialania AI po finalnym wyniku
+  albo imporcie rezultatu z pliku.
 
 Weryfikacja:
 
-- [ ] start analizy nadal wysyla tylko `correlationId`, `model`,
+- [x] start analizy nadal wysyla tylko `correlationId`, `model`,
   `reasoningEffort`,
-- [ ] import/export nadal dziala,
-- [ ] prompt nadal da sie skopiowac, gdy jest dostepny,
-- [ ] chat dziala dla live joba i jest read-only dla importu,
-- [ ] testy FE i browser check.
+- [x] import/export nadal dziala,
+- [x] prompt nadal da sie skopiowac, gdy jest dostepny,
+- [x] chat dziala dla live joba i jest read-only dla importu,
+- [x] testy FE i browser check.
 
 ### Krok 5: Tool Workbench layout
 
@@ -439,12 +451,15 @@ Zakres:
 
 Najblizszy proponowany krok do zatwierdzenia:
 
-`Krok 4: Incident Analysis jako widok roboczy`.
+`Krok 5: Tool Workbench layout`.
 
 Przed implementacja trzeba zatwierdzic:
 
-- czy usuwamy hero-card z pierwszego viewportu w calosci,
-- docelowy ksztalt kompaktowego panelu startu analizy,
-- ktore fakty runu maja wejsc do paska kontekstu po uruchomieniu joba,
-- czy follow-up chat w Krok 4 ma byc dolnym panelem, czy prawa zakladka,
-- jak daleko porzadkujemy dwukolumnowy workspace bez zmiany kontraktow API.
+- od ktorego widoku zaczynamy wspolny workbench pattern: rekomendacja
+  `Database Tools`,
+- dokladny podzial na scope panel, request builder i response panel/drawer,
+- czy response JSON ma w Krok 5 zostac panelem w layoucie, czy prawym drawerem,
+- ktore metadane toola pokazujemy jako stale: endpoint, scope, AI reusable,
+  guardrails, last result,
+- czy przebudowujemy wszystkie trzy widoki w jednym kroku, czy po jednym
+  ekranie na zatwierdzenie.

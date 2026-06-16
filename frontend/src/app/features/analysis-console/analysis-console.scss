@@ -2,21 +2,135 @@
   display: block;
 }
 
-.auth-status-badge {
-  border-color: var(--color-border);
-  background: var(--color-surface-alt);
-  color: var(--color-muted-strong);
+.analysis-console-page {
+  width: min(1480px, calc(100% - 28px));
 }
 
-.analysis-view-heading {
+.incident-workspace {
+  display: grid;
+  gap: 16px;
+}
+
+.analysis-start-panel,
+.analysis-placeholder-workspace,
+.analysis-error-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.analysis-start-panel__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.analysis-view-heading .auth-status-badge {
+.analysis-start-panel__header h2,
+.analysis-placeholder-workspace h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  line-height: 1.25;
+}
+
+.analysis-start-panel__description,
+.analysis-placeholder-workspace p,
+.analysis-result-placeholder p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.auth-status-badge {
   flex: 0 0 auto;
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-muted-strong);
+}
+
+.analysis-run-context {
+  display: grid;
+  grid-template-columns: auto repeat(7, minmax(112px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+.analysis-run-context--starting {
+  grid-template-columns: auto minmax(180px, 1fr);
+}
+
+.analysis-run-context .status-pill {
+  align-self: stretch;
+  align-items: center;
+  display: inline-flex;
+}
+
+.analysis-run-context__item {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+}
+
+.analysis-run-context__label {
+  color: var(--text-soft);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.analysis-run-context__value {
+  min-width: 0;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-start-form {
+  display: grid;
+  gap: 12px;
+}
+
+.analysis-start-form__intro {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.analysis-start-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.2fr) minmax(180px, 0.75fr) minmax(180px, 0.75fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.analysis-start-grid__correlation {
+  min-width: 0;
+}
+
+.analysis-start-actions {
+  display: inline-flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.analysis-start-actions .secondary-button,
+.analysis-start-actions .primary-button {
+  white-space: nowrap;
 }
 
 .github-auth-panel {
@@ -24,9 +138,9 @@
   gap: 16px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 1px solid rgba(174, 46, 36, 0.22);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--warning-soft);
 }
 
@@ -37,14 +151,14 @@
 
 .github-auth-panel__title {
   margin: 0;
-  font-weight: 700;
   color: var(--text-main);
+  font-weight: 700;
 }
 
 .github-auth-panel__description {
   margin: 4px 0 0;
   color: var(--text-muted);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .select-loading-control {
@@ -74,8 +188,106 @@
   animation: spin 0.9s linear infinite;
 }
 
+.incident-workspace__body {
+  min-width: 0;
+}
+
+.analysis-workspace-grid {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+.analysis-workspace-main,
+.analysis-trace-section {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.analysis-result-placeholder {
+  min-height: 220px;
+}
+
+.analysis-placeholder-workspace {
+  min-height: 260px;
+  align-content: center;
+}
+
+.analysis-placeholder-workspace p {
+  max-width: 68ch;
+}
+
+.analysis-chat {
+  border-style: dashed;
+}
+
+@media (max-width: 1280px) {
+  .analysis-run-context {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .analysis-run-context .status-pill {
+    justify-content: center;
+  }
+
+  .analysis-start-grid {
+    grid-template-columns: minmax(240px, 1fr) minmax(180px, 0.8fr) minmax(180px, 0.8fr);
+  }
+
+  .analysis-start-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 860px) {
-  .analysis-view-heading {
+  .analysis-start-panel__header,
+  .github-auth-panel {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .analysis-run-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analysis-start-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-start-actions {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+}
+
+@media (max-width: 640px) {
+  .analysis-console-page {
+    width: min(100% - 18px, 100%);
+  }
+
+  .analysis-start-panel {
+    padding: 12px;
+  }
+
+  .analysis-start-panel__description,
+  .analysis-start-form__intro {
+    display: none;
+  }
+
+  .analysis-run-context {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-start-actions {
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .analysis-start-actions .primary-button,
+  .analysis-start-actions .secondary-button {
+    width: auto;
   }
 }
