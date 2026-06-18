@@ -1,5 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -190,5 +190,34 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
       'GET /api/operational-context/*'
     );
+  });
+
+  it('should render the flow explorer shell on the flow explorer route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/flow-explorer');
+    fixture.detectChanges();
+    http.expectOne('/flow-explorer/config').flush({ defaultBranch: 'main' });
+    http.expectOne('/flow-explorer/systems').flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Flow Explorer"]'
+    );
+
+    expect(compiled.querySelector('app-flow-explorer-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb')?.textContent).toContain(
+      'Analysis Features'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'Flow Explorer'
+    );
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('Endpoint documentation workspace');
   });
 });

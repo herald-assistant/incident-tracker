@@ -1,0 +1,1398 @@
+# Flow Explorer Implementation Plan
+
+## Cel dokumentu
+
+Ten dokument jest roboczym planem dostarczenia drugiego feature'u platformy:
+Flow Explorer. Ma byc aktualizowany krok po kroku w trakcie implementacji.
+
+Flow Explorer ma pozwolic analitykowi, testerowi albo mniej technicznej osobie
+poznac system bottom-up przez wybor systemu, wybor endpointu i wygenerowanie
+czytelnej dokumentacji use case'u endpointu na podstawie deterministic context,
+operational context, GitLab tools i sesji AI.
+
+Rownoleglym celem jest sprawdzenie, czy granice `features`, `aiplatform`,
+`agenttools`, `integrations`, `api`, `shared` i `common` sa faktycznie
+feature-independent. Flow Explorer jest stress testem architektury, nie
+pretekstem do duzego refaktoru bez potrzeby.
+
+## Zasady pracy z planem
+
+- Kazdy punkt implementacyjny najpierw opisujemy w rozmowie: co zmieniamy,
+  dlaczego i jakie pliki/pakiety beda dotkniete.
+- Implementujemy dopiero po zatwierdzeniu danego kroku.
+- Po implementacji aktualizujemy checklisty w tym pliku.
+- Jesli w trakcie pracy zmieni sie decyzja produktowa albo architektoniczna,
+  dopisujemy ja do sekcji "Decision log".
+- Refaktory granic robimy tylko wtedy, gdy Flow Explorer realnie pokazuje
+  tarcie, zly import albo brak neutralnego kontraktu.
+- Nie reuse'ujemy `features.incidentanalysis` jako generycznego core.
+
+## Decyzje startowe
+
+- [x] Flow Explorer jest osobnym feature'em pod `features.flowexplorer`.
+- [x] Incident analysis pozostaje pierwszym feature'em, ale nie jest core dla
+  nowych analiz.
+- [x] User-editable textarea oznacza "instrukcje / doprecyzowanie
+  uzytkownika", a nie pelny prompt systemowy.
+- [x] Canonical prompt, response contract, policy tools i skills buduje backend.
+- [x] User instructions sa traktowane jako dane wejscia, nie jako nadpisanie
+  polityki, formatu JSON ani zasad widocznosci.
+- [x] Backend buduje minimalny deterministic flow spine dla endpointu przed AI.
+- [x] AI poglabia szczegoly przez tools zalezne od celu uzytkownika.
+- [x] Initial prompt ma byc optymalizowany kosztowo: compact flow manifest +
+  wybrane high-value snippet cards, nie dump listy klas ani pelnych beanow.
+- [x] Opcje dokumentacji maja byc male i priorytetyzujace, nie wielka lista
+  "opisz wszystko".
+- [x] MVP nie wlacza DB tools jako domyslnego zrodla danych runtime; persistence
+  opisujemy code-first. DB moze zostac osobnym rozszerzeniem po MVP.
+- [x] Runtime skille Flow Explorera beda w
+  `src/main/resources/copilot/skills` i beda pisane po polsku z zachowaniem
+  technicznych nazw klas, tooli i pol JSON.
+
+## Zweryfikowany stan obecny
+
+### Dokumentacja
+
+- [x] `docs/architecture/00-product-direction.md` opisuje Flow Explorer jako
+  planowany drugi feature i dowod platformowosci.
+- [x] `docs/architecture/01-system-overview.md` opisuje obecne shared/operator
+  API, GitLab endpoint inventory i operational context console.
+- [x] `docs/architecture/02-key-decisions.md` wymaga, aby nowe feature'y mialy
+  wlasny request/result, prompt, skills, tool policy, hidden context i result
+  contract.
+- [x] `docs/architecture/03-runtime-flow.md` potwierdza, ze obecny runtime
+  incident analysis nie jest docelowym generycznym core.
+- [x] `docs/architecture/05-package-dependencies.md` i
+  `docs/architecture/06-modular-architecture-roadmap.md` opisuja docelowe
+  zaleznosci warstw i wskazuja Flow Explorer jako najlepszy drugi dowod.
+- [x] `docs/architecture/08-operational-context-model-tools-and-usage.md`
+  opisuje operational context jako knowledge index dla Flow Explorera i
+  wskazuje read modele: code-search, implementation, flow i blast-radius.
+
+### Backend i AI platform
+
+- [x] `aiplatform.copilot.runtime.CopilotRunRequest` jest neutralnym wejscem
+  runtime: `runReference`, `auth`, `prompt`, `sessionConfigRequest`,
+  `artifactContents`, `evidenceSink`, `activitySink`.
+- [x] `aiplatform.copilot.runtime.CopilotSessionConfigRequest` przyjmuje
+  session id, tools, allowliste, skill directories, model selection i denied
+  message.
+- [x] `aiplatform.copilot.runtime.execution.CopilotExecutionResult` zwraca
+  content i user-visible usage.
+- [x] `aiplatform.copilot.tools.CopilotSdkToolFactory` rejestruje callbacki
+  Spring tools i dekoruje opisy przez neutralny
+  `CopilotToolDescriptionCustomizer`.
+- [x] `aiplatform.copilot.tools.context.CopilotToolSessionContext` jest
+  neutralnym typem platformowym, ale ma incident-specific convenience
+  konstruktor/gettery. To jest punkt do sprawdzenia podczas implementacji Flow
+  Explorera.
+- [x] Platformowy tool budget jest capability-based i rozpoznaje m.in. GitLab,
+  DB, Elasticsearch i Operational Context po prefixach tooli.
+
+### GitLab capability
+
+- [x] `integrations.gitlab.GitLabRepositoryEndpointService` listuje Spring
+  endpointy, laczy dane z kodu i OpenAPI oraz zwraca dokumentacje endpointu.
+- [x] `integrations.gitlab.GitLabRepositoryEndpoint` zawiera dane potrzebne dla
+  UI selecta: `endpointId`, `httpMethods`, `path`, `controllerClass`,
+  `handlerMethod`, `filePath`, `lineStart`, `lineEnd`, request/response types,
+  annotations, documentation, confidence, limitations i suggested next reads.
+- [x] `integrations.gitlab.usecase.GitLabEndpointUseCaseContextService` buduje
+  deterministic endpoint use-case context.
+- [x] Endpoint use-case context zwraca teraz file-level `symbols` oraz
+  method-level `methods` z klasa, podpisem, parametrami, zakresem linii,
+  rola, depth, confidence i reason.
+- [x] `GitLabEndpointUseCaseFileRole` ma role plikow przydatne dla flow spine:
+  `CONTROLLER`, `USE_CASE_SERVICE`, `REPOSITORY_IMPLEMENTATION`,
+  `SPRING_DATA_REPOSITORY`, `MAPPER`, `DOMAIN_MODEL`, `WEB_MODEL`,
+  `EXTERNAL_CLIENT` itd.
+- [x] `agenttools.gitlab.mcp.GitLabMcpTools` wystawia
+  `gitlab_list_repository_endpoints` i
+  `gitlab_build_endpoint_use_case_context` jako neutralne tools nad integracja.
+- [x] `api.gitlab.GitLabRepositorySearchController` ma helper endpointy:
+  `/api/gitlab/repository/endpoints` i
+  `/api/gitlab/repository/endpoint-use-case-context`.
+
+### Operational context
+
+- [x] `api.operationalcontext.OperationalContextController` wystawia systemy,
+  repozytoria i read modele dla FE.
+- [x] `integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver`
+  potrafi rozwiazac project paths z system hints.
+- [x] `agenttools.operationalcontext` wystawia neutralne `opctx_*` tools bez
+  incidentowego scope'u.
+- [x] Operational context uzywa `system` jako kanonicznego targetu katalogowego.
+
+### Incident job jako wzorzec, nie core
+
+- [x] `features.incidentanalysis.flow.AnalysisOrchestrator` pokazuje wzorzec:
+  deterministic context, prepare prompt, analyze, user-visible prompt/activity.
+- [x] `features.incidentanalysis.job.AnalysisJobService` pokazuje wzorzec
+  in-memory async job + polling + follow-up chat.
+- [x] `features.incidentanalysis.job.state.AnalysisJobState` pokazuje wzorzec
+  projection job state, tool evidence, AI activity i chat.
+- [x] Te klasy nie sa do importowania przez Flow Explorer.
+
+### Frontend
+
+- [x] Angular routes sa w `frontend/src/app/app.routes.ts`.
+- [x] Sidebar jest w `frontend/src/app/components/app-shell/app-shell.ts`;
+  Flow Explorer istnieje tam jako disabled nav item.
+- [x] Spring forward route dla znanych Angular paths jest w
+  `src/main/java/pl/mkn/incidenttracker/ui/FrontendRouteController.java`.
+- [x] GitLab workbench ma juz UI do endpoint inventory i endpoint use-case
+  context; jest to material do reuse'u koncepcyjnego, nie docelowy ekran
+  feature'u.
+
+## Guardraile architektoniczne
+
+- [x] Flow Explorer nie importuje `features.incidentanalysis`.
+- [x] `features.incidentanalysis` nie importuje Flow Explorera.
+- [x] `aiplatform` nie importuje zadnego `features.*`.
+- [x] `agenttools` nie importuje zadnego `features.*` ani `aiplatform`.
+- [x] `integrations` nie importuje `features`, `agenttools`, `aiplatform`
+  ani `api`.
+- [x] Shared/operator API w `api.*` nie staje sie orkiestratorem feature'u.
+- [x] Feature-specific API Flow Explorera mieszka pod
+  `features.flowexplorer.api`.
+- [x] Reusable endpoint inventory, use-case context, source/file reads zostaja
+  w `integrations.gitlab` i `agenttools.gitlab`.
+- [x] Prompt, skills, response parser, feature policy, hidden context,
+  artifact rendering i UI contract zostaja w `features.flowexplorer`.
+- [x] Nie dodajemy produkcyjnych ani testowych klas pod historyczny root
+  `analysis.*`.
+
+## Docelowy UX MVP
+
+### Ekran
+
+Route:
+
+```text
+/flow-explorer
+```
+
+Glowne sekcje:
+
+- wybor systemu,
+- wybor endpointu,
+- zakres dokumentacji,
+- doprecyzowanie uzytkownika,
+- podglad context coverage / prepared prompt,
+- progress joba,
+- wynik AI,
+- follow-up chat.
+
+### Wybor systemu
+
+- [x] Lista internal systems z operational context.
+- [x] Search/filter po nazwie, aliasach, runtime/deployment signals i summary.
+- [ ] Karta/szczegoly systemu: owner/team, lifecycle, code-search scopes,
+  repozytoria, validation findings, open questions.
+- [x] UI nie pokazuje GitLaba jako pierwszego pojecia; pokazuje system i
+  scope implementacji.
+
+### Wybor endpointu
+
+- [x] Po wyborze systemu backend rozwiazuje repozytoria/code-search scope.
+- [x] UI pobiera endpoint inventory dla glownego repo albo repozytoriow w
+  scope zgodnie z decyzja implementacyjna.
+- [x] Endpoint selector jest searchable comboboxem/lista, nie prostym selectem.
+- [x] W collapsed item widac: method, path i summary/description.
+- [ ] W collapsed item dodac confidence, jesli testy UX pokaza, ze pomaga w
+  wyborze endpointu.
+- [x] W expanded/popover item widac: controller, handler,
+  request/response types, operationId i source.
+- [ ] W expanded/popover item dodac tags, documentation source i suggested
+  next reads jako final polish, jesli nie zaszumia wyboru endpointu.
+- [ ] Ikona info ma custom tooltip/popover dostepny na hover, focus i click.
+- [x] Tooltip pokazuje parametry z opisami, limitations i file/lines.
+
+### Zakres dokumentacji
+
+Presety:
+
+- [x] "Chce zrozumiec endpoint jako analityk"
+- [x] "Chce przygotowac testy"
+- [x] "Chce sprawdzic wplyw zmiany"
+- [x] "Chce techniczny handoff"
+
+Obszary poglebienia:
+
+- [x] Cel biznesowy i flow
+- [x] Reguly i walidacje
+- [x] Dane i persystencja
+- [x] Integracje zewnetrzne
+- [x] Scenariusze testowe
+- [x] Ryzyka, ograniczenia i pytania otwarte
+
+Zasada:
+
+- [x] UI pozwala wybrac preset i maksymalnie kilka priorytetow poglebienia.
+- [x] Checkboxy oznaczaja "pogleb te obszary w pierwszym przebiegu", nie
+  "opisz wszystko".
+- [x] Reszta moze trafic do "mozliwe dalsze poglebienia" albo follow-up.
+
+### Doprecyzowanie uzytkownika
+
+- [x] Textarea ma label w stylu "Doprecyzuj oczekiwany opis".
+- [x] UI nie nazywa tego pola pelnym promptem.
+- [x] Backend wstawia tresc jako `userInstructions`.
+- [x] Canonical prompt blokuje zmiane kontraktu JSON, tools policy, jezyka
+  wyniku i zasad widocznosci przez `userInstructions`.
+
+### Wynik
+
+Wynik ma byc zrozumialy dla analityka/testera:
+
+- [x] krotkie podsumowanie celu endpointu,
+- [x] flow krok po kroku,
+- [x] reguly biznesowe i decyzje,
+- [x] walidacje i bledy,
+- [x] request/response contract,
+- [x] persystencja code-first,
+- [x] integracje zewnetrzne,
+- [x] scenariusze testowe,
+- [x] ryzyka, open questions i visibility limits,
+- [x] source/provenance references,
+- [x] confidence i usage.
+
+## Proponowany backend contract MVP
+
+### Feature packages
+
+- [x] `features.flowexplorer.api`
+- [x] `features.flowexplorer.job`
+- [ ] `features.flowexplorer.flow`
+- [x] `features.flowexplorer.context`
+- [x] `features.flowexplorer.ai`
+- [x] `features.flowexplorer.ai.copilot`
+- [ ] `features.flowexplorer.ai.copilot.response`
+- [x] `features.flowexplorer.ai.copilot.preparation`
+- [ ] `features.flowexplorer.ai.copilot.tools.description`
+
+### API endpoints
+
+Feature-owned:
+
+```http
+GET  /flow-explorer/systems
+GET  /flow-explorer/systems/{systemId}/endpoints
+POST /flow-explorer/jobs
+GET  /flow-explorer/jobs/{jobId}
+POST /flow-explorer/jobs/{jobId}/chat/messages
+```
+
+Do rozstrzygniecia:
+
+- [ ] Czy `GET /flow-explorer/systems` ma byc feature-owned projection, czy UI
+  ma bezposrednio uzyc `/api/operational-context/systems`.
+- [ ] Czy endpoint inventory ma zwracac jeden scalony widok z wielu repo, czy
+  najpierw tylko primary repository.
+- [ ] Jak resolve'owac GitLab branch/ref dla feature'u bez incident evidence.
+
+### Start request
+
+Roboczy shape:
+
+```json
+{
+  "systemId": "string",
+  "endpointId": "string",
+  "httpMethod": "GET",
+  "endpointPath": "/api/example/{id}",
+  "branch": "optional",
+  "documentationPreset": "ANALYST_OVERVIEW",
+  "focusAreas": ["BUSINESS_FLOW", "VALIDATIONS"],
+  "userInstructions": "string",
+  "model": "optional",
+  "reasoningEffort": "optional"
+}
+```
+
+### Job snapshot
+
+Roboczy shape:
+
+```json
+{
+  "jobId": "string",
+  "systemId": "string",
+  "endpoint": {},
+  "branch": "string",
+  "aiModel": "string",
+  "reasoningEffort": "string",
+  "status": "QUEUED|COLLECTING_CONTEXT|ANALYZING|COMPLETED|FAILED|NOT_FOUND",
+  "steps": [],
+  "contextSnapshot": {},
+  "contextSections": [],
+  "toolEvidenceSections": [],
+  "aiActivityEvents": [],
+  "toolFeedback": [],
+  "chatMessages": [],
+  "preparedPrompt": "string",
+  "result": null
+}
+```
+
+### Follow-up chat request/response
+
+Request:
+
+```json
+{
+  "message": "string"
+}
+```
+
+Response:
+
+- endpoint `POST /flow-explorer/jobs/{jobId}/chat/messages` zwraca aktualny
+  `FlowExplorerJobStateSnapshot`;
+- `chatMessages[]` zawiera role `USER`/`ASSISTANT`, status
+  `IN_PROGRESS|COMPLETED|FAILED`, tresc, blad, timestampy, prompt
+  follow-up oraz message-level `toolEvidenceSections`, `aiActivityEvents` i
+  `toolFeedback`;
+- chat jest dostepny tylko po jobie `COMPLETED` z `result`;
+- backend blokuje drugi follow-up, gdy odpowiedz asystenta jest jeszcze
+  `IN_PROGRESS`;
+- follow-up prompt jest natural-language, a nie JSON-only. Result contract
+  skill jest uzywany dla initial run, ale nie dla follow-up chatu.
+
+Do rozstrzygniecia:
+
+- [ ] Czy reuse'ujemy `shared.evidence.AnalysisEvidenceSection` dla
+  `contextSections`, czy dodajemy neutralny `shared.context`/feature-local
+  source context model.
+- [ ] Czy `AnalysisAiActivityEvent`, `AnalysisAiUsage` i
+  `AnalysisAiToolFeedback` pozostaja wystarczajaco neutralne dla Flow
+  Explorera.
+
+### AI response contract MVP
+
+Roboczy JSON-only contract:
+
+```json
+{
+  "userIntentSummary": "string",
+  "audienceSummary": "string",
+  "endpointContract": {
+    "method": "string",
+    "path": "string",
+    "purpose": "string",
+    "request": ["string"],
+    "response": ["string"],
+    "parameters": ["string"]
+  },
+  "flowSteps": [
+    {
+      "order": 1,
+      "title": "string",
+      "plainLanguage": "string",
+      "technicalGrounding": "string",
+      "sourceRefs": ["string"]
+    }
+  ],
+  "businessRules": ["string"],
+  "validations": ["string"],
+  "persistence": ["string"],
+  "externalIntegrations": ["string"],
+  "testScenarios": ["string"],
+  "risksAndEdgeCases": ["string"],
+  "openQuestions": ["string"],
+  "visibilityLimits": ["string"],
+  "sourceReferences": ["string"],
+  "confidence": "high|medium|low"
+}
+```
+
+## Deterministic context gathering MVP
+
+- [x] Resolve selected system from operational context.
+- [x] Resolve code-search scope/repositories for selected system.
+- [x] Resolve GitLab group from configuration.
+- [x] Resolve branch/ref.
+- [x] List endpoint inventory for selected repository/scope.
+- [x] Resolve selected endpoint by `endpointId` or method/path.
+- [x] Build endpoint use-case context by
+  `GitLabEndpointUseCaseContextService`.
+- [x] Build minimal flow spine:
+  - endpoint/controller/handler,
+  - primary use-case service or port,
+  - direct collaborators,
+  - candidate repositories/entities/clients/validators/mappers,
+  - relations,
+  - limitations,
+  - suggested next reads.
+- [x] Build compact flow manifest for prompt:
+  - flow node role,
+  - file path,
+  - method names and `Lx-Ly` ranges,
+  - one short reason why the node matters,
+  - confidence/limitations only when they change how AI should treat the node.
+- [x] Decide selected high-value snippet cards embedded deterministically in
+  prompt.
+- [x] Snippet cards V1 are scoped per flow node and include only material that
+  improves analysis:
+  - selected methods participating in the endpoint/use case,
+  - minimal nearby context needed to understand the method,
+  - explicit omissions such as `// ... omitted earlier lines ...`.
+- [ ] Enrich snippet cards later with package, class-level annotations and
+  dependency constructor signals when they explain the flow.
+- [x] Avoid embedding low-value metadata in prompt:
+  - full import lists unless imports carry semantic meaning,
+  - unrelated methods in the same bean,
+  - full DTO/model/entity bodies unless selected focus area requires them,
+  - full class dumps for mappers/repositories/clients when signature/role is
+    enough.
+- [x] Keep full code exploration focused and AI-guided through GitLab tools.
+- [x] Publish context coverage to job state before AI call.
+
+Do rozstrzygniecia:
+
+- [x] Czy backend powinien deterministycznie czytac initial snippets przez
+  `GitLabRepositoryFilesByPathApiService`/integration service, czy zostawic
+  wszystkie code snippets dla AI tools.
+- [x] Jaki jest minimalny "flow spine" wystarczajacy dla modelu bez
+  nadmiernego dumpu kodu.
+- [x] Jak dobrac token budget/limit snippet cards per preset/focus area.
+
+## AI runtime plan
+
+### Flow Explorer skills
+
+Nowe katalogi:
+
+- [x] `src/main/resources/copilot/skills/flow-explorer-orchestrator`
+- [x] `src/main/resources/copilot/skills/flow-explorer-gitlab-tools`
+- [x] `src/main/resources/copilot/skills/flow-explorer-operational-context-tools`
+- [x] `src/main/resources/copilot/skills/flow-explorer-result-contract`
+
+Zasady skilli:
+
+- [x] Skille po polsku.
+- [x] Techniczne identyfikatory zostaja w oryginalnym brzmieniu.
+- [x] Orkiestrator najpierw stabilizuje flow spine, potem dobiera poglebienia
+  zgodnie z preset/focus areas/user instructions.
+- [x] GitLab skill preferuje `gitlab_build_endpoint_use_case_context`,
+  `gitlab_read_repository_files_by_path`, outline/chunks i focused reads.
+- [x] Operational context skill sluzy do system/process/bounded context,
+  ownership, glossary, code-search scope i handoff, ale nie jako dowod
+  zachowania kodu.
+- [x] Result contract skill wymusza JSON-only i odbiorce analityk/tester.
+
+### Tool policy
+
+- [x] Wlacz GitLab tools potrzebne dla endpoint flow:
+  - `gitlab_list_available_repositories`,
+  - `gitlab_list_repository_endpoints`,
+  - `gitlab_build_endpoint_use_case_context`,
+  - `gitlab_read_repository_file`,
+  - `gitlab_read_repository_files_by_path`,
+  - `gitlab_read_repository_file_outline`,
+  - `gitlab_read_repository_file_chunk`,
+  - `gitlab_read_repository_file_chunks`,
+  - opcjonalnie `gitlab_find_flow_context`.
+- [x] Wlacz `opctx_*` tools dla doprecyzowania katalogu.
+- [x] Wlacz `record_tool_feedback`.
+- [x] Domyslnie nie wlaczaj DB tools w MVP.
+- [x] Nie wlaczaj Elasticsearch tools w MVP, chyba ze pozniejsza decyzja
+  rozszerzy feature o runtime/log validation.
+- [x] Tool policy jest feature-owned.
+- [ ] Tool descriptions dla Flow Explorera sa dekorowane feature-owned
+  customizerem, bez zmian w neutralnych tool implementations.
+
+### Hidden ToolContext
+
+- [x] Flow Explorer sklada wlasny hidden context:
+  - run/job id,
+  - Copilot session id,
+  - GitLab group,
+  - GitLab branch/ref,
+  - selected system id,
+  - selected endpoint id/method/path,
+  - opcjonalnie resolved project/scope metadata.
+- [x] Model-facing schema nie przyjmuje `gitLabGroup`, branch/ref ani system
+  scope jako recznych parametrow.
+- [ ] Jesli `CopilotToolSessionContext` incident convenience API przeszkadza,
+  refaktorujemy go do bardziej neutralnego API bez zmiany runtime behavior.
+
+## Architektura do zweryfikowania podczas implementacji
+
+- [x] Czy `CopilotRunRequest` wystarcza bez zmian dla drugiego feature'u.
+- [ ] Czy `CopilotSessionConfigRequest` powinien dostac feature-level budget
+  preset albo per-run budget override.
+- [ ] Czy `CopilotToolSessionContext` wymaga usuniecia incident-specific
+  convenience konstruktora/getterow albo przeniesienia ich do incident feature.
+- [ ] Czy `AnalysisEvidenceSection` jest nadal dobra nazwa/model dla Flow
+  Explorer context/tool evidence.
+- [ ] Czy `AnalysisAiActivityEvent`, `AnalysisAiUsage` i
+  `AnalysisAiToolFeedback` powinny zostac pod `shared.ai` jako neutralne nazwy,
+  czy wymagaja bardziej generic naming.
+- [ ] Czy GitLab endpoint/use-case context result jest wystarczajaco neutralny
+  dla UI feature'u, czy potrzebny jest feature-local DTO/projection.
+- [ ] Czy operational context API potrzebuje dedicated internal systems
+  projection dla Flow Explorera.
+- [ ] Czy `api.gitlab` helper endpointy zostaja tylko workbench API, a Flow
+  Explorer ma wlasna fasade.
+- [ ] Czy in-memory job state mozna powtorzyc lokalnie w feature, czy warto
+  wydzielic neutralny run/job support po drugim feature.
+
+## Szczegolowa kolejnosc prac
+
+### 0. Plan i dokumentacja
+
+- [x] Zweryfikowac architekture i kluczowe klasy.
+- [x] Utworzyc ten plan.
+- [ ] Po akceptacji planu dodac krotka wzmianke o Flow Explorer planie do
+  `docs/architecture/00-product-direction.md` albo zostawic ten dokument jako
+  osobny source of truth dla implementacji.
+
+### 1. Backend vertical skeleton
+
+- [x] Utworzyc lokalne `AGENTS.md` dla `features.flowexplorer`.
+- [x] Dodac pakiety feature'u bez logiki AI:
+  - request DTO,
+  - result DTO,
+  - job status DTO,
+  - controller,
+  - service in-memory job state.
+- [x] Dodac endpoint `POST /flow-explorer/jobs` i `GET /flow-explorer/jobs/{id}`
+  z fake/skeleton result.
+- [x] Dodac test controller/service dla skeletonu.
+- [x] Uruchomic `mvn -q -Dtest=*FlowExplorer* test`.
+
+Approval gate:
+
+- [x] Przed implementacja opisac skeleton API i nazwy pakietow.
+- [x] Po zatwierdzeniu implementowac.
+
+### 2. Operational context system selection
+
+- [x] Dodac feature-owned projection internal systems albo uzyc bezposrednio
+  `/api/operational-context/systems`.
+- [x] Jesli feature-owned, controller deleguje do
+  `integrations.operationalcontext`, nie do `api.operationalcontext`.
+- [x] Dodac DTO system row dla Flow Explorer UI.
+- [x] Dodac testy resolve systemu i filtrowania internal systems.
+
+Decision update:
+
+- [x] Flow Explorer dostaje feature-owned endpoint `GET /flow-explorer/systems`.
+- [x] Endpoint zwraca tylko systemy internal na podstawie `kind`: `internal`,
+  `internal-*` oraz `api-gateway`.
+- [x] Projection zawiera sygnaly dla UI selecta: nazwe, skrot, `kind`,
+  statusy, criticality, summary, aliasy, liczbe repozytoriow, liczbe
+  code-search scopes i owner team ids.
+
+Approval gate:
+
+- [x] Przed implementacja opisac, czy dodajemy feature endpoint czy reuse UI
+  endpointu operational context.
+
+### 3. Endpoint inventory dla systemu
+
+- [x] Resolve system -> repositories/code-search scope.
+- [x] Resolve GitLab group z konfiguracji.
+- [x] Resolve branch/ref z requestu albo defaultu w application props.
+- [x] Wywolac `GitLabRepositoryEndpointService` dla wybranego repo/scope.
+- [x] Zmapowac wynik na UI-friendly endpoint option DTO.
+- [x] Dodac support dla tooltip details: documentation parameters,
+  limitations, suggested reads.
+- [x] Dodac testy inventory mapping i error/empty states.
+
+Decision update:
+
+- [x] `branch`/`ref` jest inputem Flow Explorera.
+- [x] Backend ma uzywac defaultu z `application.properties`, gdy request nie
+  poda branch/ref.
+- [x] UI powinno dostac default branch/ref z backendu i wysylac jawna wartosc
+  tylko wtedy, gdy uzytkownik ja zmieni albo potwierdzi.
+- [x] Response inventory powinien zwracac `resolvedRef`, zeby uzytkownik
+  widzial, z jakiego kodu pochodzi lista endpointow.
+- [x] Endpoint inventory jest wystawione jako
+  `GET /flow-explorer/systems/{systemId}/endpoints`.
+- [x] Zakres repozytoriow V1 to repozytoria z `system.references.repositories`,
+  `system.codeSearchScope.repositories` oraz semantyczne `codeSearchScopes`
+  targetujace wybrany system.
+- [x] `POST /flow-explorer/jobs` przyjmuje opcjonalny `branch`, aby pozniejszy
+  job mogl uzyc tego samego refa co endpoint inventory.
+
+Approval gate:
+
+- [x] Przed implementacja opisac branch/ref decision i zakres repozytoriow V1.
+
+### 3a. GitLab endpoint context method-level model
+
+- [x] Dodac neutralny `GitLabEndpointUseCaseMethodCandidate`.
+- [x] Rozszerzyc `GitLabEndpointUseCaseFileCandidate` o `methods`, bez
+  usuwania kompatybilnego `symbols`.
+- [x] Zbierac metody w traversal tylko wtedy, gdy `GitLabJavaMethodLocator`
+  faktycznie rozwiazal metode.
+- [x] Zachowac `symbols` jako prosty indeks nazw metod/typow dla istniejacych
+  tools i workbencha.
+- [x] Wlaczyc pozycje tokenow JavaParsera w bounded
+  `GitLabEndpointUseCaseSourceSession`, zeby metody mialy realne zakresy
+  linii.
+- [x] Dodac testy modelu, kompresora i traversal dla method-level context.
+- [x] Dostosowac GitLab Source workbench do `files[].methods`, ale renderowac
+  tylko minimalistycznie: nazwa metody i zakres linii `Lx-Ly`.
+
+Decision update:
+
+- [x] Flow Explorer bedzie budowal precyzyjniejszy flow spine na
+  `files[].methods`, a nie na samych stringowych `symbols`.
+- [x] `symbols` zostaje w publicznym modelu integracji jako backward-compatible
+  skrot i suggested-read aid.
+- [x] UI workbencha nie pokazuje pelnego podpisu, confidence, depth, reason ani
+  roli metody; te dane zostaja w JSON/kontrakcie dla backendu i przyszlego
+  context buildera.
+
+Approval gate:
+
+- [x] Przed implementacja opisac additive contract: nowe `methods`, stare
+  `symbols` bez breaking change.
+
+### 4. Deterministic endpoint context
+
+- [x] Dodac flow-explorer context service.
+- [x] Wywolac `GitLabEndpointUseCaseContextService`.
+- [x] Zbudowac `FlowExplorerContextSnapshot`.
+- [x] Zbudowac coverage/limitations dla UI.
+- [x] Zdecydowac, czy initial snippets sa embedded.
+- [x] Dodac testy dla resolved/unresolved endpoint context.
+
+Decision update:
+
+- [x] Step 4A dostarcza deterministyczny `FlowExplorerContextSnapshot` oraz
+  `compact flow manifest`, ale nie osadza jeszcze snippet cards.
+- [x] `POST /flow-explorer/jobs` w tym kroku konczy job statusem `COMPLETED`
+  po przygotowaniu context snapshotu i prompt preview; AI execution zostaje
+  poza Step 4A.
+- [x] `preparedPrompt` jest teraz jawnie oznaczony jako deterministic context
+  preview i zawiera `snippetCards: not collected in this step`.
+- [x] Snippet cards beda osobnym krokiem 4B, z limitami tokenow per
+  preset/focus area i bez pelnego dumpu klas.
+- [x] Step 4B dodaje `snippetCards` do `FlowExplorerContextSnapshot`,
+  coverage i `preparedPrompt`.
+- [x] Snippet cards V1 sa czytane deterministycznie przez
+  `GitLabRepositoryPort.readFileChunk`, po jednym chunku per wybrany flow node.
+- [x] Budzet V1: 3 karty dla `ANALYST_OVERVIEW` i `TEST_PREPARATION`, 4 karty
+  dla `TECHNICAL_HANDOFF` i `CHANGE_IMPACT`, maks. 6000 znakow na karte i
+  14000 znakow lacznie.
+- [x] Dobor V1 zawsze preferuje `CONTROLLER` i `USE_CASE_SERVICE`, a focus
+  areas moga wprowadzic trzeci/czwarty typ: persistence, external integration
+  albo validation/model boundary.
+
+Approval gate:
+
+- [x] Przed implementacja opisac minimalny flow spine i limit danych.
+
+### 5. AI preparation i response parser
+
+- [x] Dodac Flow Explorer AI response contracts.
+- [x] Dodac JSON-only response parser z fallbackiem.
+- [x] Dodac prompt renderer:
+  - canonical instruction,
+  - user instructions jako ograniczony fragment,
+  - selected system/endpoint,
+  - focus areas,
+  - compact flow manifest,
+  - selected snippet cards,
+  - tool policy,
+  - response schema.
+- [x] Dodac artifact renderer: manifest/digest/context artifacts dla Flow
+  Explorera.
+- [x] Dodac testy prompt/response parsera.
+
+Decision update:
+
+- [x] Step 5A dostarcza feature-local response contract w
+  `features.flowexplorer.ai`, bez importu incident analysis.
+- [x] Step 5A dostarcza `FlowExplorerAiResponseParser`, ktory przyjmuje JSON
+  albo fenced JSON i zwraca kontrolowany fallback z `visibilityLimits`, gdy
+  odpowiedz nie spelnia kontraktu.
+- [x] Step 5A dostarcza `FlowExplorerPromptPreparationService`, ktory sklada
+  canonical prompt z policy, userInstructions, deterministic context coverage,
+  compact flow manifest, snippet cards, limitations i JSON response schema.
+- [x] `FlowExplorerJobService` nie sklada juz promptu recznie; deleguje to do
+  feature-owned prompt preparation service.
+- [x] Step 5A nie uruchamia Copilota, nie dodaje skills i nie zmienia
+  `aiplatform`.
+- [x] Step 5B dodaje `FlowExplorerArtifactService` oraz
+  `FlowExplorerPromptPreparation`, z promptem, lista `CopilotRenderedArtifact`
+  i mapa `artifactContents` gotowa pod przyszly `CopilotRunRequest`.
+- [x] Step 5B renderuje stabilne artefakty:
+  - `flow-explorer/context-snapshot.json`,
+  - `flow-explorer/compact-flow-manifest.md`,
+  - `flow-explorer/snippet-cards.md`,
+  - `flow-explorer/coverage.json`,
+  - `flow-explorer/response-contract.json`.
+- [x] Step 5B nie zmienia delivery mode Copilota; tresc artefaktow pozostaje
+  osadzona inline w promptcie, a `artifactContents` sa przygotowane na krok 6.
+
+Approval gate:
+
+- [x] Przed implementacja pokazac response schema i prompt sections.
+
+### 6. Copilot runtime integration
+
+- [x] Dodac Flow Explorer run assembler/factory analogiczny koncepcyjnie do
+  incident preparation, ale bez importow incident feature'u.
+- [x] Zbudowac Flow Explorer tool session context.
+- [x] Zbudowac Flow Explorer tool policy.
+- [x] Zbudowac session config request bez skill directories w 6A; Flow
+  Explorer skills zostaja krokiem 7.
+- [x] Uzyc `CopilotRunPreparationService` i execution gateway przez
+  platformowe API.
+- [x] Podpiac evidence/activity sinks do job state.
+- [x] Dodac testy policy/assembler.
+
+Approval gate:
+
+- [x] Przed implementacja opisac wszystkie enabled tools i hidden context keys.
+
+### 7. Flow Explorer skills
+
+- [x] Dodac runtime skille Flow Explorera po polsku.
+- [x] Dodac result contract skill.
+- [x] Dodac GitLab tools playbook dla endpoint documentation.
+- [x] Dodac opctx playbook dla system/process/ownership grounding.
+- [x] Zweryfikowac, ze skille nie zawieraja lokalnych sciezek ani sekretow.
+
+Approval gate:
+
+- [x] Przed implementacja opisac nazwy skilli i ich odpowiedzialnosci.
+
+### 8. Follow-up chat
+
+Status: wykonane w Step 11D, po dzialajacym UI end-to-end.
+
+- [x] Dodac chat request/response DTO.
+- [x] Chat dziala dopiero po `COMPLETED`.
+- [x] Chat reuse'uje context snapshot, result, previous tool evidence,
+  history i hidden scope.
+- [x] Kazda wiadomosc uruchamia nowa sesje Copilota.
+- [x] Tool evidence z chatu jest przypisane do konkretnej odpowiedzi.
+- [x] Dodac testy chatu.
+
+Approval gate:
+
+- [x] Przed implementacja opisac kontrakt chatu i scope reuse.
+
+### 9. Frontend skeleton
+
+- [x] Odblokowac nav item Flow Explorer.
+- [x] Dodac route `/flow-explorer`.
+- [x] Dodac Spring forward route `/flow-explorer/**`.
+- [x] Dodac Angular feature folder:
+  - page,
+  - API service,
+  - models,
+  - page component; child components dopiero przy realnych kontrolkach Step 10.
+- [x] Dodac basic empty/loading/error states.
+- [x] Dodac testy routingu/shell.
+
+Approval gate:
+
+- [x] Przed implementacja opisac struktur UI i route.
+
+### 10. Frontend system + endpoint selection
+
+- [x] System searchable select/list.
+- [x] Endpoint searchable combobox/list.
+- [x] Endpoint info tooltip/popover.
+- [ ] Endpoint details drawer/panel; w 10A zastapiony lekkim selected endpoint
+  summary i popoverem info.
+- [x] Context coverage preview.
+- [x] Responsive layout bez nakladania tekstu.
+- [x] Testy komponentow.
+
+Approval gate:
+
+- [x] Przed implementacja opisac UI controls i dane w tooltipie.
+
+### 11. Frontend job execution and result
+
+- [x] Presets + focus areas controls.
+- [x] User instructions textarea.
+- [x] Submit + polling.
+- [x] Prepared prompt/context preview.
+- [x] AI activity/tool evidence timeline.
+- [x] Structured result view.
+- [x] Follow-up chat panel jako koncowy etap po MVP end-to-end.
+- [ ] Export/import decyzja: MVP optional.
+- [x] Testy page/service/utils dla Step 11A/11B/11C/11D.
+
+Approval gate:
+
+- [x] Przed implementacja opisac Step 11A: scope controls, user instructions,
+  start job, polling i prompt preview.
+- [x] Przed implementacja opisac finalny layout wynikow.
+- [x] Przed implementacja opisac trace/timeline jako warstwe transparentnosci,
+  nie glowny wynik analizy.
+- [x] Przed implementacja opisac follow-up chat jako natural-language
+  doprecyzowanie po `COMPLETED`, z backendowym canonical promptem i bez
+  JSON-only result contract skilla.
+
+### 12. Weryfikacja i hardening
+
+- [x] `mvn -q "-Dtest=*FlowExplorer*" test`
+- [x] `mvn -q "-Dtest=FlowExplorerContextServiceTest,FlowExplorerEndpointInventoryServiceTest,FlowExplorerEndpointInventoryControllerTest,FlowExplorerJobServiceTest,FlowExplorerJobControllerTest,FlowExplorerSystemSelectionServiceTest,FlowExplorerSystemControllerTest,PackageDependencyGuardTest" test`
+- [x] `mvn -q "-Dtest=FlowExplorerSnippetCardServiceTest,FlowExplorerContextServiceTest,FlowExplorerJobServiceTest,FlowExplorerJobControllerTest,FlowExplorerEndpointInventoryServiceTest,FlowExplorerEndpointInventoryControllerTest,PackageDependencyGuardTest" test`
+- [x] `mvn -q "-Dtest=FlowExplorerAiResponseParserTest,FlowExplorerPromptPreparationServiceTest,FlowExplorerJobServiceTest,FlowExplorerJobControllerTest,*FlowExplorer*" test`
+- [x] `mvn -q "-Dtest=FlowExplorerArtifactServiceTest,FlowExplorerPromptPreparationServiceTest,FlowExplorerAiResponseParserTest,FlowExplorerJobServiceTest,FlowExplorerJobControllerTest,*FlowExplorer*" test`
+- [x] `mvn -q -Dtest=PackageDependencyGuardTest test`
+- [x] `mvn -q "-Dtest=FlowExplorerCopilotRuntimePreparationTest,*FlowExplorer*,PackageDependencyGuardTest" test`
+- [x] `mvn -q "-Dtest=CopilotNamedSkillDirectoryResolverTest,*FlowExplorer*,CopilotIncidentSessionConfigRequestFactoryTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest,PackageDependencyGuardTest" test`
+- [x] `mvn -q "-Dtest=FlowExplorerJobServiceTest,FlowExplorerJobControllerTest,FlowExplorerCopilotRuntimePreparationTest,FlowExplorerAiResponseParserTest,PackageDependencyGuardTest" test`
+- [x] `mvn -q "-Dtest=*FlowExplorer*,PackageDependencyGuardTest" test`
+- [x] `mvn -q "-Dtest=FrontendPageTest,FlowExplorerCopilotRuntimePreparationTest,CopilotIncidentSessionConfigRequestFactoryTest" test`
+- [x] `mvn -q "-Dtest=FlowExplorerConfigControllerTest,FlowExplorerSystemControllerTest,FlowExplorerEndpointInventoryControllerTest,FrontendPageTest" test`
+- [x] `mvn -q -DskipTests compile`
+- [x] `cd frontend && npm test -- --watch=false`
+- [x] `cd frontend && npm run build`
+- [ ] Manual UI smoke przez lokalny dev server / Spring Boot.
+- [x] Sprawdzic generated static bundle, jesli build produkcyjny jest czescia
+  zmiany.
+
+Approval gate:
+
+- [ ] Przed finalnym merge opisac co zostalo zweryfikowane i czego nie udalo
+  sie zweryfikowac.
+
+## Testy granic architektury do dodania/rozszerzenia
+
+- [x] `features.flowexplorer` nie importuje `features.incidentanalysis`.
+- [x] `features.incidentanalysis` nie importuje `features.flowexplorer`.
+- [ ] `aiplatform` nie importuje `features`.
+- [ ] `agenttools` nie importuje `features`.
+- [ ] `integrations` nie importuje `features`, `agenttools`, `aiplatform`
+  ani `api`.
+- [ ] `api` cross-screen nie importuje `features.flowexplorer`, chyba ze
+  endpoint jest przeniesiony do feature-owned API.
+- [ ] Zamkniety root `analysis.*` nadal nie istnieje.
+
+## Potencjalne refaktory wynikajace z drugiego feature'u
+
+Refaktor dopiero, gdy Flow Explorer realnie potrzebuje zmiany:
+
+- [ ] Przeniesienie incident-specific convenience API z
+  `CopilotToolSessionContext` do incident preparation.
+- [ ] Dodanie neutralnego `CopilotRunBudgetRequest` albo per-run budget
+  override, jesli globalne budzety sa za sztywne.
+- [ ] Wydzielenie neutralnego run/job projection dopiero po porownaniu
+  incident job i flow explorer job.
+- [ ] Zmiana nazwy albo modelu `AnalysisEvidenceSection`, jesli drugi feature
+  pokazuje, ze nazwa `Analysis` jest za waska lub semantyka evidence za
+  incidentowa.
+- [ ] Wydzielenie wspolnych UI komponentow timeline/prompt/usage dopiero po
+  rzeczywistym reuse w Flow Explorerze.
+
+## Decision log
+
+### 001. Flow Explorer jako osobny feature
+
+Status: accepted.
+
+Decyzja: implementacja idzie pod `features.flowexplorer`, z wlasnym API, job
+state, promptem, skillami, policy i response contractem.
+
+Powod: drugi feature ma zweryfikowac, czy platforma, tools i integracje sa
+reusable bez importu incident analysis.
+
+### 002. User textarea jako intencja, nie pelny prompt
+
+Status: accepted.
+
+Decyzja: UI moze pokazac edytowalne pole, ale backend traktuje jego zawartosc
+jako `userInstructions` w canonical prompt. Nie pozwala to zmienic response
+contractu, policy tools ani zasad widocznosci.
+
+Powod: daje uzytkownikowi kontrole zakresu, ale nie rozbija stabilnego wyniku.
+
+### 003. Deterministic flow spine przed AI
+
+Status: accepted.
+
+Decyzja: backend buduje minimalny endpoint use-case context przed sesja AI.
+AI moze poglabiac szczegoly przez tools zgodnie z wybranym celem dokumentacji.
+
+Powod: pelny dump kodu jest kosztowny, a pozostawienie calego discovery AI
+zwieksza ryzyko bledzenia.
+
+### 004. Maly zestaw focus areas
+
+Status: accepted.
+
+Decyzja: MVP ma presety i ograniczony zestaw obszarow poglebienia, zamiast
+duzej checklisty wszystkiego.
+
+Powod: zbyt szeroki zakres powoduje plytka i zbyt ogolna odpowiedz.
+
+### 005. Branch/ref jako input z defaultem konfiguracyjnym
+
+Status: accepted.
+
+Decyzja: Flow Explorer przyjmuje `branch`/`ref` jako input. Jezeli request go
+nie poda, backend uzywa defaultu z `application.properties`.
+
+Powod: user moze eksplorowac konkretny branch, ale MVP nie wymaga od niego
+technicznej decyzji przy standardowym uzyciu.
+
+### 006. System selection pokazuje tylko internal systems
+
+Status: accepted.
+
+Decyzja: Flow Explorer pokazuje jako glowne aplikacje tylko systemy internal
+na podstawie `kind`: `internal`, `internal-*` oraz `api-gateway`.
+
+Powod: Flow Explorer zaczyna od aplikacji, ktore mozemy badac kodowo. Systemy
+zewnetrzne pozostaja kontekstem integracji, nie glownym targetem pierwszego
+selecta.
+
+### 007. Endpoint inventory V1 skanuje deterministyczny scope repozytoriow
+
+Status: accepted.
+
+Decyzja: V1 skanuje repozytoria wskazane przez `system.references.repositories`,
+`system.codeSearchScope.repositories` oraz semantyczne `codeSearchScopes`
+targetujace wybrany system.
+
+Powod: primary repo bywa za waskie, a caly katalog bylby zbyt kosztowny.
+Code-search scope daje deterministyczna granice utrzymywana w operational
+context.
+
+### 008. Endpoint use-case context zwraca method-level candidates
+
+Status: accepted.
+
+Decyzja: `GitLabEndpointUseCaseContextResult.files[]` zachowuje `symbols`, ale
+dostaje dodatkowe `methods` z precyzyjna metoda, podpisem, parametrami,
+zakresem linii, rola, depth, reason i confidence. Metody sa dodawane tylko dla
+realnie rozwiazanych `GitLabJavaMethodMatch`; typy, modele i nierozwiazane
+kandydaty zostaja symbolami/file candidates.
+
+Powod: Flow Explorer ma deterministycznie osadzic glowny flow na konkretnych
+metodach uczestniczacych w endpoint use case, bez poczatkowego dumpu calych
+beanow i bez heurystycznego zgadywania zakresow po stronie UI.
+
+### 009. Method-level data w UI jako minimalistyczna projekcja
+
+Status: accepted.
+
+Decyzja: GitLab Source workbench moze korzystac z `files[].methods`, ale w
+glownym widoku pokazuje tylko `methodName` oraz zakres linii w formacie
+`Lx-Ly`. Pelny podpis, typ deklarujacy, role, depth, reason i confidence nie
+sa renderowane jako widoczne detale metod.
+
+Powod: dane metod sa potrzebne backendowi i Flow Explorer context builderowi,
+ale uzytkownik workbencha ma szybko zobaczyc, ktore metody sa w flow, bez
+zasmiecania ekranu informacjami, ktorych realnie nie bedzie weryfikowal.
+
+### 010. Initial prompt jako compact manifest + selected snippet cards
+
+Status: accepted.
+
+Decyzja: initial prompt Flow Explorera nie dostaje pelnej listy klas, pelnych
+beanow ani wszystkich danych z `GitLabEndpointUseCaseContextResult`. Backend
+buduje kosztowo zoptymalizowany `compact flow manifest`, a do niego dolacza
+tylko wybrane `snippet cards`, ktore realnie poprawiaja analize dla
+wybranego preset/focus areas/user instructions.
+
+`compact flow manifest` opisuje node'y flow strukturalnie:
+
+- rola node'a w flow,
+- path pliku,
+- metody i zakresy linii `Lx-Ly`,
+- krotki powod dolaczenia,
+- confidence/limitations tylko wtedy, gdy AI powinno potraktowac node
+  ostrozniej albo inaczej.
+
+`snippet card` jest opcjonalna i ma byc zwiazana z konkretnym node'em flow.
+Powinna zawierac tylko material potrzebny do zrozumienia use case'u:
+
+- package,
+- class-level annotations, jesli maja znaczenie,
+- dependency fields/constructor signals, jesli tlumacza przejscie flow,
+- konkretne metody uczestniczace w endpoint/use case,
+- minimalny nearby context wymagany do zrozumienia metody,
+- jawne markery pominiecia, np. `// ... omitted unrelated methods ...`.
+
+Do initial promptu nie trafia domyslnie:
+
+- pelna lista importow,
+- niepowiazane metody tego samego beana,
+- pelne DTO/modele/encje,
+- pelne klasy mapperow, repozytoriow albo klientow integracyjnych, jezeli
+  signature/rola/granica wystarcza,
+- dane tylko dlatego, ze sa dostepne w kontrakcie GitLaba.
+
+Powod: Flow Explorer ma minimalizowac koszt tokenow i ryzyko rozmycia wyniku.
+Prompt powinien dac AI mape i najcenniejsze fragmenty kodu, a dalsze
+poglebienie ma odbywac sie przez GitLab/Operational Context tools zgodnie z
+wybranym celem uzytkownika.
+
+### 011. Step 4A jako manifest-only deterministic context
+
+Status: accepted.
+
+Decyzja: pierwszy etap deterministic endpoint context nie osadza jeszcze
+snippet cards w prompt preview. Backend buduje `FlowExplorerContextSnapshot`,
+`coverage`, `limitations`, `repositories`, `flowNodes`, `relations` oraz
+`compact flow manifest`. `preparedPrompt` zawiera jawny marker
+`snippetCards: not collected in this step`.
+
+Snippet cards zostaja osobnym krokiem 4B. Maja byc dobierane deterministycznie
+z istniejacych integracji GitLaba, ale dopiero po ustaleniu limitow tokenow i
+priorytetow per preset/focus area.
+
+Powod: najpierw walidujemy, czy method-level flow spine jest wystarczajaco
+precyzyjny i tani. Dopiero potem dodajemy kosztowniejsze fragmenty kodu, z
+jasnym budzetem i bez rozmywania odpowiedzi przez nadmiar kontekstu.
+
+### 012. Step 4B jako budgeted method-level snippet cards
+
+Status: accepted.
+
+Decyzja: snippet cards sa teraz czescia `FlowExplorerContextSnapshot` i
+`preparedPrompt`. Backend czyta je deterministycznie przez
+`GitLabRepositoryPort.readFileChunk`, uzywajac `flowNodes[].methods` jako
+zrodla zakresow linii. V1 nie robi jeszcze AST enrichment importow,
+class-level annotations ani constructor dependency signals.
+
+Budzet V1:
+
+- `ANALYST_OVERVIEW` i `TEST_PREPARATION`: maksymalnie 3 snippet cards,
+- `TECHNICAL_HANDOFF` i `CHANGE_IMPACT`: maksymalnie 4 snippet cards,
+- maksymalnie 6000 znakow na snippet card,
+- maksymalnie 14000 znakow lacznie,
+- 3 linie nearby context wokol wybranych metod.
+
+Priorytet V1: `CONTROLLER`, `USE_CASE_SERVICE`, potem node'y zwiazane z
+focus areas. `PERSISTENCE` preferuje repository/domain/projection roles,
+`EXTERNAL_INTEGRATIONS` preferuje `EXTERNAL_CLIENT`, a `VALIDATIONS` preferuje
+walidacyjna granice model/API, gdy flow spine ja wykryje.
+
+Powod: to daje AI kilka najcenniejszych fragmentow kodu bez dumpu klas i bez
+oddawania initial discovery w pelni toolom. Koszt jest jawny w coverage:
+`snippetCardCount`, `snippetCharacterCount`, `snippetBudgetReached`.
+
+### 013. Step 5A jako prompt i parser bez Copilot runtime
+
+Status: accepted.
+
+Decyzja: Step 5A dodaje feature-local AI response contract, parser odpowiedzi
+oraz canonical prompt preparation, ale nie uruchamia jeszcze Copilota i nie
+zmienia `aiplatform`.
+
+`FlowExplorerPromptPreparationService` sklada prompt z sekcji:
+
+- non-negotiable rules,
+- user request i `userInstructions` jako dane, nie policy,
+- deterministic context coverage,
+- compact flow manifest,
+- snippet cards,
+- known limitations,
+- required JSON response contract.
+
+`FlowExplorerAiResponseParser` akceptuje czysty JSON albo fenced JSON. Gdy
+odpowiedz AI nie jest poprawnym JSON-em, zwraca kontrolowany fallback z
+`visibilityLimits` i `confidence=low`, zamiast przepuszczac niestrukturalna
+odpowiedz dalej.
+
+Powod: przed podpieciem kosztownego runtime AI potrzebujemy stabilnego kontraktu
+wejscia/wyjscia, testow parsera i gwarancji, ze `userInstructions` nie moga
+rozbijac schema ani polityki tools.
+
+### 014. Step 5B jako artifacts przygotowane pod CopilotRunRequest
+
+Status: accepted.
+
+Decyzja: Flow Explorer ma feature-local `FlowExplorerArtifactService`, ktory
+renderuje logiczne artefakty w neutralnym modelu `CopilotRenderedArtifact`.
+`FlowExplorerPromptPreparation` zwraca teraz:
+
+- `prompt`,
+- `artifacts`,
+- `artifactContents`.
+
+Artefakty MVP:
+
+- `flow-explorer/context-snapshot.json`,
+- `flow-explorer/compact-flow-manifest.md`,
+- `flow-explorer/snippet-cards.md`,
+- `flow-explorer/coverage.json`,
+- `flow-explorer/response-contract.json`.
+
+Prompt nadal osadza najwazniejsze tresci inline. `artifactContents` sa
+przygotowane jako payload dla przyszlego `CopilotRunRequest`, ale Step 5B nie
+zmienia delivery mode, nie wlacza SDK attachments i nie uruchamia AI.
+
+Powod: krok 6 powinien byc integracja runtime, a nie mieszanka decyzji o tym,
+jak renderowac kontekst. Artefakty daja stabilna granice miedzy "co wysylamy
+do AI" a "jak odpalamy Copilota".
+
+### 015. Step 6A jako Copilot runtime skeleton bez AI execution
+
+Status: accepted.
+
+Decyzja: Flow Explorer ma feature-local szkic integracji z runtime Copilota w
+`features.flowexplorer.ai.copilot.preparation`. Krok 6A buduje:
+
+- `FlowExplorerCopilotToolAccessPolicy` z allowlista GitLab,
+  Operational Context i `record_tool_feedback`,
+- `FlowExplorerCopilotToolSessionContextFactory` z hidden scope dla systemu,
+  endpointu, GitLaba, repozytorium, preset/focus areas i artefaktow,
+- `FlowExplorerCopilotSessionConfigRequestFactory` bez skill directories w
+  6A; Step 7 wlacza nazwane katalogi skilli Flow Explorera,
+- `FlowExplorerCopilotRunRequestAssembler`, ktory sklada `CopilotRunRequest`
+  z promptem i `artifactContents`, ale nie uruchamia AI i nie zmienia job
+  lifecycle.
+
+MVP policy nie wlacza DB tools ani Elasticsearch tools. Skille Flow Explorera
+sa nadal osobnym krokiem 7, zeby nie mieszac mechaniki runtime z playbookami
+uzycia tools.
+
+Boundary finding: neutralny `GitLabToolScope` w `agenttools.gitlab` nadal
+wymaga hidden `correlationId`, co jest dziedzictwem incident analysis. Flow
+Explorer przekazuje w tym polu `runReference` jako kompatybilny scope runtime,
+ale docelowo GitLab tools powinny wymagac tylko neutralnego run/job id oraz
+GitLab group/ref.
+
+Powod: `CopilotRunRequest` okazal sie wystarczajacy dla drugiego feature'u bez
+zmian w `aiplatform`, a feature-owned assembler/policy potwierdzaja granice
+pakietow. Nie odpalamy jeszcze AI, bo najpierw trzeba dodac skille,
+execution gateway, parser wyniku i sinks job state.
+
+### 016. Step 7 jako feature-scoped runtime skills
+
+Status: accepted.
+
+Decyzja: Flow Explorer ma cztery runtime skille w
+`src/main/resources/copilot/skills`:
+
+- `flow-explorer-orchestrator`,
+- `flow-explorer-gitlab-tools`,
+- `flow-explorer-operational-context-tools`,
+- `flow-explorer-result-contract`.
+
+Skille sa po polsku, ale zachowuja techniczne identyfikatory tooli, artefaktow,
+pol JSON, klas i endpointow. Orkiestrator stabilizuje flow spine na podstawie
+artefaktow i dopiero potem wybiera poglebienia. GitLab skill preferuje focused
+reads, outline i chunks zamiast dumpow klas. Operational Context skill daje
+system/process/ownership/glossary/handoff, ale nie jest dowodem zachowania
+kodu. Result contract skill wymusza JSON-only i audience analityk/tester.
+
+Boundary finding: globalny `CopilotSkillRuntimeLoader` zwraca root
+`copilot/skills`, wiec po dodaniu drugiego feature'u jeden root moglby
+przypadkowo wystawic skille wielu feature'ow w jednej sesji. Dodany zostal
+neutralny `CopilotNamedSkillDirectoryResolver`, ktory wybiera konkretne
+katalogi po nazwie skilla. Flow Explorer session config dostaje tylko
+`flow-explorer-*`, a incident session config zostal doprecyzowany do swoich
+`incident-*` skilli.
+
+Powod: skills sa czescia kontraktu konkretnego feature'u. Platforma moze
+przygotowac runtime directories, ale wybor konkretnych skilli musi pozostac
+po stronie feature'a.
+
+### 017. Step 6B jako AI execution w job state
+
+Status: accepted.
+
+Decyzja: `POST /flow-explorer/jobs` uruchamia teraz job asynchronicznie.
+Snapshot startowy moze byc w `COLLECTING_CONTEXT`, a docelowy flow joba to:
+
+- `DETERMINISTIC_CONTEXT`: backend buduje context snapshot, compact manifest,
+  snippet cards, artifacts i canonical prompt,
+- `AI_ANALYSIS`: Flow Explorer sklada `CopilotRunRequest`, przygotowuje sesje
+  przez `CopilotRunPreparationService`, uruchamia `CopilotSdkExecutionGateway`
+  i parsuje odpowiedz przez `FlowExplorerAiResponseParser`,
+- `COMPLETED`: `result` zawiera summary pola dotychczasowego DTO oraz pelny
+  `FlowExplorerAiResponse` w `aiResponse`, a takze `usage`,
+- `FAILED`: deterministic context i prompt pozostaja w snapshot, a blad trafia
+  do `errorCode`/`errorMessage`.
+
+Tool evidence, `record_tool_feedback` i activity events sa przypiete do
+`FlowExplorerJobState` przez runtime sinks. Nie dodano follow-up chatu,
+DB/Elasticsearch tools ani dodatkowego job frameworka.
+
+Powod: Flow Explorer dostaje realny wynik AI, ale nadal uzywa platformowego
+runtime jako mechaniki. Feature pozostaje wlascicielem promptu, policy,
+hidden contextu, parsera i job projection.
+
+### 018. Step 9 jako lazy frontend skeleton
+
+Status: accepted.
+
+Decyzja: Follow-up chat zostaje odlozony na koniec MVP. Po Step 6B kolejnym
+krokiem jest frontendowy skeleton Flow Explorera, aby szybciej zweryfikowac
+end-to-end sciezke: system -> endpoint -> user instructions -> job -> wynik.
+
+UI dostaje route `/flow-explorer` w sekcji `Analysis Features`, odblokowany
+sidebar item i lazy-loaded page component. Backend dodaje forward
+`/flow-explorer/**` tylko dla deep linkow SPA; feature API pozostaje pod tym
+samym prefiksem i wygrywa bardziej specyficznym mappingiem kontrolerow.
+
+Frontend ma feature-local modele i `FlowExplorerApiService` dla istniejacych
+endpointow:
+
+- `GET /flow-explorer/systems`,
+- `GET /flow-explorer/systems/{systemId}/endpoints`,
+- `POST /flow-explorer/jobs`,
+- `GET /flow-explorer/jobs/{jobId}`.
+
+Szkielet pokazuje tylko basic empty/loading/error states katalogu systemow i
+placeholdery nastepnych etapow. Nie implementuje jeszcze searchable selecta,
+endpoint comboboxa, tooltipow, focus areas, prompt preview, job polling ani
+result view.
+
+Powod: UI granica HTTP i routing sa gotowe pod kolejne kroki, ale ekran nie
+udaje jeszcze gotowego workflow. Child components wydzielimy dopiero wtedy,
+gdy Step 10 wprowadzi realne kontrolki wyboru systemu i endpointu.
+
+### 019. Step 10A jako endpoint discovery UI
+
+Status: accepted.
+
+Decyzja: Step 10 dzielimy na 10A i pozniejszy detail/result polish. 10A
+dostarcza realny discovery workflow w UI:
+
+- searchable system list ladowany z `GET /flow-explorer/systems`,
+- branch/ref input z defaultem pobieranym z nowego feature endpointu
+  `GET /flow-explorer/config`,
+- automatyczne pobranie endpoint inventory po wyborze systemu,
+- lokalne filtrowanie endpointow po metodzie, path, opisie, operationId,
+  tagach i handlerze,
+- compact coverage preview: resolved ref, repozytoria, pliki i endpoint count,
+- endpoint info popover z handlerem, source line range, request/response types,
+  parametrami i ograniczeniami,
+- selected endpoint summary jako lekka kotwica pod Step 11.
+
+Nie dodajemy jeszcze endpoint details drawer. Popover ma ukrywac szczegoly pod
+ikona info, a ekran ma pozostac cichy i gesty. Drawer wroci tylko jesli Step 11
+albo przyszle testy UX pokaza, ze operator potrzebuje trwalego porownania raw
+danych endpointu.
+
+Powod: najpierw trzeba zoptymalizowac samo znalezienie endpointu. Pelny drawer
+na tym etapie grozilby zaszumieniem ekranu danymi, ktorych uzytkownik zwykle
+nie bedzie weryfikowal przed uruchomieniem analizy.
+
+### 020. Step 11A jako job execution bridge
+
+Status: accepted.
+
+Decyzja: Step 11 dzielimy na mniejszy krok 11A i pozniejszy result polish.
+11A dostarcza w UI:
+
+- preset dokumentacji jako strukturalne pole `documentationPreset`,
+- focus areas jako ograniczona lista priorytetow `focusAreas`, maksymalnie 4,
+- textarea `User instructions`, ktora nie jest nazywana pelnym promptem,
+- `POST /flow-explorer/jobs` z danymi wybranego systemu, endpointu, branch/ref,
+  presetem, focus areas i `userInstructions`,
+- polling `GET /flow-explorer/jobs/{jobId}` do statusu `COMPLETED` albo
+  `FAILED`,
+- kompaktowy job state oraz rozwijany `Prepared prompt preview`.
+
+Nie dodajemy jeszcze structured result view, timeline AI/tool evidence ani
+follow-up chatu. Te elementy zostaja kolejnymi krokami, z osobnym opisem
+layoutu i osobna akceptacja.
+
+Powod: uzytkownik moze juz przejsc realna sciezke end-to-end z UI do backend
+joba, a jednoczesnie ekran nie probuje pokazac pelnego wyniku AI zanim
+zaprojektujemy czytelna prezentacje dla analityka/testera.
+
+### 021. Step 11B jako structured result view
+
+Status: accepted.
+
+Decyzja: Step 11B dodaje frontendowy widok wyniku po zakonczeniu joba, bez
+zmiany backendowego kontraktu. UI renderuje:
+
+- summary wyniku: status, confidence, endpoint, branch, intent i audience,
+- visibility limits jako osobny blok,
+- endpoint contract: purpose, parameters, request i response,
+- flow steps z opisem plain-language jako glowna trescia,
+- technical grounding i source refs schowane w `details`, zeby nie zaszumiec
+  ekranu nietechnicznemu odbiorcy,
+- focused findings tylko dla niepustych sekcji: business rules, validations,
+  persistence, external integrations, test scenarios, risks i open questions,
+- source references i usage jako kompaktowy footer.
+
+Gdy backend zwroci `result`, ale `aiResponse` jest `null`, UI pokazuje
+kontrolowany fallback zamiast pustego albo uszkodzonego ekranu.
+
+Nie dodajemy jeszcze AI activity/tool evidence timeline ani follow-up chatu.
+Timeline wymaga osobnego projektu, bo jest przydatny dla transparentnosci, ale
+nie powinien rywalizowac wizualnie z glownym, biznesowo-testerskim wynikiem.
+
+Powod: uzytkownik dostaje czytelny rezultat analizy end-to-end, a szczegoly
+techniczne pozostaja dostepne tylko tam, gdzie pomagaja zaufac wynikowi albo
+przekazac temat dalej.
+
+### 022. Step 11C jako zwijany Analysis trace
+
+Status: accepted.
+
+Decyzja: Step 11C dodaje frontendowy panel `Analysis trace` pod wynikiem
+Flow Explorera, bez zmian backendu. Panel jest zwijany i pokazuje:
+
+- liczniki `aiActivityEvents`, `toolEvidenceSections.items` i `toolFeedback`,
+- tool evidence sections jako provider/category + liczba items,
+- evidence itemy jako title oraz maksymalnie kilka najwazniejszych attributes,
+- chronologicznie posortowane AI activity events: status, title, summary,
+  category/type/tool/timestamp,
+- tool feedback: target tool, usefulness, expected data, confidence, summary
+  i suggested improvement,
+- empty state, gdy backend nie zwrocil trace ani evidence.
+
+Nie pokazujemy raw payloadow ani JSON details jako domyslnej tresci. Panel ma
+byc warstwa transparentnosci i debugowania, nie konkurencyjnym raportem do
+glownego structured result view.
+
+Powod: Flow Explorer powinien budowac zaufanie do wyniku i pokazywac, skad
+pochodza dane, ale odbiorca analityk/tester nie powinien byc zmuszony do
+czytania technicznego przebiegu AI przy kazdym uzyciu.
+
+### 023. Step 11D jako follow-up chat bez JSON-only contractu
+
+Status: accepted.
+
+Decyzja: Follow-up chat Flow Explorera jest feature-owned i dziala dopiero po
+zakonczonym jobie `COMPLETED` z `result`. `POST
+/flow-explorer/jobs/{jobId}/chat/messages` przyjmuje tylko strukturalne pole
+`message` i zwraca aktualny `FlowExplorerJobStateSnapshot`.
+
+Backend buduje `FlowExplorerFollowUpChatRequest` z initial request,
+`FlowExplorerContextSnapshot`, initial `result`, dotychczasowego tool evidence,
+historii rozmowy i nowego pytania. Kazda odpowiedz asystenta uruchamia nowa
+sesje Copilota z tym samym hidden scope i allowlista Flow Explorera.
+
+Initial run nadal uzywa `flow-explorer-result-contract` i wymusza JSON-only
+wynik. Follow-up prompt nie wlacza result-contract skilla i instruuje AI, aby
+odpowiadalo naturalnym jezykiem dla analityka/testera, chyba ze uzytkownik
+wyraznie poprosi o JSON. Tool evidence, activity events i `record_tool_feedback`
+z follow-up sa przypisane do konkretnej odpowiedzi asystenta, a nie mieszane z
+glownym trace'em initial run.
+
+UI pokazuje follow-up chat pod wynikiem i nad zwijanym `Analysis trace`.
+Wiadomosci sa proste: rola, status, tresc i kompaktowe liczniki evidence/events
+dla odpowiedzi, bez raw payloadow na ekranie.
+
+Powod: uzytkownik moze doprecyzowac rezultat bez rozbijania kontraktu initial
+JSON i bez powtarzania kosztownego discovery od zera. Jednoczesnie follow-up
+pozostaje scoped do Flow Explorera i nie przenosi incidentowego chatu jako
+generycznego core.
+
+## Open questions
+
+- [ ] Czy snippet cards V2 maja miec AST enrichment package/class annotations
+  i constructor dependency signals, czy zostawic to dla AI-guided GitLab tools?
+- [ ] Czy result ma miec source refs jako stringi w MVP, czy strukturalny
+  kontrakt z file/method/line/toolCallId?
+- [ ] Czy Flow Explorer ma miec import/export joba w MVP?
+- [ ] Czy DB tools maja wejsc jako V2 focus area "dane runtime", czy zostaja
+  poza tym feature'em?
+- [ ] Czy `GitLabToolScope` powinien zostac zrefaktorowany tak, aby
+  `correlationId` bylo opcjonalne albo zastapione neutralnym run/job id dla
+  feature'ow innych niz incident analysis?

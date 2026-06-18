@@ -1,0 +1,943 @@
+<div class="page-shell flow-explorer-page">
+  <main class="flow-explorer-workspace" aria-labelledby="flowExplorerWorkspaceTitle">
+    <section class="analysis-card flow-explorer-start">
+      <div class="section-heading flow-explorer-start__heading">
+        <div>
+          <p class="section-eyebrow">Flow Explorer</p>
+          <h2 id="flowExplorerWorkspaceTitle">Endpoint documentation workspace</h2>
+          <p class="field-hint">
+            Wybierz system, endpoint i zakres dokumentacji, a AI przygotuje opis flow w jezyku
+            czytelnym dla analityka albo testera.
+          </p>
+        </div>
+        <span [class]="statusPillClass()">{{ catalogState() }}</span>
+      </div>
+    </section>
+
+    <section class="flow-explorer-layout" aria-label="Flow Explorer setup">
+      <aside class="analysis-card flow-explorer-sidebar">
+        <div class="section-heading">
+          <div>
+            <p class="section-eyebrow">Application catalog</p>
+            <h2>System selection</h2>
+          </div>
+          <span class="panel-chip">{{ systemCountLabel() }}</span>
+        </div>
+
+        <label class="form-field">
+          <span class="field-label">Find system</span>
+          <input
+            #systemSearchInput
+            class="text-input"
+            type="search"
+            placeholder="crm, billing, team id"
+            autocomplete="off"
+            spellcheck="false"
+            [value]="systemSearch()"
+            (input)="systemSearch.set(systemSearchInput.value)"
+          />
+        </label>
+
+        @switch (catalogState()) {
+          @case ('loading') {
+            <div class="flow-explorer-skeleton" aria-live="polite">
+              <span class="flow-explorer-skeleton__line"></span>
+              <span class="flow-explorer-skeleton__line"></span>
+              <span class="flow-explorer-skeleton__line flow-explorer-skeleton__line--short"></span>
+            </div>
+          }
+          @case ('error') {
+            <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+              <span class="material-symbols-outlined" aria-hidden="true">error</span>
+              <div>
+                <p>{{ catalogError() }}</p>
+                <button
+                  class="secondary-button secondary-button--compact"
+                  type="button"
+                  (click)="loadSystems()"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          }
+          @case ('ready') {
+            @if (filteredSystems().length > 0) {
+              <div class="flow-explorer-system-list" aria-label="Loaded systems">
+                @for (system of filteredSystems(); track system.systemId) {
+                  <button
+                    type="button"
+                    [class]="systemRowClass(system)"
+                    [attr.aria-pressed]="system.systemId === selectedSystemId()"
+                    (click)="selectSystem(system)"
+                  >
+                    <span class="flow-explorer-system-row__body">
+                      <span class="flow-explorer-system-row__title">
+                        {{ system.name || system.systemId }}
+                      </span>
+                      <span class="flow-explorer-system-row__summary">
+                        {{ system.summary || system.systemId }}
+                      </span>
+                      <span class="flow-explorer-system-row__meta">
+                        <span>{{ system.kind || 'system' }}</span>
+                        <span>{{ system.lifecycleStatus || 'status n/a' }}</span>
+                        <span>{{ system.ownerTeamIds.join(', ') || 'owner n/a' }}</span>
+                      </span>
+                    </span>
+                    <span class="panel-chip">{{ system.repositoryCount }} repos</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">Brak systemow dla aktualnego filtra.</div>
+            }
+          }
+          @default {
+            <div class="empty-state">Katalog systemow jest pusty.</div>
+          }
+        }
+      </aside>
+
+      <section class="flow-explorer-main">
+        <section class="analysis-card flow-explorer-controls">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Endpoint inventory</p>
+              <h2>Endpoint selection</h2>
+              @if (selectedSystem(); as system) {
+                <p class="field-hint">{{ system.name || system.systemId }}</p>
+              }
+            </div>
+            <span [class]="endpointStatusPillClass()">{{ endpointState() }}</span>
+          </div>
+
+          <div class="flow-explorer-control-grid">
+            <label class="form-field">
+              <span class="field-label">Branch / Ref</span>
+              <input
+                #branchInput
+                class="text-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                [value]="branch()"
+                (input)="onBranchChanged(branchInput.value)"
+              />
+              @if (configError()) {
+                <span class="field-hint flow-explorer-warning">{{ configError() }}</span>
+              }
+            </label>
+
+            <label class="form-field">
+              <span class="field-label">Find endpoint</span>
+              <input
+                #endpointSearchInput
+                class="text-input"
+                type="search"
+                placeholder="GET /customers"
+                autocomplete="off"
+                spellcheck="false"
+                [value]="endpointSearch()"
+                [disabled]="endpoints().length === 0"
+                (input)="endpointSearch.set(endpointSearchInput.value)"
+              />
+            </label>
+
+            <div class="flow-explorer-control-actions">
+              <button
+                class="secondary-button"
+                type="button"
+                [disabled]="!selectedSystem() || endpointState() === 'loading'"
+                (click)="loadEndpointInventory()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+                <span>Load endpoints</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        @if (endpointInventory(); as inventory) {
+          <section class="analysis-card flow-explorer-coverage" aria-label="Endpoint inventory coverage">
+            <div class="flow-explorer-coverage__grid">
+              <div>
+                <span class="field-label">Resolved ref</span>
+                <strong>{{ inventory.resolvedRef || branch() }}</strong>
+              </div>
+              <div>
+                <span class="field-label">Repositories</span>
+                <strong>{{ inventory.scannedRepositoryCount }} / {{ inventory.repositoryCount }}</strong>
+              </div>
+              <div>
+                <span class="field-label">Files scanned</span>
+                <strong>{{ inventory.scannedFileCount }} / {{ inventory.candidateFileCount }}</strong>
+              </div>
+              <div>
+                <span class="field-label">Endpoints</span>
+                <strong>{{ endpointCountLabel() }}</strong>
+              </div>
+            </div>
+
+            @if (inventory.limitations.length > 0 || inventory.scannedFileLimitReached) {
+              <div class="flow-explorer-limitations">
+                @if (inventory.scannedFileLimitReached) {
+                  <span class="panel-chip panel-chip--warning">scan limit</span>
+                }
+                @for (limitation of inventory.limitations; track limitation) {
+                  <span class="panel-chip panel-chip--warning">{{ limitation }}</span>
+                }
+              </div>
+            }
+          </section>
+        }
+
+        <section class="analysis-card flow-explorer-endpoints">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Endpoint list</p>
+              <h2>{{ filteredEndpointCountLabel() }}</h2>
+            </div>
+            @if (selectedEndpoint(); as endpoint) {
+              <span class="panel-chip">{{ endpointMethodLabel(endpoint) }}</span>
+            }
+          </div>
+
+          @switch (endpointState()) {
+            @case ('idle') {
+              <div class="empty-state">
+                @if (selectedSystem()) {
+                  Wczytaj endpointy dla wybranego branch/ref.
+                } @else {
+                  Wybierz system z katalogu.
+                }
+              </div>
+            }
+            @case ('loading') {
+              <div class="flow-explorer-skeleton" aria-live="polite">
+                <span class="flow-explorer-skeleton__line"></span>
+                <span class="flow-explorer-skeleton__line"></span>
+                <span class="flow-explorer-skeleton__line"></span>
+              </div>
+            }
+            @case ('error') {
+              <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                <p>{{ endpointError() }}</p>
+              </div>
+            }
+            @case ('empty') {
+              <div class="empty-state">Brak endpointow dla wybranego systemu i branch/ref.</div>
+            }
+            @case ('ready') {
+              @if (filteredEndpoints().length > 0) {
+                <div class="flow-explorer-endpoint-list" aria-label="Endpoint options">
+                  @for (endpoint of filteredEndpoints(); track endpoint.endpointId) {
+                    <article [class]="endpointRowClass(endpoint)">
+                      <button
+                        class="flow-explorer-endpoint-row__select"
+                        type="button"
+                        [attr.aria-pressed]="endpoint.endpointId === selectedEndpointId()"
+                        (click)="selectEndpoint(endpoint)"
+                      >
+                        <span class="flow-explorer-endpoint-row__method">
+                          {{ endpointMethodLabel(endpoint) }}
+                        </span>
+                        <span class="flow-explorer-endpoint-row__body">
+                          <span class="flow-explorer-endpoint-row__path">{{ endpoint.path }}</span>
+                          <span class="flow-explorer-endpoint-row__summary">
+                            {{ endpointDescription(endpoint) }}
+                          </span>
+                        </span>
+                      </button>
+
+                      <div class="flow-explorer-endpoint-info">
+                        <button
+                          class="flow-explorer-info-button"
+                          type="button"
+                          aria-label="Endpoint details"
+                          title="Endpoint details"
+                        >
+                          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        </button>
+                        <section class="flow-explorer-info-popover" role="tooltip">
+                          <div>
+                            <p class="section-eyebrow">Details</p>
+                            <h3>{{ endpoint.operationId || endpoint.handlerMethod || endpoint.path }}</h3>
+                          </div>
+
+                          @if (endpoint.tooltipDetails?.description || endpoint.description) {
+                            <p>
+                              {{ endpoint.tooltipDetails?.description || endpoint.description }}
+                            </p>
+                          }
+
+                          <dl>
+                            @if (endpoint.controllerClass || endpoint.handlerMethod) {
+                              <div>
+                                <dt>Handler</dt>
+                                <dd>{{ endpoint.controllerClass }}.{{ endpoint.handlerMethod }}</dd>
+                              </div>
+                            }
+                            @if (endpointSourceLabel(endpoint.source)) {
+                              <div>
+                                <dt>Source</dt>
+                                <dd>
+                                  {{ endpointSourceLabel(endpoint.source) }}
+                                  @if (endpointLineLabel(endpoint.source)) {
+                                    <span>{{ endpointLineLabel(endpoint.source) }}</span>
+                                  }
+                                </dd>
+                              </div>
+                            }
+                            @if (endpoint.tooltipDetails?.requestTypes?.length) {
+                              <div>
+                                <dt>Request</dt>
+                                <dd>{{ endpoint.tooltipDetails?.requestTypes?.join(', ') }}</dd>
+                              </div>
+                            }
+                            @if (endpoint.tooltipDetails?.responseTypes?.length) {
+                              <div>
+                                <dt>Response</dt>
+                                <dd>{{ endpoint.tooltipDetails?.responseTypes?.join(', ') }}</dd>
+                              </div>
+                            }
+                          </dl>
+
+                          @if ((endpoint.tooltipDetails?.parameters?.length || endpoint.parameters.length) > 0) {
+                            <div class="flow-explorer-info-list">
+                              <span class="field-label">Parameters</span>
+                              @for (
+                                parameter of endpoint.tooltipDetails?.parameters || endpoint.parameters;
+                                track parameter.name + parameter.in
+                              ) {
+                                <p>
+                                  <strong>{{ parameterLabel(parameter) }}</strong>
+                                  @if (parameter.description) {
+                                    <span>{{ parameter.description }}</span>
+                                  }
+                                </p>
+                              }
+                            </div>
+                          }
+
+                          @if (
+                            (endpoint.tooltipDetails?.limitations?.length || endpoint.limitations.length) > 0
+                          ) {
+                            <div class="flow-explorer-info-list">
+                              <span class="field-label">Limitations</span>
+                              @for (
+                                limitation of endpoint.tooltipDetails?.limitations || endpoint.limitations;
+                                track limitation
+                              ) {
+                                <p>{{ limitation }}</p>
+                              }
+                            </div>
+                          }
+                        </section>
+                      </div>
+                    </article>
+                  }
+                </div>
+              } @else {
+                <div class="empty-state">Brak endpointow dla aktualnego filtra.</div>
+              }
+            }
+          }
+        </section>
+
+        @if (selectedEndpoint(); as endpoint) {
+          <section class="analysis-card flow-explorer-selection" aria-label="Selected endpoint">
+            <div>
+              <p class="section-eyebrow">Selected endpoint</p>
+              <h2>{{ endpointMethodLabel(endpoint) }} {{ endpoint.path }}</h2>
+              <p>{{ endpointDescription(endpoint) }}</p>
+            </div>
+          </section>
+        }
+
+        <section class="analysis-card flow-explorer-runner" aria-label="Flow Explorer run setup">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Documentation scope</p>
+              <h2>Analysis request</h2>
+              <p class="field-hint">
+                Preset ustawia intencje, a focus areas tylko priorytetyzuja pierwsze poglebienia.
+              </p>
+            </div>
+            <span class="panel-chip">{{ focusAreas().length }} / {{ maxFocusAreas }}</span>
+          </div>
+
+          <div class="flow-explorer-choice-group">
+            <span class="field-label">Preset</span>
+            <div class="flow-explorer-choice-grid">
+              @for (preset of documentationPresets; track preset.value) {
+                <button
+                  type="button"
+                  [class]="presetButtonClass(preset.value)"
+                  [disabled]="isSubmitting() || isJobActive()"
+                  [attr.aria-pressed]="documentationPreset() === preset.value"
+                  (click)="selectPreset(preset.value)"
+                >
+                  <span>{{ preset.label }}</span>
+                  <small>{{ preset.hint }}</small>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="flow-explorer-choice-group">
+            <div class="flow-explorer-choice-group__heading">
+              <span class="field-label">Focus areas</span>
+              @if (focusAreaLimitReached()) {
+                <span class="field-hint">Limit {{ maxFocusAreas }} priorytetow.</span>
+              }
+            </div>
+            <div class="flow-explorer-focus-grid">
+              @for (focusArea of focusAreaOptions; track focusArea.value) {
+                <button
+                  type="button"
+                  [class]="focusAreaButtonClass(focusArea.value)"
+                  [disabled]="
+                    isSubmitting() ||
+                    isJobActive() ||
+                    (!isFocusAreaSelected(focusArea.value) && focusAreaLimitReached())
+                  "
+                  [attr.aria-pressed]="isFocusAreaSelected(focusArea.value)"
+                  (click)="toggleFocusArea(focusArea.value)"
+                >
+                  <span>{{ focusArea.label }}</span>
+                  <small>{{ focusArea.hint }}</small>
+                </button>
+              }
+            </div>
+          </div>
+
+          <label class="form-field">
+            <span class="field-label">Doprecyzuj oczekiwany opis</span>
+            <textarea
+              #instructionsInput
+              class="text-input flow-explorer-textarea"
+              rows="5"
+              placeholder="Np. skup sie na scenariuszach testowych dla walidacji statusu klienta."
+              spellcheck="false"
+              [value]="userInstructions()"
+              [disabled]="isSubmitting() || isJobActive()"
+              (input)="onUserInstructionsChanged(instructionsInput.value)"
+            ></textarea>
+            <span class="field-hint">
+              To pole doprecyzowuje oczekiwania uzytkownika; canonical prompt i kontrakt wyniku
+              buduje backend.
+            </span>
+          </label>
+
+          <div class="flow-explorer-run-actions">
+            <button class="primary-button" type="button" [disabled]="!canStartJob()" (click)="startJob()">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              <span>
+                @if (isSubmitting()) {
+                  Starting...
+                } @else if (isJobActive()) {
+                  Running...
+                } @else {
+                  Run Flow Explorer
+                }
+              </span>
+            </button>
+            @if (!selectedEndpoint()) {
+              <span class="field-hint">Wybierz endpoint, aby uruchomic analize.</span>
+            }
+          </div>
+        </section>
+
+        @if (job() || jobError() || isSubmitting()) {
+          <section class="analysis-card flow-explorer-job" aria-label="Flow Explorer job state">
+            <div class="section-heading flow-explorer-job__header">
+              <div>
+                <p class="section-eyebrow">Job state</p>
+                <h2>
+                  @if (job(); as snapshot) {
+                    {{ snapshot.jobId }}
+                  } @else {
+                    Preparing request
+                  }
+                </h2>
+              </div>
+              @if (job(); as snapshot) {
+                <span [class]="jobStatusPillClass(snapshot.status)">{{ snapshot.status }}</span>
+              } @else {
+                <span class="status-pill status-pill--running">starting</span>
+              }
+            </div>
+
+            @if (jobError()) {
+              <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                <p>{{ jobError() }}</p>
+              </div>
+            }
+
+            @if (job(); as snapshot) {
+              <div class="flow-explorer-job__grid">
+                <div>
+                  <span class="field-label">Current step</span>
+                  <strong>{{ snapshot.currentStepLabel || snapshot.currentStepCode || snapshot.status }}</strong>
+                </div>
+                <div>
+                  <span class="field-label">Endpoint</span>
+                  <strong>{{ snapshot.httpMethod }} {{ snapshot.endpointPath }}</strong>
+                </div>
+                <div>
+                  <span class="field-label">Branch</span>
+                  <strong>{{ snapshot.branch || branch() }}</strong>
+                </div>
+                <div>
+                  <span class="field-label">AI options</span>
+                  <strong>{{ snapshot.aiModel || 'default' }} / {{ snapshot.reasoningEffort || 'default' }}</strong>
+                </div>
+              </div>
+
+              @if (snapshot.errorMessage) {
+                <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  <p>{{ snapshot.errorMessage }}</p>
+                </div>
+              }
+
+              @if (snapshot.preparedPrompt) {
+                <details class="flow-explorer-prompt-preview">
+                  <summary>
+                    <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+                    <span>Prepared prompt preview</span>
+                  </summary>
+                  <pre>{{ snapshot.preparedPrompt }}</pre>
+                </details>
+              }
+            }
+          </section>
+        }
+
+        @if (job()?.result; as result) {
+          <section class="analysis-card flow-explorer-result" aria-label="Flow Explorer result">
+            <div class="section-heading flow-explorer-result__heading">
+              <div>
+                <p class="section-eyebrow">AI result</p>
+                <h2>{{ result.httpMethod }} {{ result.endpointPath }}</h2>
+                <p class="field-hint">{{ result.userIntentSummary || result.audienceSummary }}</p>
+              </div>
+              <div class="flow-explorer-result__badges">
+                <span [class]="jobStatusPillClass(result.status)">{{ result.status }}</span>
+                <span [class]="confidencePillClass(result.aiResponse?.confidence || result.confidence)">
+                  {{ result.aiResponse?.confidence || result.confidence || 'confidence n/a' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flow-explorer-result-summary">
+              <div>
+                <span class="field-label">Intent</span>
+                <p>{{ result.aiResponse?.userIntentSummary || result.userIntentSummary || 'n/a' }}</p>
+              </div>
+              <div>
+                <span class="field-label">Audience</span>
+                <p>{{ result.aiResponse?.audienceSummary || result.audienceSummary || 'n/a' }}</p>
+              </div>
+              <div>
+                <span class="field-label">Branch</span>
+                <p>{{ result.branch || branch() }}</p>
+              </div>
+            </div>
+
+            @if (hasItems(result.visibilityLimits)) {
+              <div class="flow-explorer-result-band">
+                <span class="field-label">Visibility limits</span>
+                <ul>
+                  @for (limit of result.visibilityLimits; track $index) {
+                    <li>{{ limit }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (result.aiResponse; as ai) {
+              @if (ai.endpointContract; as contract) {
+                <section class="flow-explorer-result-block" aria-label="Endpoint contract">
+                  <div class="flow-explorer-result-block__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">description</span>
+                    <div>
+                      <span class="field-label">Endpoint contract</span>
+                      <h3>{{ contract.method || result.httpMethod }} {{ contract.path || result.endpointPath }}</h3>
+                    </div>
+                  </div>
+                  @if (contract.purpose) {
+                    <p>{{ contract.purpose }}</p>
+                  }
+                  <div class="flow-explorer-contract-grid">
+                    @if (hasItems(contract.parameters)) {
+                      <div>
+                        <span class="field-label">Parameters</span>
+                        <ul>
+                          @for (parameter of contract.parameters; track $index) {
+                            <li>{{ parameter }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                    @if (hasItems(contract.request)) {
+                      <div>
+                        <span class="field-label">Request</span>
+                        <ul>
+                          @for (request of contract.request; track $index) {
+                            <li>{{ request }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                    @if (hasItems(contract.response)) {
+                      <div>
+                        <span class="field-label">Response</span>
+                        <ul>
+                          @for (response of contract.response; track $index) {
+                            <li>{{ response }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+
+              @if (hasItems(ai.flowSteps)) {
+                <section class="flow-explorer-result-block" aria-label="Flow steps">
+                  <div class="flow-explorer-result-block__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                    <div>
+                      <span class="field-label">Flow</span>
+                      <h3>Step by step</h3>
+                    </div>
+                  </div>
+                  <div class="flow-explorer-flow-steps">
+                    @for (step of ai.flowSteps; track step.order + step.title) {
+                      <article class="flow-explorer-flow-step">
+                        <span class="flow-explorer-flow-step__number">{{ step.order }}</span>
+                        <div>
+                          <h4>{{ step.title }}</h4>
+                          <p>{{ step.plainLanguage }}</p>
+                          @if (step.technicalGrounding || hasItems(step.sourceRefs)) {
+                            <details>
+                              <summary>Technical grounding</summary>
+                              @if (step.technicalGrounding) {
+                                <p>{{ step.technicalGrounding }}</p>
+                              }
+                              @if (hasItems(step.sourceRefs)) {
+                                <div class="flow-explorer-chip-list">
+                                  @for (sourceRef of step.sourceRefs; track $index) {
+                                    <span class="panel-chip">{{ sourceRef }}</span>
+                                  }
+                                </div>
+                              }
+                            </details>
+                          }
+                        </div>
+                      </article>
+                    }
+                  </div>
+                </section>
+              }
+
+              @if (resultSections().length > 0) {
+                <section class="flow-explorer-result-block" aria-label="Focused findings">
+                  <div class="flow-explorer-result-block__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+                    <div>
+                      <span class="field-label">Focused findings</span>
+                      <h3>What matters for this request</h3>
+                    </div>
+                  </div>
+                  <div class="flow-explorer-section-grid">
+                    @for (section of resultSections(); track section.title) {
+                      <section class="flow-explorer-result-subsection">
+                        <h4>{{ section.title }}</h4>
+                        <ul>
+                          @for (item of section.items; track $index) {
+                            <li>{{ item }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                  </div>
+                </section>
+              }
+
+              @if (hasItems(ai.sourceReferences)) {
+                <section class="flow-explorer-result-block" aria-label="Source references">
+                  <div class="flow-explorer-result-block__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+                    <div>
+                      <span class="field-label">Sources</span>
+                      <h3>References used by AI</h3>
+                    </div>
+                  </div>
+                  <div class="flow-explorer-chip-list">
+                    @for (sourceReference of ai.sourceReferences; track $index) {
+                      <span class="panel-chip">{{ sourceReference }}</span>
+                    }
+                  </div>
+                </section>
+              }
+            } @else {
+              <div class="flow-explorer-message flow-explorer-message--warning" role="status">
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                <p>AI returned a result, but the structured response body is not available.</p>
+              </div>
+            }
+
+            @if (result.usage; as usage) {
+              <div class="flow-explorer-result-usage" aria-label="AI usage">
+                <span class="panel-chip">Tokens {{ formatTokenCount(usage.totalTokens) }}</span>
+                <span class="panel-chip">Input {{ formatTokenCount(usage.inputTokens) }}</span>
+                <span class="panel-chip">Output {{ formatTokenCount(usage.outputTokens) }}</span>
+                <span class="panel-chip">Cost {{ formatCost(usage.cost) }}</span>
+              </div>
+            }
+          </section>
+        }
+
+        @if (job()?.result || chatMessages().length > 0) {
+          <section class="analysis-card flow-explorer-chat" aria-label="Flow Explorer follow-up chat">
+            <div class="section-heading flow-explorer-chat__heading">
+              <div>
+                <p class="section-eyebrow">Follow-up chat</p>
+                <h2>Ask about this endpoint</h2>
+                <p class="field-hint">
+                  Pytania korzystaja z wyniku, deterministic contextu i dozwolonych tools dla Flow Explorera.
+                </p>
+              </div>
+              @if (hasActiveChatMessage()) {
+                <span class="status-pill status-pill--running">answering</span>
+              } @else {
+                <span class="panel-chip">{{ chatMessages().length }} messages</span>
+              }
+            </div>
+
+            @if (chatMessages().length > 0) {
+              <div class="flow-explorer-chat-list" aria-live="polite">
+                @for (message of chatMessages(); track message.id) {
+                  <article [class]="chatMessageClass(message)">
+                    <header>
+                      <span class="flow-explorer-chat-message__meta">{{ chatMessageMeta(message) }}</span>
+                      <span [class]="jobStatusPillClass(message.status)">{{ message.status }}</span>
+                    </header>
+
+                    @if (message.content) {
+                      <p>{{ message.content }}</p>
+                    } @else if (message.status === 'IN_PROGRESS') {
+                      <p class="field-hint">AI przygotowuje odpowiedz...</p>
+                    }
+
+                    @if (message.errorMessage) {
+                      <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                        <p>{{ message.errorMessage }}</p>
+                      </div>
+                    }
+
+                    @if (
+                      chatEvidenceItemCount(message) > 0 ||
+                      message.aiActivityEvents.length > 0 ||
+                      message.toolFeedback.length > 0
+                    ) {
+                      <div class="flow-explorer-chat-message__trace">
+                        @if (chatEvidenceItemCount(message) > 0) {
+                          <span class="panel-chip">{{ chatEvidenceItemCount(message) }} evidence items</span>
+                        }
+                        @if (message.aiActivityEvents.length > 0) {
+                          <span class="panel-chip">{{ message.aiActivityEvents.length }} events</span>
+                        }
+                        @if (message.toolFeedback.length > 0) {
+                          <span class="panel-chip">{{ message.toolFeedback.length }} feedback</span>
+                        }
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">Brak pytan follow-up dla tej analizy.</div>
+            }
+
+            @if (chatError()) {
+              <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                <p>{{ chatError() }}</p>
+              </div>
+            }
+
+            <div class="flow-explorer-chat-composer">
+              <label class="form-field">
+                <span class="field-label">Pytanie follow-up</span>
+                <textarea
+                  #chatInput
+                  class="text-input flow-explorer-chat-composer__textarea"
+                  rows="4"
+                  placeholder="Np. ktore walidacje warto pokryc testami regresji?"
+                  spellcheck="false"
+                  [value]="chatMessage()"
+                  [disabled]="!isChatAvailable() || isSendingChat() || hasActiveChatMessage()"
+                  (input)="onChatMessageChanged(chatInput.value)"
+                ></textarea>
+              </label>
+              <button
+                class="primary-button"
+                type="button"
+                [disabled]="!canSendChat()"
+                (click)="sendChatMessage()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">send</span>
+                <span>
+                  @if (isSendingChat() || hasActiveChatMessage()) {
+                    Sending...
+                  } @else {
+                    Send
+                  }
+                </span>
+              </button>
+            </div>
+          </section>
+        }
+
+        @if (job(); as snapshot) {
+          <section class="analysis-card flow-explorer-trace" aria-label="Analysis trace">
+            <details>
+              <summary class="flow-explorer-trace__summary">
+                <div>
+                  <p class="section-eyebrow">Analysis trace</p>
+                  <h2>AI activity and tool evidence</h2>
+                  <p class="field-hint">
+                    Transparentny zapis pracy AI, tool calls i feedbacku. Glowny wynik pozostaje powyzej.
+                  </p>
+                </div>
+                <div class="flow-explorer-trace__counters">
+                  <span class="panel-chip">{{ snapshot.aiActivityEvents.length }} events</span>
+                  <span class="panel-chip">{{ toolEvidenceItemCount() }} evidence items</span>
+                  <span class="panel-chip">{{ snapshot.toolFeedback.length }} feedback</span>
+                  <span class="material-symbols-outlined flow-explorer-trace__icon" aria-hidden="true">
+                    expand_more
+                  </span>
+                </div>
+              </summary>
+
+              <div class="flow-explorer-trace__body">
+                @if (hasTraceData()) {
+                  @if (snapshot.toolEvidenceSections.length > 0) {
+                    <section class="flow-explorer-trace-block" aria-label="Tool evidence">
+                      <div class="flow-explorer-trace-block__heading">
+                        <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
+                        <div>
+                          <span class="field-label">Tool evidence</span>
+                          <h3>Captured context from tools</h3>
+                        </div>
+                      </div>
+                      <div class="flow-explorer-evidence-list">
+                        @for (section of snapshot.toolEvidenceSections; track section.provider + section.category) {
+                          <details class="flow-explorer-evidence-section">
+                            <summary>
+                              <span>{{ evidenceSectionTitle(section.provider, section.category) }}</span>
+                              <span class="panel-chip">{{ section.items.length }} items</span>
+                            </summary>
+                            <div class="flow-explorer-evidence-items">
+                              @for (item of section.items; track item.title + $index) {
+                                <article class="flow-explorer-evidence-item">
+                                  <h4>{{ item.title }}</h4>
+                                  @if (evidenceAttributePreview(item).length > 0) {
+                                    <dl>
+                                      @for (attribute of evidenceAttributePreview(item); track attribute.name + $index) {
+                                        <div>
+                                          <dt>{{ attribute.name }}</dt>
+                                          <dd>{{ attribute.value }}</dd>
+                                        </div>
+                                      }
+                                    </dl>
+                                  }
+                                  @if (item.attributes.length > evidenceAttributePreview(item).length) {
+                                    <span class="field-hint">
+                                      {{ item.attributes.length - evidenceAttributePreview(item).length }}
+                                      more attributes hidden in compact view.
+                                    </span>
+                                  }
+                                </article>
+                              }
+                            </div>
+                          </details>
+                        }
+                      </div>
+                    </section>
+                  }
+
+                  @if (sortedAiActivityEvents().length > 0) {
+                    <section class="flow-explorer-trace-block" aria-label="AI activity events">
+                      <div class="flow-explorer-trace-block__heading">
+                        <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+                        <div>
+                          <span class="field-label">AI activity</span>
+                          <h3>Chronological runtime events</h3>
+                        </div>
+                      </div>
+                      <div class="flow-explorer-activity-list">
+                        @for (event of sortedAiActivityEvents(); track event.eventId || $index) {
+                          <article class="flow-explorer-activity-item">
+                            <span [class]="jobStatusPillClass(event.status)">{{ event.status || 'INFO' }}</span>
+                            <div>
+                              <h4>{{ activityEventTitle(event) }}</h4>
+                              @if (event.summary) {
+                                <p>{{ event.summary }}</p>
+                              }
+                              @if (activityEventMeta(event)) {
+                                <span class="field-hint">{{ activityEventMeta(event) }}</span>
+                              }
+                            </div>
+                          </article>
+                        }
+                      </div>
+                    </section>
+                  }
+
+                  @if (snapshot.toolFeedback.length > 0) {
+                    <section class="flow-explorer-trace-block" aria-label="Tool feedback">
+                      <div class="flow-explorer-trace-block__heading">
+                        <span class="material-symbols-outlined" aria-hidden="true">rate_review</span>
+                        <div>
+                          <span class="field-label">Tool feedback</span>
+                          <h3>AI quality notes about tool responses</h3>
+                        </div>
+                      </div>
+                      <div class="flow-explorer-feedback-list">
+                        @for (feedback of snapshot.toolFeedback; track feedback.feedbackId || $index) {
+                          <article class="flow-explorer-feedback-item">
+                            <div>
+                              <h4>{{ toolFeedbackTitle(feedback) }}</h4>
+                              @if (feedback.summaryForOperator) {
+                                <p>{{ feedback.summaryForOperator }}</p>
+                              }
+                              @if (feedback.suggestedImprovement) {
+                                <p>{{ feedback.suggestedImprovement }}</p>
+                              }
+                            </div>
+                            @if (feedbackMeta(feedback)) {
+                              <span class="panel-chip">{{ feedbackMeta(feedback) }}</span>
+                            }
+                          </article>
+                        }
+                      </div>
+                    </section>
+                  }
+                } @else {
+                  <div class="empty-state">No AI trace or tool evidence was captured for this run.</div>
+                }
+              </div>
+            </details>
+          </section>
+        }
+      </section>
+    </section>
+  </main>
+</div>

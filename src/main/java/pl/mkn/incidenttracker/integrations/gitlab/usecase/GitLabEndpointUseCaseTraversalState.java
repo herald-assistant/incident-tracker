@@ -74,6 +74,33 @@ final class GitLabEndpointUseCaseTraversalState {
         existing.upgradeConfidence(confidence);
     }
 
+    void addMethod(
+            GitLabJavaMethodMatch method,
+            GitLabEndpointUseCaseFileRole role,
+            int depth,
+            String reason,
+            GitLabEndpointUseCaseConfidence confidence
+    ) {
+        if (method == null) {
+            return;
+        }
+        var effectiveRole = role != null ? role : GitLabEndpointUseCaseFileRole.UNKNOWN;
+        var effectiveConfidence = confidence != null ? confidence : method.confidence();
+        addFile(method.filePath(), effectiveRole, method.methodName(), reason, effectiveConfidence);
+        var normalizedPath = GitLabEndpointUseCaseModelSupport.normalizeFilePath(method.filePath());
+        var file = normalizedPath != null ? files.get(normalizedPath) : null;
+        if (file != null) {
+            file.addMethod(GitLabEndpointUseCaseMethodCandidate.from(
+                    method,
+                    effectiveRole,
+                    rolePriority(effectiveRole),
+                    depth,
+                    reason,
+                    effectiveConfidence
+            ));
+        }
+    }
+
     void addRelation(
             String from,
             String to,
@@ -269,6 +296,7 @@ final class GitLabEndpointUseCaseTraversalState {
 
         private final String path;
         private final LinkedHashSet<String> symbols = new LinkedHashSet<>();
+        private final LinkedHashMap<String, GitLabEndpointUseCaseMethodCandidate> methods = new LinkedHashMap<>();
         private final LinkedHashSet<String> reasons = new LinkedHashSet<>();
         private GitLabEndpointUseCaseFileRole role;
         private int priority;
@@ -313,6 +341,14 @@ final class GitLabEndpointUseCaseTraversalState {
             }
         }
 
+        private void addMethod(GitLabEndpointUseCaseMethodCandidate method) {
+            if (method == null || method.methodName() == null) {
+                return;
+            }
+            methods.putIfAbsent(method.deduplicationKey(), method);
+            addSymbol(method.methodName());
+        }
+
         private void addReason(String reason) {
             var normalized = GitLabEndpointUseCaseModelSupport.trimToNull(reason);
             if (normalized != null) {
@@ -332,6 +368,14 @@ final class GitLabEndpointUseCaseTraversalState {
                     role,
                     priority,
                     symbols.stream().toList(),
+                    methods.values().stream()
+                            .sorted(Comparator
+                                    .comparingInt(GitLabEndpointUseCaseMethodCandidate::depth)
+                                    .thenComparingInt(GitLabEndpointUseCaseMethodCandidate::lineStart)
+                                    .thenComparing(
+                                            GitLabEndpointUseCaseMethodCandidate::methodName,
+                                            Comparator.nullsLast(String::compareTo)))
+                            .toList(),
                     String.join(" ", reasons),
                     confidence
             );

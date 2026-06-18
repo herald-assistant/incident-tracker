@@ -1,0 +1,31 @@
+package pl.mkn.incidenttracker.features.flowexplorer.ai.copilot.preparation;
+
+import java.util.List;
+
+final class FlowExplorerCopilotRuntimeSkillNames {
+
+    static final String STARTER_SKILL_NAME = "flow-explorer-orchestrator";
+    static final String GITLAB_TOOLS_SKILL_NAME = "flow-explorer-gitlab-tools";
+    static final String OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME = "flow-explorer-operational-context-tools";
+    static final String RESULT_CONTRACT_SKILL_NAME = "flow-explorer-result-contract";
+
+    static List<String> allSkillNames() {
+        return List.of(
+                STARTER_SKILL_NAME,
+                GITLAB_TOOLS_SKILL_NAME,
+                OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME,
+                RESULT_CONTRACT_SKILL_NAME
+        );
+    }
+
+    static List<String> followUpSkillNames() {
+        return List.of(
+                STARTER_SKILL_NAME,
+                GITLAB_TOOLS_SKILL_NAME,
+                OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME
+        );
+    }
+
+    private FlowExplorerCopilotRuntimeSkillNames() {
+    }
+}

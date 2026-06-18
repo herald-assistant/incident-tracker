@@ -16,6 +16,7 @@ import {
   GitLabEndpointUseCaseContextPayload,
   GitLabEndpointUseCaseContextResponse,
   GitLabEndpointUseCaseFileCandidate,
+  GitLabEndpointUseCaseMethodCandidate,
   GitLabEndpointUseCaseRelation,
   GitLabRepositoryEndpoint,
   GitLabRepositoryEndpointParameterDocumentation,
@@ -1070,8 +1071,13 @@ export class GitLabEvidenceConsoleComponent {
     return 'Ten plik pojawił się już wcześniej w drzewie; wpis jest skrótem, żeby nie powielać gałęzi flow.';
   }
 
-  symbolTooltip(symbol: string): string {
-    return `Symbol znaleziony w wybranym pliku use-case: ${symbol}.`;
+  methodLineRange(method: GitLabEndpointUseCaseMethodCandidate): string {
+    const lineStart = Math.max(0, method.lineStart || 0);
+    const lineEnd = Math.max(lineStart, method.lineEnd || 0);
+    if (lineStart <= 0) {
+      return '';
+    }
+    return lineEnd > lineStart ? `L${lineStart}-L${lineEnd}` : `L${lineStart}`;
   }
 
   displayPathName(path: string | null | undefined): string {

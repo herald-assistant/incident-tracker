@@ -29,7 +29,7 @@ class FrontendPageTest {
         mockMvc.perform(get("/index.html"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("Incident Tracker")))
+                .andExpect(content().string(containsString("Team Delivery Workspace")))
                 .andExpect(content().string(containsString("<html lang=\"pl\"")))
                 .andExpect(content().string(containsString("<app-root>")))
                 .andExpect(content().string(containsString("main-")))
@@ -54,6 +54,17 @@ class FrontendPageTest {
     @Test
     void shouldServeDatabaseRoute() throws Exception {
         mockMvc.perform(get("/database"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
+    void shouldServeFlowExplorerRoute() throws Exception {
+        mockMvc.perform(get("/flow-explorer"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/flow-explorer/customer-onboarding"))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
     }

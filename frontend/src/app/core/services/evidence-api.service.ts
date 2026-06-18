@@ -138,8 +138,17 @@ export interface GitLabEndpointUseCaseFileCandidate {
   role?: string | null;
   priority: number;
   symbols: string[];
+  methods?: GitLabEndpointUseCaseMethodCandidate[];
   reason?: string | null;
   confidence?: string | null;
+}
+
+export interface GitLabEndpointUseCaseMethodCandidate {
+  filePath?: string | null;
+  signature?: string | null;
+  methodName?: string | null;
+  lineStart: number;
+  lineEnd: number;
 }
 
 export interface GitLabEndpointUseCaseRelation {

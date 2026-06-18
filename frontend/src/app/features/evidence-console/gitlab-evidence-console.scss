@@ -42,6 +42,34 @@
   min-width: 0;
 }
 
+.context-method-list {
+  display: grid;
+  gap: 6px;
+}
+
+.context-method-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.context-method-row span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-method-row span:last-child {
+  color: var(--text-soft);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .gitlab-result__header h2,
 .endpoint-results h3,
 .context-results h3,

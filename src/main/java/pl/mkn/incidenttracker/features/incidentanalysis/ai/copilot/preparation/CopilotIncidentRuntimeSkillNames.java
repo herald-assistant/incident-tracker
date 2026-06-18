@@ -17,6 +17,14 @@ final class CopilotIncidentRuntimeSkillNames {
             "incident-technical-handoff"
     );
 
+    static List<String> allSkillNames() {
+        var skillNames = new java.util.ArrayList<String>();
+        skillNames.add(STARTER_SKILL_NAME);
+        skillNames.addAll(DIAGNOSTIC_SKILL_NAMES);
+        skillNames.addAll(RESULT_SKILL_NAMES);
+        return List.copyOf(skillNames);
+    }
+
     private CopilotIncidentRuntimeSkillNames() {
     }
 }

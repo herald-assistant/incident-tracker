@@ -98,6 +98,18 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 byPath.get(path("domain/Customer.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.MAPPER,
                 byPath.get(path("api/CustomerMapper.java")).role());
+        var updateServiceMethod = byPath.get(path("application/UpdateCustomerService.java")).methods().stream()
+                .filter(method -> "update".equals(method.methodName()))
+                .filter(method -> method.parameterTypes().equals(List.of("Customer")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("com.example.crm.customer.application.UpdateCustomerService",
+                updateServiceMethod.declaringTypeQualifiedName());
+        assertEquals("void update(Customer customer)", updateServiceMethod.signature());
+        assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE, updateServiceMethod.role());
+        assertEquals(1, updateServiceMethod.depth());
+        assertTrue(updateServiceMethod.lineStart() > 0);
+        assertTrue(updateServiceMethod.lineEnd() >= updateServiceMethod.lineStart());
         assertTrue(byPath.get(path("domain/Customer.java")).symbols().contains("update"));
         assertTrue(byPath.get(path("domain/Customer.java")).symbols().contains("calculateStatus"));
         assertTrue(result.relations().stream()

@@ -18,6 +18,10 @@ import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveExce
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSystemNotFoundException;
+import pl.mkn.incidenttracker.features.flowexplorer.endpoint.FlowExplorerGitLabConfigurationException;
+import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
+import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -68,6 +72,56 @@ public class ApiExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(FlowExplorerSystemNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleFlowExplorerSystemNotFound(
+            FlowExplorerSystemNotFoundException exception
+    ) {
+        var response = new ApiErrorResponse(
+                "FLOW_EXPLORER_SYSTEM_NOT_FOUND",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(FlowExplorerGitLabConfigurationException.class)
+    public ResponseEntity<ApiErrorResponse> handleFlowExplorerGitLabConfiguration(
+            FlowExplorerGitLabConfigurationException exception
+    ) {
+        var response = new ApiErrorResponse(
+                "FLOW_EXPLORER_GITLAB_CONFIGURATION_MISSING",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(FlowExplorerJobNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleFlowExplorerJobNotFound(FlowExplorerJobNotFoundException exception) {
+        var response = new ApiErrorResponse(
+                "FLOW_EXPLORER_JOB_NOT_FOUND",
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(FlowExplorerJobChatUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleFlowExplorerJobChatUnavailable(
+            FlowExplorerJobChatUnavailableException exception
+    ) {
+        var response = new ApiErrorResponse(
+                exception.code(),
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(OperationalContextEntityNotFoundException.class)

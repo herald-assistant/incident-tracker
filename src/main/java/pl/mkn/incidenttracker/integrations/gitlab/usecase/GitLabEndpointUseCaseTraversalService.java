@@ -206,13 +206,7 @@ public class GitLabEndpointUseCaseTraversalService {
             GitLabJavaMethodMatch match,
             GitLabEndpointUseCaseConfidence confidence
     ) {
-        state.addFile(
-                match.filePath(),
-                node.role(),
-                match.methodName(),
-                node.reason(),
-                confidence
-        );
+        state.addMethod(match, node.role(), node.depth(), node.reason(), confidence);
         var method = methodLocator.methodDeclaration(astFile, match).orElse(null);
         if (method == null) {
             state.addUnresolved(

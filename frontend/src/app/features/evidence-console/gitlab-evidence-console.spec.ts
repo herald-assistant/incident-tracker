@@ -60,6 +60,17 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(injectedEdge?.getAttribute('title') || '').toContain('wstrzykniętą przez DI');
     expect(repositoryRole?.getAttribute('title') || '').toContain('adapter dostępu do danych');
     expect(confidencePill?.getAttribute('title') || '').toContain('Wysoka pewność');
+
+    const serviceNode = fixture.componentInstance.gitLabUseCaseTree()?.rows.find(
+      (row) => row.node.label === 'CustomerService.java'
+    )?.node;
+    expect(serviceNode).toBeTruthy();
+    fixture.componentInstance.selectGitLabUseCaseTreeNode(serviceNode!);
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('getCustomer');
+    expect(compiled.textContent).toContain('L42-L50');
+    expect(compiled.textContent).not.toContain('CustomerModel getCustomer(CustomerId customerId)');
   });
 
   it('should expose workbench actions only for selected GitLab result', () => {
@@ -337,6 +348,14 @@ function buildUseCaseContextResponse(
         role: 'CONTROLLER',
         priority: 1,
         symbols: ['getCustomer'],
+        methods: [
+          {
+            filePath: 'src/main/java/com/example/crm/customer/api/CustomerController.java',
+            methodName: 'getCustomer',
+            lineStart: 10,
+            lineEnd: 18
+          }
+        ],
         reason: 'Endpoint handler and local controller flow.',
         confidence: 'HIGH'
       },
@@ -345,6 +364,15 @@ function buildUseCaseContextResponse(
         role: 'USE_CASE_SERVICE',
         priority: 2,
         symbols: ['getCustomer'],
+        methods: [
+          {
+            filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+            signature: 'CustomerModel getCustomer(CustomerId customerId)',
+            methodName: 'getCustomer',
+            lineStart: 42,
+            lineEnd: 50
+          }
+        ],
         reason: 'Injected dependency used by traversed method.',
         confidence: 'HIGH'
       },
@@ -353,6 +381,14 @@ function buildUseCaseContextResponse(
         role: 'MAPPER',
         priority: 5,
         symbols: ['from'],
+        methods: [
+          {
+            filePath: 'src/main/java/com/example/crm/customer/api/CustomerMapper.java',
+            methodName: 'from',
+            lineStart: 12,
+            lineEnd: 14
+          }
+        ],
         reason: 'Mapper method used by service.',
         confidence: 'MEDIUM'
       },
@@ -361,6 +397,14 @@ function buildUseCaseContextResponse(
         role: 'REPOSITORY_IMPLEMENTATION',
         priority: 4,
         symbols: ['getCustomer'],
+        methods: [
+          {
+            filePath: 'src/main/java/com/example/crm/customer/adapter/out/CustomerRepository.java',
+            methodName: 'getCustomer',
+            lineStart: 23,
+            lineEnd: 31
+          }
+        ],
         reason: 'Implementation candidate for injected interface.',
         confidence: 'HIGH'
       },

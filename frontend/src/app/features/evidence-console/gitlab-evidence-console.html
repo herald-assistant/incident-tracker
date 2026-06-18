@@ -640,10 +640,23 @@
                             </dl>
                           }
 
-                          @if (selectedNode.file?.symbols?.length) {
-                            <div class="context-chip-list">
+                          @if (selectedNode.file?.methods?.length) {
+                            <div class="context-method-list">
+                              @for (method of selectedNode.file?.methods || []; track method.methodName || $index) {
+                                <div class="context-method-row">
+                                  <span>{{ method.methodName }}</span>
+                                  @if (methodLineRange(method)) {
+                                    <span>{{ methodLineRange(method) }}</span>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          } @else if (selectedNode.file?.symbols?.length) {
+                            <div class="context-method-list">
                               @for (symbol of selectedNode.file?.symbols || []; track symbol) {
-                                <span class="context-chip" [title]="symbolTooltip(symbol)">{{ symbol }}</span>
+                                <div class="context-method-row">
+                                  <span>{{ symbol }}</span>
+                                </div>
                               }
                             </div>
                           }

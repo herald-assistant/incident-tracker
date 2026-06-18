@@ -19,11 +19,17 @@ class GitLabEndpointUseCaseResultCompressorTest {
                 null,
                 List.of(
                         file("src/main/java/com/example/CustomerMapper.java", GitLabEndpointUseCaseFileRole.MAPPER, 5,
-                                List.of("from"), "mapper call", GitLabEndpointUseCaseConfidence.MEDIUM),
+                                List.of("from"),
+                                List.of(method("src/main/java/com/example/CustomerMapper.java", "CustomerMapper",
+                                        "from", 20, 24)),
+                                "mapper call", GitLabEndpointUseCaseConfidence.MEDIUM),
                         file("src/main/java/com/example/CustomerController.java", GitLabEndpointUseCaseFileRole.CONTROLLER, 1,
                                 List.of("getCustomer"), "endpoint", GitLabEndpointUseCaseConfidence.HIGH),
                         file("src/main/java/com/example/CustomerMapper.java", GitLabEndpointUseCaseFileRole.MAPPER, 5,
-                                List.of("toWeb"), "mapper default method", GitLabEndpointUseCaseConfidence.HIGH)
+                                List.of("toWeb"),
+                                List.of(method("src/main/java/com/example/CustomerMapper.java", "CustomerMapper",
+                                        "toWeb", 30, 34)),
+                                "mapper default method", GitLabEndpointUseCaseConfidence.HIGH)
                 ),
                 List.of(),
                 List.of(),
@@ -37,6 +43,9 @@ class GitLabEndpointUseCaseResultCompressorTest {
         assertEquals("src/main/java/com/example/CustomerController.java", result.files().get(0).path());
         assertEquals("src/main/java/com/example/CustomerMapper.java", result.files().get(1).path());
         assertEquals(List.of("from", "toWeb"), result.files().get(1).symbols());
+        assertEquals(List.of("from", "toWeb"), result.files().get(1).methods().stream()
+                .map(GitLabEndpointUseCaseMethodCandidate::methodName)
+                .toList());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, result.files().get(1).confidence());
         assertEquals(List.of("raw limitation"), result.limitations());
         assertEquals(2, result.suggestedNextReads().size());
@@ -166,5 +175,47 @@ class GitLabEndpointUseCaseResultCompressorTest {
             GitLabEndpointUseCaseConfidence confidence
     ) {
         return new GitLabEndpointUseCaseFileCandidate(path, role, priority, symbols, reason, confidence);
+    }
+
+    private GitLabEndpointUseCaseFileCandidate file(
+            String path,
+            GitLabEndpointUseCaseFileRole role,
+            int priority,
+            List<String> symbols,
+            List<GitLabEndpointUseCaseMethodCandidate> methods,
+            String reason,
+            GitLabEndpointUseCaseConfidence confidence
+    ) {
+        return new GitLabEndpointUseCaseFileCandidate(path, role, priority, symbols, methods, reason, confidence);
+    }
+
+    private GitLabEndpointUseCaseMethodCandidate method(
+            String filePath,
+            String typeName,
+            String methodName,
+            int lineStart,
+            int lineEnd
+    ) {
+        return new GitLabEndpointUseCaseMethodCandidate(
+                filePath,
+                typeName,
+                typeName,
+                "com.example." + typeName,
+                GitLabJavaTypeKind.CLASS,
+                methodName,
+                null,
+                lineStart,
+                lineEnd,
+                0,
+                List.of(),
+                List.of(),
+                "CustomerModel",
+                List.of("public"),
+                GitLabEndpointUseCaseFileRole.MAPPER,
+                5,
+                1,
+                "mapper call",
+                GitLabEndpointUseCaseConfidence.HIGH
+        );
     }
 }

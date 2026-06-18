@@ -62,7 +62,7 @@ public final class GitLabEndpointUseCaseSourceSession {
                 : maxCharactersPerFile;
         this.javaParser = new JavaParser(new ParserConfiguration()
                 .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21)
-                .setStoreTokens(false));
+                .setStoreTokens(true));
     }
 
     public List<GitLabRepositoryFile> listRepositoryFiles(String pathPrefix) {

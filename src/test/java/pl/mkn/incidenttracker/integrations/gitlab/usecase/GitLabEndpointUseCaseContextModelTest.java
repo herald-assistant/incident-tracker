@@ -55,11 +55,33 @@ class GitLabEndpointUseCaseContextModelTest {
 
     @Test
     void shouldKeepResultListsNullSafeAndImmutable() {
+        var method = new GitLabEndpointUseCaseMethodCandidate(
+                "\\src\\main\\java\\com\\example\\crm\\CustomerController.java",
+                " CustomerController ",
+                " customer.api.CustomerController ",
+                " com.example.crm.CustomerController ",
+                GitLabJavaTypeKind.CLASS,
+                " getCustomer ",
+                null,
+                -10,
+                42,
+                1,
+                List.of(" String "),
+                List.of(" customerId "),
+                " CustomerResponse ",
+                List.of(" public "),
+                GitLabEndpointUseCaseFileRole.CONTROLLER,
+                0,
+                -5,
+                " endpoint handler ",
+                GitLabEndpointUseCaseConfidence.HIGH
+        );
         var files = new ArrayList<>(List.of(new GitLabEndpointUseCaseFileCandidate(
                 "/src/main/java/com/example/crm/CustomerController.java",
                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                 0,
                 List.of(" getCustomer ", " "),
+                List.of(method),
                 " endpoint handler ",
                 GitLabEndpointUseCaseConfidence.HIGH
         )));
@@ -81,6 +103,13 @@ class GitLabEndpointUseCaseContextModelTest {
         assertEquals("src/main/java/com/example/crm/CustomerController.java", result.files().get(0).path());
         assertEquals(1, result.files().get(0).priority());
         assertEquals(List.of("getCustomer"), result.files().get(0).symbols());
+        assertEquals(1, result.files().get(0).methods().size());
+        assertEquals("CustomerResponse getCustomer(String customerId)",
+                result.files().get(0).methods().get(0).signature());
+        assertEquals("com.example.crm.CustomerController",
+                result.files().get(0).methods().get(0).declaringTypeQualifiedName());
+        assertEquals(0, result.files().get(0).methods().get(0).lineStart());
+        assertEquals(42, result.files().get(0).methods().get(0).lineEnd());
         assertEquals("endpoint handler", result.files().get(0).reason());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, result.files().get(0).confidence());
         assertTrue(result.relations().isEmpty());
@@ -90,6 +119,7 @@ class GitLabEndpointUseCaseContextModelTest {
         assertEquals(GitLabEndpointUseCaseLimits.defaults(), result.limits());
         assertEquals(GitLabEndpointUseCaseConfidence.LOW, result.confidence());
         assertThrows(UnsupportedOperationException.class, () -> result.files().add(result.files().get(0)));
+        assertThrows(UnsupportedOperationException.class, () -> result.files().get(0).methods().add(method));
     }
 
     @Test

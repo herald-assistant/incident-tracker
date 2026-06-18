@@ -1,20 +1,29 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotModelSelection;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 @Component
-@RequiredArgsConstructor
 public class CopilotIncidentSessionConfigRequestFactory {
 
     private static final String INCIDENT_TOOL_DENIED_MESSAGE =
             "Use only the inline incident artifacts and the explicitly enabled incident-analysis tools for this session.";
 
-    private final CopilotSkillRuntimeLoader skillRuntimeLoader;
+    private final CopilotNamedSkillDirectoryResolver skillDirectoryResolver;
+
+    @Autowired
+    public CopilotIncidentSessionConfigRequestFactory(CopilotNamedSkillDirectoryResolver skillDirectoryResolver) {
+        this.skillDirectoryResolver = skillDirectoryResolver;
+    }
+
+    public CopilotIncidentSessionConfigRequestFactory(CopilotSkillRuntimeLoader skillRuntimeLoader) {
+        this(new CopilotNamedSkillDirectoryResolver(skillRuntimeLoader));
+    }
 
     public CopilotSessionConfigRequest create(
             String copilotSessionId,
@@ -25,7 +34,7 @@ public class CopilotIncidentSessionConfigRequestFactory {
                 copilotSessionId,
                 toolAccessPolicy.enabledTools(),
                 toolAccessPolicy.availableToolNames(),
-                skillRuntimeLoader.resolveSkillDirectories(),
+                skillDirectoryResolver.resolveSkillDirectories(CopilotIncidentRuntimeSkillNames.allSkillNames()),
                 modelSelection(options),
                 INCIDENT_TOOL_DENIED_MESSAGE
         );

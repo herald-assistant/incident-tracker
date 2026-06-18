@@ -20,6 +20,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'flow-explorer',
+        loadComponent: () =>
+          import('./features/flow-explorer/pages/flow-explorer-page/flow-explorer-page').then(
+            (module) => module.FlowExplorerPageComponent
+          ),
+        data: {
+          section: 'Analysis Features',
+          title: 'Flow Explorer'
+        }
+      },
+      {
         path: 'evidence',
         redirectTo: 'elastic',
         pathMatch: 'full'

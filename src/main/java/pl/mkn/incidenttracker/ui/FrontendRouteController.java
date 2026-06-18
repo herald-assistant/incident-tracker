@@ -21,6 +21,14 @@ class FrontendRouteController {
     }
 
     @GetMapping({
+            "/flow-explorer",
+            "/flow-explorer/**"
+    })
+    String forwardFlowExplorer() {
+        return "forward:/index.html";
+    }
+
+    @GetMapping({
             "/operational-context",
             "/operational-context/**"
     })

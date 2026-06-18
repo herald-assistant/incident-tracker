@@ -325,6 +325,7 @@ public class GitLabEndpointUseCaseResultCompressor {
 
         private final String path;
         private final LinkedHashSet<String> symbols = new LinkedHashSet<>();
+        private final LinkedHashMap<String, GitLabEndpointUseCaseMethodCandidate> methods = new LinkedHashMap<>();
         private final LinkedHashSet<String> reasons = new LinkedHashSet<>();
         private GitLabEndpointUseCaseFileRole role = GitLabEndpointUseCaseFileRole.UNKNOWN;
         private int priority = rolePriority(GitLabEndpointUseCaseFileRole.UNKNOWN);
@@ -342,6 +343,12 @@ public class GitLabEndpointUseCaseResultCompressor {
                 role = file.role();
             }
             symbols.addAll(file.symbols());
+            file.methods().stream()
+                    .filter(method -> method.methodName() != null)
+                    .forEach(method -> {
+                        methods.putIfAbsent(method.deduplicationKey(), method);
+                        symbols.add(method.methodName());
+                    });
             if (file.reason() != null) {
                 reasons.add(file.reason());
             }
@@ -356,6 +363,14 @@ public class GitLabEndpointUseCaseResultCompressor {
                     role,
                     priority,
                     symbols.stream().toList(),
+                    methods.values().stream()
+                            .sorted(Comparator
+                                    .comparingInt(GitLabEndpointUseCaseMethodCandidate::depth)
+                                    .thenComparingInt(GitLabEndpointUseCaseMethodCandidate::lineStart)
+                                    .thenComparing(
+                                            GitLabEndpointUseCaseMethodCandidate::methodName,
+                                            Comparator.nullsLast(String::compareTo)))
+                            .toList(),
                     String.join(" ", reasons),
                     confidence
             );

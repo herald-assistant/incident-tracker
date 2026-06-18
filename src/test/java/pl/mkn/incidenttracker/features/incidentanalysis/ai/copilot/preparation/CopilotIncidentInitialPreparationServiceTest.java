@@ -107,8 +107,10 @@ class CopilotIncidentInitialPreparationServiceTest {
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
             assertEquals(7, prepared.session().sessionConfig().getTools().size());
-            assertEquals(1, prepared.session().sessionConfig().getSkillDirectories().size());
-            assertTrue(prepared.session().sessionConfig().getSkillDirectories().get(0).contains("copilot_skills"));
+            assertEquals(
+                    CopilotIncidentRuntimeSkillNames.allSkillNames(),
+                    skillDirectoryNames(prepared.session().sessionConfig().getSkillDirectories())
+            );
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.session().sessionConfig().getOnPermissionRequest());
             assertEquals(List.of(), prepared.session().sessionConfig().getDisabledSkills());
             assertNotNull(prepared.session().sessionConfig().getHooks());
@@ -458,7 +460,10 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
             assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());
-            assertEquals(1, prepared.session().sessionConfig().getSkillDirectories().size());
+            assertEquals(
+                    CopilotIncidentRuntimeSkillNames.allSkillNames(),
+                    skillDirectoryNames(prepared.session().sessionConfig().getSkillDirectories())
+            );
         }
     }
 
@@ -540,6 +545,15 @@ class CopilotIncidentInitialPreparationServiceTest {
                 new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
         );
     }
+
+    private List<String> skillDirectoryNames(List<String> skillDirectories) {
+        return skillDirectories.stream()
+                .map(Path::of)
+                .map(Path::getFileName)
+                .map(Path::toString)
+                .toList();
+    }
+
     private CopilotSdkProperties baseProperties() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\Users\\mknie\\IdeaProjects\\incidenttracker");
