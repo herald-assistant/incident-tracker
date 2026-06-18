@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSystemSe
 import java.util.List;
 
 @RestController
-@RequestMapping("/flow-explorer")
+@RequestMapping("/api/flow-explorer")
 @RequiredArgsConstructor
 public class FlowExplorerSystemController {
 

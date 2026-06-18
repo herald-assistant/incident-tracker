@@ -24,7 +24,7 @@ describe('FlowExplorerApiService', () => {
   it('should load systems from the feature API', () => {
     service.getSystems().subscribe((systems) => expect(systems).toEqual([]));
 
-    const request = http.expectOne('/flow-explorer/systems');
+    const request = http.expectOne('/api/flow-explorer/systems');
     expect(request.request.method).toBe('GET');
     request.flush([]);
   });
@@ -32,7 +32,7 @@ describe('FlowExplorerApiService', () => {
   it('should load Flow Explorer config from the feature API', () => {
     service.getConfig().subscribe((config) => expect(config.defaultBranch).toBe('main'));
 
-    const request = http.expectOne('/flow-explorer/config');
+    const request = http.expectOne('/api/flow-explorer/config');
     expect(request.request.method).toBe('GET');
     request.flush({ defaultBranch: 'main' });
   });
@@ -47,7 +47,7 @@ describe('FlowExplorerApiService', () => {
       .subscribe();
 
     const request = http.expectOne(
-      '/flow-explorer/systems/crm%2Fservice/endpoints?branch=main&endpointPathPrefix=/api/customers&httpMethod=GET'
+      '/api/flow-explorer/systems/crm%2Fservice/endpoints?branch=main&endpointPathPrefix=/api/customers&httpMethod=GET'
     );
     expect(request.request.method).toBe('GET');
     request.flush({ endpoints: [] });
@@ -56,7 +56,7 @@ describe('FlowExplorerApiService', () => {
   it('should start and read jobs', () => {
     service.startJob({ systemId: 'crm-service', endpointId: 'GET /customers' }).subscribe();
 
-    const startRequest = http.expectOne('/flow-explorer/jobs');
+    const startRequest = http.expectOne('/api/flow-explorer/jobs');
     expect(startRequest.request.method).toBe('POST');
     expect(startRequest.request.body).toEqual({
       systemId: 'crm-service',
@@ -66,7 +66,7 @@ describe('FlowExplorerApiService', () => {
 
     service.getJob('job/123').subscribe();
 
-    const getRequest = http.expectOne('/flow-explorer/jobs/job%2F123');
+    const getRequest = http.expectOne('/api/flow-explorer/jobs/job%2F123');
     expect(getRequest.request.method).toBe('GET');
     getRequest.flush({ jobId: 'job/123' });
   });
@@ -74,7 +74,7 @@ describe('FlowExplorerApiService', () => {
   it('should send follow-up chat messages for a job', () => {
     service.sendChatMessage('job/123', { message: 'Gdzie jest walidacja?' }).subscribe();
 
-    const request = http.expectOne('/flow-explorer/jobs/job%2F123/chat/messages');
+    const request = http.expectOne('/api/flow-explorer/jobs/job%2F123/chat/messages');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ message: 'Gdzie jest walidacja?' });
     request.flush({ jobId: 'job/123', chatMessages: [] });

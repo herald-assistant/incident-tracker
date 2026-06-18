@@ -42,7 +42,7 @@ class FlowExplorerSystemControllerTest {
                 List.of("billing-team")
         )));
 
-        mockMvc.perform(get("/flow-explorer/systems"))
+        mockMvc.perform(get("/api/flow-explorer/systems"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].systemId").value("billing-core"))

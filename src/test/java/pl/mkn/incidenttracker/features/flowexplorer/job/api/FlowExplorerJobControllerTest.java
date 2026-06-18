@@ -45,7 +45,7 @@ class FlowExplorerJobControllerTest {
         when(flowExplorerJobService.startJob(any(FlowExplorerJobStartRequest.class)))
                 .thenReturn(snapshot("job-123"));
 
-        mockMvc.perform(post("/flow-explorer/jobs")
+        mockMvc.perform(post("/api/flow-explorer/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -92,7 +92,7 @@ class FlowExplorerJobControllerTest {
 
     @Test
     void shouldRejectMissingEndpointSelector() throws Exception {
-        mockMvc.perform(post("/flow-explorer/jobs")
+        mockMvc.perform(post("/api/flow-explorer/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -108,7 +108,7 @@ class FlowExplorerJobControllerTest {
     void shouldReturnFlowExplorerJobSnapshot() throws Exception {
         when(flowExplorerJobService.getJob("job-123")).thenReturn(snapshot("job-123"));
 
-        mockMvc.perform(get("/flow-explorer/jobs/job-123"))
+        mockMvc.perform(get("/api/flow-explorer/jobs/job-123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobId").value("job-123"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
@@ -123,7 +123,7 @@ class FlowExplorerJobControllerTest {
         when(flowExplorerJobService.startChatMessage(any(String.class), any(FlowExplorerChatMessageRequest.class)))
                 .thenReturn(snapshotWithChat("job-123"));
 
-        mockMvc.perform(post("/flow-explorer/jobs/job-123/chat/messages")
+        mockMvc.perform(post("/api/flow-explorer/jobs/job-123/chat/messages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -150,7 +150,7 @@ class FlowExplorerJobControllerTest {
         when(flowExplorerJobService.getJob("missing-job"))
                 .thenThrow(new FlowExplorerJobNotFoundException("missing-job"));
 
-        mockMvc.perform(get("/flow-explorer/jobs/missing-job"))
+        mockMvc.perform(get("/api/flow-explorer/jobs/missing-job"))
                 .andExpect(status().isNotFound());
 
         verify(flowExplorerJobService).getJob("missing-job");

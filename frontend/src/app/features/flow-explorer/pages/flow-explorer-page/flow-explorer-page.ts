@@ -122,6 +122,7 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly endpointSearch = signal('');
   readonly branch = signal('');
   readonly selectedSystemId = signal('');
+  readonly expandedSystemIds = signal<string[]>([]);
   readonly selectedEndpointId = signal('');
   readonly documentationPreset = signal<FlowExplorerDocumentationPreset>('ANALYST_OVERVIEW');
   readonly focusAreas = signal<FlowExplorerFocusArea[]>(['BUSINESS_FLOW']);
@@ -257,6 +258,19 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set('');
     this.endpointSearch.set('');
     this.loadEndpointInventory();
+  }
+
+  protected toggleSystemExpanded(systemId: string): void {
+    const expandedSystemIds = this.expandedSystemIds();
+    this.expandedSystemIds.set(
+      expandedSystemIds.includes(systemId)
+        ? expandedSystemIds.filter((candidate) => candidate !== systemId)
+        : [...expandedSystemIds, systemId]
+    );
+  }
+
+  protected isSystemExpanded(systemId: string): boolean {
+    return this.expandedSystemIds().includes(systemId);
   }
 
   protected onBranchChanged(value: string): void {
@@ -456,9 +470,13 @@ export class FlowExplorerPageComponent implements OnInit {
   }
 
   protected systemRowClass(system: FlowExplorerSystemOption): string {
-    return system.systemId === this.selectedSystemId()
-      ? 'flow-explorer-system-row flow-explorer-system-row--selected'
-      : 'flow-explorer-system-row';
+    return [
+      'flow-explorer-system-row',
+      system.systemId === this.selectedSystemId() ? 'flow-explorer-system-row--selected' : '',
+      this.isSystemExpanded(system.systemId) ? 'flow-explorer-system-row--expanded' : ''
+    ]
+      .filter(Boolean)
+      .join(' ');
   }
 
   protected endpointRowClass(endpoint: FlowExplorerEndpointOption): string {

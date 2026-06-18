@@ -64,6 +64,21 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('CRM Service');
     expect(compiled.textContent).toContain('Billing Core');
     expect(compiled.textContent).toContain('2 systems');
+    expect(compiled.textContent).not.toContain('Customer relationship core API.');
+  });
+
+  it('should reveal long system summaries only after expanding the row', () => {
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).not.toContain('Customer relationship core API.');
+
+    clickSystemSummaryToggle(compiled, 'CRM Service');
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('Customer relationship core API.');
   });
 
   it('should filter systems locally', () => {
@@ -375,9 +390,16 @@ function setInputValue(nativeElement: HTMLElement, selector: string, value: stri
 
 function clickSystem(nativeElement: HTMLElement, label: string): void {
   const systemButton = Array.from(
-    nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-system-row')
+    nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-system-row__select')
   ).find((button) => button.textContent?.includes(label));
   systemButton?.click();
+}
+
+function clickSystemSummaryToggle(nativeElement: HTMLElement, label: string): void {
+  const systemRow = Array.from(
+    nativeElement.querySelectorAll<HTMLElement>('.flow-explorer-system-row')
+  ).find((row) => row.textContent?.includes(label));
+  systemRow?.querySelector<HTMLButtonElement>('.flow-explorer-system-row__toggle')?.click();
 }
 
 function clickLoadEndpoints(nativeElement: HTMLElement): void {

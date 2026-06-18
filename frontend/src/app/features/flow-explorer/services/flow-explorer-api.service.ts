@@ -17,7 +17,7 @@ import {
 })
 export class FlowExplorerApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/flow-explorer';
+  private readonly baseUrl = '/api/flow-explorer';
 
   getConfig(): Observable<FlowExplorerConfig> {
     return this.http.get<FlowExplorerConfig>(`${this.baseUrl}/config`);

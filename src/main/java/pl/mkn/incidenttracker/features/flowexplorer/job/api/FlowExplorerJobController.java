@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.incidenttracker.features.flowexplorer.job.FlowExplorerJobService;
 
 @RestController
-@RequestMapping("/flow-explorer/jobs")
+@RequestMapping("/api/flow-explorer/jobs")
 @RequiredArgsConstructor
 public class FlowExplorerJobController {
 

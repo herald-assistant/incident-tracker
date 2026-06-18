@@ -199,8 +199,8 @@ describe('App', () => {
 
     await router.navigateByUrl('/flow-explorer');
     fixture.detectChanges();
-    http.expectOne('/flow-explorer/config').flush({ defaultBranch: 'main' });
-    http.expectOne('/flow-explorer/systems').flush([]);
+    http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
+    http.expectOne('/api/flow-explorer/systems').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
 

@@ -65,27 +65,50 @@
             @if (filteredSystems().length > 0) {
               <div class="flow-explorer-system-list" aria-label="Loaded systems">
                 @for (system of filteredSystems(); track system.systemId) {
-                  <button
-                    type="button"
-                    [class]="systemRowClass(system)"
-                    [attr.aria-pressed]="system.systemId === selectedSystemId()"
-                    (click)="selectSystem(system)"
-                  >
-                    <span class="flow-explorer-system-row__body">
-                      <span class="flow-explorer-system-row__title">
-                        {{ system.name || system.systemId }}
+                  <article [class]="systemRowClass(system)">
+                    <button
+                      class="flow-explorer-system-row__select"
+                      type="button"
+                      [attr.aria-pressed]="system.systemId === selectedSystemId()"
+                      (click)="selectSystem(system)"
+                    >
+                      <span class="flow-explorer-system-row__body">
+                        <span class="flow-explorer-system-row__title">
+                          {{ system.name || system.systemId }}
+                        </span>
+                        <span class="flow-explorer-system-row__meta">
+                          <span>{{ system.kind || 'system' }}</span>
+                          <span>{{ system.lifecycleStatus || 'status n/a' }}</span>
+                          <span>{{ system.ownerTeamIds.join(', ') || 'owner n/a' }}</span>
+                        </span>
                       </span>
-                      <span class="flow-explorer-system-row__summary">
-                        {{ system.summary || system.systemId }}
-                      </span>
-                      <span class="flow-explorer-system-row__meta">
-                        <span>{{ system.kind || 'system' }}</span>
-                        <span>{{ system.lifecycleStatus || 'status n/a' }}</span>
-                        <span>{{ system.ownerTeamIds.join(', ') || 'owner n/a' }}</span>
-                      </span>
-                    </span>
-                    <span class="panel-chip">{{ system.repositoryCount }} repos</span>
-                  </button>
+                      <span class="panel-chip">{{ system.repositoryCount }} repos</span>
+                    </button>
+
+                    @if (system.summary) {
+                      <button
+                        class="flow-explorer-system-row__toggle"
+                        type="button"
+                        [attr.aria-expanded]="isSystemExpanded(system.systemId)"
+                        [attr.aria-label]="
+                          isSystemExpanded(system.systemId) ? 'Hide system summary' : 'Show system summary'
+                        "
+                        (click)="toggleSystemExpanded(system.systemId)"
+                      >
+                        <span class="material-symbols-outlined" aria-hidden="true">
+                          @if (isSystemExpanded(system.systemId)) {
+                            expand_less
+                          } @else {
+                            expand_more
+                          }
+                        </span>
+                      </button>
+
+                      @if (isSystemExpanded(system.systemId)) {
+                        <p class="flow-explorer-system-row__summary">{{ system.summary }}</p>
+                      }
+                    }
+                  </article>
                 }
               </div>
             } @else {

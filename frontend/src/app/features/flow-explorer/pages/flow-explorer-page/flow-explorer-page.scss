@@ -44,28 +44,73 @@
 }
 
 .flow-explorer-system-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
   width: 100%;
-  min-height: 74px;
-  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--text-main);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
     box-shadow 140ms ease;
 }
 
+.flow-explorer-system-row__select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 62px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-explorer-system-row__select:focus-visible {
+  outline: none;
+}
+
+.flow-explorer-system-row__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.flow-explorer-system-row__toggle:hover,
+.flow-explorer-system-row__toggle:focus-visible {
+  border-color: rgba(12, 102, 228, 0.38);
+  color: var(--primary-dark);
+  outline: none;
+}
+
+.flow-explorer-system-row__toggle .material-symbols-outlined {
+  font-size: 22px;
+}
+
 .flow-explorer-system-row:hover,
-.flow-explorer-system-row:focus-visible,
+.flow-explorer-system-row:focus-within,
 .flow-explorer-endpoint-row:hover,
 .flow-explorer-endpoint-row:focus-within {
   border-color: rgba(12, 102, 228, 0.34);
@@ -77,6 +122,10 @@
 .flow-explorer-endpoint-row--selected {
   border-color: rgba(12, 102, 228, 0.48);
   background: #eff6ff;
+}
+
+.flow-explorer-system-row--expanded {
+  align-items: start;
 }
 
 .flow-explorer-system-row__body,
@@ -102,6 +151,13 @@
   font-size: 0.86rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.flow-explorer-system-row__summary {
+  grid-column: 1 / -1;
+  margin: -2px 12px 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .flow-explorer-system-row__meta {

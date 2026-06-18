@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.incidenttracker.features.flowexplorer.FlowExplorerProperties;
 
 @RestController
-@RequestMapping("/flow-explorer")
+@RequestMapping("/api/flow-explorer")
 @RequiredArgsConstructor
 public class FlowExplorerConfigController {
 

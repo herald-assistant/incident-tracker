@@ -25,7 +25,7 @@ class FlowExplorerConfigControllerTest {
     void shouldReturnConfiguredDefaults() throws Exception {
         when(flowExplorerProperties.getDefaultBranch()).thenReturn("release-candidate");
 
-        mockMvc.perform(get("/flow-explorer/config"))
+        mockMvc.perform(get("/api/flow-explorer/config"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.defaultBranch").value("release-candidate"));
     }

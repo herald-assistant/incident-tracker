@@ -187,6 +187,8 @@ Glowne sekcje:
 
 - [x] Lista internal systems z operational context.
 - [x] Search/filter po nazwie, aliasach, runtime/deployment signals i summary.
+- [x] Dlugie `system.summary` nie jest renderowane w collapsed row; row ma
+  osobna akcje expand/collapse dla opisu systemu.
 - [ ] Karta/szczegoly systemu: owner/team, lifecycle, code-search scopes,
   repozytoria, validation findings, open questions.
 - [x] UI nie pokazuje GitLaba jako pierwszego pojecia; pokazuje system i
@@ -276,16 +278,17 @@ Wynik ma byc zrozumialy dla analityka/testera:
 Feature-owned:
 
 ```http
-GET  /flow-explorer/systems
-GET  /flow-explorer/systems/{systemId}/endpoints
-POST /flow-explorer/jobs
-GET  /flow-explorer/jobs/{jobId}
-POST /flow-explorer/jobs/{jobId}/chat/messages
+GET  /api/flow-explorer/config
+GET  /api/flow-explorer/systems
+GET  /api/flow-explorer/systems/{systemId}/endpoints
+POST /api/flow-explorer/jobs
+GET  /api/flow-explorer/jobs/{jobId}
+POST /api/flow-explorer/jobs/{jobId}/chat/messages
 ```
 
 Do rozstrzygniecia:
 
-- [ ] Czy `GET /flow-explorer/systems` ma byc feature-owned projection, czy UI
+- [x] Czy `GET /api/flow-explorer/systems` ma byc feature-owned projection, czy UI
   ma bezposrednio uzyc `/api/operational-context/systems`.
 - [ ] Czy endpoint inventory ma zwracac jeden scalony widok z wielu repo, czy
   najpierw tylko primary repository.
@@ -347,7 +350,7 @@ Request:
 
 Response:
 
-- endpoint `POST /flow-explorer/jobs/{jobId}/chat/messages` zwraca aktualny
+- endpoint `POST /api/flow-explorer/jobs/{jobId}/chat/messages` zwraca aktualny
   `FlowExplorerJobStateSnapshot`;
 - `chatMessages[]` zawiera role `USER`/`ASSISTANT`, status
   `IN_PROGRESS|COMPLETED|FAILED`, tresc, blad, timestampy, prompt
@@ -557,8 +560,8 @@ Zasady skilli:
   - job status DTO,
   - controller,
   - service in-memory job state.
-- [x] Dodac endpoint `POST /flow-explorer/jobs` i `GET /flow-explorer/jobs/{id}`
-  z fake/skeleton result.
+- [x] Dodac endpoint `POST /api/flow-explorer/jobs` i
+  `GET /api/flow-explorer/jobs/{id}` z fake/skeleton result.
 - [x] Dodac test controller/service dla skeletonu.
 - [x] Uruchomic `mvn -q -Dtest=*FlowExplorer* test`.
 
@@ -578,7 +581,8 @@ Approval gate:
 
 Decision update:
 
-- [x] Flow Explorer dostaje feature-owned endpoint `GET /flow-explorer/systems`.
+- [x] Flow Explorer dostaje feature-owned endpoint
+  `GET /api/flow-explorer/systems`.
 - [x] Endpoint zwraca tylko systemy internal na podstawie `kind`: `internal`,
   `internal-*` oraz `api-gateway`.
 - [x] Projection zawiera sygnaly dla UI selecta: nazwe, skrot, `kind`,
@@ -611,12 +615,12 @@ Decision update:
 - [x] Response inventory powinien zwracac `resolvedRef`, zeby uzytkownik
   widzial, z jakiego kodu pochodzi lista endpointow.
 - [x] Endpoint inventory jest wystawione jako
-  `GET /flow-explorer/systems/{systemId}/endpoints`.
+  `GET /api/flow-explorer/systems/{systemId}/endpoints`.
 - [x] Zakres repozytoriow V1 to repozytoria z `system.references.repositories`,
   `system.codeSearchScope.repositories` oraz semantyczne `codeSearchScopes`
   targetujace wybrany system.
-- [x] `POST /flow-explorer/jobs` przyjmuje opcjonalny `branch`, aby pozniejszy
-  job mogl uzyc tego samego refa co endpoint inventory.
+- [x] `POST /api/flow-explorer/jobs` przyjmuje opcjonalny `branch`, aby
+  pozniejszy job mogl uzyc tego samego refa co endpoint inventory.
 
 Approval gate:
 
@@ -666,7 +670,7 @@ Decision update:
 
 - [x] Step 4A dostarcza deterministyczny `FlowExplorerContextSnapshot` oraz
   `compact flow manifest`, ale nie osadza jeszcze snippet cards.
-- [x] `POST /flow-explorer/jobs` w tym kroku konczy job statusem `COMPLETED`
+- [x] `POST /api/flow-explorer/jobs` w tym kroku konczy job statusem `COMPLETED`
   po przygotowaniu context snapshotu i prompt preview; AI execution zostaje
   poza Step 4A.
 - [x] `preparedPrompt` jest teraz jawnie oznaczony jako deterministic context
@@ -1200,7 +1204,7 @@ po stronie feature'a.
 
 Status: accepted.
 
-Decyzja: `POST /flow-explorer/jobs` uruchamia teraz job asynchronicznie.
+Decyzja: `POST /api/flow-explorer/jobs` uruchamia teraz job asynchronicznie.
 Snapshot startowy moze byc w `COLLECTING_CONTEXT`, a docelowy flow joba to:
 
 - `DETERMINISTIC_CONTEXT`: backend buduje context snapshot, compact manifest,
@@ -1231,16 +1235,17 @@ end-to-end sciezke: system -> endpoint -> user instructions -> job -> wynik.
 
 UI dostaje route `/flow-explorer` w sekcji `Analysis Features`, odblokowany
 sidebar item i lazy-loaded page component. Backend dodaje forward
-`/flow-explorer/**` tylko dla deep linkow SPA; feature API pozostaje pod tym
-samym prefiksem i wygrywa bardziej specyficznym mappingiem kontrolerow.
+`/flow-explorer/**` tylko dla deep linkow SPA. Feature API jest wydzielone pod
+`/api/flow-explorer/*`, zeby lokalny Angular dev server mogl proxy'owac API
+przez istniejacy `/api` proxy bez konfliktu z route'em SPA.
 
 Frontend ma feature-local modele i `FlowExplorerApiService` dla istniejacych
 endpointow:
 
-- `GET /flow-explorer/systems`,
-- `GET /flow-explorer/systems/{systemId}/endpoints`,
-- `POST /flow-explorer/jobs`,
-- `GET /flow-explorer/jobs/{jobId}`.
+- `GET /api/flow-explorer/systems`,
+- `GET /api/flow-explorer/systems/{systemId}/endpoints`,
+- `POST /api/flow-explorer/jobs`,
+- `GET /api/flow-explorer/jobs/{jobId}`.
 
 Szkielet pokazuje tylko basic empty/loading/error states katalogu systemow i
 placeholdery nastepnych etapow. Nie implementuje jeszcze searchable selecta,
@@ -1258,9 +1263,9 @@ Status: accepted.
 Decyzja: Step 10 dzielimy na 10A i pozniejszy detail/result polish. 10A
 dostarcza realny discovery workflow w UI:
 
-- searchable system list ladowany z `GET /flow-explorer/systems`,
+- searchable system list ladowany z `GET /api/flow-explorer/systems`,
 - branch/ref input z defaultem pobieranym z nowego feature endpointu
-  `GET /flow-explorer/config`,
+  `GET /api/flow-explorer/config`,
 - automatyczne pobranie endpoint inventory po wyborze systemu,
 - lokalne filtrowanie endpointow po metodzie, path, opisie, operationId,
   tagach i handlerze,
@@ -1288,9 +1293,9 @@ Decyzja: Step 11 dzielimy na mniejszy krok 11A i pozniejszy result polish.
 - preset dokumentacji jako strukturalne pole `documentationPreset`,
 - focus areas jako ograniczona lista priorytetow `focusAreas`, maksymalnie 4,
 - textarea `User instructions`, ktora nie jest nazywana pelnym promptem,
-- `POST /flow-explorer/jobs` z danymi wybranego systemu, endpointu, branch/ref,
-  presetem, focus areas i `userInstructions`,
-- polling `GET /flow-explorer/jobs/{jobId}` do statusu `COMPLETED` albo
+- `POST /api/flow-explorer/jobs` z danymi wybranego systemu, endpointu,
+  branch/ref, presetem, focus areas i `userInstructions`,
+- polling `GET /api/flow-explorer/jobs/{jobId}` do statusu `COMPLETED` albo
   `FAILED`,
 - kompaktowy job state oraz rozwijany `Prepared prompt preview`.
 
@@ -1360,7 +1365,7 @@ Status: accepted.
 
 Decyzja: Follow-up chat Flow Explorera jest feature-owned i dziala dopiero po
 zakonczonym jobie `COMPLETED` z `result`. `POST
-/flow-explorer/jobs/{jobId}/chat/messages` przyjmuje tylko strukturalne pole
+/api/flow-explorer/jobs/{jobId}/chat/messages` przyjmuje tylko strukturalne pole
 `message` i zwraca aktualny `FlowExplorerJobStateSnapshot`.
 
 Backend buduje `FlowExplorerFollowUpChatRequest` z initial request,
@@ -1383,6 +1388,34 @@ Powod: uzytkownik moze doprecyzowac rezultat bez rozbijania kontraktu initial
 JSON i bez powtarzania kosztownego discovery od zera. Jednoczesnie follow-up
 pozostaje scoped do Flow Explorera i nie przenosi incidentowego chatu jako
 generycznego core.
+
+### 024. System row summary jako expandable content
+
+Status: accepted.
+
+Decyzja: `flow-explorer-system-row__summary` nie jest renderowane w collapsed
+state listy systemow. Wiersz systemu ma osobna akcje wyboru systemu i osobna
+akcje expand/collapse dla summary, zeby dlugie opisy nie rozpychaly katalogu
+aplikacji i nie spowalnialy skanowania listy.
+
+Powod: wybor systemu jest czesta, skanujaca interakcja. Summary jest
+wartosciowe jako kontekst, ale powinno byc czytane intencjonalnie, a nie
+dominowac kazdy wiersz listy.
+
+### 025. Flow Explorer API pod `/api/flow-explorer`
+
+Status: accepted.
+
+Decyzja: frontendowy route ekranu zostaje `/flow-explorer`, a wszystkie
+backendowe endpointy feature'u sa wystawiane pod `/api/flow-explorer/*`.
+Dotyczy to configu, listy systemow, endpoint inventory, jobow i follow-up
+chatu.
+
+Powod: route SPA i API nie powinny dzielic tego samego prefiksu. Przy lokalnym
+uruchomieniu Angular dev server obsluguje `/flow-explorer` jako widok, a
+istniejacy `proxy.conf.json` przekazuje `/api/*` do Spring Boot na
+`localhost:8080`. To usuwa przypadek, w ktorym request API dostawal HTML
+aplikacji zamiast JSON.
 
 ## Open questions
 

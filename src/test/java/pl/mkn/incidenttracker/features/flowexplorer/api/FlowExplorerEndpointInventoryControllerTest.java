@@ -40,7 +40,7 @@ class FlowExplorerEndpointInventoryControllerTest {
                 "get"
         )).thenReturn(inventory());
 
-        mockMvc.perform(get("/flow-explorer/systems/billing-core/endpoints")
+        mockMvc.perform(get("/api/flow-explorer/systems/billing-core/endpoints")
                         .param("branch", "feature/FLOW-42")
                         .param("endpointPathPrefix", "/api")
                         .param("httpMethod", "get"))
@@ -73,7 +73,7 @@ class FlowExplorerEndpointInventoryControllerTest {
                 null
         )).thenThrow(new FlowExplorerSystemNotFoundException("missing-system"));
 
-        mockMvc.perform(get("/flow-explorer/systems/missing-system/endpoints"))
+        mockMvc.perform(get("/api/flow-explorer/systems/missing-system/endpoints"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("FLOW_EXPLORER_SYSTEM_NOT_FOUND"));
     }
