@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.features.flowexplorer.context;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.common.GitLabPathUtils;
 import pl.mkn.incidenttracker.features.flowexplorer.FlowExplorerProperties;
 import pl.mkn.incidenttracker.features.flowexplorer.endpoint.FlowExplorerGitLabConfigurationException;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
@@ -211,7 +212,7 @@ public class FlowExplorerRepositoryScopeService {
     private boolean groupMatches(String configuredGroup, OperationalContextRepository repository) {
         var repositoryGroup = normalize(repository.git().group());
         return !StringUtils.hasText(repositoryGroup)
-                || normalizeGroupPath(configuredGroup).equals(normalizeGroupPath(repositoryGroup));
+                || GitLabPathUtils.isSameOrNestedPath(configuredGroup, repositoryGroup);
     }
 
     private String projectName(String configuredGroup, OperationalContextRepository repository) {
@@ -229,19 +230,7 @@ public class FlowExplorerRepositoryScopeService {
     }
 
     private String relativeProjectPath(String configuredGroup, String rawProjectPath) {
-        var projectPath = trimSlashes(rawProjectPath.trim());
-        var normalizedGroup = trimSlashes(configuredGroup.trim());
-        var prefix = normalizedGroup + "/";
-        if (projectPath.regionMatches(true, 0, prefix, 0, prefix.length())) {
-            return projectPath.substring(prefix.length());
-        }
-        return projectPath;
-    }
-
-    private String normalizeGroupPath(String value) {
-        return StringUtils.hasText(value)
-                ? trimSlashes(value.trim()).toLowerCase(Locale.ROOT)
-                : "";
+        return GitLabPathUtils.relativeProjectPath(configuredGroup, rawProjectPath);
     }
 
     private String trimSlashes(String value) {

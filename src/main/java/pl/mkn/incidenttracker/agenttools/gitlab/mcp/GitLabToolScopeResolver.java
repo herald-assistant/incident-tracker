@@ -3,6 +3,7 @@ package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolScope;
+import pl.mkn.incidenttracker.common.GitLabPathUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
@@ -55,20 +56,20 @@ final class GitLabToolScopeResolver {
             var repositoryGroup = trimToNull(repository.git().group());
             if (StringUtils.hasText(configuredGroup)
                     && StringUtils.hasText(repositoryGroup)
-                    && !samePath(configuredGroup, repositoryGroup)) {
+                    && !GitLabPathUtils.isSameOrNestedPath(configuredGroup, repositoryGroup)) {
                 throw new IllegalArgumentException(
                         "GitLab project '%s' belongs to group '%s', not configured group '%s'."
                                 .formatted(projectName, repositoryGroup, configuredGroup)
                 );
             }
-            return firstNonBlank(repositoryGroup, configuredGroup);
+            return StringUtils.hasText(configuredGroup) ? configuredGroup : repositoryGroup;
         }
 
         var applicationGroups = applicationRepositoryGroups(applicationName, catalog);
         if (!applicationGroups.isEmpty()) {
             if (StringUtils.hasText(configuredGroup)) {
                 var configuredGroupAllowed = applicationGroups.stream()
-                        .anyMatch(group -> samePath(group, configuredGroup));
+                        .anyMatch(group -> GitLabPathUtils.isSameOrNestedPath(configuredGroup, group));
                 if (!configuredGroupAllowed) {
                     throw new IllegalArgumentException(
                             "Application '%s' repositories do not belong to configured GitLab group '%s'."
@@ -186,28 +187,7 @@ final class GitLabToolScopeResolver {
     }
 
     private String relativeProjectPath(String configuredGroup, String rawProjectPath) {
-        if (!StringUtils.hasText(rawProjectPath)) {
-            return null;
-        }
-        var projectPath = trimSlashes(rawProjectPath.trim());
-        if (!StringUtils.hasText(configuredGroup)) {
-            return projectPath;
-        }
-
-        var prefix = trimSlashes(configuredGroup.trim()) + "/";
-        return projectPath.regionMatches(true, 0, prefix, 0, prefix.length())
-                ? projectPath.substring(prefix.length())
-                : projectPath;
-    }
-
-    private boolean samePath(String left, String right) {
-        return normalizePath(left).equals(normalizePath(right));
-    }
-
-    private String normalizePath(String value) {
-        return StringUtils.hasText(value)
-                ? trimSlashes(value.trim()).toLowerCase(Locale.ROOT)
-                : "";
+        return GitLabPathUtils.relativeProjectPath(configuredGroup, rawProjectPath);
     }
 
     private String normalizeComparable(String value) {
@@ -217,29 +197,6 @@ final class GitLabToolScopeResolver {
                         .replace('-', '_')
                         .replaceAll("[^a-z0-9/_]+", "_")
                 : null;
-    }
-
-    private String trimSlashes(String value) {
-        var start = 0;
-        var end = value.length();
-
-        while (start < end && value.charAt(start) == '/') {
-            start++;
-        }
-        while (end > start && value.charAt(end - 1) == '/') {
-            end--;
-        }
-
-        return value.substring(start, end);
-    }
-
-    private String firstNonBlank(String... values) {
-        for (var value : values) {
-            if (StringUtils.hasText(value)) {
-                return value.trim();
-            }
-        }
-        return null;
     }
 
     private String trimToNull(String value) {

@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailab
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTarget;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTraversal;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableRepository;
+import pl.mkn.incidenttracker.common.GitLabPathUtils;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
@@ -201,10 +202,9 @@ final class GitLabAvailableRepositoryMapper {
             return true;
         }
 
-        var normalizedSessionGroup = normalizePath(sessionGroup);
         var repositoryGroup = repository.git().group();
         if (StringUtils.hasText(repositoryGroup)) {
-            return normalizedSessionGroup.equals(normalizePath(repositoryGroup));
+            return GitLabPathUtils.isSameOrNestedPath(sessionGroup, repositoryGroup);
         }
 
         var projectPath = repository.git().projectPath();
@@ -212,9 +212,7 @@ final class GitLabAvailableRepositoryMapper {
             return true;
         }
 
-        var normalizedProjectPath = normalizePath(projectPath);
-        return normalizedProjectPath.equals(normalizedSessionGroup)
-                || normalizedProjectPath.startsWith(normalizedSessionGroup + "/");
+        return GitLabPathUtils.isSameOrNestedPath(sessionGroup, projectPath);
     }
 
     private static List<String> aliases(
@@ -305,18 +303,7 @@ final class GitLabAvailableRepositoryMapper {
             return null;
         }
 
-        var projectPath = trimSlashes(rawProjectPath.trim());
-        if (!StringUtils.hasText(sessionGroup)) {
-            return projectPath;
-        }
-
-        var normalizedGroup = trimSlashes(sessionGroup.trim());
-        var prefix = normalizedGroup + "/";
-        if (projectPath.regionMatches(true, 0, prefix, 0, prefix.length())) {
-            return projectPath.substring(prefix.length());
-        }
-
-        return projectPath;
+        return GitLabPathUtils.relativeProjectPath(sessionGroup, rawProjectPath);
     }
 
     private static List<String> distinctLimited(List<String> values, int limit) {
@@ -352,12 +339,6 @@ final class GitLabAvailableRepositoryMapper {
         return normalized.length() > maxCharacters
                 ? normalized.substring(0, maxCharacters) + "..."
                 : normalized;
-    }
-
-    private static String normalizePath(String value) {
-        return StringUtils.hasText(value)
-                ? trimSlashes(value.trim()).toLowerCase(Locale.ROOT)
-                : "";
     }
 
     private static String normalizeId(String value) {

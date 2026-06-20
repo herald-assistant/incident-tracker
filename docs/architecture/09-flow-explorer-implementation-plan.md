@@ -2169,6 +2169,40 @@ Weryfikacja:
   overlaya Materiala, wiec finalne odczucie hovera warto potwierdzic wizualnie
   na dzialajacym UI.
 
+### 044. GitLab configured group as root namespace
+
+Status: implemented.
+
+Problem: repozytoria z operational context mogly miec `git.group` wskazujace
+podgrupe GitLaba, np. synthetic `CRM/PROCESSES`, podczas gdy konfiguracja
+aplikacji wskazuje root namespace, np. `CRM`. Dotychczasowa walidacja
+porownywala grupy po dokladnym pathu, przez co Flow Explorer i GitLab tools
+odrzucaly repozytoria z podgrup mimo ze pelny project path byl poprawnie pod
+skonfigurowanym rootem.
+
+Decyzja: `analysis.gitlab.group` traktujemy jako root namespace. Repozytorium
+jest zgodne, gdy jego `git.group` albo `git.projectPath` jest tym samym pathem
+albo znajduje sie pod tym rootem. Do adapterow GitLaba nadal przekazujemy
+skonfigurowany root group, a `projectName` relatywizujemy wzgledem tego rootu,
+np. `CRM/PROCESSES/CRM_CUSTOMER_PROCESS` -> `PROCESSES/CRM_CUSTOMER_PROCESS`.
+
+Zakres implementacji:
+
+- [x] Dodano neutralny helper `GitLabPathUtils` w `common`.
+- [x] Flow Explorer repository scope akceptuje repozytoria z podgrup root
+  namespace i relatywizuje project path.
+- [x] GitLab tool scope resolver akceptuje repozytoria z podgrup, ale nie
+  zmienia session group z configured root na podgrupe.
+- [x] GitLab available repository mapper pokazuje repozytoria z podgrup w
+  `gitlab_list_available_repositories`.
+- [x] Testy regresji sa CRM-specific i zanonimizowane.
+
+Weryfikacja:
+
+- [x] `mvn -q "-Dtest=FlowExplorerEndpointInventoryServiceTest,GitLabMcpToolsTest" test`
+- [x] `rg -n "CLP|clp|AgreementController"` na dotknietych testach nie zwraca
+  nowych fixture'ow z realnymi nazwami.
+
 ## Open questions
 
 - [ ] Czy result ma miec source refs jako stringi w MVP, czy strukturalny

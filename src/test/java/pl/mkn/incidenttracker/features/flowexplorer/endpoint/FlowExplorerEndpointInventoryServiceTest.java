@@ -98,6 +98,29 @@ class FlowExplorerEndpointInventoryServiceTest {
     }
 
     @Test
+    void shouldAllowRepositoriesFromConfiguredGitLabSubgroups() {
+        var endpointService = mock(GitLabRepositoryEndpointService.class);
+        when(endpointService.listEndpoints(argThat(request -> request != null
+                && "CRM".equals(request.group())
+                && "PROCESSES/CRM_CUSTOMER_PROCESS".equals(request.projectName()))))
+                .thenReturn(endpointList("PROCESSES/CRM_CUSTOMER_PROCESS", List.of(endpoint()), List.of()));
+        var service = service(endpointService, "CRM", "main", subgroupCatalog());
+
+        var response = service.endpoints("customer-process", null, null, null);
+
+        assertEquals("CRM", response.gitLabGroup());
+        assertEquals(1, response.repositoryCount());
+        assertEquals(1, response.scannedRepositoryCount());
+        assertEquals(1, response.endpointCount());
+
+        var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
+        verify(endpointService).listEndpoints(requestCaptor.capture());
+        assertEquals("CRM", requestCaptor.getValue().group());
+        assertEquals("PROCESSES/CRM_CUSTOMER_PROCESS", requestCaptor.getValue().projectName());
+        assertEquals("main", requestCaptor.getValue().branch());
+    }
+
+    @Test
     void shouldFailWhenSystemDoesNotExist() {
         var service = service(mock(GitLabRepositoryEndpointService.class), "platform/backend", "main");
 
@@ -122,12 +145,21 @@ class FlowExplorerEndpointInventoryServiceTest {
             String gitLabGroup,
             String defaultBranch
     ) {
+        return service(endpointService, gitLabGroup, defaultBranch, catalog());
+    }
+
+    private static FlowExplorerEndpointInventoryService service(
+            GitLabRepositoryEndpointService endpointService,
+            String gitLabGroup,
+            String defaultBranch,
+            OperationalContextCatalog catalog
+    ) {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup(gitLabGroup);
         var flowExplorerProperties = new FlowExplorerProperties();
         flowExplorerProperties.setDefaultBranch(defaultBranch);
         var scopeService = new FlowExplorerRepositoryScopeService(
-                query -> catalog(),
+                query -> catalog,
                 gitLabProperties,
                 flowExplorerProperties
         );
@@ -230,6 +262,35 @@ class FlowExplorerEndpointInventoryServiceTest {
                                 map("repoId", "billing-domain", "priority", 2)
                         )
                 )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        );
+    }
+
+    private static OperationalContextCatalog subgroupCatalog() {
+        return OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map(
+                        "id", "customer-process",
+                        "name", "Customer Process",
+                        "kind", "internal-application",
+                        "references", map("repositories", List.of("crm-customer-process-repo"))
+                )),
+                List.of(),
+                List.of(map(
+                        "id", "crm-customer-process-repo",
+                        "name", "CRM Customer Process",
+                        "git", map(
+                                "provider", "gitlab",
+                                "group", "CRM/PROCESSES",
+                                "projectPath", "CRM/PROCESSES/CRM_CUSTOMER_PROCESS"
+                        )
+                )),
+                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),

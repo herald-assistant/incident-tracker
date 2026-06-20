@@ -95,7 +95,7 @@ class GitLabMcpToolsTest {
                                 "Customer",
                                 "service",
                                 "active",
-                                "CRM",
+                                "CRM/PROCESSES",
                                 "CRM/PROCESSES/CRM_CUSTOMER_PROCESS",
                                 "CRM_CUSTOMER_PROCESS",
                                 List.of("customer-process"),
@@ -428,6 +428,67 @@ class GitLabMcpToolsTest {
         assertEquals("src/main/java/com/example/synthetic/edge/CustomerProfileClient.java", response.filePath());
         assertEquals("class CustomerProfileClient {}", response.content());
         assertFalse(response.truncated());
+    }
+
+    @Test
+    void shouldResolveNestedOperationalContextRepositoryGroupUnderConfiguredRootGroup() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = new GitLabMcpTools(
+                gitLabRepositoryPort,
+                ignored -> operationalContextCatalog(repository(
+                        "crm-customer-process-repo",
+                        "CRM Customer Process",
+                        "service",
+                        "active",
+                        "CRM/PROCESSES",
+                        "CRM/PROCESSES/CRM_CUSTOMER_PROCESS",
+                        "CRM_CUSTOMER_PROCESS",
+                        List.of("customer-process"),
+                        List.of("customer-process"),
+                        List.of("customer"),
+                        List.of("customer-process"),
+                        List.of(),
+                        List.of(),
+                        List.of("com.example.crm.customer"),
+                        List.of("/customers"),
+                        List.of("customer-process")
+                )),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "PROCESSES/CRM_CUSTOMER_PROCESS",
+                "main",
+                "src/main/java/com/example/crm/customer/CustomerProcessController.java",
+                120
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "PROCESSES/CRM_CUSTOMER_PROCESS",
+                "main",
+                "src/main/java/com/example/crm/customer/CustomerProcessController.java",
+                "class CustomerProcessController {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFile(
+                "PROCESSES/CRM_CUSTOMER_PROCESS",
+                "main",
+                "customer-process",
+                "src/main/java/com/example/crm/customer/CustomerProcessController.java",
+                120,
+                "Czytam repozytorium z podgrupy GitLaba.",
+                gitLabToolContext()
+        );
+
+        verify(gitLabRepositoryPort).readFile(
+                "CRM",
+                "PROCESSES/CRM_CUSTOMER_PROCESS",
+                "main",
+                "src/main/java/com/example/crm/customer/CustomerProcessController.java",
+                120
+        );
+        assertEquals("CRM", response.group());
+        assertEquals("PROCESSES/CRM_CUSTOMER_PROCESS", response.projectName());
     }
 
     @Test
