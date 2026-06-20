@@ -13,6 +13,7 @@ public final class GitLabToolNames {
     public static final String READ_REPOSITORY_FILE_CHUNK = PREFIX + "read_repository_file_chunk";
     public static final String READ_REPOSITORY_FILE_CHUNKS = PREFIX + "read_repository_file_chunks";
     public static final String READ_REPOSITORY_FILE_OUTLINE = PREFIX + "read_repository_file_outline";
+    public static final String READ_JAVA_METHOD_SLICE = PREFIX + "read_java_method_slice";
     public static final String FIND_CLASS_REFERENCES = PREFIX + "find_class_references";
     public static final String FIND_FLOW_CONTEXT = PREFIX + "find_flow_context";
 

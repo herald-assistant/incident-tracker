@@ -309,10 +309,88 @@
                     rows="8"
                     placeholder="src/main/java/com/example/crm/customer/CustomerController.java"
                     spellcheck="false"
-                    [formControl]="gitLabRepositoryFilesByPathForm.controls.filePaths"
+                  [formControl]="gitLabRepositoryFilesByPathForm.controls.filePaths"
+                ></textarea>
+              </label>
+            </div>
+          }
+
+            @case ('java-method-slice') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">File path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="src/main/java/com/example/crm/customer/CustomerService.java"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.filePath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Declaring type</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie, np. CustomerService"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.declaringTypeName"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max chars</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="40000"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.maxCharacters"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Methods</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="5"
+                    placeholder="getCustomer&#10;validateAccess@42&#10;mapResponse L91"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.methodSelectors"
                   ></textarea>
                 </label>
               </div>
+
+              <div class="toggle-grid">
+                <label class="toggle-row">
+                  <input
+                    type="checkbox"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.includeDirectPrivateHelpers"
+                  />
+                  <span>Direct private helpers</span>
+                </label>
+                <label class="toggle-row">
+                  <input
+                    type="checkbox"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.includeRelevantFields"
+                  />
+                  <span>Relevant fields</span>
+                </label>
+                <label class="toggle-row">
+                  <input
+                    type="checkbox"
+                    [formControl]="gitLabJavaMethodSliceForm.controls.includeRelevantImports"
+                  />
+                  <span>Relevant imports</span>
+                </label>
+              </div>
+
+              @if (controlInvalid(gitLabJavaMethodSliceForm.controls.filePath) || controlInvalid(gitLabJavaMethodSliceForm.controls.methodSelectors)) {
+                <p class="form-error">Pola `filePath` i `Methods` są wymagane.</p>
+              }
             }
 
             @case ('source-resolve') {
@@ -608,9 +686,20 @@
                               <p class="tool-status__label">Selected node</p>
                               <h4>{{ selectedNode.label }}</h4>
                             </div>
-                            <span class="panel-chip" [title]="roleTooltip(selectedNode.role)">
-                              {{ displayRole(selectedNode.role) }}
-                            </span>
+                            <div class="flow-node-details__actions">
+                              @if (selectedNode.file?.methods?.length) {
+                                <button
+                                  class="secondary-button secondary-button--compact"
+                                  type="button"
+                                  (click)="useUseCaseNodeMethodsForSlice(selectedNode)"
+                                >
+                                  Slice all
+                                </button>
+                              }
+                              <span class="panel-chip" [title]="roleTooltip(selectedNode.role)">
+                                {{ displayRole(selectedNode.role) }}
+                              </span>
+                            </div>
                           </div>
 
                           @if (selectedNode.subtitle) {
@@ -644,10 +733,19 @@
                             <div class="context-method-list">
                               @for (method of selectedNode.file?.methods || []; track method.methodName || $index) {
                                 <div class="context-method-row">
-                                  <span>{{ method.methodName }}</span>
+                                  <span class="context-method-row__name">{{ method.methodName }}</span>
                                   @if (methodLineRange(method)) {
-                                    <span>{{ methodLineRange(method) }}</span>
+                                    <span class="context-method-row__range">{{ methodLineRange(method) }}</span>
                                   }
+                                  <button
+                                    class="json-icon-button context-method-row__action"
+                                    type="button"
+                                    title="Użyj w Java Method Slice"
+                                    aria-label="Użyj metody w Java Method Slice"
+                                    (click)="useUseCaseMethodForSlice(selectedNode, method)"
+                                  >
+                                    <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+                                  </button>
                                 </div>
                               }
                             </div>
@@ -655,7 +753,7 @@
                             <div class="context-method-list">
                               @for (symbol of selectedNode.file?.symbols || []; track symbol) {
                                 <div class="context-method-row">
-                                  <span>{{ symbol }}</span>
+                                  <span class="context-method-row__name">{{ symbol }}</span>
                                 </div>
                               }
                             </div>
@@ -746,6 +844,86 @@
                       </details>
                     }
                   </div>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'java-method-slice' && gitLabJavaMethodSliceResult(); as sliceResult) {
+              <section class="context-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Java Method Slice</p>
+                    <h3>{{ sliceResult.status }} · {{ sliceResult.includedMethods.length }} methods</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    @if (methodLineRange(sliceResult)) {
+                      <span class="panel-chip">{{ methodLineRange(sliceResult) }}</span>
+                    }
+                    <span class="panel-chip">{{ sliceResult.returnedCharacters }} chars</span>
+                    @if (sliceResult.truncated) {
+                      <span class="panel-chip panel-chip--warning">truncated</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="endpoint-card__meta">
+                  <span>{{ sliceResult.projectName }}</span>
+                  <span>{{ sliceResult.branch }}</span>
+                  <span>{{ sliceResult.filePath }}</span>
+                  @if (sliceResult.declaringTypeName) {
+                    <span>{{ sliceResult.declaringTypeName }}</span>
+                  }
+                </div>
+
+                @if (sliceResult.includedMethods.length > 0) {
+                  <div class="context-method-list">
+                    @for (method of sliceResult.includedMethods; track method.signature || method.methodName || $index) {
+                      <div class="context-method-row">
+                        <span class="context-method-row__name">{{ method.methodName || method.signature }}</span>
+                        @if (methodLineRange(method)) {
+                          <span class="context-method-row__range">{{ methodLineRange(method) }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (sliceResult.candidates.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary>
+                      <span>Candidates</span>
+                      <span class="panel-chip">{{ sliceResult.candidates.length }}</span>
+                    </summary>
+                    <div class="context-method-list">
+                      @for (candidate of sliceResult.candidates; track candidate.signature || $index) {
+                        <div class="context-method-row">
+                          <span class="context-method-row__name">
+                            {{ candidate.methodName || candidate.signature }}
+                          </span>
+                          @if (methodLineRange(candidate)) {
+                            <span class="context-method-row__range">{{ methodLineRange(candidate) }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </details>
+                }
+
+                @if (sliceResult.content) {
+                  <textarea
+                    class="json-output source-output source-output--slice"
+                    readonly
+                    spellcheck="false"
+                    [value]="sliceResult.content"
+                  ></textarea>
+                }
+
+                @if (sliceResult.limitations.length > 0) {
+                  <ul class="context-list">
+                    @for (limitation of sliceResult.limitations; track limitation) {
+                      <li>{{ limitation }}</li>
+                    }
+                  </ul>
                 }
               </section>
             }

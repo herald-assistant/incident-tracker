@@ -25,17 +25,22 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoad
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
+
+    private static final CopilotToolDescriptionContext INCIDENT_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("incident-analysis");
 
     @TempDir
     Path tempDirectory;
@@ -46,7 +51,10 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
         properties.setWorkingDirectory("C:\\workspace");
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
         var factory = mock(CopilotSdkToolFactory.class);
-        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.<ToolDefinition>of());
+        when(factory.createToolDefinitions(
+                any(CopilotToolSessionContext.class),
+                eq(INCIDENT_DESCRIPTION_CONTEXT)
+        )).thenReturn(List.<ToolDefinition>of());
         var service = new CopilotIncidentInitialPreparationService(
                 new CopilotIncidentInitialRunAssembler(
                         factory,

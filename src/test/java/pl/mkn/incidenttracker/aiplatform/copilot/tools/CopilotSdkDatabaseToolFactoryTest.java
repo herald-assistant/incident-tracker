@@ -9,6 +9,7 @@ import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.integrations.database.DatabaseToolService;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.agenttools.database.mcp.DatabaseMcpTools;
 
 import java.util.List;
@@ -47,7 +48,8 @@ class CopilotSdkDatabaseToolFactoryTest {
                 "sandbox-a",
                 "release/2026.04",
                 "CRM/runtime"
-        )).stream().collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
+        ), CopilotToolDescriptionContext.empty()).stream()
+                .collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
 
         assertSchemaProperties(
                 toolsByName.get("db_find_tables"),
@@ -85,7 +87,7 @@ class CopilotSdkDatabaseToolFactoryTest {
                 registry
         );
         var sessionContext = sessionContext();
-        var tool = factory.createToolDefinitions(sessionContext).stream()
+        var tool = factory.createToolDefinitions(sessionContext, CopilotToolDescriptionContext.empty()).stream()
                 .filter(candidate -> candidate.name().equals("db_count_rows"))
                 .findFirst()
                 .orElseThrow();

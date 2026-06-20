@@ -120,10 +120,20 @@ orkiestratorowi, ktora klasa bledu powinna byc sprawdzona dalej.
 
 ## Staly Kontekst Repozytorium
 
-Traktuj `gitLabGroup` i `gitLabBranch` z manifestu/promptu jako stale.
+Traktuj `gitLabBranch` z manifestu/promptu jako staly incident context. Gdy
+wolanie GitLab toola wymaga branch/ref, przekaz jawnie `branchRef` ustawiony na
+wartosc `gitLabBranch` albo branch zwrocony przez poprzedni GitLab tool result.
 
-Nie zmieniaj group ani branch. Nie wymyslaj project names. Wyprowadzaj project
-names i file paths tylko z evidence oraz eksploracji repozytorium.
+Nie przekazuj `gitLabGroup` do GitLab tools. Backend rozstrzyga GitLab group
+przez operational context albo konfiguracje. `gitLabGroup` z
+manifestu/promptu jest kontekstem diagnostycznym, nie model-facing inputem
+toola.
+
+Nie zmieniaj branch. Nie wymyslaj project names. Wyprowadzaj `projectName` i
+file paths tylko z evidence, operational context albo eksploracji repozytorium.
+Gdy tool dotyczy kodu konkretnej aplikacji/systemu i prompt albo operational
+context podaje nazwe aplikacji, przekaz `applicationName` jako dodatkowe
+zawężenie scope'u.
 
 ## Semantyczny Code-Search Scope
 
@@ -171,8 +181,9 @@ ugruntowane przez logs, deterministic evidence albo code references, ale
 incydent zawiera luzne clues o repozytorium, komponencie, module, package,
 endpointcie, integracji, systemie, bounded context albo procesie.
 
-Tool czyta katalog repozytoriow z operational context dla stalej session group.
-Nie przeszukuje kodu i nie zmienia branch ani group.
+Tool czyta katalog repozytoriow z operational context dla backendowo
+rozstrzygnietej GitLab group. Nie przeszukuje kodu i nie zmienia branch.
+Przekaz `branchRef` jawnie.
 
 Uzyj zwroconego `projectName` jako inputu dla kolejnych GitLab search, flow,
 outline, chunk i read tools. `gitLabPath`, `summary` i metadata repozytorium
@@ -261,10 +272,18 @@ Preferowana kolejnosc:
 4. `gitlab_find_class_references` dla ugruntowanej klasy, entity, repository,
    DTO, mappera, validatora albo klienta,
 5. `gitlab_find_flow_context` dla direct collaborators i broader flow,
-6. `gitlab_read_repository_files_by_path` tylko dla ugruntowanej listy sciezek
+6. `gitlab_read_java_method_slice` dla znanego pliku Java i metody, bo zwraca
+   wybrane metody z potrzebnymi polami, importami i prywatnymi helperami bez
+   dumpu calej klasy,
+7. `gitlab_read_repository_files_by_path` tylko dla ugruntowanej listy sciezek
    plikow, np. po wyniku `gitlab_build_endpoint_use_case_context`,
-7. outline/chunk/chunks przed pojedynczym full file,
-8. pojedynczy full file tylko gdy krotki plik albo chunk nie wystarcza.
+8. outline/chunk/chunks przed pojedynczym full file, gdy method slice nie pasuje
+   do pytania albo parser Java nie wystarcza,
+9. pojedynczy full file tylko gdy krotki plik albo chunk nie wystarcza.
+
+Dla `gitlab_read_java_method_slice` zwykle wystarczy `methodSelectors` z
+`methodName`. `lineStart` jest opcjonalne; uzyj go tylko, gdy trzeba zawęzic
+wynik do konkretnego overloadu.
 
 Szukaj po evidence, nie po ciekawosci:
 

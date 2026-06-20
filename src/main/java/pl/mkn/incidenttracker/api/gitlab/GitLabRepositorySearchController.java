@@ -12,6 +12,9 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointServic
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 
@@ -24,6 +27,7 @@ public class GitLabRepositorySearchController {
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
     private final GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
+    private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
 
     @PostMapping("/search")
     public GitLabRepositorySearchResponse search(@Valid @RequestBody GitLabRepositorySearchRequest request) {
@@ -53,6 +57,13 @@ public class GitLabRepositorySearchController {
             @Valid @RequestBody GitLabRepositoryFilesByPathApiRequest request
     ) {
         return gitLabRepositoryFilesByPathApiService.readFiles(request);
+    }
+
+    @PostMapping("/java-method-slice")
+    public GitLabJavaMethodSliceResponse readJavaMethodSlice(
+            @Valid @RequestBody GitLabJavaMethodSliceRequest request
+    ) {
+        return gitLabJavaMethodSliceService.readMethodSlice(request);
     }
 
 }

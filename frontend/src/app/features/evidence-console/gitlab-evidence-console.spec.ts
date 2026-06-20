@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
   GitLabEndpointUseCaseContextResponse,
+  GitLabJavaMethodSliceResponse,
   GitLabRepositoryEndpointsResponse,
   GitLabRepositoryFilesByPathResponse
 } from '../../core/services/evidence-api.service';
@@ -78,7 +79,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(5);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(6);
     expect(compiled.querySelector('.workbench-header')).toBeNull();
     expect(compiled.querySelector('.gitlab-result')).toBeFalsy();
     expect(compiled.textContent).not.toContain('Kopiuj JSON');
@@ -247,6 +248,63 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('READ');
     expect(compiled.textContent).toContain('2026-06-14T10:20:00.000Z');
     expect(compiled.textContent).toContain('last-customer-controller');
+  });
+
+  it('should render Java method slice response with focused source content', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.selectedToolKey.set('java-method-slice');
+    fixture.componentInstance.gitLabJavaMethodSliceState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildJavaMethodSliceResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Java Method Slice');
+    expect(compiled.textContent).toContain('OK · 2 methods');
+    expect(compiled.textContent).toContain('L42-L58');
+    expect(compiled.textContent).toContain('CustomerService.java');
+    expect(compiled.textContent).toContain('loadCustomer');
+
+    const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice');
+    expect(sourceOutput?.value).toContain('public CustomerModel getCustomer(CustomerId customerId)');
+    expect(sourceOutput?.value).toContain('// ... omitted');
+  });
+
+  it('should populate Java method slice form from selected use-case method', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.gitLabEndpointUseCaseContextState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildUseCaseContextResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    const serviceNode = fixture.componentInstance.gitLabUseCaseTree()?.rows.find(
+      (row) => row.node.label === 'CustomerService.java'
+    )?.node;
+    const method = serviceNode?.file?.methods?.[0];
+
+    expect(serviceNode).toBeTruthy();
+    expect(method).toBeTruthy();
+
+    fixture.componentInstance.useUseCaseMethodForSlice(serviceNode!, method!);
+    fixture.detectChanges();
+
+    const form = fixture.componentInstance.gitLabJavaMethodSliceForm;
+    expect(fixture.componentInstance.selectedToolKey()).toBe('java-method-slice');
+    expect(form.controls.group.value).toBe('CRM');
+    expect(form.controls.projectName.value).toBe('crm-customer-service');
+    expect(form.controls.branch.value).toBe('main');
+    expect(form.controls.filePath.value).toBe(
+      'src/main/java/com/example/crm/customer/application/CustomerService.java'
+    );
+    expect(form.controls.methodSelectors.value).toBe('getCustomer');
   });
 });
 
@@ -497,6 +555,68 @@ function buildFilesByPathResponse(): GitLabRepositoryFilesByPathResponse {
         error: null
       }
     ]
+  };
+}
+
+function buildJavaMethodSliceResponse(): GitLabJavaMethodSliceResponse {
+  return {
+    group: 'CRM',
+    projectName: 'crm-customer-service',
+    branch: 'main',
+    filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+    status: 'OK',
+    declaringTypeName: 'CustomerService',
+    requestedMethods: [{ methodName: 'getCustomer' }],
+    returnedLineStart: 42,
+    returnedLineEnd: 58,
+    totalLines: 120,
+    content: [
+      'package com.example.crm.customer.application;',
+      '',
+      'import com.example.crm.customer.api.CustomerModel;',
+      '',
+      'class CustomerService {',
+      '  private final CustomerRepository customerRepository;',
+      '',
+      '  public CustomerModel getCustomer(CustomerId customerId) {',
+      '    return loadCustomer(customerId);',
+      '  }',
+      '',
+      '  private CustomerModel loadCustomer(CustomerId customerId) {',
+      '    return customerRepository.getCustomer(customerId);',
+      '  }',
+      '',
+      '  // ... omitted 3 methods',
+      '}'
+    ].join('\n'),
+    returnedCharacters: 391,
+    truncated: false,
+    includedImports: ['import com.example.crm.customer.api.CustomerModel;'],
+    includedFields: ['customerRepository'],
+    includedMethods: [
+      {
+        declaringTypeName: 'CustomerService',
+        methodName: 'getCustomer',
+        signature: 'public CustomerModel getCustomer(CustomerId customerId)',
+        lineStart: 42,
+        lineEnd: 46,
+        parameterCount: 1,
+        parameterTypes: ['CustomerId']
+      },
+      {
+        declaringTypeName: 'CustomerService',
+        methodName: 'loadCustomer',
+        signature: 'private CustomerModel loadCustomer(CustomerId customerId)',
+        lineStart: 48,
+        lineEnd: 58,
+        parameterCount: 1,
+        parameterTypes: ['CustomerId']
+      }
+    ],
+    omittedFieldCount: 0,
+    omittedMethodCount: 3,
+    candidates: [],
+    limitations: []
   };
 }
 

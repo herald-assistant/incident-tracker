@@ -16,6 +16,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStart
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FlowExplorerArtifactServiceTest {
@@ -39,8 +40,17 @@ class FlowExplorerArtifactServiceTest {
                 FlowExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT
         ));
         assertEquals("flow-explorer-artifacts-v1", contextJson.get("artifactFormatVersion").asText());
+        assertEquals("crm-service", contextJson.get("applicationName").asText());
         assertEquals("crm-service", contextJson.get("systemId").asText());
-        assertTrue(contextJson.at("/contextSnapshot/snippetCards/0/content").asText().contains("getCustomer"));
+        assertEquals("feature/FLOW-42", contextJson.get("branchRef").asText());
+        assertEquals("feature/FLOW-42", contextJson.at("/contextSnapshot/branchRef").asText());
+        assertTrue(contextJson.at("/contextSnapshot/gitLabGroup").isMissingNode());
+        assertEquals("crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                contextJson.at("/contextSnapshot/snippetCards/0/id").asText());
+        assertTrue(contextJson.at("/contextSnapshot/snippetCards/0/characterCount").asInt() > 0);
+        assertEquals(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT,
+                contextJson.at("/contextSnapshot/snippetCards/0/contentArtifact").asText());
+        assertFalse(contextJson.toString().contains("public CustomerResponse getCustomer"));
 
         var manifest = artifactContents.get(FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT);
         assertTrue(manifest.contains("[CONTROLLER]"));

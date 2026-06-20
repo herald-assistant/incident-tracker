@@ -1,9 +1,16 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.job.error;
 
-public class AnalysisJobNotFoundException extends RuntimeException {
+import pl.mkn.incidenttracker.shared.error.UserFacingApplicationException;
+import pl.mkn.incidenttracker.shared.error.UserFacingErrorType;
+
+public class AnalysisJobNotFoundException extends UserFacingApplicationException {
 
     public AnalysisJobNotFoundException(String analysisId) {
-        super("Analysis job not found: " + analysisId);
+        super(
+                "ANALYSIS_JOB_NOT_FOUND",
+                UserFacingErrorType.NOT_FOUND,
+                "Analysis job not found: " + analysisId
+        );
     }
 
 }

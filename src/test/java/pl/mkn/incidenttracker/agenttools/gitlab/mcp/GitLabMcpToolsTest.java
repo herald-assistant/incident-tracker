@@ -8,7 +8,10 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
@@ -24,7 +27,6 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
-import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolScope;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +47,14 @@ import static org.mockito.Mockito.when;
 
 class GitLabMcpToolsTest {
 
-    private final GitLabMcpTools gitLabMcpTools = new GitLabMcpTools(new TestGitLabRepositoryPort());
+    private static final String DEFAULT_GROUP = "CRM/backend";
+    private static final String DEFAULT_BRANCH_REF = "feature/INC-123";
+    private static final String DEFAULT_APPLICATION_NAME = "backend";
+
+    private final GitLabMcpTools gitLabMcpTools = new GitLabMcpTools(
+            new TestGitLabRepositoryPort(),
+            gitLabProperties(DEFAULT_GROUP)
+    );
 
     @Test
     void shouldListAvailableRepositoriesFromOperationalContextUsingSessionGroup() {
@@ -117,12 +126,15 @@ class GitLabMcpToolsTest {
                                 List.of("/outside"),
                                 List.of("outside-module")
                         )
-                )
+                ),
+                gitLabProperties("CRM")
         );
 
         var response = tools.listAvailableRepositories(
+                DEFAULT_APPLICATION_NAME,
+                "release/2026.04",
                 "Sprawdzam katalog repozytoriow.",
-                gitLabToolContext("CRM", "release/2026.04", "corr-123")
+                gitLabToolContext()
         );
 
         assertEquals("CRM", response.group());
@@ -170,7 +182,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldDelegateSearchRepositoryCandidatesUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(new GitLabRepositoryFileCandidate(
                 "CRM/backend",
                 "crm-customer-client-service",
@@ -182,6 +194,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.searchRepositoryCandidates(
                 List.of("crm-billing-service", "crm-customer-profile-service"),
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 List.of("GET /crm/customers"),
                 List.of("timeout", "customer-profile"),
                 "Sprawdzam kandydatow repozytorium dla testu.",
@@ -189,7 +203,7 @@ class GitLabMcpToolsTest {
         );
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
-                "corr-123".equals(query.correlationId())
+                query.correlationId() == null
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
                         && List.of("crm-billing-service", "crm-customer-profile-service").equals(query.projectNames())
@@ -203,10 +217,18 @@ class GitLabMcpToolsTest {
     @Test
     void shouldDefaultNullListsToEmptyListsInSearchRepositoryCandidates() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
 
-        tools.searchRepositoryCandidates(null, null, null, "Sprawdzam puste wejscie.", gitLabToolContext());
+        tools.searchRepositoryCandidates(
+                null,
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
+                null,
+                null,
+                "Sprawdzam puste wejscie.",
+                gitLabToolContext()
+        );
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 query.projectNames().isEmpty()
@@ -217,12 +239,16 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldSearchRepositoryCandidatesThroughToolUsingComponentHintForNestedProject() {
-        var response = gitLabMcpTools.searchRepositoryCandidates(
+        var tools = new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM"));
+
+        var response = tools.searchRepositoryCandidates(
                 List.of("crm-customer-workflow"),
+                "release-candidate",
+                "customer",
                 List.of(),
                 List.of("customer-profile"),
                 "Sprawdzam zagniezdzony projekt.",
-                gitLabToolContext("CRM", "release-candidate", "customer-123")
+                gitLabToolContext()
         );
 
         assertEquals(1, response.candidates().size());
@@ -235,11 +261,13 @@ class GitLabMcpToolsTest {
     void shouldListRepositoryEndpointsUsingSessionBoundScope() {
         var response = gitLabMcpTools.listRepositoryEndpoints(
                 "crm-customer-api",
+                "feature/FLOW-1",
+                DEFAULT_APPLICATION_NAME,
                 "/api/customers",
                 "GET",
                 50,
                 "Listuje endpointy zamowien.",
-                gitLabToolContext("CRM/backend", "feature/FLOW-1", "flow-123")
+                gitLabToolContext()
         );
 
         assertEquals("CRM/backend", response.group());
@@ -274,7 +302,9 @@ class GitLabMcpToolsTest {
                 mock(GitLabRepositoryPort.class),
                 ignored -> OperationalContextCatalog.empty(),
                 mock(GitLabRepositoryEndpointService.class),
-                endpointUseCaseContextService
+                endpointUseCaseContextService,
+                mock(GitLabJavaMethodSliceService.class),
+                gitLabProperties("CRM/backend")
         );
         when(endpointUseCaseContextService.buildContext(any(), any(), any()))
                 .thenReturn(new GitLabEndpointUseCaseContextResult(
@@ -324,13 +354,15 @@ class GitLabMcpToolsTest {
 
         var response = tools.buildEndpointUseCaseContext(
                 "crm-customer-api",
+                "feature/FLOW-1",
+                DEFAULT_APPLICATION_NAME,
                 "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                 null,
                 null,
                 4,
                 12,
                 "Buduje liste plikow dla endpointu zamowienia.",
-                gitLabToolContext("CRM/backend", "feature/FLOW-1", "flow-123")
+                gitLabToolContext()
         );
 
         verify(endpointUseCaseContextService).buildContext(
@@ -358,7 +390,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldDelegateReadRepositoryFileUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-client-service",
@@ -376,6 +408,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.readRepositoryFile(
                 "crm-customer-client-service",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 120,
                 "Czytam plik w tescie delegacji.",
@@ -399,12 +433,16 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldUseDefaultCharacterLimitWhenNotProvided() {
-        var response = gitLabMcpTools.readRepositoryFile(
+        var tools = new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime"));
+
+        var response = tools.readRepositoryFile(
                 "crm-customer-account-service",
+                "release/2026.04",
+                "crm-runtime",
                 "src/main/java/com/example/crm/customer/account/CustomerAccountService.java",
                 null,
                 "Czytam plik z domyslnym limitem.",
-                gitLabToolContext("CRM/runtime", "release/2026.04", "corr-123")
+                gitLabToolContext()
         );
 
         assertFalse(response.truncated());
@@ -414,9 +452,35 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldReadJavaMethodSliceUsingSessionScope() {
+        var response = gitLabMcpTools.readJavaMethodSlice(
+                "crm-customer-api",
+                "feature/FLOW-1",
+                DEFAULT_APPLICATION_NAME,
+                "src/main/java/com/example/crm/customer/api/CustomerController.java",
+                "CustomerController",
+                List.of(new GitLabJavaMethodSliceMethodSelector("getCustomer", null)),
+                true,
+                true,
+                true,
+                8_000,
+                "Czytam wycinek metody kontrolera.",
+                gitLabToolContext()
+        );
+
+        assertEquals("OK", response.status());
+        assertEquals("CRM/backend", response.group());
+        assertEquals("crm-customer-api", response.projectName());
+        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals(List.of(new GitLabJavaMethodSliceMethodSelector("getCustomer", null)), response.requestedMethods());
+        assertTrue(response.content().contains("public ResponseEntity<OrderResponse> getCustomer"));
+        assertFalse(response.content().contains("public OrderResponse createOrder"));
+    }
+
+    @Test
     void shouldReadRepositoryFilesByPathUsingSessionScopeAndRespectLimits() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-api",
@@ -489,6 +553,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.readRepositoryFilesByPath(
                 "crm-customer-api",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 List.of(
                         "/src/main/java/com/example/crm/customer/MissingCustomerService.java",
                         "crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_repository_file_outline",
@@ -560,7 +626,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldDelegateReadRepositoryFileChunkUsingSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
                 "crm-customer-client-service",
@@ -585,6 +651,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.readRepositoryFileChunk(
                 "crm-customer-client-service",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 5,
                 12,
@@ -614,7 +682,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldReadRepositoryFileOutlineAndInferRole() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-billing-service",
@@ -648,6 +716,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.readRepositoryFileOutline(
                 "crm-billing-service",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 "src/main/java/com/example/crm/billing/CustomerBillingService.java",
                 null,
                 "Sprawdzam zarys pliku w tescie.",
@@ -685,7 +755,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldReadRepositoryFileChunksAndRespectBatchAndCharacterLimits() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
                 "crm-billing-service",
@@ -741,6 +811,8 @@ class GitLabMcpToolsTest {
                         new GitLabFileChunkRequest("crm-billing-service", "src/main/java/com/example/crm/billing/CustomerJob.java", 1, 5, 100),
                         new GitLabFileChunkRequest("crm-billing-service", "src/main/java/com/example/crm/billing/Extra.java", 1, 5, 100)
                 ),
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 15,
                 "Czytam kilka fragmentow w tescie limitow.",
                 gitLabToolContext()
@@ -778,7 +850,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldFindFlowContextGroupedByRoleAndUseFocusedKeywordsFromSessionBoundScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
@@ -832,6 +904,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.findFlowContext(
                 List.of("crm-customer-api", "crm-customer-core"),
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 List.of(
                         "com.example.crm.customer.CustomerController",
                         "CustomerController",
@@ -847,7 +921,7 @@ class GitLabMcpToolsTest {
         );
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
-                "corr-123".equals(query.correlationId())
+                query.correlationId() == null
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
                         && List.of("crm-customer-api", "crm-customer-core").equals(query.projectNames())
@@ -887,7 +961,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldFindClassReferencesUsingImportAndSimpleNameKeywords() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(gitLabRepositoryPort);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
@@ -917,6 +991,8 @@ class GitLabMcpToolsTest {
 
         var response = tools.findClassReferences(
                 List.of("crm-customer-core"),
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
                 "com.example.crm.customer.domain.CustomerEntity",
                 List.of("@Entity", "@Table", "mappedBy", "CustomerRepository"),
                 List.of("GET /crm/customers/{customerId}"),
@@ -926,7 +1002,7 @@ class GitLabMcpToolsTest {
         );
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
-                "corr-123".equals(query.correlationId())
+                query.correlationId() == null
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
                         && List.of("crm-customer-core").equals(query.projectNames())
@@ -987,43 +1063,73 @@ class GitLabMcpToolsTest {
     }
 
     @Test
-    void shouldThrowReadableErrorWhenGitLabGroupIsMissing() {
-        var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
-                AgentToolContextKeys.GITLAB_GROUP
-        )));
+    void shouldThrowReadableErrorWhenGitLabGroupCannotBeResolved() {
+        var tools = new GitLabMcpTools(mock(GitLabRepositoryPort.class));
+
+        var exception = assertThrows(IllegalStateException.class, () -> tools.listAvailableRepositories(
+                DEFAULT_APPLICATION_NAME,
+                DEFAULT_BRANCH_REF,
+                "Sprawdzam brak konfiguracji grupy.",
+                gitLabToolContext()
+        ));
 
         assertEquals(
-                "Missing gitLabGroup in Copilot tool context; GitLab tools require session-bound group.",
+                "GitLab group could not be resolved from operational context or analysis.gitlab.group.",
                 exception.getMessage()
         );
     }
 
     @Test
-    void shouldThrowReadableErrorWhenGitLabBranchIsMissing() {
-        var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
-                AgentToolContextKeys.GITLAB_BRANCH
-        )));
+    void shouldThrowReadableErrorWhenBranchRefIsMissing() {
+        var exception = assertThrows(IllegalArgumentException.class, () -> gitLabMcpTools.readRepositoryFile(
+                "crm-customer-client-service",
+                null,
+                DEFAULT_APPLICATION_NAME,
+                "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
+                120,
+                "Czytam plik bez brancha.",
+                gitLabToolContext()
+        ));
 
         assertEquals(
-                "Missing gitLabBranch in Copilot tool context; GitLab tools require resolved session branch.",
+                "branchRef must be provided explicitly for GitLab tools.",
                 exception.getMessage()
         );
     }
 
     @Test
-    void shouldThrowReadableErrorWhenCorrelationIdIsMissing() {
-        var exception = assertThrows(IllegalStateException.class, () -> GitLabToolScope.from(toolContextWithout(
-                AgentToolContextKeys.CORRELATION_ID
-        )));
-
-        assertEquals(
-                "Missing correlationId in Copilot tool context; GitLab tools require session-bound correlationId.",
-                exception.getMessage()
+    void shouldUseResolvedScopeWithoutLegacyFeatureSpecificToolContext() {
+        var response = gitLabMcpTools.readRepositoryFile(
+                "crm-customer-client-service",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
+                "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
+                120,
+                "Czytam plik bez legacy hidden scope.",
+                gitLabToolContext()
         );
+
+        assertEquals("CRM/backend", response.group());
+        assertEquals("feature/INC-123", response.branch());
     }
 
     private ToolContext gitLabToolContext() {
-        return gitLabToolContext("CRM/backend", "feature/INC-123", "corr-123");
+        var context = new LinkedHashMap<String, Object>();
+        context.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "run-1");
+        context.put(AgentToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
+        context.put(AgentToolContextKeys.TOOL_CALL_ID, "tool-call-1");
+        context.put(AgentToolContextKeys.TOOL_NAME, "gitlab_test_tool");
+        return new ToolContext(context);
+    }
+
+    private GitLabMcpTools gitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
+        return new GitLabMcpTools(gitLabRepositoryPort, gitLabProperties(DEFAULT_GROUP));
+    }
+
+    private static GitLabProperties gitLabProperties(String group) {
+        var properties = new GitLabProperties();
+        properties.setGroup(group);
+        return properties;
     }
 
     private OperationalContextCatalog operationalContextCatalog(Map<String, Object>... repositories) {
@@ -1143,22 +1249,4 @@ class GitLabMcpToolsTest {
         return repository;
     }
 
-    private ToolContext gitLabToolContext(String group, String branch, String correlationId) {
-        var context = new LinkedHashMap<String, Object>();
-        context.put(AgentToolContextKeys.CORRELATION_ID, correlationId);
-        context.put(AgentToolContextKeys.GITLAB_GROUP, group);
-        context.put(AgentToolContextKeys.GITLAB_BRANCH, branch);
-        context.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
-        context.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "run-1");
-        context.put(AgentToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
-        context.put(AgentToolContextKeys.TOOL_CALL_ID, "tool-call-1");
-        context.put(AgentToolContextKeys.TOOL_NAME, "gitlab_test_tool");
-        return new ToolContext(context);
-    }
-
-    private ToolContext toolContextWithout(String keyToRemove) {
-        var context = new LinkedHashMap<>(gitLabToolContext().getContext());
-        context.remove(keyToRemove);
-        return new ToolContext(context);
-    }
 }

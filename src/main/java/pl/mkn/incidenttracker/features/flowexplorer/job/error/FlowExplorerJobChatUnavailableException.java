@@ -1,15 +1,11 @@
 package pl.mkn.incidenttracker.features.flowexplorer.job.error;
 
-public class FlowExplorerJobChatUnavailableException extends RuntimeException {
+import pl.mkn.incidenttracker.shared.error.UserFacingApplicationException;
+import pl.mkn.incidenttracker.shared.error.UserFacingErrorType;
 
-    private final String code;
+public class FlowExplorerJobChatUnavailableException extends UserFacingApplicationException {
 
     public FlowExplorerJobChatUnavailableException(String code, String message) {
-        super(message);
-        this.code = code;
-    }
-
-    public String code() {
-        return code;
+        super(code, UserFacingErrorType.CONFLICT, message);
     }
 }

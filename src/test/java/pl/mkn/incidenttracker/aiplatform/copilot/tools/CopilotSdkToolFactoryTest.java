@@ -9,11 +9,13 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
 
 import java.util.List;
@@ -42,7 +44,7 @@ class CopilotSdkToolFactoryTest {
     void shouldExposeSpringToolsAsCopilotToolDefinitions() {
         var factory = factory(List.of(gitLabToolProvider()));
         var analysisRunId = UUID.randomUUID().toString();
-        var tools = factory.createToolDefinitions(new CopilotToolSessionContext(
+        var tools = createToolDefinitions(factory, new CopilotToolSessionContext(
                 analysisRunId,
                 "analysis-" + analysisRunId,
                 null,
@@ -51,7 +53,7 @@ class CopilotSdkToolFactoryTest {
                 null
         ));
 
-        assertEquals(11, tools.size());
+        assertEquals(12, tools.size());
         assertEquals(
                 Set.of(
                         "gitlab_build_endpoint_use_case_context",
@@ -64,7 +66,8 @@ class CopilotSdkToolFactoryTest {
                         "gitlab_read_repository_files_by_path",
                         "gitlab_read_repository_file_chunk",
                         "gitlab_read_repository_file_chunks",
-                        "gitlab_read_repository_file_outline"
+                        "gitlab_read_repository_file_outline",
+                        "gitlab_read_java_method_slice"
                 ),
                 tools.stream().map(ToolDefinition::name).collect(java.util.stream.Collectors.toSet())
         );
@@ -74,7 +77,7 @@ class CopilotSdkToolFactoryTest {
     void shouldPassSessionBoundContextToSpringToolsThroughBridge() {
         var factory = factory(List.of(contextEchoToolProvider()));
         var sessionContext = gitLabSessionContext();
-        var tool = factory.createToolDefinitions(sessionContext).stream()
+        var tool = createToolDefinitions(factory, sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("context_echo"))
                 .findFirst()
                 .orElseThrow();
@@ -96,7 +99,6 @@ class CopilotSdkToolFactoryTest {
         assertEquals("CRM/runtime", payload.get("gitLabGroup"));
         assertEquals("release/2026.04", payload.get("gitLabBranch"));
         assertEquals("zt01", payload.get("environment"));
-        assertEquals("incident-analysis", payload.get("featureName"));
         assertEquals("analysis-run-1", payload.get("copilotSessionId"));
         assertEquals("analysis-run-1", payload.get("actualCopilotSessionId"));
         assertEquals("tool-call-ctx-1", payload.get("toolCallId"));
@@ -106,7 +108,7 @@ class CopilotSdkToolFactoryTest {
     @Test
     void shouldRejectInvocationWhenSessionIdDoesNotMatchContext() {
         var factory = factory(List.of(contextEchoToolProvider()));
-        var tool = factory.createToolDefinitions(gitLabSessionContext()).stream()
+        var tool = createToolDefinitions(factory, gitLabSessionContext()).stream()
                 .filter(candidate -> candidate.name().equals("context_echo"))
                 .findFirst()
                 .orElseThrow();
@@ -125,7 +127,7 @@ class CopilotSdkToolFactoryTest {
     void shouldReturnStructuredToolErrorWhenSpringToolCallbackFails() {
         var factory = factory(List.of(failingToolProvider()));
         var sessionContext = gitLabSessionContext();
-        var tool = factory.createToolDefinitions(sessionContext).stream()
+        var tool = createToolDefinitions(factory, sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("failing_tool"))
                 .findFirst()
                 .orElseThrow();
@@ -153,7 +155,7 @@ class CopilotSdkToolFactoryTest {
     void shouldReturnDatabaseRetryRecommendationWhenDatabaseToolCallbackFails() {
         var factory = factory(List.of(failingDbToolProvider()));
         var sessionContext = gitLabSessionContext();
-        var tool = factory.createToolDefinitions(sessionContext).stream()
+        var tool = createToolDefinitions(factory, sessionContext).stream()
                 .filter(candidate -> candidate.name().equals(COUNT_ROWS))
                 .findFirst()
                 .orElseThrow();
@@ -179,62 +181,62 @@ class CopilotSdkToolFactoryTest {
     @Test
     void shouldHideSessionBoundFieldsFromGitLabToolSchemas() {
         var factory = factory(List.of(gitLabToolProvider()));
-        var toolsByName = factory.createToolDefinitions(gitLabSessionContext()).stream()
+        var toolsByName = createToolDefinitions(factory, gitLabSessionContext()).stream()
                 .collect(java.util.stream.Collectors.toMap(ToolDefinition::name, tool -> tool));
 
         assertSchemaProperties(
                 toolsByName.get("gitlab_list_available_repositories"),
-                Set.of("reason"),
+                Set.of("applicationName", "branchRef", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_search_repository_candidates"),
-                Set.of("projectNames", "operationNames", "keywords", "reason"),
+                Set.of("projectNames", "branchRef", "applicationName", "operationNames", "keywords", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file"),
-                Set.of("projectName", "filePath", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationName", "filePath", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_files_by_path"),
-                Set.of("projectName", "filePaths", "maxCharactersPerFile", "maxTotalCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationName", "filePaths", "maxCharactersPerFile", "maxTotalCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunk"),
-                Set.of("projectName", "filePath", "startLine", "endLine", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationName", "filePath", "startLine", "endLine", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_outline"),
-                Set.of("projectName", "filePath", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationName", "filePath", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunks"),
-                Set.of("chunks", "maxTotalCharacters", "reason"),
+                Set.of("chunks", "branchRef", "applicationName", "maxTotalCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_list_repository_endpoints"),
-                Set.of("projectName", "endpointPathPrefix", "httpMethod", "maxScannedFiles", "reason"),
+                Set.of("projectName", "branchRef", "applicationName", "endpointPathPrefix", "httpMethod", "maxScannedFiles", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_build_endpoint_use_case_context"),
-                Set.of("projectName", "endpointId", "httpMethod", "endpointPath", "maxDepth", "maxFiles", "reason"),
+                Set.of("projectName", "branchRef", "applicationName", "endpointId", "httpMethod", "endpointPath", "maxDepth", "maxFiles", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_class_references"),
-                Set.of("projectNames", "className", "relatedHints", "operationNames", "maxFilesPerRole", "reason"),
+                Set.of("projectNames", "branchRef", "applicationName", "className", "relatedHints", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_flow_context"),
-                Set.of("projectNames", "keywords", "operationNames", "maxFilesPerRole", "reason"),
+                Set.of("projectNames", "branchRef", "applicationName", "keywords", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
     }
@@ -244,7 +246,7 @@ class CopilotSdkToolFactoryTest {
         var registry = toolEvidenceSessionStore(objectMapper);
         var factory = factory(List.of(gitLabToolProvider()), registry);
         var sessionContext = gitLabSessionContext();
-        var tool = factory.createToolDefinitions(sessionContext).stream()
+        var tool = createToolDefinitions(factory, sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("gitlab_read_repository_file_chunk"))
                 .findFirst()
                 .orElseThrow();
@@ -257,6 +259,8 @@ class CopilotSdkToolFactoryTest {
                 .setToolName("gitlab_read_repository_file_chunk")
                 .setArguments(objectMapper.valueToTree(Map.of(
                         "projectName", "crm-customer-client-service",
+                        "branchRef", "release/2026.04",
+                        "applicationName", "crm-runtime",
                         "filePath", "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                         "startLine", 5,
                         "endLine", 12,
@@ -292,7 +296,7 @@ class CopilotSdkToolFactoryTest {
         var registry = toolEvidenceSessionStore(objectMapper);
         var factory = factory(List.of(gitLabToolProvider()), registry);
         var sessionContext = gitLabSessionContext();
-        var tool = factory.createToolDefinitions(sessionContext).stream()
+        var tool = createToolDefinitions(factory, sessionContext).stream()
                 .filter(candidate -> candidate.name().equals("gitlab_read_repository_file_chunks"))
                 .findFirst()
                 .orElseThrow();
@@ -320,6 +324,8 @@ class CopilotSdkToolFactoryTest {
                                         "maxCharacters", 4_000
                                 )
                         ),
+                        "branchRef", "release/2026.04",
+                        "applicationName", "crm-runtime",
                         "maxTotalCharacters", 20_000,
                         "reason", "Sprawdzam dwa fragmenty powiazane z przeplywem."
                 )));
@@ -366,7 +372,6 @@ class CopilotSdkToolFactoryTest {
         hiddenContext.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
         hiddenContext.put(AgentToolContextKeys.GITLAB_BRANCH, "release/2026.04");
         hiddenContext.put(AgentToolContextKeys.GITLAB_GROUP, "CRM/runtime");
-        hiddenContext.put("featureName", "incident-analysis");
 
         return new CopilotToolSessionContext(
                 "run-1",
@@ -377,8 +382,14 @@ class CopilotSdkToolFactoryTest {
 
     private ToolCallbackProvider gitLabToolProvider() {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort()))
+                .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime")))
                 .build();
+    }
+
+    private GitLabProperties gitLabProperties(String group) {
+        var properties = new GitLabProperties();
+        properties.setGroup(group);
+        return properties;
     }
 
     private ToolCallbackProvider contextEchoToolProvider() {
@@ -414,6 +425,13 @@ class CopilotSdkToolFactoryTest {
         );
     }
 
+    private List<ToolDefinition> createToolDefinitions(
+            CopilotSdkToolFactory factory,
+            CopilotToolSessionContext sessionContext
+    ) {
+        return factory.createToolDefinitions(sessionContext, CopilotToolDescriptionContext.empty());
+    }
+
     static class ContextEchoTools {
 
         @Tool(name = "context_echo", description = "Echoes selected ToolContext values for testing.")
@@ -429,7 +447,6 @@ class CopilotSdkToolFactoryTest {
                     "gitLabGroup", context.get(AgentToolContextKeys.GITLAB_GROUP),
                     "gitLabBranch", context.get(AgentToolContextKeys.GITLAB_BRANCH),
                     "environment", context.get(AgentToolContextKeys.ENVIRONMENT),
-                    "featureName", context.get("featureName"),
                     "copilotSessionId", context.get(AgentToolContextKeys.COPILOT_SESSION_ID),
                     "actualCopilotSessionId", context.get(AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID),
                     "toolCallId", context.get(AgentToolContextKeys.TOOL_CALL_ID),

@@ -10,6 +10,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalys
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotIncidentToolSessionContextFactoryTest {
@@ -33,8 +34,8 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertEquals("analysis-" + context.analysisRunId(), context.copilotSessionId());
         assertEquals("corr-123", context.hiddenContext().get(AgentToolContextKeys.CORRELATION_ID));
         assertEquals("zt01", context.hiddenContext().get(AgentToolContextKeys.ENVIRONMENT));
-        assertEquals("release/2026.04", context.hiddenContext().get(AgentToolContextKeys.GITLAB_BRANCH));
-        assertEquals("CRM/runtime", context.hiddenContext().get(AgentToolContextKeys.GITLAB_GROUP));
+        assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+        assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_GROUP));
         assertEquals(context.analysisRunId(), context.hiddenContext().get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals(context.copilotSessionId(), context.hiddenContext().get(AgentToolContextKeys.COPILOT_SESSION_ID));
     }
@@ -60,7 +61,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertEquals("analysis-chat-" + context.analysisRunId(), context.copilotSessionId());
         assertEquals("corr-chat", context.hiddenContext().get(AgentToolContextKeys.CORRELATION_ID));
         assertEquals("prod", context.hiddenContext().get(AgentToolContextKeys.ENVIRONMENT));
-        assertEquals("main", context.hiddenContext().get(AgentToolContextKeys.GITLAB_BRANCH));
-        assertEquals("CRM/runtime", context.hiddenContext().get(AgentToolContextKeys.GITLAB_GROUP));
+        assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+        assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_GROUP));
     }
 }

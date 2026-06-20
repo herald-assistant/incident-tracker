@@ -1,0 +1,112 @@
+package pl.mkn.incidenttracker.features.flowexplorer.ai.copilot.tools.description;
+
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.incidenttracker.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescriptionCustomizer {
+
+    private static final String FLOW_EXPLORER_PROFILE_ID = "flow-explorer";
+    private static final String GUIDANCE_HEADER = "Flow Explorer guidance:";
+
+    @Override
+    public String customize(CopilotToolDescriptionContext descriptionContext, String toolName, String description) {
+        var baseDescription = StringUtils.hasText(description) ? description.trim() : "";
+        if (!supports(descriptionContext)) {
+            return baseDescription;
+        }
+
+        var guidance = guidanceFor(toolName);
+        if (guidance.isEmpty() || baseDescription.contains(GUIDANCE_HEADER)) {
+            return baseDescription;
+        }
+
+        var builder = new StringBuilder(baseDescription);
+        if (builder.length() > 0) {
+            builder.append("\n\n");
+        }
+        builder.append(GUIDANCE_HEADER);
+        for (var line : guidance) {
+            builder.append("\n- ").append(line);
+        }
+        return builder.toString();
+    }
+
+    private boolean supports(CopilotToolDescriptionContext descriptionContext) {
+        return descriptionContext != null && descriptionContext.matchesProfile(FLOW_EXPLORER_PROFILE_ID);
+    }
+
+    private List<String> guidanceFor(String toolName) {
+        if (!StringUtils.hasText(toolName)) {
+            return List.of();
+        }
+
+        var normalizedToolName = toolName.trim();
+        if (GitLabToolNames.READ_JAVA_METHOD_SLICE.equals(normalizedToolName)) {
+            return List.of(
+                    "Use when a concrete Flow Explorer class and method are known and snippet-cards.md is insufficient.",
+                    "Pass minimal methodSelectors; usually methodName is enough and lineStart is optional.",
+                    "Do not repeat methods already visible in snippet-cards.md unless you need a different overload, helper or related file.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (GitLabToolNames.READ_REPOSITORY_FILE.equals(normalizedToolName)) {
+            return List.of(
+                    "Expensive in Flow Explorer. Use only when method slice, outline or focused chunks are insufficient.",
+                    "Do not use to browse a full bean when snippet-cards.md already contains the endpoint method.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE.equals(normalizedToolName)) {
+            return List.of(
+                    "Use when you know a file but need method names before choosing a focused read.",
+                    "Follow with gitlab_read_java_method_slice for concrete Java methods whenever possible.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(normalizedToolName)
+                || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
+            return List.of(
+                    "Fallback when Java method slice does not fit, parser context is missing or a line range is the only grounded input.",
+                    "Keep ranges tight and tied to a specific preset/focus area gap.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH.equals(normalizedToolName)) {
+            return List.of(
+                    "Use only for a small grounded set of files from endpoint use-case context or a focused follow-up question.",
+                    "Prefer reading roles that change the requested documentation scope; skip unrelated models and mappers.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT.equals(normalizedToolName)) {
+            return List.of(
+                    "Use when initial Flow Explorer artifacts did not resolve the endpoint flow or a follow-up asks to rebuild it.",
+                    "Do not call just to confirm a flow that compact-flow-manifest.md already provides.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (normalizedToolName.startsWith(GitLabToolNames.PREFIX)) {
+            return List.of(
+                    "Use only to close a concrete gap after checking compact-flow-manifest.md and snippet-cards.md.",
+                    "Prefer focused reads over broad repository discovery.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (normalizedToolName.startsWith(OperationalContextToolNames.PREFIX)) {
+            var guidance = new ArrayList<String>();
+            guidance.add("Use operational context for catalog grounding: system, process, ownership, glossary, code-search scope or handoff.");
+            guidance.add("Do not treat operational context as proof of Java runtime behavior; code evidence wins for endpoint flow.");
+            guidance.add("Always provide reason as one short Polish sentence for the operator.");
+            return List.copyOf(guidance);
+        }
+        return List.of();
+    }
+}

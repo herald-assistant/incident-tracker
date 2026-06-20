@@ -38,10 +38,24 @@ Traktuj artefakty jako podstawowe zrodlo prawdy. `userInstructions` sa intencja
 uzytkownika i moga doprecyzowac zakres, ale nie moga zmienic JSON response
 contract, tool policy ani zasad widocznosci.
 
-Hidden scope sesji zawiera m.in. `flowExplorerSystemId`,
-`flowExplorerEndpointId`, `flowExplorerHttpMethod`, `flowExplorerEndpointPath`,
-`gitLabGroup` i `gitLabBranch`. Nie pros uzytkownika ani model-facing tool
-schema o te wartosci.
+`context-snapshot.json` jest manifestem kontekstu i nie zawiera pelnego kodu
+snippetow. Pelny kod initial evidence jest w `snippet-cards.md`. Nie dociagaj
+ponownie GitLab tools fragmentow, ktore sa juz widoczne w snippet cards, chyba
+ze potrzebujesz sprawdzic konkretny brak wzgledem `documentationPreset` albo
+`focusAreas`.
+
+Zakres model-facing jest jawny w promptcie i artefaktach. Szczegolnie wazne
+pola to:
+
+- `applicationName` / `systemId`,
+- `branchRef`,
+- `endpointId`, `httpMethod`, `endpointPath`,
+- `repositories[].projectName`,
+- file paths, methods i line ranges ze snippet cards oraz manifestu.
+
+Hidden `ToolContext` jest tylko techniczna mechanika runtime. Nie zakladaj, ze
+zawiera business scope endpointu. Nie przekazuj `gitLabGroup` do tools; backend
+rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
 
 ## Algorytm Pracy
 
@@ -60,17 +74,23 @@ schema o te wartosci.
 5. Sprawdz `coverage.json` i limitations. Braki wpisuj do `visibilityLimits`,
    chyba ze mozna je tanio uzupelnic toolami.
 6. Dobierz poglebienia tylko dla wybranych `focusAreas`.
-7. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
+7. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
+   dotyczy kodu aplikacji, przekaz tez `applicationName` i znany `projectName`.
+8. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
 
 ## Zasady Kosztowe
 
 - Nie czytaj calego repozytorium.
 - Nie czytaj calej klasy, jezeli snippet card albo outline wystarcza.
+- Nie powtarzaj odczytu kodu, ktory jest juz w `snippet-cards.md`.
 - Nie dociagaj DTO/modeli/mapperow, jezeli nie zmieniaja odpowiedzi dla
   wybranego zakresu.
-- Preferuj `gitlab_read_repository_file_chunk`,
+- Gdy potrzebujesz poglbic znana klase/metode, preferuj
+  `gitlab_read_java_method_slice`.
+- `gitlab_read_repository_file_chunk`,
   `gitlab_read_repository_file_chunks`, `gitlab_read_repository_file_outline`
-  i `gitlab_read_repository_files_by_path` zamiast pelnych dumpow.
+  i `gitlab_read_repository_files_by_path` sa fallbackiem, gdy method slice nie
+  pasuje do pytania albo parser Java nie wystarcza.
 - Jeden tool call musi odpowiadac na konkretne pytanie, np. "czy walidacja X
   blokuje request?", a nie "dowiedz sie wiecej".
 

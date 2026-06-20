@@ -72,6 +72,24 @@ export interface GitLabRepositoryFilesByPathPayload {
   maxTotalCharacters?: number;
 }
 
+export interface GitLabJavaMethodSlicePayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  filePath: string;
+  declaringTypeName?: string;
+  methodSelectors: GitLabJavaMethodSliceMethodSelector[];
+  includeDirectPrivateHelpers?: boolean;
+  includeRelevantFields?: boolean;
+  includeRelevantImports?: boolean;
+  maxCharacters?: number;
+}
+
+export interface GitLabJavaMethodSliceMethodSelector {
+  methodName: string;
+  lineStart?: number | null;
+}
+
 export interface GitLabRepositoryEndpointParameterDocumentation {
   name?: string | null;
   in?: string | null;
@@ -223,6 +241,39 @@ export interface GitLabRepositoryFilesByPathResponse {
   files: GitLabRepositoryFileByPathResult[];
 }
 
+export interface GitLabJavaMethodSliceMethodCandidate {
+  declaringTypeName?: string | null;
+  methodName?: string | null;
+  signature?: string | null;
+  lineStart: number;
+  lineEnd: number;
+  parameterCount: number;
+  parameterTypes: string[];
+}
+
+export interface GitLabJavaMethodSliceResponse {
+  group: string;
+  projectName: string;
+  branch: string;
+  filePath: string;
+  status: string;
+  declaringTypeName?: string | null;
+  requestedMethods: GitLabJavaMethodSliceMethodSelector[];
+  returnedLineStart: number;
+  returnedLineEnd: number;
+  totalLines: number;
+  content?: string | null;
+  returnedCharacters: number;
+  truncated: boolean;
+  includedImports: string[];
+  includedFields: string[];
+  includedMethods: GitLabJavaMethodSliceMethodCandidate[];
+  omittedFieldCount: number;
+  omittedMethodCount: number;
+  candidates: GitLabJavaMethodSliceMethodCandidate[];
+  limitations: string[];
+}
+
 export interface GitLabRepositoryEndpointsResponse {
   group: string;
   projectName: string;
@@ -286,6 +337,15 @@ export class EvidenceApiService {
   ): Observable<GitLabRepositoryFilesByPathResponse> {
     return this.http.post<GitLabRepositoryFilesByPathResponse>(
       '/api/gitlab/repository/files/by-path',
+      payload
+    );
+  }
+
+  readGitLabJavaMethodSlice(
+    payload: GitLabJavaMethodSlicePayload
+  ): Observable<GitLabJavaMethodSliceResponse> {
+    return this.http.post<GitLabJavaMethodSliceResponse>(
+      '/api/gitlab/repository/java-method-slice',
       payload
     );
   }

@@ -17,10 +17,6 @@ import java.util.Map;
 import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ACTUAL_COPILOT_SESSION_ID;
 import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ANALYSIS_RUN_ID;
 import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.COPILOT_SESSION_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.CORRELATION_ID;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.ENVIRONMENT;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.GITLAB_BRANCH;
-import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.GITLAB_GROUP;
 import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.TOOL_CALL_ID;
 import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.TOOL_NAME;
 
@@ -354,53 +350,37 @@ public final class GitLabToolDtos {
     }
 
     public record GitLabToolScope(
-            String correlationId,
             String group,
             String branch,
-            String environment,
+            String applicationName,
+            String runReference,
             String analysisRunId,
             String copilotSessionId,
             String toolCallId,
             String toolName
     ) {
 
-        public static GitLabToolScope from(ToolContext toolContext) {
-            if (toolContext == null || toolContext.getContext() == null) {
-                throw new IllegalStateException("Missing Copilot tool context; GitLab tools require session-bound scope.");
-            }
-
-            var context = toolContext.getContext();
+        public static GitLabToolScope fromResolvedScope(
+                String group,
+                String branch,
+                String applicationName,
+                ToolContext toolContext
+        ) {
+            var context = toolContext != null && toolContext.getContext() != null
+                    ? toolContext.getContext()
+                    : Map.<String, Object>of();
+            var analysisRunId = optional(context, ANALYSIS_RUN_ID);
 
             return new GitLabToolScope(
-                    required(
-                            context,
-                            CORRELATION_ID,
-                            "Missing correlationId in Copilot tool context; GitLab tools require session-bound correlationId."
-                    ),
-                    required(
-                            context,
-                            GITLAB_GROUP,
-                            "Missing gitLabGroup in Copilot tool context; GitLab tools require session-bound group."
-                    ),
-                    required(
-                            context,
-                            GITLAB_BRANCH,
-                            "Missing gitLabBranch in Copilot tool context; GitLab tools require resolved session branch."
-                    ),
-                    optional(context, ENVIRONMENT),
-                    optional(context, ANALYSIS_RUN_ID),
+                    group,
+                    branch,
+                    applicationName,
+                    analysisRunId,
+                    analysisRunId,
                     firstNonBlank(optional(context, ACTUAL_COPILOT_SESSION_ID), optional(context, COPILOT_SESSION_ID)),
                     optional(context, TOOL_CALL_ID),
                     optional(context, TOOL_NAME)
             );
-        }
-
-        private static String required(Map<String, Object> context, String key, String message) {
-            var value = context.get(key);
-            if (value == null || value.toString().isBlank()) {
-                throw new IllegalStateException(message);
-            }
-            return value.toString();
         }
 
         private static String optional(Map<String, Object> context, String key) {

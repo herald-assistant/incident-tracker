@@ -86,7 +86,11 @@ class CopilotIncidentFollowUpPromptRendererTest {
         assertTrue(prompt.contains("diagnostic skills to load only when needed for new diagnosis: incident-operational-context-tools, incident-analysis-gitlab-tools, incident-data-diagnostics"));
         assertTrue(prompt.contains("result skills to load for handoff/report/final synthesis: incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("A technical handoff must keep the required section order"));
-        assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch."));
+        assertTrue(prompt.contains("GitLab tools do not read branch/group from hidden ToolContext."));
+        assertTrue(prompt.contains("pass `branchRef` explicitly from `gitLabBranch`"));
+        assertTrue(prompt.contains("Pass known `projectName` values"));
+        assertTrue(prompt.contains("Do not pass `gitLabGroup` to GitLab tools"));
+        assertTrue(prompt.contains("- GitLab code: inspect repository candidates, class references, method slices, outlines and focused file chunks using explicit `branchRef`, known `projectName`, and optional `applicationName`; do not pass `gitLabGroup`."));
         assertTrue(prompt.contains("- Operational context catalog: browse or search reusable catalog context"));
         assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));
         assertTrue(prompt.contains("- Tool quality feedback: use `record_tool_feedback` only for important tool-result quality signals"));

@@ -52,13 +52,20 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Jezeli korygujesz albo doprecyzowujesz wynik initial, powiedz to jawnie.
 
                 ## Initial request
+                applicationName: %s
                 systemId: %s
                 endpointId: %s
                 httpMethod: %s
                 endpointPath: %s
-                branchOrRef: %s
+                branchRef: %s
                 documentationPreset: %s
                 focusAreas: %s
+
+                ## Tool scope guidance
+                - GitLab tools do not read endpoint business scope from hidden ToolContext.
+                - When calling GitLab tools, pass `branchRef` explicitly from this prompt or artifacts.
+                - Pass `applicationName` and known `projectName` values when the tool needs repository scope.
+                - Do not pass `gitLabGroup`; backend resolves it through operational context or configuration.
 
                 ## Initial result summary
                 %s
@@ -81,6 +88,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 ## Snippet cards
                 %s
                 """.formatted(
+                request.initialRequest().systemId(),
                 request.initialRequest().systemId(),
                 request.initialRequest().endpointId(),
                 request.initialRequest().httpMethod(),

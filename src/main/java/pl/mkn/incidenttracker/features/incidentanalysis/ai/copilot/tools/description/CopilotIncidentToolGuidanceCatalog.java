@@ -29,6 +29,13 @@ public class CopilotIncidentToolGuidanceCatalog {
             "Always provide reason as one short Polish sentence for the operator."
     );
 
+    private static final List<String> GITLAB_SCOPE_GUIDANCE = List.of(
+            "Pass branchRef explicitly from the incident gitLabBranch or a previous GitLab tool result.",
+            "Pass known projectName values from deterministic evidence, operational context or previous GitLab tool results.",
+            "Do not pass gitLabGroup; the backend resolves GitLab group through operational context or configuration.",
+            "Always provide reason as one short Polish sentence for the operator."
+    );
+
     private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.ofEntries(
             Map.entry(
                     ElasticToolNames.SUMMARIZE_HTTP_CALLS_BY_PATH,
@@ -63,7 +70,8 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.READ_REPOSITORY_FILE,
                     List.of(
                             "Expensive. Use only when outline/chunk tools are insufficient.",
-                            "Prefer %s or %s first.".formatted(
+                            "Prefer %s for a known Java method, or %s/%s when method slicing does not fit.".formatted(
+                                    GitLabToolNames.READ_JAVA_METHOD_SLICE,
                                     GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                                     GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS
                             ),
@@ -104,14 +112,23 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE,
                     List.of(
                             "Use before full file reads to understand class role and available method signatures.",
-                            "Follow up with focused chunks when a specific method, repository predicate or client call matters.",
+                            "Follow up with gitlab_read_java_method_slice when a specific Java method matters; use focused chunks when slicing does not fit.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
+            Map.entry(
+                    GitLabToolNames.READ_JAVA_METHOD_SLICE,
+                    List.of(
+                            "Preferred focused read for a known Java file and method.",
+                            "Use methodSelectors with methodName first; lineStart is optional and only needed to narrow a specific overload.",
+                            "Use before chunk/full-file reads when the question is about a method, predicate, mapper, validator or client call.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                     List.of(
-                            "Preferred focused read for a known stack frame, method or predicate.",
+                            "Use when method slicing does not fit, for example non-Java files, parser limits or a line range without a method name.",
                             "Keep line ranges tight and tied to a concrete evidence gap.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
@@ -202,6 +219,11 @@ public class CopilotIncidentToolGuidanceCatalog {
 
         var normalizedToolName = toolName.trim();
         var guidance = GUIDANCE_BY_TOOL_NAME.getOrDefault(normalizedToolName, List.of());
+        if (normalizedToolName.startsWith(GitLabToolNames.PREFIX)) {
+            var gitLabGuidance = new ArrayList<>(guidance);
+            gitLabGuidance.addAll(GITLAB_SCOPE_GUIDANCE);
+            return List.copyOf(gitLabGuidance);
+        }
         if (!normalizedToolName.startsWith(DatabaseToolNames.PREFIX)) {
             if (normalizedToolName.startsWith(OperationalContextToolNames.PREFIX)) {
                 var operationalContextGuidance = new ArrayList<>(guidance);

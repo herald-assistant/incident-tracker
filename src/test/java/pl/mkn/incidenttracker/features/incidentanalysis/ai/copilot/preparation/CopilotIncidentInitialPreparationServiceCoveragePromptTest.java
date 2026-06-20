@@ -25,6 +25,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoad
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -34,11 +35,15 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
+
+    private static final CopilotToolDescriptionContext INCIDENT_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("incident-analysis");
 
     @TempDir
     Path tempDirectory;
@@ -51,7 +56,10 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
         properties.setWorkingDirectory("C:\\workspace");
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
         var factory = mock(CopilotSdkToolFactory.class);
-        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(List.of(
+        when(factory.createToolDefinitions(
+                any(CopilotToolSessionContext.class),
+                eq(INCIDENT_DESCRIPTION_CONTEXT)
+        )).thenReturn(List.of(
                 tool("gitlab_search_repository_candidates"),
                 tool("gitlab_find_flow_context"),
                 tool("gitlab_read_repository_file_chunk")
@@ -81,7 +89,8 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
             assertTrue(prompt.contains("Do not use tools just because they are available."));
             assertTrue(prompt.contains("coverage-aware and may be enabled for targeted gap filling"));
             assertFalse(prompt.contains("GitLab and Elasticsearch tools are fallback-only"));
-            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
+            assertTrue(prompt.contains("GitLab code: inspect class references/imports, method slices, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
+            assertTrue(prompt.contains("Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationName`; do not pass `gitLabGroup`."));
 
             var manifest = prepared.session().artifactContents().get("00-incident-manifest.json");
             assertTrue(manifest.contains("\"evidenceCoverage\""));

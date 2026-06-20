@@ -87,6 +87,23 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         }
     }
 
+    @Test
+    void shouldDescribeExplicitGitLabToolScopeForFlowExplorer() throws Exception {
+        var orchestrator = Files.readString(SKILLS_ROOT.resolve("flow-explorer-orchestrator").resolve("SKILL.md"));
+        var gitLabTools = Files.readString(SKILLS_ROOT.resolve("flow-explorer-gitlab-tools").resolve("SKILL.md"));
+
+        assertTrue(orchestrator.contains("`branchRef`"));
+        assertTrue(orchestrator.contains("`applicationName`"));
+        assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
+        assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
+
+        assertTrue(gitLabTools.contains("GitLab tools nie czytaja business scope'u z hidden `ToolContext`"));
+        assertTrue(gitLabTools.contains("`branchRef`"));
+        assertTrue(gitLabTools.contains("`applicationName`"));
+        assertTrue(gitLabTools.contains("Nie przekazuj `gitLabGroup`"));
+        assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
+    }
+
     private static void assertSkillContainsSections(String skillName, List<String> requiredSections) throws Exception {
         var skillFile = SKILLS_ROOT.resolve(skillName).resolve("SKILL.md");
 

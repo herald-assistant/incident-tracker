@@ -1,6 +1,5 @@
 package pl.mkn.incidenttracker.api;
 
-import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.api.database.DatabaseToolApiException;
 import pl.mkn.incidenttracker.api.operationalcontext.OperationalContextEntityNotFoundException;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
@@ -16,12 +15,8 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchExceptio
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveException;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveResponse;
-import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
-import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
-import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSystemNotFoundException;
-import pl.mkn.incidenttracker.features.flowexplorer.endpoint.FlowExplorerGitLabConfigurationException;
-import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
-import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
+import pl.mkn.incidenttracker.shared.error.UserFacingApplicationException;
+import pl.mkn.incidenttracker.shared.error.UserFacingErrorType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -52,76 +47,15 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    @ExceptionHandler(AnalysisDataNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleAnalysisDataNotFound(AnalysisDataNotFoundException exception) {
-        var response = new ApiErrorResponse(
-                "ANALYSIS_DATA_NOT_FOUND",
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    @ExceptionHandler(AnalysisJobNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleAnalysisJobNotFound(AnalysisJobNotFoundException exception) {
-        var response = new ApiErrorResponse(
-                "ANALYSIS_JOB_NOT_FOUND",
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    @ExceptionHandler(FlowExplorerSystemNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleFlowExplorerSystemNotFound(
-            FlowExplorerSystemNotFoundException exception
-    ) {
-        var response = new ApiErrorResponse(
-                "FLOW_EXPLORER_SYSTEM_NOT_FOUND",
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    @ExceptionHandler(FlowExplorerGitLabConfigurationException.class)
-    public ResponseEntity<ApiErrorResponse> handleFlowExplorerGitLabConfiguration(
-            FlowExplorerGitLabConfigurationException exception
-    ) {
-        var response = new ApiErrorResponse(
-                "FLOW_EXPLORER_GITLAB_CONFIGURATION_MISSING",
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
-    }
-
-    @ExceptionHandler(FlowExplorerJobNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleFlowExplorerJobNotFound(FlowExplorerJobNotFoundException exception) {
-        var response = new ApiErrorResponse(
-                "FLOW_EXPLORER_JOB_NOT_FOUND",
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    @ExceptionHandler(FlowExplorerJobChatUnavailableException.class)
-    public ResponseEntity<ApiErrorResponse> handleFlowExplorerJobChatUnavailable(
-            FlowExplorerJobChatUnavailableException exception
-    ) {
+    @ExceptionHandler(UserFacingApplicationException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserFacingApplication(UserFacingApplicationException exception) {
         var response = new ApiErrorResponse(
                 exception.code(),
                 exception.getMessage(),
                 List.of()
         );
 
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        return ResponseEntity.status(toStatus(exception.errorType())).body(response);
     }
 
     @ExceptionHandler(OperationalContextEntityNotFoundException.class)
@@ -135,19 +69,6 @@ public class ApiExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    @ExceptionHandler(AnalysisJobChatUnavailableException.class)
-    public ResponseEntity<ApiErrorResponse> handleAnalysisJobChatUnavailable(
-            AnalysisJobChatUnavailableException exception
-    ) {
-        var response = new ApiErrorResponse(
-                exception.code(),
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(GitHubCopilotAuthRequiredException.class)
@@ -246,4 +167,11 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(exception.status()).body(response);
     }
 
+    private static HttpStatus toStatus(UserFacingErrorType errorType) {
+        return switch (errorType) {
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case CONFLICT -> HttpStatus.CONFLICT;
+            case SERVICE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+    }
 }

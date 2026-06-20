@@ -13,6 +13,10 @@ wybranego endpointu.
 GitLab tools maja uzupelnic konkretna luke w rozumieniu endpoint flow. Nie
 sluza do masowego przegladania repozytorium.
 
+Zanim uzyjesz toola, sprawdz `compact-flow-manifest.md` i `snippet-cards.md`.
+Jezeli potrzebny fragment kodu jest juz w snippet cards, nie pobieraj go
+ponownie. Tool call ma dodac nowa informacja, a nie potwierdzic to samo.
+
 Przed tool call nazwij:
 
 - jaka decyzja w dokumentacji zalezy od wyniku,
@@ -31,10 +35,20 @@ Flow Explorer moze korzystac z:
 - `gitlab_read_repository_file_chunk`,
 - `gitlab_read_repository_file_chunks`,
 - `gitlab_read_repository_file_outline`,
+- `gitlab_read_java_method_slice`,
 - `gitlab_find_flow_context`.
 
-`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext. Nie podawaj ich
-jako model-facing input.
+GitLab tools nie czytaja business scope'u z hidden `ToolContext`. Gdy wolanie
+GitLab toola wymaga scope'u, przekaz jawnie:
+
+- `branchRef` z promptu, `context-snapshot.json` albo poprzedniego tool result,
+- `applicationName` jako nazwe aplikacji/systemu, jezeli pomaga zawęzic scope,
+- `projectName` z `context-snapshot.json`, `compact-flow-manifest.md`,
+  operational context albo poprzedniego GitLab tool result,
+- `filePath`, `chunks` albo `methodSelectors` zgodnie z konkretnym toolem.
+
+Nie przekazuj `gitLabGroup`. Backend rozstrzyga GitLab group przez operational
+context albo konfiguracje `analysis.gitlab.group`.
 
 ## Strategia Czytania Kodu
 
@@ -44,11 +58,15 @@ Preferowana kolejnosc:
 2. Jezeli endpoint albo flow spine jest niepelny, uzyj
    `gitlab_build_endpoint_use_case_context`.
 3. Jezeli znasz plik, ale nie metode, uzyj `gitlab_read_repository_file_outline`.
-4. Jezeli znasz metode albo zakres, uzyj `gitlab_read_repository_file_chunk`
-   albo `gitlab_read_repository_file_chunks`.
-5. Jezeli potrzebujesz kilku znanych plikow, uzyj
+4. Jezeli znasz jedna albo kilka metod, uzyj jako pierwszy focused read
+   `gitlab_read_java_method_slice`, bo zwraca wybrane metody razem z
+   potrzebnymi polami, importami i prywatnymi helperami bez dumpu calej klasy.
+5. Jezeli znasz tylko zakres linii albo parser Java nie rozstrzygnal metody,
+   uzyj `gitlab_read_repository_file_chunk` albo
+   `gitlab_read_repository_file_chunks`.
+6. Jezeli potrzebujesz kilku znanych plikow, uzyj
    `gitlab_read_repository_files_by_path`.
-6. `gitlab_read_repository_file` traktuj jako wyjatek dla malego pliku albo
+7. `gitlab_read_repository_file` traktuj jako wyjatek dla malego pliku albo
    sytuacji, w ktorej outline/chunk nie wystarcza.
 
 ## Co Czytac Wedlug Focus Area
@@ -67,6 +85,16 @@ Preferowana kolejnosc:
 ## Zasady Kosztowe
 
 - Nie czytaj niepowiazanych metod w tym samym beanie.
+- Nie czytaj ponownie metod, ktore sa juz obecne w `snippet-cards.md`, chyba ze
+  pytanie wymaga innego overloadu, helpera albo powiazanego pliku.
+- Do kazdego GitLab tool call dodaj `branchRef`. Jezeli artefakt podaje
+  `applicationName`, przekaz go rowniez, chyba ze wynik poprzedniego toola
+  wskazal precyzyjniejszy scope.
+- Dla `gitlab_read_java_method_slice` podawaj `methodSelectors` z minimalnym
+  inputem: zwykle wystarczy `methodName`. `lineStart` jest opcjonalne; uzyj go
+  tylko gdy chcesz zawęzic wynik do jednego konkretnego overloadu. Gdy
+  `lineStart` nie jest podany, tool zwroci wszystkie metody o tej nazwie w
+  wybranej klasie.
 - Nie czytaj pelnych DTO/modeli, jezeli nazwa typu i kontrakt endpointu
   wystarczaja.
 - Nie czytaj mappera tylko dlatego, ze istnieje. Czytaj go, gdy zmienia

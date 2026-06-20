@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.BudgetMode;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
@@ -133,7 +134,7 @@ class CopilotSdkToolFactoryBudgetTest {
             CopilotToolSessionContext context,
             String toolName
     ) {
-        return factory.createToolDefinitions(context).stream()
+        return factory.createToolDefinitions(context, CopilotToolDescriptionContext.empty()).stream()
                 .filter(tool -> tool.name().equals(toolName))
                 .findFirst()
                 .orElseThrow();

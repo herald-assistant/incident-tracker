@@ -13,6 +13,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextCoverage;
@@ -38,8 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 class FlowExplorerCopilotRuntimePreparationTest {
+
+    private static final CopilotToolDescriptionContext FLOW_EXPLORER_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("flow-explorer");
 
     @TempDir
     Path tempDirectory;
@@ -82,7 +87,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldBuildHiddenToolContextForSelectedEndpointScope() {
+    void shouldBuildRuntimeOnlyHiddenToolContext() {
         var contextFactory = new FlowExplorerCopilotToolSessionContextFactory();
 
         var sessionContext = contextFactory.create(
@@ -95,21 +100,12 @@ class FlowExplorerCopilotRuntimePreparationTest {
 
         assertEquals("job-123", sessionContext.analysisRunId());
         assertEquals("flow-explorer-job-123", sessionContext.copilotSessionId());
-        assertEquals("job-123", hiddenContext.get(AgentToolContextKeys.CORRELATION_ID));
-        assertEquals("platform/backend", hiddenContext.get(AgentToolContextKeys.GITLAB_GROUP));
-        assertEquals("feature/FLOW-42", hiddenContext.get(AgentToolContextKeys.GITLAB_BRANCH));
-        assertEquals("crm-service", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.SYSTEM_ID));
-        assertEquals("CRM Service", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.SYSTEM_NAME));
-        assertEquals("GET:/api/customers/{id}", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.ENDPOINT_ID));
-        assertEquals("GET", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.HTTP_METHOD));
-        assertEquals("/api/customers/{id}", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.ENDPOINT_PATH));
-        assertEquals("crm-service", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.PROJECT_NAME));
-        assertEquals("TEST_PREPARATION", hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.DOCUMENTATION_PRESET));
-        assertEquals(List.of("BUSINESS_FLOW"), hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.FOCUS_AREAS));
-        assertEquals(
-                List.of("flow-explorer/context-snapshot.json", "flow-explorer/snippet-cards.md"),
-                hiddenContext.get(FlowExplorerCopilotHiddenToolContextKeys.ARTIFACT_NAMES)
-        );
+        assertEquals("job-123", hiddenContext.get(AgentToolContextKeys.ANALYSIS_RUN_ID));
+        assertEquals("flow-explorer-job-123", hiddenContext.get(AgentToolContextKeys.COPILOT_SESSION_ID));
+        assertEquals(2, hiddenContext.size());
+        assertFalse(hiddenContext.containsKey(AgentToolContextKeys.CORRELATION_ID));
+        assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_GROUP));
+        assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_BRANCH));
     }
 
     @Test
@@ -173,7 +169,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var feedbackTool = tool(CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK);
         var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
 
-        when(toolFactory.createToolDefinitions(contextCaptor.capture()))
+        when(toolFactory.createToolDefinitions(
+                contextCaptor.capture(),
+                eq(FLOW_EXPLORER_DESCRIPTION_CONTEXT)
+        ))
                 .thenReturn(List.of(gitLabTool, databaseTool, feedbackTool));
 
         var assembly = assembler.assemble(
@@ -198,7 +197,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertSkillDirectories(runRequest.sessionConfigRequest().skillDirectories());
         assertFalse(assembly.toolAccessPolicy().databaseToolsEnabled());
 
-        verify(toolFactory).createToolDefinitions(assembly.toolSessionContext());
+        verify(toolFactory).createToolDefinitions(
+                assembly.toolSessionContext(),
+                FLOW_EXPLORER_DESCRIPTION_CONTEXT
+        );
     }
 
     @Test
@@ -216,7 +218,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var gitLabTool = tool(GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH);
         var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
 
-        when(toolFactory.createToolDefinitions(contextCaptor.capture()))
+        when(toolFactory.createToolDefinitions(
+                contextCaptor.capture(),
+                eq(FLOW_EXPLORER_DESCRIPTION_CONTEXT)
+        ))
                 .thenReturn(List.of(gitLabTool));
 
         var assembly = assembler.assembleFollowUp(
@@ -238,7 +243,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 .stream()
                 .anyMatch(directory -> directory.endsWith("flow-explorer-result-contract")));
 
-        verify(toolFactory).createToolDefinitions(assembly.toolSessionContext());
+        verify(toolFactory).createToolDefinitions(
+                assembly.toolSessionContext(),
+                FLOW_EXPLORER_DESCRIPTION_CONTEXT
+        );
     }
 
     private FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory() {

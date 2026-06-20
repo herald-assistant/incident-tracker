@@ -1,13 +1,15 @@
 package pl.mkn.incidenttracker.features.flowexplorer.job.error;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import pl.mkn.incidenttracker.shared.error.UserFacingApplicationException;
+import pl.mkn.incidenttracker.shared.error.UserFacingErrorType;
 
-@ResponseStatus(HttpStatus.NOT_FOUND)
-public class FlowExplorerJobNotFoundException extends RuntimeException {
+public class FlowExplorerJobNotFoundException extends UserFacingApplicationException {
 
     public FlowExplorerJobNotFoundException(String jobId) {
-        super("Flow Explorer job not found: " + jobId);
+        super(
+                "FLOW_EXPLORER_JOB_NOT_FOUND",
+                UserFacingErrorType.NOT_FOUND,
+                "Flow Explorer job not found: " + jobId
+        );
     }
 }
-

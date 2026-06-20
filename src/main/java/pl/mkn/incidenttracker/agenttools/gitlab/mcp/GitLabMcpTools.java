@@ -9,10 +9,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileMetadata;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -56,6 +61,7 @@ import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPO
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_JAVA_METHOD_SLICE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
 
 @Component
@@ -93,18 +99,40 @@ public class GitLabMcpTools {
     private final OperationalContextPort operationalContextPort;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
+    private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
+    private final GitLabToolScopeResolver scopeResolver;
 
     @Autowired
     public GitLabMcpTools(
             GitLabRepositoryPort gitLabRepositoryPort,
             OperationalContextPort operationalContextPort,
             GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
-            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService
+            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService,
+            GitLabJavaMethodSliceService gitLabJavaMethodSliceService,
+            GitLabProperties gitLabProperties
     ) {
         this.gitLabRepositoryPort = gitLabRepositoryPort;
         this.operationalContextPort = operationalContextPort;
         this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
         this.gitLabEndpointUseCaseContextService = gitLabEndpointUseCaseContextService;
+        this.gitLabJavaMethodSliceService = gitLabJavaMethodSliceService;
+        this.scopeResolver = new GitLabToolScopeResolver(gitLabProperties, operationalContextPort);
+    }
+
+    public GitLabMcpTools(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            OperationalContextPort operationalContextPort,
+            GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
+            GitLabProperties gitLabProperties
+    ) {
+        this(
+                gitLabRepositoryPort,
+                operationalContextPort,
+                gitLabRepositoryEndpointService,
+                defaultEndpointUseCaseContextService(gitLabRepositoryPort, gitLabRepositoryEndpointService),
+                new GitLabJavaMethodSliceService(gitLabRepositoryPort),
+                gitLabProperties
+        );
     }
 
     public GitLabMcpTools(
@@ -112,11 +140,19 @@ public class GitLabMcpTools {
             OperationalContextPort operationalContextPort,
             GitLabRepositoryEndpointService gitLabRepositoryEndpointService
     ) {
+        this(gitLabRepositoryPort, operationalContextPort, gitLabRepositoryEndpointService, new GitLabProperties());
+    }
+
+    public GitLabMcpTools(
+            GitLabRepositoryPort gitLabRepositoryPort,
+            OperationalContextPort operationalContextPort,
+            GitLabProperties gitLabProperties
+    ) {
         this(
                 gitLabRepositoryPort,
                 operationalContextPort,
-                gitLabRepositoryEndpointService,
-                defaultEndpointUseCaseContextService(gitLabRepositoryPort, gitLabRepositoryEndpointService)
+                new GitLabRepositoryEndpointService(gitLabRepositoryPort),
+                gitLabProperties
         );
     }
 
@@ -124,15 +160,15 @@ public class GitLabMcpTools {
             GitLabRepositoryPort gitLabRepositoryPort,
             OperationalContextPort operationalContextPort
     ) {
-        this(
-                gitLabRepositoryPort,
-                operationalContextPort,
-                new GitLabRepositoryEndpointService(gitLabRepositoryPort)
-        );
+        this(gitLabRepositoryPort, operationalContextPort, new GitLabProperties());
+    }
+
+    public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort, GitLabProperties gitLabProperties) {
+        this(gitLabRepositoryPort, ignored -> emptyOperationalContextCatalog(), gitLabProperties);
     }
 
     public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
-        this(gitLabRepositoryPort, ignored -> emptyOperationalContextCatalog());
+        this(gitLabRepositoryPort, new GitLabProperties());
     }
 
     private static GitLabEndpointUseCaseContextService defaultEndpointUseCaseContextService(
@@ -142,31 +178,61 @@ public class GitLabMcpTools {
         return GitLabEndpointUseCaseContextService.createDefault(gitLabRepositoryPort, gitLabRepositoryEndpointService);
     }
 
+    private GitLabToolScope scope(
+            String projectName,
+            String applicationName,
+            String branchRef,
+            ToolContext toolContext
+    ) {
+        return scopeResolver.resolve(branchRef, projectName, applicationName, toolContext);
+    }
+
+    private String firstProjectName(List<String> projectNames) {
+        return defaultList(projectNames).stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String firstChunkProjectName(List<GitLabFileChunkRequest> chunks) {
+        return defaultList(chunks).stream()
+                .filter(chunk -> chunk != null && StringUtils.hasText(chunk.projectName()))
+                .map(chunk -> chunk.projectName().trim())
+                .findFirst()
+                .orElse(null);
+    }
+
     @Tool(
             name = LIST_AVAILABLE_REPOSITORIES,
             description = """
-                    Lists GitLab repositories registered in operational context and available in the current fixed session group.
+                    Lists GitLab repositories registered in operational context and available in the resolved GitLab group.
                     Use this when projectName or GitLab path is unknown and logs, traces, code, comments, package names,
                     system names, module names, endpoints or bounded contexts mention another application or repository.
                     Prefer returned codeSearchScopes when a semantic target maps to multiple repositories; use all projectName
                     values from the matching scope as inputs for GitLab search, flow context and read tools.
-                    The group and branch are taken from hidden ToolContext.
+                    Pass branchRef explicitly from the prompt, an artifact or a previous tool result. The GitLab group is
+                    resolved from projectName/applicationName via operational context or from application configuration.
                     """
     )
     public GitLabListAvailableRepositoriesToolResponse listAvailableRepositories(
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, for example crm-service.")
+            String applicationName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
             @ToolParam(required = false, description = "Krotki powod po polsku: dlaczego model potrzebuje katalogu repozytoriow.")
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(null, applicationName, branchRef, toolContext);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={}",
                 LIST_AVAILABLE_REPOSITORIES,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId()
@@ -181,12 +247,12 @@ public class GitLabMcpTools {
         var codeSearchScopes = GitLabAvailableRepositoryMapper.codeSearchScopesFromCatalog(scope.group(), catalog);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} repositoryCount={} codeSearchScopeCount={} projectNames={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} repositoryCount={} codeSearchScopeCount={} projectNames={}",
                 LIST_AVAILABLE_REPOSITORIES,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 repositories.size(),
                 codeSearchScopes.size(),
                 abbreviateList(repositories.stream()
@@ -206,15 +272,19 @@ public class GitLabMcpTools {
             name = LIST_REPOSITORY_ENDPOINTS,
             description = """
                     Lists Spring MVC HTTP endpoints declared by RestController/Controller classes in a GitLab repository.
-                    The group and branch are taken from hidden ToolContext. Provide projectName from gitlab_list_available_repositories
+                    Provide projectName from gitlab_list_available_repositories
                     or another grounded GitLab result. Use endpointPathPrefix/httpMethod to narrow the inventory when the user asks
                     about a concrete endpoint family. The result returns endpointId, HTTP method/path, controller class/method,
                     file path, line range, request/response type hints and suggested next reads.
                     """
     )
     public GitLabListRepositoryEndpointsToolResponse listRepositoryEndpoints(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(required = false, description = "Optional endpoint path prefix, for example /api/orders.")
             String endpointPathPrefix,
             @ToolParam(required = false, description = "Optional HTTP method filter, for example GET, POST, PUT or DELETE.")
@@ -225,15 +295,15 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} maxScannedFiles={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} maxScannedFiles={}",
                 LIST_REPOSITORY_ENDPOINTS,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -253,12 +323,12 @@ public class GitLabMcpTools {
         ));
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} endpointCount={} candidateFileCount={} scannedFileCount={} scannedFileLimitReached={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} endpointCount={} candidateFileCount={} scannedFileCount={} scannedFileLimitReached={}",
                 LIST_REPOSITORY_ENDPOINTS,
-                scope.correlationId(),
+                scope.runReference(),
                 result.group(),
                 result.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 result.projectName(),
                 result.endpoints().size(),
                 result.candidateFileCount(),
@@ -283,15 +353,19 @@ public class GitLabMcpTools {
     @Tool(
             name = BUILD_ENDPOINT_USE_CASE_CONTEXT,
             description = """
-                    Builds a compact use-case context for one concrete HTTP endpoint in the current fixed session group and branch.
+                    Builds a compact use-case context for one concrete HTTP endpoint in the resolved GitLab group and explicit branchRef.
                     Use after gitlab_list_repository_endpoints when endpointId is known, or provide httpMethod + endpointPath when the
                     endpoint is uniquely identifiable. The result returns candidate file paths, roles, symbols, direct relations,
                     unresolved references, limitations and suggested next reads for focused code fetching.
                     """
     )
     public GitLabBuildEndpointUseCaseContextToolResponse buildEndpointUseCaseContext(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(required = false, description = "Exact endpointId returned by gitlab_list_repository_endpoints.")
             String endpointId,
             @ToolParam(required = false, description = "HTTP method when endpointId is unknown, for example GET, POST, PUT or DELETE.")
@@ -306,15 +380,15 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} maxDepth={} maxFiles={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} maxDepth={} maxFiles={}",
                 BUILD_ENDPOINT_USE_CASE_CONTEXT,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -342,12 +416,12 @@ public class GitLabMcpTools {
         var response = GitLabBuildEndpointUseCaseContextToolResponse.from(result);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} endpointResolved={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} endpointResolved={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
                 BUILD_ENDPOINT_USE_CASE_CONTEXT,
-                scope.correlationId(),
+                scope.runReference(),
                 response.group(),
                 response.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 response.projectName(),
                 response.endpoint() != null,
                 response.files().size(),
@@ -363,15 +437,19 @@ public class GitLabMcpTools {
     @Tool(
             name = SEARCH_REPOSITORY_CANDIDATES,
             description = """
-                    Search GitLab repository files in the current fixed session group and branch using candidate project names,
+                    Search GitLab repository files in the resolved GitLab group and explicit branchRef using candidate project names,
                     operation names, class names, method names, entity names, exception names and keywords inferred from logs,
                     traces or prior analysis. Use this when the affected project/file is unclear or when broader repository
                     candidates are needed before focused reads.
                     """
     )
     public GitLabSearchRepositoryCandidatesToolResponse searchRepositoryCandidates(
-            @ToolParam(required = false, description = "One or more candidate GitLab project paths inside the fixed session group. Relative subgroup segments are allowed.")
+            @ToolParam(required = false, description = "One or more candidate GitLab project paths inside the resolved GitLab group. Relative subgroup segments are allowed.")
             List<String> projectNames,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(required = false, description = "Operation names inferred from traces.")
             List<String> operationNames,
             @ToolParam(required = false, description = "Keywords inferred from logs, traces, code identifiers or the current hypothesis.")
@@ -380,18 +458,18 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
         var safeProjectNames = defaultList(projectNames);
         var safeOperationNames = defaultList(operationNames);
         var safeKeywords = defaultList(keywords);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} keywords={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} keywords={}",
                 SEARCH_REPOSITORY_CANDIDATES,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -401,7 +479,7 @@ public class GitLabMcpTools {
         );
 
         var query = new GitLabRepositorySearchQuery(
-                scope.correlationId(),
+                null,
                 scope.group(),
                 scope.branch(),
                 safeProjectNames,
@@ -411,12 +489,12 @@ public class GitLabMcpTools {
         var candidates = gitLabRepositoryPort.searchCandidateFiles(query);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} candidatePaths={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} candidateCount={} candidatePaths={}",
                 SEARCH_REPOSITORY_CANDIDATES,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 candidates.size(),
                 abbreviateList(candidates.stream()
                         .map(candidate -> candidate.projectName() + ":" + candidate.filePath())
@@ -429,13 +507,17 @@ public class GitLabMcpTools {
     @Tool(
             name = READ_REPOSITORY_FILE,
             description = """
-                    Read a file from the GitLab repository in the current fixed session group and branch.
+                    Read a file from the GitLab repository in the resolved GitLab group and explicit branchRef.
                     Use only when full class/file context is necessary. Prefer outline/chunk/chunks before full file reads for large files.
                     """
     )
     public GitLabReadRepositoryFileToolResponse readRepositoryFile(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(description = "Repository file path.")
             String filePath,
             @ToolParam(required = false, description = "Maximum number of characters to return. Defaults to 4000.")
@@ -444,16 +526,16 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
                 READ_REPOSITORY_FILE,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -471,12 +553,12 @@ public class GitLabMcpTools {
         );
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} returnedCharacters={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} returnedCharacters={} truncated={}",
                 READ_REPOSITORY_FILE,
-                scope.correlationId(),
+                scope.runReference(),
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
-                scope.environment(),
+                scope.applicationName(),
                 responseProjectName(fileContent, projectName),
                 responseFilePath(fileContent, filePath),
                 fileContent != null && fileContent.content() != null ? fileContent.content().length() : 0,
@@ -494,16 +576,106 @@ public class GitLabMcpTools {
     }
 
     @Tool(
+            name = READ_JAVA_METHOD_SLICE,
+            description = """
+                    Read a focused Java class slice for one or more methods from a GitLab repository in the resolved GitLab group and explicit branchRef.
+                    Provide methodSelectors with methodName and optional lineStart. When lineStart is omitted, all overloads with that
+                    method name are returned. The tool parses the Java file and returns package, relevant imports, the declaring class
+                    header, fields used by returned methods, selected methods and optional private local helper methods. Unrelated
+                    fields/methods are replaced with omission markers. Prefer this over full file reads or raw chunks when method-level context is enough.
+                    """
+    )
+    public GitLabJavaMethodSliceResponse readJavaMethodSlice(
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
+            String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
+            @ToolParam(description = "Repository Java file path.")
+            String filePath,
+            @ToolParam(required = false, description = "Optional declaring class/simple type name when the file contains nested or multiple types.")
+            String declaringTypeName,
+            @ToolParam(description = "Methods to slice. Each selector requires methodName and can optionally provide lineStart to narrow to one overload.")
+            List<GitLabJavaMethodSliceMethodSelector> methodSelectors,
+            @ToolParam(required = false, description = "Include private helper methods called by returned methods. Defaults to true.")
+            Boolean includeDirectPrivateHelpers,
+            @ToolParam(required = false, description = "Include fields used by returned methods/helper methods. Defaults to true.")
+            Boolean includeRelevantFields,
+            @ToolParam(required = false, description = "Include imports relevant to returned code. Defaults to true.")
+            Boolean includeRelevantImports,
+            @ToolParam(required = false, description = "Maximum returned characters. Defaults to 8000 and is capped by the server.")
+            Integer maxCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta wycinek metody.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
+
+        log.info(
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} declaringTypeName={} methodSelectors={} maxCharacters={}",
+                READ_JAVA_METHOD_SLICE,
+                scope.runReference(),
+                scope.group(),
+                scope.branch(),
+                scope.applicationName(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                projectName,
+                filePath,
+                declaringTypeName,
+                methodSelectors,
+                maxCharacters
+        );
+
+        var response = gitLabJavaMethodSliceService.readMethodSlice(new GitLabJavaMethodSliceRequest(
+                scope.group(),
+                projectName,
+                scope.branch(),
+                filePath,
+                declaringTypeName,
+                methodSelectors,
+                includeDirectPrivateHelpers,
+                includeRelevantFields,
+                includeRelevantImports,
+                maxCharacters
+        ));
+
+        log.info(
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} status={} returnedCharacters={} truncated={} candidateCount={} limitationCount={}",
+                READ_JAVA_METHOD_SLICE,
+                scope.runReference(),
+                response.group(),
+                response.branch(),
+                scope.applicationName(),
+                response.projectName(),
+                response.filePath(),
+                response.status(),
+                response.returnedCharacters(),
+                response.truncated(),
+                response.candidates().size(),
+                response.limitations().size()
+        );
+
+        return response;
+    }
+
+    @Tool(
             name = READ_REPOSITORY_FILES_BY_PATH,
             description = """
-                    Read several full files from one GitLab repository by exact repository file paths in the current fixed session group and branch.
+                    Read several full files from one GitLab repository by exact repository file paths in the resolved GitLab group and explicit branchRef.
                     Use after gitlab_build_endpoint_use_case_context when the model has a grounded list of relevant files and needs their source
                     content for functional/technical endpoint interpretation. The server enforces maximum files and total characters.
                     """
     )
     public GitLabReadRepositoryFilesByPathToolResponse readRepositoryFilesByPath(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(description = "Exact repository file paths. Maximum 100 distinct paths are processed.")
             List<String> filePaths,
             @ToolParam(required = false, description = "Maximum characters returned per file. Defaults to 4000.")
@@ -514,7 +686,7 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
         var requestedFilePaths = normalizeRepositoryFilePaths(filePaths, projectName);
         var processedFilePaths = requestedFilePaths.stream()
                 .limit(MAX_BATCH_FILES_BY_PATH)
@@ -523,12 +695,12 @@ public class GitLabMcpTools {
         var effectiveMaxTotalCharacters = normalizePositiveLimit(maxTotalCharacters, DEFAULT_MAX_TOTAL_FILE_CHARACTERS);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} requestedFileCount={} processedFileCount={} filePaths={} maxCharactersPerFile={} maxTotalCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} requestedFileCount={} processedFileCount={} filePaths={} maxCharactersPerFile={} maxTotalCharacters={}",
                 READ_REPOSITORY_FILES_BY_PATH,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -599,12 +771,12 @@ public class GitLabMcpTools {
                 failedFileCount++;
                 var error = toolErrorMessage(exception);
                 log.warn(
-                        "Tool partial failure [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} reason={}",
+                        "Tool partial failure [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} reason={}",
                         READ_REPOSITORY_FILES_BY_PATH,
-                        scope.correlationId(),
+                        scope.runReference(),
                         scope.group(),
                         scope.branch(),
-                        scope.environment(),
+                        scope.applicationName(),
                         projectName,
                         requestedPath,
                         error
@@ -632,12 +804,12 @@ public class GitLabMcpTools {
         }
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} requestedFileCount={} processedFileCount={} returnedFileCount={} failedFileCount={} totalReturnedCharacters={} fileCountTruncated={} totalCharacterLimitReached={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} requestedFileCount={} processedFileCount={} returnedFileCount={} failedFileCount={} totalReturnedCharacters={} fileCountTruncated={} totalCharacterLimitReached={}",
                 READ_REPOSITORY_FILES_BY_PATH,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 projectName,
                 requestedFilePaths.size(),
                 results.size(),
@@ -666,14 +838,18 @@ public class GitLabMcpTools {
     @Tool(
             name = READ_REPOSITORY_FILE_CHUNK,
             description = """
-                    Read only a selected line range from a GitLab repository file in the current fixed session group and branch.
+                    Read only a selected line range from a GitLab repository file in the resolved GitLab group and explicit branchRef.
                     Line numbers are 1-based and inclusive. Prefer this over full file reads when investigating a stack frame,
                     method, repository predicate, mapper, validator, or client call.
                     """
     )
     public GitLabReadRepositoryFileChunkToolResponse readRepositoryFileChunk(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(description = "Repository file path.")
             String filePath,
             @ToolParam(description = "First line to return. Uses 1-based inclusive numbering.")
@@ -686,16 +862,16 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} requestedStartLine={} requestedEndLine={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} requestedStartLine={} requestedEndLine={} maxCharacters={}",
                 READ_REPOSITORY_FILE_CHUNK,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -717,12 +893,12 @@ public class GitLabMcpTools {
         );
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} returnedStartLine={} returnedEndLine={} totalLines={} returnedCharacters={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} returnedStartLine={} returnedEndLine={} totalLines={} returnedCharacters={} truncated={}",
                 READ_REPOSITORY_FILE_CHUNK,
-                scope.correlationId(),
+                scope.runReference(),
                 fileChunk != null ? fileChunk.group() : scope.group(),
                 fileChunk != null ? fileChunk.branch() : scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 fileChunk != null ? fileChunk.projectName() : projectName,
                 fileChunk != null ? fileChunk.filePath() : filePath,
                 fileChunk != null ? fileChunk.returnedStartLine() : 0,
@@ -750,14 +926,18 @@ public class GitLabMcpTools {
     @Tool(
             name = READ_REPOSITORY_FILE_OUTLINE,
             description = """
-                    Read a lightweight outline of a GitLab repository file in the current fixed session group and branch:
+                    Read a lightweight outline of a GitLab repository file in the resolved GitLab group and explicit branchRef:
                     package, imports summary, class/interface names, annotations, method signatures and inferred file role.
                     Use before reading a full file when the model needs to understand the class role in the broader flow without loading all code.
                     """
     )
     public GitLabReadRepositoryFileOutlineToolResponse readRepositoryFileOutline(
-            @ToolParam(description = "GitLab project path inside the fixed session group.")
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(description = "Repository file path.")
             String filePath,
             @ToolParam(required = false, description = "Maximum number of characters to read before extracting outline. Defaults to 30000.")
@@ -766,16 +946,16 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_OUTLINE_MAX_CHARACTERS);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
                 READ_REPOSITORY_FILE_OUTLINE,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -795,12 +975,12 @@ public class GitLabMcpTools {
         var inferredRole = inferRole(filePath, fileContent != null ? fileContent.content() : null);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} packageName={} importCount={} classCount={} annotationCount={} methodSignatureCount={} inferredRole={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} packageName={} importCount={} classCount={} annotationCount={} methodSignatureCount={} inferredRole={} truncated={}",
                 READ_REPOSITORY_FILE_OUTLINE,
-                scope.correlationId(),
+                scope.runReference(),
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
-                scope.environment(),
+                scope.applicationName(),
                 responseProjectName(fileContent, projectName),
                 responseFilePath(fileContent, filePath),
                 outline.packageName(),
@@ -830,7 +1010,7 @@ public class GitLabMcpTools {
     @Tool(
             name = READ_REPOSITORY_FILE_CHUNKS,
             description = """
-                    Read several focused line ranges from GitLab files in the current fixed session group and branch in one tool call.
+                    Read several focused line ranges from GitLab files in the resolved GitLab group and explicit branchRef in one tool call.
                     Use when multiple directly related chunks are needed to explain the affected flow, for example service + repository + mapper
                     or listener + outbox handler + downstream client. The server enforces maximum chunks and total characters.
                     """
@@ -838,14 +1018,18 @@ public class GitLabMcpTools {
     public GitLabReadRepositoryFileChunksToolResponse readRepositoryFileChunks(
             @ToolParam(description = "Focused chunk requests. Maximum 8 chunks are processed.")
             List<GitLabFileChunkRequest> chunks,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(required = false, description = "Maximum total characters returned across all chunks. Defaults to 20000.")
             Integer maxTotalCharacters,
             @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta te fragmenty plikow.")
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
         var safeChunks = defaultList(chunks);
+        var scope = scope(firstChunkProjectName(safeChunks), applicationName, branchRef, toolContext);
         var processedChunks = safeChunks.stream()
                 .filter(chunk -> chunk != null)
                 .limit(MAX_BATCH_CHUNKS)
@@ -856,12 +1040,12 @@ public class GitLabMcpTools {
         );
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} requestedChunkCount={} processedChunkCount={} chunkTargets={} maxTotalCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} requestedChunkCount={} processedChunkCount={} chunkTargets={} maxTotalCharacters={}",
                 READ_REPOSITORY_FILE_CHUNKS,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -921,12 +1105,12 @@ public class GitLabMcpTools {
         }
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} chunkCount={} chunkCountTruncated={} totalCharacterLimitReached={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} chunkCount={} chunkCountTruncated={} totalCharacterLimitReached={}",
                 READ_REPOSITORY_FILE_CHUNKS,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 results.size(),
                 safeChunks.size() > MAX_BATCH_CHUNKS,
                 totalCharacterLimitReached
@@ -944,15 +1128,19 @@ public class GitLabMcpTools {
     @Tool(
             name = FIND_CLASS_REFERENCES,
             description = """
-                    Finds files in the current fixed session group and branch that declare, import or directly use a grounded class.
+                    Finds files in the resolved GitLab group and explicit branchRef that declare, import or directly use a grounded class.
                     Use this when an exception, stacktrace or deterministic code evidence points to an entity, repository, DTO,
                     mapper, validator or client class and you need surrounding code to infer repository predicates, JPA/table hints,
                     direct relations or the broader flow before DB diagnostics.
                     """
     )
     public GitLabFindClassReferencesToolResponse findClassReferences(
-            @ToolParam(required = false, description = "Candidate GitLab project paths inside the fixed session group.")
+            @ToolParam(required = false, description = "Candidate GitLab project paths inside the resolved GitLab group.")
             List<String> projectNames,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(description = "Grounded fully qualified or simple class name, for example pl.mkn.orders.domain.OrderEntity.")
             String className,
             @ToolParam(required = false, description = "Optional relation or mapping hints such as @Entity, @Table, repository method, JoinColumn, mappedBy, business key or exception name.")
@@ -965,7 +1153,7 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
         var safeProjectNames = defaultList(projectNames);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(joinLists(
@@ -975,12 +1163,12 @@ public class GitLabMcpTools {
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
                 FIND_CLASS_REFERENCES,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -992,7 +1180,7 @@ public class GitLabMcpTools {
         );
 
         var candidates = gitLabRepositoryPort.searchCandidateFiles(new GitLabRepositorySearchQuery(
-                scope.correlationId(),
+                null,
                 scope.group(),
                 scope.branch(),
                 safeProjectNames,
@@ -1004,12 +1192,12 @@ public class GitLabMcpTools {
         var recommendedNextReads = recommendedNextReads(flowCandidates);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
                 FIND_CLASS_REFERENCES,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 flowCandidates.size(),
                 groups.size(),
                 recommendedNextReads.size()
@@ -1028,7 +1216,7 @@ public class GitLabMcpTools {
     @Tool(
             name = FIND_FLOW_CONTEXT,
             description = """
-                    Finds a small set of directly related files in the current fixed session group and branch that explain the functional
+                    Finds a small set of directly related files in the resolved GitLab group and explicit branchRef that explain the functional
                     or technical flow around a failing class, method, entity, repository method, endpoint, queue, message type or integration keyword.
                     Returns grouped candidates by likely role: entrypoint, service/orchestrator, repository, mapper, validator,
                     downstream client, listener, scheduler, outbox/event handler, entity or configuration.
@@ -1036,8 +1224,12 @@ public class GitLabMcpTools {
                     """
     )
     public GitLabFindFlowContextToolResponse findFlowContext(
-            @ToolParam(required = false, description = "Candidate GitLab project paths inside the fixed session group.")
+            @ToolParam(required = false, description = "Candidate GitLab project paths inside the resolved GitLab group.")
             List<String> projectNames,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
             @ToolParam(required = false, description = "Focused keywords such as grounded class, method, entity, repository method, endpoint, queue, event type, exception or downstream client.")
             List<String> keywords,
             @ToolParam(required = false, description = "Operation names inferred from logs/traces.")
@@ -1048,19 +1240,19 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = GitLabToolScope.from(toolContext);
+        var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
         var safeProjectNames = defaultList(projectNames);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(defaultList(keywords));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
 
         log.info(
-                "Tool request [{}] correlationId={} group={} branch={} environment={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
                 FIND_FLOW_CONTEXT,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -1071,7 +1263,7 @@ public class GitLabMcpTools {
         );
 
         var candidates = gitLabRepositoryPort.searchCandidateFiles(new GitLabRepositorySearchQuery(
-                scope.correlationId(),
+                null,
                 scope.group(),
                 scope.branch(),
                 safeProjectNames,
@@ -1083,12 +1275,12 @@ public class GitLabMcpTools {
         var recommendedNextReads = recommendedNextReads(flowCandidates);
 
         log.info(
-                "Tool result [{}] correlationId={} group={} branch={} environment={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
                 FIND_FLOW_CONTEXT,
-                scope.correlationId(),
+                scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.environment(),
+                scope.applicationName(),
                 flowCandidates.size(),
                 groups.size(),
                 recommendedNextReads.size()
@@ -1453,12 +1645,12 @@ public class GitLabMcpTools {
         } catch (RuntimeException exception) {
             var error = toolErrorMessage(exception);
             log.warn(
-                    "Tool partial metadata failure [{}] correlationId={} group={} branch={} environment={} projectName={} filePath={} reason={}",
+                    "Tool partial metadata failure [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} reason={}",
                     READ_REPOSITORY_FILES_BY_PATH,
-                    scope.correlationId(),
+                    scope.runReference(),
                     scope.group(),
                     scope.branch(),
-                    scope.environment(),
+                    scope.applicationName(),
                     projectName,
                     filePath,
                     error

@@ -44,8 +44,18 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(preparation.artifactContents().containsKey(FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT));
         assertTrue(preparation.artifactContents().containsKey(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT));
         assertTrue(prompt.contains("userInstructions"));
+        assertTrue(prompt.contains("applicationName: crm-service"));
+        assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
         assertTrue(prompt.contains("nie moga zmienic response contract"));
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
+        assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`"));
+        assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
+        assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
+        assertTrue(prompt.contains("GitLab tools do not read endpoint business scope from hidden ToolContext"));
+        assertTrue(prompt.contains("pass `branchRef` explicitly"));
+        assertTrue(prompt.contains("Pass `applicationName` and known `projectName` values"));
+        assertTrue(prompt.contains("Do not pass `gitLabGroup`"));
+        assertTrue(prompt.contains("context-snapshot.json` jest manifestem bez pelnego kodu snippetow"));
         assertTrue(prompt.contains("Compact flow manifest"));
         assertTrue(prompt.contains("[CONTROLLER]"));
         assertTrue(prompt.contains("getCustomer L12-L24"));

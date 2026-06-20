@@ -17,6 +17,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchExceptio
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
@@ -58,6 +59,9 @@ class GitLabRepositorySearchControllerTest {
 
     @MockitoBean
     private GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
+
+    @MockitoBean
+    private GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
 
     @Test
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {

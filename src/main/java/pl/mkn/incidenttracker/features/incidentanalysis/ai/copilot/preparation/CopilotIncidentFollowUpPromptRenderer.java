@@ -36,8 +36,11 @@ public class CopilotIncidentFollowUpPromptRenderer {
                 - The latest user message is allowed to request targeted verification in GitLab, Elasticsearch or Database tools.
                 - Use tools when the latest message asks to check, confirm, verify, inspect, compare, or generate an answer that needs fresh repository, log or database evidence.
                 - Do not use tools for broad browsing. Keep each tool call tied to the latest user request.
-                - Treat environment, gitLabBranch and gitLabGroup as fixed hidden session scope.
-                - GitLab, Elasticsearch and Database tools receive hidden scope from the backend. Do not ask the user to provide correlationId, gitLabGroup, gitLabBranch or environment as tool arguments.
+                - Treat environment, gitLabBranch and gitLabGroup from this prompt/artifacts as fixed incident context.
+                - GitLab tools do not read branch/group from hidden ToolContext. When calling GitLab tools, pass `branchRef` explicitly from `gitLabBranch` or a previous tool result.
+                - Pass known `projectName` values from deterministic evidence, operational context, previous tool evidence or previous GitLab tool results. Pass `applicationName` only when it helps validate repository scope.
+                - Do not pass `gitLabGroup` to GitLab tools; backend resolves the group through operational context or configuration.
+                - Elasticsearch and Database tools still use session/runtime scope where their tool schema says so. Do not ask the user to provide correlationId or environment as tool arguments.
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
                 - Every Elasticsearch HTTP diagnostic tool call, GitLab tool call, Database tool call and Operational Context tool call must include `reason`: one short Polish sentence for the operator.
                 - When the user asks to compare HTTP calls or inspect opaque downstream/external HTTP failures, use Elasticsearch path summary first, then fetch concrete path/status examples only when they help explain the incident.
@@ -154,7 +157,7 @@ public class CopilotIncidentFollowUpPromptRenderer {
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: inspect repository candidates, class references, outlines and focused file chunks in the fixed group and branch. Include a short Polish `reason`.\n");
+            rendered.append("- GitLab code: inspect repository candidates, class references, method slices, outlines and focused file chunks using explicit `branchRef`, known `projectName`, and optional `applicationName`; do not pass `gitLabGroup`. Include a short Polish `reason`.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {

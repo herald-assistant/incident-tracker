@@ -177,16 +177,64 @@ public class FlowExplorerArtifactService {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("artifactFormatVersion", "flow-explorer-artifacts-v1");
         payload.put("generatedAt", Instant.now().toString());
+        payload.put("applicationName", request.systemId());
         payload.put("systemId", request.systemId());
         payload.put("endpointId", request.endpointId());
         payload.put("httpMethod", request.httpMethod());
         payload.put("endpointPath", request.endpointPath());
-        payload.put("branchOrRef", contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch());
+        payload.put("branchRef", contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch());
         payload.put("documentationPreset", request.documentationPreset());
         payload.put("focusAreas", request.focusAreas());
         payload.put("userInstructionsPresent", StringUtils.hasText(request.userInstructions()));
-        payload.put("contextSnapshot", contextSnapshot);
+        payload.put("contextSnapshot", contextSnapshotManifest(contextSnapshot));
         return renderJson(payload);
+    }
+
+    private Object contextSnapshotManifest(FlowExplorerContextSnapshot contextSnapshot) {
+        if (contextSnapshot == null) {
+            return null;
+        }
+
+        var manifest = new LinkedHashMap<String, Object>();
+        manifest.put("applicationName", contextSnapshot.systemId());
+        manifest.put("systemId", contextSnapshot.systemId());
+        manifest.put("systemName", contextSnapshot.systemName());
+        manifest.put("requestedBranch", contextSnapshot.requestedBranch());
+        manifest.put("branchRef", contextSnapshot.resolvedRef());
+        manifest.put("endpointId", contextSnapshot.endpointId());
+        manifest.put("httpMethod", contextSnapshot.httpMethod());
+        manifest.put("endpointPath", contextSnapshot.endpointPath());
+        manifest.put("endpoint", contextSnapshot.endpoint());
+        manifest.put("repositories", contextSnapshot.repositories());
+        manifest.put("flowNodes", contextSnapshot.flowNodes());
+        manifest.put("relations", contextSnapshot.relations());
+        manifest.put("snippetCards", contextSnapshot.snippetCards().stream()
+                .map(this::snippetCardManifest)
+                .toList());
+        manifest.put("limitations", contextSnapshot.limitations());
+        manifest.put("suggestedNextReads", contextSnapshot.suggestedNextReads());
+        manifest.put("coverage", contextSnapshot.coverage());
+        return manifest;
+    }
+
+    private Map<String, Object> snippetCardManifest(FlowExplorerSnippetCard card) {
+        var manifest = new LinkedHashMap<String, Object>();
+        manifest.put("id", card.id());
+        manifest.put("projectName", card.projectName());
+        manifest.put("filePath", card.filePath());
+        manifest.put("role", card.role());
+        manifest.put("methods", card.methods());
+        manifest.put("requestedStartLine", card.requestedStartLine());
+        manifest.put("requestedEndLine", card.requestedEndLine());
+        manifest.put("returnedStartLine", card.returnedStartLine());
+        manifest.put("returnedEndLine", card.returnedEndLine());
+        manifest.put("totalLines", card.totalLines());
+        manifest.put("truncated", card.truncated());
+        manifest.put("reason", card.reason());
+        manifest.put("characterCount", card.characterCount());
+        manifest.put("limitations", card.limitations());
+        manifest.put("contentArtifact", SNIPPET_CARDS_ARTIFACT);
+        return manifest;
     }
 
     private String renderCoverage(FlowExplorerContextSnapshot contextSnapshot) {

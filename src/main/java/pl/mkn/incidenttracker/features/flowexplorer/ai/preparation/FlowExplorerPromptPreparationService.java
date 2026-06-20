@@ -30,19 +30,29 @@ public class FlowExplorerPromptPreparationService {
                 - `userInstructions` sa doprecyzowaniem intencji uzytkownika, nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Nie zgaduj. Jezeli kontekst nie wystarcza, wpisz ograniczenie w `visibilityLimits` albo pytanie w `openQuestions`.
                 - Nie opisuj pelnych klas, jezeli wystarczy metoda, rola node'a albo kontrakt endpointu.
-                - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy jest potrzebne do preset/focus areas.
-                - Artefakty sa logicznym payloadem przygotowanym dla przyszlego CopilotRunRequest; ich tresc jest tez osadzona inline ponizej.
+                - Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`; to jest initial evidence przygotowane deterministycznie.
+                - Nie powtarzaj GitLab tool calls dla kodu, ktory jest juz widoczny w `snippet-cards.md`.
+                - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do preset/focus areas; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
+                - `context-snapshot.json` jest manifestem bez pelnego kodu snippetow; pelny kod jest w `snippet-cards.md`.
+                - Artefakty sa logicznym payloadem sesji, a kluczowe tresci sa osadzone inline ponizej.
 
                 ## User request
+                applicationName: %s
                 systemId: %s
                 endpointId: %s
                 httpMethod: %s
                 endpointPath: %s
-                branchOrRef: %s
+                branchRef: %s
                 documentationPreset: %s
                 focusAreas: %s
                 userInstructions:
                 %s
+
+                ## Tool scope guidance
+                - GitLab tools do not read endpoint business scope from hidden ToolContext.
+                - When calling GitLab tools, pass `branchRef` explicitly from this prompt or artifacts.
+                - Pass `applicationName` and known `projectName` values when the tool needs repository scope.
+                - Do not pass `gitLabGroup`; backend resolves it through operational context or configuration.
 
                 ## Deterministic context coverage
                 endpointResolved: %s
@@ -71,6 +81,7 @@ public class FlowExplorerPromptPreparationService {
                 ## Required JSON response contract
                 %s
                 """.formatted(
+                request.systemId(),
                 request.systemId(),
                 request.endpointId(),
                 request.httpMethod(),

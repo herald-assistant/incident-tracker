@@ -9,6 +9,7 @@ import com.github.copilot.rpc.PermissionRequestResultKind;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
@@ -32,6 +33,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoad
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabMcpTools;
 
 import java.nio.file.Path;
@@ -45,14 +47,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.GITLAB_BRANCH;
+import static pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys.GITLAB_GROUP;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.artifactService;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.incidenttracker.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
 class CopilotIncidentInitialPreparationServiceTest {
+
+    private static final CopilotToolDescriptionContext INCIDENT_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("incident-analysis");
 
     @TempDir
     Path tempDirectory;
@@ -61,12 +69,18 @@ class CopilotIncidentInitialPreparationServiceTest {
     private final CopilotSdkToolFactory toolFactory = toolFactory(
             List.of(
                     MethodToolCallbackProvider.builder()
-                            .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort()))
+                            .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime")))
                             .build()
             ),
             objectMapper,
             toolEvidenceSessionStore(objectMapper)
     );
+
+    private static GitLabProperties gitLabProperties(String group) {
+        var properties = new GitLabProperties();
+        properties.setGroup(group);
+        return properties;
+    }
 
     @Test
     void shouldPrepareSdkObjectsFromAnalysisRequest() throws Exception {
@@ -98,6 +112,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                             "gitlab_find_class_references",
                             "gitlab_find_flow_context",
                             "gitlab_list_available_repositories",
+                            "gitlab_read_java_method_slice",
                             "gitlab_read_repository_file_chunk",
                             "gitlab_read_repository_file_chunks",
                             "gitlab_read_repository_files_by_path",
@@ -106,7 +121,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                     ),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
-            assertEquals(7, prepared.session().sessionConfig().getTools().size());
+            assertEquals(8, prepared.session().sessionConfig().getTools().size());
             assertEquals(
                     CopilotIncidentRuntimeSkillNames.allSkillNames(),
                     skillDirectoryNames(prepared.session().sessionConfig().getSkillDirectories())
@@ -142,12 +157,15 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
-            assertTrue(prompt.contains("GitLab code: inspect class references/imports, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
+            assertTrue(prompt.contains("GitLab code: inspect class references/imports, method slices, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
             assertTrue(prompt.contains("enterprise software incident analysis"));
             assertTrue(prompt.contains("operator, tester, analyst, or junior/mid developer"));
             assertTrue(prompt.contains("may not know the affected system area"));
             assertTrue(prompt.contains("Hard rules:"));
-            assertTrue(prompt.contains("Treat environment, gitLabBranch and gitLabGroup as fixed session context."));
+            assertTrue(prompt.contains("Treat environment, gitLabBranch and gitLabGroup from this prompt/artifacts as fixed incident context."));
+            assertTrue(prompt.contains("GitLab tools do not read branch/group from hidden ToolContext."));
+            assertTrue(prompt.contains("pass `branchRef` explicitly from `gitLabBranch`"));
+            assertTrue(prompt.contains("Do not pass `gitLabGroup` to GitLab tools"));
             assertTrue(prompt.contains("Only the explicitly listed capability groups are enabled for this session."));
             assertTrue(prompt.contains("Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk."));
             assertTrue(prompt.contains("Do not invent environment, branch, group, project, table, owner, process, bounded context, or downstream system."));
@@ -283,7 +301,10 @@ class CopilotIncidentInitialPreparationServiceTest {
                 Map.of("type", "object", "properties", Map.of()),
                 invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
         ));
-        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
+        when(factory.createToolDefinitions(
+                any(CopilotToolSessionContext.class),
+                eq(INCIDENT_DESCRIPTION_CONTEXT)
+        )).thenReturn(expectedTools);
 
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
@@ -291,16 +312,19 @@ class CopilotIncidentInitialPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            verify(factory).createToolDefinitions(org.mockito.ArgumentMatchers.argThat(context ->
-                    "timeout-123".equals(context.correlationId())
-                            && "dev3".equals(context.environment())
-                            && "release/2026.04".equals(context.gitLabBranch())
-                            && "CRM/runtime".equals(context.gitLabGroup())
-                            && context.analysisRunId() != null
-                            && !context.analysisRunId().isBlank()
-                            && context.copilotSessionId() != null
-                            && context.copilotSessionId().startsWith("analysis-")
-            ));
+            verify(factory).createToolDefinitions(
+                    org.mockito.ArgumentMatchers.argThat(context ->
+                            "timeout-123".equals(context.correlationId())
+                                    && "dev3".equals(context.environment())
+                                    && !context.hiddenContext().containsKey(GITLAB_BRANCH)
+                                    && !context.hiddenContext().containsKey(GITLAB_GROUP)
+                                    && context.analysisRunId() != null
+                                    && !context.analysisRunId().isBlank()
+                                    && context.copilotSessionId() != null
+                                    && context.copilotSessionId().startsWith("analysis-")
+                    ),
+                    eq(INCIDENT_DESCRIPTION_CONTEXT)
+            );
             assertEquals(expectedTools, prepared.session().sessionConfig().getTools());
             assertEquals(List.of("gitlab_read_repository_file", "skill"), prepared.session().sessionConfig().getAvailableTools());
             var allowedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
@@ -339,7 +363,10 @@ class CopilotIncidentInitialPreparationServiceTest {
                         invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
                 )
         );
-        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class))).thenReturn(expectedTools);
+        when(factory.createToolDefinitions(
+                any(CopilotToolSessionContext.class),
+                eq(INCIDENT_DESCRIPTION_CONTEXT)
+        )).thenReturn(expectedTools);
 
         var service = new CopilotIncidentInitialPreparationService(
                 runAssembler(properties, factory),
@@ -378,7 +405,10 @@ class CopilotIncidentInitialPreparationServiceTest {
                 Map.of("type", "object", "properties", Map.of()),
                 invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
         );
-        when(factory.createToolDefinitions(any(CopilotToolSessionContext.class)))
+        when(factory.createToolDefinitions(
+                any(CopilotToolSessionContext.class),
+                eq(INCIDENT_DESCRIPTION_CONTEXT)
+        ))
                 .thenReturn(List.of(elasticTool, gitLabTool, dbTool));
 
         var service = new CopilotIncidentInitialPreparationService(

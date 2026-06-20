@@ -8,6 +8,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer;
 
 import java.util.Comparator;
@@ -24,10 +25,13 @@ public class CopilotSdkToolFactory {
     private final List<CopilotToolDescriptionCustomizer> descriptionCustomizers;
     private final CopilotToolInvocationHandler invocationHandler;
 
-    public List<ToolDefinition> createToolDefinitions(CopilotToolSessionContext sessionContext) {
+    public List<ToolDefinition> createToolDefinitions(
+            CopilotToolSessionContext sessionContext,
+            CopilotToolDescriptionContext descriptionContext
+    ) {
         return toolCallbacksByName().values().stream()
                 .sorted(Comparator.comparing(callback -> callback.getToolDefinition().name()))
-                .map(callback -> toCopilotToolDefinition(callback, sessionContext))
+                .map(callback -> toCopilotToolDefinition(callback, sessionContext, descriptionContext))
                 .toList();
     }
 
@@ -43,9 +47,14 @@ public class CopilotSdkToolFactory {
         return callbacksByName;
     }
 
-    private ToolDefinition toCopilotToolDefinition(ToolCallback callback, CopilotToolSessionContext sessionContext) {
+    private ToolDefinition toCopilotToolDefinition(
+            ToolCallback callback,
+            CopilotToolSessionContext sessionContext,
+            CopilotToolDescriptionContext descriptionContext
+    ) {
         var springToolDefinition = callback.getToolDefinition();
         var customizedDescription = customizeDescription(
+                descriptionContext,
                 springToolDefinition.name(),
                 springToolDefinition.description()
         );
@@ -58,10 +67,21 @@ public class CopilotSdkToolFactory {
         );
     }
 
-    private String customizeDescription(String toolName, String description) {
+    private String customizeDescription(
+            CopilotToolDescriptionContext descriptionContext,
+            String toolName,
+            String description
+    ) {
+        var effectiveDescriptionContext = descriptionContext != null
+                ? descriptionContext
+                : CopilotToolDescriptionContext.empty();
         var customizedDescription = description != null ? description : "";
         for (var customizer : descriptionCustomizers) {
-            customizedDescription = customizer.customize(toolName, customizedDescription);
+            customizedDescription = customizer.customize(
+                    effectiveDescriptionContext,
+                    toolName,
+                    customizedDescription
+            );
             if (customizedDescription == null) {
                 customizedDescription = "";
             }

@@ -18,6 +18,9 @@ import {
   GitLabEndpointUseCaseFileCandidate,
   GitLabEndpointUseCaseMethodCandidate,
   GitLabEndpointUseCaseRelation,
+  GitLabJavaMethodSlicePayload,
+  GitLabJavaMethodSliceMethodSelector,
+  GitLabJavaMethodSliceResponse,
   GitLabRepositoryEndpoint,
   GitLabRepositoryEndpointParameterDocumentation,
   GitLabRepositoryEndpointsPayload,
@@ -35,6 +38,7 @@ type GitLabJsonResponseKey =
   | 'endpoint-inventory'
   | 'endpoint-use-case-context'
   | 'repository-files-by-path'
+  | 'java-method-slice'
   | 'source-resolve';
 type GitLabToolKey = GitLabJsonResponseKey;
 type GitLabJsonPayloadKey = 'request' | 'response';
@@ -123,6 +127,14 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/repository/files/by-path',
     summary:
       'Pobiera treść konkretnych plików po ścieżkach z repozytorium i branch/ref.'
+  },
+  {
+    key: 'java-method-slice',
+    label: 'Java Method Slice',
+    category: 'Source content',
+    endpoint: '/api/gitlab/repository/java-method-slice',
+    summary:
+      'Pobiera kompaktowy wycinek klasy Java: wybraną metodę, potrzebne importy, pola i bliskie helpery.'
   },
   {
     key: 'source-resolve',
@@ -262,6 +274,37 @@ export class GitLabEvidenceConsoleComponent {
     })
   });
 
+  readonly gitLabJavaMethodSliceForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    filePath: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    declaringTypeName: new FormControl('', { nonNullable: true }),
+    methodSelectors: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    includeDirectPrivateHelpers: new FormControl(true, { nonNullable: true }),
+    includeRelevantFields: new FormControl(true, { nonNullable: true }),
+    includeRelevantImports: new FormControl(true, { nonNullable: true }),
+    maxCharacters: new FormControl('8000', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(40000)]
+    })
+  });
+
   readonly gitLabSourceForm = new FormGroup({
     gitlabBaseUrl: new FormControl('', {
       nonNullable: true,
@@ -295,6 +338,9 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabRepositoryFilesByPathState = signal<ToolState>(
     this.idleState('Przenieś listę plików z use-case contextu albo wklej pełne path ręcznie.')
   );
+  readonly gitLabJavaMethodSliceState = signal<ToolState>(
+    this.idleState('Podaj plik i metodę albo linię, aby pobrać kompaktowy slice klasy Java.')
+  );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
   );
@@ -313,6 +359,10 @@ export class GitLabEvidenceConsoleComponent {
 
   readonly gitLabRepositoryFilesByPathResult = computed(() =>
     this.asGitLabRepositoryFilesByPathResult(this.gitLabRepositoryFilesByPathState().response)
+  );
+
+  readonly gitLabJavaMethodSliceResult = computed(() =>
+    this.asGitLabJavaMethodSliceResult(this.gitLabJavaMethodSliceState().response)
   );
 
   readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
@@ -340,6 +390,9 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'repository-files-by-path':
         this.submitGitLabRepositoryFilesByPath();
+        return;
+      case 'java-method-slice':
+        this.submitGitLabJavaMethodSlice();
         return;
       case 'source-resolve':
         this.submitGitLabSource();
@@ -379,6 +432,17 @@ export class GitLabEvidenceConsoleComponent {
           filePaths: '',
           maxCharactersPerFile: '4000',
           maxTotalCharacters: '60000'
+        });
+        return;
+      case 'java-method-slice':
+        this.gitLabJavaMethodSliceForm.patchValue({
+          filePath: '',
+          declaringTypeName: '',
+          methodSelectors: '',
+          includeDirectPrivateHelpers: true,
+          includeRelevantFields: true,
+          includeRelevantImports: true,
+          maxCharacters: '8000'
         });
         return;
       case 'source-resolve':
@@ -624,6 +688,56 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
+  submitGitLabJavaMethodSlice(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabJavaMethodSliceForm)) {
+      this.gitLabJavaMethodSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+
+    const methodSelectors = this.parseMethodSelectors(
+      this.gitLabJavaMethodSliceForm.controls.methodSelectors.value
+    );
+    if (this.gitLabJavaMethodSliceForm.invalid || methodSelectors.length === 0) {
+      this.gitLabJavaMethodSliceForm.markAllAsTouched();
+      this.gitLabJavaMethodSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij filePath oraz co najmniej jedną nazwę metody dla Java Method Slice.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabJavaMethodSlicePayload = {
+      group: this.gitLabJavaMethodSliceForm.controls.group.value.trim(),
+      projectName: this.gitLabJavaMethodSliceForm.controls.projectName.value.trim(),
+      branch: this.gitLabJavaMethodSliceForm.controls.branch.value.trim(),
+      filePath: this.gitLabJavaMethodSliceForm.controls.filePath.value.trim(),
+      declaringTypeName: this.optionalValue(
+        this.gitLabJavaMethodSliceForm.controls.declaringTypeName.value
+      ),
+      methodSelectors,
+      includeDirectPrivateHelpers:
+        this.gitLabJavaMethodSliceForm.controls.includeDirectPrivateHelpers.value,
+      includeRelevantFields: this.gitLabJavaMethodSliceForm.controls.includeRelevantFields.value,
+      includeRelevantImports: this.gitLabJavaMethodSliceForm.controls.includeRelevantImports.value,
+      maxCharacters: this.optionalNumber(this.gitLabJavaMethodSliceForm.controls.maxCharacters.value)
+    };
+
+    this.runRequest(
+      this.gitLabJavaMethodSliceState,
+      this.evidenceApi.readGitLabJavaMethodSlice(payload),
+      payload,
+      '/api/gitlab/repository/java-method-slice'
+    );
+  }
+
   useEndpointForContext(endpoint: GitLabRepositoryEndpoint): void {
     this.selectedToolKey.set('endpoint-use-case-context');
     this.syncRepositoryScope(this.gitLabEndpointUseCaseContextForm);
@@ -669,6 +783,50 @@ export class GitLabEvidenceConsoleComponent {
     });
     this.gitLabRepositoryFilesByPathState.set(
       this.idleState('Lista plików została przeniesiona z use-case contextu. Uruchom odczyt, aby pobrać content.')
+    );
+  }
+
+  useUseCaseMethodForSlice(
+    node: GitLabUseCaseTreeNode,
+    method: GitLabEndpointUseCaseMethodCandidate
+  ): void {
+    this.populateJavaMethodSliceFromUseCaseNode(
+      node,
+      method.methodName ? [method.methodName] : []
+    );
+  }
+
+  useUseCaseNodeMethodsForSlice(node: GitLabUseCaseTreeNode): void {
+    const methodNames = [...new Set((node.file?.methods || [])
+      .map((method) => method.methodName || '')
+      .filter((methodName) => methodName.length > 0))];
+    this.populateJavaMethodSliceFromUseCaseNode(node, methodNames);
+  }
+
+  private populateJavaMethodSliceFromUseCaseNode(
+    node: GitLabUseCaseTreeNode,
+    methodNames: string[]
+  ): void {
+    const context = this.gitLabEndpointUseCaseContextResult();
+    const filePath = this.normalizePath(node.file?.path) || '';
+
+    this.selectedToolKey.set('java-method-slice');
+    this.scopeForm.patchValue({
+      group: context?.repository?.group || this.scopeForm.controls.group.value,
+      projectName: context?.repository?.projectName || this.scopeForm.controls.projectName.value,
+      branch: context?.repository?.branch || this.scopeForm.controls.branch.value
+    });
+
+    this.gitLabJavaMethodSliceForm.patchValue({
+      group: context?.repository?.group || this.scopeForm.controls.group.value,
+      projectName: context?.repository?.projectName || this.scopeForm.controls.projectName.value,
+      branch: context?.repository?.branch || this.scopeForm.controls.branch.value,
+      filePath,
+      declaringTypeName: '',
+      methodSelectors: methodNames.join('\n')
+    });
+    this.gitLabJavaMethodSliceState.set(
+      this.idleState('Metody zostały przeniesione z use-case contextu. Uruchom slice, aby pobrać kompaktowy kod.')
     );
   }
 
@@ -1071,9 +1229,14 @@ export class GitLabEvidenceConsoleComponent {
     return 'Ten plik pojawił się już wcześniej w drzewie; wpis jest skrótem, żeby nie powielać gałęzi flow.';
   }
 
-  methodLineRange(method: GitLabEndpointUseCaseMethodCandidate): string {
-    const lineStart = Math.max(0, method.lineStart || 0);
-    const lineEnd = Math.max(lineStart, method.lineEnd || 0);
+  methodLineRange(method: {
+    lineStart?: number;
+    lineEnd?: number;
+    returnedLineStart?: number;
+    returnedLineEnd?: number;
+  }): string {
+    const lineStart = Math.max(0, method.lineStart || method.returnedLineStart || 0);
+    const lineEnd = Math.max(lineStart, method.lineEnd || method.returnedLineEnd || 0);
     if (lineStart <= 0) {
       return '';
     }
@@ -1302,7 +1465,8 @@ export class GitLabEvidenceConsoleComponent {
     return (
       toolKey === 'endpoint-inventory' ||
       toolKey === 'endpoint-use-case-context' ||
-      toolKey === 'repository-files-by-path'
+      toolKey === 'repository-files-by-path' ||
+      toolKey === 'java-method-slice'
     );
   }
 
@@ -1311,6 +1475,49 @@ export class GitLabEvidenceConsoleComponent {
       .split(/[\r\n,]+/)
       .map((value) => value.trim())
       .filter((value) => value.length > 0);
+  }
+
+  private parseMethodSelectors(raw: string): GitLabJavaMethodSliceMethodSelector[] {
+    const selectors = new Map<string, GitLabJavaMethodSliceMethodSelector>();
+    for (const token of this.toList(raw)) {
+      const selector = this.parseMethodSelector(token);
+      if (selector) {
+        const key = `${selector.methodName}:${selector.lineStart || ''}`;
+        selectors.set(key, selector);
+      }
+    }
+    return [...selectors.values()];
+  }
+
+  private parseMethodSelector(raw: string): GitLabJavaMethodSliceMethodSelector | null {
+    const token = raw.trim();
+    if (!token) {
+      return null;
+    }
+
+    const lineMatch = token.match(/(?:^|[\s@:])L?(\d+)(?:\s*-\s*L?\d+)?\s*$/i);
+    const lineStart = lineMatch ? Number(lineMatch[1]) : undefined;
+    const withoutLine = lineMatch ? token.slice(0, lineMatch.index).trim() : token;
+    const methodCandidate = withoutLine.includes('#')
+      ? withoutLine.slice(withoutLine.lastIndexOf('#') + 1)
+      : withoutLine;
+    const methodName = (methodCandidate.includes('(')
+      ? methodCandidate.slice(0, methodCandidate.indexOf('('))
+      : methodCandidate
+    )
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .pop();
+
+    if (!methodName || !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(methodName)) {
+      return null;
+    }
+
+    return {
+      methodName,
+      lineStart: Number.isFinite(lineStart) ? lineStart : undefined
+    };
   }
 
   private optionalValue(raw: string): string | undefined {
@@ -1359,6 +1566,8 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabEndpointUseCaseContextState;
       case 'repository-files-by-path':
         return this.gitLabRepositoryFilesByPathState;
+      case 'java-method-slice':
+        return this.gitLabJavaMethodSliceState;
       case 'source-resolve':
         return this.gitLabSourceState;
       default:
@@ -1410,6 +1619,19 @@ export class GitLabEvidenceConsoleComponent {
     const record = response as Partial<GitLabRepositoryFilesByPathResponse>;
     return Array.isArray(record.files) && typeof record.returnedFileCount === 'number'
       ? (record as GitLabRepositoryFilesByPathResponse)
+      : null;
+  }
+
+  private asGitLabJavaMethodSliceResult(
+    response: unknown
+  ): GitLabJavaMethodSliceResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabJavaMethodSliceResponse>;
+    return typeof record.status === 'string' && Array.isArray(record.candidates)
+      ? (record as GitLabJavaMethodSliceResponse)
       : null;
   }
 

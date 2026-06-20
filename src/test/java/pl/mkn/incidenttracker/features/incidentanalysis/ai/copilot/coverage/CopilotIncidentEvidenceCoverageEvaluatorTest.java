@@ -25,6 +25,19 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
     }
 
     @Test
+    void shouldRecommendGitLabGroundingWhenBranchIsResolvedWithoutGitLabGroup() {
+        var report = evaluator.evaluate(new InitialAnalysisRequest(
+                "corr-123",
+                "dev3",
+                "release/2026.04",
+                null,
+                List.of()
+        ));
+
+        assertTrue(report.hasGap("TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED"));
+    }
+
+    @Test
     void shouldClassifyFailingMethodOnlyAsMissingFlowContext() {
         var report = evaluator.evaluate(request("dev3", List.of(gitLabSection(
                 "CheckoutService.java around failing method",

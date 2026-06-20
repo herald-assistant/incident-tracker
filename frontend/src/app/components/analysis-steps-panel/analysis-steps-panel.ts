@@ -424,6 +424,7 @@ const DATABASE_TOOL_LABELS: Record<string, string> = {
 const GITLAB_TOOL_LABELS: Record<string, string> = {
   gitlab_search_repository_candidates: 'Wyszukiwanie kandydatów plików',
   gitlab_read_repository_files_by_path: 'Odczyt listy plików',
+  gitlab_read_java_method_slice: 'Wycinek metody Java',
   gitlab_read_repository_file_outline: 'Zarys pliku',
   gitlab_find_class_references: 'Referencje klasy',
   gitlab_find_flow_context: 'Kontekst przepływu'

@@ -58,6 +58,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "gitlab_list_available_repositories",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
+                        "gitlab_read_java_method_slice",
                         "gitlab_read_repository_file_chunk",
                         "gitlab_read_repository_files_by_path",
                         "gitlab_read_repository_file_outline"
@@ -69,6 +70,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("gitlab_list_available_repositories"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_class_references"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_java_method_slice"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_files_by_path"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_outline"));
@@ -123,6 +125,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "gitlab_list_available_repositories",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
+                        "gitlab_read_java_method_slice",
                         "gitlab_read_repository_file_chunk",
                         "gitlab_read_repository_file_chunks",
                         "gitlab_read_repository_files_by_path",
@@ -135,6 +138,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("gitlab_find_class_references"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
         assertTrue(policy.availableToolNames().contains("gitlab_list_available_repositories"));
+        assertTrue(policy.availableToolNames().contains("gitlab_read_java_method_slice"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunks"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_files_by_path"));
@@ -327,6 +331,19 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("db_find_tables"));
         assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
         assertTrue(policy.availableToolNames().contains("opctx_search"));
+    }
+
+    @Test
+    void shouldEnableFollowUpGitLabToolsWhenBranchIsResolvedWithoutGitLabGroup() {
+        var policy = policyFactory.createForFollowUp(
+                chatRequest("dev3", null, "release/2026.04"),
+                tools("gitlab_find_flow_context", "gitlab_read_java_method_slice")
+        );
+
+        assertEquals(
+                Set.of("gitlab_find_flow_context", "gitlab_read_java_method_slice"),
+                Set.copyOf(policy.availableToolNames())
+        );
     }
 
     @Test

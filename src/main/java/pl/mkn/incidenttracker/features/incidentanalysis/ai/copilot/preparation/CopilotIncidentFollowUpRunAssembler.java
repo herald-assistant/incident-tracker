@@ -5,10 +5,14 @@ import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 
 @Component
 @RequiredArgsConstructor
 public class CopilotIncidentFollowUpRunAssembler {
+
+    private static final CopilotToolDescriptionContext TOOL_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("incident-analysis");
 
     private final CopilotSdkToolFactory toolFactory;
     private final CopilotIncidentToolSessionContextFactory toolSessionContextFactory;
@@ -21,7 +25,7 @@ public class CopilotIncidentFollowUpRunAssembler {
 
     public CopilotRunRequest assemble(AnalysisAiChatRequest request) {
         var toolSessionContext = toolSessionContextFactory.fromChatRequest(request);
-        var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
+        var registeredTools = toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT);
         var toolAccessPolicy = toolAccessPolicyFactory.createForFollowUp(request, registeredTools);
         var sessionConfigRequest = sessionConfigRequestFactory.create(
                 toolSessionContext.copilotSessionId(),

@@ -18,6 +18,9 @@ Obecnie obejmuje:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
   `AnalysisEvidenceAttribute`; zawiera tez neutralny
   `AnalysisAiToolEvidenceListener` dla aktualizacji tool evidence.
+- `error/`
+  neutralny kontrakt user-facing bledow aplikacyjnych dla feature'ow i
+  globalnego HTTP exception handlera, bez zaleznosci od `api.*`.
 
 ## Zasady modyfikacji
 

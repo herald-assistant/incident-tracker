@@ -7,6 +7,10 @@ import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocument
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,8 +28,10 @@ public class FlowExplorerSnippetCardService {
     private static final int TECHNICAL_MAX_CARDS = 4;
     private static final int MAX_CHARACTERS_PER_CARD = 6_000;
     private static final int MAX_TOTAL_CHARACTERS = 14_000;
+    private static final String METHOD_SLICE_OK_STATUS = "OK";
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final GitLabJavaMethodSliceService javaMethodSliceService;
 
     public FlowExplorerSnippetCardResult buildSnippetCards(
             String gitLabGroup,
@@ -66,24 +72,24 @@ public class FlowExplorerSnippetCardService {
                 break;
             }
 
-            var lineRange = requestedLineRange(node);
-            if (lineRange == null) {
-                limitations.add("Snippet card skipped for " + node.filePath()
-                        + " because method line range is missing.");
-                continue;
-            }
-
             try {
-                var chunk = gitLabRepositoryPort.readFileChunk(
+                var attempt = tryBuildMethodSliceCard(
                         gitLabGroup,
-                        repository.projectName(),
                         resolvedRef,
-                        node.filePath(),
-                        lineRange.startLine(),
-                        lineRange.endLine(),
-                        Math.min(MAX_CHARACTERS_PER_CARD, remainingCharacters)
+                        repository,
+                        node,
+                        remainingCharacters
                 );
-                var card = snippetCard(repository, node, lineRange, chunk);
+                var card = attempt.card() != null
+                        ? attempt.card()
+                        : fallbackSnippetCard(
+                                gitLabGroup,
+                                resolvedRef,
+                                repository,
+                                node,
+                                remainingCharacters,
+                                attempt.limitations()
+                        );
                 cards.add(card);
                 totalCharacters += card.characterCount();
                 limitations.addAll(card.limitations().stream()
@@ -119,7 +125,7 @@ public class FlowExplorerSnippetCardService {
                 ? flowNodes.stream()
                 .filter(node -> StringUtils.hasText(node.filePath()))
                 .filter(node -> !node.methods().isEmpty())
-                .filter(node -> node.methods().stream().anyMatch(method -> method.lineStart() > 0))
+                .filter(node -> !methodSelectors(node).isEmpty())
                 .sorted(Comparator
                         .comparingInt((FlowExplorerFlowNode node) -> priority(node, preset, safeFocusAreas))
                         .thenComparing(FlowExplorerFlowNode::filePath))
@@ -201,6 +207,109 @@ public class FlowExplorerSnippetCardService {
                 : DEFAULT_MAX_CARDS;
     }
 
+    private MethodSliceAttempt tryBuildMethodSliceCard(
+            String gitLabGroup,
+            String resolvedRef,
+            FlowExplorerRepositoryContext repository,
+            FlowExplorerFlowNode node,
+            int remainingCharacters
+    ) {
+        if (!javaFile(node.filePath())) {
+            return MethodSliceAttempt.empty();
+        }
+
+        var methodSelectors = methodSelectors(node);
+        if (methodSelectors.isEmpty()) {
+            return MethodSliceAttempt.empty();
+        }
+
+        var limitations = new ArrayList<String>();
+        try {
+            var response = javaMethodSliceService.readMethodSlice(new GitLabJavaMethodSliceRequest(
+                    gitLabGroup,
+                    repository.projectName(),
+                    resolvedRef,
+                    node.filePath(),
+                    null,
+                    methodSelectors,
+                    true,
+                    true,
+                    true,
+                    Math.min(MAX_CHARACTERS_PER_CARD, remainingCharacters)
+            ));
+            if (!usableMethodSlice(response)) {
+                limitations.add("Method slice returned " + safeStatus(response)
+                        + " and snippet card fell back to line chunk.");
+                if (response != null) {
+                    limitations.addAll(response.limitations());
+                }
+                return new MethodSliceAttempt(null, distinct(limitations));
+            }
+            return new MethodSliceAttempt(methodSliceCard(repository, node, response), List.of());
+        } catch (RuntimeException exception) {
+            limitations.add("Method slice failed and snippet card fell back to line chunk: "
+                    + safeMessage(exception));
+            return new MethodSliceAttempt(null, distinct(limitations));
+        }
+    }
+
+    private FlowExplorerSnippetCard fallbackSnippetCard(
+            String gitLabGroup,
+            String resolvedRef,
+            FlowExplorerRepositoryContext repository,
+            FlowExplorerFlowNode node,
+            int remainingCharacters,
+            List<String> fallbackLimitations
+    ) {
+        var lineRange = requestedLineRange(node);
+        if (lineRange == null) {
+            throw new IllegalStateException("Method line range is missing for fallback snippet card.");
+        }
+
+        var chunk = gitLabRepositoryPort.readFileChunk(
+                gitLabGroup,
+                repository.projectName(),
+                resolvedRef,
+                node.filePath(),
+                lineRange.startLine(),
+                lineRange.endLine(),
+                Math.min(MAX_CHARACTERS_PER_CARD, remainingCharacters)
+        );
+        return snippetCard(repository, node, lineRange, chunk, fallbackLimitations);
+    }
+
+    private boolean javaFile(String filePath) {
+        return StringUtils.hasText(filePath) && filePath.trim().toLowerCase(java.util.Locale.ROOT).endsWith(".java");
+    }
+
+    private List<GitLabJavaMethodSliceMethodSelector> methodSelectors(FlowExplorerFlowNode node) {
+        if (node == null || node.methods() == null) {
+            return List.of();
+        }
+        var methodNames = new LinkedHashSet<String>();
+        for (var method : node.methods()) {
+            if (method != null && StringUtils.hasText(method.methodName())) {
+                methodNames.add(method.methodName().trim());
+            }
+        }
+        return methodNames.stream()
+                .limit(20)
+                .map(methodName -> new GitLabJavaMethodSliceMethodSelector(methodName, null))
+                .toList();
+    }
+
+    private boolean usableMethodSlice(GitLabJavaMethodSliceResponse response) {
+        return response != null
+                && METHOD_SLICE_OK_STATUS.equals(response.status())
+                && StringUtils.hasText(response.content());
+    }
+
+    private String safeStatus(GitLabJavaMethodSliceResponse response) {
+        return response != null && StringUtils.hasText(response.status())
+                ? response.status()
+                : "without content";
+    }
+
     private LineRange requestedLineRange(FlowExplorerFlowNode node) {
         var methods = node.methods().stream()
                 .filter(method -> method.lineStart() > 0)
@@ -226,7 +335,18 @@ public class FlowExplorerSnippetCardService {
             LineRange requestedLineRange,
             GitLabRepositoryFileChunk chunk
     ) {
+        return snippetCard(repository, node, requestedLineRange, chunk, List.of());
+    }
+
+    private FlowExplorerSnippetCard snippetCard(
+            FlowExplorerRepositoryContext repository,
+            FlowExplorerFlowNode node,
+            LineRange requestedLineRange,
+            GitLabRepositoryFileChunk chunk,
+            List<String> extraLimitations
+    ) {
         var limitations = new ArrayList<String>(node.limitations());
+        limitations.addAll(extraLimitations != null ? extraLimitations : List.of());
         if (chunk.truncated()) {
             limitations.add("Snippet content was truncated by character budget.");
         }
@@ -248,6 +368,39 @@ public class FlowExplorerSnippetCardService {
                 content,
                 content.length(),
                 limitations
+        );
+    }
+
+    private FlowExplorerSnippetCard methodSliceCard(
+            FlowExplorerRepositoryContext repository,
+            FlowExplorerFlowNode node,
+            GitLabJavaMethodSliceResponse response
+    ) {
+        var requestedLineRange = requestedLineRange(node);
+        var requestedStartLine = requestedLineRange != null ? requestedLineRange.startLine() : response.returnedLineStart();
+        var requestedEndLine = requestedLineRange != null ? requestedLineRange.endLine() : response.returnedLineEnd();
+        var limitations = new ArrayList<String>(node.limitations());
+        limitations.addAll(response.limitations());
+        if (response.truncated()) {
+            limitations.add("Snippet content was truncated by character budget.");
+        }
+
+        return new FlowExplorerSnippetCard(
+                cardId(repository.projectName(), node.filePath(), response.returnedLineStart(), response.returnedLineEnd()),
+                repository.projectName(),
+                node.filePath(),
+                node.role(),
+                node.methods(),
+                requestedStartLine,
+                requestedEndLine,
+                response.returnedLineStart(),
+                response.returnedLineEnd(),
+                response.totalLines(),
+                response.truncated(),
+                node.reason(),
+                response.content().strip(),
+                response.returnedCharacters(),
+                distinct(limitations)
         );
     }
 
@@ -275,7 +428,11 @@ public class FlowExplorerSnippetCardService {
     }
 
     private String cardId(String projectName, String filePath, LineRange lineRange) {
-        return projectName + ":" + filePath + ":L" + lineRange.startLine() + "-L" + lineRange.endLine();
+        return cardId(projectName, filePath, lineRange.startLine(), lineRange.endLine());
+    }
+
+    private String cardId(String projectName, String filePath, int startLine, int endLine) {
+        return projectName + ":" + filePath + ":L" + startLine + "-L" + endLine;
     }
 
     private String normalizeRole(String role) {
@@ -299,5 +456,15 @@ public class FlowExplorerSnippetCardService {
     }
 
     private record LineRange(int startLine, int endLine) {
+    }
+
+    private record MethodSliceAttempt(FlowExplorerSnippetCard card, List<String> limitations) {
+        private MethodSliceAttempt {
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
+
+        private static MethodSliceAttempt empty() {
+            return new MethodSliceAttempt(null, List.of());
+        }
     }
 }

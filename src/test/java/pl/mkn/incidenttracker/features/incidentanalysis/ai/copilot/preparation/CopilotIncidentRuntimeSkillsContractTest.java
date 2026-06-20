@@ -83,6 +83,24 @@ class CopilotIncidentRuntimeSkillsContractTest {
     }
 
     @Test
+    void shouldDescribeExplicitGitLabToolScopeForIncidentAnalysis() throws Exception {
+        var content = Files.readString(SKILLS_ROOT
+                .resolve("incident-analysis-gitlab-tools")
+                .resolve("SKILL.md"));
+
+        assertContainsAll(content, List.of(
+                "`branchRef`",
+                "`projectName`",
+                "`applicationName`",
+                "Nie przekazuj `gitLabGroup` do GitLab tools",
+                "Backend rozstrzyga GitLab group",
+                "`gitlab_read_java_method_slice`"
+        ));
+        assertFalse(content.contains("stalej session group"));
+        assertFalse(content.contains("hidden ToolContext"));
+    }
+
+    @Test
     void shouldKeepResultContractSkillsAlignedWithOrchestratorContract() throws Exception {
         var requiredSections = List.of(
                 "## Rola Wobec Orkiestratora",

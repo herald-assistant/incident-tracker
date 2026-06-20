@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -11,6 +12,9 @@ import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStart
 @Component
 @RequiredArgsConstructor
 public class FlowExplorerCopilotRunRequestAssembler {
+
+    private static final CopilotToolDescriptionContext TOOL_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("flow-explorer");
 
     private final CopilotSdkToolFactory toolFactory;
     private final FlowExplorerCopilotToolSessionContextFactory toolSessionContextFactory;
@@ -48,7 +52,7 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 contextSnapshot,
                 preparation
         );
-        var registeredTools = toolFactory.createToolDefinitions(toolSessionContext);
+        var registeredTools = toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT);
         var toolAccessPolicy = toolAccessPolicyFactory.create(registeredTools);
         var aiOptions = request != null ? request.aiOptions() : null;
         var sessionConfigRequest = followUp

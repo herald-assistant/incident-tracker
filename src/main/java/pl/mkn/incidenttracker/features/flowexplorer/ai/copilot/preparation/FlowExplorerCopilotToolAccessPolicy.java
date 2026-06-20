@@ -29,6 +29,7 @@ public record FlowExplorerCopilotToolAccessPolicy(
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS,
             GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE,
+            GitLabToolNames.READ_JAVA_METHOD_SLICE,
             GitLabToolNames.FIND_FLOW_CONTEXT,
             OperationalContextToolNames.GET_SCOPE,
             OperationalContextToolNames.LIST_ENTITIES,

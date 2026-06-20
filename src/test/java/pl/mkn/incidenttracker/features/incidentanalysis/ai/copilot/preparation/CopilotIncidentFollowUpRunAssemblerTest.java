@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.incidenttracker.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
@@ -22,6 +23,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CopilotIncidentFollowUpRunAssemblerTest {
+
+    private static final CopilotToolDescriptionContext INCIDENT_DESCRIPTION_CONTEXT =
+            CopilotToolDescriptionContext.profile("incident-analysis");
 
     @Test
     void shouldAssembleNeutralRunRequestForFollowUpChat() {
@@ -82,7 +86,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         );
 
         when(toolSessionContextFactory.fromChatRequest(request)).thenReturn(toolSessionContext);
-        when(toolFactory.createToolDefinitions(toolSessionContext)).thenReturn(List.of());
+        when(toolFactory.createToolDefinitions(toolSessionContext, INCIDENT_DESCRIPTION_CONTEXT)).thenReturn(List.of());
         when(toolAccessPolicyFactory.createForFollowUp(eq(request), anyList())).thenReturn(toolAccessPolicy);
         when(artifactRequestFactory.create(request)).thenReturn(artifactRequest);
         when(sessionConfigRequestFactory.create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options))

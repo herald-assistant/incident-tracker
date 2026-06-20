@@ -26,6 +26,21 @@ pretekstem do duzego refaktoru bez potrzeby.
 - Refaktory granic robimy tylko wtedy, gdy Flow Explorer realnie pokazuje
   tarcie, zly import albo brak neutralnego kontraktu.
 - Nie reuse'ujemy `features.incidentanalysis` jako generycznego core.
+- Nie zachowujemy kompatybilnosci wstecznej dla roboczych kontraktow Flow
+  Explorera, GitLab workbencha i nowych tooli, dopoki nie sa stabilnym publicznym
+  API produktu.
+- Jezeli kolejny krok pokazuje legacy albo poprzedni roboczy wariant, ktory
+  przestal byc potrzebny, czyscimy go od razu zamiast utrzymywac rownolegle
+  sciezki kompatybilnosci.
+- Hidden `ToolContext` nie jest miejscem na feature-specific ani business-scope
+  parametry potrzebne modelowi do wyboru danych. Moze niesc runtime metadata,
+  identyfikatory sesji, dane do cache'owania wynikow stalych na poziomie sesji,
+  korelacje logow/invocation, budzety, feature/runtime profile i inne
+  informacje techniczne niewymagajace decyzji modelu. Dane takie jak
+  application/system name, environment, branch/ref, endpoint, correlationId,
+  projectName, filePath i podobne maja byc jawne dla modelu przez prompt,
+  artefakty albo wynik innego toola, a nastepnie przekazywane jako parametry
+  toola, z walidacja po stronie backendu i operational context.
 
 ## Decyzje startowe
 
@@ -271,7 +286,7 @@ Wynik ma byc zrozumialy dla analityka/testera:
 - [x] `features.flowexplorer.ai.copilot`
 - [ ] `features.flowexplorer.ai.copilot.response`
 - [x] `features.flowexplorer.ai.copilot.preparation`
-- [ ] `features.flowexplorer.ai.copilot.tools.description`
+- [x] `features.flowexplorer.ai.copilot.tools.description`
 
 ### API endpoints
 
@@ -495,6 +510,7 @@ Zasady skilli:
   - `gitlab_read_repository_file_outline`,
   - `gitlab_read_repository_file_chunk`,
   - `gitlab_read_repository_file_chunks`,
+  - `gitlab_read_java_method_slice`,
   - opcjonalnie `gitlab_find_flow_context`.
 - [x] Wlacz `opctx_*` tools dla doprecyzowania katalogu.
 - [x] Wlacz `record_tool_feedback`.
@@ -502,7 +518,7 @@ Zasady skilli:
 - [x] Nie wlaczaj Elasticsearch tools w MVP, chyba ze pozniejsza decyzja
   rozszerzy feature o runtime/log validation.
 - [x] Tool policy jest feature-owned.
-- [ ] Tool descriptions dla Flow Explorera sa dekorowane feature-owned
+- [x] Tool descriptions dla Flow Explorera sa dekorowane feature-owned
   customizerem, bez zmian w neutralnych tool implementations.
 
 ### Hidden ToolContext
@@ -853,7 +869,9 @@ Approval gate:
 - [x] `mvn -q "-Dtest=*FlowExplorer*,PackageDependencyGuardTest" test`
 - [x] `mvn -q "-Dtest=FrontendPageTest,FlowExplorerCopilotRuntimePreparationTest,CopilotIncidentSessionConfigRequestFactoryTest" test`
 - [x] `mvn -q "-Dtest=FlowExplorerConfigControllerTest,FlowExplorerSystemControllerTest,FlowExplorerEndpointInventoryControllerTest,FrontendPageTest" test`
+- [x] `mvn -q "-Dtest=CopilotIncidentPromptRendererTest,CopilotIncidentFollowUpPromptRendererTest,CopilotIncidentToolSessionContextFactoryTest,CopilotIncidentToolAccessPolicyCoverageTest,CopilotIncidentEvidenceCoverageEvaluatorTest,CopilotIncidentRuntimeSkillsContractTest,CopilotIncidentToolDescriptionCustomizerTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest" test`
 - [x] `mvn -q -DskipTests compile`
+- [x] `mvn -q test`
 - [x] `cd frontend && npm test -- --watch=false`
 - [x] `cd frontend && npm run build`
 - [ ] Manual UI smoke przez lokalny dev server / Spring Boot.
@@ -869,13 +887,13 @@ Approval gate:
 
 - [x] `features.flowexplorer` nie importuje `features.incidentanalysis`.
 - [x] `features.incidentanalysis` nie importuje `features.flowexplorer`.
-- [ ] `aiplatform` nie importuje `features`.
-- [ ] `agenttools` nie importuje `features`.
-- [ ] `integrations` nie importuje `features`, `agenttools`, `aiplatform`
+- [x] `aiplatform` nie importuje `features`.
+- [x] `agenttools` nie importuje `features`.
+- [x] `integrations` nie importuje `features`, `agenttools`, `aiplatform`
   ani `api`.
-- [ ] `api` cross-screen nie importuje `features.flowexplorer`, chyba ze
+- [x] `api` cross-screen nie importuje `features.flowexplorer`, chyba ze
   endpoint jest przeniesiony do feature-owned API.
-- [ ] Zamkniety root `analysis.*` nadal nie istnieje.
+- [x] Zamkniety root `analysis.*` nadal nie istnieje.
 
 ## Potencjalne refaktory wynikajace z drugiego feature'u
 
@@ -1146,8 +1164,8 @@ Decyzja: Flow Explorer ma feature-local szkic integracji z runtime Copilota w
 
 - `FlowExplorerCopilotToolAccessPolicy` z allowlista GitLab,
   Operational Context i `record_tool_feedback`,
-- `FlowExplorerCopilotToolSessionContextFactory` z hidden scope dla systemu,
-  endpointu, GitLaba, repozytorium, preset/focus areas i artefaktow,
+- `FlowExplorerCopilotToolSessionContextFactory` budujacy techniczny session
+  context dla runtime Copilota,
 - `FlowExplorerCopilotSessionConfigRequestFactory` bez skill directories w
   6A; Step 7 wlacza nazwane katalogi skilli Flow Explorera,
 - `FlowExplorerCopilotRunRequestAssembler`, ktory sklada `CopilotRunRequest`
@@ -1158,11 +1176,12 @@ MVP policy nie wlacza DB tools ani Elasticsearch tools. Skille Flow Explorera
 sa nadal osobnym krokiem 7, zeby nie mieszac mechaniki runtime z playbookami
 uzycia tools.
 
-Boundary finding: neutralny `GitLabToolScope` w `agenttools.gitlab` nadal
-wymaga hidden `correlationId`, co jest dziedzictwem incident analysis. Flow
-Explorer przekazuje w tym polu `runReference` jako kompatybilny scope runtime,
-ale docelowo GitLab tools powinny wymagac tylko neutralnego run/job id oraz
-GitLab group/ref.
+Boundary finding: historycznie neutralny `GitLabToolScope` w
+`agenttools.gitlab` wymagal hidden `correlationId`, co bylo dziedzictwem
+incident analysis. Decyzja 031 wycofuje ten kierunek dla Flow Explorera:
+`runReference`, system, endpoint, repozytorium, branch/ref, preset/focus areas i
+artefakty nie sa juz przekazywane jako hidden business scope tooli. Te dane maja
+byc jawne w prompt/artifactach albo w model-facing parametrach przyszlych tooli.
 
 Powod: `CopilotRunRequest` okazal sie wystarczajacy dla drugiego feature'u bez
 zmian w `aiplatform`, a feature-owned assembler/policy potwierdzaja granice
@@ -1417,15 +1436,462 @@ istniejacy `proxy.conf.json` przekazuje `/api/*` do Spring Boot na
 `localhost:8080`. To usuwa przypadek, w ktorym request API dostawal HTML
 aplikacji zamiast JSON.
 
+### 026. GitLab Java Method Slice jako kosztowy fast path
+
+Status: accepted, implemented.
+
+Decyzja: GitLab dostaje reusable capability `gitlab_read_java_method_slice`
+oraz operator API `POST /api/gitlab/repository/java-method-slice`. Tool
+pobiera pojedynczy plik Java, wybiera jedna albo wiele metod przez
+`methodSelectors[]` (`methodName` + opcjonalne `lineStart`) i renderuje
+kompaktowy wycinek klasy: package, istotne importy, naglowek typu, pola uzywane
+przez wybrane metody, wybrane metody, prywatne helpery lokalne oraz markery
+`// ... omitted ...` dla pominietego szumu.
+
+`lineStart` nie jest wymagany. Jezeli selector zawiera tylko `methodName`,
+backend zwraca wszystkie overloady tej nazwy w wybranej klasie. To jest
+intencjonalne, bo overloady zwykle maja wspolny core albo stanowia lekki
+wariant wejscia; wymaganie linii zwiekszaloby koszt poznawczy modelu bez
+realnej oszczednosci tokenow. `lineStart` zostaje opcjonalnym zawęzeniem, gdy
+operator albo AI chce konkretny wariant.
+
+To nie jest pelny type solver ani globalny slicer projektu. Na start celowo
+ograniczamy sie do AST jednego pliku i lokalnej relewancji symboli, bo glowna
+wartosc dla Flow Explorera to redukcja tokenow zanim AI poprosi o pelne pliki,
+modele albo mappery. Jezeli selector jest niejednoznaczny, backend zwraca
+kandydatow metod z liniami, zamiast zgadywac.
+
+Flow Explorer skill ma preferowac `gitlab_read_java_method_slice`, gdy
+`Endpoint Use Case Context` zwraca metode i zakres linii dla klasy w flow.
+Pelne pliki, chunki i outline zostaja fallbackiem dla parser errors,
+nieznanych metod, kontraktow OpenAPI/YAML, konfiguracji albo szerszego
+kontekstu, ktory nie miesci sie w metodowym slice.
+
+UI GitLab tool workbench pokazuje `Java Method Slice` obok pozostalych GitLab
+tooli i pozwala testowac request po `group`, `projectName`, `branch`,
+`filePath`, `methodSelectors` oraz flagach zakresu. Widok use-case contextu ma
+lekki skrot z pojedynczej metody oraz `Slice all` dla metod wybranego pliku w
+flow tree, zeby operator mogl szybko zweryfikowac dokladnie ten kod, ktory AI
+powinno pozniej dociagnac.
+
+Powod: initial context i prompt Flow Explorera maja byc optymalizowane pod
+koszt i jakosc. Przekazywanie calej klasy dla kazdego beana marnuje okno
+kontekstowe, a sama lista klas/metod nie daje wystarczajacego materialu do
+analizy. Method slice daje dobre minimum: konkretny kod use-case'u plus
+najblizsze zaleznosci lokalne bez modeli, mapperow i metod niezwiązanych z
+endpointem, dopoki uzytkownik albo AI nie potrzebuje glebszego doczytania.
+
+### 027. Initial Flow Explorer context ma uzywac Java Method Slice
+
+Status: accepted, implemented.
+
+Problem: obecny initial context Flow Explorera buduje `flowNodes` przez
+`GitLabEndpointUseCaseContextService`, ale `snippetCards` sa nadal pobierane
+przez `GitLabRepositoryPort.readFileChunk`. To oznacza, ze initial prompt ma
+osobna, mniej precyzyjna sciezke czytania kodu niz nowy reusable
+`GitLabJavaMethodSliceService`. W efekcie grozi nam duplikacja logiki
+minimalizacji kodu oraz slabsza kontrola kosztu tokenow.
+
+Decyzja: initial deterministic flow powinien korzystac z tej samej integracji
+co AI-guided tool, ale przez inna warstwe wywolania:
+
+- initial flow:
+  `FlowExplorerContextService -> FlowExplorerSnippetCardService -> GitLabJavaMethodSliceService`,
+- AI-guided follow-up / doglebianie:
+  `gitlab_read_java_method_slice -> GitLabJavaMethodSliceService`.
+
+`FlowExplorerSnippetCardService` nie powinien wolac MCP toola. Feature moze
+zalezec od `integrations.gitlab.source`, ale nie powinien mieszac
+deterministic backend flow z warstwa `agenttools.gitlab.mcp`. MCP pozostaje
+wrapperem dla modelu, a integracja pozostaje wspolnym zrodlem prawdy dla
+renderowania kompaktowego kodu Java.
+
+Docelowy flow initial run:
+
+1. Uzytkownik wybiera system, endpoint, branch/ref, preset, focus areas oraz
+   `userInstructions`.
+2. Backend rozwiazuje system i repository scope z operational context.
+3. Backend buduje `Endpoint Use Case Context` przez
+   `GitLabEndpointUseCaseContextService`.
+4. Backend zamienia file/method candidates na `flowNodes`.
+5. Backend wybiera high-value flow nodes wedlug preset/focus areas i budzetow.
+6. Backend dla wybranych node'ow buduje `GitLabJavaMethodSliceRequest` z
+   `methodSelectors[]`, domyslnie tylko po `methodName` bez `lineStart`.
+7. Backend renderuje snippet cards z odpowiedzi `GitLabJavaMethodSliceService`.
+8. Backend sklada artefakty:
+   `context-snapshot.json`, `compact-flow-manifest.md`, `snippet-cards.md`,
+   `coverage.json`, `response-contract.json`.
+9. Backend buduje canonical prompt i dopina task-specific skills Flow
+   Explorera w `CopilotRunRequest`.
+
+Zakres implementacji:
+
+- [x] W `FlowExplorerSnippetCardService` wstrzyknac
+  `GitLabJavaMethodSliceService`.
+- [x] Dla Java flow nodes z metodami budowac jeden method-slice request per
+  plik/node zamiast liniowego `readFileChunk`.
+- [x] Mapowac `FlowExplorerFlowMethod.methodName()` na
+  `GitLabJavaMethodSliceMethodSelector.methodName`; `lineStart` zostawic
+  puste w initial flow, chyba ze pozniejsza decyzja pokaze realna potrzebe
+  doprecyzowania overloadu.
+- [x] Ustawic `includeHelpers`, `includeFields` i `includeImports` na `true`,
+  bo initial prompt potrzebuje zrozumiec lokalny flow metody, zaleznosci i
+  minimalny kontekst klasy.
+- [x] Respektowac istniejace budzety snippet cards:
+  maksymalna liczba kart per preset, `MAX_CHARACTERS_PER_CARD` i
+  `MAX_TOTAL_CHARACTERS`.
+- [x] Zostawic `readFileChunk` jako fallback dla plikow nie-Java, braku metod,
+  parser errors, pustego slice albo statusu bez uzytecznego contentu.
+- [x] Przeniesc ograniczenia/failure reasons z odpowiedzi method-slice do
+  `FlowExplorerSnippetCard.limitations` i coverage.
+- [x] Zaktualizowac testy `FlowExplorerSnippetCardServiceTest`, aby
+  potwierdzaly method-slice happy path, fallback i budzety.
+- [x] Zaktualizowac dokumentacje decyzji po implementacji, wlacznie ze statusem
+  tego kroku.
+
+Granice architektoniczne:
+
+- `integrations.gitlab.source` pozostaje reusable capability.
+- `features.flowexplorer.context` orkiestruje wybor node'ow i budzet promptu,
+  ale nie duplikuje AST slicingu.
+- `agenttools.gitlab.mcp` pozostaje wrapperem AI-tool i nie jest wywolywany z
+  deterministic initial flow.
+- `aiplatform` nie dostaje wiedzy o endpointach, snippet cards ani GitLab
+  method slicing.
+
+Kolejnosc pracy dla tego kroku:
+
+1. Przed implementacja opisac w rozmowie problem i proponowane zmiany w
+   `FlowExplorerSnippetCardService` oraz testach.
+2. Po akceptacji uzytkownika zaimplementowac przepiecie snippet cards na
+   `GitLabJavaMethodSliceService`.
+3. Uruchomic testy backendowe dla Flow Explorera i Java Method Slice.
+4. Zaktualizowac checkboxy oraz status tej sekcji.
+
+### 028. Context snapshot artifact bez duplikacji kodu snippetow
+
+Status: accepted, implemented.
+
+Problem: po przepieciu snippet cards na `GitLabJavaMethodSliceService` pelny
+kod snippetow byl obecny w `flow-explorer/snippet-cards.md`, ale
+`flow-explorer/context-snapshot.json` serializowal caly
+`FlowExplorerContextSnapshot`, czyli rowniez `snippetCards[].content`. Obecny
+runtime Copilota wysyla do modelu tylko `prompt`, wiec nie byl to podwojny
+koszt tokenow w samym wywolaniu AI, ale byl to nadmiar w artefaktach, job
+payloadzie diagnostycznym i potencjalne zrodlo przyszlej duplikacji, gdyby
+ktos zaczal inline'owac snapshot.
+
+Decyzja: `context-snapshot.json` jest manifestem deterministycznego kontekstu,
+a nie miejscem na pelny kod. Zawiera system, endpoint, branch/ref,
+repositories, flowNodes, relations, limitations, suggestedNextReads, coverage
+oraz `snippetCards` jako metadane bez `content`. Pelny kod snippetow pozostaje
+wylacznie w `flow-explorer/snippet-cards.md`.
+
+Zakres implementacji:
+
+- [x] `FlowExplorerArtifactService.renderContextSnapshot` renderuje
+  znormalizowany manifest `FlowExplorerContextSnapshot` zamiast serializowac
+  record jeden do jednego.
+- [x] `snippetCards` w snapshot artifact zawieraja id, project/file, role,
+  methods, line ranges, total lines, truncation, reason, character count,
+  limitations oraz `contentArtifact=flow-explorer/snippet-cards.md`.
+- [x] `snippet-cards.md` pozostaje jedynym artefaktem z pelnym kodem
+  snippetow.
+- [x] Job state i UI API nie zostaly zmienione w tym kroku.
+- [x] Test `FlowExplorerArtifactServiceTest` potwierdza, ze snapshot artifact
+  nie zawiera `public CustomerResponse getCustomer`, a `snippet-cards.md`
+  nadal zawiera kod.
+
+Powod: zmniejszamy szum artefaktow i ryzyko przyszlej duplikacji kontekstu bez
+zmiany runtime delivery mode i bez ruszania kontraktu UI job state.
+
+### 029. Prompt i skille preferuja initial evidence przed tool calls
+
+Status: accepted, implemented.
+
+Problem: backend deterministycznie przygotowuje `compact-flow-manifest.md` i
+`snippet-cards.md` z method slices, ale prompt/skille mogly nadal sugerowac,
+ze GitLab tools sa naturalna pierwsza droga do czytania kodu. To grozilo
+powtornym pobieraniem tego samego materialu przez model i marnowaniem budzetu
+na tool calls, ktore nie wnosza nowych informacji.
+
+Decyzja: initial evidence jest pierwszym zrodlem prawdy dla AI. GitLab tools sa
+uzywane dopiero wtedy, gdy brakuje konkretnego materialu do preset/focus areas
+albo gdy trzeba rozstrzygnac ograniczenie widocznosci. Dla znanej klasy/metody
+preferowanym focused read jest `gitlab_read_java_method_slice`; file chunks,
+outline i full file reads pozostaja fallbackiem.
+
+Zakres implementacji:
+
+- [x] `FlowExplorerPromptPreparationService` instruuje AI, aby najpierw
+  korzystalo z `compact-flow-manifest.md` i `snippet-cards.md`.
+- [x] Prompt zabrania powtarzania GitLab tool calls dla kodu juz widocznego w
+  `snippet-cards.md`.
+- [x] Prompt wskazuje `gitlab_read_java_method_slice` jako preferowane
+  poglebienie dla konkretnych metod.
+- [x] Prompt usuwa nieaktualne sformulowanie o artefaktach jako payloadzie
+  "przyszlego" `CopilotRunRequest` i opisuje aktualny stan: artifact payload
+  sesji plus kluczowe tresci inline.
+- [x] `flow-explorer-orchestrator` opisuje `context-snapshot.json` jako
+  manifest bez pelnego kodu i `snippet-cards.md` jako initial code evidence.
+- [x] `flow-explorer-gitlab-tools` wymaga sprawdzenia artefaktow przed tool
+  callem i zakazuje ponownego czytania metod obecnych w snippet cards bez
+  konkretnego powodu.
+- [x] `FlowExplorerPromptPreparationServiceTest` pilnuje nowych zasad promptu.
+
+Powod: po optymalizacji deterministic contextu trzeba zamknac petle
+instrukcyjna. Model ma wydawac budzet na nowe braki, a nie na ponowne
+odkrywanie kodu, ktory backend juz dolaczyl w minimalnej formie.
+
+### 030. Tool description customizers sa scoped per feature
+
+Status: superseded by 031, partially implemented.
+
+Problem: `CopilotSdkToolFactory` stosowal globalna liste
+`CopilotToolDescriptionCustomizer` bez informacji o feature runtime. Po dodaniu
+Flow Explorera oznaczalo to ryzyko, ze incident-specific guidance dla GitLab,
+DB, Elasticsearch albo operational context tools zostanie dopisane rowniez do
+sesji Flow Explorera. To byl boundary drift miedzy feature policy a neutralna
+platforma tooli.
+
+Pierwotna decyzja: platformowy customizer opisow tooli dostaje
+`CopilotToolSessionContext`, a feature oznacza sesje neutralnym hidden
+`featureId`. Platforma nadal nie zna konkretnych feature'ow; tylko przekazuje
+context. Feature-owned customizery same decyduja, czy dany opis dekorowac:
+
+- `featureId=incident-analysis` wlacza
+  `CopilotIncidentToolDescriptionCustomizer`,
+- `featureId=flow-explorer` wlacza
+  `FlowExplorerToolDescriptionCustomizer`.
+
+Zakres implementacji:
+
+- [x] Dodano neutralny hidden context key `AgentToolContextKeys.FEATURE_ID`.
+- [x] `CopilotToolDescriptionCustomizer` przyjmuje
+  `CopilotToolSessionContext`, `toolName` i `description`.
+- [x] `CopilotSdkToolFactory` przekazuje session context do customizerow.
+- [x] Incident hidden context ustawia `featureId=incident-analysis`.
+- [x] Flow Explorer hidden context ustawia `featureId=flow-explorer`.
+- [x] `CopilotIncidentToolDescriptionCustomizer` dziala tylko dla
+  `incident-analysis`.
+- [x] Dodano
+  `features.flowexplorer.ai.copilot.tools.description.FlowExplorerToolDescriptionCustomizer`
+  z guidance dla GitLab/opctx tools: najpierw initial artifacts, nie powtarzaj
+  snippet cards, preferuj `gitlab_read_java_method_slice`, pelne/chunkowe
+  odczyty jako fallback, operational context jako katalog a nie dowod kodu.
+- [x] Testy potwierdzaja scoping incident/Flow Explorer customizerow oraz
+  przekazywanie session context przez `CopilotSdkToolFactory`.
+
+Korekta decyzji: `featureId` jako hidden `ToolContext` marker tez miesza
+runtime metadata z feature policy. Scoping opisow tooli jest nadal potrzebny,
+ale powinien byc przekazywany jako jawny runtime/profile context przy skladaniu
+sesji, a nie jako hidden data dostepna pozniej dla tool invocation.
+
+Powod: opisy tooli sa model-facing policy/guidance konkretnego feature'u, ale
+sam `ToolContext` powinien pozostac mechanika runtime, nie nosnikiem
+feature-specific kontraktu.
+
+### 031. Wycofanie feature-specific scope z hidden ToolContext
+
+Status: implemented.
+
+Problem: dotychczasowy kierunek zakladal session-bound hidden scope dla tools:
+`correlationId`, `environment`, `gitLabGroup`, `gitLabBranch`, a w kolejnym
+kroku rowniez potencjalnie `runReference` i `featureId`. Dla incident analysis
+to bylo wygodne, ale po dodaniu Flow Explorera widac, ze ten wzorzec nie
+skaluje sie na feature-independent tools. Model nie widzi tych danych jako
+parametrow toola, wiec trudniej zrozumiec kontrakt, trudniej testowac
+zachowanie i latwo przemycic incidentowe zalozenia do innych analiz.
+
+Nowa decyzja: reusable tools nie powinny dostawac business-scope danych przez
+hidden `ToolContext`. Dane potrzebne do wyboru lub pobrania materialu maja byc
+jawne dla modelu:
+
+- w canonical prompt,
+- w artefaktach,
+- w structured response poprzedniego toola,
+- jako model-facing parametry kolejnego toola.
+
+Przyklady danych, ktore nie powinny byc ukrytym scope'em dla reusable tools:
+
+- `correlationId`,
+- `environment`,
+- `applicationName` / `systemId`,
+- `branch` / `branchRef`,
+- `endpoint`,
+- `projectName`,
+- `filePath`,
+- `gitLabGroup` jako model-facing wybor.
+
+`ToolContext` moze nadal zawierac dane techniczne niewymagajace decyzji modelu:
+
+- `analysisRunId`,
+- `copilotSessionId`,
+- actual SDK session id,
+- `toolCallId`,
+- nazwe toola podczas invocation,
+- dane do cache'owania wynikow stalych na poziomie sesji,
+- korelacje logow/invocation,
+- runtime budgets i policy state,
+- techniczny session/profile context potrzebny platformie, o ile nie jest
+  uzywany jako ukryty business input toola.
+
+Docelowy model dla Flow Explorera:
+
+1. Prompt/artefakty zawieraja jawnie: application/system name, branch/ref,
+   endpoint, selected preset/focus areas i initial context.
+2. AI uzywa operational context tools po jawnych parametrach, np.
+   `applicationName`, aby pobrac repozytoria, code-search scopes, bounded
+   context, ownership i glossary.
+3. GitLab tools dostaja jawne parametry wynikajace z promptu albo poprzednich
+   tool results, np. `applicationName`, `projectName`, `branchRef`, `filePath`,
+   `methodSelectors`.
+4. Backend waliduje parametry przez operational context, konfiguracje i
+   allowlisty. Model moze poprosic o dane, ale backend decyduje, czy zakres jest
+   dozwolony.
+5. GitLab group i inne sekrety/infrastrukturalne ustawienia pozostaja po
+   stronie backendu/configu. Nie musza byc model-facing ani hidden business
+   scope'em.
+
+Zakres implementacji:
+
+- [x] Przeniesc scoping tool description customizerow z hidden `featureId` na
+  jawny runtime/session profile niedostepny jako hidden input dla tool
+  invocation. Zrealizowane przez `CopilotToolDescriptionContext` przekazywany
+  jawnie do `CopilotSdkToolFactory.createToolDefinitions(...)`.
+- [x] Usunac `featureId` z hidden `ToolContext`.
+- [x] Flow Explorer nie powinien ustawiac `CORRELATION_ID` jako job id w hidden
+  context.
+- [x] GitLab tools powinny stopniowo przechodzic na jawne parametry scope'u
+  potrzebne modelowi, z walidacja przez operational context.
+- [x] Incident-specific `correlationId` pozostaje domena incident analysis i
+  nie powinien byc wymaganiem reusable GitLab/opctx tools.
+- [x] Zaktualizowac skille/prompt, aby AI wiedzialo, ze application,
+  environment, branch/ref i endpoint sa jawne i powinny byc przekazywane jako
+  parametry tooli, jezeli tool ich wymaga.
+
+Notatka implementacyjna 031A: nie utrzymujemy kompatybilnosci wstecznej.
+Stary podpis `createToolDefinitions(CopilotToolSessionContext)` zostal usuniety,
+a testy zostaly przestawione na jawne przekazywanie profilu opisow tooli.
+Runtime invocation nadal dostaje `CopilotToolSessionContext`, ale customizery
+opisow nie czytaja juz hidden contextu.
+
+Notatka implementacyjna 031B: Flow Explorerowy hidden context zostal oczyszczony
+z business scope'u. `FlowExplorerCopilotToolSessionContextFactory` przekazuje do
+`CopilotToolSessionContext` puste feature hidden data, a platforma dopina tylko
+techniczne `analysisRunId` i `copilotSessionId`. Usunieto legacy
+`FlowExplorerCopilotHiddenToolContextKeys`; dane o systemie, endpointcie, branchu
+i artefaktach pozostaja jawne w prompt/artifactach.
+
+Notatka implementacyjna 031C: GitLab MCP tools nie czytaja juz
+`gitLabGroup`, `gitLabBranch`, `correlationId` ani `environment` z hidden
+`ToolContext`. Narzedzia dostaja jawny `branchRef` oraz opcjonalne
+`applicationName`; `projectName`, `filePath`, `chunks` i `methodSelectors`
+pozostaja model-facing parametrami konkretnego toola. Backend rozstrzyga
+GitLab group przez `GitLabToolScopeResolver`: najpierw z operational context po
+`projectName` albo `applicationName`, a potem z `analysis.gitlab.group`.
+Nie utrzymujemy kompatybilnosci wstecznej dla starych podpisow tooli. Testy
+potwierdzaja, ze GitLab tools dzialaja bez legacy hidden scope'u, a schema
+Copilota pokazuje `branchRef`/`applicationName` i nadal ukrywa `group`,
+`branch`, `correlationId` oraz `toolContext`.
+
+Notatka implementacyjna 032: Flow Explorer skille, canonical prompt i follow-up
+prompt mowia juz tym samym kontraktem co GitLab tools. AI dostaje jawne
+`applicationName`, `branchRef`, endpoint, repozytoria, pliki i metody w
+promptcie oraz artefaktach, a przy GitLab tool calls ma przekazywac
+`branchRef`, `applicationName` i znane `projectName` jako model-facing
+parametry. `context-snapshot.json` pokazuje `applicationName` i `branchRef`,
+ale nie wystawia `gitLabGroup`; GitLab group pozostaje backend/config scope'em
+rozstrzyganym przez operational context albo konfiguracje.
+
+Powod: chcemy mniejszej magii runtime i bardziej jawnego kontraktu miedzy
+promptem, operational context i narzedziami. AI powinno wiedziec, jakich danych
+uzywa, a backend powinien walidowac zakres zamiast polegac na ukrytym
+feature-specific scope.
+
+### 033. Guard architektury API bez importu feature internals
+
+Status: implemented.
+
+Problem: przy domykaniu guardow okazalo sie, ze globalny
+`api.ApiExceptionHandler` importowal konkretne wyjatki z
+`features.incidentanalysis` i `features.flowexplorer`. To lamalo kierunek, w
+ktorym `api.*` jest globalnym HTTP/shared-operator boundary, a feature-specific
+endpointy i runtime kontrakty mieszkaja pod `features.*`.
+
+Decyzja: feature-owned wyjatki, ktore maja byc widoczne jako standardowy
+`ApiErrorResponse`, dziedzicza po neutralnym
+`shared.error.UserFacingApplicationException`. Feature niesie kod bledu i
+neutralny typ bledu (`NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE`), a
+`ApiExceptionHandler` mapuje ten typ na HTTP status bez importowania klas
+feature'a. Nie tworzymy kontraktu w `api.*`, bo feature'y nie powinny importowac
+`api.*` jako runtime contract.
+
+Zakres implementacji:
+
+- [x] Dodano neutralny `shared.error.UserFacingApplicationException` i
+  `UserFacingErrorType`.
+- [x] Incident i Flow Explorer user-facing exceptions zostaly przepiete na
+  shared error contract bez zmiany publicznych kodow bledow.
+- [x] `ApiExceptionHandler` obsluguje jeden neutralny handler dla
+  `UserFacingApplicationException`.
+- [x] `PackageDependencyGuardTest` blokuje import `features.*` z `api.*`.
+- [x] Targeted testy potwierdzaja guard oraz zachowanie kontrolerow job/endpoint.
+
+Powod: drugi feature pokazal, ze globalne HTTP API moze bardzo latwo zaczac
+znac szczegoly feature'ow. Shared error contract jest malym, stabilnym
+kontraktem uzywanym przez kilka feature'ow i globalny handler, wiec zamyka
+granice bez wypychania feature-specific logiki do `api.*`.
+
+### 034. Incident prompts and skills aligned with explicit GitLab scope
+
+Status: implemented.
+
+Problem: po zmianie GitLab tools na jawne parametry scope'u Flow Explorer byl
+spojny z nowym kontraktem, ale incident analysis nadal mialo legacy guidance w
+initial/follow-up promptach i skillu `incident-analysis-gitlab-tools`.
+Szczegolnie mylace byly instrukcje, ze GitLab tools dostaja hidden
+`gitLabGroup`/`gitLabBranch` z backendu. Po 031C GitLab tools juz tego nie
+czytaja.
+
+Decyzja: incident analysis nadal pokazuje `gitLabBranch` i `gitLabGroup` w
+promptach i artefaktach jako kontekst incydentu, ale GitLab tool calls maja
+uzywac jawnych parametrow:
+
+- `branchRef` przekazywany z `gitLabBranch` albo poprzedniego GitLab result,
+- `projectName` z deterministic evidence, operational context albo poprzednich
+  GitLab results,
+- opcjonalne `applicationName`, gdy pomaga walidowac repository scope,
+- bez przekazywania `gitLabGroup` jako inputu toola.
+
+`CopilotIncidentHiddenToolContextFactory` nie dodaje juz
+`GITLAB_BRANCH`/`GITLAB_GROUP` do hidden `ToolContext`; zostaja tylko
+incidentowe `correlationId` i `environment` dla tooli, ktore nadal maja taki
+kontrakt. Incident GitLab policy dopuszcza `gitlab_read_java_method_slice` jako
+focused GitLab tool i preferuje go przed chunk/full-file reads dla znanej
+metody Java. Follow-up GitLab tool availability wymaga teraz resolved branch,
+a nie resolved group.
+
+Powod: Flow Explorer ujawnil boundary drift, ale GitLab tools sa reusable
+capability uzywana tez przez incident analysis. Wszystkie feature'y musza
+uzywac tego samego jawnego kontraktu tooli, z group rozstrzyganym po stronie
+backendu/configu.
+
+Weryfikacja:
+
+- [x] `mvn -q "-Dtest=CopilotIncidentPromptRendererTest,CopilotIncidentFollowUpPromptRendererTest,CopilotIncidentToolSessionContextFactoryTest,CopilotIncidentToolAccessPolicyCoverageTest,CopilotIncidentEvidenceCoverageEvaluatorTest,CopilotIncidentRuntimeSkillsContractTest,CopilotIncidentToolDescriptionCustomizerTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest" test`
+- [x] `mvn -q "-Dtest=CopilotSdkToolFactoryDescriptionTest" test`
+- [x] `mvn -q test`
+
 ## Open questions
 
-- [ ] Czy snippet cards V2 maja miec AST enrichment package/class annotations
-  i constructor dependency signals, czy zostawic to dla AI-guided GitLab tools?
 - [ ] Czy result ma miec source refs jako stringi w MVP, czy strukturalny
   kontrakt z file/method/line/toolCallId?
 - [ ] Czy Flow Explorer ma miec import/export joba w MVP?
 - [ ] Czy DB tools maja wejsc jako V2 focus area "dane runtime", czy zostaja
   poza tym feature'em?
-- [ ] Czy `GitLabToolScope` powinien zostac zrefaktorowany tak, aby
+- [x] Czy `GitLabToolScope` powinien zostac zrefaktorowany tak, aby
   `correlationId` bylo opcjonalne albo zastapione neutralnym run/job id dla
-  feature'ow innych niz incident analysis?
+  feature'ow innych niz incident analysis? Decyzja 031: nie zastępujemy tego
+  ukrytym `runReference`; wycofujemy feature/business scope z hidden
+  `ToolContext` i przechodzimy na jawne parametry tooli.

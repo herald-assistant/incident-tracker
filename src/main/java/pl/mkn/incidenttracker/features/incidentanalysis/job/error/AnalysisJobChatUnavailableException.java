@@ -1,15 +1,11 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.job.error;
 
-public class AnalysisJobChatUnavailableException extends RuntimeException {
+import pl.mkn.incidenttracker.shared.error.UserFacingApplicationException;
+import pl.mkn.incidenttracker.shared.error.UserFacingErrorType;
 
-    private final String code;
+public class AnalysisJobChatUnavailableException extends UserFacingApplicationException {
 
     public AnalysisJobChatUnavailableException(String code, String message) {
-        super(message);
-        this.code = code;
-    }
-
-    public String code() {
-        return code;
+        super(code, UserFacingErrorType.CONFLICT, message);
     }
 }

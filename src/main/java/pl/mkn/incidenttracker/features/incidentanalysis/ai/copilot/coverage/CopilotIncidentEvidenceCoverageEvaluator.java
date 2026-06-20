@@ -326,8 +326,7 @@ public class CopilotIncidentEvidenceCoverageEvaluator {
 
     private boolean gitLabScopeResolved(InitialAnalysisRequest request) {
         return request != null
-                && StringUtils.hasText(request.gitLabBranch())
-                && StringUtils.hasText(request.gitLabGroup());
+                && StringUtils.hasText(request.gitLabBranch());
     }
 
     private String allEvidenceText(List<AnalysisEvidenceSection> sections) {

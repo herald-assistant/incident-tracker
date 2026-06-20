@@ -19,9 +19,7 @@ public class CopilotIncidentHiddenToolContextFactory {
 
         return fromIncidentScope(
                 request.correlationId(),
-                request.environment(),
-                request.gitLabBranch(),
-                request.gitLabGroup()
+                request.environment()
         );
     }
 
@@ -32,23 +30,17 @@ public class CopilotIncidentHiddenToolContextFactory {
 
         return fromIncidentScope(
                 request.correlationId(),
-                request.environment(),
-                request.gitLabBranch(),
-                request.gitLabGroup()
+                request.environment()
         );
     }
 
     private Map<String, Object> fromIncidentScope(
             String correlationId,
-            String environment,
-            String gitLabBranch,
-            String gitLabGroup
+            String environment
     ) {
         var context = new LinkedHashMap<String, Object>();
         putIfNotBlank(context, AgentToolContextKeys.CORRELATION_ID, correlationId);
         putIfNotBlank(context, AgentToolContextKeys.ENVIRONMENT, environment);
-        putIfNotBlank(context, AgentToolContextKeys.GITLAB_BRANCH, gitLabBranch);
-        putIfNotBlank(context, AgentToolContextKeys.GITLAB_GROUP, gitLabGroup);
         return context;
     }
 

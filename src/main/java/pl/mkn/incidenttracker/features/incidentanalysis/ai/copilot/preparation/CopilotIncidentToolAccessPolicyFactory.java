@@ -33,7 +33,7 @@ public class CopilotIncidentToolAccessPolicyFactory {
         return CopilotIncidentToolAccessPolicy.fromFollowUpSession(
                 registeredTools,
                 StringUtils.hasText(request.environment()),
-                StringUtils.hasText(request.gitLabGroup()) && StringUtils.hasText(request.gitLabBranch())
+                StringUtils.hasText(request.gitLabBranch())
         );
     }
 }

@@ -28,11 +28,18 @@
 .context-results__header,
 .context-flow__header,
 .context-endpoint,
-.flow-node-details__header {
+.flow-node-details__header,
+.flow-node-details__actions {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.flow-node-details__actions {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .gitlab-tool-button__content,
@@ -49,7 +56,7 @@
 
 .context-method-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
   color: var(--text-main);
@@ -58,16 +65,25 @@
   line-height: 1.35;
 }
 
-.context-method-row span:first-child {
+.context-method-row__name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.context-method-row span:last-child {
+.context-method-row__range {
   color: var(--text-soft);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.context-method-row__action {
+  width: 28px;
+  height: 28px;
+}
+
+.context-method-row__action .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .gitlab-result__header h2,
@@ -291,10 +307,15 @@
 
 .gitlab-runner__actions .primary-button,
 .gitlab-runner__actions .secondary-button,
-.toggle-row {
+.toggle-row,
+.toggle-grid {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.toggle-grid {
+  flex-wrap: wrap;
 }
 
 .toggle-row {
