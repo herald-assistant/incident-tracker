@@ -23,8 +23,6 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class FlowExplorerContextService {
 
-    private static final String DEFAULT_REASON = "Flow Explorer deterministic endpoint context.";
-
     private final FlowExplorerRepositoryScopeService repositoryScopeService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
     private final FlowExplorerSnippetCardService snippetCardService;
@@ -56,8 +54,7 @@ public class FlowExplorerContextService {
                                 request.httpMethod(),
                                 request.endpointPath(),
                                 GitLabEndpointUseCaseContextRequest.DEFAULT_MAX_DEPTH,
-                                GitLabEndpointUseCaseContextRequest.DEFAULT_MAX_FILES,
-                                StringUtils.hasText(request.reason()) ? request.reason() : DEFAULT_REASON
+                                GitLabEndpointUseCaseContextRequest.DEFAULT_MAX_FILES
                         )
                 );
                 repositoryContexts.add(repositoryContext(repository, scope.resolvedRef(), true,

@@ -1883,6 +1883,52 @@ Weryfikacja:
 - [x] `mvn -q "-Dtest=CopilotSdkToolFactoryDescriptionTest" test`
 - [x] `mvn -q test`
 
+### 035. Endpoint Use Case Context request no longer carries tool reason
+
+Status: implemented.
+
+Problem: `reason` z model-facing tool contract przeciekl do recznego UI
+workbencha, shared API `/api/gitlab/repository/endpoint-use-case-context` i
+`integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest`. Integracja
+nie potrzebuje czytac powodu wywolania; buduje deterministyczny kontekst na
+podstawie repository scope, branch, endpoint selector i limitow. To mieszalo
+operator/tool evidence z czystym kontraktem integracji.
+
+Decyzja: `reason` jako input zostaje w `agenttools.gitlab.mcp` tam, gdzie jest
+powodem wywolania toola dla operatora/evidence/logow, ale nie jest
+przekazywany do `GitLabEndpointUseCaseContextService`. Workbench UI i API
+operatora nie pokazuja ani nie wysylaja `reason` dla Endpoint Use Case
+Context. `reason` w wynikach flow nodes, relacji i unresolved references
+zostaje, bo jest explainability rezultatu wygenerowana przez algorytm.
+
+Weryfikacja:
+
+- [x] `mvn -q "-Dtest=GitLabEndpointUseCaseContextModelTest,GitLabEndpointUseCaseContextServiceTest,GitLabEndpointUseCaseEndpointResolverTest,GitLabRepositorySearchControllerTest,GitLabMcpToolsTest,FlowExplorerContextServiceTest,FlowExplorerJobServiceTest" test`
+- [x] `npm test -- --watch=false`
+- [x] `mvn -q test`
+
+### 036. GitLab Source Resolve no longer accepts base URL from UI
+
+Status: implemented.
+
+Problem: reczny GitLab workbench pokazywal `GitLab Base URL`, a
+`GitLabSourceResolveRequest` wymagal `gitlabBaseUrl`. To byl legacy drift:
+adres GitLaba jest konfiguracja integracji (`analysis.gitlab.base-url`), razem
+z tokenem i SSL policy, a nie operator-facing parametrem requestu.
+
+Decyzja: `GitLabSourceResolveRequest` przyjmuje tylko repository/symbol scope:
+`groupPath`, `projectPath`, opcjonalny `ref` i `symbol`. `GitLabSourceResolveService`
+czyta base URL z `GitLabProperties` i zwraca czytelny blad konfiguracji, jesli
+`analysis.gitlab.base-url` nie jest ustawione. UI workbencha nie pokazuje juz
+`GitLab Base URL` ani nie wysyla go w payloadzie. Deterministic GitLab evidence
+provider korzysta z tego samego kontraktu source-resolve bez podawania base URL.
+
+Weryfikacja:
+
+- [x] `mvn -q "-Dtest=GitLabSourceResolveServiceTest,GitLabSourceResolveControllerTest,GitLabDeterministicEvidenceProviderTest" test`
+- [x] `npm test -- --watch=false`
+- [x] `mvn -q test`
+
 ## Open questions
 
 - [ ] Czy result ma miec source refs jako stringi w MVP, czy strukturalny

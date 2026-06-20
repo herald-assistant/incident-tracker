@@ -231,8 +231,7 @@ class GitLabRepositorySearchControllerTest {
                                   "branch": "release-candidate",
                                   "endpointId": "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                                   "maxDepth": 4,
-                                  "maxFiles": 12,
-                                  "reason": "Manualny test kontekstu endpointu."
+                                  "maxFiles": 12
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -251,8 +250,7 @@ class GitLabRepositorySearchControllerTest {
                         && request.httpMethod() == null
                         && request.endpointPath() == null
                         && request.maxDepth() == 4
-                        && request.maxFiles() == 12
-                        && "Manualny test kontekstu endpointu.".equals(request.reason()))
+                        && request.maxFiles() == 12)
         );
     }
 

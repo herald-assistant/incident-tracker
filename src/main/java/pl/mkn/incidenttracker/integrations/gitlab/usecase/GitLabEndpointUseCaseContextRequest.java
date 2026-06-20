@@ -6,8 +6,7 @@ public record GitLabEndpointUseCaseContextRequest(
         String httpMethod,
         String endpointPath,
         Integer maxDepth,
-        Integer maxFiles,
-        String reason
+        Integer maxFiles
 ) {
     public static final int DEFAULT_MAX_DEPTH = 5;
     public static final int MAX_MAX_DEPTH = 8;
@@ -21,6 +20,5 @@ public record GitLabEndpointUseCaseContextRequest(
         endpointPath = GitLabEndpointUseCaseModelSupport.normalizeEndpointPath(endpointPath);
         maxDepth = GitLabEndpointUseCaseModelSupport.normalizeLimit(maxDepth, DEFAULT_MAX_DEPTH, MAX_MAX_DEPTH);
         maxFiles = GitLabEndpointUseCaseModelSupport.normalizeLimit(maxFiles, DEFAULT_MAX_FILES, MAX_MAX_FILES);
-        reason = GitLabEndpointUseCaseModelSupport.trimToNull(reason);
     }
 }

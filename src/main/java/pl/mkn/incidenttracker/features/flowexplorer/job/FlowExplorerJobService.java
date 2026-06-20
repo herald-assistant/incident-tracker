@@ -76,8 +76,7 @@ public class FlowExplorerJobService {
                     request.endpointPath(),
                     request.branch(),
                     request.documentationPreset(),
-                    request.focusAreas(),
-                    null
+                    request.focusAreas()
             ));
             var promptPreparation = promptPreparationService.prepare(request, contextSnapshot);
             job.markAiStarted(contextSnapshot, promptPreparation.prompt());

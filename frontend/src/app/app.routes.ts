@@ -77,7 +77,7 @@ export const routes: Routes = [
               { label: 'Endpointy', value: 'POST /api/gitlab/*' },
               {
                 label: 'Wymagany scope',
-                value: 'group, projectName, branch/ref albo source resolve base URL i symbol'
+                value: 'group, projectName, branch/ref albo source resolve groupPath, projectPath i symbol'
               },
               {
                 label: 'Reusable przez AI',

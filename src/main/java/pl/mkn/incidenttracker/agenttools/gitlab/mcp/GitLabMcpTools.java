@@ -409,8 +409,7 @@ public class GitLabMcpTools {
                         httpMethod,
                         endpointPath,
                         maxDepth,
-                        maxFiles,
-                        reason
+                        maxFiles
                 )
         );
         var response = GitLabBuildEndpointUseCaseContextToolResponse.from(result);

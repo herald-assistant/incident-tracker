@@ -373,8 +373,7 @@ class GitLabMcpToolsTest {
                         && request.httpMethod() == null
                         && request.endpointPath() == null
                         && request.maxDepth() == 4
-                        && request.maxFiles() == 12
-                        && "Buduje liste plikow dla endpointu zamowienia.".equals(request.reason()))
+                        && request.maxFiles() == 12)
         );
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-api", response.projectName());

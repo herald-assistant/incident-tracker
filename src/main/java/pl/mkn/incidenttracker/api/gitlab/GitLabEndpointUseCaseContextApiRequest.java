@@ -23,10 +23,8 @@ public record GitLabEndpointUseCaseContextApiRequest(
         @Max(value = GitLabEndpointUseCaseContextRequest.MAX_MAX_DEPTH, message = "maxDepth must be at most 8")
         Integer maxDepth,
         @Min(value = 1, message = "maxFiles must be at least 1")
-        @Max(value = GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, message = "maxFiles must be at most 40")
-        Integer maxFiles,
-        @Size(max = 500, message = "reason must contain at most 500 characters")
-        String reason
+        @Max(value = GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, message = "maxFiles must be at most 100")
+        Integer maxFiles
 ) {
 
     GitLabEndpointUseCaseContextRequest toUseCaseRequest() {
@@ -36,8 +34,7 @@ public record GitLabEndpointUseCaseContextApiRequest(
                 httpMethod,
                 endpointPath,
                 maxDepth,
-                maxFiles,
-                reason
+                maxFiles
         );
     }
 }

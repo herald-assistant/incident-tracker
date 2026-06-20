@@ -182,8 +182,7 @@ export class GitLabEvidenceConsoleComponent {
   readonly scopeForm = new FormGroup({
     group: new FormControl('', { nonNullable: true }),
     projectName: new FormControl('', { nonNullable: true }),
-    branch: new FormControl('HEAD', { nonNullable: true }),
-    gitlabBaseUrl: new FormControl('', { nonNullable: true })
+    branch: new FormControl('HEAD', { nonNullable: true })
   });
 
   readonly gitLabRepositoryForm = new FormGroup({
@@ -241,9 +240,6 @@ export class GitLabEvidenceConsoleComponent {
     maxFiles: new FormControl('60', {
       nonNullable: true,
       validators: [Validators.min(1), Validators.max(100)]
-    }),
-    reason: new FormControl('Manualna weryfikacja kontekstu use-case endpointu.', {
-      nonNullable: true
     })
   });
 
@@ -306,10 +302,6 @@ export class GitLabEvidenceConsoleComponent {
   });
 
   readonly gitLabSourceForm = new FormGroup({
-    gitlabBaseUrl: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required]
-    }),
     groupPath: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required]
@@ -423,8 +415,7 @@ export class GitLabEvidenceConsoleComponent {
           httpMethod: '',
           endpointPath: '',
           maxDepth: '5',
-          maxFiles: '60',
-          reason: 'Manualna weryfikacja kontekstu use-case endpointu.'
+          maxFiles: '60'
         });
         return;
       case 'repository-files-by-path':
@@ -485,14 +476,6 @@ export class GitLabEvidenceConsoleComponent {
       this.scopeForm.controls.group.touched ||
       this.scopeForm.controls.projectName.touched ||
       this.scopeForm.controls.branch.touched
-    );
-  }
-
-  sourceBaseUrlMissingForSelectedTool(): boolean {
-    return (
-      this.selectedToolKey() === 'source-resolve' &&
-      this.scopeForm.controls.gitlabBaseUrl.value.trim().length === 0 &&
-      this.scopeForm.controls.gitlabBaseUrl.touched
     );
   }
 
@@ -630,8 +613,7 @@ export class GitLabEvidenceConsoleComponent {
       httpMethod,
       endpointPath,
       maxDepth: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxDepth.value),
-      maxFiles: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxFiles.value),
-      reason: this.optionalValue(this.gitLabEndpointUseCaseContextForm.controls.reason.value)
+      maxFiles: this.optionalNumber(this.gitLabEndpointUseCaseContextForm.controls.maxFiles.value)
     };
 
     this.selectedGitLabUseCaseTreeNodeId.set(null);
@@ -832,14 +814,8 @@ export class GitLabEvidenceConsoleComponent {
 
   submitGitLabSource(event?: Event): void {
     event?.preventDefault();
-    this.gitLabSourceForm.controls.gitlabBaseUrl.setValue(
-      this.scopeForm.controls.gitlabBaseUrl.value.trim()
-    );
 
     if (this.gitLabSourceForm.invalid) {
-      if (this.scopeForm.controls.gitlabBaseUrl.value.trim().length === 0) {
-        this.scopeForm.controls.gitlabBaseUrl.markAsTouched();
-      }
       this.gitLabSourceForm.markAllAsTouched();
       this.gitLabSourceState.set(
         this.errorStateFromPayload({
@@ -852,7 +828,6 @@ export class GitLabEvidenceConsoleComponent {
 
     const preview = this.gitLabSourceForm.controls.preview.value;
     const payload: GitLabSourceResolvePayload = {
-      gitlabBaseUrl: this.gitLabSourceForm.controls.gitlabBaseUrl.value.trim(),
       groupPath: this.gitLabSourceForm.controls.groupPath.value.trim(),
       projectPath: this.gitLabSourceForm.controls.projectPath.value.trim(),
       ref: this.optionalValue(this.gitLabSourceForm.controls.ref.value),

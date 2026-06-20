@@ -70,8 +70,7 @@ class FlowExplorerContextServiceTest {
                 null,
                 "feature/FLOW-42",
                 pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset.TECHNICAL_HANDOFF,
-                List.of(pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE),
-                null
+                List.of(pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE)
         ));
 
         assertEquals("billing-core", snapshot.systemId());
@@ -124,8 +123,7 @@ class FlowExplorerContextServiceTest {
                 "/missing",
                 null,
                 null,
-                List.of(),
-                null
+                List.of()
         ));
 
         assertFalse(snapshot.coverage().endpointResolved());
@@ -150,8 +148,7 @@ class FlowExplorerContextServiceTest {
                         null,
                         null,
                         null,
-                        List.of(),
-                        null
+                        List.of()
                 ))
         );
     }

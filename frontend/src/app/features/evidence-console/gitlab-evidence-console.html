@@ -47,25 +47,10 @@
               />
             </label>
 
-            <label class="form-field">
-              <span class="field-label">GitLab Base URL</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. https://gitlab.example.com"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.gitlabBaseUrl"
-              />
-            </label>
           </div>
 
           @if (repositoryScopeMissingForSelectedTool()) {
             <p class="form-error">Pola `group`, `projectName` i `branch` są wymagane.</p>
-          }
-
-          @if (sourceBaseUrlMissingForSelectedTool()) {
-            <p class="form-error">Pole `GitLab Base URL` jest wymagane dla Source Resolve.</p>
           }
         </section>
 
@@ -265,16 +250,6 @@
                   />
                 </label>
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Reason</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabEndpointUseCaseContextForm.controls.reason"
-                  />
-                </label>
               </div>
             }
 

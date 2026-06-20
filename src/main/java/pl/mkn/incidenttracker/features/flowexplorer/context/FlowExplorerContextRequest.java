@@ -14,8 +14,7 @@ public record FlowExplorerContextRequest(
         String endpointPath,
         String branch,
         FlowExplorerDocumentationPreset documentationPreset,
-        List<FlowExplorerFocusArea> focusAreas,
-        String reason
+        List<FlowExplorerFocusArea> focusAreas
 ) {
 
     public FlowExplorerContextRequest {
@@ -30,7 +29,6 @@ public record FlowExplorerContextRequest(
         focusAreas = focusAreas != null
                 ? focusAreas.stream().filter(Objects::nonNull).toList()
                 : List.of();
-        reason = normalize(reason);
     }
 
     private static String normalize(String value) {

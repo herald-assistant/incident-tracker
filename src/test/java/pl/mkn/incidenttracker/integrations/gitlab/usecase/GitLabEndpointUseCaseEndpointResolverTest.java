@@ -39,8 +39,7 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 null,
                 null,
                 null,
-                null,
-                "manual check"
+                null
         ));
 
         assertEquals(GitLabEndpointUseCaseEndpointResolutionStatus.RESOLVED, resolution.status());
@@ -76,7 +75,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 null,
                 "put",
                 "/api/crm/customers/{id}",
-                null,
                 null,
                 null
         ));
@@ -117,7 +115,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 "GET",
                 "/api/crm/customers/{id}",
                 null,
-                null,
                 null
         ));
 
@@ -148,7 +145,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 "GET",
                 "/api/crm/customers/{id}",
                 null,
-                null,
                 null
         ));
 
@@ -164,7 +160,6 @@ class GitLabEndpointUseCaseEndpointResolverTest {
     void shouldReturnInvalidRequestWhenSelectorIsMissing() {
         var resolution = resolver.resolve("CRM", "main", new GitLabEndpointUseCaseContextRequest(
                 "crm-customer-service",
-                null,
                 null,
                 null,
                 null,

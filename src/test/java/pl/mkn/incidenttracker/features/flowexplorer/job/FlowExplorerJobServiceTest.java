@@ -356,8 +356,7 @@ class FlowExplorerJobServiceTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
-                null
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW)
         );
     }
 

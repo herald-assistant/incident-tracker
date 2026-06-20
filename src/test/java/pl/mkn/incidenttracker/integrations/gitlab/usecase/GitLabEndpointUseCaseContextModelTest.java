@@ -19,8 +19,7 @@ class GitLabEndpointUseCaseContextModelTest {
                 " get ",
                 "api/customers/{id}",
                 99,
-                999,
-                " manual verification "
+                999
         );
 
         assertEquals("crm-customer-service", request.projectName());
@@ -29,7 +28,6 @@ class GitLabEndpointUseCaseContextModelTest {
         assertEquals("/api/customers/{id}", request.endpointPath());
         assertEquals(GitLabEndpointUseCaseContextRequest.MAX_MAX_DEPTH, request.maxDepth());
         assertEquals(GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, request.maxFiles());
-        assertEquals("manual verification", request.reason());
     }
 
     @Test
@@ -40,8 +38,7 @@ class GitLabEndpointUseCaseContextModelTest {
                 " ",
                 " ",
                 0,
-                -10,
-                " "
+                -10
         );
 
         assertEquals("crm-customer-service", request.projectName());
@@ -50,7 +47,6 @@ class GitLabEndpointUseCaseContextModelTest {
         assertEquals(null, request.endpointId());
         assertEquals(null, request.httpMethod());
         assertEquals(null, request.endpointPath());
-        assertEquals(null, request.reason());
     }
 
     @Test

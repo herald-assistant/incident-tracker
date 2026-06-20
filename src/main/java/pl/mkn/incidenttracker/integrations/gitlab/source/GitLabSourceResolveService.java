@@ -11,6 +11,7 @@ import org.springframework.web.util.UriUtils;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeException;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeNode;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryTreeService;
+import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRestClientFactory;
 
 import java.net.URI;
@@ -30,18 +31,21 @@ public class GitLabSourceResolveService {
 
     private final GitLabRestClientFactory gitLabRestClientFactory;
     private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
+    private final GitLabProperties gitLabProperties;
 
     @Autowired
     public GitLabSourceResolveService(
             GitLabRestClientFactory gitLabRestClientFactory,
-            GitLabRepositoryTreeService gitLabRepositoryTreeService
+            GitLabRepositoryTreeService gitLabRepositoryTreeService,
+            GitLabProperties gitLabProperties
     ) {
         this.gitLabRestClientFactory = gitLabRestClientFactory;
         this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
+        this.gitLabProperties = gitLabProperties;
     }
 
-    GitLabSourceResolveService(GitLabRestClientFactory gitLabRestClientFactory) {
-        this(gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory));
+    GitLabSourceResolveService(GitLabRestClientFactory gitLabRestClientFactory, GitLabProperties gitLabProperties) {
+        this(gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory), gitLabProperties);
     }
 
     public GitLabSourceResolveResponse resolve(GitLabSourceResolveRequest request) {
@@ -111,9 +115,10 @@ public class GitLabSourceResolveService {
         var effectiveRef = request.effectiveRef();
         var projectIdOrPath = encodeProjectIdOrPath(request.groupPath(), request.projectPath());
         var symbol = request.symbol().trim();
+        var gitLabBaseUrl = configuredBaseUrl();
         var match = resolveMatch(request, session);
         var rawContent = fetchRawFile(
-                request.gitlabBaseUrl(),
+                gitLabBaseUrl,
                 projectIdOrPath,
                 effectiveRef,
                 match.matchedPath(),
@@ -146,7 +151,7 @@ public class GitLabSourceResolveService {
     ) {
         try {
             return gitLabRepositoryTreeService.fetchRepositoryBlobs(
-                    request.gitlabBaseUrl(),
+                    configuredBaseUrl(),
                     request.groupPath().trim() + "/" + request.projectPath().trim(),
                     ref,
                     null,
@@ -320,6 +325,13 @@ public class GitLabSourceResolveService {
         }
 
         return normalized.endsWith("/api/v4") ? normalized : normalized + "/api/v4";
+    }
+
+    private String configuredBaseUrl() {
+        if (gitLabProperties == null || !StringUtils.hasText(gitLabProperties.getBaseUrl())) {
+            throw new IllegalStateException("analysis.gitlab.base-url must be configured for source resolve.");
+        }
+        return gitLabProperties.getBaseUrl();
     }
 
     private String encodePathSegment(String value) {

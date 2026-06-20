@@ -50,8 +50,7 @@ class GitLabEndpointUseCaseContextServiceTest {
                 null,
                 null,
                 4,
-                10,
-                "manual verification"
+                10
         ));
 
         assertEquals("CRM", result.repository().group());
@@ -96,8 +95,7 @@ class GitLabEndpointUseCaseContextServiceTest {
                 "put",
                 "/api/customers/{id}",
                 4,
-                10,
-                null
+                10
         ));
 
         assertEquals("updateCustomer", result.endpoint().handlerMethod());
@@ -126,7 +124,6 @@ class GitLabEndpointUseCaseContextServiceTest {
                 null,
                 "GET",
                 "/api/customers/{id}",
-                null,
                 null,
                 null
         ));
@@ -175,7 +172,6 @@ class GitLabEndpointUseCaseContextServiceTest {
                 "GET",
                 "/api/customers/{id}",
                 null,
-                null,
                 null
         ));
 
@@ -191,7 +187,6 @@ class GitLabEndpointUseCaseContextServiceTest {
     void shouldReturnInvalidRequestWithoutCallingGitLab() {
         var result = service.buildContext("CRM", "main", new GitLabEndpointUseCaseContextRequest(
                 "crm-customer-service",
-                null,
                 null,
                 null,
                 null,

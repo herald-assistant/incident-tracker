@@ -51,7 +51,6 @@ class GitLabSourceResolveServiceTest {
                 .andRespond(withSuccess("package c.e.synthetic.response;\npublic class ResponsePathSelector {}", MediaType.TEXT_PLAIN));
 
         var response = serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                "https://gitlab.example.com",
                 "my-group/subgroup",
                 "my-service",
                 null,
@@ -86,7 +85,6 @@ class GitLabSourceResolveServiceTest {
                 .andRespond(withSuccess("class ResponsePathSelector {}", MediaType.TEXT_PLAIN));
 
         var response = serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                "https://gitlab.example.com",
                 "my-group/subgroup",
                 "my-service",
                 "dev/atlas",
@@ -102,7 +100,6 @@ class GitLabSourceResolveServiceTest {
     void shouldCacheRepositoryTreeWithinSingleHttpRequest() {
         var serviceFixture = newServiceFixture();
         var request = new GitLabSourceResolveRequest(
-                "https://gitlab.example.com",
                 "my-group/subgroup",
                 "my-service",
                 "dev/atlas",
@@ -138,7 +135,6 @@ class GitLabSourceResolveServiceTest {
     void shouldCacheRepositoryTreeWithinExplicitResolveSession() {
         var serviceFixture = newServiceFixture();
         var request = new GitLabSourceResolveRequest(
-                "https://gitlab.example.com",
                 "my-group/subgroup",
                 "my-service",
                 "dev/atlas",
@@ -186,7 +182,6 @@ class GitLabSourceResolveServiceTest {
                 .andRespond(withSuccess("class ResponsePathSelector {}", MediaType.TEXT_PLAIN));
 
         var response = serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                "https://gitlab.example.com",
                 "my-group/subgroup",
                 "my-service",
                 "main",
@@ -227,7 +222,6 @@ class GitLabSourceResolveServiceTest {
         var exception = assertThrows(
                 GitLabSourceResolveException.class,
                 () -> serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                        "https://gitlab.example.com",
                         "my-group/subgroup",
                         "my-service",
                         null,
@@ -254,7 +248,6 @@ class GitLabSourceResolveServiceTest {
         var exception = assertThrows(
                 GitLabSourceResolveException.class,
                 () -> serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                        "https://gitlab.example.com",
                         "my-group/subgroup",
                         "missing-service",
                         null,
@@ -270,11 +263,12 @@ class GitLabSourceResolveServiceTest {
 
     private ServiceFixture newServiceFixture() {
         var properties = new GitLabProperties();
+        properties.setBaseUrl("https://gitlab.example.com");
         properties.setToken("glpat-test");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var factory = new GitLabRestClientFactory(properties, restClientBuilder);
-        return new ServiceFixture(new GitLabSourceResolveService(factory), server);
+        return new ServiceFixture(new GitLabSourceResolveService(factory, properties), server);
     }
 
     private record ServiceFixture(

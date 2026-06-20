@@ -228,7 +228,6 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
         for (var symbolCandidate : symbolCandidates(reference.symbol())) {
             try {
                 var match = gitLabSourceResolveService.resolveMatch(new GitLabSourceResolveRequest(
-                        gitLabProperties.getBaseUrl(),
                         gitLabProperties.getGroup(),
                         projectName,
                         deployment.branch(),

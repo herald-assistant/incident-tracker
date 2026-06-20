@@ -47,7 +47,6 @@ class GitLabSourceResolveControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "gitlabBaseUrl": "https://gitlab.example.com",
                                   "groupPath": "my-group/subgroup",
                                   "projectPath": "my-service",
                                   "ref": "HEAD",
@@ -61,7 +60,6 @@ class GitLabSourceResolveControllerTest {
                 .andExpect(jsonPath("$.message").value("OK"));
 
         verify(gitLabSourceResolveService).resolve(new GitLabSourceResolveRequest(
-                "https://gitlab.example.com",
                 "my-group/subgroup",
                 "my-service",
                 "HEAD",
@@ -75,7 +73,6 @@ class GitLabSourceResolveControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "gitlabBaseUrl": " ",
                                   "groupPath": "",
                                   "projectPath": "my-service",
                                   "ref": "HEAD",

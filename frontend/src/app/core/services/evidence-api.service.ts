@@ -35,7 +35,6 @@ export interface GitLabRepositorySearchPayload {
 }
 
 export interface GitLabSourceResolvePayload {
-  gitlabBaseUrl: string;
   groupPath: string;
   projectPath: string;
   ref?: string;
@@ -60,7 +59,6 @@ export interface GitLabEndpointUseCaseContextPayload {
   endpointPath?: string;
   maxDepth?: number;
   maxFiles?: number;
-  reason?: string;
 }
 
 export interface GitLabRepositoryFilesByPathPayload {
