@@ -1929,11 +1929,253 @@ Weryfikacja:
 - [x] `npm test -- --watch=false`
 - [x] `mvn -q test`
 
+### 037. Flow Explorer result export/import in UI
+
+Status: implemented.
+
+Problem: po smoke testach Flow Explorera brakowalo prostego sposobu zachowania
+wyniku analizy do pliku i ponownego wczytania go na ekran. Incident analysis
+miala juz taki UX, ale implementacja laczyla w komponencie czytanie pliku,
+parsowanie JSON-a i pobieranie pliku.
+
+Decyzja: Flow Explorer dostaje wlasny format eksportu
+`incident-tracker.flow-explorer-export` w wersji `1`. Nie utrzymujemy
+kompatybilnosci wstecznej ani nie importujemy surowych legacy snapshotow bez
+envelope. Wspoldzielone zostaly tylko neutralne frontendowe helpery JSON/file:
+
+- `readJsonFile`,
+- `downloadJsonFile`,
+- `sanitizeFileNamePart`,
+- `formatFileTimestamp`.
+
+Incident analysis korzysta teraz z tych samych helperow do samego IO pliku, ale
+zachowuje wlasny incidentowy envelope i normalizacje. Flow Explorer ma
+feature-owned normalizacje `FlowExplorerJobStateSnapshot`, zeby nie importowac
+incidentowych kontraktow ani nie robic wspolnego "analysis export core" zanim
+pojawi sie drugi realny reuse.
+
+Zakres implementacji:
+
+- [x] Dodano przycisk `Import` obok `Run Flow Explorer`.
+- [x] Dodano przycisk `Export` widoczny dla zakonczonych snapshotow.
+- [x] Importowany snapshot jest read-only dla follow-up chat; chat dziala tylko
+  dla live joba w backendzie.
+- [x] UI pokazuje nazwe wczytanego pliku, aby operator widzial, ze oglada
+  snapshot.
+- [x] Export/import obejmuje wynik, prepared prompt, trace, tool evidence,
+  feedback i chat messages zapisane w job snapshot.
+- [x] Import odrzuca niezakończone Flow Explorer joby oraz aktywne odpowiedzi
+  follow-up.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+
+### 038. Full-width collapsible Flow Explorer workspace sections
+
+Status: implemented.
+
+Problem: po smoke testach ekran Flow Explorera byl zbyt dwukolumnowy i
+sidebar `Application catalog` zabieral miejsce pozostalej pracy. Przy rosnacej
+liczbie sekcji wynik, job state, trace i chat wymagaja szybkiego zwijania, zeby
+operator mogl skupic sie na aktualnym kroku.
+
+Decyzja: Flow Explorer UI przechodzi na jedna pelnoszerokosciowa kolumne.
+`Application catalog` jest pierwsza sekcja nad pozostala konfiguracja i
+wynikami. Glowne karty Flow Explorera sa natywnymi panelami `details/summary`,
+domyslnie otwartymi, zeby nie utrudniac smoke flow, ale kazda moze zostac
+zwinieta przez uzytkownika.
+
+Zakres implementacji:
+
+- [x] Usunieto sticky/sidebar layout dla `Application catalog`.
+- [x] `flow-explorer-layout` renderuje jedna pelna kolumne.
+- [x] Gorne intro, katalog aplikacji, endpoint selection, coverage, endpoint
+  list, selected endpoint, analysis request, job state, AI result i follow-up
+  chat dostaly wspolny collapsible shell.
+- [x] `Analysis trace` pozostaje collapsible przez istniejace `details`.
+- [x] Dodano wspolne style `flow-explorer-collapsible` dla naglowkow i body.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+- [x] Browser smoke: `Application catalog` jest pierwsza sekcja workspace,
+  wszystkie glowne panele maja szerokosc kolumny, a zwiniety katalog realnie
+  ukrywa zawartosc.
+
+### 039. Align Flow Explorer header pills
+
+Status: implemented.
+
+Problem: po wprowadzeniu zwijalnych sekcji chipy i status pille w naglowkach
+Flow Explorera byly rozmieszczone nierowno, bo `summary` dziedziczyl layout
+flex z `space-between`, a ikona zwijania byla trzecim elementem flex.
+
+Decyzja: lokalnie dla Flow Explorera naglowek `details/summary` uzywa ukladu
+grid `title | chip/status | collapse icon`. Lewa czesc pozostaje elastyczna,
+chip albo status pill jest wyrownany do prawej, a ikona zwijania ma stala
+koncowa pozycje.
+
+Zakres implementacji:
+
+- [x] Zmieniono `flow-explorer-collapsible__summary` z flexowego rozkladu na
+  lokalny grid.
+- [x] Bezposrednie `panel-chip` i `status-pill` w summary sa wyrownane do
+  prawej i zachowuja pojedyncza linie.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+- [x] Browser smoke: chipy/status pille w zwijalnych naglowkach sa wyrownane
+  do prawej przed ikona zwijania.
+
+### 040. Compact custom selects for Flow Explorer target
+
+Status: implemented.
+
+Problem: `System selection`, `Endpoint selection`, `Endpoint list` i osobny
+`Selected endpoint` zajmowaly za duzo miejsca jak na glowny happy path. Ekran
+wygladal bardziej jak przegladarka inventory niz proste narzedzie
+`application -> endpoint -> scope -> run`.
+
+Decyzja: glowny target Flow Explorera jest jedna sekcja z dwoma customowymi
+selectami:
+
+- `Application` wybiera system z operational context i po zmianie resetuje
+  aktualny job/result/chat oraz automatycznie laduje endpoint inventory.
+- `Endpoint` wybiera endpoint z zaladowanego inventory i po zmianie resetuje
+  aktualny job/result/chat bez ponownego pobierania calego inventory.
+- `Branch / Ref` zostaje jako kompaktowy input obok selectow; zmiana branch
+  czysci endpoint inventory i wymaga swiadomego `Load endpoints`.
+- Szczegoly endpointu zostaja dostepne przez kompaktowy info tooltip w opcjach
+  endpoint selecta oraz przez maly inline preview wybranego endpointu.
+
+Zakres implementacji:
+
+- [x] Usunieto osobne karty `Application catalog`, `Endpoint list` i
+  `Selected endpoint`.
+- [x] Dodano custom listbox dla aplikacji z lokalnym filtrem.
+- [x] Dodano custom listbox dla endpointow z lokalnym filtrem i info tooltipem.
+- [x] Przeniesiono coverage inventory do kompaktowych metryk pod selectami.
+- [x] Dodano widoczny inline alert dla bledow ladowania endpoint inventory.
+- [x] Dostosowano testy komponentu do nowego UX wyboru.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+- [x] Browser smoke: zmiana aplikacji laduje endpointy i resetuje wynik, a
+  zmiana endpointu resetuje wynik bez reloadu inventory.
+
+### 041. Unified Flow Explorer configuration card
+
+Status: implemented.
+
+Problem: po przejsciu na custom selecty ekran nadal marnowal miejsce na trzy
+osobne sekcje: `Flow Explorer`, `Endpoint target` i `Documentation scope`.
+Dodatkowo pierwszy rzad mial nierowne wysokosci kontrolek, a preset/focus
+areas zajmowaly zbyt duzo miejsca jako kafle.
+
+Decyzja: konfiguracja Flow Explorera jest jedna zwijalna karta. Pierwszy rzad
+zawiera `Application`, `Branch / Ref`, `Endpoint` i `Load endpoints`; drugi
+rzad zawiera `Preset` i wielowyborczy `Focus areas`. Labelki dostaja kompaktowe
+tooltipy z wyjasnieniem pola, zeby nie dokladac stalego tekstu na ekranie.
+
+Zakres implementacji:
+
+- [x] Scalono sekcje start, endpoint target i documentation scope w jedna karte
+  `flow-explorer-composer`.
+- [x] Ujednolicono wysokosc `Application`, `Branch / Ref`, `Endpoint` i
+  `Load endpoints`.
+- [x] Zamieniono preset z kafli na custom single-select.
+- [x] Zamieniono focus areas z kafli na custom multi-select z limitem
+  `maxFocusAreas`.
+- [x] Dodano tooltipy przy labelach: application, branch/ref, endpoint,
+  inventory, preset, focus areas i instrukcje uzytkownika.
+- [x] Usunieto stare template sekcji i helpery CSS/TS dla kafli scope.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+- [x] Browser smoke: konfiguracja jest jedna karta, pierwszy rzad ma rowne
+  wysokosci, preset/focus dzialaja jako selecty.
+
+### 042. Non-technical application select copy
+
+Status: implemented.
+
+Problem: application select pokazywal repo count jako `panel-chip` oraz
+techniczne meta typu `internal-service`, status i owner bezposrednio w opcji.
+Dla analityka/testera nie jest jasne, dlaczego jedna aplikacja sklada sie z
+wielu repozytoriow, bibliotek albo parentow, wiec taki detal zaciemnial wybor.
+
+Decyzja: widoczna opcja aplikacji pokazuje tylko nazwe aplikacji. Opis
+aplikacji oraz techniczne szczegoly katalogowe sa dostepne pod ikona info w
+tooltipie. Copy licznika katalogu mowi o `applications`, nie o `systems`.
+
+Zakres implementacji:
+
+- [x] Usunieto widoczny `repositoryCount` chip z opcji aplikacji.
+- [x] Usunieto widoczne meta `kind/status/owner` z opcji aplikacji.
+- [x] Dodano tooltip z opisem aplikacji i schowanymi szczegolami katalogowymi.
+- [x] Wybrana aplikacja pokazuje opis/summary zamiast technicznego meta.
+- [x] Zmieniono copy pustego wyboru z `systems` na `applications`.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+- [x] Browser smoke: application select nie pokazuje repo count ani technicznego
+  meta na wierzchu, a tooltip pokazuje opis aplikacji.
+
+### 043. Application tooltip positioning polish
+
+Status: implemented.
+
+Problem: tooltip z opisem aplikacji byl dzieckiem listy selecta z
+`overflow: auto`, wiec nawet wysoki `z-index` nie wystarczal i tooltip mogl
+byc ucinany na krawedzi menu. Reczny panel nad lista rozwiazywal clipping, ale
+znikal z pola widzenia po scrollu listy. Dodatkowo ikony tooltipow obok labeli
+fieldow wizualnie siedzialy minimalnie nizej niz tekst labela.
+
+Decyzja: uzywamy `MatTooltip` z Angular Material jako jednego mechanizmu
+tooltipow dla opcji aplikacji i labeli fieldow. Tooltip jest renderowany jako
+overlay poza scrollowanym menu, ma wspolna klase `flow-explorer-tooltip`,
+pozycje `right` i customowe style w globalnym `styles.scss`. Menu aplikacji
+zachowuje scroll i ma krotszy `max-height`, zeby nie wychodzilo poza ekran.
+Ikony pomocy przy labelach dostaja delikatna korekte pionowa, bez zmiany
+ukladu fieldow.
+
+Zakres implementacji:
+
+- [x] Dodano wariant menu application selecta z krotszym limitem wysokosci.
+- [x] Zastapiono opis aplikacji natywnym `MatTooltip` po prawej stronie opcji.
+- [x] Przeniesiono tooltip opisu aplikacji z calego buttona opcji na ikone
+  info, zeby hover nazwy nie otwieral tooltipa.
+- [x] Zastapiono reczne tooltipy labeli tym samym `MatTooltip`.
+- [x] Dodano globalna klase `flow-explorer-tooltip` dla tooltipow Materiala.
+- [x] Wyrownano pionowo ikony tooltipow obok labeli fieldow.
+- [x] Wyzerowano lokalnie `margin-bottom` globalnego `.field-label` wewnatrz
+  `.flow-explorer-field-label`, zeby tekst labela i ikona info mialy wspolna
+  linie wyrownania.
+
+Weryfikacja:
+
+- [x] `npm test -- --watch=false`
+- [x] Browser smoke: application menu pozostaje w viewportcie, ma `overflow:
+  auto`, opcje aplikacji i label help maja podpiety `MatTooltip` z pozycja
+  `right` oraz wspolna klase `flow-explorer-tooltip`.
+- [x] Browser smoke: tooltip aplikacji jest triggerowany przez
+  `.flow-explorer-system-info`/ikone info, a nie przez caly button opcji.
+- [ ] Manual hover check: automatyzacja przegladarki nie wymusila renderu
+  overlaya Materiala, wiec finalne odczucie hovera warto potwierdzic wizualnie
+  na dzialajacym UI.
+
 ## Open questions
 
 - [ ] Czy result ma miec source refs jako stringi w MVP, czy strukturalny
   kontrakt z file/method/line/toolCallId?
-- [ ] Czy Flow Explorer ma miec import/export joba w MVP?
+- [x] Czy Flow Explorer ma miec import/export joba w MVP? Decyzja 037:
+  tak, jako frontendowy zapis zakonczonego `FlowExplorerJobStateSnapshot` we
+  wlasnym envelope feature'u.
 - [ ] Czy DB tools maja wejsc jako V2 focus area "dane runtime", czy zostaja
   poza tym feature'em?
 - [x] Czy `GitLabToolScope` powinien zostac zrefaktorowany tak, aby

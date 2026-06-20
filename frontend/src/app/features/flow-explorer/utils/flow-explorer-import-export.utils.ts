@@ -1,0 +1,380 @@
+import {
+  AnalysisAiActivityEvent,
+  AnalysisAiToolFeedback,
+  AnalysisAiUsage,
+  AnalysisEvidenceAttribute,
+  AnalysisEvidenceItem,
+  AnalysisEvidenceSection
+} from '../../../core/models/analysis.models';
+import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
+import {
+  FlowExplorerAiEndpointContract,
+  FlowExplorerAiFlowStep,
+  FlowExplorerAiResponse,
+  FlowExplorerChatMessageResponse,
+  FlowExplorerDocumentationPreset,
+  FlowExplorerFocusArea,
+  FlowExplorerJobStateSnapshot,
+  FlowExplorerJobStep,
+  FlowExplorerResult
+} from '../models/flow-explorer.models';
+
+export const FLOW_EXPLORER_EXPORT_SCHEMA = 'incident-tracker.flow-explorer-export';
+export const FLOW_EXPLORER_EXPORT_VERSION = 1;
+
+export interface FlowExplorerExportEnvelope {
+  schema: string;
+  version: number;
+  exportedAt: string;
+  payload: {
+    type: 'flow-explorer-job';
+    job: FlowExplorerJobStateSnapshot;
+  };
+}
+
+export interface FlowExplorerExportState {
+  origin: 'live' | 'imported';
+  exportedAt: string;
+  fileName: string;
+  job: FlowExplorerJobStateSnapshot;
+}
+
+export function buildFlowExplorerExportEnvelope(
+  job: FlowExplorerJobStateSnapshot,
+  exportedAt: string
+): FlowExplorerExportEnvelope {
+  return {
+    schema: FLOW_EXPLORER_EXPORT_SCHEMA,
+    version: FLOW_EXPLORER_EXPORT_VERSION,
+    exportedAt,
+    payload: {
+      type: 'flow-explorer-job',
+      job
+    }
+  };
+}
+
+export function parseImportedFlowExplorerAnalysis(payload: unknown): {
+  exportedAt: string;
+  job: FlowExplorerJobStateSnapshot;
+} {
+  const payloadObject = asObject(payload);
+  if (!payloadObject || payloadObject['schema'] !== FLOW_EXPLORER_EXPORT_SCHEMA) {
+    throw new Error('Wybierz plik wyeksportowany z Flow Explorera.');
+  }
+
+  if (Number(payloadObject['version']) !== FLOW_EXPLORER_EXPORT_VERSION) {
+    throw new Error('Ten plik eksportu Flow Explorera ma nieobsługiwaną wersję formatu.');
+  }
+
+  const envelopePayload = asObject(payloadObject['payload']);
+  if (!envelopePayload || envelopePayload['type'] !== 'flow-explorer-job') {
+    throw new Error('Plik eksportu nie zawiera wyniku Flow Explorera.');
+  }
+
+  const job = normalizeFlowExplorerJob(envelopePayload['job']);
+  if (!job.status) {
+    throw new Error('Plik nie zawiera statusu Flow Explorer joba.');
+  }
+
+  if (!isTerminalJobStatus(job.status) || hasActiveChat(job)) {
+    throw new Error('Import wspiera tylko zakończone Flow Explorer analizy.');
+  }
+
+  return {
+    exportedAt: normalizeString(payloadObject['exportedAt']),
+    job
+  };
+}
+
+export function normalizeFlowExplorerJob(job: unknown): FlowExplorerJobStateSnapshot {
+  const jobObject = asObject(job);
+  if (!jobObject) {
+    throw new Error('Plik eksportu nie zawiera poprawnego obiektu Flow Explorer joba.');
+  }
+
+  return {
+    jobId: normalizeString(jobObject['jobId']),
+    systemId: normalizeString(jobObject['systemId']),
+    endpointId: normalizeString(jobObject['endpointId']),
+    httpMethod: normalizeString(jobObject['httpMethod']),
+    endpointPath: normalizeString(jobObject['endpointPath']),
+    branch: normalizeString(jobObject['branch']),
+    documentationPreset:
+      (normalizeString(jobObject['documentationPreset']) || 'ANALYST_OVERVIEW') as FlowExplorerDocumentationPreset,
+    focusAreas: normalizeStringArray(jobObject['focusAreas']) as FlowExplorerFocusArea[],
+    aiModel: normalizeString(jobObject['aiModel']),
+    reasoningEffort: normalizeString(jobObject['reasoningEffort']),
+    status: normalizeString(jobObject['status']),
+    currentStepCode: normalizeString(jobObject['currentStepCode']),
+    currentStepLabel: normalizeString(jobObject['currentStepLabel']),
+    errorCode: normalizeString(jobObject['errorCode']),
+    errorMessage: normalizeString(jobObject['errorMessage']),
+    createdAt: normalizeString(jobObject['createdAt']),
+    updatedAt: normalizeString(jobObject['updatedAt']),
+    completedAt: normalizeString(jobObject['completedAt']),
+    steps: Array.isArray(jobObject['steps']) ? jobObject['steps'].map(normalizeStep) : [],
+    contextSnapshot: jobObject['contextSnapshot'] ?? null,
+    contextSections: Array.isArray(jobObject['contextSections'])
+      ? jobObject['contextSections'].map(normalizeEvidenceSection)
+      : [],
+    toolEvidenceSections: Array.isArray(jobObject['toolEvidenceSections'])
+      ? jobObject['toolEvidenceSections'].map(normalizeEvidenceSection)
+      : [],
+    aiActivityEvents: Array.isArray(jobObject['aiActivityEvents'])
+      ? jobObject['aiActivityEvents'].map(normalizeAiActivityEvent)
+      : [],
+    toolFeedback: Array.isArray(jobObject['toolFeedback'])
+      ? jobObject['toolFeedback'].map(normalizeToolFeedback)
+      : [],
+    chatMessages: Array.isArray(jobObject['chatMessages'])
+      ? jobObject['chatMessages'].map(normalizeChatMessage)
+      : [],
+    preparedPrompt: normalizeString(jobObject['preparedPrompt']),
+    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
+  };
+}
+
+export function buildFlowExplorerExportFileName(
+  job: FlowExplorerJobStateSnapshot,
+  exportedAt: string
+): string {
+  const systemId = sanitizeFileNamePart(job.systemId || job.jobId || 'flow-explorer');
+  const endpoint = sanitizeFileNamePart(job.endpointPath || job.endpointId || 'endpoint');
+  const status = sanitizeFileNamePart((job.status || 'result').toLowerCase());
+  return `flow-explorer-${systemId}-${endpoint}-${status}-${formatFileTimestamp(exportedAt)}.json`;
+}
+
+function normalizeStep(step: unknown): FlowExplorerJobStep {
+  const stepObject = asObject(step);
+  return {
+    code: normalizeString(stepObject?.['code']),
+    label: normalizeString(stepObject?.['label']),
+    status: normalizeString(stepObject?.['status']),
+    message: normalizeString(stepObject?.['message']),
+    startedAt: normalizeString(stepObject?.['startedAt']),
+    completedAt: normalizeString(stepObject?.['completedAt'])
+  };
+}
+
+function normalizeChatMessage(message: unknown): FlowExplorerChatMessageResponse {
+  const messageObject = asObject(message);
+  return {
+    id: normalizeString(messageObject?.['id']),
+    role: normalizeString(messageObject?.['role']),
+    status: normalizeString(messageObject?.['status']),
+    content: normalizeString(messageObject?.['content']),
+    errorCode: normalizeString(messageObject?.['errorCode']),
+    errorMessage: normalizeString(messageObject?.['errorMessage']),
+    createdAt: normalizeString(messageObject?.['createdAt']),
+    updatedAt: normalizeString(messageObject?.['updatedAt']),
+    completedAt: normalizeString(messageObject?.['completedAt']),
+    toolEvidenceSections: Array.isArray(messageObject?.['toolEvidenceSections'])
+      ? messageObject['toolEvidenceSections'].map(normalizeEvidenceSection)
+      : [],
+    aiActivityEvents: Array.isArray(messageObject?.['aiActivityEvents'])
+      ? messageObject['aiActivityEvents'].map(normalizeAiActivityEvent)
+      : [],
+    toolFeedback: Array.isArray(messageObject?.['toolFeedback'])
+      ? messageObject['toolFeedback'].map(normalizeToolFeedback)
+      : [],
+    prompt: normalizeString(messageObject?.['prompt'])
+  };
+}
+
+function normalizeResult(result: unknown): FlowExplorerResult {
+  const resultObject = asObject(result);
+  return {
+    status: normalizeString(resultObject?.['status']),
+    systemId: normalizeString(resultObject?.['systemId']),
+    endpointId: normalizeString(resultObject?.['endpointId']),
+    httpMethod: normalizeString(resultObject?.['httpMethod']),
+    endpointPath: normalizeString(resultObject?.['endpointPath']),
+    branch: normalizeString(resultObject?.['branch']),
+    userIntentSummary: normalizeString(resultObject?.['userIntentSummary']),
+    audienceSummary: normalizeString(resultObject?.['audienceSummary']),
+    confidence: normalizeString(resultObject?.['confidence']),
+    visibilityLimits: normalizeStringArray(resultObject?.['visibilityLimits']),
+    prompt: normalizeString(resultObject?.['prompt']),
+    aiResponse: asObject(resultObject?.['aiResponse'])
+      ? normalizeAiResponse(resultObject?.['aiResponse'])
+      : null,
+    usage: normalizeUsage(resultObject?.['usage'])
+  };
+}
+
+function normalizeAiResponse(response: unknown): FlowExplorerAiResponse {
+  const responseObject = asObject(response);
+  return {
+    userIntentSummary: normalizeString(responseObject?.['userIntentSummary']),
+    audienceSummary: normalizeString(responseObject?.['audienceSummary']),
+    endpointContract: asObject(responseObject?.['endpointContract'])
+      ? normalizeEndpointContract(responseObject?.['endpointContract'])
+      : null,
+    flowSteps: Array.isArray(responseObject?.['flowSteps'])
+      ? responseObject['flowSteps'].map((step, index) => normalizeFlowStep(step, index))
+      : [],
+    businessRules: normalizeStringArray(responseObject?.['businessRules']),
+    validations: normalizeStringArray(responseObject?.['validations']),
+    persistence: normalizeStringArray(responseObject?.['persistence']),
+    externalIntegrations: normalizeStringArray(responseObject?.['externalIntegrations']),
+    testScenarios: normalizeStringArray(responseObject?.['testScenarios']),
+    risksAndEdgeCases: normalizeStringArray(responseObject?.['risksAndEdgeCases']),
+    openQuestions: normalizeStringArray(responseObject?.['openQuestions']),
+    visibilityLimits: normalizeStringArray(responseObject?.['visibilityLimits']),
+    sourceReferences: normalizeStringArray(responseObject?.['sourceReferences']),
+    confidence: normalizeString(responseObject?.['confidence'])
+  };
+}
+
+function normalizeEndpointContract(contract: unknown): FlowExplorerAiEndpointContract {
+  const contractObject = asObject(contract);
+  return {
+    method: normalizeString(contractObject?.['method']),
+    path: normalizeString(contractObject?.['path']),
+    purpose: normalizeString(contractObject?.['purpose']),
+    request: normalizeStringArray(contractObject?.['request']),
+    response: normalizeStringArray(contractObject?.['response']),
+    parameters: normalizeStringArray(contractObject?.['parameters'])
+  };
+}
+
+function normalizeFlowStep(step: unknown, index: number): FlowExplorerAiFlowStep {
+  const stepObject = asObject(step);
+  const order = normalizeNumber(stepObject?.['order']);
+  return {
+    order: order > 0 ? order : index + 1,
+    title: normalizeString(stepObject?.['title']),
+    plainLanguage: normalizeString(stepObject?.['plainLanguage']),
+    technicalGrounding: normalizeString(stepObject?.['technicalGrounding']),
+    sourceRefs: normalizeStringArray(stepObject?.['sourceRefs'])
+  };
+}
+
+function normalizeEvidenceSection(section: unknown): AnalysisEvidenceSection {
+  const sectionObject = asObject(section);
+  return {
+    provider: normalizeString(sectionObject?.['provider']),
+    category: normalizeString(sectionObject?.['category']),
+    items: Array.isArray(sectionObject?.['items'])
+      ? sectionObject['items'].map(normalizeEvidenceItem)
+      : []
+  };
+}
+
+function normalizeEvidenceItem(item: unknown): AnalysisEvidenceItem {
+  const itemObject = asObject(item);
+  return {
+    title: normalizeString(itemObject?.['title']),
+    attributes: Array.isArray(itemObject?.['attributes'])
+      ? itemObject['attributes'].map(normalizeAttribute)
+      : []
+  };
+}
+
+function normalizeAttribute(attribute: unknown): AnalysisEvidenceAttribute {
+  const attributeObject = asObject(attribute);
+  return {
+    name: normalizeString(attributeObject?.['name']),
+    value: normalizeString(attributeObject?.['value'])
+  };
+}
+
+function normalizeToolFeedback(feedback: unknown): AnalysisAiToolFeedback {
+  const feedbackObject = asObject(feedback);
+  return {
+    feedbackId: normalizeString(feedbackObject?.['feedbackId']),
+    targetToolName: normalizeString(feedbackObject?.['targetToolName']),
+    targetToolCallId: normalizeString(feedbackObject?.['targetToolCallId']),
+    feedbackToolCallId: normalizeString(feedbackObject?.['feedbackToolCallId']),
+    usefulness: normalizeString(feedbackObject?.['usefulness']),
+    expectedDataReceived: normalizeString(feedbackObject?.['expectedDataReceived']),
+    issueCategory: normalizeString(feedbackObject?.['issueCategory']),
+    improvementArea: normalizeString(feedbackObject?.['improvementArea']),
+    confidence: normalizeString(feedbackObject?.['confidence']),
+    summaryForOperator: normalizeString(feedbackObject?.['summaryForOperator']),
+    suggestedImprovement: normalizeString(feedbackObject?.['suggestedImprovement']),
+    createdAt: normalizeString(feedbackObject?.['createdAt'])
+  };
+}
+
+function normalizeAiActivityEvent(event: unknown): AnalysisAiActivityEvent {
+  const eventObject = asObject(event);
+  return {
+    eventId: normalizeString(eventObject?.['eventId']),
+    parentEventId: normalizeString(eventObject?.['parentEventId']),
+    type: normalizeString(eventObject?.['type']),
+    category: normalizeString(eventObject?.['category']),
+    status: normalizeString(eventObject?.['status']),
+    title: normalizeString(eventObject?.['title']),
+    summary: normalizeString(eventObject?.['summary']),
+    turnId: normalizeString(eventObject?.['turnId']),
+    interactionId: normalizeString(eventObject?.['interactionId']),
+    toolCallId: normalizeString(eventObject?.['toolCallId']),
+    toolName: normalizeString(eventObject?.['toolName']),
+    timestamp: normalizeString(eventObject?.['timestamp']),
+    details: asObject(eventObject?.['details']) ?? {}
+  };
+}
+
+function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
+  const usageObject = asObject(usage);
+  if (!usageObject) {
+    return null;
+  }
+
+  const totalTokens = normalizeNumber(usageObject['totalTokens']);
+  const inputTokens = normalizeNumber(usageObject['inputTokens']);
+  const outputTokens = normalizeNumber(usageObject['outputTokens']);
+
+  if (totalTokens <= 0 && inputTokens <= 0 && outputTokens <= 0) {
+    return null;
+  }
+
+  return {
+    inputTokens,
+    outputTokens,
+    cacheReadTokens: normalizeNumber(usageObject['cacheReadTokens']),
+    cacheWriteTokens: normalizeNumber(usageObject['cacheWriteTokens']),
+    totalTokens,
+    cost: normalizeNumber(usageObject['cost']),
+    apiDurationMs: normalizeNumber(usageObject['apiDurationMs']),
+    apiCallCount: normalizeNumber(usageObject['apiCallCount']),
+    model: normalizeString(usageObject['model']),
+    contextTokenLimit: normalizeNullableNumber(usageObject['contextTokenLimit']),
+    contextCurrentTokens: normalizeNullableNumber(usageObject['contextCurrentTokens']),
+    contextMessages: normalizeNullableNumber(usageObject['contextMessages'])
+  };
+}
+
+function isTerminalJobStatus(status: string): boolean {
+  return status === 'COMPLETED' || status === 'FAILED';
+}
+
+function hasActiveChat(snapshot: FlowExplorerJobStateSnapshot): boolean {
+  return snapshot.chatMessages.some((message) => message.status === 'IN_PROGRESS');
+}
+
+function normalizeString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function normalizeNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function normalizeNullableNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}

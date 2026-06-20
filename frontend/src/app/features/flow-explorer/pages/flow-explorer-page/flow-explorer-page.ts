@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
   AnalysisAiActivityEvent,
@@ -23,6 +24,14 @@ import {
   FlowExplorerSystemOption
 } from '../../models/flow-explorer.models';
 import { FlowExplorerApiService } from '../../services/flow-explorer-api.service';
+import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
+import {
+  buildFlowExplorerExportEnvelope,
+  buildFlowExplorerExportFileName,
+  FlowExplorerExportState,
+  normalizeFlowExplorerJob,
+  parseImportedFlowExplorerAnalysis
+} from '../../utils/flow-explorer-import-export.utils';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -99,6 +108,7 @@ const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
 
 @Component({
   selector: 'app-flow-explorer-page',
+  imports: [MatTooltipModule],
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
 })
@@ -120,14 +130,18 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly configError = signal('');
   readonly systemSearch = signal('');
   readonly endpointSearch = signal('');
+  readonly systemSelectOpen = signal(false);
+  readonly endpointSelectOpen = signal(false);
+  readonly presetSelectOpen = signal(false);
+  readonly focusAreasSelectOpen = signal(false);
   readonly branch = signal('');
   readonly selectedSystemId = signal('');
-  readonly expandedSystemIds = signal<string[]>([]);
   readonly selectedEndpointId = signal('');
   readonly documentationPreset = signal<FlowExplorerDocumentationPreset>('ANALYST_OVERVIEW');
   readonly focusAreas = signal<FlowExplorerFocusArea[]>(['BUSINESS_FLOW']);
   readonly userInstructions = signal('');
   readonly job = signal<FlowExplorerJobStateSnapshot | null>(null);
+  readonly exportState = signal<FlowExplorerExportState | null>(null);
   readonly jobError = signal('');
   readonly isSubmitting = signal(false);
   readonly chatMessage = signal('');
@@ -172,7 +186,27 @@ export class FlowExplorerPageComponent implements OnInit {
       !this.isJobActive()
   );
   readonly chatMessages = computed(() => this.job()?.chatMessages ?? []);
-  readonly isChatAvailable = computed(() => Boolean(this.job()?.result && this.job()?.status === 'COMPLETED'));
+  readonly isChatAvailable = computed(
+    () =>
+      Boolean(this.job()?.result && this.job()?.status === 'COMPLETED') &&
+      this.exportState()?.origin === 'live'
+  );
+  readonly chatHint = computed(() => {
+    const job = this.job();
+    if (!job?.result) {
+      return 'Chat bedzie dostepny po zakonczeniu analizy.';
+    }
+    if (this.exportState()?.origin === 'imported') {
+      return 'Importowany zapis jest tylko do odczytu. Chat dziala dla analiz zywych w backendzie.';
+    }
+    if (job.status !== 'COMPLETED') {
+      return 'Chat bedzie dostepny po zakonczeniu analizy.';
+    }
+    if (this.hasActiveChat(job)) {
+      return 'AI przygotowuje odpowiedz na poprzednie pytanie.';
+    }
+    return 'Pytania korzystaja z wyniku, deterministic contextu i dozwolonych tools dla Flow Explorera.';
+  });
   readonly canSendChat = computed(
     () =>
       this.isChatAvailable() &&
@@ -183,15 +217,81 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly focusAreaLimitReached = computed(() => this.focusAreas().length >= MAX_FOCUS_AREAS);
   readonly systemCountLabel = computed(() => {
     const count = this.systems().length;
-    return count === 1 ? '1 system' : `${count} systems`;
+    return count === 1 ? '1 application' : `${count} applications`;
   });
   readonly endpointCountLabel = computed(() => {
     const count = this.endpoints().length;
     return count === 1 ? '1 endpoint' : `${count} endpoints`;
   });
-  readonly filteredEndpointCountLabel = computed(() => {
-    const count = this.filteredEndpoints().length;
-    return count === 1 ? '1 match' : `${count} matches`;
+  readonly selectedSystemLabel = computed(() => {
+    const system = this.selectedSystem();
+    if (system) {
+      return system.name || system.shortName || system.systemId;
+    }
+    if (this.catalogState() === 'loading') {
+      return 'Loading applications...';
+    }
+    if (this.catalogState() === 'error') {
+      return 'Application catalog unavailable';
+    }
+    return 'Select application';
+  });
+  readonly selectedSystemMeta = computed(() => {
+    const system = this.selectedSystem();
+    if (!system) {
+      return this.systemCountLabel();
+    }
+    return system.summary || system.shortName || 'Application selected';
+  });
+  readonly selectedEndpointLabel = computed(() => {
+    const endpoint = this.selectedEndpoint();
+    if (endpoint) {
+      return `${this.endpointMethodLabel(endpoint)} ${endpoint.path}`;
+    }
+    if (!this.selectedSystem()) {
+      return 'Select application first';
+    }
+    switch (this.endpointState()) {
+      case 'loading':
+        return 'Loading endpoints...';
+      case 'error':
+        return 'Endpoint inventory unavailable';
+      case 'empty':
+        return 'No endpoints found';
+      case 'ready':
+        return 'Select endpoint';
+      default:
+        return 'Load endpoints for branch/ref';
+    }
+  });
+  readonly selectedEndpointMeta = computed(() => {
+    const endpoint = this.selectedEndpoint();
+    if (endpoint) {
+      return this.endpointDescription(endpoint) || endpoint.operationId || endpoint.handlerMethod || 'Endpoint selected';
+    }
+    if (this.endpointState() === 'ready') {
+      return this.endpointCountLabel();
+    }
+    return this.selectedSystem() ? this.endpointState() : 'waiting for application';
+  });
+  readonly selectedPresetLabel = computed(() => this.selectedPresetChoice().label);
+  readonly selectedPresetMeta = computed(() => this.selectedPresetChoice().hint);
+  readonly focusAreasLabel = computed(() => {
+    const selected = this.selectedFocusAreaChoices();
+    if (selected.length === 0) {
+      return 'Select focus areas';
+    }
+    if (selected.length === 1) {
+      return selected[0].label;
+    }
+    return `${selected[0].label} + ${selected.length - 1}`;
+  });
+  readonly focusAreasMeta = computed(() => {
+    const selected = this.selectedFocusAreaChoices();
+    if (selected.length === 0) {
+      return `0 / ${MAX_FOCUS_AREAS} selected`;
+    }
+    return `${selected.length} / ${MAX_FOCUS_AREAS}: ${selected.map((choice) => choice.label).join(', ')}`;
   });
   readonly resultSections = computed(() => {
     const aiResponse = this.job()?.result?.aiResponse;
@@ -228,6 +328,14 @@ export class FlowExplorerPageComponent implements OnInit {
     this.loadSystems();
   }
 
+  @HostListener('document:click')
+  protected closeCustomSelects(): void {
+    this.systemSelectOpen.set(false);
+    this.endpointSelectOpen.set(false);
+    this.presetSelectOpen.set(false);
+    this.focusAreasSelectOpen.set(false);
+  }
+
   protected loadSystems(): void {
     this.catalogState.set('loading');
     this.catalogError.set('');
@@ -257,20 +365,71 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedSystemId.set(system.systemId);
     this.selectedEndpointId.set('');
     this.endpointSearch.set('');
+    this.endpointSelectOpen.set(false);
     this.loadEndpointInventory();
   }
 
-  protected toggleSystemExpanded(systemId: string): void {
-    const expandedSystemIds = this.expandedSystemIds();
-    this.expandedSystemIds.set(
-      expandedSystemIds.includes(systemId)
-        ? expandedSystemIds.filter((candidate) => candidate !== systemId)
-        : [...expandedSystemIds, systemId]
-    );
+  protected keepCustomSelectOpen(event: Event): void {
+    event.stopPropagation();
   }
 
-  protected isSystemExpanded(systemId: string): boolean {
-    return this.expandedSystemIds().includes(systemId);
+  protected toggleSystemSelect(event: Event): void {
+    event.stopPropagation();
+    const willOpen = !this.systemSelectOpen();
+    this.systemSelectOpen.set(willOpen);
+    this.endpointSelectOpen.set(false);
+    this.presetSelectOpen.set(false);
+    this.focusAreasSelectOpen.set(false);
+  }
+
+  protected toggleEndpointSelect(event: Event): void {
+    event.stopPropagation();
+    if (!this.selectedSystem()) {
+      return;
+    }
+    this.endpointSelectOpen.update((isOpen) => !isOpen);
+    this.systemSelectOpen.set(false);
+    this.presetSelectOpen.set(false);
+    this.focusAreasSelectOpen.set(false);
+  }
+
+  protected togglePresetSelect(event: Event): void {
+    event.stopPropagation();
+    this.presetSelectOpen.update((isOpen) => !isOpen);
+    this.systemSelectOpen.set(false);
+    this.endpointSelectOpen.set(false);
+    this.focusAreasSelectOpen.set(false);
+  }
+
+  protected toggleFocusAreasSelect(event: Event): void {
+    event.stopPropagation();
+    this.focusAreasSelectOpen.update((isOpen) => !isOpen);
+    this.systemSelectOpen.set(false);
+    this.endpointSelectOpen.set(false);
+    this.presetSelectOpen.set(false);
+  }
+
+  protected selectSystemFromDropdown(system: FlowExplorerSystemOption, event: Event): void {
+    event.stopPropagation();
+    this.systemSelectOpen.set(false);
+    this.selectSystem(system);
+  }
+
+  protected selectEndpointFromDropdown(endpoint: FlowExplorerEndpointOption, event: Event): void {
+    event.stopPropagation();
+    this.endpointSelectOpen.set(false);
+    this.selectEndpoint(endpoint);
+  }
+
+  protected selectPresetFromDropdown(value: FlowExplorerDocumentationPreset, event: Event): void {
+    event.stopPropagation();
+    this.presetSelectOpen.set(false);
+    this.selectPreset(value);
+  }
+
+  protected toggleFocusAreaFromDropdown(value: FlowExplorerFocusArea, event: Event): void {
+    event.stopPropagation();
+    this.toggleFocusArea(value);
   }
 
   protected onBranchChanged(value: string): void {
@@ -279,6 +438,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set('');
     this.endpointInventory.set(null);
     this.endpointError.set('');
+    this.endpointSearch.set('');
+    this.endpointSelectOpen.set(false);
     this.endpointState.set('idle');
   }
 
@@ -371,7 +532,11 @@ export class FlowExplorerPageComponent implements OnInit {
         next: (snapshot) => {
           this.isSendingChat.set(false);
           this.chatMessage.set('');
-          this.job.set(snapshot);
+          this.applyJobSnapshot(snapshot, {
+            origin: 'live',
+            exportedAt: '',
+            fileName: ''
+          });
           if (this.hasActiveChat(snapshot)) {
             this.startPolling(snapshot.jobId);
           }
@@ -395,6 +560,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.isSubmitting.set(true);
     this.jobError.set('');
     this.job.set(null);
+    this.exportState.set(null);
 
     this.flowExplorerApi
       .startJob(this.jobStartRequest(selectedSystem, selectedEndpoint))
@@ -402,7 +568,11 @@ export class FlowExplorerPageComponent implements OnInit {
       .subscribe({
         next: (snapshot) => {
           this.isSubmitting.set(false);
-          this.job.set(snapshot);
+          this.applyJobSnapshot(snapshot, {
+            origin: 'live',
+            exportedAt: '',
+            fileName: ''
+          });
           if (!this.isTerminalJobStatus(snapshot.status) || this.hasActiveChat(snapshot)) {
             this.startPolling(snapshot.jobId);
           }
@@ -414,20 +584,61 @@ export class FlowExplorerPageComponent implements OnInit {
       });
   }
 
+  triggerImport(fileInput: HTMLInputElement): void {
+    this.jobError.set('');
+    fileInput.value = '';
+    fileInput.click();
+  }
+
+  async importFlowExplorerAnalysis(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const parsedContent = await readJsonFile(file, 'Wybrany plik nie zawiera poprawnego JSON-a.');
+      const imported = parseImportedFlowExplorerAnalysis(parsedContent);
+
+      this.stopPolling();
+      this.isSubmitting.set(false);
+      this.isSendingChat.set(false);
+      this.chatMessage.set('');
+      this.chatError.set('');
+      this.jobError.set('');
+      this.applyJobSnapshot(imported.job, {
+        origin: 'imported',
+        exportedAt: imported.exportedAt,
+        fileName: file.name
+      });
+      this.syncImportedControls(imported.job);
+    } catch (error) {
+      this.jobError.set(
+        error instanceof Error
+          ? error.message
+          : 'Nie udalo sie wczytac pliku z wynikiem Flow Explorera.'
+      );
+    } finally {
+      if (input) {
+        input.value = '';
+      }
+    }
+  }
+
+  exportFlowExplorerAnalysis(): void {
+    const exportState = this.exportState();
+    if (!exportState) {
+      return;
+    }
+
+    const exportedAt = new Date().toISOString();
+    const payload = buildFlowExplorerExportEnvelope(exportState.job, exportedAt);
+    downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), payload);
+  }
+
   protected isFocusAreaSelected(value: FlowExplorerFocusArea): boolean {
     return this.focusAreas().includes(value);
-  }
-
-  protected presetButtonClass(value: FlowExplorerDocumentationPreset): string {
-    return this.documentationPreset() === value
-      ? 'flow-explorer-choice flow-explorer-choice--selected'
-      : 'flow-explorer-choice';
-  }
-
-  protected focusAreaButtonClass(value: FlowExplorerFocusArea): string {
-    return this.isFocusAreaSelected(value)
-      ? 'flow-explorer-choice flow-explorer-choice--selected'
-      : 'flow-explorer-choice';
   }
 
   protected statusPillClass(): string {
@@ -469,20 +680,46 @@ export class FlowExplorerPageComponent implements OnInit {
     }
   }
 
-  protected systemRowClass(system: FlowExplorerSystemOption): string {
+  protected systemTooltip(system: FlowExplorerSystemOption): string {
+    const summary = system.summary?.trim() || 'Application description is not available.';
+    const catalogMeta = [
+      system.kind || 'application',
+      system.lifecycleStatus || 'status n/a',
+      system.ownerTeamIds.join(', ') || 'owner n/a'
+    ].join(' · ');
+    const repositoryCount =
+      system.repositoryCount === 1
+        ? '1 source repository'
+        : `${system.repositoryCount} source repositories`;
+
+    return `${summary}\n${catalogMeta}\n${repositoryCount}`;
+  }
+
+  protected systemOptionClass(system: FlowExplorerSystemOption): string {
     return [
-      'flow-explorer-system-row',
-      system.systemId === this.selectedSystemId() ? 'flow-explorer-system-row--selected' : '',
-      this.isSystemExpanded(system.systemId) ? 'flow-explorer-system-row--expanded' : ''
+      'flow-explorer-select-option',
+      system.systemId === this.selectedSystemId() ? 'flow-explorer-select-option--selected' : ''
     ]
       .filter(Boolean)
       .join(' ');
   }
 
-  protected endpointRowClass(endpoint: FlowExplorerEndpointOption): string {
+  protected endpointOptionClass(endpoint: FlowExplorerEndpointOption): string {
     return endpoint.endpointId === this.selectedEndpointId()
-      ? 'flow-explorer-endpoint-row flow-explorer-endpoint-row--selected'
-      : 'flow-explorer-endpoint-row';
+      ? 'flow-explorer-select-option flow-explorer-select-option--selected'
+      : 'flow-explorer-select-option';
+  }
+
+  protected presetOptionClass(value: FlowExplorerDocumentationPreset): string {
+    return this.documentationPreset() === value
+      ? 'flow-explorer-select-option flow-explorer-select-option--selected'
+      : 'flow-explorer-select-option';
+  }
+
+  protected focusAreaSelectOptionClass(value: FlowExplorerFocusArea): string {
+    return this.isFocusAreaSelected(value)
+      ? 'flow-explorer-select-option flow-explorer-select-option--selected'
+      : 'flow-explorer-select-option';
   }
 
   protected endpointMethodLabel(endpoint: FlowExplorerEndpointOption): string {
@@ -615,7 +852,11 @@ export class FlowExplorerPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (snapshot) => {
-          this.job.set(snapshot);
+          this.applyJobSnapshot(snapshot, {
+            origin: 'live',
+            exportedAt: '',
+            fileName: ''
+          });
           if (this.isTerminalJobStatus(snapshot.status) && !this.hasActiveChat(snapshot)) {
             this.stopPolling();
           }
@@ -638,6 +879,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private resetJobState(): void {
     this.stopPolling();
     this.job.set(null);
+    this.exportState.set(null);
     this.jobError.set('');
     this.isSubmitting.set(false);
     this.chatMessage.set('');
@@ -651,6 +893,41 @@ export class FlowExplorerPageComponent implements OnInit {
 
   private hasActiveChat(snapshot: FlowExplorerJobStateSnapshot | null | undefined): boolean {
     return Boolean(snapshot?.chatMessages?.some((message) => message.status === 'IN_PROGRESS'));
+  }
+
+  private applyJobSnapshot(
+    job: FlowExplorerJobStateSnapshot,
+    metadata: Pick<FlowExplorerExportState, 'origin' | 'exportedAt' | 'fileName'>
+  ): void {
+    const normalizedJob = normalizeFlowExplorerJob(job);
+    this.job.set(normalizedJob);
+    this.syncExportableState(normalizedJob, metadata);
+  }
+
+  private syncExportableState(
+    job: FlowExplorerJobStateSnapshot,
+    metadata: Pick<FlowExplorerExportState, 'origin' | 'exportedAt' | 'fileName'>
+  ): void {
+    if (!this.isTerminalJobStatus(job.status) || this.hasActiveChat(job)) {
+      this.exportState.set(null);
+      return;
+    }
+
+    this.exportState.set({
+      origin: metadata.origin,
+      exportedAt: metadata.exportedAt,
+      fileName: metadata.fileName,
+      job: normalizeFlowExplorerJob(job)
+    });
+  }
+
+  private syncImportedControls(job: FlowExplorerJobStateSnapshot): void {
+    this.selectedSystemId.set(job.systemId);
+    this.selectedEndpointId.set(job.endpointId);
+    this.branch.set(job.branch || this.branch());
+    this.documentationPreset.set(job.documentationPreset || 'ANALYST_OVERVIEW');
+    this.focusAreas.set(job.focusAreas.length ? job.focusAreas.slice(0, MAX_FOCUS_AREAS) : ['BUSINESS_FLOW']);
+    this.userInstructions.set('');
   }
 
   private jobStartRequest(
@@ -714,6 +991,18 @@ export class FlowExplorerPageComponent implements OnInit {
         endpoint.handlerMethod
       ].join(' ')
     );
+  }
+
+  private selectedPresetChoice(): FlowExplorerChoice<FlowExplorerDocumentationPreset> {
+    return (
+      DOCUMENTATION_PRESETS.find((preset) => preset.value === this.documentationPreset()) ??
+      DOCUMENTATION_PRESETS[0]
+    );
+  }
+
+  private selectedFocusAreaChoices(): FlowExplorerChoice<FlowExplorerFocusArea>[] {
+    const selected = this.focusAreas();
+    return FOCUS_AREA_OPTIONS.filter((focusArea) => selected.includes(focusArea.value));
   }
 
   private buildResultSections(aiResponse: FlowExplorerAiResponse): FlowExplorerResultSection[] {

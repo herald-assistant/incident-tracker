@@ -46,6 +46,7 @@ import {
   normalizeAnalysisJob,
   parseImportedAnalysis
 } from '../../core/utils/analysis-import-export.utils';
+import { downloadJsonFile, readJsonFile } from '../../core/utils/json-file.utils';
 import {
   AnalysisAiCostEstimate,
   estimateAnalysisAiCost,
@@ -372,15 +373,7 @@ export class AnalysisConsoleComponent {
     }
 
     try {
-      const content = await file.text();
-      let parsedContent: unknown;
-
-      try {
-        parsedContent = JSON.parse(content);
-      } catch {
-        throw new Error('Wybrany plik nie zawiera poprawnego JSON-a.');
-      }
-
+      const parsedContent = await readJsonFile(file, 'Wybrany plik nie zawiera poprawnego JSON-a.');
       const imported = parseImportedAnalysis(parsedContent);
 
       this.stopPolling();
@@ -427,17 +420,7 @@ export class AnalysisConsoleComponent {
 
     const exportedAt = new Date().toISOString();
     const payload = buildExportEnvelope(exportState.job, exportedAt);
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: 'application/json'
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = buildExportFileName(exportState.job, exportedAt);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    downloadJsonFile(buildExportFileName(exportState.job, exportedAt), payload);
   }
 
   onAiModelChanged(): void {

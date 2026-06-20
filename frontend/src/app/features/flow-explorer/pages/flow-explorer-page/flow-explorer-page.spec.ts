@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
 import {
@@ -8,6 +8,7 @@ import {
   FlowExplorerSystemOption
 } from '../../models/flow-explorer.models';
 import { FlowExplorerApiService } from '../../services/flow-explorer-api.service';
+import { buildFlowExplorerExportEnvelope } from '../../utils/flow-explorer-import-export.utils';
 import { FlowExplorerPageComponent } from './flow-explorer-page';
 
 describe('FlowExplorerPageComponent', () => {
@@ -61,31 +62,23 @@ describe('FlowExplorerPageComponent', () => {
     expect(flowExplorerApi.getConfig).toHaveBeenCalledTimes(1);
     expect(flowExplorerApi.getSystems).toHaveBeenCalledTimes(1);
     expect(branchInput.value).toBe('main');
-    expect(compiled.textContent).toContain('CRM Service');
-    expect(compiled.textContent).toContain('Billing Core');
-    expect(compiled.textContent).toContain('2 systems');
+    expect(compiled.textContent).toContain('Endpoint documentation workspace');
+    expect(compiled.textContent).toContain('Select application');
+    expect(compiled.textContent).toContain('2 applications');
     expect(compiled.textContent).not.toContain('Customer relationship core API.');
-  });
-
-  it('should reveal long system summaries only after expanding the row', () => {
-    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
-
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).not.toContain('Customer relationship core API.');
-
-    clickSystemSummaryToggle(compiled, 'CRM Service');
-    fixture.detectChanges();
-
-    expect(compiled.textContent).toContain('Customer relationship core API.');
   });
 
   it('should filter systems locally', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    setInputValue(fixture.nativeElement, 'input[type="search"]', 'billing');
+    openApplicationSelect(fixture.nativeElement);
+    fixture.detectChanges();
+    setInputValue(
+      fixture.nativeElement,
+      '.flow-explorer-select__search input[type="search"]',
+      'billing'
+    );
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -97,8 +90,7 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(flowExplorerApi.getEndpointInventory).toHaveBeenCalledWith('crm-service', {
@@ -106,6 +98,8 @@ describe('FlowExplorerPageComponent', () => {
     });
     expect(compiled.textContent).toContain('feature/FLOW-42');
     expect(compiled.textContent).toContain('1 endpoint');
+    openEndpointSelect(compiled);
+    fixture.detectChanges();
     expect(compiled.textContent).toContain('GET');
     expect(compiled.textContent).toContain('/api/customers/{id}');
     expect(compiled.textContent).toContain('CustomerController.getCustomer');
@@ -116,12 +110,11 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
     setInputValue(fixture.nativeElement, 'input[type="text"]', 'release-candidate');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Wczytaj endpointy');
+    expect(fixture.nativeElement.textContent).toContain('Load endpoints for branch/ref');
 
     clickLoadEndpoints(fixture.nativeElement);
     fixture.detectChanges();
@@ -144,8 +137,7 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('CRM Service');
@@ -156,11 +148,10 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
-    clickEndpoint(fixture.nativeElement, '/api/customers/{id}');
-    clickButtonContaining(fixture.nativeElement, 'Test preparation');
-    clickButtonContaining(fixture.nativeElement, 'Validations');
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+    selectPreset(fixture, 'Test preparation');
+    toggleFocusArea(fixture, 'Validations');
     setTextareaValue(
       fixture.nativeElement,
       'Skup sie na negatywnych scenariuszach walidacji statusu klienta.'
@@ -192,10 +183,8 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
-    clickEndpoint(fixture.nativeElement, '/api/customers/{id}');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
@@ -208,6 +197,71 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Customer id is required.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
     expect(compiled.textContent).toContain('Tokens 2,820');
+  });
+
+  it('should export completed Flow Explorer results to a JSON file', async () => {
+    const downloadMock = mockFileDownload();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+
+    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+    fixture.detectChanges();
+    clickButtonContaining(fixture.nativeElement, 'Export');
+
+    const blob = downloadMock.createObjectURL.mock.calls[0]?.[0] as Blob;
+    expect(downloadMock.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(blob.type).toBe('application/json');
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    expect(downloadMock.revokeObjectURL).toHaveBeenCalledWith('blob:flow-explorer-export');
+
+    clickSpy.mockRestore();
+    downloadMock.restore();
+  });
+
+  it('should import a completed Flow Explorer export as a read-only result', async () => {
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+    const exportedJob = jobSnapshot({
+      status: 'COMPLETED',
+      currentStepCode: 'COMPLETED',
+      currentStepLabel: 'AI result ready',
+      preparedPrompt: 'imported canonical prompt',
+      result: flowExplorerResult()
+    });
+    const fileContent = JSON.stringify(
+      buildFlowExplorerExportEnvelope(exportedJob, '2026-06-18T10:00:00Z')
+    );
+    const file = new File(
+      [fileContent],
+      'flow-explorer-export.json',
+      { type: 'application/json' }
+    );
+    Object.defineProperty(file, 'text', {
+      configurable: true,
+      value: () => Promise.resolve(fileContent)
+    });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+
+    fixture.detectChanges();
+    await fixture.componentInstance.importFlowExplorerAnalysis({ target: input } as unknown as Event);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const chatInput = compiled.querySelector(
+      '.flow-explorer-chat-composer__textarea'
+    ) as HTMLTextAreaElement;
+    expect(compiled.textContent).toContain('Wczytany plik: flow-explorer-export.json');
+    expect(compiled.textContent).toContain('AI result');
+    expect(compiled.textContent).toContain('Importowany zapis jest tylko do odczytu');
+    expect(chatInput.disabled).toBe(true);
   });
 
   it('should show a controlled fallback when structured AI response is missing', () => {
@@ -228,10 +282,8 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
-    clickEndpoint(fixture.nativeElement, '/api/customers/{id}');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
@@ -304,10 +356,8 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
-    clickEndpoint(fixture.nativeElement, '/api/customers/{id}');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
@@ -328,10 +378,8 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
-    clickEndpoint(fixture.nativeElement, '/api/customers/{id}');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
@@ -344,10 +392,8 @@ describe('FlowExplorerPageComponent', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    clickSystem(fixture.nativeElement, 'CRM Service');
-    fixture.detectChanges();
-    clickEndpoint(fixture.nativeElement, '/api/customers/{id}');
-    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
@@ -388,30 +434,62 @@ function setInputValue(nativeElement: HTMLElement, selector: string, value: stri
   input.dispatchEvent(new Event('input'));
 }
 
-function clickSystem(nativeElement: HTMLElement, label: string): void {
+function selectSystem(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openApplicationSelect(nativeElement);
+  fixture.detectChanges();
   const systemButton = Array.from(
-    nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-system-row__select')
+    nativeElement.querySelectorAll<HTMLButtonElement>('button.flow-explorer-select-option')
   ).find((button) => button.textContent?.includes(label));
   systemButton?.click();
+  fixture.detectChanges();
 }
 
-function clickSystemSummaryToggle(nativeElement: HTMLElement, label: string): void {
-  const systemRow = Array.from(
-    nativeElement.querySelectorAll<HTMLElement>('.flow-explorer-system-row')
-  ).find((row) => row.textContent?.includes(label));
-  systemRow?.querySelector<HTMLButtonElement>('.flow-explorer-system-row__toggle')?.click();
+function openApplicationSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[0]?.click();
+}
+
+function openEndpointSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[1]?.click();
+}
+
+function openPresetSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[2]?.click();
+}
+
+function openFocusAreasSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
 }
 
 function clickLoadEndpoints(nativeElement: HTMLElement): void {
-  const button = buttonContaining(nativeElement, 'Load endpoints');
-  button?.click();
+  nativeElement.querySelector<HTMLButtonElement>('.flow-explorer-control-actions button')?.click();
 }
 
-function clickEndpoint(nativeElement: HTMLElement, path: string): void {
+function selectEndpoint(fixture: ComponentFixture<FlowExplorerPageComponent>, path: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openEndpointSelect(nativeElement);
+  fixture.detectChanges();
   const endpointButton = Array.from(
-    nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-endpoint-row__select')
+    nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select-option__select')
   ).find((button) => button.textContent?.includes(path));
   endpointButton?.click();
+  fixture.detectChanges();
+}
+
+function selectPreset(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openPresetSelect(nativeElement);
+  fixture.detectChanges();
+  buttonContaining(nativeElement, label)?.click();
+  fixture.detectChanges();
+}
+
+function toggleFocusArea(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openFocusAreasSelect(nativeElement);
+  fixture.detectChanges();
+  buttonContaining(nativeElement, label)?.click();
+  fixture.detectChanges();
 }
 
 function clickButtonContaining(nativeElement: HTMLElement, label: string): void {
@@ -422,6 +500,41 @@ function buttonContaining(nativeElement: HTMLElement, label: string): HTMLButton
   return Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('button')).find((candidate) =>
     candidate.textContent?.includes(label)
   );
+}
+
+function mockFileDownload(): {
+  createObjectURL: ReturnType<typeof vi.fn>;
+  revokeObjectURL: ReturnType<typeof vi.fn>;
+  restore: () => void;
+} {
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  const createObjectURL = vi.fn(() => 'blob:flow-explorer-export');
+  const revokeObjectURL = vi.fn();
+
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    value: createObjectURL
+  });
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    value: revokeObjectURL
+  });
+
+  return {
+    createObjectURL,
+    revokeObjectURL,
+    restore: () => {
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: originalCreateObjectURL
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        value: originalRevokeObjectURL
+      });
+    }
+  };
 }
 
 function setTextareaValue(nativeElement: HTMLElement, value: string): void {

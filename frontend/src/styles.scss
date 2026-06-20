@@ -2279,6 +2279,30 @@ body.is-column-resizing {
   text-align: left;
 }
 
+.flow-explorer-tooltip,
+.flow-explorer-tooltip .mat-mdc-tooltip-surface {
+  max-width: min(420px, calc(100vw - 32px));
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(12, 102, 228, 0.22);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--text-main);
+  box-shadow: 0 18px 42px rgba(9, 30, 66, 0.18);
+}
+
+.flow-explorer-tooltip .mat-mdc-tooltip-surface {
+  display: block;
+  max-height: min(260px, calc(100vh - 32px));
+  padding: 12px 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.5;
+  text-align: left;
+}
+
 .analysis-json-tooltip,
 .analysis-json-tooltip .mat-mdc-tooltip-surface {
   max-width: min(680px, calc(100vw - 32px));

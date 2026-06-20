@@ -1,7 +1,8 @@
 <div class="page-shell flow-explorer-page">
   <main class="flow-explorer-workspace" aria-labelledby="flowExplorerWorkspaceTitle">
-    <section class="analysis-card flow-explorer-start">
-      <div class="section-heading flow-explorer-start__heading">
+    <section class="analysis-card flow-explorer-composer">
+      <details class="flow-explorer-collapsible" open>
+      <summary class="section-heading flow-explorer-composer__heading flow-explorer-collapsible__summary">
         <div>
           <p class="section-eyebrow">Flow Explorer</p>
           <h2 id="flowExplorerWorkspaceTitle">Endpoint documentation workspace</h2>
@@ -11,470 +12,631 @@
           </p>
         </div>
         <span [class]="statusPillClass()">{{ catalogState() }}</span>
+      </summary>
+
+      <div class="flow-explorer-collapsible__body">
+        <div class="flow-explorer-target-grid">
+          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Application</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Application field help"
+                matTooltip="Aplikacja z operational context. Zmiana aplikacji odswieza liste endpointow i czysci aktualny wynik."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="flow-explorer-select__control"
+              type="button"
+              aria-haspopup="listbox"
+              [attr.aria-expanded]="systemSelectOpen()"
+              (click)="toggleSystemSelect($event)"
+            >
+              <span class="flow-explorer-select__value">
+                <strong>{{ selectedSystemLabel() }}</strong>
+                <small>{{ selectedSystemMeta() }}</small>
+              </span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+
+            @if (systemSelectOpen()) {
+              <div
+                class="flow-explorer-select__menu flow-explorer-select__menu--applications"
+                role="listbox"
+                aria-label="Application options"
+              >
+                <label class="form-field flow-explorer-select__search">
+                  <span class="field-label">Find application</span>
+                  <input
+                    #systemSearchInput
+                    class="text-input"
+                    type="search"
+                    placeholder="crm, billing, team id"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [value]="systemSearch()"
+                    (input)="systemSearch.set(systemSearchInput.value)"
+                  />
+                </label>
+
+                @switch (catalogState()) {
+                  @case ('loading') {
+                    <div class="flow-explorer-skeleton" aria-live="polite">
+                      <span class="flow-explorer-skeleton__line"></span>
+                      <span class="flow-explorer-skeleton__line flow-explorer-skeleton__line--short"></span>
+                    </div>
+                  }
+                  @case ('error') {
+                    <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                      <div>
+                        <p>{{ catalogError() }}</p>
+                        <button
+                          class="secondary-button secondary-button--compact"
+                          type="button"
+                          (click)="loadSystems()"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @case ('ready') {
+                    @if (filteredSystems().length > 0) {
+                      <div class="flow-explorer-select__options">
+                        @for (system of filteredSystems(); track system.systemId) {
+                          <button
+                            [class]="systemOptionClass(system)"
+                            type="button"
+                            role="option"
+                            [attr.aria-selected]="system.systemId === selectedSystemId()"
+                            (click)="selectSystemFromDropdown(system, $event)"
+                          >
+                            <span class="flow-explorer-select-option__body">
+                              <strong>{{ system.name || system.systemId }}</strong>
+                            </span>
+                            <span
+                              class="flow-explorer-system-info"
+                              aria-label="Application details"
+                              [matTooltip]="systemTooltip(system)"
+                              matTooltipClass="flow-explorer-tooltip"
+                              matTooltipPosition="right"
+                              [matTooltipShowDelay]="120"
+                            >
+                              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                            </span>
+                          </button>
+                        }
+                      </div>
+                    } @else {
+                      <div class="empty-state">Brak systemow dla aktualnego filtra.</div>
+                    }
+                  }
+                  @default {
+                    <div class="empty-state">Katalog systemow jest pusty.</div>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          <label class="form-field flow-explorer-field">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Branch / Ref</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Branch field help"
+                matTooltip="Git ref dla pobrania endpoint inventory. Zmiana ref czysci endpointy; uzyj Load endpoints."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <input
+              #branchInput
+              class="text-input"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              [value]="branch()"
+              (input)="onBranchChanged(branchInput.value)"
+            />
+            @if (configError()) {
+              <span class="field-hint flow-explorer-warning">{{ configError() }}</span>
+            }
+          </label>
+
+          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Endpoint</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Endpoint field help"
+                matTooltip="Endpoint do udokumentowania. Zmiana endpointu czysci wynik bez ponownego ladowania inventory."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="flow-explorer-select__control"
+              type="button"
+              aria-haspopup="listbox"
+              [disabled]="!selectedSystem()"
+              [attr.aria-expanded]="endpointSelectOpen()"
+              (click)="toggleEndpointSelect($event)"
+            >
+              <span class="flow-explorer-select__value">
+                <strong>{{ selectedEndpointLabel() }}</strong>
+                <small>{{ selectedEndpointMeta() }}</small>
+              </span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+
+            @if (endpointSelectOpen()) {
+              <div class="flow-explorer-select__menu" role="listbox" aria-label="Endpoint options">
+                @switch (endpointState()) {
+                  @case ('loading') {
+                    <div class="flow-explorer-skeleton" aria-live="polite">
+                      <span class="flow-explorer-skeleton__line"></span>
+                      <span class="flow-explorer-skeleton__line"></span>
+                    </div>
+                  }
+                  @case ('error') {
+                    <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+                      <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                      <p>{{ endpointError() }}</p>
+                    </div>
+                  }
+                  @case ('empty') {
+                    <div class="empty-state">Brak endpointow dla wybranego systemu i branch/ref.</div>
+                  }
+                  @case ('ready') {
+                    <label class="form-field flow-explorer-select__search">
+                      <span class="field-label">Find endpoint</span>
+                      <input
+                        #endpointSearchInput
+                        class="text-input"
+                        type="search"
+                        placeholder="GET /customers"
+                        autocomplete="off"
+                        spellcheck="false"
+                        [value]="endpointSearch()"
+                        (input)="endpointSearch.set(endpointSearchInput.value)"
+                      />
+                    </label>
+
+                    @if (filteredEndpoints().length > 0) {
+                      <div class="flow-explorer-select__options">
+                        @for (endpoint of filteredEndpoints(); track endpoint.endpointId) {
+                          <article [class]="endpointOptionClass(endpoint)">
+                            <button
+                              class="flow-explorer-select-option__select"
+                              type="button"
+                              role="option"
+                              [attr.aria-selected]="endpoint.endpointId === selectedEndpointId()"
+                              (click)="selectEndpointFromDropdown(endpoint, $event)"
+                            >
+                              <span class="flow-explorer-endpoint-method">
+                                {{ endpointMethodLabel(endpoint) }}
+                              </span>
+                              <span class="flow-explorer-select-option__body">
+                                <strong>{{ endpoint.path }}</strong>
+                                <small>{{ endpointDescription(endpoint) }}</small>
+                              </span>
+                            </button>
+
+                            <div class="flow-explorer-endpoint-info">
+                              <button
+                                class="flow-explorer-info-button"
+                                type="button"
+                                aria-label="Endpoint details"
+                                title="Endpoint details"
+                              >
+                                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                              </button>
+                              <section class="flow-explorer-info-popover" role="tooltip">
+                                <div>
+                                  <p class="section-eyebrow">Details</p>
+                                  <h3>{{ endpoint.operationId || endpoint.handlerMethod || endpoint.path }}</h3>
+                                </div>
+
+                                @if (endpoint.tooltipDetails?.description || endpoint.description) {
+                                  <p>
+                                    {{ endpoint.tooltipDetails?.description || endpoint.description }}
+                                  </p>
+                                }
+
+                                <dl>
+                                  @if (endpoint.controllerClass || endpoint.handlerMethod) {
+                                    <div>
+                                      <dt>Handler</dt>
+                                      <dd>{{ endpoint.controllerClass }}.{{ endpoint.handlerMethod }}</dd>
+                                    </div>
+                                  }
+                                  @if (endpointSourceLabel(endpoint.source)) {
+                                    <div>
+                                      <dt>Source</dt>
+                                      <dd>
+                                        {{ endpointSourceLabel(endpoint.source) }}
+                                        @if (endpointLineLabel(endpoint.source)) {
+                                          <span>{{ endpointLineLabel(endpoint.source) }}</span>
+                                        }
+                                      </dd>
+                                    </div>
+                                  }
+                                  @if (endpoint.tooltipDetails?.requestTypes?.length) {
+                                    <div>
+                                      <dt>Request</dt>
+                                      <dd>{{ endpoint.tooltipDetails?.requestTypes?.join(', ') }}</dd>
+                                    </div>
+                                  }
+                                  @if (endpoint.tooltipDetails?.responseTypes?.length) {
+                                    <div>
+                                      <dt>Response</dt>
+                                      <dd>{{ endpoint.tooltipDetails?.responseTypes?.join(', ') }}</dd>
+                                    </div>
+                                  }
+                                </dl>
+
+                                @if ((endpoint.tooltipDetails?.parameters?.length || endpoint.parameters.length) > 0) {
+                                  <div class="flow-explorer-info-list">
+                                    <span class="field-label">Parameters</span>
+                                    @for (
+                                      parameter of endpoint.tooltipDetails?.parameters || endpoint.parameters;
+                                      track parameter.name + parameter.in
+                                    ) {
+                                      <p>
+                                        <strong>{{ parameterLabel(parameter) }}</strong>
+                                        @if (parameter.description) {
+                                          <span>{{ parameter.description }}</span>
+                                        }
+                                      </p>
+                                    }
+                                  </div>
+                                }
+
+                                @if (
+                                  (endpoint.tooltipDetails?.limitations?.length || endpoint.limitations.length) > 0
+                                ) {
+                                  <div class="flow-explorer-info-list">
+                                    <span class="field-label">Limitations</span>
+                                    @for (
+                                      limitation of endpoint.tooltipDetails?.limitations || endpoint.limitations;
+                                      track limitation
+                                    ) {
+                                      <p>{{ limitation }}</p>
+                                    }
+                                  </div>
+                                }
+                              </section>
+                            </div>
+                          </article>
+                        }
+                      </div>
+                    } @else {
+                      <div class="empty-state">Brak endpointow dla aktualnego filtra.</div>
+                    }
+                  }
+                  @default {
+                    <div class="empty-state">Wczytaj endpointy dla wybranego branch/ref.</div>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          <div class="flow-explorer-control-actions">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Inventory</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Inventory refresh help"
+                matTooltip="Pobiera liste endpointow dla wybranej aplikacji i branch/ref."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="secondary-button"
+              type="button"
+              [disabled]="!selectedSystem() || endpointState() === 'loading'"
+              (click)="loadEndpointInventory()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+              <span>Load endpoints</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flow-explorer-scope-grid">
+          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Preset</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Preset field help"
+                matTooltip="Ustawia glowna intencje dokumentacji i ton odpowiedzi AI."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="flow-explorer-select__control"
+              type="button"
+              aria-haspopup="listbox"
+              [disabled]="isSubmitting() || isJobActive()"
+              [attr.aria-expanded]="presetSelectOpen()"
+              (click)="togglePresetSelect($event)"
+            >
+              <span class="flow-explorer-select__value">
+                <strong>{{ selectedPresetLabel() }}</strong>
+                <small>{{ selectedPresetMeta() }}</small>
+              </span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+
+            @if (presetSelectOpen()) {
+              <div class="flow-explorer-select__menu" role="listbox" aria-label="Preset options">
+                <div class="flow-explorer-select__options">
+                  @for (preset of documentationPresets; track preset.value) {
+                    <button
+                      [class]="presetOptionClass(preset.value)"
+                      type="button"
+                      role="option"
+                      [attr.aria-selected]="documentationPreset() === preset.value"
+                      (click)="selectPresetFromDropdown(preset.value, $event)"
+                    >
+                      <span class="flow-explorer-select-option__body">
+                        <strong>{{ preset.label }}</strong>
+                        <small>{{ preset.hint }}</small>
+                      </span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Focus areas</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Focus areas field help"
+                [matTooltip]="
+                  'Maksymalnie ' +
+                  maxFocusAreas +
+                  ' priorytety. To zawęża pierwsze poglebienia AI, nie blokuje innych znalezisk.'
+                "
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="flow-explorer-select__control"
+              type="button"
+              aria-haspopup="listbox"
+              [disabled]="isSubmitting() || isJobActive()"
+              [attr.aria-expanded]="focusAreasSelectOpen()"
+              (click)="toggleFocusAreasSelect($event)"
+            >
+              <span class="flow-explorer-select__value">
+                <strong>{{ focusAreasLabel() }}</strong>
+                <small>{{ focusAreasMeta() }}</small>
+              </span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+
+            @if (focusAreasSelectOpen()) {
+              <div
+                class="flow-explorer-select__menu"
+                role="listbox"
+                aria-label="Focus area options"
+                aria-multiselectable="true"
+              >
+                <div class="flow-explorer-select__options">
+                  @for (focusArea of focusAreaOptions; track focusArea.value) {
+                    <button
+                      [class]="focusAreaSelectOptionClass(focusArea.value)"
+                      type="button"
+                      role="option"
+                      [disabled]="
+                        isSubmitting() ||
+                        isJobActive() ||
+                        (!isFocusAreaSelected(focusArea.value) && focusAreaLimitReached())
+                      "
+                      [attr.aria-selected]="isFocusAreaSelected(focusArea.value)"
+                      (click)="toggleFocusAreaFromDropdown(focusArea.value, $event)"
+                    >
+                      <span class="flow-explorer-select-option__body">
+                        <strong>{{ focusArea.label }}</strong>
+                        <small>{{ focusArea.hint }}</small>
+                      </span>
+                      @if (isFocusAreaSelected(focusArea.value)) {
+                        <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
+                          check
+                        </span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (endpointState() === 'error') {
+          <div class="flow-explorer-message flow-explorer-message--error" role="alert">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <p>{{ endpointError() }}</p>
+          </div>
+        }
+
+        @if (endpointInventory(); as inventory) {
+          <div class="flow-explorer-target-metrics" aria-label="Endpoint inventory coverage">
+            <div>
+              <span class="field-label">Resolved ref</span>
+              <strong>{{ inventory.resolvedRef || branch() }}</strong>
+            </div>
+            <div>
+              <span class="field-label">Endpoints</span>
+              <strong>{{ endpointCountLabel() }}</strong>
+            </div>
+            <div>
+              <span class="field-label">Repositories</span>
+              <strong>{{ inventory.scannedRepositoryCount }} / {{ inventory.repositoryCount }}</strong>
+            </div>
+            <div>
+              <span class="field-label">Files scanned</span>
+              <strong>{{ inventory.scannedFileCount }} / {{ inventory.candidateFileCount }}</strong>
+            </div>
+          </div>
+
+          @if (inventory.limitations.length > 0 || inventory.scannedFileLimitReached) {
+            <div class="flow-explorer-limitations">
+              @if (inventory.scannedFileLimitReached) {
+                <span class="panel-chip panel-chip--warning">scan limit</span>
+              }
+              @for (limitation of inventory.limitations; track limitation) {
+                <span class="panel-chip panel-chip--warning">{{ limitation }}</span>
+              }
+            </div>
+          }
+        }
+
+        @if (selectedEndpoint(); as endpoint) {
+          <div class="flow-explorer-target-preview" aria-label="Selected endpoint">
+            <span class="flow-explorer-endpoint-method">{{ endpointMethodLabel(endpoint) }}</span>
+            <div>
+              <strong>{{ endpoint.path }}</strong>
+              <span>{{ endpointDescription(endpoint) }}</span>
+            </div>
+            @if (endpoint.controllerClass || endpoint.handlerMethod || endpointLineLabel(endpoint.source)) {
+              <span class="field-hint">
+                {{ endpoint.controllerClass }}.{{ endpoint.handlerMethod }}
+                @if (endpointLineLabel(endpoint.source)) {
+                  · {{ endpointLineLabel(endpoint.source) }}
+                }
+              </span>
+            }
+          </div>
+        }
+
+        <label class="form-field">
+          <span class="flow-explorer-field-label">
+            <span class="field-label">Doprecyzuj oczekiwany opis</span>
+            <span
+              class="flow-explorer-label-help"
+              tabindex="0"
+              aria-label="User instructions field help"
+              matTooltip="Doprecyzowanie oczekiwanego rezultatu. Backend nadal buduje canonical prompt i kontrakt odpowiedzi."
+              matTooltipClass="flow-explorer-tooltip"
+              matTooltipPosition="right"
+              [matTooltipShowDelay]="120"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <textarea
+            #instructionsInput
+            class="text-input flow-explorer-textarea"
+            rows="4"
+            placeholder="Np. skup sie na scenariuszach testowych dla walidacji statusu klienta."
+            spellcheck="false"
+            [value]="userInstructions()"
+            [disabled]="isSubmitting() || isJobActive()"
+            (input)="onUserInstructionsChanged(instructionsInput.value)"
+          ></textarea>
+        </label>
+
+        <div class="flow-explorer-run-actions">
+          <button class="primary-button" type="button" [disabled]="!canStartJob()" (click)="startJob()">
+            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+            <span>
+              @if (isSubmitting()) {
+                Starting...
+              } @else if (isJobActive()) {
+                Running...
+              } @else {
+                Run Flow Explorer
+              }
+            </span>
+          </button>
+
+          <input
+            #flowExplorerImportFileInput
+            type="file"
+            accept=".json,application/json"
+            hidden
+            (change)="importFlowExplorerAnalysis($event)"
+          />
+          <button
+            class="secondary-button"
+            type="button"
+            [disabled]="isSubmitting() || isJobActive()"
+            (click)="triggerImport(flowExplorerImportFileInput)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+            <span>Import</span>
+          </button>
+
+          @if (exportState()) {
+            <button
+              class="secondary-button secondary-button--accent"
+              type="button"
+              (click)="exportFlowExplorerAnalysis()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              <span>Export</span>
+            </button>
+          }
+
+          @if (exportState(); as snapshotExport) {
+            @if (snapshotExport.origin === 'imported') {
+              <span class="field-hint">Wczytany plik: {{ snapshotExport.fileName }}</span>
+            }
+          }
+
+          @if (!selectedEndpoint() && exportState()?.origin !== 'imported') {
+            <span class="field-hint">Wybierz endpoint, aby uruchomic analize.</span>
+          }
+        </div>
       </div>
+      </details>
     </section>
 
     <section class="flow-explorer-layout" aria-label="Flow Explorer setup">
-      <aside class="analysis-card flow-explorer-sidebar">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Application catalog</p>
-            <h2>System selection</h2>
-          </div>
-          <span class="panel-chip">{{ systemCountLabel() }}</span>
-        </div>
-
-        <label class="form-field">
-          <span class="field-label">Find system</span>
-          <input
-            #systemSearchInput
-            class="text-input"
-            type="search"
-            placeholder="crm, billing, team id"
-            autocomplete="off"
-            spellcheck="false"
-            [value]="systemSearch()"
-            (input)="systemSearch.set(systemSearchInput.value)"
-          />
-        </label>
-
-        @switch (catalogState()) {
-          @case ('loading') {
-            <div class="flow-explorer-skeleton" aria-live="polite">
-              <span class="flow-explorer-skeleton__line"></span>
-              <span class="flow-explorer-skeleton__line"></span>
-              <span class="flow-explorer-skeleton__line flow-explorer-skeleton__line--short"></span>
-            </div>
-          }
-          @case ('error') {
-            <div class="flow-explorer-message flow-explorer-message--error" role="alert">
-              <span class="material-symbols-outlined" aria-hidden="true">error</span>
-              <div>
-                <p>{{ catalogError() }}</p>
-                <button
-                  class="secondary-button secondary-button--compact"
-                  type="button"
-                  (click)="loadSystems()"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          }
-          @case ('ready') {
-            @if (filteredSystems().length > 0) {
-              <div class="flow-explorer-system-list" aria-label="Loaded systems">
-                @for (system of filteredSystems(); track system.systemId) {
-                  <article [class]="systemRowClass(system)">
-                    <button
-                      class="flow-explorer-system-row__select"
-                      type="button"
-                      [attr.aria-pressed]="system.systemId === selectedSystemId()"
-                      (click)="selectSystem(system)"
-                    >
-                      <span class="flow-explorer-system-row__body">
-                        <span class="flow-explorer-system-row__title">
-                          {{ system.name || system.systemId }}
-                        </span>
-                        <span class="flow-explorer-system-row__meta">
-                          <span>{{ system.kind || 'system' }}</span>
-                          <span>{{ system.lifecycleStatus || 'status n/a' }}</span>
-                          <span>{{ system.ownerTeamIds.join(', ') || 'owner n/a' }}</span>
-                        </span>
-                      </span>
-                      <span class="panel-chip">{{ system.repositoryCount }} repos</span>
-                    </button>
-
-                    @if (system.summary) {
-                      <button
-                        class="flow-explorer-system-row__toggle"
-                        type="button"
-                        [attr.aria-expanded]="isSystemExpanded(system.systemId)"
-                        [attr.aria-label]="
-                          isSystemExpanded(system.systemId) ? 'Hide system summary' : 'Show system summary'
-                        "
-                        (click)="toggleSystemExpanded(system.systemId)"
-                      >
-                        <span class="material-symbols-outlined" aria-hidden="true">
-                          @if (isSystemExpanded(system.systemId)) {
-                            expand_less
-                          } @else {
-                            expand_more
-                          }
-                        </span>
-                      </button>
-
-                      @if (isSystemExpanded(system.systemId)) {
-                        <p class="flow-explorer-system-row__summary">{{ system.summary }}</p>
-                      }
-                    }
-                  </article>
-                }
-              </div>
-            } @else {
-              <div class="empty-state">Brak systemow dla aktualnego filtra.</div>
-            }
-          }
-          @default {
-            <div class="empty-state">Katalog systemow jest pusty.</div>
-          }
-        }
-      </aside>
-
       <section class="flow-explorer-main">
-        <section class="analysis-card flow-explorer-controls">
-          <div class="section-heading">
-            <div>
-              <p class="section-eyebrow">Endpoint inventory</p>
-              <h2>Endpoint selection</h2>
-              @if (selectedSystem(); as system) {
-                <p class="field-hint">{{ system.name || system.systemId }}</p>
-              }
-            </div>
-            <span [class]="endpointStatusPillClass()">{{ endpointState() }}</span>
-          </div>
-
-          <div class="flow-explorer-control-grid">
-            <label class="form-field">
-              <span class="field-label">Branch / Ref</span>
-              <input
-                #branchInput
-                class="text-input"
-                type="text"
-                autocomplete="off"
-                spellcheck="false"
-                [value]="branch()"
-                (input)="onBranchChanged(branchInput.value)"
-              />
-              @if (configError()) {
-                <span class="field-hint flow-explorer-warning">{{ configError() }}</span>
-              }
-            </label>
-
-            <label class="form-field">
-              <span class="field-label">Find endpoint</span>
-              <input
-                #endpointSearchInput
-                class="text-input"
-                type="search"
-                placeholder="GET /customers"
-                autocomplete="off"
-                spellcheck="false"
-                [value]="endpointSearch()"
-                [disabled]="endpoints().length === 0"
-                (input)="endpointSearch.set(endpointSearchInput.value)"
-              />
-            </label>
-
-            <div class="flow-explorer-control-actions">
-              <button
-                class="secondary-button"
-                type="button"
-                [disabled]="!selectedSystem() || endpointState() === 'loading'"
-                (click)="loadEndpointInventory()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">sync</span>
-                <span>Load endpoints</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        @if (endpointInventory(); as inventory) {
-          <section class="analysis-card flow-explorer-coverage" aria-label="Endpoint inventory coverage">
-            <div class="flow-explorer-coverage__grid">
-              <div>
-                <span class="field-label">Resolved ref</span>
-                <strong>{{ inventory.resolvedRef || branch() }}</strong>
-              </div>
-              <div>
-                <span class="field-label">Repositories</span>
-                <strong>{{ inventory.scannedRepositoryCount }} / {{ inventory.repositoryCount }}</strong>
-              </div>
-              <div>
-                <span class="field-label">Files scanned</span>
-                <strong>{{ inventory.scannedFileCount }} / {{ inventory.candidateFileCount }}</strong>
-              </div>
-              <div>
-                <span class="field-label">Endpoints</span>
-                <strong>{{ endpointCountLabel() }}</strong>
-              </div>
-            </div>
-
-            @if (inventory.limitations.length > 0 || inventory.scannedFileLimitReached) {
-              <div class="flow-explorer-limitations">
-                @if (inventory.scannedFileLimitReached) {
-                  <span class="panel-chip panel-chip--warning">scan limit</span>
-                }
-                @for (limitation of inventory.limitations; track limitation) {
-                  <span class="panel-chip panel-chip--warning">{{ limitation }}</span>
-                }
-              </div>
-            }
-          </section>
-        }
-
-        <section class="analysis-card flow-explorer-endpoints">
-          <div class="section-heading">
-            <div>
-              <p class="section-eyebrow">Endpoint list</p>
-              <h2>{{ filteredEndpointCountLabel() }}</h2>
-            </div>
-            @if (selectedEndpoint(); as endpoint) {
-              <span class="panel-chip">{{ endpointMethodLabel(endpoint) }}</span>
-            }
-          </div>
-
-          @switch (endpointState()) {
-            @case ('idle') {
-              <div class="empty-state">
-                @if (selectedSystem()) {
-                  Wczytaj endpointy dla wybranego branch/ref.
-                } @else {
-                  Wybierz system z katalogu.
-                }
-              </div>
-            }
-            @case ('loading') {
-              <div class="flow-explorer-skeleton" aria-live="polite">
-                <span class="flow-explorer-skeleton__line"></span>
-                <span class="flow-explorer-skeleton__line"></span>
-                <span class="flow-explorer-skeleton__line"></span>
-              </div>
-            }
-            @case ('error') {
-              <div class="flow-explorer-message flow-explorer-message--error" role="alert">
-                <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                <p>{{ endpointError() }}</p>
-              </div>
-            }
-            @case ('empty') {
-              <div class="empty-state">Brak endpointow dla wybranego systemu i branch/ref.</div>
-            }
-            @case ('ready') {
-              @if (filteredEndpoints().length > 0) {
-                <div class="flow-explorer-endpoint-list" aria-label="Endpoint options">
-                  @for (endpoint of filteredEndpoints(); track endpoint.endpointId) {
-                    <article [class]="endpointRowClass(endpoint)">
-                      <button
-                        class="flow-explorer-endpoint-row__select"
-                        type="button"
-                        [attr.aria-pressed]="endpoint.endpointId === selectedEndpointId()"
-                        (click)="selectEndpoint(endpoint)"
-                      >
-                        <span class="flow-explorer-endpoint-row__method">
-                          {{ endpointMethodLabel(endpoint) }}
-                        </span>
-                        <span class="flow-explorer-endpoint-row__body">
-                          <span class="flow-explorer-endpoint-row__path">{{ endpoint.path }}</span>
-                          <span class="flow-explorer-endpoint-row__summary">
-                            {{ endpointDescription(endpoint) }}
-                          </span>
-                        </span>
-                      </button>
-
-                      <div class="flow-explorer-endpoint-info">
-                        <button
-                          class="flow-explorer-info-button"
-                          type="button"
-                          aria-label="Endpoint details"
-                          title="Endpoint details"
-                        >
-                          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-                        </button>
-                        <section class="flow-explorer-info-popover" role="tooltip">
-                          <div>
-                            <p class="section-eyebrow">Details</p>
-                            <h3>{{ endpoint.operationId || endpoint.handlerMethod || endpoint.path }}</h3>
-                          </div>
-
-                          @if (endpoint.tooltipDetails?.description || endpoint.description) {
-                            <p>
-                              {{ endpoint.tooltipDetails?.description || endpoint.description }}
-                            </p>
-                          }
-
-                          <dl>
-                            @if (endpoint.controllerClass || endpoint.handlerMethod) {
-                              <div>
-                                <dt>Handler</dt>
-                                <dd>{{ endpoint.controllerClass }}.{{ endpoint.handlerMethod }}</dd>
-                              </div>
-                            }
-                            @if (endpointSourceLabel(endpoint.source)) {
-                              <div>
-                                <dt>Source</dt>
-                                <dd>
-                                  {{ endpointSourceLabel(endpoint.source) }}
-                                  @if (endpointLineLabel(endpoint.source)) {
-                                    <span>{{ endpointLineLabel(endpoint.source) }}</span>
-                                  }
-                                </dd>
-                              </div>
-                            }
-                            @if (endpoint.tooltipDetails?.requestTypes?.length) {
-                              <div>
-                                <dt>Request</dt>
-                                <dd>{{ endpoint.tooltipDetails?.requestTypes?.join(', ') }}</dd>
-                              </div>
-                            }
-                            @if (endpoint.tooltipDetails?.responseTypes?.length) {
-                              <div>
-                                <dt>Response</dt>
-                                <dd>{{ endpoint.tooltipDetails?.responseTypes?.join(', ') }}</dd>
-                              </div>
-                            }
-                          </dl>
-
-                          @if ((endpoint.tooltipDetails?.parameters?.length || endpoint.parameters.length) > 0) {
-                            <div class="flow-explorer-info-list">
-                              <span class="field-label">Parameters</span>
-                              @for (
-                                parameter of endpoint.tooltipDetails?.parameters || endpoint.parameters;
-                                track parameter.name + parameter.in
-                              ) {
-                                <p>
-                                  <strong>{{ parameterLabel(parameter) }}</strong>
-                                  @if (parameter.description) {
-                                    <span>{{ parameter.description }}</span>
-                                  }
-                                </p>
-                              }
-                            </div>
-                          }
-
-                          @if (
-                            (endpoint.tooltipDetails?.limitations?.length || endpoint.limitations.length) > 0
-                          ) {
-                            <div class="flow-explorer-info-list">
-                              <span class="field-label">Limitations</span>
-                              @for (
-                                limitation of endpoint.tooltipDetails?.limitations || endpoint.limitations;
-                                track limitation
-                              ) {
-                                <p>{{ limitation }}</p>
-                              }
-                            </div>
-                          }
-                        </section>
-                      </div>
-                    </article>
-                  }
-                </div>
-              } @else {
-                <div class="empty-state">Brak endpointow dla aktualnego filtra.</div>
-              }
-            }
-          }
-        </section>
-
-        @if (selectedEndpoint(); as endpoint) {
-          <section class="analysis-card flow-explorer-selection" aria-label="Selected endpoint">
-            <div>
-              <p class="section-eyebrow">Selected endpoint</p>
-              <h2>{{ endpointMethodLabel(endpoint) }} {{ endpoint.path }}</h2>
-              <p>{{ endpointDescription(endpoint) }}</p>
-            </div>
-          </section>
-        }
-
-        <section class="analysis-card flow-explorer-runner" aria-label="Flow Explorer run setup">
-          <div class="section-heading">
-            <div>
-              <p class="section-eyebrow">Documentation scope</p>
-              <h2>Analysis request</h2>
-              <p class="field-hint">
-                Preset ustawia intencje, a focus areas tylko priorytetyzuja pierwsze poglebienia.
-              </p>
-            </div>
-            <span class="panel-chip">{{ focusAreas().length }} / {{ maxFocusAreas }}</span>
-          </div>
-
-          <div class="flow-explorer-choice-group">
-            <span class="field-label">Preset</span>
-            <div class="flow-explorer-choice-grid">
-              @for (preset of documentationPresets; track preset.value) {
-                <button
-                  type="button"
-                  [class]="presetButtonClass(preset.value)"
-                  [disabled]="isSubmitting() || isJobActive()"
-                  [attr.aria-pressed]="documentationPreset() === preset.value"
-                  (click)="selectPreset(preset.value)"
-                >
-                  <span>{{ preset.label }}</span>
-                  <small>{{ preset.hint }}</small>
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="flow-explorer-choice-group">
-            <div class="flow-explorer-choice-group__heading">
-              <span class="field-label">Focus areas</span>
-              @if (focusAreaLimitReached()) {
-                <span class="field-hint">Limit {{ maxFocusAreas }} priorytetow.</span>
-              }
-            </div>
-            <div class="flow-explorer-focus-grid">
-              @for (focusArea of focusAreaOptions; track focusArea.value) {
-                <button
-                  type="button"
-                  [class]="focusAreaButtonClass(focusArea.value)"
-                  [disabled]="
-                    isSubmitting() ||
-                    isJobActive() ||
-                    (!isFocusAreaSelected(focusArea.value) && focusAreaLimitReached())
-                  "
-                  [attr.aria-pressed]="isFocusAreaSelected(focusArea.value)"
-                  (click)="toggleFocusArea(focusArea.value)"
-                >
-                  <span>{{ focusArea.label }}</span>
-                  <small>{{ focusArea.hint }}</small>
-                </button>
-              }
-            </div>
-          </div>
-
-          <label class="form-field">
-            <span class="field-label">Doprecyzuj oczekiwany opis</span>
-            <textarea
-              #instructionsInput
-              class="text-input flow-explorer-textarea"
-              rows="5"
-              placeholder="Np. skup sie na scenariuszach testowych dla walidacji statusu klienta."
-              spellcheck="false"
-              [value]="userInstructions()"
-              [disabled]="isSubmitting() || isJobActive()"
-              (input)="onUserInstructionsChanged(instructionsInput.value)"
-            ></textarea>
-            <span class="field-hint">
-              To pole doprecyzowuje oczekiwania uzytkownika; canonical prompt i kontrakt wyniku
-              buduje backend.
-            </span>
-          </label>
-
-          <div class="flow-explorer-run-actions">
-            <button class="primary-button" type="button" [disabled]="!canStartJob()" (click)="startJob()">
-              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
-              <span>
-                @if (isSubmitting()) {
-                  Starting...
-                } @else if (isJobActive()) {
-                  Running...
-                } @else {
-                  Run Flow Explorer
-                }
-              </span>
-            </button>
-            @if (!selectedEndpoint()) {
-              <span class="field-hint">Wybierz endpoint, aby uruchomic analize.</span>
-            }
-          </div>
-        </section>
 
         @if (job() || jobError() || isSubmitting()) {
           <section class="analysis-card flow-explorer-job" aria-label="Flow Explorer job state">
-            <div class="section-heading flow-explorer-job__header">
+            <details class="flow-explorer-collapsible" open>
+            <summary class="section-heading flow-explorer-job__header flow-explorer-collapsible__summary">
               <div>
                 <p class="section-eyebrow">Job state</p>
                 <h2>
@@ -490,8 +652,9 @@
               } @else {
                 <span class="status-pill status-pill--running">starting</span>
               }
-            </div>
+            </summary>
 
+            <div class="flow-explorer-collapsible__body">
             @if (jobError()) {
               <div class="flow-explorer-message flow-explorer-message--error" role="alert">
                 <span class="material-symbols-outlined" aria-hidden="true">error</span>
@@ -536,12 +699,15 @@
                 </details>
               }
             }
+            </div>
+            </details>
           </section>
         }
 
         @if (job()?.result; as result) {
           <section class="analysis-card flow-explorer-result" aria-label="Flow Explorer result">
-            <div class="section-heading flow-explorer-result__heading">
+            <details class="flow-explorer-collapsible" open>
+            <summary class="section-heading flow-explorer-result__heading flow-explorer-collapsible__summary">
               <div>
                 <p class="section-eyebrow">AI result</p>
                 <h2>{{ result.httpMethod }} {{ result.endpointPath }}</h2>
@@ -553,8 +719,9 @@
                   {{ result.aiResponse?.confidence || result.confidence || 'confidence n/a' }}
                 </span>
               </div>
-            </div>
+            </summary>
 
+            <div class="flow-explorer-collapsible__body">
             <div class="flow-explorer-result-summary">
               <div>
                 <span class="field-label">Intent</span>
@@ -722,26 +889,28 @@
                 <span class="panel-chip">Cost {{ formatCost(usage.cost) }}</span>
               </div>
             }
+            </div>
+            </details>
           </section>
         }
 
         @if (job()?.result || chatMessages().length > 0) {
           <section class="analysis-card flow-explorer-chat" aria-label="Flow Explorer follow-up chat">
-            <div class="section-heading flow-explorer-chat__heading">
+            <details class="flow-explorer-collapsible" open>
+            <summary class="section-heading flow-explorer-chat__heading flow-explorer-collapsible__summary">
               <div>
                 <p class="section-eyebrow">Follow-up chat</p>
                 <h2>Ask about this endpoint</h2>
-                <p class="field-hint">
-                  Pytania korzystaja z wyniku, deterministic contextu i dozwolonych tools dla Flow Explorera.
-                </p>
+                <p class="field-hint">{{ chatHint() }}</p>
               </div>
               @if (hasActiveChatMessage()) {
                 <span class="status-pill status-pill--running">answering</span>
               } @else {
                 <span class="panel-chip">{{ chatMessages().length }} messages</span>
               }
-            </div>
+            </summary>
 
+            <div class="flow-explorer-collapsible__body">
             @if (chatMessages().length > 0) {
               <div class="flow-explorer-chat-list" aria-live="polite">
                 @for (message of chatMessages(); track message.id) {
@@ -825,6 +994,8 @@
                 </span>
               </button>
             </div>
+            </div>
+            </details>
           </section>
         }
 

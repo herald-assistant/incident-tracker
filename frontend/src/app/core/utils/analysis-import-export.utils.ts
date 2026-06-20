@@ -12,6 +12,7 @@ import {
   AnalysisResultResponse
 } from '../models/analysis.models';
 import { isTerminalStatus } from './analysis-display.utils';
+import { formatFileTimestamp, sanitizeFileNamePart } from './json-file.utils';
 
 export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
 export const EXPORT_VERSION = 6;
@@ -317,32 +318,6 @@ function normalizeNumber(value: unknown): number {
 
 function normalizeNullableNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function sanitizeFileNamePart(value: string): string {
-  const normalized = String(value || '')
-    .trim()
-    .replace(/[^a-zA-Z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return normalized ? normalized.substring(0, 48) : 'snapshot';
-}
-
-function formatFileTimestamp(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'snapshot';
-  }
-
-  return (
-    [date.getFullYear(), pad2(date.getMonth() + 1), pad2(date.getDate())].join('') +
-    '-' +
-    [pad2(date.getHours()), pad2(date.getMinutes()), pad2(date.getSeconds())].join('')
-  );
-}
-
-function pad2(value: number): string {
-  return String(value).padStart(2, '0');
 }
 
 function asObject(value: unknown): Record<string, unknown> | null {
