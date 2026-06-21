@@ -33,6 +33,7 @@ public class FlowExplorerPromptPreparationService {
                 - Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`; to jest initial evidence przygotowane deterministycznie.
                 - Nie powtarzaj GitLab tool calls dla kodu, ktory jest juz widoczny w `snippet-cards.md`.
                 - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do preset/focus areas; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
+                - Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` i uzyj wartosci z tego artefaktu zamiast rediscovery.
                 - `context-snapshot.json` jest manifestem bez pelnego kodu snippetow; pelny kod jest w `snippet-cards.md`.
                 - Artefakty sa logicznym payloadem sesji, a kluczowe tresci sa osadzone inline ponizej.
 
@@ -50,9 +51,10 @@ public class FlowExplorerPromptPreparationService {
 
                 ## Tool scope guidance
                 - GitLab tools do not read endpoint business scope from hidden ToolContext.
-                - When calling GitLab tools, pass `branchRef` explicitly from this prompt or artifacts.
-                - Pass `applicationName` and known `projectName` values when the tool needs repository scope.
+                - When calling GitLab tools, pass `branchRef` explicitly from `canonical-tool-inputs.md`.
+                - Pass `applicationName`, known `projectName` and `filePath` values from `canonical-tool-inputs.md` when the tool needs repository scope.
                 - Do not pass `gitLabGroup`; backend resolves it through operational context or configuration.
+                - Do not call repository discovery or endpoint context rebuild when `canonical-tool-inputs.md` already contains the needed project, branch and file path.
 
                 ## Deterministic context coverage
                 endpointResolved: %s
@@ -67,6 +69,9 @@ public class FlowExplorerPromptPreparationService {
                 confidence: %s
 
                 ## Prepared artifact contents
+                %s
+
+                ## Canonical tool inputs
                 %s
 
                 ## Compact flow manifest
@@ -120,6 +125,10 @@ public class FlowExplorerPromptPreparationService {
                         ? contextSnapshot.coverage().confidence()
                         : "LOW",
                 artifactIndex(artifacts),
+                artifactContents.getOrDefault(
+                        FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT,
+                        artifactService.renderCanonicalToolInputs(request, contextSnapshot)
+                ),
                 artifactContents.getOrDefault(
                         FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT,
                         "- endpoint flow not resolved"

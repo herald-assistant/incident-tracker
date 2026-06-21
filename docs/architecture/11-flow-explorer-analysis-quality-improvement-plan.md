@@ -302,35 +302,36 @@ Flow Explorer. Feature'y nadal decyduja o dostepnosci chatu i wywolaniu
 wlasnego endpointu, ale nie duplikuja prezentacji wiadomosci, evidence,
 feedbacku tooli ani kopiowania.
 
-### 001. Baseline quality report model
+### 001. Canonical tool inputs artifact
 
-- [ ] Omowic krok i zatwierdzic zakres.
-- [ ] Dodac feature-local model quality report dla Flow Explorer runu.
-- [ ] Zmapowac istniejace usage/activity/context coverage na pierwsze
-  quality signals.
-- [ ] Dodac diagnostic export pola z quality report.
-- [ ] Dodac testy CRM-specific i zanonimizowane.
-
-Cel kroku:
-
-Zanim zaczniemy poprawiac zachowanie, mierzymy obecny problem w powtarzalny
-sposob. To pozwoli sprawdzac, czy kolejne zmiany realnie zmniejszaja koszt i
-redundantne tool calle.
-
-### 002. Canonical tool inputs artifact
-
-- [ ] Omowic krok i zatwierdzic zakres.
-- [ ] Dodac artifact/sekcje `canonical-tool-inputs.md`.
-- [ ] Osadzic w nim kanoniczne argumenty GitLab i operational context dla
+- [x] Omowic krok i zatwierdzic zakres.
+- [x] Dodac artifact/sekcje `canonical-tool-inputs.md`.
+- [x] Osadzic w nim kanoniczne argumenty GitLab i operational context dla
   wybranego runu.
-- [ ] Doprecyzowac prompt i skill, ze model ma uzywac tych wartosci bez
+- [x] Doprecyzowac prompt i skill, ze model ma uzywac tych wartosci bez
   rediscovery.
-- [ ] Dodac testy CRM-specific i zanonimizowane.
+- [x] Dodac testy CRM-specific i zanonimizowane.
 
 Cel kroku:
 
 Zmniejszyc liczbe blednych tool calli spowodowanych zgadywaniem nazw projektu,
 sciezek repozytorium i file pathow.
+
+### 002. Tool policy dla redundantnego discovery
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Dodac Flow Explorer policy blokujaca redundantny context rebuild w
+  initial run.
+- [ ] Ograniczyc repository rediscovery, gdy selected repository scope jest
+  znany.
+- [ ] Zwrocic modelowi czytelny denied message z instrukcja uzycia artifacts.
+- [ ] Zostawic follow-up z osobna, ostrozniejsza polityka.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Zamienic miekkie guidance w egzekwowalna polityke runtime i ograniczyc koszt
+bez polegania wylacznie na posluszenstwie modelu.
 
 ### 003. Snippet ranking pod primary flow i focus areas
 
@@ -348,21 +349,20 @@ Cel kroku:
 Sprawic, zeby initial context przenosil najwieksza wartosc merytoryczna w
 malym budzecie tokenowym.
 
-### 004. Tool policy dla redundantnego discovery
+### 004. Baseline quality report model
 
 - [ ] Omowic krok i zatwierdzic zakres.
-- [ ] Dodac Flow Explorer policy blokujaca redundantny context rebuild w
-  initial run.
-- [ ] Ograniczyc repository rediscovery, gdy selected repository scope jest
-  znany.
-- [ ] Zwrocic modelowi czytelny denied message z instrukcja uzycia artifacts.
-- [ ] Zostawic follow-up z osobna, ostrozniejsza polityka.
+- [ ] Dodac feature-local model quality report dla Flow Explorer runu.
+- [ ] Zmapowac istniejace usage/activity/context coverage na pierwsze
+  quality signals.
+- [ ] Dodac diagnostic export pola z quality report.
 - [ ] Dodac testy CRM-specific i zanonimizowane.
 
 Cel kroku:
 
-Zamienic miekkie guidance w egzekwowalna polityke runtime i ograniczyc koszt
-bez polegania wylacznie na posluszenstwie modelu.
+Po wprowadzeniu pierwszych zmian kosztowych mierzymy run w powtarzalny sposob.
+To pozwoli sprawdzac, czy canonical inputs, policy i ranking snippetow realnie
+zmniejszaja koszt oraz redundantne tool calle.
 
 ### 005. Ranking i grupowanie limitations/next reads
 
@@ -474,15 +474,47 @@ drift wzgledem Incident Trackera.
 
 Status: implemented and verified.
 
+### 004. Priorytet na redukcje blednych tool calli przed diagnostyka
+
+Decyzja: `Baseline quality report model` nie jest pierwszym krokiem
+usprawnien merytorycznych. Najpierw realizujemy `canonical-tool-inputs.md`,
+potem polityke blokujaca redundantne discovery, nastepnie ranking snippetow.
+Quality report zostaje przesuniety za te zmiany jako pomiar efektow, a nie
+blokada startowa.
+
+Powod: smoke test pokazal, ze najwiekszy koszt i ryzyko wynikaja z tego, ze
+model zgaduje GitLab inputs albo odtwarza context, ktory backend juz zna.
+Raport diagnostyczny jest przydatny, ale sam nie ogranicza kosztu ani nie
+poprawia odpowiedzi.
+
+Status: accepted.
+
+### 005. Canonical tool inputs artifact
+
+Decyzja: Flow Explorer dodaje osobny artefakt
+`flow-explorer/canonical-tool-inputs.md` oraz osadza jego tresc w initial i
+follow-up promptach. Artefakt zawiera kanoniczne wartosci potrzebne modelowi
+do tool calli: `applicationName`, `systemId`, `endpointId`, `httpMethod`,
+`endpointPath`, `branchRef`, repozytoria GitLaba, `projectName`,
+`projectPath`, kanoniczne `filePath` i metody z flow/snippet cards.
+
+Powod: `context-snapshot.json` pozostaje pelniejszym manifestem, ale model
+potrzebuje krotkiej sciagi narzedziowej. Bez niej latwo zgaduje
+`projectName`, `projectPath` albo `filePath`, szczegolnie przy repozytoriach w
+podgrupach. `canonical-tool-inputs.md` ma zmniejszyc liczbe blednych tool
+calli i ograniczyc rediscovery.
+
+Status: implemented and verified.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
 - [x] 000. Wspolny kontrakt i widok przebiegu pracy Copilota.
 - [x] 000a. Wspolny kontrakt i komponent follow-up chatu.
-- [ ] 001. Baseline quality report model.
-- [ ] 002. Canonical tool inputs artifact.
+- [x] 001. Canonical tool inputs artifact.
+- [ ] 002. Tool policy dla redundantnego discovery.
 - [ ] 003. Snippet ranking pod primary flow i focus areas.
-- [ ] 004. Tool policy dla redundantnego discovery.
+- [ ] 004. Baseline quality report model.
 - [ ] 005. Ranking i grupowanie limitations/next reads.
 - [ ] 006. Result contract: fact vs inference vs unknown.
 - [ ] 007. Export result vs export diagnostics.

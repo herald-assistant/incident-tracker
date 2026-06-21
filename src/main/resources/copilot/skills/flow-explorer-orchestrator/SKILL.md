@@ -29,6 +29,7 @@ Twoim zadaniem jest:
 Zacznij od artefaktow:
 
 - `flow-explorer/context-snapshot.json`,
+- `flow-explorer/canonical-tool-inputs.md`,
 - `flow-explorer/compact-flow-manifest.md`,
 - `flow-explorer/snippet-cards.md`,
 - `flow-explorer/coverage.json`,
@@ -43,6 +44,13 @@ snippetow. Pelny kod initial evidence jest w `snippet-cards.md`. Nie dociagaj
 ponownie GitLab tools fragmentow, ktore sa juz widoczne w snippet cards, chyba
 ze potrzebujesz sprawdzic konkretny brak wzgledem `documentationPreset` albo
 `focusAreas`.
+
+`canonical-tool-inputs.md` jest krotka sciaga argumentow do tools. Przed
+kazdym GitLab albo operational context tool call sprawdz ten artefakt i uzyj
+wartosci z niego dokladnie. Nie zgaduj `projectName`, `projectPath`,
+`branchRef` ani `filePath`, jezeli sa tam podane. Nie uruchamiaj repository
+discovery ani endpoint context rebuild tylko po to, zeby potwierdzic wartosci
+z tego artefaktu.
 
 Zakres model-facing jest jawny w promptcie i artefaktach. Szczegolnie wazne
 pola to:
@@ -60,23 +68,26 @@ rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
 ## Algorytm Pracy
 
 1. Przeczytaj `context-snapshot.json` i `compact-flow-manifest.md`.
-2. Ustal endpoint contract: metoda, path, controller, handler i glowny use
+2. Przeczytaj `canonical-tool-inputs.md`, zeby ustalic kanoniczne wartosci dla
+   ewentualnych tool calli.
+3. Ustal endpoint contract: metoda, path, controller, handler i glowny use
    case service.
-3. Przeczytaj `snippet-cards.md` tylko jako high-value code evidence, nie jako
+4. Przeczytaj `snippet-cards.md` tylko jako high-value code evidence, nie jako
    pelny dump kodu.
-4. Zmapuj flow krok po kroku:
+5. Zmapuj flow krok po kroku:
    - wejscie HTTP,
    - walidacje i decyzje,
    - logika biznesowa,
    - persistence code-first,
    - integracje zewnetrzne,
    - response albo error boundary.
-5. Sprawdz `coverage.json` i limitations. Braki wpisuj do `visibilityLimits`,
+6. Sprawdz `coverage.json` i limitations. Braki wpisuj do `visibilityLimits`,
    chyba ze mozna je tanio uzupelnic toolami.
-6. Dobierz poglebienia tylko dla wybranych `focusAreas`.
-7. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
-   dotyczy kodu aplikacji, przekaz tez `applicationName` i znany `projectName`.
-8. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
+7. Dobierz poglebienia tylko dla wybranych `focusAreas`.
+8. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
+   dotyczy kodu aplikacji, przekaz tez `applicationName`, znany `projectName`
+   i `filePath` z `canonical-tool-inputs.md`.
+9. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
 
 ## Zasady Kosztowe
 

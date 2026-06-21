@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMethod;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
@@ -22,6 +24,7 @@ import java.util.Map;
 public class FlowExplorerArtifactService {
 
     static final String CONTEXT_SNAPSHOT_ARTIFACT = "flow-explorer/context-snapshot.json";
+    static final String CANONICAL_TOOL_INPUTS_ARTIFACT = "flow-explorer/canonical-tool-inputs.md";
     static final String COMPACT_FLOW_MANIFEST_ARTIFACT = "flow-explorer/compact-flow-manifest.md";
     static final String SNIPPET_CARDS_ARTIFACT = "flow-explorer/snippet-cards.md";
     static final String COVERAGE_ARTIFACT = "flow-explorer/coverage.json";
@@ -41,6 +44,14 @@ public class FlowExplorerArtifactService {
                         contextSnapshot != null ? contextSnapshot.flowNodes().size() : 0,
                         "application/json",
                         renderContextSnapshot(request, contextSnapshot)
+                ),
+                artifact(
+                        CANONICAL_TOOL_INPUTS_ARTIFACT,
+                        "Canonical model-facing inputs for Flow Explorer tools",
+                        "canonical-tool-inputs",
+                        canonicalToolInputCount(contextSnapshot),
+                        "text/markdown",
+                        renderCanonicalToolInputs(request, contextSnapshot)
                 ),
                 artifact(
                         COMPACT_FLOW_MANIFEST_ARTIFACT,
@@ -103,6 +114,78 @@ public class FlowExplorerArtifactService {
                 .map(this::snippetCard)
                 .reduce((left, right) -> left + System.lineSeparator() + System.lineSeparator() + right)
                 .orElse("- no snippet cards collected");
+    }
+
+    public String renderCanonicalToolInputs(
+            FlowExplorerJobStartRequest request,
+            FlowExplorerContextSnapshot contextSnapshot
+    ) {
+        var branchRef = contextSnapshot != null && StringUtils.hasText(contextSnapshot.resolvedRef())
+                ? contextSnapshot.resolvedRef()
+                : request.branch();
+        var builder = new StringBuilder();
+        builder.append("# Canonical Tool Inputs").append(System.lineSeparator()).append(System.lineSeparator());
+        builder.append("Use these values exactly when a Flow Explorer GitLab or operational context tool needs scope.")
+                .append(System.lineSeparator());
+        builder.append("Do not rediscover repository scope or rebuild endpoint use-case context unless a required value below is missing.")
+                .append(System.lineSeparator()).append(System.lineSeparator());
+
+        builder.append("## Request Scope").append(System.lineSeparator());
+        appendKeyValue(builder, "applicationName", request.systemId());
+        appendKeyValue(builder, "systemId", request.systemId());
+        appendKeyValue(builder, "endpointId", contextSnapshot != null ? contextSnapshot.endpointId() : request.endpointId());
+        appendKeyValue(builder, "httpMethod", contextSnapshot != null ? contextSnapshot.httpMethod() : request.httpMethod());
+        appendKeyValue(builder, "endpointPath", contextSnapshot != null ? contextSnapshot.endpointPath() : request.endpointPath());
+        appendKeyValue(builder, "branchRef", branchRef);
+        builder.append(System.lineSeparator());
+
+        builder.append("## GitLab Repository Scope").append(System.lineSeparator());
+        var repositories = contextSnapshot != null ? contextSnapshot.repositories() : List.<FlowExplorerRepositoryContext>of();
+        if (repositories.isEmpty()) {
+            builder.append("- repository scope not resolved; use `applicationName` for narrow discovery only if code evidence is required")
+                    .append(System.lineSeparator());
+        } else {
+            repositories.stream()
+                    .filter(FlowExplorerArtifactService::hasRepositoryIdentity)
+                    .forEach(repository -> builder.append("- ")
+                            .append(repository.selected() ? "selected " : "")
+                            .append("projectName: `").append(safe(repository.projectName())).append("`")
+                            .append(", projectPath: `").append(safe(repository.projectPath())).append("`")
+                            .append(", branchRef: `").append(safe(repository.resolvedRef())).append("`")
+                            .append(repository.attempted() ? ", attempted" : ", not-attempted")
+                            .append(System.lineSeparator()));
+        }
+        builder.append(System.lineSeparator());
+
+        builder.append("## Canonical File Paths").append(System.lineSeparator());
+        var fileInputs = canonicalFileInputs(contextSnapshot);
+        if (fileInputs.isEmpty()) {
+            builder.append("- no canonical file paths resolved").append(System.lineSeparator());
+        } else {
+            fileInputs.forEach(fileInput -> builder.append("- ")
+                    .append(StringUtils.hasText(fileInput.projectName())
+                            ? "`" + fileInput.projectName() + "` "
+                            : "")
+                    .append("`").append(fileInput.filePath()).append("`")
+                    .append(fileInput.methods().isEmpty()
+                            ? ""
+                            : " methods: " + String.join(", ", fileInput.methods()))
+                    .append(fileInput.snippetEmbedded() ? " (already embedded in snippet-cards.md)" : "")
+                    .append(System.lineSeparator()));
+        }
+        builder.append(System.lineSeparator());
+
+        builder.append("## Preferred GitLab Tool Arguments").append(System.lineSeparator());
+        builder.append("- Always pass `branchRef` exactly as listed above.").append(System.lineSeparator());
+        builder.append("- Use listed `projectName` and `filePath` values exactly; do not derive them from application labels.")
+                .append(System.lineSeparator());
+        builder.append("- For `gitlab_read_java_method_slice`, prefer `methodSelectors` with only `methodName`; `lineStart` is optional and only narrows overloads.")
+                .append(System.lineSeparator());
+        builder.append("- Do not pass `gitLabGroup`; backend resolves it from configuration or operational context.")
+                .append(System.lineSeparator());
+        builder.append("- Do not call `gitlab_list_available_repositories` or `gitlab_build_endpoint_use_case_context` just to confirm values listed here.")
+                .append(System.lineSeparator());
+        return builder.toString().trim();
     }
 
     public String responseContract() {
@@ -255,6 +338,87 @@ public class FlowExplorerArtifactService {
         }
     }
 
+    private int canonicalToolInputCount(FlowExplorerContextSnapshot contextSnapshot) {
+        return contextSnapshot != null
+                ? contextSnapshot.repositories().size() + canonicalFileInputs(contextSnapshot).size()
+                : 0;
+    }
+
+    private List<CanonicalFileInput> canonicalFileInputs(FlowExplorerContextSnapshot contextSnapshot) {
+        if (contextSnapshot == null) {
+            return List.of();
+        }
+
+        var selectedProjectName = contextSnapshot.repositories().stream()
+                .filter(repository -> repository.selected() && StringUtils.hasText(repository.projectName()))
+                .map(FlowExplorerRepositoryContext::projectName)
+                .findFirst()
+                .orElse(null);
+        var inputs = new LinkedHashMap<String, CanonicalFileInput>();
+
+        for (var node : contextSnapshot.flowNodes()) {
+            if (!StringUtils.hasText(node.filePath())) {
+                continue;
+            }
+            var methods = node.methods().stream()
+                    .map(this::methodSelectorLabel)
+                    .filter(StringUtils::hasText)
+                    .toList();
+            var key = canonicalFileKey(selectedProjectName, node.filePath());
+            inputs.putIfAbsent(key, new CanonicalFileInput(
+                    selectedProjectName,
+                    node.filePath().trim(),
+                    methods,
+                    false
+            ));
+        }
+
+        for (var card : contextSnapshot.snippetCards()) {
+            if (!StringUtils.hasText(card.filePath())) {
+                continue;
+            }
+            var projectName = StringUtils.hasText(card.projectName()) ? card.projectName().trim() : selectedProjectName;
+            var methods = card.methods().stream()
+                    .map(this::methodSelectorLabel)
+                    .filter(StringUtils::hasText)
+                    .toList();
+            var key = canonicalFileKey(projectName, card.filePath());
+            inputs.put(key, new CanonicalFileInput(
+                    projectName,
+                    card.filePath().trim(),
+                    methods,
+                    true
+            ));
+        }
+
+        return List.copyOf(inputs.values());
+    }
+
+    private static boolean hasRepositoryIdentity(FlowExplorerRepositoryContext repository) {
+        return repository != null
+                && (StringUtils.hasText(repository.projectName()) || StringUtils.hasText(repository.projectPath()));
+    }
+
+    private String methodSelectorLabel(FlowExplorerFlowMethod method) {
+        if (method == null || !StringUtils.hasText(method.methodName())) {
+            return "";
+        }
+        return "`" + method.methodName().trim() + "`" + lineRange(method.lineStart(), method.lineEnd());
+    }
+
+    private String canonicalFileKey(String projectName, String filePath) {
+        return safe(projectName) + ":" + safe(filePath);
+    }
+
+    private void appendKeyValue(StringBuilder builder, String key, String value) {
+        builder.append("- ").append(key).append(": `").append(safe(value)).append("`")
+                .append(System.lineSeparator());
+    }
+
+    private static String safe(String value) {
+        return StringUtils.hasText(value) ? value.trim() : "<missing>";
+    }
+
     private String flowNodeLine(FlowExplorerFlowNode node) {
         var methods = node.methods().isEmpty()
                 ? "methods: none"
@@ -296,5 +460,17 @@ public class FlowExplorerArtifactService {
             return "";
         }
         return lineEnd > lineStart ? " L" + lineStart + "-L" + lineEnd : " L" + lineStart;
+    }
+
+    private record CanonicalFileInput(
+            String projectName,
+            String filePath,
+            List<String> methods,
+            boolean snippetEmbedded
+    ) {
+
+        private CanonicalFileInput {
+            methods = methods != null ? List.copyOf(methods) : List.of();
+        }
     }
 }

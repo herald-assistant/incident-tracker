@@ -30,6 +30,7 @@ class FlowExplorerArtifactServiceTest {
 
         assertEquals(List.of(
                 FlowExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT,
+                FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT,
                 FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT,
                 FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT,
                 FlowExplorerArtifactService.COVERAGE_ARTIFACT,
@@ -51,6 +52,18 @@ class FlowExplorerArtifactServiceTest {
         assertEquals(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT,
                 contextJson.at("/contextSnapshot/snippetCards/0/contentArtifact").asText());
         assertFalse(contextJson.toString().contains("public CustomerResponse getCustomer"));
+
+        var canonicalToolInputs = artifactContents.get(FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT);
+        assertTrue(canonicalToolInputs.contains("# Canonical Tool Inputs"));
+        assertTrue(canonicalToolInputs.contains("applicationName: `crm-service`"));
+        assertTrue(canonicalToolInputs.contains("branchRef: `feature/FLOW-42`"));
+        assertTrue(canonicalToolInputs.contains("selected projectName: `crm-service`"));
+        assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));
+        assertTrue(canonicalToolInputs.contains("`src/main/java/com/example/CustomerController.java`"));
+        assertTrue(canonicalToolInputs.contains("methods: `getCustomer` L12-L24"));
+        assertTrue(canonicalToolInputs.contains("already embedded in snippet-cards.md"));
+        assertTrue(canonicalToolInputs.contains("Do not call `gitlab_list_available_repositories`"));
+        assertFalse(canonicalToolInputs.contains("gitLabGroup:"));
 
         var manifest = artifactContents.get(FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT);
         assertTrue(manifest.contains("[CONTROLLER]"));

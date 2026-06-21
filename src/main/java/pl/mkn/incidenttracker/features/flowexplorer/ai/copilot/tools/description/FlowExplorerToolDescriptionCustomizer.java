@@ -52,6 +52,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_JAVA_METHOD_SLICE.equals(normalizedToolName)) {
             return List.of(
                     "Use when a concrete Flow Explorer class and method are known and snippet-cards.md is insufficient.",
+                    "Use branchRef, projectName and filePath exactly from canonical-tool-inputs.md when available.",
                     "Pass minimal methodSelectors; usually methodName is enough and lineStart is optional.",
                     "Do not repeat methods already visible in snippet-cards.md unless you need a different overload, helper or related file.",
                     "Always provide reason as one short Polish sentence for the operator."
@@ -90,12 +91,14 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
             return List.of(
                     "Use when initial Flow Explorer artifacts did not resolve the endpoint flow or a follow-up asks to rebuild it.",
                     "Do not call just to confirm a flow that compact-flow-manifest.md already provides.",
+                    "Do not call to rediscover branchRef, projectName or filePath already listed in canonical-tool-inputs.md.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }
         if (normalizedToolName.startsWith(GitLabToolNames.PREFIX)) {
             return List.of(
-                    "Use only to close a concrete gap after checking compact-flow-manifest.md and snippet-cards.md.",
+                    "Use only to close a concrete gap after checking canonical-tool-inputs.md, compact-flow-manifest.md and snippet-cards.md.",
+                    "Use branchRef, projectName and filePath exactly from canonical-tool-inputs.md when available.",
                     "Prefer focused reads over broad repository discovery.",
                     "Always provide reason as one short Polish sentence for the operator."
             );

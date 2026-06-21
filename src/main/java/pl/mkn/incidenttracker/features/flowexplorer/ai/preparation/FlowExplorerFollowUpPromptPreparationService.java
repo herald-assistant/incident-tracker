@@ -50,6 +50,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Jezeli odpowiedz wymaga nowego kodu albo operational context, uzyj tylko dozwolonych tools i czytaj celowo.
                 - Nie zgaduj. Jezeli nie widzisz danych, powiedz co jest ograniczeniem widocznosci.
                 - Jezeli korygujesz albo doprecyzowujesz wynik initial, powiedz to jawnie.
+                - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`.
 
                 ## Initial request
                 applicationName: %s
@@ -63,9 +64,10 @@ public class FlowExplorerFollowUpPromptPreparationService {
 
                 ## Tool scope guidance
                 - GitLab tools do not read endpoint business scope from hidden ToolContext.
-                - When calling GitLab tools, pass `branchRef` explicitly from this prompt or artifacts.
-                - Pass `applicationName` and known `projectName` values when the tool needs repository scope.
+                - When calling GitLab tools, pass `branchRef` explicitly from `canonical-tool-inputs.md`.
+                - Pass `applicationName`, known `projectName` and `filePath` values from `canonical-tool-inputs.md` when the tool needs repository scope.
                 - Do not pass `gitLabGroup`; backend resolves it through operational context or configuration.
+                - Do not call repository discovery or endpoint context rebuild when `canonical-tool-inputs.md` already contains the needed project, branch and file path.
 
                 ## Initial result summary
                 %s
@@ -80,6 +82,9 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 %s
 
                 ## Available artifacts
+                %s
+
+                ## Canonical tool inputs
                 %s
 
                 ## Compact flow manifest
@@ -103,6 +108,10 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 renderHistory(request.history()),
                 textOrPlaceholder(request.message()),
                 artifactIndex(artifacts),
+                artifactContents.getOrDefault(
+                        FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT,
+                        artifactService.renderCanonicalToolInputs(request.initialRequest(), request.contextSnapshot())
+                ),
                 artifactContents.getOrDefault(
                         FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT,
                         "- endpoint flow not resolved"

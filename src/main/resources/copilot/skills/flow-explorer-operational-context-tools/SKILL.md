@@ -35,6 +35,11 @@ Operational context tools nie przyjmuja `gitLabGroup`, `gitLabBranch`,
 `environment` ani `correlationId` jako model-facing input. Podaj tylko krotki
 `reason`, gdy tool tego wymaga.
 
+Jezeli potrzebujesz wyszukac albo potwierdzic system, zacznij od
+`applicationName` albo `systemId` z `flow-explorer/canonical-tool-inputs.md`.
+Nie wyszukuj szeroko katalogu tylko po to, zeby potwierdzic system juz wybrany
+przez Flow Explorer UI.
+
 ## Kiedy Uzyc
 
 Uzyj `opctx_*`, gdy:

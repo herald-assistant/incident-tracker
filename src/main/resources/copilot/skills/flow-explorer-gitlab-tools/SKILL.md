@@ -13,9 +13,10 @@ wybranego endpointu.
 GitLab tools maja uzupelnic konkretna luke w rozumieniu endpoint flow. Nie
 sluza do masowego przegladania repozytorium.
 
-Zanim uzyjesz toola, sprawdz `compact-flow-manifest.md` i `snippet-cards.md`.
-Jezeli potrzebny fragment kodu jest juz w snippet cards, nie pobieraj go
-ponownie. Tool call ma dodac nowa informacja, a nie potwierdzic to samo.
+Zanim uzyjesz toola, sprawdz `canonical-tool-inputs.md`,
+`compact-flow-manifest.md` i `snippet-cards.md`. Jezeli potrzebny fragment kodu
+jest juz w snippet cards, nie pobieraj go ponownie. Tool call ma dodac nowa
+informacja, a nie potwierdzic to samo.
 
 Przed tool call nazwij:
 
@@ -39,12 +40,12 @@ Flow Explorer moze korzystac z:
 - `gitlab_find_flow_context`.
 
 GitLab tools nie czytaja business scope'u z hidden `ToolContext`. Gdy wolanie
-GitLab toola wymaga scope'u, przekaz jawnie:
+GitLab toola wymaga scope'u, przekaz jawnie wartosci z
+`flow-explorer/canonical-tool-inputs.md`:
 
-- `branchRef` z promptu, `context-snapshot.json` albo poprzedniego tool result,
+- `branchRef`,
 - `applicationName` jako nazwe aplikacji/systemu, jezeli pomaga zawęzic scope,
-- `projectName` z `context-snapshot.json`, `compact-flow-manifest.md`,
-  operational context albo poprzedniego GitLab tool result,
+- `projectName`,
 - `filePath`, `chunks` albo `methodSelectors` zgodnie z konkretnym toolem.
 
 Nie przekazuj `gitLabGroup`. Backend rozstrzyga GitLab group przez operational
@@ -54,7 +55,8 @@ context albo konfiguracje `analysis.gitlab.group`.
 
 Preferowana kolejnosc:
 
-1. Uzyj artefaktow: `compact-flow-manifest.md` i `snippet-cards.md`.
+1. Uzyj artefaktow: `canonical-tool-inputs.md`,
+   `compact-flow-manifest.md` i `snippet-cards.md`.
 2. Jezeli endpoint albo flow spine jest niepelny, uzyj
    `gitlab_build_endpoint_use_case_context`.
 3. Jezeli znasz plik, ale nie metode, uzyj `gitlab_read_repository_file_outline`.
@@ -87,14 +89,18 @@ Preferowana kolejnosc:
 - Nie czytaj niepowiazanych metod w tym samym beanie.
 - Nie czytaj ponownie metod, ktore sa juz obecne w `snippet-cards.md`, chyba ze
   pytanie wymaga innego overloadu, helpera albo powiazanego pliku.
-- Do kazdego GitLab tool call dodaj `branchRef`. Jezeli artefakt podaje
-  `applicationName`, przekaz go rowniez, chyba ze wynik poprzedniego toola
-  wskazal precyzyjniejszy scope.
+- Do kazdego GitLab tool call dodaj `branchRef` z
+  `canonical-tool-inputs.md`. Jezeli artefakt podaje `applicationName`,
+  `projectName` albo `filePath`, przekaz te wartosci dokladnie, chyba ze wynik
+  poprzedniego toola wskazal precyzyjniejszy scope.
 - Dla `gitlab_read_java_method_slice` podawaj `methodSelectors` z minimalnym
   inputem: zwykle wystarczy `methodName`. `lineStart` jest opcjonalne; uzyj go
   tylko gdy chcesz zawęzic wynik do jednego konkretnego overloadu. Gdy
   `lineStart` nie jest podany, tool zwroci wszystkie metody o tej nazwie w
   wybranej klasie.
+- Nie uzywaj `gitlab_list_available_repositories` ani
+  `gitlab_build_endpoint_use_case_context` do potwierdzania `projectName`,
+  `branchRef` albo `filePath`, ktore sa juz w `canonical-tool-inputs.md`.
 - Nie czytaj pelnych DTO/modeli, jezeli nazwa typu i kontrakt endpointu
   wystarczaja.
 - Nie czytaj mappera tylko dlatego, ze istnieje. Czytaj go, gdy zmienia
