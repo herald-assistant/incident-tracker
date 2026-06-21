@@ -7,22 +7,52 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultOverview;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSection;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class FlowExplorerAiResponseParser {
 
+    private static final Set<String> LEGACY_TOP_LEVEL_FIELDS = Set.of(
+            "endpointContract",
+            "flowSteps",
+            "businessRules",
+            "testScenarios",
+            "risksAndEdgeCases"
+    );
+
     private final ObjectMapper objectMapper;
 
     public FlowExplorerAiResponse parse(String assistantContent) {
+        return parseValidated(assistantContent, null, null);
+    }
+
+    public FlowExplorerAiResponse parse(
+            String assistantContent,
+            FlowExplorerAnalysisGoal requestedGoal,
+            List<FlowExplorerFocusArea> focusAreas
+    ) {
+        return parseValidated(assistantContent, requestedGoal, focusAreas)
+                .withRequestContext(requestedGoal, focusAreas);
+    }
+
+    private FlowExplorerAiResponse parseValidated(
+            String assistantContent,
+            FlowExplorerAnalysisGoal requestedGoal,
+            List<FlowExplorerFocusArea> focusAreas
+    ) {
         if (!StringUtils.hasText(assistantContent)) {
             return FlowExplorerAiResponse.parseFallback("AI response was empty.");
         }
@@ -30,6 +60,10 @@ public class FlowExplorerAiResponseParser {
         var node = parseJsonNode(assistantContent);
         if (node == null || !node.isObject()) {
             return FlowExplorerAiResponse.parseFallback("AI response was not valid JSON.");
+        }
+        var validationError = validationError(node, requestedGoal, focusAreas);
+        if (StringUtils.hasText(validationError)) {
+            return FlowExplorerAiResponse.parseFallback(validationError);
         }
 
         return new FlowExplorerAiResponse(
@@ -42,6 +76,103 @@ public class FlowExplorerAiResponseParser {
                 textList(node.get("sourceReferences")),
                 confidence(text(node, "confidence"))
         );
+    }
+
+    private String validationError(
+            JsonNode node,
+            FlowExplorerAnalysisGoal requestedGoal,
+            List<FlowExplorerFocusArea> focusAreas
+    ) {
+        for (var legacyField : LEGACY_TOP_LEVEL_FIELDS) {
+            if (node.has(legacyField)) {
+                return "AI response contains legacy top-level field: " + legacyField + ".";
+            }
+        }
+
+        var parsedGoal = goalStrict(text(node, "goal"));
+        if (parsedGoal == null) {
+            return "AI response contract violation: goal must be one of DEEP_DISCOVERY, TEST_SCENARIOS, RISK_DETECTION.";
+        }
+        if (requestedGoal != null && parsedGoal != requestedGoal) {
+            return "AI response goal does not match requested goal.";
+        }
+
+        var overview = node.get("overview");
+        if (overview == null || !overview.isObject()) {
+            return "AI response contract violation: overview must be an object.";
+        }
+        if (!StringUtils.hasText(text(overview, "markdown"))) {
+            return "AI response contract violation: overview.markdown is required.";
+        }
+        var overviewListError = validateListField(overview, "overview", "sourceRefs");
+        if (overviewListError != null) {
+            return overviewListError;
+        }
+
+        for (var fieldName : List.of("globalVisibilityLimits", "globalOpenQuestions", "sourceReferences")) {
+            var listError = validateListField(node, "response", fieldName);
+            if (listError != null) {
+                return listError;
+            }
+        }
+
+        var sections = node.get("sections");
+        if (sections == null || !sections.isArray()) {
+            return "AI response contract violation: sections must be an array.";
+        }
+        if (sections.size() != FlowExplorerResultSectionId.values().length) {
+            return "AI response contract violation: sections must contain exactly four items.";
+        }
+
+        var expectedModes = FlowExplorerResultSectionModeResolver.resolve(focusAreas).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        assignment -> assignment.id(),
+                        assignment -> assignment.mode()
+                ));
+        var validateModes = focusAreas != null;
+        var sectionIds = new LinkedHashSet<FlowExplorerResultSectionId>();
+
+        for (var section : sections) {
+            if (section == null || !section.isObject()) {
+                return "AI response contract violation: each section must be an object.";
+            }
+            var sectionId = sectionIdStrict(text(section, "id"));
+            if (sectionId == null) {
+                return "AI response contract violation: section.id must be one of BUSINESS_FLOW_RULES, VALIDATIONS, PERSISTENCE, INTEGRATIONS.";
+            }
+            if (!sectionIds.add(sectionId)) {
+                return "AI response contract violation: sections must not contain duplicate ids.";
+            }
+            var sectionMode = sectionModeStrict(text(section, "mode"));
+            if (sectionMode == null) {
+                return "AI response contract violation: section.mode must be compact or deep.";
+            }
+            if (validateModes && expectedModes.get(sectionId) != sectionMode) {
+                return "AI response contract violation: section.mode does not match request focusAreas.";
+            }
+            if (!StringUtils.hasText(text(section, "markdown"))) {
+                return "AI response contract violation: section.markdown is required for " + sectionId.name() + ".";
+            }
+            for (var fieldName : List.of("sourceRefs", "visibilityLimits", "openQuestions")) {
+                var listError = validateListField(section, sectionId.name(), fieldName);
+                if (listError != null) {
+                    return listError;
+                }
+            }
+        }
+
+        if (!sectionIds.equals(EnumSet.allOf(FlowExplorerResultSectionId.class))) {
+            return "AI response contract violation: sections must include all required ids.";
+        }
+        return null;
+    }
+
+    private String validateListField(JsonNode objectNode, String owner, String fieldName) {
+        var field = objectNode.get(fieldName);
+        if (field == null || field.isNull() || field.isArray()) {
+            return null;
+        }
+        return "AI response contract violation: " + owner + "." + fieldName + " must be an array.";
     }
 
     private FlowExplorerResultOverview overview(JsonNode node) {
@@ -83,35 +214,40 @@ public class FlowExplorerAiResponseParser {
     }
 
     private FlowExplorerAnalysisGoal goal(String value) {
-        if (!StringUtils.hasText(value)) {
-            return FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
-        }
+        var strict = goalStrict(value);
+        return strict != null ? strict : FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
+    }
+
+    private FlowExplorerAnalysisGoal goalStrict(String value) {
         try {
             return FlowExplorerAnalysisGoal.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            return FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
+        } catch (RuntimeException exception) {
+            return null;
         }
     }
 
     private FlowExplorerResultSectionId sectionId(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
+        return sectionIdStrict(value);
+    }
+
+    private FlowExplorerResultSectionId sectionIdStrict(String value) {
         try {
             return FlowExplorerResultSectionId.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
+        } catch (RuntimeException exception) {
             return null;
         }
     }
 
     private FlowExplorerResultSectionMode sectionMode(String value) {
-        if (!StringUtils.hasText(value)) {
-            return FlowExplorerResultSectionMode.COMPACT;
-        }
+        var strict = sectionModeStrict(value);
+        return strict != null ? strict : FlowExplorerResultSectionMode.COMPACT;
+    }
+
+    private FlowExplorerResultSectionMode sectionModeStrict(String value) {
         try {
             return FlowExplorerResultSectionMode.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            return FlowExplorerResultSectionMode.COMPACT;
+        } catch (RuntimeException exception) {
+            return null;
         }
     }
 
@@ -162,22 +298,7 @@ public class FlowExplorerAiResponseParser {
     }
 
     private JsonNode parseJsonNode(String assistantContent) {
-        var trimmed = assistantContent.trim();
-        var direct = readTree(trimmed);
-        if (direct != null) {
-            return direct;
-        }
-
-        var fencedJson = fencedJson(trimmed);
-        if (fencedJson != null) {
-            var fenced = readTree(fencedJson);
-            if (fenced != null) {
-                return fenced;
-            }
-        }
-
-        var objectJson = firstObjectJson(trimmed);
-        return objectJson != null ? readTree(objectJson) : null;
+        return readTree(assistantContent.trim());
     }
 
     private JsonNode readTree(String candidate) {
@@ -188,59 +309,4 @@ public class FlowExplorerAiResponseParser {
         }
     }
 
-    private String fencedJson(String content) {
-        var fenceStart = content.indexOf("```");
-        if (fenceStart < 0) {
-            return null;
-        }
-        var contentStart = content.indexOf('\n', fenceStart + 3);
-        if (contentStart < 0) {
-            return null;
-        }
-        var fenceEnd = content.indexOf("```", contentStart + 1);
-        if (fenceEnd < 0) {
-            return null;
-        }
-        var fenced = content.substring(contentStart + 1, fenceEnd).trim();
-        return StringUtils.hasText(fenced) ? fenced : null;
-    }
-
-    private String firstObjectJson(String content) {
-        var start = content.indexOf('{');
-        if (start < 0) {
-            return null;
-        }
-
-        var depth = 0;
-        var inString = false;
-        var escaped = false;
-        for (var index = start; index < content.length(); index++) {
-            var character = content.charAt(index);
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-            if (character == '\\') {
-                escaped = true;
-                continue;
-            }
-            if (character == '"') {
-                inString = !inString;
-                continue;
-            }
-            if (inString) {
-                continue;
-            }
-            if (character == '{') {
-                depth++;
-            }
-            if (character == '}') {
-                depth--;
-                if (depth == 0) {
-                    return content.substring(start, index + 1);
-                }
-            }
-        }
-        return null;
-    }
 }

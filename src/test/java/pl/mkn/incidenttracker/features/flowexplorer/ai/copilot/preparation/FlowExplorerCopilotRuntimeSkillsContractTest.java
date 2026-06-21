@@ -34,13 +34,18 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "flow-explorer-goal-test-scenarios",
                 FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME
         );
+        assertEquals(
+                "flow-explorer-goal-risk-detection",
+                FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME
+        );
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
                 "flow-explorer-gitlab-tools",
                 "flow-explorer-operational-context-tools",
                 "flow-explorer-result-contract",
                 "flow-explorer-goal-deep-discovery",
-                "flow-explorer-goal-test-scenarios"
+                "flow-explorer-goal-test-scenarios",
+                "flow-explorer-goal-risk-detection"
         ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
@@ -96,6 +101,17 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Antywzorce"
         ));
         assertSkillContainsSections("flow-explorer-goal-test-scenarios", List.of(
+                "## Cel",
+                "## Zasada Ogolna",
+                "## Overview",
+                "## Business flow/rules",
+                "## Validations",
+                "## Persistence",
+                "## Integrations",
+                "## Format Sekcji",
+                "## Antywzorce"
+        ));
+        assertSkillContainsSections("flow-explorer-goal-risk-detection", List.of(
                 "## Cel",
                 "## Zasada Ogolna",
                 "## Overview",

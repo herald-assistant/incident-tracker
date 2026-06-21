@@ -12,6 +12,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
     static final String RESULT_CONTRACT_SKILL_NAME = "flow-explorer-result-contract";
     static final String DEEP_DISCOVERY_SKILL_NAME = "flow-explorer-goal-deep-discovery";
     static final String TEST_SCENARIOS_SKILL_NAME = "flow-explorer-goal-test-scenarios";
+    static final String RISK_DETECTION_SKILL_NAME = "flow-explorer-goal-risk-detection";
 
     static List<String> initialSkillNames(FlowExplorerAnalysisGoal goal) {
         var skillNames = new java.util.ArrayList<>(List.of(
@@ -26,6 +27,9 @@ final class FlowExplorerCopilotRuntimeSkillNames {
         if (goal == FlowExplorerAnalysisGoal.TEST_SCENARIOS) {
             skillNames.add(TEST_SCENARIOS_SKILL_NAME);
         }
+        if (goal == FlowExplorerAnalysisGoal.RISK_DETECTION) {
+            skillNames.add(RISK_DETECTION_SKILL_NAME);
+        }
         return List.copyOf(skillNames);
     }
 
@@ -36,7 +40,8 @@ final class FlowExplorerCopilotRuntimeSkillNames {
                 OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME,
                 RESULT_CONTRACT_SKILL_NAME,
                 DEEP_DISCOVERY_SKILL_NAME,
-                TEST_SCENARIOS_SKILL_NAME
+                TEST_SCENARIOS_SKILL_NAME,
+                RISK_DETECTION_SKILL_NAME
         );
     }
 

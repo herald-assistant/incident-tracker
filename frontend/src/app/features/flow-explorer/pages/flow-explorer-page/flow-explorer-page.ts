@@ -31,6 +31,8 @@ import {
 } from '../../utils/flow-explorer-import-export.utils';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
+import { copyElementToClipboard } from '../../../../core/utils/clipboard.utils';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -65,8 +67,7 @@ const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
   {
     value: 'RISK_DETECTION',
     label: 'Risk detection',
-    hint: 'Coming next: risks, gaps and regression areas.',
-    disabled: true
+    hint: 'Find risks, visibility gaps and likely regression areas.'
   }
 ];
 
@@ -95,7 +96,12 @@ const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
 
 @Component({
   selector: 'app-flow-explorer-page',
-  imports: [MatTooltipModule, AnalysisFollowUpChatComponent, AnalysisStepsPanelComponent],
+  imports: [
+    MatTooltipModule,
+    AnalysisFollowUpChatComponent,
+    AnalysisStepsPanelComponent,
+    MarkdownContentComponent
+  ],
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
 })
@@ -104,6 +110,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly analysisApi = inject(AnalysisApiService);
   private readonly destroyRef = inject(DestroyRef);
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private resultCopyFeedbackHandle: number | null = null;
 
   readonly analysisGoals = ANALYSIS_GOALS;
   readonly focusAreaOptions = FOCUS_AREA_OPTIONS;
@@ -141,6 +148,7 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelOptionsError = signal('');
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
+  readonly resultCopied = signal(false);
 
   readonly filteredSystems = computed(() => {
     const query = normalizeSearch(this.systemSearch());
@@ -380,7 +388,10 @@ export class FlowExplorerPageComponent implements OnInit {
     return this.job()?.result?.aiResponse?.sections ?? [];
   });
   constructor() {
-    this.destroyRef.onDestroy(() => this.stopPolling());
+    this.destroyRef.onDestroy(() => {
+      this.stopPolling();
+      this.clearResultCopyFeedback();
+    });
   }
 
   ngOnInit(): void {
@@ -745,6 +756,26 @@ export class FlowExplorerPageComponent implements OnInit {
     downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), payload);
   }
 
+  protected async copyFlowExplorerResult(resultElement: HTMLElement): Promise<void> {
+    const copied = await copyElementToClipboard(resultElement);
+    if (!copied) {
+      this.jobError.set('Nie udalo sie skopiowac wyniku Flow Explorera do schowka.');
+      return;
+    }
+
+    this.jobError.set('');
+    this.resultCopied.set(true);
+    this.clearResultCopyFeedback();
+    this.resultCopyFeedbackHandle = window.setTimeout(() => {
+      this.resultCopied.set(false);
+      this.resultCopyFeedbackHandle = null;
+    }, 1600);
+  }
+
+  protected resultOverviewHint(markdown: string | null | undefined): string {
+    return markdownSummary(markdown) || this.selectedGoalLabel();
+  }
+
   protected isFocusAreaSelected(value: FlowExplorerFocusArea): boolean {
     return this.focusAreas().includes(value);
   }
@@ -999,11 +1030,21 @@ export class FlowExplorerPageComponent implements OnInit {
     this.pollingTimer = null;
   }
 
+  private clearResultCopyFeedback(): void {
+    if (this.resultCopyFeedbackHandle === null) {
+      return;
+    }
+    window.clearTimeout(this.resultCopyFeedbackHandle);
+    this.resultCopyFeedbackHandle = null;
+  }
+
   private resetJobState(): void {
     this.stopPolling();
+    this.clearResultCopyFeedback();
     this.job.set(null);
     this.exportState.set(null);
     this.jobError.set('');
+    this.resultCopied.set(false);
     this.isSubmitting.set(false);
     this.chatError.set('');
     this.isSendingChat.set(false);
@@ -1226,4 +1267,15 @@ export class FlowExplorerPageComponent implements OnInit {
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function markdownSummary(markdown: string | null | undefined): string {
+  return String(markdown || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
+    .replace(/[*_~>#-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

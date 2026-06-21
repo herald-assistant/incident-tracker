@@ -91,7 +91,11 @@ public class FlowExplorerJobService {
                     .withEvidenceSink(job::markAiToolEvidenceUpdated)
                     .withActivitySink(job::markAiActivity);
             var executionResult = executionGateway.execute(preparedSession);
-            var aiResponse = responseParser.parse(executionResult.content());
+            var aiResponse = responseParser.parse(
+                    executionResult.content(),
+                    request.goal(),
+                    request.focusAreas()
+            );
 
             job.markAiCompleted(aiResponse, executionResult.usage(), promptPreparation.prompt());
         } catch (RuntimeException exception) {

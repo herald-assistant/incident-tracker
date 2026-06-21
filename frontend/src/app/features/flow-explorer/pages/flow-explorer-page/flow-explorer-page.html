@@ -832,13 +832,17 @@
         }
 
         @if (job()?.result; as result) {
-          <section class="analysis-card flow-explorer-result" aria-label="Flow Explorer result">
+          <section
+            class="analysis-card flow-explorer-result"
+            aria-label="Flow Explorer result"
+            #flowExplorerResultElement
+          >
             <details class="flow-explorer-collapsible" open>
             <summary class="section-heading flow-explorer-result__heading flow-explorer-collapsible__summary">
               <div>
                 <p class="section-eyebrow">AI result</p>
                 <h2>{{ result.httpMethod }} {{ result.endpointPath }}</h2>
-                <p class="field-hint">{{ result.aiResponse?.overview?.markdown || selectedGoalLabel() }}</p>
+                <p class="field-hint">{{ resultOverviewHint(result.aiResponse?.overview?.markdown) }}</p>
               </div>
               <div class="flow-explorer-result__badges">
                 <span [class]="jobStatusPillClass(result.status)">{{ result.status }}</span>
@@ -846,6 +850,19 @@
                 <span [class]="confidencePillClass(result.aiResponse?.confidence || '')">
                   {{ result.aiResponse?.confidence || 'confidence n/a' }}
                 </span>
+                <button
+                  class="secondary-button flow-explorer-result__copy-button"
+                  type="button"
+                  data-clipboard-exclude
+                  [attr.aria-label]="resultCopied() ? 'Skopiowano wynik Flow Explorera' : 'Kopiuj caly wynik Flow Explorera'"
+                  [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj caly wynik'"
+                  (click)="$event.preventDefault(); $event.stopPropagation(); copyFlowExplorerResult(flowExplorerResultElement)"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ resultCopied() ? 'task_alt' : 'content_copy' }}
+                  </span>
+                  <span>{{ resultCopied() ? 'Copied' : 'Copy result' }}</span>
+                </button>
               </div>
             </summary>
 
@@ -877,7 +894,10 @@
                     {{ ai.overview.confidence || ai.confidence || 'confidence n/a' }}
                   </span>
                 </div>
-                <p class="flow-explorer-markdown">{{ ai.overview.markdown || 'AI did not provide an overview.' }}</p>
+                <app-markdown-content
+                  class="flow-explorer-markdown"
+                  [content]="ai.overview.markdown || 'AI did not provide an overview.'"
+                ></app-markdown-content>
                 @if (hasItems(ai.overview.sourceRefs)) {
                   <div class="flow-explorer-chip-list">
                     @for (sourceRef of ai.overview.sourceRefs; track $index) {
@@ -898,7 +918,10 @@
                     </div>
                     <span [class]="sectionModePillClass(section.mode)">{{ sectionModeLabel(section.mode) }}</span>
                   </div>
-                  <p class="flow-explorer-markdown">{{ section.markdown || 'No confirmed details for this section.' }}</p>
+                  <app-markdown-content
+                    class="flow-explorer-markdown"
+                    [content]="section.markdown || 'No confirmed details for this section.'"
+                  ></app-markdown-content>
                   @if (hasItems(section.sourceRefs)) {
                     <div class="flow-explorer-chip-list">
                       @for (sourceRef of section.sourceRefs; track $index) {

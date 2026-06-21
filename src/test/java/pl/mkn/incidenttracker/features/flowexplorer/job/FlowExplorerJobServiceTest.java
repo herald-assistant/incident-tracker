@@ -476,7 +476,7 @@ class FlowExplorerJobServiceTest {
                     {
                       "id": "BUSINESS_FLOW_RULES",
                       "title": "Business flow/rules",
-                      "mode": "compact",
+                      "mode": "deep",
                       "markdown": "Controller przyjmuje request.",
                       "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
                       "visibilityLimits": [],

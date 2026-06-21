@@ -173,6 +173,34 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
+    void shouldBuildSessionConfigWithRiskDetectionGoalSkillOnly() {
+        var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
+        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
+        var factory = sessionConfigRequestFactory();
+
+        var request = factory.create(
+                "flow-explorer-job-123",
+                policy,
+                riskDetectionRequest().aiOptions(),
+                riskDetectionRequest().goal()
+        );
+
+        assertSkillDirectories(
+                request.skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.RISK_DETECTION)
+        );
+        assertTrue(request.skillDirectories()
+                .stream()
+                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME)));
+        assertFalse(request.skillDirectories()
+                .stream()
+                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME)));
+        assertFalse(request.skillDirectories()
+                .stream()
+                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME)));
+    }
+
+    @Test
     void shouldBuildFollowUpSessionConfigWithoutResultContractSkill() {
         var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
@@ -344,6 +372,21 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES, FlowExplorerFocusArea.VALIDATIONS),
                 "Skup sie na scenariuszach regresyjnych CRM.",
+                "gpt-5.4",
+                "high"
+        );
+    }
+
+    private static FlowExplorerJobStartRequest riskDetectionRequest() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerAnalysisGoal.RISK_DETECTION,
+                List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
+                "Skup sie na ryzykach regresji CRM.",
                 "gpt-5.4",
                 "high"
         );

@@ -371,7 +371,7 @@ Wykonano:
 
 ### 004. Risk detection vertical slice
 
-Status: [ ]
+Status: [x]
 
 Potrzeba:
 
@@ -397,9 +397,27 @@ Ryzyka:
 - model moze opisywac hipotetyczne ryzyka jako fakty; skill musi wymagac
   rozroznienia faktu, inferencji, luki widocznosci i pytania otwartego.
 
+Wykonano:
+
+- dodano runtime skill `flow-explorer-goal-risk-detection` z konkretnym
+  template'em dla `Overview`, `Business flow/rules`, `Validations`,
+  `Persistence`, `Integrations` oraz trybow `compact`/`deep`,
+- skill wymaga rozroznienia ryzyk na: `Fakt z evidence`, `Inferencja`,
+  `Luka widocznosci` i `Pytanie otwarte`,
+- initial run dla `RISK_DETECTION` laduje goal-specific skill ryzyk i nie
+  laduje skilli `DEEP_DISCOVERY` ani `TEST_SCENARIOS`,
+- `FlowExplorerCopilotRuntimeSkillNames.allSkillNames()` zawiera skill ryzyk,
+  zeby kontrakt runtime i pliki skillow byly walidowane razem,
+- frontend Flow Explorera odblokowuje cel `Risk detection` w selectcie celu,
+- test UI potwierdza, ze wybor `Risk detection` trafia do request payload jako
+  `goal: RISK_DETECTION`,
+- prompt preparation test potwierdza `RISK_DETECTION` w canonical prompt,
+- dodano CRM-specific, zanonimizowany fixture parsera AI response dla
+  `RISK_DETECTION` z czterema sekcjami.
+
 ### 005. Cross-goal parser hardening i response validation
 
-Status: [ ]
+Status: [x]
 
 Potrzeba:
 
@@ -423,9 +441,34 @@ Ryzyka:
 - zbyt twardy parser moze czesciej failowac initial run; dlatego robimy go po
   wdrozeniu i przetestowaniu wszystkich goal-specific template'ow.
 
+Wykonano:
+
+- parser akceptuje teraz tylko czysty JSON object; tekst wokol JSON-a albo
+  fenced block trafia do kontrolowanego fallbacku,
+- parser wymaga znanego `goal` i dla initial job waliduje zgodnosc goal z
+  requestem,
+- parser wymaga `overview.markdown`,
+- parser wymaga dokladnie czterech sekcji z id:
+  `BUSINESS_FLOW_RULES`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
+- parser wymaga `section.markdown` w kazdej sekcji,
+- parser waliduje `section.mode` wobec requestowych `focusAreas` w initial
+  jobie,
+- parser odrzuca legacy top-level pola:
+  `endpointContract`, `flowSteps`, `businessRules`, `testScenarios`,
+  `risksAndEdgeCases`,
+- parser wymaga listowego shape'u dla pol:
+  `sourceRefs`, `visibilityLimits`, `openQuestions`,
+  `globalVisibilityLimits`, `globalOpenQuestions`, `sourceReferences`,
+- naruszenie kontraktu nie wywala joba; zwracany jest fallback z
+  `visibilityLimits` i pytaniem o ponowienie JSON w wymaganym formacie,
+- dodano pozytywne i negatywne testy parsera na CRM-specific,
+  zanonimizowanych fixture'ach,
+- `FlowExplorerJobService` przekazuje do parsera `goal` i `focusAreas`, zeby
+  walidacja mogla byc zgodna z requestem.
+
 ### 006. UI polish: composer, result view i copy
 
-Status: [ ]
+Status: [x]
 
 Potrzeba:
 
@@ -447,10 +490,17 @@ Co wykonujemy:
   - Persistence,
   - Integrations,
 - przy kazdej sekcji pokazywac badge `compact`/`deep`,
-- renderowac markdown sekcji w bezpieczny sposob zgodny z obecnym podejsciem
-  UI,
+- renderowac markdown sekcji przez wspolny `MarkdownContentComponent`
+  (`app-markdown-content`), tak jak w Incident Trackerze i wspolnych widokach
+  AI activity; nie renderowac markdown jako zwyklego `<p>` ani przez lokalny
+  parser Flow Explorera,
 - source refs, visibility limits i open questions pokazac w czytelnym,
   powtarzalnym wzorcu,
+- dodac akcje kopiowania calego rezultatu Flow Explorera do schowka,
+  wykorzystujac wspolne clipboard utilsy FE (`copyElementToClipboard` dla
+  sformatowanego wyniku albo `copyTextToClipboard` dla przygotowanego tekstu,
+  zaleznie od finalnego DOM), z wykluczeniem przyciskow przez
+  `data-clipboard-exclude`,
 - zachowac wspolny workflow UI: przebieg AI, tool evidence, usage, import/export
   i follow-up chat,
 - dodac testy FE.
@@ -459,6 +509,19 @@ Ryzyka:
 
 - zbyt wiele nested cards moze pogorszyc UX; sekcje powinny byc proste,
   szerokie i zgodne z aktualnym stylem Flow Explorera.
+
+Wykonano:
+
+- result view Flow Explorera renderuje `overview.markdown` i markdown czterech
+  sekcji przez wspolny `MarkdownContentComponent` (`app-markdown-content`),
+- naglowek wyniku pokazuje tekstowy skrot overview bez surowej skladni
+  Markdown,
+- karta wyniku ma akcje `Copy result`, ktora uzywa wspolnego
+  `copyElementToClipboard` i wyklucza przycisk przez `data-clipboard-exclude`,
+- dodano feedback `Copied` oraz reset feedbacku przy zmianie runu,
+- testy FE sprawdzaja uzycie wspolnego markdown componentu i kopiowanie wyniku
+  bez action controls,
+- wykonano `npm test -- --watch=false` oraz produkcyjny `npm run build`.
 
 ### 007. Import/export i diagnostic artifacts
 
@@ -552,9 +615,9 @@ Ryzyka:
 - [x] 001. Wspolny fundament kontraktu: goal, focus areas i result DTO.
 - [x] 002. Deep Discovery vertical slice.
 - [x] 003. Test scenarios vertical slice.
-- [ ] 004. Risk detection vertical slice.
-- [ ] 005. Cross-goal parser hardening i response validation.
-- [ ] 006. UI polish: composer, result view i copy.
+- [x] 004. Risk detection vertical slice.
+- [x] 005. Cross-goal parser hardening i response validation.
+- [x] 006. UI polish: composer, result view i copy.
 - [ ] 007. Import/export i diagnostic artifacts.
 - [ ] 008. Follow-up chat alignment.
 - [ ] 009. Cross-goal smoke test i korekta template'ow.
@@ -649,6 +712,18 @@ ze prompt, UI albo import/export zaczna korzystac z poprzedniego modelu.
 
 Status: implemented.
 
+### 007. Deep Discovery jako pierwszy aktywny cel end-to-end
+
+Decyzja: `DEEP_DISCOVERY` jest pierwszym aktywnym celem Flow Explorera
+wdrozonym end-to-end. Na tym etapie `TEST_SCENARIOS` i `RISK_DETECTION`
+pozostawaly w modelu i UI jako zaplanowane cele do osobnych vertical slice'ow.
+
+Powod: jeden kompletny cel pozwala zweryfikowac template, runtime skille,
+prompt, parser, UI, import/export i koszt odpowiedzi bez powielania bledow w
+trzech celach jednoczesnie.
+
+Status: implemented.
+
 ### 008. Test scenarios jako drugi aktywny cel end-to-end
 
 Decyzja: `TEST_SCENARIOS` jest drugim aktywnym celem Flow Explorera. Ma wlasny
@@ -662,15 +737,42 @@ danych testowych i zaleznosci integracyjnych bez standardowego follow-upu.
 
 Status: implemented.
 
-### 007. Deep Discovery jako pierwszy aktywny cel end-to-end
+### 009. Risk detection jako trzeci aktywny cel end-to-end
 
-Decyzja: `DEEP_DISCOVERY` jest pierwszym aktywnym celem Flow Explorera
-wdrozonym end-to-end. `TEST_SCENARIOS` i `RISK_DETECTION` zostaja w modelu i
-UI jako zaplanowane cele, ale w UI sa zablokowane do czasu ich osobnych
-vertical slice'ow.
+Decyzja: `RISK_DETECTION` jest trzecim aktywnym celem Flow Explorera. Ma wlasny
+runtime skill, jest wybierany przez initial session config i jest dostepny w UI
+bez feature flaga albo legacy mapperow.
 
-Powod: jeden kompletny cel pozwala zweryfikowac template, runtime skille,
-prompt, parser, UI, import/export i koszt odpowiedzi bez powielania bledow w
-trzech celach jednoczesnie.
+Powod: po wdrozeniu rozpoznania flow i scenariuszy testowych mozemy domknac
+zestaw celow o ocene ryzyk. Wynik ma nie tylko wskazywac ryzyka, ale tez
+rozrozniac fakt z evidence, inferencje, luke widocznosci i pytanie otwarte,
+zeby analityk albo tester nie traktowal hipotez jak potwierdzonego zachowania.
+
+Status: implemented.
+
+### 010. Parser waliduje shape kontraktu, nie jakosc merytoryczna
+
+Decyzja: parser Flow Explorera waliduje twardy shape odpowiedzi AI: czysty JSON,
+znany `goal`, cztery wymagane sekcje, wymagane pola `markdown`, zgodnosc
+`mode` z `focusAreas` oraz brak legacy top-level pol. Parser nie ocenia, czy
+opis jest merytorycznie wystarczajaco dobry.
+
+Powod: backend, UI, import/export i follow-up chat potrzebuja stabilnego
+kontraktu transportowego. Ocena jakosci rezultatu powinna zostac w skillach,
+smoke testach i korektach promptow, bo kod nie ma wystarczajacego kontekstu,
+zeby wiarygodnie oceniac wartosc analizy.
+
+Status: implemented.
+
+### 011. Flow Explorer uzywa wspolnego markdown renderera i clipboard utils
+
+Decyzja: wynik Flow Explorera renderuje pola `markdown` przez wspolny
+`MarkdownContentComponent`, a kopiowanie calego rezultatu uzywa wspolnego
+`copyElementToClipboard` z wykluczaniem kontrolek przez `data-clipboard-exclude`.
+
+Powod: przebieg i wynik feature'ow maja korzystac ze wspolnych mechanizmow UI
+tam, gdzie uzytkownik wykonuje znane czynnosci: czyta wynik AI, kopiuje go i
+wraca do niego w follow-upie. Flow Explorer nie powinien miec lokalnego parsera
+markdown ani osobnego mechanizmu clipboard.
 
 Status: implemented.

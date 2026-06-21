@@ -665,6 +665,22 @@ article.flow-explorer-select-option {
   align-items: center;
 }
 
+.flow-explorer-result__badges {
+  justify-content: flex-end;
+}
+
+.flow-explorer-result__copy-button {
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.flow-explorer-result__copy-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .flow-explorer-result-summary,
 .flow-explorer-contract-grid,
 .flow-explorer-section-grid,
@@ -752,7 +768,8 @@ article.flow-explorer-select-option {
 }
 
 .flow-explorer-markdown {
-  white-space: pre-line;
+  display: block;
+  min-width: 0;
 }
 
 .flow-explorer-result-subsection h4,

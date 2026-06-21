@@ -194,6 +194,33 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Prompt po przygotowaniu deterministic context');
   });
 
+  it('should start a risk detection job from the selected endpoint', () => {
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+    selectGoal(fixture, 'Risk detection');
+    toggleFocusArea(fixture, 'Integrations');
+    fixture.detectChanges();
+
+    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+    fixture.detectChanges();
+
+    expect(flowExplorerApi.startJob).toHaveBeenCalledWith({
+      systemId: 'crm-service',
+      endpointId: 'crm-api:GET /api/customers/{id}',
+      httpMethod: 'GET',
+      endpointPath: '/api/customers/{id}',
+      branch: 'main',
+      goal: 'RISK_DETECTION',
+      focusAreas: ['BUSINESS_FLOW_RULES', 'INTEGRATIONS'],
+      userInstructions: undefined,
+      model: undefined,
+      reasoningEffort: undefined
+    });
+  });
+
   it('should render structured AI result for a completed job', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -205,14 +232,48 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    const markdownBlocks = compiled.querySelectorAll('app-markdown-content.flow-explorer-markdown');
+    const headingHint = compiled.querySelector('.flow-explorer-result__heading .field-hint');
     expect(compiled.textContent).toContain('AI result');
     expect(compiled.textContent).toContain('Overview');
     expect(compiled.textContent).toContain('Deep Discovery');
     expect(compiled.textContent).toContain('The endpoint reads the requested customer');
+    expect(markdownBlocks.length).toBe(5);
+    expect(markdownBlocks[0]?.querySelector('strong')?.textContent).toBe('The endpoint');
+    expect(headingHint?.textContent).not.toContain('**');
     expect(compiled.textContent).toContain('Business flow/rules');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
     expect(compiled.textContent).toContain('Tokens 2,820');
+  });
+
+  it('should copy the completed Flow Explorer result without action controls', async () => {
+    const clipboard = mockRichClipboard();
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    try {
+      fixture.detectChanges();
+      selectSystem(fixture, 'CRM Service');
+      selectEndpoint(fixture, '/api/customers/{id}');
+
+      clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+      fixture.detectChanges();
+
+      clickButtonContaining(fixture.nativeElement, 'Copy result');
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      fixture.detectChanges();
+
+      const clipboardItems = clipboard.write.mock.calls[0]?.[0] as TestClipboardItem[] | undefined;
+      const copiedText = await readBlobText(clipboardItems?.[0]?.items['text/plain']);
+
+      expect(clipboard.write).toHaveBeenCalledTimes(1);
+      expect(copiedText).toContain('The endpoint reads the requested customer');
+      expect(copiedText).toContain('Business flow/rules');
+      expect(copiedText).not.toContain('Copy result');
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
+    } finally {
+      clipboard.restore();
+    }
   });
 
   it('should export completed Flow Explorer results to a JSON file', async () => {
@@ -578,6 +639,68 @@ function mockFileDownload(): {
   };
 }
 
+interface TestClipboardItem {
+  readonly items: Record<string, Blob>;
+}
+
+function mockRichClipboard(): {
+  write: ReturnType<typeof vi.fn>;
+  restore: () => void;
+} {
+  const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const originalClipboardItem = Object.getOwnPropertyDescriptor(globalThis, 'ClipboardItem');
+  const write = vi.fn(() => Promise.resolve());
+  class FlowExplorerTestClipboardItem implements TestClipboardItem {
+    constructor(readonly items: Record<string, Blob>) {}
+  }
+
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { write }
+  });
+  Object.defineProperty(globalThis, 'ClipboardItem', {
+    configurable: true,
+    value: FlowExplorerTestClipboardItem
+  });
+
+  return {
+    write,
+    restore: () => {
+      restoreProperty(navigator, 'clipboard', originalClipboard);
+      restoreProperty(globalThis, 'ClipboardItem', originalClipboardItem);
+    }
+  };
+}
+
+function restoreProperty(
+  target: object,
+  propertyName: string,
+  descriptor: PropertyDescriptor | undefined
+): void {
+  if (descriptor) {
+    Object.defineProperty(target, propertyName, descriptor);
+    return;
+  }
+  delete (target as Record<string, unknown>)[propertyName];
+}
+
+function readBlobText(blob: Blob | undefined): Promise<string> {
+  if (!blob) {
+    return Promise.resolve('');
+  }
+  const blobWithText = blob as Blob & { text?: () => Promise<string> };
+  if (typeof blobWithText.text === 'function') {
+    return blobWithText.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
 function setTextareaValue(nativeElement: HTMLElement, value: string): void {
   const textarea = nativeElement.querySelector('textarea') as HTMLTextAreaElement;
   textarea.value = value;
@@ -898,7 +1021,7 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       goal: 'DEEP_DISCOVERY',
       audience: 'business_or_system_analyst_tester',
       overview: {
-        markdown: 'The endpoint reads the requested customer and returns its current CRM profile.',
+        markdown: '**The endpoint** reads the requested customer and returns its current CRM profile.',
         confidence: 'high',
         sourceRefs: ['CustomerController.getCustomer L12-L24']
       },

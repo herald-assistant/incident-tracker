@@ -77,6 +77,17 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("1 snippet card(s) were truncated by GitLab read output limits"));
     }
 
+    @Test
+    void shouldRenderRiskDetectionGoalInCanonicalPrompt() {
+        var preparation = service.prepare(riskDetectionRequest(), contextSnapshot());
+        var prompt = preparation.prompt();
+
+        assertTrue(prompt.contains("goal: RISK_DETECTION"));
+        assertTrue(prompt.contains("focusAreas: [VALIDATIONS, INTEGRATIONS]"));
+        assertTrue(prompt.contains("reasoningEffort: high"));
+        assertTrue(prompt.contains("Skup sie na ryzykach regresji CRM."));
+    }
+
     private static FlowExplorerContextSnapshot contextSnapshot() {
         return contextSnapshot(false, false, false);
     }
@@ -91,6 +102,21 @@ class FlowExplorerPromptPreparationServiceTest {
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "Skup sie na jezyku zrozumialym dla testera.",
+                "gpt-5.4-mini",
+                "high"
+        );
+    }
+
+    private static FlowExplorerJobStartRequest riskDetectionRequest() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerAnalysisGoal.RISK_DETECTION,
+                List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
+                "Skup sie na ryzykach regresji CRM.",
                 "gpt-5.4-mini",
                 "high"
         );
