@@ -2,8 +2,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { finalize } from 'rxjs';
 
-import { ApiErrorResponse } from '../../../../core/models/analysis.models';
+import {
+  AnalysisAiModelOptionsResponse,
+  ApiErrorResponse
+} from '../../../../core/models/analysis.models';
+import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
 import {
   FlowExplorerAiResponse,
   FlowExplorerDocumentationPreset,
@@ -35,6 +40,7 @@ interface FlowExplorerChoice<T extends string> {
   value: T;
   label: string;
   hint: string;
+  disabled?: boolean;
 }
 
 interface FlowExplorerResultSection {
@@ -44,6 +50,12 @@ interface FlowExplorerResultSection {
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_FOCUS_AREAS = 4;
+const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
+  defaultModel: '',
+  defaultReasoningEffort: '',
+  defaultReasoningEfforts: [],
+  models: []
+};
 
 const DOCUMENTATION_PRESETS: FlowExplorerChoice<FlowExplorerDocumentationPreset>[] = [
   {
@@ -109,6 +121,7 @@ const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
 })
 export class FlowExplorerPageComponent implements OnInit {
   private readonly flowExplorerApi = inject(FlowExplorerApiService);
+  private readonly analysisApi = inject(AnalysisApiService);
   private readonly destroyRef = inject(DestroyRef);
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -129,11 +142,15 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly endpointSelectOpen = signal(false);
   readonly presetSelectOpen = signal(false);
   readonly focusAreasSelectOpen = signal(false);
+  readonly aiModelSelectOpen = signal(false);
+  readonly reasoningEffortSelectOpen = signal(false);
   readonly branch = signal('');
   readonly selectedSystemId = signal('');
   readonly selectedEndpointId = signal('');
   readonly documentationPreset = signal<FlowExplorerDocumentationPreset>('ANALYST_OVERVIEW');
   readonly focusAreas = signal<FlowExplorerFocusArea[]>(['BUSINESS_FLOW']);
+  readonly selectedAiModel = signal('');
+  readonly selectedReasoningEffort = signal('');
   readonly userInstructions = signal('');
   readonly job = signal<FlowExplorerJobStateSnapshot | null>(null);
   readonly exportState = signal<FlowExplorerExportState | null>(null);
@@ -141,6 +158,9 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly isSubmitting = signal(false);
   readonly chatError = signal('');
   readonly isSendingChat = signal(false);
+  readonly isAiModelOptionsLoading = signal(false);
+  readonly aiModelOptionsError = signal('');
+  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
 
   readonly filteredSystems = computed(() => {
     const query = normalizeSearch(this.systemSearch());
@@ -280,6 +300,102 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     return `${selected.length} / ${MAX_FOCUS_AREAS}: ${selected.map((choice) => choice.label).join(', ')}`;
   });
+  readonly aiModelOptions = computed<FlowExplorerChoice<string>[]>(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return [
+        {
+          value: this.selectedAiModel(),
+          label: 'Loading AI models...',
+          hint: 'Fetching model catalog from backend.',
+          disabled: true
+        }
+      ];
+    }
+
+    return [
+      {
+        value: '',
+        label: this.defaultModelLabel(),
+        hint: 'Use backend default model for this Flow Explorer run.'
+      },
+      ...this.aiModelCatalog().models.map((model) => ({
+        value: model.id,
+        label: this.modelLabel(model.id, model.name),
+        hint: model.supportsReasoningEffort
+          ? `Reasoning efforts: ${model.reasoningEfforts.join(', ') || 'backend default'}`
+          : 'This model does not expose reasoning effort choices.'
+      }))
+    ];
+  });
+  readonly availableReasoningEfforts = computed(() =>
+    this.reasoningEffortsForModel(this.selectedAiModel())
+  );
+  readonly reasoningEffortOptions = computed<FlowExplorerChoice<string>[]>(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return [
+        {
+          value: this.selectedReasoningEffort(),
+          label: 'Loading reasoning effort...',
+          hint: 'Fetching effort choices from backend.',
+          disabled: true
+        }
+      ];
+    }
+
+    return [
+      {
+        value: '',
+        label: this.defaultReasoningEffortLabel(),
+        hint: 'Use backend default exploration depth.'
+      },
+      ...this.availableReasoningEfforts().map((effort) => ({
+        value: effort,
+        label: this.reasoningEffortLabel(effort),
+        hint: this.reasoningEffortHint(effort)
+      }))
+    ];
+  });
+  readonly selectedAiModelLabel = computed(() => {
+    const selected = this.selectedAiModel();
+    if (!selected) {
+      return this.defaultModelLabel();
+    }
+    return this.aiModelOptions().find((option) => option.value === selected)?.label ?? selected;
+  });
+  readonly selectedAiModelMeta = computed(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return 'loading catalog';
+    }
+    if (this.aiModelOptionsError()) {
+      return 'catalog unavailable';
+    }
+    const selected = this.selectedAiModel();
+    if (!selected) {
+      return 'backend default';
+    }
+    const model = this.aiModelCatalog().models.find((candidate) => candidate.id === selected);
+    if (!model) {
+      return 'custom model';
+    }
+    return model.supportsReasoningEffort ? 'reasoning configurable' : 'fixed reasoning';
+  });
+  readonly selectedReasoningEffortLabel = computed(() => {
+    const selected = this.selectedReasoningEffort();
+    if (!selected) {
+      return this.defaultReasoningEffortLabel();
+    }
+    return this.reasoningEffortLabel(selected);
+  });
+  readonly selectedReasoningEffortMeta = computed(() => {
+    const selected = this.selectedReasoningEffort();
+    if (this.isAiModelOptionsLoading()) {
+      return 'loading effort choices';
+    }
+    if (!this.availableReasoningEfforts().length) {
+      return 'backend default';
+    }
+    return selected ? this.reasoningEffortHint(selected) : 'backend default exploration depth';
+  });
   readonly resultSections = computed(() => {
     const aiResponse = this.job()?.result?.aiResponse;
     if (!aiResponse) {
@@ -294,6 +410,7 @@ export class FlowExplorerPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadConfig();
     this.loadSystems();
+    this.loadAiModelOptions();
   }
 
   @HostListener('document:click')
@@ -302,6 +419,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.endpointSelectOpen.set(false);
     this.presetSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
+    this.aiModelSelectOpen.set(false);
+    this.reasoningEffortSelectOpen.set(false);
   }
 
   protected loadSystems(): void {
@@ -348,6 +467,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.endpointSelectOpen.set(false);
     this.presetSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
+    this.aiModelSelectOpen.set(false);
+    this.reasoningEffortSelectOpen.set(false);
   }
 
   protected toggleEndpointSelect(event: Event): void {
@@ -359,6 +480,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.systemSelectOpen.set(false);
     this.presetSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
+    this.aiModelSelectOpen.set(false);
+    this.reasoningEffortSelectOpen.set(false);
   }
 
   protected togglePresetSelect(event: Event): void {
@@ -367,6 +490,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
+    this.aiModelSelectOpen.set(false);
+    this.reasoningEffortSelectOpen.set(false);
   }
 
   protected toggleFocusAreasSelect(event: Event): void {
@@ -375,6 +500,28 @@ export class FlowExplorerPageComponent implements OnInit {
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.presetSelectOpen.set(false);
+    this.aiModelSelectOpen.set(false);
+    this.reasoningEffortSelectOpen.set(false);
+  }
+
+  protected toggleAiModelSelect(event: Event): void {
+    event.stopPropagation();
+    this.aiModelSelectOpen.update((isOpen) => !isOpen);
+    this.systemSelectOpen.set(false);
+    this.endpointSelectOpen.set(false);
+    this.presetSelectOpen.set(false);
+    this.focusAreasSelectOpen.set(false);
+    this.reasoningEffortSelectOpen.set(false);
+  }
+
+  protected toggleReasoningEffortSelect(event: Event): void {
+    event.stopPropagation();
+    this.reasoningEffortSelectOpen.update((isOpen) => !isOpen);
+    this.systemSelectOpen.set(false);
+    this.endpointSelectOpen.set(false);
+    this.presetSelectOpen.set(false);
+    this.focusAreasSelectOpen.set(false);
+    this.aiModelSelectOpen.set(false);
   }
 
   protected selectSystemFromDropdown(system: FlowExplorerSystemOption, event: Event): void {
@@ -398,6 +545,27 @@ export class FlowExplorerPageComponent implements OnInit {
   protected toggleFocusAreaFromDropdown(value: FlowExplorerFocusArea, event: Event): void {
     event.stopPropagation();
     this.toggleFocusArea(value);
+  }
+
+  protected selectAiModelFromDropdown(value: string, event: Event): void {
+    event.stopPropagation();
+    this.aiModelSelectOpen.set(false);
+    if (this.selectedAiModel() === value) {
+      return;
+    }
+    this.resetJobState();
+    this.selectedAiModel.set(value);
+    this.syncReasoningEffortSelection();
+  }
+
+  protected selectReasoningEffortFromDropdown(value: string, event: Event): void {
+    event.stopPropagation();
+    this.reasoningEffortSelectOpen.set(false);
+    if (this.selectedReasoningEffort() === value) {
+      return;
+    }
+    this.resetJobState();
+    this.selectedReasoningEffort.set(value);
   }
 
   protected onBranchChanged(value: string): void {
@@ -685,6 +853,18 @@ export class FlowExplorerPageComponent implements OnInit {
       : 'flow-explorer-select-option';
   }
 
+  protected aiModelOptionClass(value: string): string {
+    return this.selectedAiModel() === value
+      ? 'flow-explorer-select-option flow-explorer-select-option--selected'
+      : 'flow-explorer-select-option';
+  }
+
+  protected reasoningEffortOptionClass(value: string): string {
+    return this.selectedReasoningEffort() === value
+      ? 'flow-explorer-select-option flow-explorer-select-option--selected'
+      : 'flow-explorer-select-option';
+  }
+
   protected endpointMethodLabel(endpoint: FlowExplorerEndpointOption): string {
     return endpoint.methods.length > 0 ? endpoint.methods.join(', ') : endpoint.method || 'HTTP';
   }
@@ -754,6 +934,29 @@ export class FlowExplorerPageComponent implements OnInit {
         },
         error: (error: HttpErrorResponse) => {
           this.configError.set(this.errorMessage(error, 'Nie udalo sie pobrac default branch.'));
+        }
+      });
+  }
+
+  private loadAiModelOptions(): void {
+    this.isAiModelOptionsLoading.set(true);
+    this.aiModelOptionsError.set('');
+
+    this.analysisApi
+      .getAiModelOptions()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isAiModelOptionsLoading.set(false))
+      )
+      .subscribe({
+        next: (options) => {
+          this.aiModelCatalog.set(this.normalizeAiModelOptions(options));
+          this.syncReasoningEffortSelection();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
+          this.aiModelOptionsError.set(this.errorMessage(error, 'Nie udalo sie pobrac modeli AI.'));
+          this.syncReasoningEffortSelection();
         }
       });
   }
@@ -844,6 +1047,9 @@ export class FlowExplorerPageComponent implements OnInit {
     this.branch.set(job.branch || this.branch());
     this.documentationPreset.set(job.documentationPreset || 'ANALYST_OVERVIEW');
     this.focusAreas.set(job.focusAreas.length ? job.focusAreas.slice(0, MAX_FOCUS_AREAS) : ['BUSINESS_FLOW']);
+    this.selectedAiModel.set(job.aiModel || '');
+    this.selectedReasoningEffort.set(job.reasoningEffort || '');
+    this.syncReasoningEffortSelection();
     this.userInstructions.set('');
   }
 
@@ -852,6 +1058,8 @@ export class FlowExplorerPageComponent implements OnInit {
     selectedEndpoint: FlowExplorerEndpointOption
   ): FlowExplorerJobStartRequest {
     const userInstructions = this.userInstructions().trim();
+    const selectedAiModel = this.selectedAiModel().trim();
+    const selectedReasoningEffort = this.selectedReasoningEffort().trim();
     return {
       systemId: selectedSystem.systemId,
       endpointId: selectedEndpoint.endpointId,
@@ -860,7 +1068,9 @@ export class FlowExplorerPageComponent implements OnInit {
       branch: this.branch().trim() || undefined,
       documentationPreset: this.documentationPreset(),
       focusAreas: this.focusAreas(),
-      userInstructions: userInstructions || undefined
+      userInstructions: userInstructions || undefined,
+      model: selectedAiModel || undefined,
+      reasoningEffort: selectedReasoningEffort || undefined
     };
   }
 
@@ -920,6 +1130,94 @@ export class FlowExplorerPageComponent implements OnInit {
   private selectedFocusAreaChoices(): FlowExplorerChoice<FlowExplorerFocusArea>[] {
     const selected = this.focusAreas();
     return FOCUS_AREA_OPTIONS.filter((focusArea) => selected.includes(focusArea.value));
+  }
+
+  private normalizeAiModelOptions(
+    options: AnalysisAiModelOptionsResponse | null
+  ): AnalysisAiModelOptionsResponse {
+    if (!options) {
+      return EMPTY_AI_MODEL_OPTIONS;
+    }
+
+    return {
+      defaultModel: typeof options.defaultModel === 'string' ? options.defaultModel : '',
+      defaultReasoningEffort:
+        typeof options.defaultReasoningEffort === 'string' ? options.defaultReasoningEffort : '',
+      defaultReasoningEfforts: Array.isArray(options.defaultReasoningEfforts)
+        ? options.defaultReasoningEfforts.filter((effort) => typeof effort === 'string')
+        : [],
+      models: Array.isArray(options.models)
+        ? options.models
+            .filter((model) => model && typeof model.id === 'string')
+            .map((model) => ({
+              id: model.id,
+              name: typeof model.name === 'string' ? model.name : model.id,
+              supportsReasoningEffort: Boolean(model.supportsReasoningEffort),
+              reasoningEfforts: Array.isArray(model.reasoningEfforts)
+                ? model.reasoningEfforts.filter((effort) => typeof effort === 'string')
+                : [],
+              defaultReasoningEffort:
+                typeof model.defaultReasoningEffort === 'string'
+                  ? model.defaultReasoningEffort
+                  : ''
+            }))
+        : []
+    };
+  }
+
+  private syncReasoningEffortSelection(): void {
+    const availableEfforts = this.reasoningEffortsForModel(this.selectedAiModel());
+    const selectedReasoningEffort = this.selectedReasoningEffort().trim();
+    if (!availableEfforts.length) {
+      this.selectedReasoningEffort.set('');
+      return;
+    }
+    if (selectedReasoningEffort && !availableEfforts.includes(selectedReasoningEffort)) {
+      this.selectedReasoningEffort.set('');
+    }
+  }
+
+  private reasoningEffortsForModel(modelId: string): string[] {
+    const catalog = this.aiModelCatalog();
+    if (!modelId) {
+      return catalog.defaultReasoningEfforts;
+    }
+
+    const model = catalog.models.find((candidate) => candidate.id === modelId);
+    return model?.supportsReasoningEffort ? model.reasoningEfforts : [];
+  }
+
+  private defaultModelLabel(): string {
+    const defaultModel = this.aiModelCatalog().defaultModel;
+    return defaultModel ? `Default backend (${defaultModel})` : 'Default backend';
+  }
+
+  private defaultReasoningEffortLabel(): string {
+    const defaultEffort = this.aiModelCatalog().defaultReasoningEffort;
+    return defaultEffort ? `Default backend (${defaultEffort})` : 'Default backend';
+  }
+
+  private modelLabel(id: string, name: string): string {
+    if (!name || name === id) {
+      return id;
+    }
+
+    return `${name} (${id})`;
+  }
+
+  private reasoningEffortLabel(effort: string): string {
+    return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
+  }
+
+  private reasoningEffortHint(effort: string): string {
+    switch (normalizeSearch(effort)) {
+      case 'low':
+        return 'Artifact-first, minimal additional reads.';
+      case 'high':
+        return 'Deep exploration of edge cases and dependencies.';
+      default:
+        return 'Focused reads for missing primary flow details.';
+    }
   }
 
   private buildResultSections(aiResponse: FlowExplorerAiResponse): FlowExplorerResultSection[] {

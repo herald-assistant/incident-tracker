@@ -44,6 +44,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertSkillContainsSections("flow-explorer-orchestrator", List.of(
                 "## Rola",
                 "## Wejscie Sesji",
+                "## Sterowanie Analiza",
                 "## Algorytm Pracy",
                 "## Zasady Kosztowe",
                 "## Kiedy Uzyc Tools",
@@ -98,6 +99,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("Nie zgaduj `projectName`, `projectPath`"));
         assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
         assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
+        assertTrue(orchestrator.contains("`focusAreas` okreslaja kierunki analizy"));
+        assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja business scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
@@ -105,6 +108,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(gitLabTools.contains("`applicationName`"));
         assertTrue(gitLabTools.contains("Nie uzywaj `gitlab_list_available_repositories`"));
         assertTrue(gitLabTools.contains("Nie przekazuj `gitLabGroup`"));
+        assertTrue(gitLabTools.contains("Focus area wskazuje kierunek"));
+        assertTrue(gitLabTools.contains("Glebokoscia steruje `reasoningEffort`"));
         assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
     }
 

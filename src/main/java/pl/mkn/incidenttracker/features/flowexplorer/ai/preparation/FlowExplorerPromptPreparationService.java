@@ -32,7 +32,9 @@ public class FlowExplorerPromptPreparationService {
                 - Nie opisuj pelnych klas, jezeli wystarczy metoda, rola node'a albo kontrakt endpointu.
                 - Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`; to jest initial evidence przygotowane deterministycznie.
                 - Nie powtarzaj GitLab tool calls dla kodu, ktory jest juz widoczny w `snippet-cards.md`.
-                - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do preset/focus areas; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
+                - Zawsze zbuduj primary endpoint flow, a `focusAreas` traktuj jako kierunki analizy i akcenty, nie jako poziom glebokosci.
+                - Glebokosc eksploracji wynika z `reasoningEffort`: low = artifact-first i minimalne tool calls, medium = focused reads dla brakow primary flow, high = glebsze edge case'y i zaleznosci, nadal przez canonical inputs.
+                - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do primary flow albo kierunkow focusAreas zgodnie z reasoningEffort; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
                 - Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` i uzyj wartosci z tego artefaktu zamiast rediscovery.
                 - `context-snapshot.json` jest manifestem bez pelnego kodu snippetow; pelny kod jest w `snippet-cards.md`.
                 - Artefakty sa logicznym payloadem sesji, a kluczowe tresci sa osadzone inline ponizej.
@@ -46,6 +48,7 @@ public class FlowExplorerPromptPreparationService {
                 branchRef: %s
                 documentationPreset: %s
                 focusAreas: %s
+                reasoningEffort: %s
                 userInstructions:
                 %s
 
@@ -94,6 +97,7 @@ public class FlowExplorerPromptPreparationService {
                 contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch(),
                 request.documentationPreset(),
                 request.focusAreas(),
+                reasoningEffort(request),
                 userInstructions(request.userInstructions()),
                 contextSnapshot != null && contextSnapshot.coverage() != null
                         ? contextSnapshot.coverage().endpointResolved()
@@ -150,6 +154,14 @@ public class FlowExplorerPromptPreparationService {
         return StringUtils.hasText(userInstructions)
                 ? userInstructions.trim()
                 : "(none)";
+    }
+
+    private String reasoningEffort(FlowExplorerJobStartRequest request) {
+        if (request == null || request.aiOptions() == null
+                || !StringUtils.hasText(request.aiOptions().reasoningEffort())) {
+            return "default backend";
+        }
+        return request.aiOptions().reasoningEffort();
     }
 
     private String artifactIndex(List<CopilotRenderedArtifact> artifacts) {

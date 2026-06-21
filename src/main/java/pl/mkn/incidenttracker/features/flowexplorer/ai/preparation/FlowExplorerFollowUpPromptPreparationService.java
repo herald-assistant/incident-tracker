@@ -5,6 +5,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatTurn;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
@@ -51,6 +52,8 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Nie zgaduj. Jezeli nie widzisz danych, powiedz co jest ograniczeniem widocznosci.
                 - Jezeli korygujesz albo doprecyzowujesz wynik initial, powiedz to jawnie.
                 - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`.
+                - `focusAreas` z initial request sa kierunkiem analizy, nie poziomem glebokosci.
+                - `reasoningEffort` z initial request steruje glebokoscia dodatkowego czytania: low = minimalnie, medium = focused reads dla brakow, high = glebsze edge case'y i zaleznosci.
 
                 ## Initial request
                 applicationName: %s
@@ -61,6 +64,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 branchRef: %s
                 documentationPreset: %s
                 focusAreas: %s
+                reasoningEffort: %s
 
                 ## Tool scope guidance
                 - GitLab tools do not read endpoint business scope from hidden ToolContext.
@@ -103,6 +107,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                         : request.initialRequest().branch(),
                 request.initialRequest().documentationPreset(),
                 request.initialRequest().focusAreas(),
+                reasoningEffort(request.initialRequest()),
                 artifactContents.getOrDefault(INITIAL_RESULT_ARTIFACT, "- initial result unavailable"),
                 renderEvidenceSummary(request.toolEvidenceSections()),
                 renderHistory(request.history()),
@@ -201,6 +206,14 @@ public class FlowExplorerFollowUpPromptPreparationService {
 
     private static String textOrPlaceholder(String value) {
         return StringUtils.hasText(value) ? value.trim() : "(not available)";
+    }
+
+    private static String reasoningEffort(FlowExplorerJobStartRequest request) {
+        if (request == null || request.aiOptions() == null
+                || !StringUtils.hasText(request.aiOptions().reasoningEffort())) {
+            return "default backend";
+        }
+        return request.aiOptions().reasoningEffort();
     }
 
     private static void appendLine(StringBuilder builder, String line) {

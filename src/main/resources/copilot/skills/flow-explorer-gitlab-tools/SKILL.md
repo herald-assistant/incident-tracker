@@ -73,6 +73,10 @@ Preferowana kolejnosc:
 
 ## Co Czytac Wedlug Focus Area
 
+Focus area wskazuje kierunek, w ktorym masz poglębic juz ustalony primary flow.
+Nie oznacza, ze inne elementy flow mozna pominac, ani ze wolno zwiekszyc
+glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
+
 - `BUSINESS_FLOW`: controller, use case service, decyzje biznesowe.
 - `VALIDATIONS`: request model, validator, guard clause, error boundary.
 - `PERSISTENCE`: repository method, query predicate, entity status fields,
@@ -101,6 +105,13 @@ Preferowana kolejnosc:
 - Nie uzywaj `gitlab_list_available_repositories` ani
   `gitlab_build_endpoint_use_case_context` do potwierdzania `projectName`,
   `branchRef` albo `filePath`, ktore sa juz w `canonical-tool-inputs.md`.
+- Dla `reasoningEffort=low` wykonaj dodatkowy GitLab read tylko dla krytycznej
+  luki, ktora moze zmienic wynik dla uzytkownika.
+- Dla `reasoningEffort=medium` czytaj brakujace metody primary flow i
+  najwazniejsze elementy wynikajace z focus areas.
+- Dla `reasoningEffort=high` mozesz czytac pomocnicze walidatory, mappery,
+  repository details albo klientow integracyjnych, jezeli maja realny wplyw na
+  scenariusze, ryzyka albo edge case'y.
 - Nie czytaj pelnych DTO/modeli, jezeli nazwa typu i kontrakt endpointu
   wystarczaja.
 - Nie czytaj mappera tylko dlatego, ze istnieje. Czytaj go, gdy zmienia

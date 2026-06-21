@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-orchestrator
-description: Glowny starter Flow Explorera - stabilizuje endpoint flow na podstawie artefaktow, dobiera poglebienia zgodnie z preset/focus areas/userInstructions i pilnuje kosztu tokenow.
+description: Glowny starter Flow Explorera - stabilizuje endpoint flow na podstawie artefaktow, traktuje focusAreas jako kierunki analizy, reasoningEffort jako glebokosc i pilnuje kosztu tokenow.
 ---
 
 # Skill Orkiestratora Flow Explorera
@@ -65,6 +65,29 @@ Hidden `ToolContext` jest tylko techniczna mechanika runtime. Nie zakladaj, ze
 zawiera business scope endpointu. Nie przekazuj `gitLabGroup` do tools; backend
 rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
 
+## Sterowanie Analiza
+
+`documentationPreset` okresla odbiorce, format i ton wyniku.
+
+`focusAreas` okreslaja kierunki analizy i akcenty w wyniku. Nie sa filtrem,
+ktory pozwala pominac primary endpoint flow, i nie sa poziomem glebokosci.
+Zawsze najpierw zbuduj glowny flow endpointu: HTTP entrypoint -> use case /
+service -> walidacje/mapowanie -> persistence/integracje -> response/error
+boundary. Dopiero potem rozwin te elementy, ktore odpowiadaja `focusAreas`.
+
+`reasoningEffort` okresla glebokosc eksploracji:
+
+- `low`: bazuj prawie wylacznie na artefaktach deterministic context. Uzyj
+  toola tylko dla jednego krytycznego braku, bez ktorego wynik bylby mylacy.
+- `medium`: uzupelnij brakujace elementy primary flow focused readami. Nie
+  wykonuj szerokiego discovery ani nie czytaj pomocniczych klas dla samego
+  potwierdzenia.
+- `high`: mozesz zejsc glebiej w walidatory, mappery, repozytoria, klientow
+  integracyjnych i edge case'y, ale nadal uzywaj canonical inputs i focused
+  reads zamiast szerokiego przegladania repozytorium.
+
+Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
+
 ## Algorytm Pracy
 
 1. Przeczytaj `context-snapshot.json` i `compact-flow-manifest.md`.
@@ -83,7 +106,8 @@ rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
    - response albo error boundary.
 6. Sprawdz `coverage.json` i limitations. Braki wpisuj do `visibilityLimits`,
    chyba ze mozna je tanio uzupelnic toolami.
-7. Dobierz poglebienia tylko dla wybranych `focusAreas`.
+7. Uzyj `focusAreas` jako kierunkow, ktore decyduja co opisac mocniej po
+   zbudowaniu primary flow.
 8. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
    dotyczy kodu aplikacji, przekaz tez `applicationName`, znany `projectName`
    i `filePath` z `canonical-tool-inputs.md`.
@@ -104,6 +128,8 @@ rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
   pasuje do pytania albo parser Java nie wystarcza.
 - Jeden tool call musi odpowiadac na konkretne pytanie, np. "czy walidacja X
   blokuje request?", a nie "dowiedz sie wiecej".
+- Liczbe i glebokosc tool calli dostosuj do `reasoningEffort`, a nie do liczby
+  `focusAreas`.
 
 ## Kiedy Uzyc Tools
 

@@ -59,6 +59,12 @@ Pisz po polsku, prostym jezykiem dla analityka albo testera. Techniczne nazwy
 endpointow, klas, metod, tools, pol JSON i plikow zostaw w oryginalnym
 brzmieniu.
 
+`documentationPreset` ustawia odbiorce i format wyniku. `focusAreas` ustawiaja
+akcenty, ale nie zwalniaja z opisania glownego flow endpointu. `reasoningEffort`
+nie jest polem odpowiedzi, ale powinno byc widoczne w glebokosci uzasadnien:
+niski effort oznacza krotsze, bardziej artifact-first wyjasnienie, wysoki effort
+moze zawierac wiecej potwierdzonych edge case'ow i zaleznosci.
+
 Kazdy krok flow powinien miec:
 
 - krotki tytul,
@@ -103,4 +109,5 @@ Nie:
 - ukrywaj limity widocznosci,
 - mieszaj source refs z hipotezami,
 - tworz dlugiego technicznego eseju w polach dla analityka,
-- ignoruj `documentationPreset` i `focusAreas`.
+- ignoruj `documentationPreset` i `focusAreas`,
+- traktuj `focusAreas` jako pozwolenie na pominiecie primary endpoint flow.

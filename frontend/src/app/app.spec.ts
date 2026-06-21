@@ -246,6 +246,12 @@ describe('App', () => {
     flushUiConfig(http, 'ChatCLP');
     http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
     http.expectOne('/api/flow-explorer/systems').flush([]);
+    http.expectOne('/analysis/ai/options').flush({
+      defaultModel: 'gpt-5.4',
+      defaultReasoningEffort: 'medium',
+      defaultReasoningEfforts: ['low', 'medium', 'high'],
+      models: []
+    });
     await fixture.whenStable();
     fixture.detectChanges();
 

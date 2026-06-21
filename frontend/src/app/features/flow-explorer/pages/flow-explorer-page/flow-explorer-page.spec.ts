@@ -2,6 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
+import { AnalysisAiModelOptionsResponse } from '../../../../core/models/analysis.models';
+import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
 import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStateSnapshot,
@@ -13,8 +15,12 @@ import { FlowExplorerPageComponent } from './flow-explorer-page';
 
 describe('FlowExplorerPageComponent', () => {
   let flowExplorerApi: FlowExplorerApiServiceMock;
+  let analysisApi: AnalysisApiServiceMock;
 
   beforeEach(async () => {
+    analysisApi = {
+      getAiModelOptions: vi.fn(() => of(aiModelOptions()))
+    };
     flowExplorerApi = {
       getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
       getSystems: vi.fn(() => of([systemOption('crm-service'), systemOption('billing-core')])),
@@ -47,7 +53,10 @@ describe('FlowExplorerPageComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [FlowExplorerPageComponent],
-      providers: [{ provide: FlowExplorerApiService, useValue: flowExplorerApi }]
+      providers: [
+        { provide: FlowExplorerApiService, useValue: flowExplorerApi },
+        { provide: AnalysisApiService, useValue: analysisApi }
+      ]
     }).compileComponents();
   });
 
@@ -61,10 +70,12 @@ describe('FlowExplorerPageComponent', () => {
 
     expect(flowExplorerApi.getConfig).toHaveBeenCalledTimes(1);
     expect(flowExplorerApi.getSystems).toHaveBeenCalledTimes(1);
+    expect(analysisApi.getAiModelOptions).toHaveBeenCalledTimes(1);
     expect(branchInput.value).toBe('main');
     expect(compiled.textContent).toContain('Endpoint documentation workspace');
     expect(compiled.textContent).toContain('Select application');
     expect(compiled.textContent).toContain('2 applications');
+    expect(compiled.textContent).toContain('Default backend (gpt-5.4)');
     expect(compiled.textContent).not.toContain('Customer relationship core API.');
   });
 
@@ -152,6 +163,8 @@ describe('FlowExplorerPageComponent', () => {
     selectEndpoint(fixture, '/api/customers/{id}');
     selectPreset(fixture, 'Test preparation');
     toggleFocusArea(fixture, 'Validations');
+    selectAiModel(fixture, 'GPT-5.4 mini');
+    selectReasoningEffort(fixture, 'High');
     setTextareaValue(
       fixture.nativeElement,
       'Skup sie na negatywnych scenariuszach walidacji statusu klienta.'
@@ -169,7 +182,9 @@ describe('FlowExplorerPageComponent', () => {
       branch: 'main',
       documentationPreset: 'TEST_PREPARATION',
       focusAreas: ['BUSINESS_FLOW', 'VALIDATIONS'],
-      userInstructions: 'Skup sie na negatywnych scenariuszach walidacji statusu klienta.'
+      userInstructions: 'Skup sie na negatywnych scenariuszach walidacji statusu klienta.',
+      model: 'gpt-5.4-mini',
+      reasoningEffort: 'high'
     });
     expect(flowExplorerApi.getJob).toHaveBeenCalledWith('flow-job-1');
 
@@ -428,6 +443,7 @@ type FlowExplorerApiServiceMock = Pick<
   FlowExplorerApiService,
   'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
 >;
+type AnalysisApiServiceMock = Pick<AnalysisApiService, 'getAiModelOptions'>;
 
 function setInputValue(nativeElement: HTMLElement, selector: string, value: string): void {
   const input = nativeElement.querySelector(selector) as HTMLInputElement;
@@ -462,6 +478,14 @@ function openFocusAreasSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
 }
 
+function openAiModelSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[4]?.click();
+}
+
+function openReasoningEffortSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[5]?.click();
+}
+
 function clickLoadEndpoints(nativeElement: HTMLElement): void {
   nativeElement.querySelector<HTMLButtonElement>('.flow-explorer-control-actions button')?.click();
 }
@@ -488,6 +512,22 @@ function selectPreset(fixture: ComponentFixture<FlowExplorerPageComponent>, labe
 function toggleFocusArea(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
   const nativeElement = fixture.nativeElement as HTMLElement;
   openFocusAreasSelect(nativeElement);
+  fixture.detectChanges();
+  buttonContaining(nativeElement, label)?.click();
+  fixture.detectChanges();
+}
+
+function selectAiModel(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openAiModelSelect(nativeElement);
+  fixture.detectChanges();
+  buttonContaining(nativeElement, label)?.click();
+  fixture.detectChanges();
+}
+
+function selectReasoningEffort(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openReasoningEffortSelect(nativeElement);
   fixture.detectChanges();
   buttonContaining(nativeElement, label)?.click();
   fixture.detectChanges();
@@ -567,6 +607,30 @@ function systemOption(systemId: string): FlowExplorerSystemOption {
     repositoryCount: crm ? 2 : 1,
     codeSearchScopeCount: 1,
     ownerTeamIds: crm ? ['team-crm'] : ['team-billing']
+  };
+}
+
+function aiModelOptions(): AnalysisAiModelOptionsResponse {
+  return {
+    defaultModel: 'gpt-5.4',
+    defaultReasoningEffort: 'medium',
+    defaultReasoningEfforts: ['low', 'medium', 'high'],
+    models: [
+      {
+        id: 'gpt-5.4-mini',
+        name: 'GPT-5.4 mini',
+        supportsReasoningEffort: true,
+        reasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium'
+      },
+      {
+        id: 'crm-fast-model',
+        name: 'CRM fast model',
+        supportsReasoningEffort: false,
+        reasoningEfforts: [],
+        defaultReasoningEffort: ''
+      }
+    ]
   };
 }
 

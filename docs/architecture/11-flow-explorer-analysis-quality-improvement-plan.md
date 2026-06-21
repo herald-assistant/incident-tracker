@@ -333,14 +333,38 @@ Cel kroku:
 Zamienic miekkie guidance w egzekwowalna polityke runtime i ograniczyc koszt
 bez polegania wylacznie na posluszenstwie modelu.
 
-### 003. Snippet ranking pod primary flow i focus areas
+### 003. Skill guidance i UI sterowania modelem AI
+
+- [x] Omowic krok i zatwierdzic zakres.
+- [x] Dostosowac runtime skille Flow Explorera: `focusAreas` sa kierunkiem
+  analizy, a nie poziomem glebokosci.
+- [x] Dostosowac runtime skille Flow Explorera: `reasoningEffort` steruje
+  glebokoscia eksploracji i uzasadnieniem dodatkowych tool calli.
+- [x] Doprecyzowac prompt, ze wynik zawsze zaczyna od primary endpoint flow,
+  a `focusAreas` tylko przesuwaja akcenty.
+- [x] Dodac w UI Flow Explorera wybor modelu AI i reasoning effort z katalogu
+  `GET /analysis/ai/options`.
+- [x] Zachowac spojnosc UX z Incident Trackerem i nie tworzyc osobnego
+  zrodla prawdy dla modeli AI.
+- [x] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Ustawic prawidlowy kontrakt sterowania analiza: `focusAreas` mowia, gdzie AI
+ma patrzec, `documentationPreset` mowi dla kogo i w jakim formacie pisac, a
+`reasoningEffort` mowi jak gleboko wolno zejsc w dodatkowe czytanie kodu i
+operational context. UI ma pozwolic operatorowi jawnie wybrac model i effort,
+tak jak w Incident Trackerze.
+
+### 004. Snippet ranking pod primary flow i focus areas
 
 - [ ] Omowic krok i zatwierdzic zakres.
 - [ ] Dodac albo dopracowac ranking kandydatow snippetow w
   `features.flowexplorer`.
 - [ ] Priorytetyzowac primary use-case service i mapper wejscia przed
   secondary read/response details.
-- [ ] Uwzglednic focus areas w rankingu.
+- [ ] Uwzglednic focus areas jako kierunek rankingu, nie jako poziom
+  glebokosci analizy.
 - [ ] Dodac coverage diagnostics: primary roles covered/missing.
 - [ ] Dodac testy CRM-specific i zanonimizowane.
 
@@ -349,7 +373,7 @@ Cel kroku:
 Sprawic, zeby initial context przenosil najwieksza wartosc merytoryczna w
 malym budzecie tokenowym.
 
-### 004. Baseline quality report model
+### 005. Baseline quality report model
 
 - [ ] Omowic krok i zatwierdzic zakres.
 - [ ] Dodac feature-local model quality report dla Flow Explorer runu.
@@ -364,7 +388,7 @@ Po wprowadzeniu pierwszych zmian kosztowych mierzymy run w powtarzalny sposob.
 To pozwoli sprawdzac, czy canonical inputs, policy i ranking snippetow realnie
 zmniejszaja koszt oraz redundantne tool calle.
 
-### 005. Ranking i grupowanie limitations/next reads
+### 006. Ranking i grupowanie limitations/next reads
 
 - [ ] Omowic krok i zatwierdzic zakres.
 - [ ] Rozdzielic limitations na technical/user-facing/AI-guidance.
@@ -377,7 +401,7 @@ Cel kroku:
 
 Poprawic czytelnosc wyniku i ograniczyc pokuse nadmiernego doczytywania kodu.
 
-### 006. Result contract: fact vs inference vs unknown
+### 007. Result contract: fact vs inference vs unknown
 
 - [ ] Omowic krok i zatwierdzic zakres.
 - [ ] Dostosowac runtime skill `flow-explorer-result-contract`.
@@ -390,7 +414,7 @@ Cel kroku:
 Poprawic merytoryczna wiarygodnosc wyniku i ograniczyc ryzyko, ze AI opisze
 inferencje jako potwierdzony fakt.
 
-### 007. Export result vs export diagnostics
+### 008. Export result vs export diagnostics
 
 - [ ] Omowic krok i zatwierdzic zakres.
 - [ ] Rozdzielic export user-facing od diagnostic export.
@@ -525,6 +549,28 @@ potrzebowac dodatkowego discovery po nowym pytaniu.
 
 Status: implemented and verified.
 
+### 007. Skill guidance i UI sterowania modelem AI
+
+Decyzja: Flow Explorer traktuje `focusAreas` jako kierunki analizy i akcenty
+wyniku, a nie jako poziom glebokosci ani filtr pozwalajacy pominac primary
+endpoint flow. `reasoningEffort` jest jawna kontrola glebokosci eksploracji:
+`low` oznacza artifact-first i minimalne tool calls, `medium` focused reads
+dla brakow primary flow, a `high` glebsze edge case'y i zaleznosci, nadal przez
+canonical inputs i focused reads.
+
+Decyzja UI: ekran Flow Explorera pobiera katalog modeli z tego samego shared
+operator API co Incident Tracker, czyli `GET /analysis/ai/options`, i pozwala
+operatorowi wybrac `model` oraz `reasoningEffort` w composerze runu. Backendowy
+kontrakt startu Flow Explorera byl juz gotowy na te pola, wiec UI tylko
+przestaje polegac na domyslnym backendzie bez widocznej kontroli.
+
+Powod: smoke test pokazal, ze samo dodawanie opcji focus moze byc odczytane
+przez AI jako zaproszenie do szerokiego opisywania wielu obszarow. Lepsza
+separacja sterowania pozwala utrzymac wynik w primary endpoint flow, a koszt i
+glebokosc kontrolowac parametrem, ktory operator juz zna z Incident Trackera.
+
+Status: implemented and verified.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
@@ -532,8 +578,9 @@ Status: implemented and verified.
 - [x] 000a. Wspolny kontrakt i komponent follow-up chatu.
 - [x] 001. Canonical tool inputs artifact.
 - [x] 002. Tool policy dla redundantnego discovery.
-- [ ] 003. Snippet ranking pod primary flow i focus areas.
-- [ ] 004. Baseline quality report model.
-- [ ] 005. Ranking i grupowanie limitations/next reads.
-- [ ] 006. Result contract: fact vs inference vs unknown.
-- [ ] 007. Export result vs export diagnostics.
+- [x] 003. Skill guidance i UI sterowania modelem AI.
+- [ ] 004. Snippet ranking pod primary flow i focus areas.
+- [ ] 005. Baseline quality report model.
+- [ ] 006. Ranking i grupowanie limitations/next reads.
+- [ ] 007. Result contract: fact vs inference vs unknown.
+- [ ] 008. Export result vs export diagnostics.

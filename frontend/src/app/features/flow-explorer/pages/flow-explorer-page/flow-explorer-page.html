@@ -428,7 +428,7 @@
                 [matTooltip]="
                   'Maksymalnie ' +
                   maxFocusAreas +
-                  ' priorytety. To zawęża pierwsze poglebienia AI, nie blokuje innych znalezisk.'
+                  ' kierunki analizy. To ustawia akcenty wyniku; glebokoscia steruje reasoning effort.'
                 "
                 matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
@@ -478,6 +478,132 @@
                         <small>{{ focusArea.hint }}</small>
                       </span>
                       @if (isFocusAreaSelected(focusArea.value)) {
+                        <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
+                          check
+                        </span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Model AI</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="AI model field help"
+                matTooltip="Model uzyty do analizy Flow Explorera. Lista pochodzi z tego samego katalogu co w Incident Trackerze."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="flow-explorer-select__control"
+              type="button"
+              aria-haspopup="listbox"
+              [disabled]="isSubmitting() || isJobActive()"
+              [attr.aria-expanded]="aiModelSelectOpen()"
+              [attr.aria-busy]="isAiModelOptionsLoading()"
+              (click)="toggleAiModelSelect($event)"
+            >
+              <span class="flow-explorer-select__value">
+                <strong>{{ selectedAiModelLabel() }}</strong>
+                <small>{{ selectedAiModelMeta() }}</small>
+              </span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+
+            @if (aiModelOptionsError()) {
+              <span class="field-hint flow-explorer-warning">{{ aiModelOptionsError() }}</span>
+            }
+
+            @if (aiModelSelectOpen()) {
+              <div class="flow-explorer-select__menu" role="listbox" aria-label="AI model options">
+                <div class="flow-explorer-select__options">
+                  @for (option of aiModelOptions(); track option.value + option.label) {
+                    <button
+                      [class]="aiModelOptionClass(option.value)"
+                      type="button"
+                      role="option"
+                      [disabled]="option.disabled || isSubmitting() || isJobActive()"
+                      [attr.aria-selected]="selectedAiModel() === option.value"
+                      (click)="selectAiModelFromDropdown(option.value, $event)"
+                    >
+                      <span class="flow-explorer-select-option__body">
+                        <strong>{{ option.label }}</strong>
+                        <small>{{ option.hint }}</small>
+                      </span>
+                      @if (selectedAiModel() === option.value) {
+                        <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
+                          check
+                        </span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+            <span class="flow-explorer-field-label">
+              <span class="field-label">Reasoning effort</span>
+              <span
+                class="flow-explorer-label-help"
+                tabindex="0"
+                aria-label="Reasoning effort field help"
+                matTooltip="Steruje glebokoscia eksploracji: low bazuje glownie na artefaktach, medium uzupelnia primary flow, high moze zejsc glebiej w edge case'y."
+                matTooltipClass="flow-explorer-tooltip"
+                matTooltipPosition="right"
+                [matTooltipShowDelay]="120"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <button
+              class="flow-explorer-select__control"
+              type="button"
+              aria-haspopup="listbox"
+              [disabled]="isSubmitting() || isJobActive()"
+              [attr.aria-expanded]="reasoningEffortSelectOpen()"
+              [attr.aria-busy]="isAiModelOptionsLoading()"
+              (click)="toggleReasoningEffortSelect($event)"
+            >
+              <span class="flow-explorer-select__value">
+                <strong>{{ selectedReasoningEffortLabel() }}</strong>
+                <small>{{ selectedReasoningEffortMeta() }}</small>
+              </span>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </button>
+
+            @if (reasoningEffortSelectOpen()) {
+              <div
+                class="flow-explorer-select__menu"
+                role="listbox"
+                aria-label="Reasoning effort options"
+              >
+                <div class="flow-explorer-select__options">
+                  @for (option of reasoningEffortOptions(); track option.value + option.label) {
+                    <button
+                      [class]="reasoningEffortOptionClass(option.value)"
+                      type="button"
+                      role="option"
+                      [disabled]="option.disabled || isSubmitting() || isJobActive()"
+                      [attr.aria-selected]="selectedReasoningEffort() === option.value"
+                      (click)="selectReasoningEffortFromDropdown(option.value, $event)"
+                    >
+                      <span class="flow-explorer-select-option__body">
+                        <strong>{{ option.label }}</strong>
+                        <small>{{ option.hint }}</small>
+                      </span>
+                      @if (selectedReasoningEffort() === option.value) {
                         <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
                           check
                         </span>

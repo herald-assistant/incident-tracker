@@ -34,8 +34,8 @@ class FlowExplorerPromptPreparationServiceTest {
                 FlowExplorerDocumentationPreset.TEST_PREPARATION,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
                 "Skup sie na jezyku zrozumialym dla testera.",
-                null,
-                null
+                "gpt-5.4-mini",
+                "high"
         ), contextSnapshot());
         var prompt = preparation.prompt();
 
@@ -51,6 +51,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
         assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`"));
         assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
+        assertTrue(prompt.contains("`focusAreas` traktuj jako kierunki analizy"));
+        assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));
+        assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
         assertTrue(prompt.contains("Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`"));
         assertTrue(prompt.contains("GitLab tools do not read endpoint business scope from hidden ToolContext"));
