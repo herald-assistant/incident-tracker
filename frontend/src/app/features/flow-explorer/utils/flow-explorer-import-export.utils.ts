@@ -23,16 +23,75 @@ import {
 } from '../models/flow-explorer.models';
 
 export const FLOW_EXPLORER_EXPORT_SCHEMA = 'incident-tracker.flow-explorer-export';
-export const FLOW_EXPLORER_EXPORT_VERSION = 1;
+export const FLOW_EXPLORER_EXPORT_VERSION = 2;
+export const FLOW_EXPLORER_EXPORT_PAYLOAD_TYPE = 'flow-explorer-analysis';
+export const FLOW_EXPLORER_RESULT_CONTRACT = 'flow-explorer-goal-result-v1';
 
 export interface FlowExplorerExportEnvelope {
   schema: string;
   version: number;
   exportedAt: string;
   payload: {
-    type: 'flow-explorer-job';
+    type: typeof FLOW_EXPLORER_EXPORT_PAYLOAD_TYPE;
+    resultContract: typeof FLOW_EXPLORER_RESULT_CONTRACT;
+    diagnostics: FlowExplorerExportDiagnostics;
     job: FlowExplorerJobStateSnapshot;
   };
+}
+
+export interface FlowExplorerExportDiagnostics {
+  resultContract: typeof FLOW_EXPLORER_RESULT_CONTRACT;
+  target: {
+    systemId: string;
+    endpointId: string;
+    httpMethod: string;
+    endpointPath: string;
+    branch: string;
+  };
+  request: {
+    goal: FlowExplorerAnalysisGoal;
+    focusAreas: FlowExplorerFocusArea[];
+    aiModel: string;
+    reasoningEffort: string;
+  };
+  result: {
+    goal: FlowExplorerAnalysisGoal;
+    confidence: string;
+    sectionModes: Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>;
+    sourceReferenceCount: number;
+    visibilityLimitCount: number;
+    openQuestionCount: number;
+  };
+  context: {
+    contextSnapshotIncluded: boolean;
+    repositoryCount: number;
+    flowNodeCount: number;
+    relationCount: number;
+    snippetCardCount: number;
+    snippetCharacterCount: number;
+    snippetBudgetReached: boolean;
+    clippingNotes: string[];
+    limitationCount: number;
+  };
+  workflow: {
+    stepCount: number;
+    contextEvidenceItemCount: number;
+    toolEvidenceItemCount: number;
+    aiActivityEventCount: number;
+    toolFeedbackCount: number;
+    chatMessageCount: number;
+    usageIncluded: boolean;
+  };
+  artifacts: FlowExplorerDiagnosticArtifactSummary[];
+  resultMarkdown: string;
+}
+
+export interface FlowExplorerDiagnosticArtifactSummary {
+  name: string;
+  kind: string;
+  included: boolean;
+  itemCount: number | null;
+  characterCount: number | null;
 }
 
 export interface FlowExplorerExportState {
@@ -46,14 +105,84 @@ export function buildFlowExplorerExportEnvelope(
   job: FlowExplorerJobStateSnapshot,
   exportedAt: string
 ): FlowExplorerExportEnvelope {
+  const normalizedJob = normalizeFlowExplorerJob(job);
+  assertCompletedExportableJob(normalizedJob);
+
   return {
     schema: FLOW_EXPLORER_EXPORT_SCHEMA,
     version: FLOW_EXPLORER_EXPORT_VERSION,
     exportedAt,
     payload: {
-      type: 'flow-explorer-job',
-      job
+      type: FLOW_EXPLORER_EXPORT_PAYLOAD_TYPE,
+      resultContract: FLOW_EXPLORER_RESULT_CONTRACT,
+      diagnostics: buildFlowExplorerExportDiagnostics(normalizedJob),
+      job: normalizedJob
     }
+  };
+}
+
+export function buildFlowExplorerExportDiagnostics(
+  job: FlowExplorerJobStateSnapshot
+): FlowExplorerExportDiagnostics {
+  assertCompletedExportableJob(job);
+
+  const result = job.result;
+  const aiResponse = result.aiResponse;
+  const resultMarkdown = renderFlowExplorerResultMarkdown(job);
+  const contextSnapshot = asObject(job.contextSnapshot);
+  const coverage = asObject(contextSnapshot?.['coverage']);
+  const snippetCharacterCount = normalizeNumber(coverage?.['snippetCharacterCount']);
+
+  return {
+    resultContract: FLOW_EXPLORER_RESULT_CONTRACT,
+    target: {
+      systemId: job.systemId,
+      endpointId: job.endpointId,
+      httpMethod: job.httpMethod,
+      endpointPath: job.endpointPath,
+      branch: job.branch
+    },
+    request: {
+      goal: job.goal,
+      focusAreas: job.focusAreas,
+      aiModel: job.aiModel,
+      reasoningEffort: job.reasoningEffort
+    },
+    result: {
+      goal: aiResponse.goal,
+      confidence: aiResponse.confidence || aiResponse.overview.confidence,
+      sectionModes: sectionModeIndex(aiResponse.sections),
+      sourceReferenceCount: aiResponse.sourceReferences.length,
+      visibilityLimitCount:
+        aiResponse.globalVisibilityLimits.length +
+        aiResponse.sections.reduce((count, section) => count + section.visibilityLimits.length, 0),
+      openQuestionCount:
+        aiResponse.globalOpenQuestions.length +
+        aiResponse.sections.reduce((count, section) => count + section.openQuestions.length, 0)
+    },
+    context: {
+      contextSnapshotIncluded: Boolean(contextSnapshot),
+      repositoryCount: contextArrayLength(contextSnapshot, 'repositories'),
+      flowNodeCount: normalizeNumber(coverage?.['flowNodeCount']) || contextArrayLength(contextSnapshot, 'flowNodes'),
+      relationCount: normalizeNumber(coverage?.['relationCount']) || contextArrayLength(contextSnapshot, 'relations'),
+      snippetCardCount:
+        normalizeNumber(coverage?.['snippetCardCount']) || contextArrayLength(contextSnapshot, 'snippetCards'),
+      snippetCharacterCount,
+      snippetBudgetReached: Boolean(coverage?.['snippetBudgetReached']),
+      clippingNotes: diagnosticClippingNotes(contextSnapshot, coverage),
+      limitationCount: contextArrayLength(contextSnapshot, 'limitations')
+    },
+    workflow: {
+      stepCount: job.steps.length,
+      contextEvidenceItemCount: evidenceItemCount(job.contextSections),
+      toolEvidenceItemCount: evidenceItemCount(job.toolEvidenceSections),
+      aiActivityEventCount: job.aiActivityEvents.length,
+      toolFeedbackCount: job.toolFeedback.length,
+      chatMessageCount: job.chatMessages.length,
+      usageIncluded: Boolean(result.usage)
+    },
+    artifacts: diagnosticArtifactSummary(job, resultMarkdown, snippetCharacterCount),
+    resultMarkdown
   };
 }
 
@@ -71,18 +200,21 @@ export function parseImportedFlowExplorerAnalysis(payload: unknown): {
   }
 
   const envelopePayload = asObject(payloadObject['payload']);
-  if (!envelopePayload || envelopePayload['type'] !== 'flow-explorer-job') {
+  if (!envelopePayload || envelopePayload['type'] !== FLOW_EXPLORER_EXPORT_PAYLOAD_TYPE) {
     throw new Error('Plik eksportu nie zawiera wyniku Flow Explorera.');
   }
 
-  const job = normalizeFlowExplorerJob(envelopePayload['job']);
-  if (!job.status) {
-    throw new Error('Plik nie zawiera statusu Flow Explorer joba.');
+  if (envelopePayload['resultContract'] !== FLOW_EXPLORER_RESULT_CONTRACT) {
+    throw new Error('Plik eksportu Flow Explorera ma nieobsługiwany kontrakt wyniku.');
   }
 
-  if (!isTerminalJobStatus(job.status) || hasActiveChat(job)) {
-    throw new Error('Import wspiera tylko zakończone Flow Explorer analizy.');
+  const diagnostics = asObject(envelopePayload['diagnostics']);
+  if (!diagnostics || diagnostics['resultContract'] !== FLOW_EXPLORER_RESULT_CONTRACT) {
+    throw new Error('Plik eksportu nie zawiera diagnostyki Flow Explorera w aktualnym formacie.');
   }
+
+  const job = normalizeFlowExplorerJob(envelopePayload['job']);
+  assertCompletedExportableJob(job);
 
   return {
     exportedAt: normalizeString(payloadObject['exportedAt']),
@@ -203,6 +335,7 @@ function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
 
 function normalizeResult(result: unknown): FlowExplorerResult {
   const resultObject = asObject(result);
+  assertNoLegacyResultFields(resultObject);
   return {
     status: normalizeString(resultObject?.['status']),
     systemId: normalizeString(resultObject?.['systemId']),
@@ -221,6 +354,7 @@ function normalizeResult(result: unknown): FlowExplorerResult {
 
 function normalizeAiResponse(response: unknown): FlowExplorerAiResponse {
   const responseObject = asObject(response);
+  assertNoLegacyResultFields(responseObject);
   return {
     goal: normalizeGoal(responseObject?.['goal']),
     audience: normalizeString(responseObject?.['audience']) || 'business_or_system_analyst_tester',
@@ -243,34 +377,32 @@ function normalizeOverview(overview: unknown): FlowExplorerResultOverview {
 }
 
 function normalizeSections(sections: unknown): FlowExplorerResultSection[] {
-  const byId = new Map<FlowExplorerResultSectionId, FlowExplorerResultSection>();
-  if (Array.isArray(sections)) {
-    sections.forEach((section) => {
-      const normalized = normalizeSection(section);
-      if (normalized) {
-        byId.set(normalized.id, normalized);
-      }
-    });
+  if (!Array.isArray(sections)) {
+    throw new Error('Flow Explorer result nie zawiera wymaganych czterech sekcji.');
   }
 
-  return SECTION_IDS.map((id) =>
-    byId.get(id) ?? {
-      id,
-      title: sectionTitle(id),
-      mode: 'compact',
-      markdown: '',
-      sourceRefs: [],
-      visibilityLimits: [],
-      openQuestions: []
+  const byId = new Map<FlowExplorerResultSectionId, FlowExplorerResultSection>();
+  sections.forEach((section) => {
+    const normalized = normalizeSection(section);
+    if (byId.has(normalized.id)) {
+      throw new Error(`Flow Explorer result zawiera zdublowaną sekcję ${normalized.id}.`);
     }
-  );
+    byId.set(normalized.id, normalized);
+  });
+
+  const missingSectionIds = SECTION_IDS.filter((id) => !byId.has(id));
+  if (missingSectionIds.length > 0) {
+    throw new Error(`Flow Explorer result nie zawiera sekcji: ${missingSectionIds.join(', ')}.`);
+  }
+
+  return SECTION_IDS.map((id) => byId.get(id) as FlowExplorerResultSection);
 }
 
-function normalizeSection(section: unknown): FlowExplorerResultSection | null {
+function normalizeSection(section: unknown): FlowExplorerResultSection {
   const sectionObject = asObject(section);
   const id = normalizeSectionId(sectionObject?.['id']);
   if (!id) {
-    return null;
+    throw new Error('Flow Explorer result zawiera sekcję bez aktualnego identyfikatora.');
   }
 
   return {
@@ -380,8 +512,199 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
   };
 }
 
-function isTerminalJobStatus(status: string): boolean {
-  return status === 'COMPLETED' || status === 'FAILED';
+type ExportableFlowExplorerJob = FlowExplorerJobStateSnapshot & {
+  result: FlowExplorerResult & {
+    aiResponse: FlowExplorerAiResponse;
+  };
+};
+
+function assertCompletedExportableJob(
+  job: FlowExplorerJobStateSnapshot
+): asserts job is ExportableFlowExplorerJob {
+  if (job.status !== 'COMPLETED') {
+    throw new Error('Import i eksport wspiera tylko zakończone Flow Explorer analizy COMPLETED.');
+  }
+  if (hasActiveChat(job)) {
+    throw new Error('Import i eksport nie wspiera analiz z aktywną odpowiedzią follow-up.');
+  }
+  if (!job.result || !job.result.aiResponse) {
+    throw new Error('Flow Explorer export wymaga ustrukturyzowanego wyniku AI.');
+  }
+  if (job.result.goal !== job.goal || job.result.aiResponse.goal !== job.goal) {
+    throw new Error('Flow Explorer export ma niespójny goal w jobie i wyniku AI.');
+  }
+  if (job.result.status !== 'COMPLETED') {
+    throw new Error('Flow Explorer export wymaga wyniku o statusie COMPLETED.');
+  }
+}
+
+function renderFlowExplorerResultMarkdown(job: ExportableFlowExplorerJob): string {
+  const result = job.result;
+  const aiResponse = result.aiResponse;
+  const sectionMarkdown = aiResponse.sections
+    .map((section) =>
+      [
+        `## ${section.title}`,
+        `Mode: ${normalizeSectionMode(section.mode)}`,
+        section.markdown || 'No confirmed details.',
+        sourceRefsMarkdown(section.sourceRefs),
+        listMarkdown('Visibility limits', section.visibilityLimits),
+        listMarkdown('Open questions', section.openQuestions)
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    )
+    .join('\n\n');
+
+  return [
+    '# Flow Explorer result',
+    `Target: ${result.httpMethod} ${result.endpointPath}`,
+    `System: ${result.systemId}`,
+    `Goal: ${result.goal}`,
+    `Confidence: ${aiResponse.confidence || aiResponse.overview.confidence || 'n/a'}`,
+    '## Overview',
+    aiResponse.overview.markdown || 'No overview.',
+    sourceRefsMarkdown(aiResponse.overview.sourceRefs),
+    sectionMarkdown,
+    listMarkdown('Global visibility limits', aiResponse.globalVisibilityLimits),
+    listMarkdown('Global open questions', aiResponse.globalOpenQuestions),
+    sourceRefsMarkdown(aiResponse.sourceReferences)
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
+}
+
+function sourceRefsMarkdown(sourceRefs: string[]): string {
+  return listMarkdown('Source refs', sourceRefs);
+}
+
+function listMarkdown(title: string, items: string[]): string {
+  if (!items.length) {
+    return '';
+  }
+  return [`### ${title}`, ...items.map((item) => `- ${item}`)].join('\n');
+}
+
+function sectionModeIndex(
+  sections: FlowExplorerResultSection[]
+): Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode> {
+  return SECTION_IDS.reduce((index, id) => {
+    const section = sections.find((candidate) => candidate.id === id);
+    index[id] = normalizeSectionMode(section?.mode);
+    return index;
+  }, {} as Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>);
+}
+
+function diagnosticClippingNotes(
+  contextSnapshot: Record<string, unknown> | null,
+  coverage: Record<string, unknown> | null
+): string[] {
+  const notes = [
+    Boolean(coverage?.['snippetBudgetReached']) ? 'Snippet budget reached.' : '',
+    Boolean(coverage?.['maxDepthReached']) ? 'Max flow depth reached.' : '',
+    Boolean(coverage?.['maxFilesReached']) ? 'Max file scan limit reached.' : '',
+    Boolean(coverage?.['readFileLimitReached']) ? 'Read file limit reached.' : '',
+    ...contextStringArray(contextSnapshot, 'limitations')
+  ].filter(Boolean);
+
+  return notes.length ? notes : ['No clipping reported by deterministic context.'];
+}
+
+function diagnosticArtifactSummary(
+  job: ExportableFlowExplorerJob,
+  resultMarkdown: string,
+  snippetCharacterCount: number
+): FlowExplorerDiagnosticArtifactSummary[] {
+  return [
+    {
+      name: 'flow-explorer-result.md',
+      kind: 'user-facing-markdown',
+      included: Boolean(resultMarkdown),
+      itemCount: 5,
+      characterCount: resultMarkdown.length
+    },
+    {
+      name: 'jobSnapshot',
+      kind: 'diagnostic-json',
+      included: true,
+      itemCount: 1,
+      characterCount: null
+    },
+    {
+      name: 'contextSnapshot',
+      kind: 'deterministic-context-json',
+      included: Boolean(job.contextSnapshot),
+      itemCount: contextArrayLength(asObject(job.contextSnapshot), 'flowNodes'),
+      characterCount: snippetCharacterCount || null
+    },
+    {
+      name: 'preparedPrompt',
+      kind: 'canonical-prompt',
+      included: Boolean(job.preparedPrompt),
+      itemCount: null,
+      characterCount: job.preparedPrompt ? job.preparedPrompt.length : null
+    },
+    {
+      name: 'contextSections',
+      kind: 'workflow-evidence',
+      included: job.contextSections.length > 0,
+      itemCount: evidenceItemCount(job.contextSections),
+      characterCount: null
+    },
+    {
+      name: 'toolEvidenceSections',
+      kind: 'tool-evidence',
+      included: job.toolEvidenceSections.length > 0,
+      itemCount: evidenceItemCount(job.toolEvidenceSections),
+      characterCount: null
+    },
+    {
+      name: 'aiActivityEvents',
+      kind: 'ai-activity',
+      included: job.aiActivityEvents.length > 0,
+      itemCount: job.aiActivityEvents.length,
+      characterCount: null
+    },
+    {
+      name: 'toolFeedback',
+      kind: 'tool-quality-feedback',
+      included: job.toolFeedback.length > 0,
+      itemCount: job.toolFeedback.length,
+      characterCount: null
+    },
+    {
+      name: 'usage',
+      kind: 'token-and-cost-usage',
+      included: Boolean(job.result.usage),
+      itemCount: job.result.usage ? 1 : 0,
+      characterCount: null
+    }
+  ];
+}
+
+function evidenceItemCount(sections: AnalysisEvidenceSection[]): number {
+  return sections.reduce((count, section) => count + section.items.length, 0);
+}
+
+function contextArrayLength(contextSnapshot: Record<string, unknown> | null, fieldName: string): number {
+  const value = contextSnapshot?.[fieldName];
+  return Array.isArray(value) ? value.length : 0;
+}
+
+function contextStringArray(contextSnapshot: Record<string, unknown> | null, fieldName: string): string[] {
+  const value = contextSnapshot?.[fieldName];
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function assertNoLegacyResultFields(value: Record<string, unknown> | null): void {
+  if (!value) {
+    return;
+  }
+  const legacyFields = LEGACY_RESULT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(value, field));
+  if (legacyFields.length > 0) {
+    throw new Error(`Flow Explorer export zawiera legacy pola wyniku: ${legacyFields.join(', ')}.`);
+  }
 }
 
 function hasActiveChat(snapshot: FlowExplorerJobStateSnapshot): boolean {
@@ -398,11 +721,19 @@ function normalizeStringArray(value: unknown): string[] {
 
 function normalizeGoal(value: unknown): FlowExplorerAnalysisGoal {
   const normalized = normalizeString(value);
-  return isFlowExplorerGoal(normalized) ? normalized : 'DEEP_DISCOVERY';
+  if (isFlowExplorerGoal(normalized)) {
+    return normalized;
+  }
+  throw new Error('Flow Explorer export zawiera nieznany cel analizy.');
 }
 
 function normalizeFocusAreas(value: unknown): FlowExplorerFocusArea[] {
-  return normalizeStringArray(value).filter(isFlowExplorerFocusArea);
+  const focusAreas = normalizeStringArray(value);
+  const unsupported = focusAreas.filter((focusArea) => !isFlowExplorerFocusArea(focusArea));
+  if (unsupported.length > 0) {
+    throw new Error(`Flow Explorer export zawiera nieznane focus areas: ${unsupported.join(', ')}.`);
+  }
+  return Array.from(new Set(focusAreas.filter(isFlowExplorerFocusArea)));
 }
 
 function normalizeSectionId(value: unknown): FlowExplorerResultSectionId | null {
@@ -436,6 +767,14 @@ const SECTION_IDS: FlowExplorerResultSectionId[] = [
   'VALIDATIONS',
   'PERSISTENCE',
   'INTEGRATIONS'
+];
+
+const LEGACY_RESULT_FIELDS = [
+  'endpointContract',
+  'flowSteps',
+  'businessRules',
+  'testScenarios',
+  'risksAndEdgeCases'
 ];
 
 function sectionTitle(id: FlowExplorerResultSectionId): string {

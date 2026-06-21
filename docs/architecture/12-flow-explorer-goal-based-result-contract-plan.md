@@ -525,7 +525,7 @@ Wykonano:
 
 ### 007. Import/export i diagnostic artifacts
 
-Status: [ ]
+Status: [x]
 
 Potrzeba:
 
@@ -553,9 +553,31 @@ Ryzyka:
 - stare pliki exportu Flow Explorera nie beda kompatybilne; to jest
   akceptowane i powinno byc opisane w finalnym podsumowaniu kroku.
 
+Wykonano:
+
+- format exportu Flow Explorera zostal podbity do v2 bez kompatybilnosci
+  wstecznej z v1,
+- export/import wymaga `COMPLETED` joba z ustrukturyzowanym `aiResponse`;
+  failed, in-progress albo niepelne wyniki nie sa eksportowalne/importowalne,
+- payload exportu zawiera `resultContract:
+  flow-explorer-goal-result-v1`,
+- payload exportu zawiera jawne `diagnostics` z:
+  goal, focus areas, section modes, targetem endpointu, coverage contextu,
+  clipping notes, usage flag, licznikami evidence/activity/tool feedback oraz
+  lista artefaktow diagnostycznych,
+- export zawiera user-facing `resultMarkdown` z Overview + czterema sekcjami
+  bez surowego kodu,
+- import odrzuca legacy top-level pola resultu:
+  `endpointContract`, `flowSteps`, `businessRules`, `testScenarios`,
+  `risksAndEdgeCases`,
+- import odrzuca niekompletny zestaw czterech sekcji,
+- dodano CRM-specific, zanonimizowane testy FE dla exportu v2, diagnostics,
+  odrzucenia legacy pol i odrzucenia niepelnych sekcji,
+- wykonano `npm test -- --watch=false`.
+
 ### 008. Follow-up chat alignment
 
-Status: [ ]
+Status: [x]
 
 Potrzeba:
 
@@ -576,6 +598,29 @@ Ryzyka:
 
 - follow-up moze zaczac powtarzac caly initial result; prompt powinien
   wymagac odpowiedzi tylko na pytanie uzytkownika.
+
+Wykonano:
+
+- follow-up prompt ma jawny answer contract: bezposrednia odpowiedz na pytanie,
+  tylko potrzebne szczegoly, bez generowania calego initial resultu od nowa,
+- prompt wskazuje stale punkty odniesienia:
+  Overview, Business flow/rules, Validations, Persistence, Integrations,
+- initial result w follow-up artifact jest renderowany sekcyjnie z goal,
+  confidence, Overview, czterema sekcjami, mode, source refs, visibility
+  limits i open questions,
+- sekcje `DEEP` maja byc najpierw obslugiwane z initial result, initial
+  artifacts i zebranych evidence; tool call tylko gdy pytanie wychodzi poza
+  znany material albo wskazuje sprzecznosc,
+- sekcje `COMPACT` moga byc poglobione toolsami, ale wasko do pytania i zgodnie
+  z `reasoningEffort`,
+- jezeli tools zostaly uzyte, AI ma wskazac jednym zdaniem, co nowego wniosly
+  wzgledem initial resultu,
+- dodano CRM-specific, zanonimizowany test `FlowExplorerFollowUpPromptPreparationServiceTest`,
+- rozszerzono `FlowExplorerJobServiceTest`, zeby potwierdzal przekazanie do
+  follow-up prompt preparation initial requestu, context snapshotu, wyniku z
+  czterema sekcjami i aktualnego pytania uzytkownika,
+- wykonano `mvn -q "-Dtest=FlowExplorerFollowUpPromptPreparationServiceTest,FlowExplorerJobServiceTest" test`,
+- wykonano `mvn -q "-Dtest=FlowExplorer*Test,PackageDependencyGuardTest" test`.
 
 ### 009. Cross-goal smoke test i korekta template'ow
 
@@ -618,8 +663,8 @@ Ryzyka:
 - [x] 004. Risk detection vertical slice.
 - [x] 005. Cross-goal parser hardening i response validation.
 - [x] 006. UI polish: composer, result view i copy.
-- [ ] 007. Import/export i diagnostic artifacts.
-- [ ] 008. Follow-up chat alignment.
+- [x] 007. Import/export i diagnostic artifacts.
+- [x] 008. Follow-up chat alignment.
 - [ ] 009. Cross-goal smoke test i korekta template'ow.
 
 ## Guardraile architektoniczne
@@ -774,5 +819,34 @@ Powod: przebieg i wynik feature'ow maja korzystac ze wspolnych mechanizmow UI
 tam, gdzie uzytkownik wykonuje znane czynnosci: czyta wynik AI, kopiuje go i
 wraca do niego w follow-upie. Flow Explorer nie powinien miec lokalnego parsera
 markdown ani osobnego mechanizmu clipboard.
+
+Status: implemented.
+
+### 012. Export Flow Explorera jest v2 diagnostic envelope
+
+Decyzja: Flow Explorer export uzywa formatu v2 i payload type
+`flow-explorer-analysis`. Plik zawiera pelny `job` do odtworzenia ekranu oraz
+jawne `diagnostics` z indeksem kontraktu, targetu, requestu, trybow sekcji,
+coverage, clipping notes, artefaktow, usage, tool evidence i AI activity.
+Import wymaga v2 oraz `flow-explorer-goal-result-v1`.
+
+Powod: po zmianie na goal-based result nie chcemy cichego wspierania starych
+plikow ani niepelnych danych. Jednoczesnie plik ma byc przydatny diagnostycznie:
+odtwarza UI, ale daje tez szybki indeks tego, co zostalo rzeczywiscie
+zapisane i czy wynik ma cztery wymagane sekcje.
+
+Status: implemented.
+
+### 013. Follow-up chat jest precyzyjnym doprecyzowaniem, nie drugim raportem
+
+Decyzja: Flow Explorer follow-up prompt uzywa goal-based initial result jako
+stalego punktu odniesienia. Odpowiedz ma dotyczyc aktualnego pytania, nie
+odtwarzac calej analizy. Sekcje `DEEP` sa najpierw obslugiwane z initial
+resultu i evidence, a sekcje `COMPACT` moga byc wasko poglobione toolsami
+zgodnie z `reasoningEffort`.
+
+Powod: initial result ma pokrywac wiekszosc potrzeb uzytkownika. Follow-up ma
+byc narzedziem do wyjatkow, doprecyzowan i nowych pytan, a nie sposobem na
+nadrabianie zbyt ogolnej odpowiedzi poczatkowej.
 
 Status: implemented.

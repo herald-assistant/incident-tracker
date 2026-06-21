@@ -5,6 +5,7 @@ import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.SessionConfig;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.core.task.TaskExecutor;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunPreparationService;
@@ -304,7 +305,18 @@ class FlowExplorerJobServiceTest {
         assertEquals(1, afterChatStart.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals("gitlab", afterChatStart.chatMessages().get(1).toolEvidenceSections().get(0).provider());
 
-        verify(followUpPromptPreparationService).prepare(any(FlowExplorerFollowUpChatRequest.class));
+        var chatRequestCaptor = ArgumentCaptor.forClass(FlowExplorerFollowUpChatRequest.class);
+        verify(followUpPromptPreparationService).prepare(chatRequestCaptor.capture());
+        var capturedChatRequest = chatRequestCaptor.getValue();
+        assertSame(request, capturedChatRequest.initialRequest());
+        assertSame(contextSnapshot, capturedChatRequest.contextSnapshot());
+        assertEquals("Gdzie jest walidacja?", capturedChatRequest.message());
+        assertEquals(0, capturedChatRequest.history().size());
+        assertNotNull(capturedChatRequest.result());
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, capturedChatRequest.result().goal());
+        assertEquals(4, capturedChatRequest.result().aiResponse().sections().size());
+        assertEquals(FlowExplorerResultSectionMode.DEEP,
+                capturedChatRequest.result().aiResponse().sections().get(0).mode());
         verify(runRequestAssembler).assembleFollowUp(
                 any(String.class),
                 same(request),

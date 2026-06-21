@@ -52,9 +52,20 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Jezeli odpowiedz wymaga nowego kodu albo operational context, uzyj tylko dozwolonych tools i czytaj celowo.
                 - Nie zgaduj. Jezeli nie widzisz danych, powiedz co jest ograniczeniem widocznosci.
                 - Jezeli korygujesz albo doprecyzowujesz wynik initial, powiedz to jawnie.
+                - Nie generuj ponownie calego initial resultu. Odpowiedz tylko na aktualne pytanie uzytkownika.
+                - Follow-up sluzy do wyjatkow, doprecyzowan i waskich dopytan, nie do ratowania powierzchownego initial resultu.
                 - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`.
                 - `focusAreas` z initial request wskazuja sekcje, ktore mialy tryb deep.
                 - `reasoningEffort` z initial request steruje glebokoscia dodatkowego czytania: low = minimalnie, medium = focused reads dla brakow, high = glebsze edge case'y i zaleznosci.
+
+                ## Follow-up answer contract
+                - Zacznij od krotkiej bezposredniej odpowiedzi na pytanie.
+                - Nastepnie podaj tylko te szczegoly, ktore sa potrzebne do decyzji analityka/testera.
+                - Uzywaj stalych punktow odniesienia: Overview, Business flow/rules, Validations, Persistence, Integrations.
+                - Jezeli pytanie dotyczy sekcji `DEEP`, najpierw wykorzystaj initial result, initial artifacts i juz zebrane evidence; tool call wykonaj tylko gdy pytanie wychodzi poza znany material albo wskazuje sprzecznosc.
+                - Jezeli pytanie dotyczy sekcji `COMPACT`, mozesz dociagnac szczegoly przez dozwolone tools, ale tylko wasko do pytania i zgodnie z `reasoningEffort`.
+                - Gdy uzywasz tools, wyjasnij jednym zdaniem co nowego wniosly wzgledem initial resultu.
+                - Jezeli odpowiedz nadal jest ograniczona widocznoscia, zakoncz sekcja `Ograniczenia widocznosci`.
 
                 ## Initial request
                 applicationName: %s
@@ -138,17 +149,30 @@ public class FlowExplorerFollowUpPromptPreparationService {
             return "- initial result unavailable";
         }
         var builder = new StringBuilder();
+        appendLine(builder, "### Result metadata");
         appendLine(builder, "- status: " + textOrPlaceholder(result.status()));
         appendLine(builder, "- goal: " + textOrPlaceholder(result.goal() != null ? result.goal().name() : null));
         if (result.aiResponse() != null) {
             appendLine(builder, "- audience: " + textOrPlaceholder(result.aiResponse().audience()));
             appendLine(builder, "- confidence: " + textOrPlaceholder(result.aiResponse().confidence()));
-            appendLine(builder, "- overview: " + textOrPlaceholder(result.aiResponse().overview().markdown()));
+            appendLine(builder, "");
+            appendLine(builder, "### Overview");
+            appendLine(builder, textOrPlaceholder(result.aiResponse().overview().markdown()));
+            appendLine(builder, "- confidence: " + textOrPlaceholder(result.aiResponse().overview().confidence()));
+            appendLine(builder, "- sourceRefs: " + listOrNone(result.aiResponse().overview().sourceRefs()));
+            appendLine(builder, "");
+            appendLine(builder, "### Result sections");
+            result.aiResponse().sections().forEach(section -> {
+                appendLine(builder, "#### " + section.id() + " | " + section.title() + " | mode=" + section.mode());
+                appendLine(builder, textOrPlaceholder(section.markdown()));
+                appendLine(builder, "- sourceRefs: " + listOrNone(section.sourceRefs()));
+                appendLine(builder, "- visibilityLimits: " + listOrNone(section.visibilityLimits()));
+                appendLine(builder, "- openQuestions: " + listOrNone(section.openQuestions()));
+                appendLine(builder, "");
+            });
+            appendLine(builder, "### Global limits and references");
             appendLine(builder, "- globalVisibilityLimits: " + listOrNone(result.aiResponse().globalVisibilityLimits()));
             appendLine(builder, "- globalOpenQuestions: " + listOrNone(result.aiResponse().globalOpenQuestions()));
-            result.aiResponse().sections().forEach(section -> appendLine(builder,
-                    "- section " + section.id() + " (" + section.mode() + "): "
-                            + textOrPlaceholder(section.markdown())));
             appendLine(builder, "- sourceReferences: " + listOrNone(result.aiResponse().sourceReferences()));
         }
         return builder.toString().trim();

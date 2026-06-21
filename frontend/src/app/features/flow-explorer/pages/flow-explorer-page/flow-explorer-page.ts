@@ -1071,7 +1071,7 @@ export class FlowExplorerPageComponent implements OnInit {
     job: FlowExplorerJobStateSnapshot,
     metadata: Pick<FlowExplorerExportState, 'origin' | 'exportedAt' | 'fileName'>
   ): void {
-    if (!this.isTerminalJobStatus(job.status) || this.hasActiveChat(job)) {
+    if (job.status !== 'COMPLETED' || !job.result?.aiResponse || this.hasActiveChat(job)) {
       this.exportState.set(null);
       return;
     }
