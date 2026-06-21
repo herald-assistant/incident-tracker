@@ -842,7 +842,6 @@
               <div>
                 <p class="section-eyebrow">AI result</p>
                 <h2>{{ result.httpMethod }} {{ result.endpointPath }}</h2>
-                <p class="field-hint">{{ resultOverviewHint(result.aiResponse?.overview?.markdown) }}</p>
               </div>
               <div class="flow-explorer-result__badges">
                 <span [class]="jobStatusPillClass(result.status)">{{ result.status }}</span>
@@ -899,11 +898,18 @@
                   [content]="ai.overview.markdown || 'AI did not provide an overview.'"
                 ></app-markdown-content>
                 @if (hasItems(ai.overview.sourceRefs)) {
-                  <div class="flow-explorer-chip-list">
-                    @for (sourceRef of ai.overview.sourceRefs; track $index) {
-                      <span class="panel-chip">{{ sourceRef }}</span>
-                    }
-                  </div>
+                  <details class="flow-explorer-reference-list">
+                    <summary>
+                      <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+                      <span>References</span>
+                      <small>{{ ai.overview.sourceRefs.length }}</small>
+                    </summary>
+                    <div class="flow-explorer-chip-list">
+                      @for (sourceRef of ai.overview.sourceRefs; track $index) {
+                        <span class="panel-chip">{{ sourceRef }}</span>
+                      }
+                    </div>
+                  </details>
                 }
               </section>
 
@@ -923,11 +929,18 @@
                     [content]="section.markdown || 'No confirmed details for this section.'"
                   ></app-markdown-content>
                   @if (hasItems(section.sourceRefs)) {
-                    <div class="flow-explorer-chip-list">
-                      @for (sourceRef of section.sourceRefs; track $index) {
-                        <span class="panel-chip">{{ sourceRef }}</span>
-                      }
-                    </div>
+                    <details class="flow-explorer-reference-list">
+                      <summary>
+                        <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+                        <span>References</span>
+                        <small>{{ section.sourceRefs.length }}</small>
+                      </summary>
+                      <div class="flow-explorer-chip-list">
+                        @for (sourceRef of section.sourceRefs; track $index) {
+                          <span class="panel-chip">{{ sourceRef }}</span>
+                        }
+                      </div>
+                    </details>
                   }
                   <div class="flow-explorer-section-metadata">
                     @if (hasItems(section.visibilityLimits)) {
@@ -990,19 +1003,19 @@
               }
 
               @if (hasItems(ai.sourceReferences)) {
-                <section class="flow-explorer-result-block" aria-label="Source references">
-                  <div class="flow-explorer-result-block__heading">
-                    <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-                    <div>
-                      <span class="field-label">Sources</span>
-                      <h3>References used by AI</h3>
+                <section class="flow-explorer-result-block flow-explorer-result-block--references" aria-label="Source references">
+                  <details class="flow-explorer-reference-list flow-explorer-reference-list--global">
+                    <summary>
+                      <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+                      <span>All references</span>
+                      <small>{{ ai.sourceReferences.length }}</small>
+                    </summary>
+                    <div class="flow-explorer-chip-list">
+                      @for (sourceReference of ai.sourceReferences; track $index) {
+                        <span class="panel-chip">{{ sourceReference }}</span>
+                      }
                     </div>
-                  </div>
-                  <div class="flow-explorer-chip-list">
-                    @for (sourceReference of ai.sourceReferences; track $index) {
-                      <span class="panel-chip">{{ sourceReference }}</span>
-                    }
-                  </div>
+                  </details>
                 </section>
               }
             } @else {
@@ -1013,11 +1026,20 @@
             }
 
             @if (result.usage; as usage) {
-              <div class="flow-explorer-result-usage" aria-label="AI usage">
-                <span class="panel-chip">Tokens {{ formatTokenCount(usage.totalTokens) }}</span>
-                <span class="panel-chip">Input {{ formatTokenCount(usage.inputTokens) }}</span>
-                <span class="panel-chip">Output {{ formatTokenCount(usage.outputTokens) }}</span>
-                <span class="panel-chip">Cost {{ formatCost(usage.cost) }}</span>
+              <div
+                class="flow-explorer-result-usage"
+                [attr.aria-label]="usageTooltip(usage)"
+                [matTooltip]="usageTooltip(usage)"
+                matTooltipPosition="above"
+                matTooltipClass="analysis-token-tooltip"
+                [matTooltipShowDelay]="100"
+              >
+                @for (stat of usageStats(usage); track stat.label) {
+                  <span class="panel-chip flow-explorer-result-usage__chip">
+                    <span>{{ stat.label }}</span>
+                    <strong>{{ stat.value }}</strong>
+                  </span>
+                }
               </div>
             }
             </div>

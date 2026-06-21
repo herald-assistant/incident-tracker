@@ -27,6 +27,11 @@ public class FlowExplorerPromptPreparationService {
                 ## Non-negotiable rules
                 - Odpowiadasz dla analityka/testera lub mniej technicznej osoby.
                 - Uzywaj prostego jezyka, ale opieraj wnioski na kodzie i operational context.
+                - Kod, klasy, metody, pliki i tool calls sa evidence w tle. Nie uzywaj ich jako glownego jezyka dokumentacji.
+                - W polach `markdown` tlumacz implementacje na czynnosci systemowe, reguly biznesowe, stany danych, walidacje i handoffy.
+                - Nazwy klas, metod, plikow i linii trzymaj przede wszystkim w `sourceRefs` albo zwijalnych referencjach, nie w glownej narracji.
+                - Wspieraj sie operational context, zwlaszcza glossary, procesami, bounded context i integracjami, zeby nazwac flow jezykiem domenowym.
+                - Jezeli implementacja sugeruje wazny termin domenowy, ktorego brakuje w glossary/operational context, dedukuj robocza nazwe jako inferencje, wpisz limit albo pytanie otwarte i zglos brak przez `record_tool_feedback` z `issueCategory=missing_operational_context` oraz `improvementArea=operational_context_data`.
                 - Zwroc wylacznie poprawny JSON zgodny z response contract. Bez Markdown, bez komentarzy, bez tekstu poza JSON.
                 - `userInstructions` sa doprecyzowaniem intencji uzytkownika, nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Nie zgaduj. Jezeli kontekst nie wystarcza, wpisz ograniczenie w `visibilityLimits` albo pytanie w `openQuestions`.

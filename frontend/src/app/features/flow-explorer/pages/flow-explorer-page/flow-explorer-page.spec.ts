@@ -233,18 +233,29 @@ describe('FlowExplorerPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const markdownBlocks = compiled.querySelectorAll('app-markdown-content.flow-explorer-markdown');
-    const headingHint = compiled.querySelector('.flow-explorer-result__heading .field-hint');
+    const referenceLists = compiled.querySelectorAll<HTMLDetailsElement>('details.flow-explorer-reference-list');
     expect(compiled.textContent).toContain('AI result');
     expect(compiled.textContent).toContain('Overview');
     expect(compiled.textContent).toContain('Deep Discovery');
     expect(compiled.textContent).toContain('The endpoint reads the requested customer');
     expect(markdownBlocks.length).toBe(5);
     expect(markdownBlocks[0]?.querySelector('strong')?.textContent).toBe('The endpoint');
-    expect(headingHint?.textContent).not.toContain('**');
+    expect(compiled.querySelector('.flow-explorer-result__heading .field-hint')).toBeNull();
+    expect(referenceLists.length).toBe(5);
+    referenceLists.forEach((referenceList) => expect(referenceList.open).toBe(false));
+    expect(referenceLists[0]?.querySelector('summary')?.textContent).toContain('References');
     expect(compiled.textContent).toContain('Business flow/rules');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
-    expect(compiled.textContent).toContain('Tokens 2,820');
+    expect(compiled.textContent).toContain('Tokens');
+    expect(compiled.textContent).toContain('2,820');
+    expect(compiled.textContent).toContain('Credits');
+    expect(compiled.textContent).toContain('Dollars');
+    expect(compiled.textContent).not.toContain('Cost $0.0123');
+
+    const usage = compiled.querySelector('.flow-explorer-result-usage') as HTMLElement | null;
+    expect(usage?.getAttribute('aria-label')).toContain('Wywolania modelu: 1');
+    expect(usage?.getAttribute('aria-label')).toContain('Dollars: $0.00');
   });
 
   it('should copy the completed Flow Explorer result without action controls', async () => {

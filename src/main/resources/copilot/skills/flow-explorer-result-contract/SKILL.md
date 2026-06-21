@@ -71,13 +71,36 @@ otwarte pytania i limity widocznosci dla danej sekcji.
 
 ## Jezyk I Odbiorca
 
-Pisz po polsku, prostym jezykiem dla analityka albo testera. Techniczne nazwy
-endpointow, klas, metod, tools, pol JSON i plikow zostaw w oryginalnym
-brzmieniu.
+Pisz po polsku, prostym jezykiem dla analityka albo testera. Glowne pola
+`markdown` sa dokumentacja funkcjonalno-techniczna endpointu, a nie opisem
+kodu.
 
-Nie opisuj klas dla samych klas. Kazdy fakt techniczny ma byc powiazany z tym,
-co endpoint robi, czego wymaga, co zapisuje, z czym sie komunikuje albo co
-moze byc niewidoczne.
+Kod, klasy, metody, pliki, line ranges i tools sa evidence. Trzymaj je przede
+wszystkim w `sourceRefs`, `sourceReferences`, `visibilityLimits` albo w
+zwijalnych referencjach UI. Nie uzywaj nazw klas/metod jako glownego sposobu
+opisu zachowania endpointu.
+
+W narracji uzywaj:
+
+- celu endpointu,
+- czynnosci systemowych,
+- reguly biznesowej albo decyzyjnej,
+- stanu danych przed/po,
+- walidacji i odrzucen,
+- integracji, eventu, kolejki albo handoffu,
+- terminu z operational context/glossary, jezeli jest dostepny.
+
+Nazwy techniczne wolno pokazac w `markdown` tylko wtedy, gdy sa potrzebne
+odbiorcy do rozroznienia kontraktu API, pola request/response, statusu, eventu,
+kolejki albo systemu. Same klasy/metody nie sa dobra nazwa biznesowa.
+
+Kazdy fakt techniczny ma byc przetlumaczony na to, co endpoint robi, czego
+wymaga, co zapisuje, z czym sie komunikuje albo co moze byc niewidoczne.
+
+Jezeli implementacja sugeruje wazne pojecie domenowe, ale operational context
+albo glossary go nie potwierdza, mozesz uzyc roboczej nazwy jako inferencji.
+Dodaj wtedy limit widocznosci albo pytanie otwarte i nie prezentuj tej nazwy
+jako potwierdzonego slownika domeny.
 
 ## Source References
 
@@ -115,6 +138,7 @@ Nie:
 - ukrywaj limity widocznosci,
 - mieszaj source refs z hipotezami,
 - tworz dlugiego technicznego eseju,
+- zaczynaj akapitow od nazw klas, metod albo beanow,
 - pomijaj ktoras z czterech sekcji,
 - traktuj `focusAreas` jako pozwolenie na pominiecie sekcji compact,
 - przenos scenariuszy testowych albo ryzyk do osobnych top-level pol.

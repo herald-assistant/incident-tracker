@@ -31,6 +31,13 @@ Kazda sekcja ma odpowiadac na inne pytanie testowe:
 Nie duplikuj tej samej listy scenariuszy w kilku sekcjach. Jezeli scenariusz
 dotyka kilku sekcji, w kazdej sekcji opisz tylko jej perspektywe.
 
+Pisz scenariusze jezykiem procesu i danych biznesowych, nie jezykiem klas,
+metod ani repozytoriow. Kod jest evidence dla setupu i oczekiwanego rezultatu,
+ale nazwy implementacyjne trzymaj w source refs. Jezeli potrzebujesz nazwy
+domenowej, sprawdz operational context/glossary; brak wartosciowego terminu
+zglos przez feedback tool jako `missing_operational_context`, jezeli tool jest
+dostepny.
+
 ## Overview
 
 `overview.markdown` ma zawierac:

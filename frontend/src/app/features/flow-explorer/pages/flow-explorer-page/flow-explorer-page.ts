@@ -5,6 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { finalize } from 'rxjs';
 
 import {
+  AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
   ApiErrorResponse
 } from '../../../../core/models/analysis.models';
@@ -33,6 +34,11 @@ import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-f
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
 import { copyElementToClipboard } from '../../../../core/utils/clipboard.utils';
+import {
+  AnalysisAiCostEstimate,
+  estimateAnalysisAiCost,
+  GITHUB_AI_CREDIT_USD
+} from '../../../../core/utils/analysis-ai-usage-cost.utils';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -42,6 +48,11 @@ interface FlowExplorerChoice<T extends string> {
   label: string;
   hint: string;
   disabled?: boolean;
+}
+
+interface FlowExplorerUsageStat {
+  label: string;
+  value: string;
 }
 
 const POLL_INTERVAL_MS = 1500;
@@ -772,10 +783,6 @@ export class FlowExplorerPageComponent implements OnInit {
     }, 1600);
   }
 
-  protected resultOverviewHint(markdown: string | null | undefined): string {
-    return markdownSummary(markdown) || this.selectedGoalLabel();
-  }
-
   protected isFocusAreaSelected(value: FlowExplorerFocusArea): boolean {
     return this.focusAreas().includes(value);
   }
@@ -940,18 +947,12 @@ export class FlowExplorerPageComponent implements OnInit {
     }
   }
 
-  protected formatTokenCount(value: number | null | undefined): string {
-    if (!value || value <= 0) {
-      return 'n/a';
-    }
-    return new Intl.NumberFormat('en-US').format(value);
+  protected usageStats(usage: AnalysisAiUsage | null | undefined): FlowExplorerUsageStat[] {
+    return buildFlowExplorerUsageStats(usage ?? null);
   }
 
-  protected formatCost(value: number | null | undefined): string {
-    if (!value || value <= 0) {
-      return 'n/a';
-    }
-    return `$${value.toFixed(4)}`;
+  protected usageTooltip(usage: AnalysisAiUsage | null | undefined): string {
+    return buildFlowExplorerUsageTooltip(usage ?? null);
   }
 
   private loadConfig(): void {
@@ -1265,17 +1266,139 @@ export class FlowExplorerPageComponent implements OnInit {
 
 }
 
-function normalizeSearch(value: string): string {
-  return value.trim().toLowerCase();
+function buildFlowExplorerUsageStats(usage: AnalysisAiUsage | null): FlowExplorerUsageStat[] {
+  const estimate = estimateAnalysisAiCost(usage);
+  if (!usage || usage.totalTokens <= 0 || !estimate) {
+    return [];
+  }
+
+  return [
+    { label: 'Tokens', value: formatUsageTokenCount(usage.totalTokens) },
+    { label: 'Credits', value: formatCredits(estimate.credits) },
+    { label: 'Dollars', value: formatDollars(estimate.dollars) }
+  ];
 }
 
-function markdownSummary(markdown: string | null | undefined): string {
-  return String(markdown || '')
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
-    .replace(/[*_~>#-]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+function buildFlowExplorerUsageTooltip(usage: AnalysisAiUsage | null): string {
+  const estimate = estimateAnalysisAiCost(usage);
+  if (!usage || !estimate) {
+    return '';
+  }
+
+  const lines = [
+    'Szacowany koszt analizy AI',
+    '',
+    `Tokens: ${formatUsageTokenCount(usage.totalTokens)} - laczna ilosc tekstu odczytanego przez model i wygenerowanej odpowiedzi.`,
+    `Credits: ${formatCredits(estimate.credits)} - przeliczenie tokenow na GitHub AI Credits.`,
+    `Dollars: ${formatDollars(estimate.dollars)} - orientacyjny koszt dodatkowego uzycia po wykorzystaniu pakietu.`,
+    '',
+    'Jak to liczymy:',
+    `Nowy kontekst wyslany do AI: ${formatUsageTokenCount(
+      estimate.newInputTokens
+    )} tokenow x ${formatUsdRate(estimate.inputUsdPerMillion)} / 1M.`,
+    `Kontekst odczytany z cache: ${formatUsageTokenCount(
+      estimate.cachedInputTokens
+    )} tokenow x ${formatUsdRate(
+      estimate.cachedInputUsdPerMillion
+    )} / 1M. To ponownie uzyty kontekst rozmowy/evidence, zwykle duzo tanszy niz nowy input.`,
+    `Odpowiedz AI: ${formatUsageTokenCount(estimate.outputTokens)} tokenow x ${formatUsdRate(
+      estimate.outputUsdPerMillion
+    )} / 1M.`
+  ];
+
+  if (estimate.cacheWriteTokens > 0) {
+    if (estimate.cacheWriteUsdPerMillion !== null) {
+      lines.push(
+        `Zapis do cache: ${formatUsageTokenCount(estimate.cacheWriteTokens)} tokenow x ${formatUsdRate(
+          estimate.cacheWriteUsdPerMillion
+        )} / 1M.`
+      );
+    } else {
+      lines.push(
+        `Zapis do cache: ${formatUsageTokenCount(
+          estimate.cacheWriteTokens
+        )} tokenow. Ten model nie ma osobnej stawki cache-write w tabeli, wiec pokazujemy to informacyjnie.`
+      );
+    }
+  }
+
+  lines.push('');
+  lines.push(
+    `Stawki: ${estimate.pricingModel}${
+      estimate.usedFallbackPricing ? ' (model nierozpoznany, uzyty domyslny przelicznik)' : ''
+    }, 1 credit = ${formatDollars(GITHUB_AI_CREDIT_USD)}.`
+  );
+
+  if (usage.apiCallCount > 0) {
+    lines.push(
+      `Wywolania modelu: ${formatUsageTokenCount(
+        usage.apiCallCount
+      )}. Jedna analiza moze miec kilka rund, zwlaszcza gdy AI pobiera dodatkowe dane przez tools.`
+    );
+  }
+
+  if (usage.apiDurationMs > 0) {
+    lines.push(`Czas po stronie API: ${formatDurationMs(usage.apiDurationMs)}.`);
+  }
+
+  if (usage.model) {
+    lines.push(`Model zgloszony przez SDK: ${usage.model}.`);
+  }
+
+  if (usage.contextCurrentTokens !== null && usage.contextTokenLimit !== null) {
+    lines.push(
+      `Aktualny rozmiar kontekstu sesji: ${formatUsageTokenCount(
+        usage.contextCurrentTokens
+      )} / ${formatUsageTokenCount(
+        usage.contextTokenLimit
+      )} tokenow. To snapshot pamieci rozmowy, a nie osobna pozycja do doliczenia.`
+    );
+  }
+
+  if (usage.contextMessages !== null) {
+    lines.push(
+      `Wiadomosci w kontekscie sesji: ${formatUsageTokenCount(
+        usage.contextMessages
+      )}. To pomaga ocenic, jak dluga byla sesja AI.`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+function formatUsageTokenCount(value: number | null | undefined): string {
+  return new Intl.NumberFormat('en-US').format(Math.max(0, Math.round(Number(value ?? 0))));
+}
+
+function formatCredits(value: number): string {
+  return new Intl.NumberFormat('pl-PL', {
+    minimumFractionDigits: value < 10 ? 2 : 1,
+    maximumFractionDigits: value < 10 ? 2 : 1
+  }).format(value);
+}
+
+function formatDollars(value: number): string {
+  return `$${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)}`;
+}
+
+function formatUsdRate(value: number): string {
+  return `$${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: value < 1 ? 3 : 2,
+    maximumFractionDigits: 3
+  }).format(value)}`;
+}
+
+function formatDurationMs(value: number): string {
+  if (value >= 1000) {
+    return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value / 1000)} s`;
+  }
+
+  return `${formatUsageTokenCount(value)} ms`;
+}
+
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase();
 }

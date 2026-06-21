@@ -29,6 +29,30 @@ Nie streszczaj kodu klasa po klasie. Zawsze tlumacz zachowanie endpointu:
 - jakie systemy zewnetrzne dostaja sygnal albo dane,
 - czego nie bylo widac w evidence.
 
+Kod jest materialem zrodlowym, ale wynik ma czytac sie jak dokumentacja
+funkcjonalno-techniczna. Nazwy klas, metod, beanow i plikow przenos do
+referencji, a w tresci opisuj czynnosci systemu, reguly, decyzje, stany danych
+i handoffy.
+
+Wspieraj sie operational context i glossary. Jezeli implementacja sugeruje
+ubiquitous language, ktorego brakuje w slowniku, uzyj roboczej nazwy jako
+inferencji, dopisz limit albo pytanie otwarte i zglos luke przez feedback tool,
+jezeli jest dostepny.
+
+Przyklady ponizej sa CRM-specific i zanonimizowane; nie kopiuj nazw do wyniku
+dla realnego endpointu.
+
+- Zle: "`CustomerCaseController` wywoluje `CustomerCaseService.create`, potem
+  `CustomerCaseRepository.save`."
+- Dobrze: "Po przyjeciu zgloszenia system tworzy sprawe klienta, nadaje jej
+  poczatkowy status i zapisuje ja tak, aby byla widoczna w dalszym procesie
+  obslugi."
+- Zle: "`EligibilityValidator` sprawdza `customerSegment` i
+  `activeAgreementFlag`."
+- Dobrze: "System dopuszcza kontynuacje tylko wtedy, gdy klient nalezy do
+  obslugiwanego segmentu i ma aktywna relacje produktowa. Jezeli te terminy nie
+  sa potwierdzone w glossary, oznacz je jako inferowane."
+
 ## Overview
 
 `overview.markdown` ma zawierac zwarty opis:

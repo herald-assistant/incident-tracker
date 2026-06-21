@@ -32,6 +32,12 @@ Kazdy istotny wpis ryzyka oznacz jednym z typow:
 Nie prezentuj hipotez jako faktow. Jezeli ryzyko wynika z braku danych, nazwij
 to jako luka widocznosci i wskaz, czego brakuje.
 
+Opisuj ryzyka jezykiem skutku dla procesu, testow, danych albo handoffu. Nie
+rob z nazw klas/metod glownego ryzyka. Jezeli kod sugeruje wazne pojecie
+domenowe, sprawdz operational context/glossary; gdy terminu brakuje, oznacz
+nazwe jako inferowana i zglos luke przez feedback tool jako
+`missing_operational_context`, jezeli tool jest dostepny.
+
 Kazda sekcja ma patrzec na inny rodzaj ryzyka:
 
 - `BUSINESS_FLOW_RULES`: niejasne reguly, warianty procesu, decyzje i skutki

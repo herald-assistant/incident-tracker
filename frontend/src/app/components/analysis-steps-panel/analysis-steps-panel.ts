@@ -424,7 +424,7 @@ const DATABASE_TOOL_LABELS: Record<string, string> = {
 const GITLAB_TOOL_LABELS: Record<string, string> = {
   gitlab_search_repository_candidates: 'Wyszukiwanie kandydatów plików',
   gitlab_read_repository_files_by_path: 'Odczyt listy plików',
-  gitlab_read_java_method_slice: 'Wycinek metody Java',
+  gitlab_read_java_method_slice: 'Odczyt metody Java',
   gitlab_read_repository_file_outline: 'Zarys pliku',
   gitlab_find_class_references: 'Referencje klasy',
   gitlab_find_flow_context: 'Kontekst przepływu'
@@ -1567,12 +1567,13 @@ function buildToolWorkItem(
     activity.start?.toolName ||
     activity.complete?.toolName ||
     'tool';
+  const skillName = resolveSkillName(request, activity);
   const reason =
     toolEvidence?.reason ||
     request?.reason ||
     toolReasonFromActivity(activity.start) ||
     toolReasonFromActivity(activity.complete) ||
-    `Copilot wywołał ${toolName}.`;
+    formatToolTimelineSummary(toolName, skillName);
   const toolCallId =
     toolEvidence?.toolCallId || request?.toolCallId || activity.start?.toolCallId || activity.complete?.toolCallId || '';
   const meta = buildToolTimelineMeta(toolEvidence, request, activity, toolName, toolCallId);
@@ -1582,7 +1583,7 @@ function buildToolWorkItem(
     kind: 'tool',
     category: 'TOOL',
     status,
-    title: formatToolTimelineTitle(toolEvidence, toolName),
+    title: formatToolTimelineTitle(toolEvidence, toolName, skillName, request, activity),
     summary: reason,
     previewMarkdown: '',
     markdownContent: '',
@@ -2008,7 +2009,10 @@ function resolveToolTimelineStatus(
 
 function formatToolTimelineTitle(
   toolEvidence: ToolEvidenceTimelineItemView | null,
-  toolName: string
+  toolName: string,
+  skillName: string,
+  request: ToolRequestInfo | null,
+  activity: ToolActivityBundle
 ): string {
   if (toolEvidence?.databaseTool?.title) {
     return toolEvidence.databaseTool.title;
@@ -2022,7 +2026,112 @@ function formatToolTimelineTitle(
     return toolEvidence.codePanel.headerTitle;
   }
 
+  const gitLabCodeReadTitle = formatGitLabCodeReadTimelineTitle(toolName, request, activity);
+  if (gitLabCodeReadTitle) {
+    return gitLabCodeReadTitle;
+  }
+
+  if (isSkillTool(toolName) && skillName) {
+    return `skill ${skillName}`;
+  }
+
   return toolName || 'Wywołanie toola';
+}
+
+function formatToolTimelineSummary(toolName: string, skillName: string): string {
+  if (isSkillTool(toolName) && skillName) {
+    return `Copilot wywołał skill ${skillName}.`;
+  }
+
+  return `Copilot wywołał ${toolName}.`;
+}
+
+function resolveSkillName(request: ToolRequestInfo | null, activity: ToolActivityBundle): string {
+  return (
+    skillNameFromArguments(request?.arguments) ||
+    skillNameFromActivity(activity.start) ||
+    skillNameFromActivity(activity.complete) ||
+    skillNameFromResultPreview(activity.complete)
+  );
+}
+
+function skillNameFromActivity(event: AnalysisAiActivityEvent | null): string {
+  if (!event) {
+    return '';
+  }
+
+  const details = activityDetails(event);
+  const toolTelemetry = recordFromValue(details['toolTelemetry']);
+  const restrictedProperties = recordFromValue(toolTelemetry['restrictedProperties']);
+  return (
+    skillNameFromArguments(recordFromValue(details['arguments'])) ||
+    stringFromRecord(restrictedProperties, 'skillName')
+  );
+}
+
+function skillNameFromArguments(argumentsRecord: Record<string, unknown> | null | undefined): string {
+  const record = argumentsRecord ?? {};
+  return stringFromRecord(record, 'skill') || stringFromRecord(record, 'skillName');
+}
+
+function skillNameFromResultPreview(event: AnalysisAiActivityEvent | null): string {
+  if (!event) {
+    return '';
+  }
+
+  const preview = stringFromRecord(activityDetails(event), 'resultContentPreview');
+  return preview.match(/Skill\s+"([^"]+)"/)?.[1]?.trim() ?? '';
+}
+
+function isSkillTool(toolName: string): boolean {
+  return toolName.trim().toLowerCase() === 'skill';
+}
+
+function formatGitLabCodeReadTimelineTitle(
+  toolName: string,
+  request: ToolRequestInfo | null,
+  activity: ToolActivityBundle
+): string {
+  if (toolName !== 'gitlab_read_java_method_slice') {
+    return '';
+  }
+
+  return (
+    gitLabJavaMethodSliceTitleFromRecord(request?.arguments) ||
+    gitLabJavaMethodSliceTitleFromActivity(activity.start) ||
+    gitLabJavaMethodSliceTitleFromActivity(activity.complete) ||
+    gitLabJavaMethodSliceTitleFromResultPreview(activity.complete)
+  );
+}
+
+function gitLabJavaMethodSliceTitleFromActivity(event: AnalysisAiActivityEvent | null): string {
+  if (!event) {
+    return '';
+  }
+
+  return gitLabJavaMethodSliceTitleFromRecord(recordFromValue(activityDetails(event)['arguments']));
+}
+
+function gitLabJavaMethodSliceTitleFromResultPreview(event: AnalysisAiActivityEvent | null): string {
+  if (!event) {
+    return '';
+  }
+
+  const details = activityDetails(event);
+  const parsedPreview =
+    asRecord(parseOptionalJson(stringFromRecord(details, 'resultContentPreview'))) ||
+    asRecord(parseOptionalJson(stringFromRecord(details, 'resultDetailedContentPreview')));
+
+  return gitLabJavaMethodSliceTitleFromRecord(parsedPreview);
+}
+
+function gitLabJavaMethodSliceTitleFromRecord(
+  record: Record<string, unknown> | null | undefined
+): string {
+  const source = record ?? {};
+  const declaringTypeName = stringFromRecord(source, 'declaringTypeName');
+  const filePath = stringFromRecord(source, 'filePath');
+  return firstDefinedText(declaringTypeName, filePath ? lastPathSegment(filePath) : '') ?? '';
 }
 
 function toolStatusIcon(status: string): string {

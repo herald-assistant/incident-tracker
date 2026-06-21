@@ -5,3 +5,53 @@
 .analysis-chat {
   border-style: dashed;
 }
+
+.analysis-chat .collapsible-panel__summary.panel-card__header {
+  grid-template-columns: minmax(220px, max-content) minmax(0, 1fr) auto;
+}
+
+.analysis-chat__summary-main {
+  min-width: 0;
+}
+
+.analysis-chat__hint {
+  justify-self: end;
+  max-width: min(52ch, 100%);
+  text-align: right;
+}
+
+.analysis-chat__summary-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 12px;
+  min-width: max-content;
+}
+
+.analysis-chat__summary-actions .panel-chip,
+.analysis-chat__summary-actions .status-pill {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.analysis-chat__summary-actions .collapsible-panel__icon {
+  margin-left: 0;
+}
+
+@media (max-width: 860px) {
+  .analysis-chat .collapsible-panel__summary.panel-card__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .analysis-chat__hint {
+    grid-column: 1 / -1;
+    justify-self: start;
+    max-width: none;
+    text-align: left;
+  }
+
+  .analysis-chat__summary-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}

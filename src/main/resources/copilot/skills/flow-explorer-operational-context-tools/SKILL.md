@@ -16,6 +16,7 @@ Operational context pomaga nazwac:
 - proces albo bounded context,
 - owner team,
 - glossary pojec biznesowych,
+- ubiquitous language dla flow endpointu,
 - code-search scope,
 - integracje i handoff route.
 
@@ -62,6 +63,31 @@ predicate albo mapowania. To jest praca GitLab tools.
   uzywa danego pliku.
 - Jezeli owner albo process jest niejednoznaczny, wpisz to jako ograniczenie
   widocznosci.
+
+## Glossary I Ubiquitous Language
+
+Operational context jest pierwszym miejscem do potwierdzania nazw domenowych:
+procesow, bounded context, systemow, integracji, handoffow i terminow ze
+slownika. Jezeli kod sugeruje pojecie domenowe, najpierw sprobuj znalezc je w
+glossary albo powiazanym bycie katalogowym.
+
+Jezeli glossary nie ma potrzebnego terminu:
+
+- nie wymyslaj go jako potwierdzonego faktu,
+- mozesz uzyc roboczej nazwy na podstawie implementacji, endpointu, pol
+  requestu, enumow albo eventow,
+- oznacz taka nazwe jako inferencje albo pytanie otwarte,
+- zglos brak przez `record_tool_feedback`, jezeli feedback tool jest dostepny:
+  `issueCategory=missing_operational_context`,
+  `improvementArea=operational_context_data`,
+  `summaryForOperator` po polsku z opisem brakujacego terminu.
+
+Przyklad CRM-specific, zanonimizowany:
+
+- Nie pisz: "`CustomerAssignmentService` wywoluje `SegmentRepository`".
+- Pisz: "System przypisuje sprawe klienta do opiekuna na podstawie segmentu
+  klienta. Termin 'segment klienta' wyglada na pojecie domenowe; jezeli nie ma
+  go w glossary, oznacz go jako inferowany i zglos luke katalogu."
 
 ## Wklad Do Wyniku
 

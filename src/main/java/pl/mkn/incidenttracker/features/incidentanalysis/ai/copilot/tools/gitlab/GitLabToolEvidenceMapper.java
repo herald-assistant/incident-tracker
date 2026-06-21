@@ -23,6 +23,7 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRep
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFilesByPathToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
 import pl.mkn.incidenttracker.common.JsonPayloadReader;
+import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_CLAS
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_ENDPOINTS;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_JAVA_METHOD_SLICE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
@@ -65,6 +67,7 @@ public class GitLabToolEvidenceMapper {
                  READ_REPOSITORY_FILES_BY_PATH,
                  READ_REPOSITORY_FILE_CHUNK,
                  READ_REPOSITORY_FILE_CHUNKS,
+                 READ_JAVA_METHOD_SLICE,
                  READ_REPOSITORY_FILE_OUTLINE,
                  LIST_AVAILABLE_REPOSITORIES,
                  LIST_REPOSITORY_ENDPOINTS,
@@ -93,6 +96,7 @@ public class GitLabToolEvidenceMapper {
             );
             case READ_REPOSITORY_FILE_CHUNK -> captureGitLabFileChunk(toolCallId, rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_CHUNKS -> captureGitLabFileChunks(toolCallId, rawArguments, rawResult, sessionEvidence);
+            case READ_JAVA_METHOD_SLICE -> captureGitLabJavaMethodSlice(toolCallId, rawArguments, rawResult, sessionEvidence);
             case READ_REPOSITORY_FILE_OUTLINE -> captureGitLabFileOutline(toolCallId, rawArguments, rawResult, sessionEvidence);
             case LIST_AVAILABLE_REPOSITORIES -> captureGitLabAvailableRepositories(
                     toolCallId,
@@ -270,6 +274,38 @@ public class GitLabToolEvidenceMapper {
             return updatedSection;
         } catch (JsonProcessingException exception) {
             log.warn("Failed to parse GitLab tool chunks result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
+    private AnalysisEvidenceSection captureGitLabJavaMethodSlice(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabJavaMethodSliceResponse.class);
+            return sessionEvidence.upsertItem(
+                    GITLAB_PROVIDER,
+                    GITLAB_FETCHED_CODE_CATEGORY,
+                    gitLabFileKey(response.group(), response.projectName(), response.branch(), response.filePath()),
+                    GITLAB_FILE_ORDER_NAMESPACE,
+                    GITLAB_FILE_FALLBACK_KEY,
+                    buildGitLabFileItem(
+                            response.projectName(),
+                            response.filePath(),
+                            toolReason(rawArguments),
+                            toolCallId,
+                            READ_JAVA_METHOD_SLICE,
+                            rawArguments,
+                            response.content(),
+                            response.returnedLineStart() > 0 ? response.returnedLineStart() : null
+                    ),
+                    this::keepExistingGitLabFileItem
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab Java method slice result. reason={}", exception.getMessage(), exception);
             return null;
         }
     }

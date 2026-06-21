@@ -279,6 +279,134 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(runtimePayload).toContain('"messagesLength": 6');
   });
 
+  it('should show skill name in Copilot skill tool header', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      {
+        eventId: 'event-skill-start',
+        parentEventId: '',
+        type: 'tool.execution_start',
+        category: 'TOOL',
+        status: 'STARTED',
+        title: 'Tool start: skill',
+        summary: 'Copilot uruchamia skill.',
+        turnId: '',
+        interactionId: '',
+        toolCallId: 'tool-call-skill-1',
+        toolName: 'skill',
+        timestamp: '2026-04-14T12:00:14Z',
+        details: {
+          toolCallId: 'tool-call-skill-1',
+          toolName: 'skill',
+          arguments: {
+            skill: 'flow-explorer-gitlab-tools'
+          }
+        }
+      },
+      {
+        eventId: 'event-skill-complete',
+        parentEventId: '',
+        type: 'tool.execution_complete',
+        category: 'TOOL',
+        status: 'COMPLETED',
+        title: 'Tool koniec',
+        summary: 'Tool zakończył wykonanie poprawnie.',
+        turnId: '',
+        interactionId: 'interaction-skill-1',
+        toolCallId: 'tool-call-skill-1',
+        toolName: '',
+        timestamp: '2026-04-14T12:00:15Z',
+        details: {
+          toolCallId: 'tool-call-skill-1',
+          success: true,
+          resultContentPreview:
+            'Skill "flow-explorer-gitlab-tools" loaded successfully. Follow the instructions in the skill context.',
+          toolTelemetry: {
+            restrictedProperties: {
+              skillName: 'flow-explorer-gitlab-tools'
+            }
+          }
+        }
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const skillItem = compiled.querySelector('.ai-work-item--tool') as HTMLElement | null;
+
+    expect(skillItem).not.toBeNull();
+    expect(skillItem?.querySelector('.ai-work-item__text')?.textContent).toContain(
+      'Copilot wywołał skill flow-explorer-gitlab-tools.'
+    );
+    expect(skillItem?.querySelector('.ai-work-item__details-title')?.textContent).toContain(
+      'skill flow-explorer-gitlab-tools'
+    );
+  });
+
+  it('should show Java class name for GitLab method slice tool details', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      {
+        eventId: 'event-method-slice-start',
+        parentEventId: '',
+        type: 'tool.execution_start',
+        category: 'TOOL',
+        status: 'STARTED',
+        title: 'Tool start: gitlab_read_java_method_slice',
+        summary: 'Copilot uruchamia GitLab tool.',
+        turnId: '',
+        interactionId: '',
+        toolCallId: 'tool-call-method-slice-1',
+        toolName: 'gitlab_read_java_method_slice',
+        timestamp: '2026-04-14T12:00:14Z',
+        details: {
+          toolCallId: 'tool-call-method-slice-1',
+          toolName: 'gitlab_read_java_method_slice',
+          arguments: {
+            reason: 'Potrzebuje szczegolow glownej metody dla walidacji.',
+            filePath: 'src/main/java/com/example/crm/customer/LaunchCollateralsRequest.java'
+          }
+        }
+      },
+      {
+        eventId: 'event-method-slice-complete',
+        parentEventId: '',
+        type: 'tool.execution_complete',
+        category: 'TOOL',
+        status: 'COMPLETED',
+        title: 'Tool koniec',
+        summary: 'Tool zakończył wykonanie poprawnie.',
+        turnId: '',
+        interactionId: 'interaction-method-slice-1',
+        toolCallId: 'tool-call-method-slice-1',
+        toolName: '',
+        timestamp: '2026-04-14T12:00:15Z',
+        details: {
+          toolCallId: 'tool-call-method-slice-1',
+          success: true
+        }
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toolItem = compiled.querySelector('.ai-work-item--tool') as HTMLElement | null;
+    const detailsTitle = toolItem?.querySelector('.ai-work-item__details-title')?.textContent ?? '';
+
+    expect(toolItem).not.toBeNull();
+    expect(toolItem?.querySelector('.ai-work-item__text')?.textContent).toContain(
+      'Potrzebuje szczegolow glownej metody dla walidacji.'
+    );
+    expect(detailsTitle).toContain('LaunchCollateralsRequest.java');
+    expect(detailsTitle).not.toContain('gitlab_read_java_method_slice');
+  });
+
   it('should collapse progress and Copilot workflow when a final result is available', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);

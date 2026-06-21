@@ -112,6 +112,34 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
         assertFalse(attributes(section, 0).containsKey("startLine"));
     }
 
+    @Test
+    void shouldCaptureGitLabJavaMethodSliceAsFetchedCodeItem() {
+        var registry = toolEvidenceSessionStore(objectMapper);
+        var toolEvidenceListener = gitLabToolEvidenceListener(registry);
+        var capturedSection = new AtomicReference<AnalysisEvidenceSection>();
+        registry.registerSession("session-1", capturedSection::set);
+
+        capture(
+                toolEvidenceListener,
+                "session-1",
+                "tool-call-method-slice-1",
+                "gitlab_read_java_method_slice",
+                "{\"reason\":\"Sprawdzam metode odpowiedzialna za walidacje.\"}",
+                javaMethodSliceResult()
+        );
+
+        var section = capturedSection.get();
+        var attributes = attributes(section);
+        assertEquals("gitlab", section.provider());
+        assertEquals("tool-fetched-code", section.category());
+        assertEquals(FILE_PATH, attributes.get("filePath"));
+        assertEquals("gitlab_read_java_method_slice", attributes.get("toolName"));
+        assertEquals("tool-call-method-slice-1", attributes.get("toolCallId"));
+        assertEquals("Sprawdzam metode odpowiedzialna za walidacje.", attributes.get("reason"));
+        assertEquals("12", attributes.get("startLine"));
+        assertTrue(attributes.get("content").contains("void validateCustomer()"));
+    }
+
     private String fullFileResult(String content) {
         return """
                 {
@@ -123,6 +151,48 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
                   "truncated": false
                 }
                 """.formatted(FILE_PATH, content);
+    }
+
+    private String javaMethodSliceResult() {
+        return """
+                {
+                  "group": "CRM/runtime",
+                  "projectName": "crm-customer-api",
+                  "branch": "main",
+                  "filePath": "%s",
+                  "status": "FOUND",
+                  "declaringTypeName": "CustomerService",
+                  "requestedMethods": [
+                    {
+                      "methodName": "validateCustomer",
+                      "lineStart": 12
+                    }
+                  ],
+                  "returnedLineStart": 12,
+                  "returnedLineEnd": 18,
+                  "totalLines": 120,
+                  "content": "class CustomerService {\\n    void validateCustomer() {\\n    }\\n}",
+                  "returnedCharacters": 57,
+                  "truncated": false,
+                  "includedImports": [],
+                  "includedFields": [],
+                  "includedMethods": [
+                    {
+                      "declaringTypeName": "CustomerService",
+                      "methodName": "validateCustomer",
+                      "signature": "void validateCustomer()",
+                      "lineStart": 12,
+                      "lineEnd": 18,
+                      "parameterCount": 0,
+                      "parameterTypes": []
+                    }
+                  ],
+                  "omittedFieldCount": 0,
+                  "omittedMethodCount": 0,
+                  "candidates": [],
+                  "limitations": []
+                }
+                """.formatted(FILE_PATH);
     }
 
     private String chunkResult(String content) {
