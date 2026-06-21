@@ -48,18 +48,22 @@ Na dzisiaj projekt ma:
 - wspolny shell UI `Team Delivery Workspace` z lewym sidebarem, kontekstowym
   topbarem i grupami nawigacji `Analysis Features`, `Tool Workbench` oraz
   `Platform`,
-- ekran `GET /` serwowany przez Spring Boot z mozliwoscia importu i eksportu
-  zapisu zakonczonej analizy jako JSON,
-- w ekranie `GET /` widok promptu przygotowanego dla AI, mozliwy do skopiowania
-  nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
-- w ekranie `GET /` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
+- ekran `GET /` jako startowy `Platform / Team Delivery Workspace` overview,
+  z szybkim wejsciem do aktywnych feature'ow i nietechnicznym opisem tego, jak
+  platforma oszczedza czas w codziennej pracy,
+- ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
+  importu i eksportu zapisu zakonczonej analizy jako JSON,
+- w ekranie `GET /incident-analysis` widok promptu przygotowanego dla AI,
+  mozliwy do skopiowania nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
+- w ekranie `GET /incident-analysis` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
   dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
   pollingiem joba,
-- w ekranie `GET /` ostatni krok AI pokazuje plaska liste aktywnosci Copilota
-  i user-facing tool evidence: komunikaty/rozumowanie AI, usage/runtime oraz
-  wywolania tools sa laczone w jeden tok wedlug zdarzen z pollingu, a kazdy
-  wiersz ma ikone, prosty tekst, status i rozwijane szczegoly,
-- w ekranie `GET /` ostatni krok AI pokazuje sumaryczne tokeny oraz
+- w ekranie `GET /incident-analysis` ostatni krok AI pokazuje plaska liste
+  aktywnosci Copilota i user-facing tool evidence:
+  komunikaty/rozumowanie AI, usage/runtime oraz wywolania tools sa laczone w
+  jeden tok wedlug zdarzen z pollingu, a kazdy wiersz ma ikone, prosty tekst,
+  status i rozwijane szczegoly,
+- w ekranie `GET /incident-analysis` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /database` i
@@ -101,6 +105,10 @@ Na dzisiaj projekt ma:
 ## Glowne entrypointy HTTP
 
 - `GET /`
+  Angularowy ekran `Platform / Team Delivery Workspace` jako overview
+  platformy, szybkie wejscie do aktywnych feature'ow i customer-centric opis
+  automatyzacji pracy bez eksponowania mechaniki AI/tools.
+- `GET /incident-analysis`
   Angularowy ekran `Analysis Features / Incident Analysis` do uruchamiania
   analizy z pola `correlationId`.
 - `GET /elastic`
@@ -376,9 +384,10 @@ Znaczenie grup UI:
   GitLab, Database i Operational Context sa analysis-independent i nie
   eksponuja incidentowego `analysisRunId`; DB/GitLab scope dla AI pozostaje
   feature-owned hidden `ToolContext`.
-- `Platform` - konfiguracja samego Team Delivery Workspace: workspace
-  settings, personalizacja, autentykacja i modele AI. V1 pokazuje te pozycje
-  jako disabled placeholders, dopoki nie powstana ich dedykowane widoki.
+- `Platform` - overview i konfiguracja samego Team Delivery Workspace:
+  workspace settings, personalizacja, autentykacja i modele AI. V1 pokazuje
+  ustawieniowe pozycje jako disabled placeholders, dopoki nie powstana ich
+  dedykowane widoki.
 
 ## Aktualny model runtime
 
@@ -438,7 +447,9 @@ Znaczenie grup UI:
 
 ```mermaid
 flowchart LR
-    A["GET /"] --> B["Angular bundle from static resources"]
+    A["GET /"] --> L["Workspace overview landing"]
+    L --> IA["GET /incident-analysis"]
+    IA --> B["Angular bundle from static resources"]
     B --> U["GET /analysis/ai/options"]
     B --> C["POST /analysis/jobs"]
     C --> D["AnalysisJobService"]

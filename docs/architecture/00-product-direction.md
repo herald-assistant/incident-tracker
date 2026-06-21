@@ -35,12 +35,19 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
   Elastic Logs, GitLab Source, Database Tools i Operational Context. Te widoki
   sluza do testow, debugowania i recznego zebrania inputu; nie sa osobnymi
   feature'ami produktowymi ani nie powinny niesc logiki incydentu.
-- `Platform` - customizacja Team Delivery Workspace: parametryzacja workspace'u,
-  personalizacja, autentykacja, konfiguracja modeli i inne ustawienia
-  platformy.
+- `Platform` - startowy overview Team Delivery Workspace oraz customizacja:
+  parametryzacja workspace'u, personalizacja, autentykacja, konfiguracja
+  modeli i inne ustawienia platformy.
 
 Topbar jest kontekstowy: pokazuje aktualny widok, breadcrumb i ewentualny
 skompresowany `capabilityInfo` pod ikona info. Nie jest glowna nawigacja.
+
+Route `GET /` jest spokojnym workspace overview pisanym jezykiem uzytkownika.
+Ma pokazac, ze platforma automatyzuje zbieranie danych z wielu firmowych
+zrodel, uklada je w zrozumialy kontekst i oddaje gotowe rezultaty do codziennej
+pracy. Landing nie powinien tlumaczyc AI, tools, promptow, integracji ani
+mechaniki platformy. Incident Analysis pozostaje osobnym workspace'em pod
+`/incident-analysis`.
 
 V1 UI ma byc jasny, prosty, korporacyjny i roboczy. Nie projektujemy
 marketingowych hero, dekoracyjnych gradientow ani duzych kart opisowych jako

@@ -268,13 +268,16 @@ przeczytaj `frontend/AGENTS.md` i najblizszy lokalny `AGENTS.md` w
 `frontend/src/app`. Widoczna nawigacja ma trzy grupy:
 
 - `Analysis Features` dla dedykowanych feature'ow, na teraz
-  `Incident Analysis`,
+  `Incident Analysis` i `Flow Explorer`,
 - `Tool Workbench` dla analysis-independent capability: Elastic Logs,
   GitLab Source, Database Tools i Operational Context,
-- `Platform` dla customizacji workspace'u: settings, personalizacja,
-  autentykacja i modele.
+- `Platform` dla startowego overview workspace'u oraz customizacji:
+  settings, personalizacja, autentykacja i modele.
 
-Aktualny ekran `GET /` korzysta z `POST /analysis/jobs` i
+Aktualny ekran `GET /` jest overview `Team Delivery Workspace`: pokazuje
+wartosc platformy jezykiem uzytkownika, aktywne feature'y i oszczednosc czasu
+bez tlumaczenia AI, tools, runtime ani integracji. Codzienny ekran incydentowy
+jest pod `/incident-analysis` i korzysta z `POST /analysis/jobs` oraz
 `GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
 Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
 albo wybrac `model` i dostepny dla niego `reasoningEffort` dla sesji AI. Opcje

@@ -84,8 +84,26 @@
   <div class="app-shell__workspace">
     <header class="app-shell__topbar">
       <div class="app-shell__title-block">
-        <p class="app-shell__breadcrumb">{{ section() }}</p>
         <h1>{{ title() }}</h1>
+        @if (breadcrumbs().length > 0) {
+          <nav class="app-shell__breadcrumb" aria-label="Breadcrumb">
+            <ol>
+              @for (item of breadcrumbs(); track item.label) {
+                <li>
+                  @if (item.route) {
+                    <a class="app-shell__breadcrumb-link" [routerLink]="item.route">
+                      {{ item.label }}
+                    </a>
+                  } @else {
+                    <span class="app-shell__breadcrumb-current" aria-current="page">
+                      {{ item.label }}
+                    </span>
+                  }
+                </li>
+              }
+            </ol>
+          </nav>
+        }
       </div>
 
       @if (capabilityInfo(); as info) {

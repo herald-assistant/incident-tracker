@@ -15,6 +15,14 @@ class FrontendRouteController {
         return "forward:/index.html";
     }
 
+    @GetMapping({
+            "/incident-analysis",
+            "/incident-analysis/**"
+    })
+    String forwardIncidentAnalysis() {
+        return "forward:/index.html";
+    }
+
     @GetMapping("/database")
     String forwardDatabase() {
         return "forward:/index.html";

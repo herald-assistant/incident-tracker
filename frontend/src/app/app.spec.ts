@@ -30,17 +30,61 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the analysis console shell on the root route', async () => {
+  it('should render the platform landing shell on the root route', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
 
     await router.navigateByUrl('/');
     fixture.detectChanges();
+    flushUiConfig(http);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'Team Delivery Workspace'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
+    expect(compiled.textContent).toContain('Sprawdź incydent');
+    expect(compiled.textContent).toContain('Flow Explorer');
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+  });
+
+  it('should render the incident analysis shell on the incident analysis route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/incident-analysis');
+    fixture.detectChanges();
+    flushUiConfig(http);
+    http.expectOne('/api/auth/github/status').flush({
+      mode: 'LOCAL_TOKEN',
+      required: false,
+      connected: false,
+      githubLogin: null,
+      displayName: null,
+      tokenExpiresAt: null,
+      reauthRequired: false,
+      authStartUrl: null
+    });
     await fixture.whenStable();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-analysis-console')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
+      'Team Delivery Workspace'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.getAttribute('href')).toBe('/');
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Incident Analysis'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'Incident Analysis'
+    );
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
@@ -59,14 +103,14 @@ describe('App', () => {
       '.app-shell__sidebar-toggle'
     ) as HTMLButtonElement | null;
     const toggleIcon = toggle?.querySelector('.material-symbols-outlined');
-    const incidentLink = compiled.querySelector(
-      'a.app-shell__nav-item[aria-label="Incident Analysis"]'
+    const homeLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Workspace Overview"]'
     );
 
     expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
     expect(toggle?.getAttribute('aria-label')).toBe('Zwiń panel nawigacji');
     expect(toggleIcon?.textContent?.trim()).toBe('dock_to_right');
-    expect(incidentLink?.getAttribute('title')).toBeNull();
+    expect(homeLink?.getAttribute('title')).toBeNull();
 
     toggle?.click();
     fixture.detectChanges();
@@ -83,7 +127,7 @@ describe('App', () => {
     expect(brandToggle?.querySelector('.app-shell__brand-toggle-icon')?.textContent?.trim()).toBe(
       'dock_to_right'
     );
-    expect(incidentLink?.getAttribute('title')).toBe('Incident Analysis');
+    expect(homeLink?.getAttribute('title')).toBe('Workspace Overview');
     expect(window.localStorage.getItem('team-delivery-workspace.sidebar.collapsed')).toBe('true');
 
     brandToggle?.click();
@@ -199,6 +243,7 @@ describe('App', () => {
 
     await router.navigateByUrl('/flow-explorer');
     fixture.detectChanges();
+    flushUiConfig(http, 'ChatCLP');
     http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
     http.expectOne('/api/flow-explorer/systems').flush([]);
     await fixture.whenStable();
@@ -210,8 +255,13 @@ describe('App', () => {
     );
 
     expect(compiled.querySelector('app-flow-explorer-page')).not.toBeNull();
-    expect(compiled.querySelector('.app-shell__breadcrumb')?.textContent).toContain(
-      'Analysis Features'
+    const breadcrumbLink = compiled.querySelector(
+      '.app-shell__breadcrumb-link'
+    ) as HTMLAnchorElement | null;
+    expect(breadcrumbLink?.textContent?.trim()).toBe('ChatCLP');
+    expect(breadcrumbLink?.getAttribute('href')).toBe('/');
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Flow Explorer'
     );
     expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
       'Flow Explorer'
@@ -219,5 +269,21 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('Endpoint documentation workspace');
+
+    breadcrumbLink?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toBe('/');
+    expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
   });
 });
+
+function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Workspace'): void {
+  http.expectOne('/api/ui/config').flush({
+    title,
+    subtitle: title === 'Team Delivery Workspace' ? null : 'Team Delivery Workspace',
+    defaultTitle: 'Team Delivery Workspace'
+  });
+}

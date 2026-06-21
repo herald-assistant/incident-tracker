@@ -5,6 +5,7 @@ import { AnalysisConsoleComponent } from './features/analysis-console/analysis-c
 import { DatabaseConsoleComponent } from './features/database-console/database-console';
 import { ElasticEvidenceConsoleComponent } from './features/evidence-console/elastic-evidence-console';
 import { GitLabEvidenceConsoleComponent } from './features/evidence-console/gitlab-evidence-console';
+import { PlatformLandingPageComponent } from './features/platform-landing/platform-landing';
 
 export const routes: Routes = [
   {
@@ -13,6 +14,14 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        component: PlatformLandingPageComponent,
+        data: {
+          section: 'Platform',
+          title: 'Team Delivery Workspace'
+        }
+      },
+      {
+        path: 'incident-analysis',
         component: AnalysisConsoleComponent,
         data: {
           section: 'Analysis Features',

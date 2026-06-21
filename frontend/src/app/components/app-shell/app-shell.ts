@@ -10,6 +10,7 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { AppBrandComponent } from '../app-brand/app-brand';
 
 type NavItem = {
@@ -28,7 +29,13 @@ type NavGroup = {
 type RouteContext = {
   section: string;
   title: string;
+  breadcrumbs: RouteBreadcrumbItem[];
   capabilityInfo: RouteCapabilityInfo | null;
+};
+
+type RouteBreadcrumbItem = {
+  label: string;
+  route: string | null;
 };
 
 type RouteCapabilityInfo = {
@@ -43,8 +50,9 @@ type RouteCapabilityMetaItem = {
 };
 
 const DEFAULT_CONTEXT: RouteContext = {
-  section: 'Analysis Features',
-  title: 'Incident Analysis',
+  section: 'Platform',
+  title: 'Team Delivery Workspace',
+  breadcrumbs: [],
   capabilityInfo: null
 };
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'team-delivery-workspace.sidebar.collapsed';
@@ -54,7 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Analysis Features',
     items: [
-      { label: 'Incident Analysis', route: '/', icon: 'troubleshoot', exact: true },
+      { label: 'Incident Analysis', route: '/incident-analysis', icon: 'troubleshoot' },
       { label: 'Flow Explorer', route: '/flow-explorer', icon: 'account_tree' },
       { label: 'Functional Logic', icon: 'schema', disabled: true },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
@@ -72,6 +80,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Platform',
     items: [
+      { label: 'Workspace Overview', route: '/', icon: 'space_dashboard', exact: true },
       { label: 'Workspace Settings', icon: 'tune', disabled: true },
       { label: 'Personalization', icon: 'palette', disabled: true },
       { label: 'Authentication', icon: 'admin_panel_settings', disabled: true },
@@ -89,6 +98,7 @@ const NAV_GROUPS: NavGroup[] = [
 export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly uiConfig = inject(AppUiConfigService);
   private readonly routeContext = signal<RouteContext>(DEFAULT_CONTEXT);
   private sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -98,9 +108,24 @@ export class AppShellComponent {
   readonly sidebarRailMode = computed(() => this.sidebarCollapsed() || this.sidebarExpanding());
   readonly section = computed(() => this.routeContext().section);
   readonly title = computed(() => this.routeContext().title);
+  readonly breadcrumbs = computed((): RouteBreadcrumbItem[] => {
+    const workspaceTitle = this.uiConfig.config().title;
+    const routeBreadcrumbs = this.routeContext().breadcrumbs;
+
+    if (routeBreadcrumbs.length === 0) {
+      return [];
+    }
+
+    if (routeBreadcrumbs.length === 1 && routeBreadcrumbs[0].label === workspaceTitle) {
+      return [];
+    }
+
+    return [{ label: workspaceTitle, route: '/' }, ...routeBreadcrumbs];
+  });
   readonly capabilityInfo = computed(() => this.routeContext().capabilityInfo);
 
   constructor() {
+    this.uiConfig.load();
     this.updateRouteContext();
     this.router.events
       .pipe(
@@ -135,18 +160,28 @@ export class AppShellComponent {
     let section = DEFAULT_CONTEXT.section;
     let title = DEFAULT_CONTEXT.title;
     let capabilityInfo: RouteCapabilityInfo | null = DEFAULT_CONTEXT.capabilityInfo;
+    const breadcrumbs: RouteBreadcrumbItem[] = [];
+    const pathSegments: string[] = [];
 
     while (route) {
+      const snapshot = route.snapshot;
       const data = route.snapshot?.data ?? {};
       const routeSection = data['section'];
       const routeTitle = data['title'];
       const routeCapabilityInfo = normalizeCapabilityInfo(data['capabilityInfo']);
+      const currentSegments = snapshot?.url?.map((segment) => segment.path).filter(Boolean) ?? [];
+
+      pathSegments.push(...currentSegments);
 
       if (typeof routeSection === 'string' && routeSection.trim()) {
         section = routeSection;
       }
       if (typeof routeTitle === 'string' && routeTitle.trim()) {
-        title = routeTitle;
+        title = routeTitle.trim();
+        breadcrumbs.push({
+          label: title,
+          route: pathSegments.length > 0 ? `/${pathSegments.join('/')}` : '/'
+        });
       }
       if (routeCapabilityInfo) {
         capabilityInfo = routeCapabilityInfo;
@@ -155,7 +190,12 @@ export class AppShellComponent {
       route = route.firstChild;
     }
 
-    this.routeContext.set({ section, title, capabilityInfo });
+    const currentBreadcrumb = breadcrumbs.at(-1);
+    if (currentBreadcrumb) {
+      currentBreadcrumb.route = null;
+    }
+
+    this.routeContext.set({ section, title, breadcrumbs, capabilityInfo });
   }
 
   private clearSidebarExpandTimer(): void {

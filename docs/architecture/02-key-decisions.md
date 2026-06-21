@@ -42,18 +42,26 @@ Decyzje:
   `Team Delivery Workspace` podtytulem.
 - Glowna nawigacja jest w lewym sidebarze, a topbar pozostaje kontekstowy.
 - Sidebar ma grupy `Analysis Features`, `Tool Workbench` i `Platform`.
+- `GET /` jest `Platform / Team Delivery Workspace`: startowym overview
+  workspace'u z szybkim wejsciem do aktywnych feature'ow. Tresc jest
+  customer-centric i tlumaczy oszczednosc czasu, nie mechanike AI/tools.
 - `Analysis Features` zawiera dedykowane feature'y produktowe; na teraz
-  aktywny jest `Incident Analysis`.
+  aktywne sa `Incident Analysis` pod `/incident-analysis` oraz
+  `Flow Explorer` pod `/flow-explorer`.
 - `Tool Workbench` zawiera reusable capability do testow i debugowania:
   `Elastic Logs`, `GitLab Source`, `Database Tools` i `Operational Context`.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
-- `Platform` dotyczy customizacji Team Delivery Workspace: workspace settings,
-  personalizacji, autentykacji, konfiguracji modeli i podobnych ustawien.
+- `Platform` dotyczy overview i customizacji Team Delivery Workspace:
+  workspace settings, personalizacji, autentykacji, konfiguracji modeli i
+  podobnych ustawien.
 
 Konsekwencje UI:
 
 - Nie dodajemy marketingowych hero do narzedzi codziennej pracy.
+- Workspace overview moze opisywac platforme, ale ma byc action-oriented,
+  spokojny, przyjazny dla osob nietechnicznych i zgodny z roboczym charakterem
+  UI. Nie opisuje tools, promptow, runtime ani integracji pod spodem.
 - Jeden ekran ma miec jeden dominujacy primary action.
 - Workbench nie dostaje stalego trzykolumnowego layoutu dla response; wynik
   toola jest renderowany szeroko pod formularzem.

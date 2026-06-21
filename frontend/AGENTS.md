@@ -16,9 +16,9 @@ Glowny shell ma trzy grupy nawigacji:
 - `Tool Workbench` - analysis-independent zaplecze do testow, debugowania i
   recznego zbierania inputu: Elastic Logs, GitLab Source, Database Tools i
   Operational Context.
-- `Platform` - customizacja Team Delivery Workspace: workspace settings,
-  personalizacja, autentykacja, konfiguracja modeli i inne ustawienia
-  platformy.
+- `Platform` - startowy overview Team Delivery Workspace oraz customizacja:
+  workspace settings, personalizacja, autentykacja, konfiguracja modeli i inne
+  ustawienia platformy.
 
 `Operational Context` zostaje w `Tool Workbench`. Nie przenos go do sekcji
 `Platform`; Platform dotyczy konfiguracji samego workspace'u.
@@ -49,6 +49,11 @@ Glowny shell ma trzy grupy nawigacji:
   juz wzorcow, zeby uzytkownik nie uczyl sie nowego interfejsu dla tej samej
   czynnosci.
 - Nie dodawaj marketingowych hero do narzedzi codziennej pracy.
+- Root route `/` moze opisywac platforme jako workspace overview, ale ma byc
+  spokojny, action-oriented i bez dekoracyjnego marketingu. Pisz go dla osob
+  nietechnicznych i nowych w zespole: platforma zbiera dane, wstepnie je
+  porzadkuje i oddaje gotowy rezultat. Nie opisuj tam AI, tools, promptow,
+  runtime ani integracji pod spodem.
 - Nie uzywaj dekoracyjnych gradientow/orbow ani duzych opisowych kart jako
   glownej kompozycji.
 - Jeden ekran albo sekcja robocza powinna miec jeden dominujacy primary action.
