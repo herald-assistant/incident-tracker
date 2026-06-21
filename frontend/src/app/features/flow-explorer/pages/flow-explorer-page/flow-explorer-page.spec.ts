@@ -161,6 +161,7 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
+    selectGoal(fixture, 'Test scenarios');
     toggleFocusArea(fixture, 'Validations');
     selectAiModel(fixture, 'GPT-5.4 mini');
     selectReasoningEffort(fixture, 'High');
@@ -179,7 +180,7 @@ describe('FlowExplorerPageComponent', () => {
       httpMethod: 'GET',
       endpointPath: '/api/customers/{id}',
       branch: 'main',
-      goal: 'DEEP_DISCOVERY',
+      goal: 'TEST_SCENARIOS',
       focusAreas: ['BUSINESS_FLOW_RULES', 'VALIDATIONS'],
       userInstructions: 'Skup sie na negatywnych scenariuszach walidacji statusu klienta.',
       model: 'gpt-5.4-mini',
@@ -469,6 +470,10 @@ function openEndpointSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[1]?.click();
 }
 
+function openGoalSelect(nativeElement: HTMLElement): void {
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[2]?.click();
+}
+
 function openFocusAreasSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
 }
@@ -499,6 +504,14 @@ function selectEndpoint(fixture: ComponentFixture<FlowExplorerPageComponent>, pa
 function toggleFocusArea(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
   const nativeElement = fixture.nativeElement as HTMLElement;
   openFocusAreasSelect(nativeElement);
+  fixture.detectChanges();
+  buttonContaining(nativeElement, label)?.click();
+  fixture.detectChanges();
+}
+
+function selectGoal(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+  const nativeElement = fixture.nativeElement as HTMLElement;
+  openGoalSelect(nativeElement);
   fixture.detectChanges();
   buttonContaining(nativeElement, label)?.click();
   fixture.detectChanges();

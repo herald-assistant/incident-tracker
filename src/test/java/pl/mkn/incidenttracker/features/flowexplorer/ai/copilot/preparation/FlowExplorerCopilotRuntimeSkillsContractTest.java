@@ -30,12 +30,17 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "flow-explorer-goal-deep-discovery",
                 FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME
         );
+        assertEquals(
+                "flow-explorer-goal-test-scenarios",
+                FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME
+        );
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
                 "flow-explorer-gitlab-tools",
                 "flow-explorer-operational-context-tools",
                 "flow-explorer-result-contract",
-                "flow-explorer-goal-deep-discovery"
+                "flow-explorer-goal-deep-discovery",
+                "flow-explorer-goal-test-scenarios"
         ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
@@ -88,6 +93,17 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Persistence",
                 "## Integrations",
                 "## Compact Vs Deep",
+                "## Antywzorce"
+        ));
+        assertSkillContainsSections("flow-explorer-goal-test-scenarios", List.of(
+                "## Cel",
+                "## Zasada Ogolna",
+                "## Overview",
+                "## Business flow/rules",
+                "## Validations",
+                "## Persistence",
+                "## Integrations",
+                "## Format Sekcji",
                 "## Antywzorce"
         ));
     }

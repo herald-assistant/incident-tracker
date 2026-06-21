@@ -148,6 +148,31 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
+    void shouldBuildSessionConfigWithTestScenariosGoalSkillOnly() {
+        var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
+        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
+        var factory = sessionConfigRequestFactory();
+
+        var request = factory.create(
+                "flow-explorer-job-123",
+                policy,
+                testScenariosRequest().aiOptions(),
+                testScenariosRequest().goal()
+        );
+
+        assertSkillDirectories(
+                request.skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.TEST_SCENARIOS)
+        );
+        assertTrue(request.skillDirectories()
+                .stream()
+                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME)));
+        assertFalse(request.skillDirectories()
+                .stream()
+                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME)));
+    }
+
+    @Test
     void shouldBuildFollowUpSessionConfigWithoutResultContractSkill() {
         var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
@@ -306,6 +331,21 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
                 "medium"
+        );
+    }
+
+    private static FlowExplorerJobStartRequest testScenariosRequest() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES, FlowExplorerFocusArea.VALIDATIONS),
+                "Skup sie na scenariuszach regresyjnych CRM.",
+                "gpt-5.4",
+                "high"
         );
     }
 

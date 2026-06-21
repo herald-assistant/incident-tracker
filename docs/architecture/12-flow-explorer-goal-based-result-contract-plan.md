@@ -326,7 +326,7 @@ Wykonano:
 
 ### 003. Test scenarios vertical slice
 
-Status: [ ]
+Status: [x]
 
 Potrzeba:
 
@@ -352,6 +352,22 @@ Ryzyka:
 
 - wynik moze zaczac dublowac te same scenariusze w kilku sekcjach; skill ma
   wymuszac rozne perspektywy sekcji, a nie powtarzanie tej samej listy.
+
+Wykonano:
+
+- dodano runtime skill `flow-explorer-goal-test-scenarios` z konkretnym
+  template'em dla `Overview`, `Business flow/rules`, `Validations`,
+  `Persistence`, `Integrations` oraz trybow `compact`/`deep`,
+- initial run dla `TEST_SCENARIOS` laduje teraz goal-specific skill testowy i
+  nie laduje skilla `DEEP_DISCOVERY`,
+- `FlowExplorerCopilotRuntimeSkillNames.allSkillNames()` zawiera skill testowy,
+  zeby kontrakt runtime i pliki skillow byly walidowane razem,
+- frontend Flow Explorera odblokowuje cel `Test scenarios` w selectcie celu,
+- test UI potwierdza, ze wybor `Test scenarios` trafia do request payload jako
+  `goal: TEST_SCENARIOS`,
+- dodano CRM-specific, zanonimizowany fixture parsera AI response dla
+  `TEST_SCENARIOS` z czterema sekcjami,
+- produkcyjny bundle Angulara zostal odswiezony w `src/main/resources/static`.
 
 ### 004. Risk detection vertical slice
 
@@ -535,7 +551,7 @@ Ryzyka:
 - [x] 000. Utworzenie planu ground-breaking zmiany.
 - [x] 001. Wspolny fundament kontraktu: goal, focus areas i result DTO.
 - [x] 002. Deep Discovery vertical slice.
-- [ ] 003. Test scenarios vertical slice.
+- [x] 003. Test scenarios vertical slice.
 - [ ] 004. Risk detection vertical slice.
 - [ ] 005. Cross-goal parser hardening i response validation.
 - [ ] 006. UI polish: composer, result view i copy.
@@ -630,6 +646,19 @@ Powod: kontrakt Flow Explorera ma byc dalej rozwijany cel po celu na jednym
 stabilnym modelu `goal` + `Overview` + cztery sekcje z trybem
 `compact`/`deep`. Utrzymywanie starych DTO lub mapperow zwiekszaloby ryzyko,
 ze prompt, UI albo import/export zaczna korzystac z poprzedniego modelu.
+
+Status: implemented.
+
+### 008. Test scenarios jako drugi aktywny cel end-to-end
+
+Decyzja: `TEST_SCENARIOS` jest drugim aktywnym celem Flow Explorera. Ma wlasny
+runtime skill, jest wybierany przez initial session config i jest dostepny w UI
+bez feature flaga albo legacy mapperow.
+
+Powod: po ustabilizowaniu `Deep Discovery` mozemy wdrazac kolejne cele pionowo.
+`Test scenarios` wnosi odrebna wartosc dla testerow i analitykow: initial
+result ma dostarczyc material do pokrycia happy path, negative path, edge cases,
+danych testowych i zaleznosci integracyjnych bez standardowego follow-upu.
 
 Status: implemented.
 

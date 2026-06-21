@@ -60,8 +60,7 @@ const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
   {
     value: 'TEST_SCENARIOS',
     label: 'Test scenarios',
-    hint: 'Coming next: test coverage and data preparation.',
-    disabled: true
+    hint: 'Prepare test coverage, data setup and negative paths.'
   },
   {
     value: 'RISK_DETECTION',

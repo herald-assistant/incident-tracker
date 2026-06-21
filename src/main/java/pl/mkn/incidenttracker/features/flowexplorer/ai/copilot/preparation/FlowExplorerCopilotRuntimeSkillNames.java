@@ -11,6 +11,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
     static final String OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME = "flow-explorer-operational-context-tools";
     static final String RESULT_CONTRACT_SKILL_NAME = "flow-explorer-result-contract";
     static final String DEEP_DISCOVERY_SKILL_NAME = "flow-explorer-goal-deep-discovery";
+    static final String TEST_SCENARIOS_SKILL_NAME = "flow-explorer-goal-test-scenarios";
 
     static List<String> initialSkillNames(FlowExplorerAnalysisGoal goal) {
         var skillNames = new java.util.ArrayList<>(List.of(
@@ -22,11 +23,21 @@ final class FlowExplorerCopilotRuntimeSkillNames {
         if (goal == FlowExplorerAnalysisGoal.DEEP_DISCOVERY) {
             skillNames.add(DEEP_DISCOVERY_SKILL_NAME);
         }
+        if (goal == FlowExplorerAnalysisGoal.TEST_SCENARIOS) {
+            skillNames.add(TEST_SCENARIOS_SKILL_NAME);
+        }
         return List.copyOf(skillNames);
     }
 
     static List<String> allSkillNames() {
-        return initialSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY);
+        return List.of(
+                STARTER_SKILL_NAME,
+                GITLAB_TOOLS_SKILL_NAME,
+                OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME,
+                RESULT_CONTRACT_SKILL_NAME,
+                DEEP_DISCOVERY_SKILL_NAME,
+                TEST_SCENARIOS_SKILL_NAME
+        );
     }
 
     static List<String> followUpSkillNames() {

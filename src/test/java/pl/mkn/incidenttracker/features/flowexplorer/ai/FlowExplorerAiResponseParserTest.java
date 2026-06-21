@@ -65,6 +65,72 @@ class FlowExplorerAiResponseParserTest {
     }
 
     @Test
+    void shouldParseTestScenariosGoalResponse() {
+        var response = parser.parse("""
+                {
+                  "goal": "TEST_SCENARIOS",
+                  "audience": "business_or_system_analyst_tester",
+                  "overview": {
+                    "markdown": "Plan testow dla odczytu profilu klienta CRM powinien pokryc happy path, brak klienta i dane niepoprawne.",
+                    "confidence": "medium",
+                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                  },
+                  "sections": [
+                    {
+                      "id": "BUSINESS_FLOW_RULES",
+                      "title": "Business flow/rules",
+                      "mode": "deep",
+                      "markdown": "- Setup: aktywny klient CRM istnieje.\\n- Akcja: tester pobiera profil po id.\\n- Oczekiwany rezultat: profil wraca bez zmiany stanu.",
+                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "VALIDATIONS",
+                      "title": "Validations",
+                      "mode": "deep",
+                      "markdown": "- Setup: brak id albo id spoza katalogu CRM.\\n- Akcja: request GET.\\n- Oczekiwany rezultat: request zostaje odrzucony albo zwraca kontrolowany brak rekordu.",
+                      "sourceRefs": ["crm-service:CustomerService.java:L30-L44"],
+                      "visibilityLimits": [],
+                      "openQuestions": ["Potwierdzic oczekiwany kod bledu dla nieistniejacego klienta."]
+                    },
+                    {
+                      "id": "PERSISTENCE",
+                      "title": "Persistence",
+                      "mode": "compact",
+                      "markdown": "Przygotowac rekord klienta CRM i sprawdzic, ze odczyt nie zmienia statusu profilu.",
+                      "sourceRefs": ["crm-service:CustomerRepository.java:L10-L18"],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "INTEGRATIONS",
+                      "title": "Integrations",
+                      "mode": "compact",
+                      "markdown": "Initial evidence nie pokazuje wywolania systemu zewnetrznego; test moze uzyc lokalnego fixture profilu.",
+                      "sourceRefs": [],
+                      "visibilityLimits": ["Nie widac klientow zewnetrznych w initial flow."],
+                      "openQuestions": []
+                    }
+                  ],
+                  "globalVisibilityLimits": ["Nie sprawdzono danych runtime."],
+                  "globalOpenQuestions": ["Potwierdzic wymagany status klienta w CRM."],
+                  "sourceReferences": ["crm-service:CustomerService.java:L30-L44"],
+                  "confidence": "medium"
+                }
+                """);
+
+        assertEquals(FlowExplorerAnalysisGoal.TEST_SCENARIOS, response.goal());
+        assertEquals("medium", response.confidence());
+        assertEquals(4, response.sections().size());
+        assertEquals(FlowExplorerResultSectionId.VALIDATIONS, response.sections().get(1).id());
+        assertEquals(FlowExplorerResultSectionMode.DEEP, response.sections().get(1).mode());
+        assertTrue(response.sections().get(1).markdown().contains("brak id"));
+        assertEquals(FlowExplorerResultSectionMode.COMPACT, response.sections().get(3).mode());
+        assertTrue(response.globalOpenQuestions().contains("Potwierdzic wymagany status klienta w CRM."));
+    }
+
+    @Test
     void shouldParseJsonFromFencedBlock() {
         var response = parser.parse("""
                 Odpowiedz:
