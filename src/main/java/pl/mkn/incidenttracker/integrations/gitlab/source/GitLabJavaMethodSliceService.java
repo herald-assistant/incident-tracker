@@ -379,9 +379,11 @@ public class GitLabJavaMethodSliceService {
     ) {
         var content = new StringBuilder();
         compilationUnit.getPackageDeclaration()
-                .ifPresent(packageDeclaration -> content.append(packageDeclaration).append(System.lineSeparator()).append(System.lineSeparator()));
+                .ifPresent(packageDeclaration -> content.append(packageDeclaration.toString().strip())
+                        .append(System.lineSeparator())
+                        .append(System.lineSeparator()));
         for (var importDeclaration : includedImports) {
-            content.append(importDeclaration).append(System.lineSeparator());
+            content.append(importDeclaration.toString().strip()).append(System.lineSeparator());
         }
         var omittedImportCount = compilationUnit.getImports().size() - includedImports.size();
         if (omittedImportCount > 0) {

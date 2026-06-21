@@ -48,6 +48,19 @@ class GitLabJavaMethodSliceServiceTest {
         assertTrue(response.includedMethods().stream().anyMatch(method -> "map".equals(method.methodName())));
 
         var content = response.content();
+        var normalizedContent = content.replace("\r\n", "\n");
+        assertTrue(normalizedContent.contains("""
+                package com.example.orders;
+
+                import java.time.Clock;
+                import java.time.Instant;
+                import lombok.RequiredArgsConstructor;
+                """.stripIndent()));
+        assertFalse(normalizedContent.contains("""
+                import java.time.Clock;
+
+                import java.time.Instant;
+                """.stripIndent()));
         assertTrue(content.contains("import java.time.Clock;"));
         assertTrue(content.contains("import java.time.Instant;"));
         assertTrue(content.contains("import lombok.RequiredArgsConstructor;"));

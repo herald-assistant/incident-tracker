@@ -53,15 +53,15 @@ class FlowExplorerSnippetCardServiceTest {
                 List.of(FlowExplorerFocusArea.PERSISTENCE)
         );
 
-        assertEquals(3, result.cards().size());
-        assertTrue(result.budgetReached());
+        assertEquals(4, result.cards().size());
+        assertFalse(result.budgetReached());
         assertEquals("CONTROLLER", result.cards().get(0).role());
         assertEquals("USE_CASE_SERVICE", result.cards().get(1).role());
         assertEquals("SPRING_DATA_REPOSITORY", result.cards().get(2).role());
         assertTrue(result.cards().get(0).content().contains("public void getCustomer"));
         assertTrue(result.limitations().stream()
-                .anyMatch(limitation -> limitation.contains("Snippet card budget reached")));
-        verify(javaMethodSliceService, times(3)).readMethodSlice(argThat(request ->
+                .noneMatch(limitation -> limitation.contains("maxCards=20")));
+        verify(javaMethodSliceService, times(4)).readMethodSlice(argThat(request ->
                 "platform/backend".equals(request.group())
                         && "crm-service".equals(request.projectName())
                         && "feature/FLOW-42".equals(request.branch())
@@ -69,11 +69,40 @@ class FlowExplorerSnippetCardServiceTest {
                         && Boolean.TRUE.equals(request.includeDirectPrivateHelpers())
                         && Boolean.TRUE.equals(request.includeRelevantFields())
                         && Boolean.TRUE.equals(request.includeRelevantImports())
-                        && request.maxCharacters() <= 6_000
+                        && request.maxCharacters() == GitLabJavaMethodSliceService.MAX_OUTPUT_CHARACTERS
         ));
         verify(repositoryPort, never()).readFileChunk(
                 anyString(), anyString(), anyString(), anyString(), anyInt(), anyInt(), anyInt()
         );
+    }
+
+    @Test
+    void shouldLimitSnippetCardsToTwentyFlowNodes() {
+        when(javaMethodSliceService.readMethodSlice(any()))
+                .thenAnswer(invocation -> methodSliceResponse(invocation.getArgument(0)));
+
+        var result = service.buildSnippetCards(
+                "platform/backend",
+                "feature/FLOW-42",
+                repository(),
+                java.util.stream.IntStream.rangeClosed(1, 21)
+                        .mapToObj(index -> node(
+                                "src/main/java/app/CustomerFlowStep" + index + ".java",
+                                "USE_CASE_SERVICE",
+                                "step" + index,
+                                index * 10,
+                                index * 10 + 5
+                        ))
+                        .toList(),
+                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW)
+        );
+
+        assertEquals(20, result.cards().size());
+        assertTrue(result.budgetReached());
+        assertTrue(result.limitations().stream()
+                .anyMatch(limitation -> limitation.contains("maxCards=20")));
+        verify(javaMethodSliceService, times(20)).readMethodSlice(any());
     }
 
     @Test

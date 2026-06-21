@@ -105,6 +105,7 @@ class FlowExplorerContextServiceTest {
         );
         assertEquals("billing-api", requestCaptor.getValue().projectName());
         assertEquals("GET /api/billing/{id}", requestCaptor.getValue().endpointId());
+        assertEquals(GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, requestCaptor.getValue().maxFiles());
     }
 
     @Test

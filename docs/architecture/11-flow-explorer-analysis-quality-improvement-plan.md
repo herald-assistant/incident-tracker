@@ -356,6 +356,30 @@ ma patrzec, `documentationPreset` mowi dla kogo i w jakim formacie pisac, a
 operational context. UI ma pozwolic operatorowi jawnie wybrac model i effort,
 tak jak w Incident Trackerze.
 
+### 003a. Initial context limits i clipping notes
+
+- [x] Omowic krok i zatwierdzic zakres.
+- [x] Zwiekszyc limit snippet cards do 20 dla wszystkich presetow.
+- [x] Usunac niski feature-level total character budget dla snippet cards.
+- [x] Zostawic neutralny guard integracji GitLab method slice jako awaryjny
+  limit pojedynczego odczytu.
+- [x] Budowac deterministic endpoint context dla Flow Explorera z
+  `maxFiles=100`.
+- [x] Renderowac `compact-flow-manifest.md` maksymalnie do 100 flow nodes.
+- [x] Dodac jawne `Context clipping notes` w promptcie i coverage artifact,
+  gdy snippet cards albo flow manifest zostaly przyciete.
+- [x] Znormalizowac formatowanie `package`/`import` w Java method slice, zeby
+  snippet cards nie zawieraly podwojnych pustych linii miedzy importami.
+- [x] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Wykorzystac optymalizacje method-slice: skoro jedna snippet card zawiera juz
+tylko metody biorace udzial w endpoint flow, limit 3/4 cards byl zbyt niski i
+odcinal wartosciowe evidence. Flow manifest ma przenosic do 100
+deterministycznie znalezionych node'ow, a kazde przyciecie initial evidence ma
+byc jawne dla modelu w promptcie.
+
 ### 004. Snippet ranking pod primary flow i focus areas
 
 - [ ] Omowic krok i zatwierdzic zakres.
@@ -571,6 +595,25 @@ glebokosc kontrolowac parametrem, ktory operator juz zna z Incident Trackera.
 
 Status: implemented and verified.
 
+### 008. Initial context limits i clipping notes
+
+Decyzja: Flow Explorer zwieksza limit snippet cards do 20 dla wszystkich
+presetow, usuwa niski laczny character budget na poziomie feature'a i prosi
+GitLab endpoint use-case context o `maxFiles=100`. `compact-flow-manifest.md`
+renderuje maksymalnie 100 flow nodes. Jezeli manifest, lista snippet cards
+albo pojedyncze snippet content zostaly przyciete, initial prompt dostaje
+jawna sekcje `Context clipping notes`, a coverage artifact dostaje te same
+notes w formie diagnostycznej.
+
+Powod: po przejsciu na `gitlab_read_java_method_slice` snippet card nie jest
+juz cala klasa, tylko endpoint-relevant methods z niezbednymi importami,
+polami i helperami. Stary limit 3/4 cards oraz 14k znakow lacznie powodowal,
+ze AI musialo nadrabiac deterministic evidence dodatkowymi tool callami.
+Flow manifest jest tania mapa flow i powinien zachowac do 100
+deterministycznie znalezionych node'ow.
+
+Status: implemented and verified.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
@@ -579,6 +622,7 @@ Status: implemented and verified.
 - [x] 001. Canonical tool inputs artifact.
 - [x] 002. Tool policy dla redundantnego discovery.
 - [x] 003. Skill guidance i UI sterowania modelem AI.
+- [x] 003a. Initial context limits i clipping notes.
 - [ ] 004. Snippet ranking pod primary flow i focus areas.
 - [ ] 005. Baseline quality report model.
 - [ ] 006. Ranking i grupowanie limitations/next reads.

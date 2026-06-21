@@ -12,8 +12,10 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +31,8 @@ public class FlowExplorerArtifactService {
     static final String SNIPPET_CARDS_ARTIFACT = "flow-explorer/snippet-cards.md";
     static final String COVERAGE_ARTIFACT = "flow-explorer/coverage.json";
     static final String RESPONSE_CONTRACT_ARTIFACT = "flow-explorer/response-contract.json";
+
+    private static final int COMPACT_FLOW_MANIFEST_MAX_NODES = GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES;
 
     private final ObjectMapper objectMapper;
 
@@ -57,13 +61,13 @@ public class FlowExplorerArtifactService {
                         COMPACT_FLOW_MANIFEST_ARTIFACT,
                         "Compact flow manifest for prompt grounding",
                         "compact-flow-manifest",
-                        contextSnapshot != null ? contextSnapshot.flowNodes().size() : 0,
+                        compactFlowManifestNodeCount(contextSnapshot),
                         "text/markdown",
                         renderCompactFlowManifest(contextSnapshot)
                 ),
                 artifact(
                         SNIPPET_CARDS_ARTIFACT,
-                        "Budgeted snippet cards embedded in the initial prompt",
+                        "Endpoint method snippet cards embedded in the initial prompt",
                         "snippet-cards",
                         contextSnapshot != null ? contextSnapshot.snippetCards().size() : 0,
                         "text/markdown",
@@ -100,10 +104,18 @@ public class FlowExplorerArtifactService {
         if (contextSnapshot == null || contextSnapshot.flowNodes().isEmpty()) {
             return "- endpoint flow not resolved";
         }
-        return contextSnapshot.flowNodes().stream()
+        var nodes = contextSnapshot.flowNodes();
+        var renderedManifest = nodes.stream()
+                .limit(COMPACT_FLOW_MANIFEST_MAX_NODES)
                 .map(this::flowNodeLine)
                 .reduce((left, right) -> left + System.lineSeparator() + right)
                 .orElse("- endpoint flow not resolved");
+        if (nodes.size() <= COMPACT_FLOW_MANIFEST_MAX_NODES) {
+            return renderedManifest;
+        }
+        return renderedManifest + System.lineSeparator()
+                + "- compact flow manifest truncated from " + nodes.size()
+                + " to maxFlowNodes=" + COMPACT_FLOW_MANIFEST_MAX_NODES + ".";
     }
 
     public String renderSnippetCards(FlowExplorerContextSnapshot contextSnapshot) {
@@ -234,6 +246,17 @@ public class FlowExplorerArtifactService {
                 .orElse("- none");
     }
 
+    public String renderContextClippingNotes(FlowExplorerContextSnapshot contextSnapshot) {
+        var notes = contextClippingNoteList(contextSnapshot);
+        if (notes.isEmpty()) {
+            return "- none";
+        }
+        return notes.stream()
+                .map(note -> "- " + note)
+                .reduce((left, right) -> left + System.lineSeparator() + right)
+                .orElse("- none");
+    }
+
     private CopilotRenderedArtifact artifact(
             String displayName,
             String role,
@@ -327,7 +350,40 @@ public class FlowExplorerArtifactService {
         payload.put("coverage", contextSnapshot != null ? contextSnapshot.coverage() : null);
         payload.put("limitations", contextSnapshot != null ? contextSnapshot.limitations() : List.of());
         payload.put("suggestedNextReads", contextSnapshot != null ? contextSnapshot.suggestedNextReads() : List.of());
+        payload.put("contextClippingNotes", contextClippingNoteList(contextSnapshot));
         return renderJson(payload);
+    }
+
+    private List<String> contextClippingNoteList(FlowExplorerContextSnapshot contextSnapshot) {
+        if (contextSnapshot == null) {
+            return List.of("Flow Explorer did not receive a deterministic context snapshot.");
+        }
+
+        var notes = new ArrayList<String>();
+        var flowNodeCount = contextSnapshot.flowNodes().size();
+        if (flowNodeCount > COMPACT_FLOW_MANIFEST_MAX_NODES) {
+            notes.add("compact-flow-manifest.md was truncated from " + flowNodeCount
+                    + " to maxFlowNodes=" + COMPACT_FLOW_MANIFEST_MAX_NODES + ".");
+        }
+
+        var coverage = contextSnapshot.coverage();
+        if (coverage != null && coverage.maxFilesReached()) {
+            notes.add("GitLab endpoint use-case context reached maxFiles="
+                    + GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES
+                    + "; deterministic flow manifest may omit lower-priority files.");
+        }
+        if (coverage != null && coverage.snippetBudgetReached()) {
+            notes.add("snippet-cards.md was truncated to maxCards=20 before all eligible flow nodes were embedded.");
+        }
+
+        var truncatedCardCount = contextSnapshot.snippetCards().stream()
+                .filter(FlowExplorerSnippetCard::truncated)
+                .count();
+        if (truncatedCardCount > 0) {
+            notes.add(truncatedCardCount
+                    + " snippet card(s) were truncated by GitLab read output limits; treat affected snippets as partial evidence.");
+        }
+        return List.copyOf(notes);
     }
 
     private String renderJson(Object payload) {
@@ -342,6 +398,13 @@ public class FlowExplorerArtifactService {
         return contextSnapshot != null
                 ? contextSnapshot.repositories().size() + canonicalFileInputs(contextSnapshot).size()
                 : 0;
+    }
+
+    private int compactFlowManifestNodeCount(FlowExplorerContextSnapshot contextSnapshot) {
+        if (contextSnapshot == null) {
+            return 0;
+        }
+        return Math.min(contextSnapshot.flowNodes().size(), COMPACT_FLOW_MANIFEST_MAX_NODES);
     }
 
     private List<CanonicalFileInput> canonicalFileInputs(FlowExplorerContextSnapshot contextSnapshot) {

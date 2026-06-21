@@ -72,13 +72,38 @@ class FlowExplorerArtifactServiceTest {
 
         var snippets = artifactContents.get(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT);
         assertTrue(snippets.contains("public CustomerResponse getCustomer"));
+        assertEquals("- none", service.renderContextClippingNotes(contextSnapshot()));
 
         var coverageJson = new ObjectMapper().readTree(artifactContents.get(
                 FlowExplorerArtifactService.COVERAGE_ARTIFACT
         ));
         assertEquals(1, coverageJson.at("/coverage/snippetCardCount").asInt());
+        assertEquals(0, coverageJson.at("/contextClippingNotes").size());
         assertTrue(artifactContents.get(FlowExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT)
                 .contains("\"flowSteps\""));
+    }
+
+    @Test
+    void shouldLimitCompactFlowManifestAndRenderClippingNotes() throws Exception {
+        var snapshot = contextSnapshotWithFlowNodeCount(101);
+
+        var manifest = service.renderCompactFlowManifest(snapshot);
+        assertEquals(100L, manifest.lines()
+                .filter(line -> line.startsWith("- ["))
+                .count());
+        assertTrue(manifest.contains("compact flow manifest truncated from 101 to maxFlowNodes=100"));
+
+        var clippingNotes = service.renderContextClippingNotes(snapshot);
+        assertTrue(clippingNotes.contains("compact-flow-manifest.md was truncated from 101 to maxFlowNodes=100"));
+        assertTrue(clippingNotes.contains("maxFiles=100"));
+        assertTrue(clippingNotes.contains("snippet-cards.md was truncated to maxCards=20"));
+
+        var artifacts = service.renderArtifacts(request(), snapshot);
+        var artifactContents = service.toArtifactContentMap(artifacts);
+        var coverageJson = new ObjectMapper().readTree(artifactContents.get(
+                FlowExplorerArtifactService.COVERAGE_ARTIFACT
+        ));
+        assertEquals(3, coverageJson.at("/contextClippingNotes").size());
     }
 
     private static FlowExplorerJobStartRequest request() {
@@ -170,6 +195,90 @@ class FlowExplorerArtifactServiceTest {
                         0,
                         false,
                         false,
+                        false,
+                        "HIGH"
+                )
+        );
+    }
+
+    private static FlowExplorerContextSnapshot contextSnapshotWithFlowNodeCount(int nodeCount) {
+        var flowNodes = java.util.stream.IntStream.rangeClosed(1, nodeCount)
+                .mapToObj(index -> new FlowExplorerFlowNode(
+                        "src/main/java/com/example/CustomerFlowStep" + index + ".java",
+                        "USE_CASE_SERVICE",
+                        "src/main/java/com/example/CustomerFlowStep" + index + ".java",
+                        List.of(new FlowExplorerFlowMethod("step" + index, index * 10, index * 10 + 5)),
+                        "CRM flow step " + index + ".",
+                        "MEDIUM",
+                        List.of()
+                ))
+                .toList();
+
+        return new FlowExplorerContextSnapshot(
+                "crm-service",
+                "CRM Service",
+                "feature/FLOW-42",
+                "feature/FLOW-42",
+                "platform/backend",
+                "GET:/api/customers/{id}",
+                "GET",
+                "/api/customers/{id}",
+                new FlowExplorerEndpointContext(
+                        "GET:/api/customers/{id}",
+                        List.of("GET"),
+                        "/api/customers/{id}",
+                        "/api/customers/{id}",
+                        "CustomerController",
+                        "getCustomer",
+                        "src/main/java/com/example/CustomerController.java",
+                        12,
+                        24,
+                        "HIGH"
+                ),
+                List.of(new FlowExplorerRepositoryContext(
+                        "crm-service",
+                        "crm-service",
+                        "platform/backend/crm-service",
+                        "feature/FLOW-42",
+                        true,
+                        true,
+                        List.of()
+                )),
+                flowNodes,
+                List.of(),
+                List.of(new FlowExplorerSnippetCard(
+                        "crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                        "crm-service",
+                        "src/main/java/com/example/CustomerController.java",
+                        "CONTROLLER",
+                        List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
+                        9,
+                        27,
+                        9,
+                        27,
+                        100,
+                        false,
+                        "Endpoint handler.",
+                        "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
+                        0,
+                        List.of()
+                )),
+                List.of(),
+                List.of(),
+                new FlowExplorerContextCoverage(
+                        true,
+                        1,
+                        1,
+                        nodeCount,
+                        nodeCount,
+                        0,
+                        1,
+                        103,
+                        true,
+                        0,
+                        0,
+                        false,
+                        true,
                         false,
                         "HIGH"
                 )

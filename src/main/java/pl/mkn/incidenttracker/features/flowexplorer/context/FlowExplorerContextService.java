@@ -54,7 +54,7 @@ public class FlowExplorerContextService {
                                 request.httpMethod(),
                                 request.endpointPath(),
                                 GitLabEndpointUseCaseContextRequest.DEFAULT_MAX_DEPTH,
-                                GitLabEndpointUseCaseContextRequest.DEFAULT_MAX_FILES
+                                GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES
                         )
                 );
                 repositoryContexts.add(repositoryContext(repository, scope.resolvedRef(), true,

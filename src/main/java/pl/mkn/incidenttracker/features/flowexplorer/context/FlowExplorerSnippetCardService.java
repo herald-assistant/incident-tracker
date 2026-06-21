@@ -24,10 +24,8 @@ import java.util.Set;
 public class FlowExplorerSnippetCardService {
 
     private static final int CONTEXT_LINES = 3;
-    private static final int DEFAULT_MAX_CARDS = 3;
-    private static final int TECHNICAL_MAX_CARDS = 4;
-    private static final int MAX_CHARACTERS_PER_CARD = 6_000;
-    private static final int MAX_TOTAL_CHARACTERS = 14_000;
+    private static final int MAX_CARDS = 20;
+    private static final int GITLAB_METHOD_SLICE_MAX_CHARACTERS = GitLabJavaMethodSliceService.MAX_OUTPUT_CHARACTERS;
     private static final String METHOD_SLICE_OK_STATUS = "OK";
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
@@ -55,19 +53,13 @@ public class FlowExplorerSnippetCardService {
             return FlowExplorerSnippetCardResult.empty();
         }
 
-        var maxCards = maxCards(preset);
         var cards = new ArrayList<FlowExplorerSnippetCard>();
         var limitations = new ArrayList<String>();
         var totalCharacters = 0;
         var budgetReached = false;
 
         for (var node : eligibleNodes) {
-            if (cards.size() >= maxCards) {
-                budgetReached = true;
-                break;
-            }
-            var remainingCharacters = MAX_TOTAL_CHARACTERS - totalCharacters;
-            if (remainingCharacters <= 0) {
+            if (cards.size() >= MAX_CARDS) {
                 budgetReached = true;
                 break;
             }
@@ -77,8 +69,7 @@ public class FlowExplorerSnippetCardService {
                         gitLabGroup,
                         resolvedRef,
                         repository,
-                        node,
-                        remainingCharacters
+                        node
                 );
                 var card = attempt.card() != null
                         ? attempt.card()
@@ -87,7 +78,6 @@ public class FlowExplorerSnippetCardService {
                                 resolvedRef,
                                 repository,
                                 node,
-                                remainingCharacters,
                                 attempt.limitations()
                         );
                 cards.add(card);
@@ -102,7 +92,8 @@ public class FlowExplorerSnippetCardService {
         }
 
         if (budgetReached) {
-            limitations.add("Snippet card budget reached before all eligible flow nodes were embedded.");
+            limitations.add("Snippet card list was truncated to maxCards=" + MAX_CARDS
+                    + " before all eligible flow nodes were embedded.");
         }
 
         return new FlowExplorerSnippetCardResult(
@@ -200,19 +191,11 @@ public class FlowExplorerSnippetCardService {
         return technicalRole(role) || "DOMAIN_MODEL".equals(role) || "WEB_MODEL".equals(role);
     }
 
-    private int maxCards(FlowExplorerDocumentationPreset preset) {
-        return preset == FlowExplorerDocumentationPreset.TECHNICAL_HANDOFF
-                || preset == FlowExplorerDocumentationPreset.CHANGE_IMPACT
-                ? TECHNICAL_MAX_CARDS
-                : DEFAULT_MAX_CARDS;
-    }
-
     private MethodSliceAttempt tryBuildMethodSliceCard(
             String gitLabGroup,
             String resolvedRef,
             FlowExplorerRepositoryContext repository,
-            FlowExplorerFlowNode node,
-            int remainingCharacters
+            FlowExplorerFlowNode node
     ) {
         if (!javaFile(node.filePath())) {
             return MethodSliceAttempt.empty();
@@ -235,7 +218,7 @@ public class FlowExplorerSnippetCardService {
                     true,
                     true,
                     true,
-                    Math.min(MAX_CHARACTERS_PER_CARD, remainingCharacters)
+                    GITLAB_METHOD_SLICE_MAX_CHARACTERS
             ));
             if (!usableMethodSlice(response)) {
                 limitations.add("Method slice returned " + safeStatus(response)
@@ -258,7 +241,6 @@ public class FlowExplorerSnippetCardService {
             String resolvedRef,
             FlowExplorerRepositoryContext repository,
             FlowExplorerFlowNode node,
-            int remainingCharacters,
             List<String> fallbackLimitations
     ) {
         var lineRange = requestedLineRange(node);
@@ -273,7 +255,7 @@ public class FlowExplorerSnippetCardService {
                 node.filePath(),
                 lineRange.startLine(),
                 lineRange.endLine(),
-                Math.min(MAX_CHARACTERS_PER_CARD, remainingCharacters)
+                GITLAB_METHOD_SLICE_MAX_CHARACTERS
         );
         return snippetCard(repository, node, lineRange, chunk, fallbackLimitations);
     }
@@ -348,7 +330,7 @@ public class FlowExplorerSnippetCardService {
         var limitations = new ArrayList<String>(node.limitations());
         limitations.addAll(extraLimitations != null ? extraLimitations : List.of());
         if (chunk.truncated()) {
-            limitations.add("Snippet content was truncated by character budget.");
+            limitations.add("Snippet content was truncated by GitLab read output limit.");
         }
 
         var content = renderSnippetContent(repository, node, chunk);
@@ -382,7 +364,7 @@ public class FlowExplorerSnippetCardService {
         var limitations = new ArrayList<String>(node.limitations());
         limitations.addAll(response.limitations());
         if (response.truncated()) {
-            limitations.add("Snippet content was truncated by character budget.");
+            limitations.add("Snippet content was truncated by GitLab method slice output limit.");
         }
 
         return new FlowExplorerSnippetCard(

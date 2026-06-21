@@ -25,18 +25,7 @@ class FlowExplorerPromptPreparationServiceTest {
 
     @Test
     void shouldRenderCanonicalPromptWithManifestSnippetCardsAndSchema() {
-        var preparation = service.prepare(new FlowExplorerJobStartRequest(
-                "crm-service",
-                "crm-service:GET:/api/customers/{id}",
-                null,
-                null,
-                "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.TEST_PREPARATION,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
-                "Skup sie na jezyku zrozumialym dla testera.",
-                "gpt-5.4-mini",
-                "high"
-        ), contextSnapshot());
+        var preparation = service.prepare(request(), contextSnapshot());
         var prompt = preparation.prompt();
 
         assertTrue(prompt.contains("# Flow Explorer canonical prompt"));
@@ -54,6 +43,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("`focusAreas` traktuj jako kierunki analizy"));
         assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));
         assertTrue(prompt.contains("reasoningEffort: high"));
+        assertTrue(prompt.contains("Context clipping notes"));
         assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
         assertTrue(prompt.contains("Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`"));
         assertTrue(prompt.contains("GitLab tools do not read endpoint business scope from hidden ToolContext"));
@@ -73,7 +63,41 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("\"confidence\": \"high|medium|low\""));
     }
 
+    @Test
+    void shouldWarnModelWhenInitialContextWasClipped() {
+        var preparation = service.prepare(request(), contextSnapshot(true, true, true));
+        var prompt = preparation.prompt();
+
+        assertTrue(prompt.contains("Context clipping notes"));
+        assertTrue(prompt.contains("GitLab endpoint use-case context reached maxFiles=100"));
+        assertTrue(prompt.contains("snippet-cards.md was truncated to maxCards=20"));
+        assertTrue(prompt.contains("1 snippet card(s) were truncated by GitLab read output limits"));
+    }
+
     private static FlowExplorerContextSnapshot contextSnapshot() {
+        return contextSnapshot(false, false, false);
+    }
+
+    private static FlowExplorerJobStartRequest request() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerDocumentationPreset.TEST_PREPARATION,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                "Skup sie na jezyku zrozumialym dla testera.",
+                "gpt-5.4-mini",
+                "high"
+        );
+    }
+
+    private static FlowExplorerContextSnapshot contextSnapshot(
+            boolean snippetBudgetReached,
+            boolean maxFilesReached,
+            boolean snippetCardTruncated
+    ) {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
@@ -125,7 +149,7 @@ class FlowExplorerPromptPreparationServiceTest {
                         9,
                         27,
                         100,
-                        false,
+                        snippetCardTruncated,
                         "Endpoint handler.",
                         "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
                         0,
@@ -142,11 +166,11 @@ class FlowExplorerPromptPreparationServiceTest {
                         0,
                         1,
                         103,
-                        false,
+                        snippetBudgetReached,
                         0,
                         0,
                         false,
-                        false,
+                        maxFilesReached,
                         false,
                         "HIGH"
                 )

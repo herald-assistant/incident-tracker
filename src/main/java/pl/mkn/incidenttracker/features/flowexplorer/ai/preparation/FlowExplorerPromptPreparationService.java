@@ -71,6 +71,9 @@ public class FlowExplorerPromptPreparationService {
                 snippetBudgetReached: %s
                 confidence: %s
 
+                ## Context clipping notes
+                %s
+
                 ## Prepared artifact contents
                 %s
 
@@ -128,6 +131,7 @@ public class FlowExplorerPromptPreparationService {
                 contextSnapshot != null && contextSnapshot.coverage() != null
                         ? contextSnapshot.coverage().confidence()
                         : "LOW",
+                artifactService.renderContextClippingNotes(contextSnapshot),
                 artifactIndex(artifacts),
                 artifactContents.getOrDefault(
                         FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT,
