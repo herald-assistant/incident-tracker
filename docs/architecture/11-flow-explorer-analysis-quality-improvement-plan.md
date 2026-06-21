@@ -1,0 +1,417 @@
+# Flow Explorer Analysis Quality Improvement Plan
+
+## Cel dokumentu
+
+Ten dokument opisuje plan usprawnien Flow Explorera po pierwszym realnym
+smoke tescie wyniku wyeksportowanego z UI.
+
+Celem nie jest dodanie kolejnych opcji do ekranu. Celem jest poprawa
+merytorycznej jakosci odpowiedzi, ograniczenie kosztu tokenow i ograniczenie
+losowego "AI sobie dociagnie" na rzecz lepszego deterministic context,
+jasnych tool inputs, twardszej polityki tooli oraz mierzalnej diagnostyki.
+
+Plan jest wykonywany krok po kroku:
+
+- przed kazdym krokiem opisujemy w rozmowie problem, proponowane rozwiazanie,
+  dotykane pakiety/pliki i ryzyka,
+- implementujemy dopiero po zatwierdzeniu kroku przez uzytkownika,
+- po kazdym wykonanym kroku aktualizujemy checklisty w tym pliku,
+- jezeli w trakcie pracy zmieni sie podejscie, aktualizujemy sekcje
+  "Decision log" przed dalsza implementacja,
+- nie utrzymujemy kompatybilnosci wstecznej dla roboczych kontraktow Flow
+  Explorera, GitLab workbencha ani diagnostyki quality, jezeli stare pola albo
+  warianty zaciemniaja docelowy kontrakt,
+- testy i fixture'y dodawane w ramach tego planu maja byc zawsze
+  CRM-specific i zanonimizowane.
+
+## Zrodlo obserwacji
+
+Plan powstal po analizie jednego realnego exportu Flow Explorera z UI. Dane
+konkretnej domeny i repozytoriow nie sa powtarzane w tym dokumencie; ponizsze
+obserwacje sa uogolnione i zanonimizowane.
+
+Najwazniejsze sygnaly z exportu:
+
+- wynik byl merytorycznie uzyteczny, ale AI musialo nadrabiac braki wieloma
+  tool callami,
+- dla jednej analizy endpointu zuzycie bylo bardzo wysokie: okolo 294k
+  tokenow, 10 API/tool-assisted tur i okolo 118 sekund,
+- initial context mial tylko 4 snippet cards i trafil w czesc flow, ale nie
+  zawieral wszystkich najwazniejszych metod glownego use case'u,
+- AI kilkukrotnie probowalo uzyc niekanonicznych argumentow GitLaba, zanim
+  trafilo w prawidlowy project path dla repozytorium w podgrupie,
+- AI ponownie uruchomilo budowanie endpoint use-case context, mimo ze ten
+  context byl juz deterministycznie przygotowany i osadzony w promptcie,
+- `limitations` i `suggestedNextReads` byly obszerne i miejscami zbyt
+  techniczne dla analityka/testera.
+
+## Problemy, przyczyny i kierunek rozwiazan
+
+### 1. Initial snippets nie zawsze pokrywaja glowny flow
+
+Problem:
+
+Initial prompt dostaje `compact-flow-manifest` oraz budzetowane
+`snippetCards`, ale ranking snippetow nie zawsze wybiera najwazniejsze metody
+do zrozumienia endpointu. W smoke tescie zabraklo glownego service/update use
+case'u oraz mappera wejscia, a pojawily sie fragmenty mniej krytyczne dla
+pierwszego zrozumienia flow.
+
+Dlaczego tak sie dzieje:
+
+- obecny ranking opiera sie zbyt mocno na ogolnej roli pliku i kolejnosci
+  znalezionych kandydatow,
+- focus areas nie steruja wystarczajaco priorytetem snippetow,
+- nie ma wyraznego rozroznienia pomiedzy "primary flow spine" a detalami typu
+  response enrichment, helper mapper albo secondary read model,
+- limit snippet cards jest poprawny kosztowo, ale bez mocnego rankingu odcina
+  czasem wlasciwe metody.
+
+Propozycja rozwiazania:
+
+- dodac feature-local ranking `FlowExplorerSnippetCandidateRanker`,
+- nadawac najwyzszy priorytet lancuchowi:
+  controller/API entrypoint -> primary use-case service -> mapper wejscia ->
+  repository/query-for-update -> command repository/save -> response mapper,
+- wplyw focus areas:
+  - `BUSINESS_FLOW`: primary service, decyzje, porty i glowne przejscia,
+  - `VALIDATIONS`: mapper wejscia, walidatory, wymagane pola, adnotacje,
+  - `PERSISTENCE`: query/update/save repository, encje tylko gdy wnosza
+    reguly albo mapping stanu,
+  - `EXTERNAL_INTEGRATIONS`: klienty/porty outbound tylko gdy sa wywolane w
+    flow endpointu,
+- dodac diagnostyke, ktora pokazuje "dlaczego ten snippet zostal wybrany" i
+  "co zostalo odciete przez budzet".
+
+### 2. Model nie dostaje wystarczajaco jawnych canonical GitLab tool inputs
+
+Problem:
+
+AI probuje zgadywac `projectName`, `projectPath` albo `filePath`, mimo ze
+backend zna te wartosci po etapie deterministic context. Powoduje to bledne
+tool calle, strata tokenow i dodatkowe tury.
+
+Dlaczego tak sie dzieje:
+
+- `context-snapshot.json` zawiera repozytoria, ale nie prezentuje modelowi
+  jednoznacznego, krotkiego bloku "uzywaj dokladnie tych argumentow",
+- compact manifest i snippet cards sa dobre dla czlowieka/modelu, ale nie sa
+  wystarczajaco dyrektywne jako tool-call cheat sheet,
+- przy repozytoriach w podgrupach GitLaba roznica miedzy application name,
+  repository id, project name i full project path jest latwa do pomylenia.
+
+Propozycja rozwiazania:
+
+- dodac artifact albo sekcje promptu `canonical-tool-inputs.md`,
+- dla wybranego endpointu pokazywac:
+  - `applicationName`,
+  - `branchRef`,
+  - `selectedRepository.projectName`,
+  - `selectedRepository.projectPath`,
+  - `endpointId`,
+  - liste kanonicznych `filePath` dla flow nodes i snippet cards,
+- dodac krotkie przyklady poprawnych tool calls dla
+  `gitlab_read_java_method_slice`,
+- w tool policy walidowac, czy `projectName` nalezy do repozytoriow
+  wybranych dla tego Flow Explorer runu.
+
+### 3. AI wykonuje redundantne discovery i rebuild context
+
+Problem:
+
+Model potrafi uruchomic `gitlab_build_endpoint_use_case_context`,
+`gitlab_list_available_repositories` albo operational context search mimo ze
+wybrany system, repozytorium, branch i endpoint sa juz znane.
+
+Dlaczego tak sie dzieje:
+
+- tool descriptions mowia, kiedy tool jest przydatny, ale nie egzekwuja
+  twardej polityki po stronie backendu,
+- Flow Explorer pozwala na tools, ktore sa przydatne przy follow-up albo przy
+  braku contextu, ale sa za drogie w initial run po deterministycznym
+  przygotowaniu contextu,
+- brak runtime feedbacku dla modelu typu "ten tool call jest redundantny,
+  uzyj danych z artifacts".
+
+Propozycja rozwiazania:
+
+- w initial run ograniczyc albo zablokowac:
+  - `gitlab_build_endpoint_use_case_context`, jezeli endpoint context jest juz
+    osadzony,
+  - `gitlab_list_available_repositories`, jezeli wybrany system ma resolved
+    repository scope,
+  - szerokie `opctx_search`, jezeli potrzebne dane sa juz w promptcie albo
+    canonical tool inputs,
+- zostawic te tools w follow-up tylko z jasna polityka i budzetem,
+- dodac `FlowExplorerCopilotToolInvocationPolicy`, ktora rozpoznaje redundantne
+  discovery i zwraca czytelny denied message zamiast pozwalac na kosztowny call.
+
+### 4. Brak mierzalnej quality diagnostyki po runie
+
+Problem:
+
+Export pokazuje usage i aktywnosc AI, ale nie ocenia, czy run byl efektywny.
+Nie ma prostych flag typu: zly projectName, redundantny context rebuild,
+za duzo tool calli, snippet budget obcial primary service.
+
+Dlaczego tak sie dzieje:
+
+- platforma zbiera usage i activity, ale feature nie mapuje ich na
+  merytoryczne quality signals Flow Explorera,
+- tool evidence jest user-facing, a nie quality-facing,
+- nie mamy jeszcze kontraktu diagnostycznego, ktory mozna porownywac miedzy
+  smoke testami.
+
+Propozycja rozwiazania:
+
+- dodac feature-local `FlowExplorerRunQualityReport`,
+- liczyc co najmniej:
+  - liczbe tool calli,
+  - liczbe denied/redundant tool attempts,
+  - czy byl context rebuild w initial run,
+  - czy bylo repository rediscovery,
+  - ile tokenow poszlo na input/output/cache,
+  - czy snippet budget reached,
+  - czy primary flow roles maja snippet coverage,
+  - czy model uzywal niekanonicznych project/file inputs,
+- pokazac quality summary w diagnostic export i opcjonalnie w UI jako zwijalna
+  sekcje developerska.
+
+### 5. `limitations` i `suggestedNextReads` sa zbyt szumne
+
+Problem:
+
+Lista ograniczen i nastepnych odczytow moze byc technicznie poprawna, ale zbyt
+dluga i zbyt niskopoziomowa. To obniza czytelnosc dla nietechnicznego odbiorcy
+i zwieksza ryzyko, ze AI bedzie czytac za duzo.
+
+Dlaczego tak sie dzieje:
+
+- integracja GitLaba zwraca wiele precyzyjnych ograniczen parsera/metod,
+- prompt nie rozdziela ograniczen dla AI od ograniczen dla uzytkownika,
+- `suggestedNextReads` nie sa wystarczajaco rankowane pod preset/focus areas.
+
+Propozycja rozwiazania:
+
+- rozdzielic:
+  - `technicalLimitations` dla diagnostyki,
+  - `userFacingVisibilityLimits` dla wyniku,
+  - `aiGuidanceLimitations` dla promptu,
+- grupowac powtarzalne ograniczenia, np. overloady mapperow/metod,
+- ograniczyc `suggestedNextReads` w initial promptcie do top N pozycji,
+  zaleznie od focus areas,
+- pelna lista moze zostac w diagnostic artifact, ale nie musi byc cala
+  inline w promptcie.
+
+### 6. Result contract powinien mocniej rozdzielac fakt, inferencje i braki
+
+Problem:
+
+Wynik potrafi uzyc jezyka sugerujacego pewnosc, gdy dowod jest posredni.
+Przyklad klasy problemu: nazwa metody sugeruje lockowanie, ale snippet nie
+potwierdza mechanizmu. Taki element powinien byc opisany jako inferencja albo
+otwarte pytanie, nie jako fakt.
+
+Dlaczego tak sie dzieje:
+
+- obecny kontrakt wymaga visibility limits, ale nie wymaga przypisania
+  pewnosci do waznych twierdzen,
+- skill moze byc zbyt ogolny w regule "nie zgaduj",
+- response parser nie waliduje, czy sekcje techniczne maja source/evidence
+  odniesienie albo uncertainty marker.
+
+Propozycja rozwiazania:
+
+- doprecyzowac `flow-explorer-result-contract`:
+  - wazne twierdzenia techniczne maja byc oznaczone jako `fact`,
+    `inference` albo `unknown`,
+  - ryzykowne terminy typu lock, transaction, event publish, async handoff
+    wymagaja potwierdzenia w snippetach albo jawnego oznaczenia jako
+    niepotwierdzone,
+  - test scenarios nie moga laczyc kilku mozliwych zachowan jako pewnik,
+- dodac light validation po parsowaniu wyniku, ktora flaguje odpowiedz zbyt
+  pewna wobec znanych limitations.
+
+### 7. Export potrzebuje trybu user-facing i diagnostic
+
+Problem:
+
+Aktualny export jest dobry do debugowania, ale zawiera prompt, artifacts,
+tool evidence i fragmenty kodu. To nie zawsze jest odpowiedni format dla
+analityka/testera ani do bezpiecznego przekazywania poza zespol developerski.
+
+Dlaczego tak sie dzieje:
+
+- export powstal jako szybka funkcja operacyjna,
+- UI nie rozroznia "pobierz wynik" od "pobierz pelna diagnostyke runu",
+- Flow Explorer ma dwa rozne audytoria: nietechniczny odbiorca wyniku i
+  developer/debugger platformy.
+
+Propozycja rozwiazania:
+
+- dodac dwa tryby exportu:
+  - user-facing: wynik AI, wybrane metadane, visibility limits, usage summary,
+    bez surowego kodu i pelnego promptu,
+  - diagnostic: pelny prompt, artifacts, context snapshot, tool activity,
+    quality report,
+- UI powinno jasno nazywac tryby, np. `Export result` i `Export diagnostics`.
+
+## Kolejnosc realizacji
+
+### 001. Baseline quality report model
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Dodac feature-local model quality report dla Flow Explorer runu.
+- [ ] Zmapowac istniejace usage/activity/context coverage na pierwsze
+  quality signals.
+- [ ] Dodac diagnostic export pola z quality report.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Zanim zaczniemy poprawiac zachowanie, mierzymy obecny problem w powtarzalny
+sposob. To pozwoli sprawdzac, czy kolejne zmiany realnie zmniejszaja koszt i
+redundantne tool calle.
+
+### 002. Canonical tool inputs artifact
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Dodac artifact/sekcje `canonical-tool-inputs.md`.
+- [ ] Osadzic w nim kanoniczne argumenty GitLab i operational context dla
+  wybranego runu.
+- [ ] Doprecyzowac prompt i skill, ze model ma uzywac tych wartosci bez
+  rediscovery.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Zmniejszyc liczbe blednych tool calli spowodowanych zgadywaniem nazw projektu,
+sciezek repozytorium i file pathow.
+
+### 003. Snippet ranking pod primary flow i focus areas
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Dodac albo dopracowac ranking kandydatow snippetow w
+  `features.flowexplorer`.
+- [ ] Priorytetyzowac primary use-case service i mapper wejscia przed
+  secondary read/response details.
+- [ ] Uwzglednic focus areas w rankingu.
+- [ ] Dodac coverage diagnostics: primary roles covered/missing.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Sprawic, zeby initial context przenosil najwieksza wartosc merytoryczna w
+malym budzecie tokenowym.
+
+### 004. Tool policy dla redundantnego discovery
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Dodac Flow Explorer policy blokujaca redundantny context rebuild w
+  initial run.
+- [ ] Ograniczyc repository rediscovery, gdy selected repository scope jest
+  znany.
+- [ ] Zwrocic modelowi czytelny denied message z instrukcja uzycia artifacts.
+- [ ] Zostawic follow-up z osobna, ostrozniejsza polityka.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Zamienic miekkie guidance w egzekwowalna polityke runtime i ograniczyc koszt
+bez polegania wylacznie na posluszenstwie modelu.
+
+### 005. Ranking i grupowanie limitations/next reads
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Rozdzielic limitations na technical/user-facing/AI-guidance.
+- [ ] Grupowac powtarzalne niskopoziomowe ograniczenia.
+- [ ] Przyciac inline `suggestedNextReads` do top N dla focus areas.
+- [ ] Zostawic pelna liste w diagnostic artifact, jezeli jest potrzebna.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Poprawic czytelnosc wyniku i ograniczyc pokuse nadmiernego doczytywania kodu.
+
+### 006. Result contract: fact vs inference vs unknown
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Dostosowac runtime skill `flow-explorer-result-contract`.
+- [ ] Dostosowac parser/DTO, jezeli kontrakt wymaga strukturalnej zmiany.
+- [ ] Dodac walidacje albo quality flags dla zbyt pewnych twierdzen.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Poprawic merytoryczna wiarygodnosc wyniku i ograniczyc ryzyko, ze AI opisze
+inferencje jako potwierdzony fakt.
+
+### 007. Export result vs export diagnostics
+
+- [ ] Omowic krok i zatwierdzic zakres.
+- [ ] Rozdzielic export user-facing od diagnostic export.
+- [ ] User-facing export nie powinien zawierac surowego kodu ani pelnego
+  promptu.
+- [ ] Diagnostic export powinien zawierac quality report i pelne artifacts.
+- [ ] Dostosowac UI i import, jezeli trzeba.
+- [ ] Dodac testy CRM-specific i zanonimizowane.
+
+Cel kroku:
+
+Dopasowac eksport do dwoch roznych potrzeb: przekazania wyniku analitykowi i
+debugowania jakosci platformy przez developera.
+
+## Proponowane metryki sukcesu
+
+Te progi sa startowa hipoteza i moga zostac skorygowane po pierwszych dwoch
+krokach:
+
+- initial run dla typowego endpointu nie powinien wymagac repository
+  rediscovery,
+- initial run nie powinien odpalac ponownie endpoint use-case context, jezeli
+  context zostal juz osadzony,
+- primary flow powinien miec snippet coverage dla controller + primary service
+  + co najmniej jednego persistence/mapper elementu zgodnego z focus areas,
+- bledne `projectName`/`filePath` powinny byc blokowane albo flagowane,
+- user-facing limitations powinny byc krotkie i zrozumiale dla analityka,
+- diagnostic export powinien pozwalac wyjasnic, dlaczego odpowiedz kosztowala
+  wiecej niz oczekiwano.
+
+## Guardraile architektoniczne
+
+- `integrations.gitlab` pozostaje neutralna capability i nie importuje
+  Flow Explorera.
+- Flow Explorer moze budowac wlasny ranking, prompt, artifacts, policy,
+  skills, quality report i export projection w `features.flowexplorer`.
+- `agenttools` nie dostaje semantyki Flow Explorera; moze dostac tylko
+  neutralne mechanizmy, jezeli beda faktycznie wspolne.
+- `aiplatform` moze egzekwowac mechanike invocation/policy, ale nie zna
+  semantyki endpointow ani result contract Flow Explorera.
+- Nie przenosimy logiki do `features.incidentanalysis`.
+- Testy nowych przypadkow maja uzywac zanonimizowanych nazw CRM, np.
+  `crm-customer-workflow`, `CRM_CUSTOMER_WORKFLOW`,
+  `crm/customer-profile`, zamiast realnych nazw systemow.
+
+## Decision log
+
+### 001. Plan usprawnien po smoke tescie exportu
+
+Decyzja: tworzymy osobny plan usprawnien jakosci Flow Explorera zamiast
+rozszerzac glowny plan implementacyjny.
+
+Powod: glowny feature juz istnieje, a obecny problem dotyczy jakosci,
+kosztow, polityki tooli i diagnostyki po realnym runie. Osobny dokument
+ulatwia egzekwowanie kolejnych krokow i mierzenie poprawy.
+
+Status: accepted.
+
+## Checklist status
+
+- [x] Utworzono plan usprawnien po analizie realnego exportu.
+- [ ] 001. Baseline quality report model.
+- [ ] 002. Canonical tool inputs artifact.
+- [ ] 003. Snippet ranking pod primary flow i focus areas.
+- [ ] 004. Tool policy dla redundantnego discovery.
+- [ ] 005. Ranking i grupowanie limitations/next reads.
+- [ ] 006. Result contract: fact vs inference vs unknown.
+- [ ] 007. Export result vs export diagnostics.
