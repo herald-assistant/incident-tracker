@@ -1,57 +1,73 @@
 ---
 name: flow-explorer-result-contract
-description: Kontrakt odpowiedzi Flow Explorera - JSON-only, prosty jezyk dla analityka/testera, source refs, confidence i visibility limits.
+description: Kontrakt odpowiedzi Flow Explorera - JSON-only, Overview plus cztery sekcje, compact/deep, source refs, confidence i visibility limits.
 ---
 
 # Skill Kontraktu Wyniku Flow Explorera
 
-Uzywaj tego skilla przed finalna odpowiedzia. Wynik musi byc poprawnym JSON-em,
-bez Markdown poza stringami pol.
+Uzywaj tego skilla przed finalna odpowiedzia. Wynik musi byc jednym poprawnym
+obiektem JSON. Nie zwracaj Markdown poza stringami pol `markdown`.
 
 ## Rola
 
-Ten skill nie diagnozuje kodu i nie wybiera tools. Pilnuje tylko finalnego
-ksztaltu odpowiedzi Flow Explorera.
+Ten skill nie diagnozuje kodu i nie wybiera tools. Pilnuje finalnego ksztaltu
+odpowiedzi Flow Explorera, zeby UI moglo zawsze pokazac ten sam uklad:
+`Overview` oraz cztery stale sekcje.
 
 ## Wymagany JSON Contract
 
-Zwroc jeden obiekt JSON zgodny z polami:
+Zwroc dokladnie jeden obiekt JSON zgodny z polami:
 
 ```json
 {
-  "userIntentSummary": "string",
-  "audienceSummary": "string",
-  "endpointContract": {
-    "method": "string",
-    "path": "string",
-    "purpose": "string",
-    "request": ["string"],
-    "response": ["string"],
-    "parameters": ["string"]
+  "goal": "DEEP_DISCOVERY|TEST_SCENARIOS|RISK_DETECTION",
+  "audience": "business_or_system_analyst_tester",
+  "overview": {
+    "markdown": "string",
+    "confidence": "high|medium|low",
+    "sourceRefs": ["string"]
   },
-  "flowSteps": [
+  "sections": [
     {
-      "order": 1,
+      "id": "BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
       "title": "string",
-      "plainLanguage": "string",
-      "technicalGrounding": "string",
-      "sourceRefs": ["string"]
+      "mode": "compact|deep",
+      "markdown": "string",
+      "sourceRefs": ["string"],
+      "visibilityLimits": ["string"],
+      "openQuestions": ["string"]
     }
   ],
-  "businessRules": ["string"],
-  "validations": ["string"],
-  "persistence": ["string"],
-  "externalIntegrations": ["string"],
-  "testScenarios": ["string"],
-  "risksAndEdgeCases": ["string"],
-  "openQuestions": ["string"],
-  "visibilityLimits": ["string"],
+  "globalVisibilityLimits": ["string"],
+  "globalOpenQuestions": ["string"],
   "sourceReferences": ["string"],
   "confidence": "high|medium|low"
 }
 ```
 
-Nie dodawaj pol spoza kontraktu.
+Nie dodawaj top-level pol spoza kontraktu. Nie przywracaj pol legacy:
+`userIntentSummary`, `audienceSummary`, `endpointContract`, `flowSteps`,
+`businessRules`, `testScenarios`, `risksAndEdgeCases`, `visibilityLimits`.
+
+## Sekcje I Kolejnosc
+
+`sections` musi miec dokladnie cztery elementy w tej kolejnosci:
+
+1. `BUSINESS_FLOW_RULES` / `Business flow/rules`
+2. `VALIDATIONS` / `Validations`
+3. `PERSISTENCE` / `Persistence`
+4. `INTEGRATIONS` / `Integrations`
+
+Kazda sekcja musi miec `mode` zgodny z `sectionModes` z promptu:
+
+- `deep`, gdy requestowe focus area wskazuje dana sekcje,
+- `compact`, gdy dana sekcja nie byla wskazana.
+
+`compact` nie znaczy powierzchownie. Compact ma zawierac najwazniejsze fakty,
+decyzje i ograniczenia widocznosci w zwartej formie.
+
+`deep` ma zawierac konkretne reguly, warianty, edge case'y, source refs,
+otwarte pytania i limity widocznosci dla danej sekcji.
 
 ## Jezyk I Odbiorca
 
@@ -59,18 +75,9 @@ Pisz po polsku, prostym jezykiem dla analityka albo testera. Techniczne nazwy
 endpointow, klas, metod, tools, pol JSON i plikow zostaw w oryginalnym
 brzmieniu.
 
-`documentationPreset` ustawia odbiorce i format wyniku. `focusAreas` ustawiaja
-akcenty, ale nie zwalniaja z opisania glownego flow endpointu. `reasoningEffort`
-nie jest polem odpowiedzi, ale powinno byc widoczne w glebokosci uzasadnien:
-niski effort oznacza krotsze, bardziej artifact-first wyjasnienie, wysoki effort
-moze zawierac wiecej potwierdzonych edge case'ow i zaleznosci.
-
-Kazdy krok flow powinien miec:
-
-- krotki tytul,
-- wyjasnienie biznesowo-systemowe,
-- techniczne ugruntowanie,
-- source refs, jezeli sa dostepne.
+Nie opisuj klas dla samych klas. Kazdy fakt techniczny ma byc powiazany z tym,
+co endpoint robi, czego wymaga, co zapisuje, z czym sie komunikuje albo co
+moze byc niewidoczne.
 
 ## Source References
 
@@ -79,11 +86,11 @@ Preferuj source refs w formie:
 - `flow-explorer/compact-flow-manifest.md`,
 - `flow-explorer/snippet-cards.md`,
 - `projectName:path:Lx-Ly`,
-- `tool:gitlab_read_repository_file_chunk`,
+- `tool:gitlab_read_java_method_slice`,
 - `tool:opctx_get_entity`.
 
 Nie wymyslaj plikow, metod ani linii. Jezeli source ref jest niepewny, wpisz
-brak do `visibilityLimits` zamiast tworzyc falszywa referencje.
+brak do `visibilityLimits` danej sekcji albo `globalVisibilityLimits`.
 
 ## Confidence I Visibility Limits
 
@@ -92,13 +99,12 @@ Ustaw:
 - `high`, gdy flow jest ugruntowany w deterministic context i snippet/code
   evidence,
 - `medium`, gdy glowny flow jest jasny, ale brakuje szczegolow dla czesci
-  focus areas,
+  sekcji,
 - `low`, gdy endpoint, repozytorium, flow spine albo kluczowe evidence sa
   niepelne.
 
-`visibilityLimits` musza jasno powiedziec, czego nie bylo widac: kodu,
-konfiguracji, runtime data, operational context, ownera albo downstream
-systemu.
+`globalVisibilityLimits` opisuje ograniczenia calej analizy. `visibilityLimits`
+w sekcji opisuje brak tylko dla tej sekcji.
 
 ## Antywzorce
 
@@ -108,6 +114,7 @@ Nie:
 - wpisuj "brak" jako confidence,
 - ukrywaj limity widocznosci,
 - mieszaj source refs z hipotezami,
-- tworz dlugiego technicznego eseju w polach dla analityka,
-- ignoruj `documentationPreset` i `focusAreas`,
-- traktuj `focusAreas` jako pozwolenie na pominiecie primary endpoint flow.
+- tworz dlugiego technicznego eseju,
+- pomijaj ktoras z czterech sekcji,
+- traktuj `focusAreas` jako pozwolenie na pominiecie sekcji compact,
+- przenos scenariuszy testowych albo ryzyk do osobnych top-level pol.

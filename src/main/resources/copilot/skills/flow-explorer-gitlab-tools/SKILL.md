@@ -77,16 +77,12 @@ Focus area wskazuje kierunek, w ktorym masz poglębic juz ustalony primary flow.
 Nie oznacza, ze inne elementy flow mozna pominac, ani ze wolno zwiekszyc
 glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
 
-- `BUSINESS_FLOW`: controller, use case service, decyzje biznesowe.
+- `BUSINESS_FLOW_RULES`: controller, use case service, decyzje biznesowe.
 - `VALIDATIONS`: request model, validator, guard clause, error boundary.
 - `PERSISTENCE`: repository method, query predicate, entity status fields,
   transactional boundary.
-- `EXTERNAL_INTEGRATIONS`: client, adapter, request mapper, response handling,
+- `INTEGRATIONS`: client, adapter, request mapper, response handling,
   retry/error handling.
-- `TEST_SCENARIOS`: branch conditions, negative paths, edge cases, response
-  contract.
-- `CHANGE_IMPACT`: direct collaborators, outbound boundary, persisted state,
-  public API contract.
 
 ## Zasady Kosztowe
 
@@ -108,7 +104,7 @@ glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
 - Dla `reasoningEffort=low` wykonaj dodatkowy GitLab read tylko dla krytycznej
   luki, ktora moze zmienic wynik dla uzytkownika.
 - Dla `reasoningEffort=medium` czytaj brakujace metody primary flow i
-  najwazniejsze elementy wynikajace z focus areas.
+  najwazniejsze elementy wynikajace z sekcji oznaczonych jako `deep`.
 - Dla `reasoningEffort=high` mozesz czytac pomocnicze walidatory, mappery,
   repository details albo klientow integracyjnych, jezeli maja realny wplyw na
   scenariusze, ryzyka albo edge case'y.
@@ -117,7 +113,7 @@ glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
 - Nie czytaj mappera tylko dlatego, ze istnieje. Czytaj go, gdy zmienia
   request/response semantics, walidacje albo edge case.
 - Nie rozszerzaj flow poza wybrany endpoint bez powodu wynikajacego z
-  `focusAreas`.
+  `sectionModes`, `goal` albo konkretnego `userInstructions`.
 
 ## Wklad Do Wyniku
 

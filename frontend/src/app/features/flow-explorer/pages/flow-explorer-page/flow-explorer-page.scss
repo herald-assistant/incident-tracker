@@ -667,7 +667,8 @@ article.flow-explorer-select-option {
 
 .flow-explorer-result-summary,
 .flow-explorer-contract-grid,
-.flow-explorer-section-grid {
+.flow-explorer-section-grid,
+.flow-explorer-section-metadata {
   display: grid;
   gap: 12px;
 }
@@ -677,14 +678,16 @@ article.flow-explorer-select-option {
 }
 
 .flow-explorer-contract-grid,
-.flow-explorer-section-grid {
+.flow-explorer-section-grid,
+.flow-explorer-section-metadata {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .flow-explorer-result-summary > div,
 .flow-explorer-result-band,
 .flow-explorer-contract-grid > div,
-.flow-explorer-result-subsection {
+.flow-explorer-result-subsection,
+.flow-explorer-section-metadata > div {
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--border);
@@ -713,10 +716,20 @@ article.flow-explorer-select-option {
   padding-top: 2px;
 }
 
+.flow-explorer-section-stack {
+  display: grid;
+  gap: 14px;
+}
+
 .flow-explorer-result-block__heading {
   display: flex;
   gap: 10px;
   align-items: start;
+}
+
+.flow-explorer-result-block__heading > div {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .flow-explorer-result-block__heading .material-symbols-outlined {
@@ -736,6 +749,10 @@ article.flow-explorer-select-option {
 
 .flow-explorer-result-block h3 {
   font-size: 1.05rem;
+}
+
+.flow-explorer-markdown {
+  white-space: pre-line;
 }
 
 .flow-explorer-result-subsection h4,
@@ -856,7 +873,8 @@ article.flow-explorer-select-option {
   .flow-explorer-job__grid,
   .flow-explorer-result-summary,
   .flow-explorer-contract-grid,
-  .flow-explorer-section-grid {
+  .flow-explorer-section-grid,
+  .flow-explorer-section-metadata {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -879,7 +897,8 @@ article.flow-explorer-select-option {
   .flow-explorer-job__grid,
   .flow-explorer-result-summary,
   .flow-explorer-contract-grid,
-  .flow-explorer-section-grid {
+  .flow-explorer-section-grid,
+  .flow-explorer-section-metadata {
     grid-template-columns: 1fr;
   }
 

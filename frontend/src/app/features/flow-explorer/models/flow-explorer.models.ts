@@ -7,19 +7,24 @@ import {
   AnalysisEvidenceSection
 } from '../../../core/models/analysis.models';
 
-export type FlowExplorerDocumentationPreset =
-  | 'ANALYST_OVERVIEW'
-  | 'TEST_PREPARATION'
-  | 'CHANGE_IMPACT'
-  | 'TECHNICAL_HANDOFF';
+export type FlowExplorerAnalysisGoal =
+  | 'DEEP_DISCOVERY'
+  | 'TEST_SCENARIOS'
+  | 'RISK_DETECTION';
 
 export type FlowExplorerFocusArea =
-  | 'BUSINESS_FLOW'
+  | 'BUSINESS_FLOW_RULES'
   | 'VALIDATIONS'
   | 'PERSISTENCE'
-  | 'EXTERNAL_INTEGRATIONS'
-  | 'TEST_SCENARIOS'
-  | 'RISKS_AND_OPEN_QUESTIONS';
+  | 'INTEGRATIONS';
+
+export type FlowExplorerResultSectionId =
+  | 'BUSINESS_FLOW_RULES'
+  | 'VALIDATIONS'
+  | 'PERSISTENCE'
+  | 'INTEGRATIONS';
+
+export type FlowExplorerResultSectionMode = 'COMPACT' | 'DEEP' | 'compact' | 'deep';
 
 export type FlowExplorerJobStatus =
   | 'QUEUED'
@@ -141,7 +146,7 @@ export interface FlowExplorerJobStartRequest {
   httpMethod?: string;
   endpointPath?: string;
   branch?: string;
-  documentationPreset?: FlowExplorerDocumentationPreset;
+  goal?: FlowExplorerAnalysisGoal;
   focusAreas?: FlowExplorerFocusArea[];
   userInstructions?: string;
   model?: string;
@@ -159,7 +164,7 @@ export interface FlowExplorerJobStateSnapshot {
   httpMethod: string;
   endpointPath: string;
   branch: string;
-  documentationPreset: FlowExplorerDocumentationPreset;
+  goal: FlowExplorerAnalysisGoal;
   focusAreas: FlowExplorerFocusArea[];
   aiModel: string;
   reasoningEffort: string;
@@ -189,45 +194,35 @@ export interface FlowExplorerResult {
   httpMethod: string;
   endpointPath: string;
   branch: string;
-  userIntentSummary: string;
-  audienceSummary: string;
-  confidence: string;
-  visibilityLimits: string[];
+  goal: FlowExplorerAnalysisGoal;
   prompt: string;
   aiResponse: FlowExplorerAiResponse | null;
   usage: AnalysisAiUsage | null;
 }
 
 export interface FlowExplorerAiResponse {
-  userIntentSummary: string;
-  audienceSummary: string;
-  endpointContract: FlowExplorerAiEndpointContract | null;
-  flowSteps: FlowExplorerAiFlowStep[];
-  businessRules: string[];
-  validations: string[];
-  persistence: string[];
-  externalIntegrations: string[];
-  testScenarios: string[];
-  risksAndEdgeCases: string[];
-  openQuestions: string[];
-  visibilityLimits: string[];
+  goal: FlowExplorerAnalysisGoal;
+  audience: string;
+  overview: FlowExplorerResultOverview;
+  sections: FlowExplorerResultSection[];
+  globalVisibilityLimits: string[];
+  globalOpenQuestions: string[];
   sourceReferences: string[];
   confidence: string;
 }
 
-export interface FlowExplorerAiEndpointContract {
-  method: string;
-  path: string;
-  purpose: string;
-  request: string[];
-  response: string[];
-  parameters: string[];
+export interface FlowExplorerResultOverview {
+  markdown: string;
+  confidence: string;
+  sourceRefs: string[];
 }
 
-export interface FlowExplorerAiFlowStep {
-  order: number;
+export interface FlowExplorerResultSection {
+  id: FlowExplorerResultSectionId;
   title: string;
-  plainLanguage: string;
-  technicalGrounding: string;
+  mode: FlowExplorerResultSectionMode;
+  markdown: string;
   sourceRefs: string[];
+  visibilityLimits: string[];
+  openQuestions: string[];
 }

@@ -10,7 +10,10 @@ import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatR
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatTurn;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultOverview;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultResponse;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSection;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
@@ -220,14 +223,9 @@ public final class FlowExplorerJobState {
                 request.httpMethod(),
                 request.endpointPath(),
                 contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch(),
-                "Deterministic context zostal zbudowany; AI nie zostalo jeszcze uruchomione.",
-                "Flow Explorer pokazuje compact flow manifest przygotowany pod przyszly prompt.",
-                contextSnapshot != null && contextSnapshot.coverage() != null
-                        ? contextSnapshot.coverage().confidence()
-                        : "LOW",
-                contextSnapshot != null ? contextSnapshot.limitations() : List.of(),
+                request.goal(),
                 prompt,
-                null,
+                deterministicContextResponse(contextSnapshot),
                 null
         );
     }
@@ -312,7 +310,7 @@ public final class FlowExplorerJobState {
                 request.httpMethod(),
                 request.endpointPath(),
                 contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch(),
-                request.documentationPreset(),
+                request.goal(),
                 request.focusAreas(),
                 request.aiOptions().model(),
                 request.aiOptions().reasoningEffort(),
@@ -341,9 +339,10 @@ public final class FlowExplorerJobState {
             AnalysisAiUsage usage,
             String prompt
     ) {
-        var response = aiResponse != null
+        var response = (aiResponse != null
                 ? aiResponse
-                : FlowExplorerAiResponse.parseFallback("AI response was not available.");
+                : FlowExplorerAiResponse.parseFallback("AI response was not available."))
+                .withRequestContext(request.goal(), request.focusAreas());
         return new FlowExplorerResultResponse(
                 STATUS_COMPLETED,
                 request.systemId(),
@@ -351,13 +350,42 @@ public final class FlowExplorerJobState {
                 httpMethod(),
                 endpointPath(),
                 contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch(),
-                response.userIntentSummary(),
-                response.audienceSummary(),
-                response.confidence(),
-                response.visibilityLimits(),
+                request.goal(),
                 prompt,
                 response,
                 usage
+        );
+    }
+
+    private FlowExplorerAiResponse deterministicContextResponse(FlowExplorerContextSnapshot contextSnapshot) {
+        var confidence = contextSnapshot != null && contextSnapshot.coverage() != null
+                ? contextSnapshot.coverage().confidence()
+                : "low";
+        var limitations = contextSnapshot != null ? contextSnapshot.limitations() : List.<String>of();
+        var sections = FlowExplorerResultSectionModeResolver.resolve(request.focusAreas()).stream()
+                .map(assignment -> new FlowExplorerResultSection(
+                        assignment.id(),
+                        assignment.title(),
+                        assignment.mode(),
+                        "",
+                        List.of(),
+                        List.of(),
+                        List.of()
+                ))
+                .toList();
+        return new FlowExplorerAiResponse(
+                request.goal(),
+                "business_or_system_analyst_tester",
+                new FlowExplorerResultOverview(
+                        "Deterministic context zostal zbudowany; AI nie zostalo jeszcze uruchomione.",
+                        confidence,
+                        List.of("flow-explorer/compact-flow-manifest.md")
+                ),
+                sections,
+                limitations,
+                List.of(),
+                List.of(),
+                confidence
         );
     }
 

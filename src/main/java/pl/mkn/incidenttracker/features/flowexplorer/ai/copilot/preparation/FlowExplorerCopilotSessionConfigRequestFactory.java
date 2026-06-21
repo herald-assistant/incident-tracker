@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotModelSelection;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiOptions;
 
 import java.util.List;
@@ -30,9 +31,15 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
     public CopilotSessionConfigRequest create(
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
-            AnalysisAiOptions options
+            AnalysisAiOptions options,
+            FlowExplorerAnalysisGoal goal
     ) {
-        return create(copilotSessionId, toolAccessPolicy, options, FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
+        return create(
+                copilotSessionId,
+                toolAccessPolicy,
+                options,
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(goal)
+        );
     }
 
     public CopilotSessionConfigRequest createForFollowUp(

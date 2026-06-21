@@ -368,12 +368,12 @@
         <div class="flow-explorer-scope-grid">
           <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">
-              <span class="field-label">Preset</span>
+              <span class="field-label">Goal</span>
               <span
                 class="flow-explorer-label-help"
                 tabindex="0"
-                aria-label="Preset field help"
-                matTooltip="Ustawia glowna intencje dokumentacji i ton odpowiedzi AI."
+                aria-label="Goal field help"
+                matTooltip="Ustawia cel analizy. Deep Discovery buduje kompleksowe rozpoznanie endpointu."
                 matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
@@ -386,30 +386,31 @@
               type="button"
               aria-haspopup="listbox"
               [disabled]="isSubmitting() || isJobActive()"
-              [attr.aria-expanded]="presetSelectOpen()"
-              (click)="togglePresetSelect($event)"
+              [attr.aria-expanded]="goalSelectOpen()"
+              (click)="toggleGoalSelect($event)"
             >
               <span class="flow-explorer-select__value">
-                <strong>{{ selectedPresetLabel() }}</strong>
-                <small>{{ selectedPresetMeta() }}</small>
+                <strong>{{ selectedGoalLabel() }}</strong>
+                <small>{{ selectedGoalMeta() }}</small>
               </span>
               <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
             </button>
 
-            @if (presetSelectOpen()) {
-              <div class="flow-explorer-select__menu" role="listbox" aria-label="Preset options">
+            @if (goalSelectOpen()) {
+              <div class="flow-explorer-select__menu" role="listbox" aria-label="Goal options">
                 <div class="flow-explorer-select__options">
-                  @for (preset of documentationPresets; track preset.value) {
+                  @for (goal of analysisGoals; track goal.value) {
                     <button
-                      [class]="presetOptionClass(preset.value)"
+                      [class]="goalOptionClass(goal.value)"
                       type="button"
                       role="option"
-                      [attr.aria-selected]="documentationPreset() === preset.value"
-                      (click)="selectPresetFromDropdown(preset.value, $event)"
+                      [disabled]="goal.disabled || isSubmitting() || isJobActive()"
+                      [attr.aria-selected]="analysisGoal() === goal.value"
+                      (click)="selectGoalFromDropdown(goal.value, $event)"
                     >
                       <span class="flow-explorer-select-option__body">
-                        <strong>{{ preset.label }}</strong>
-                        <small>{{ preset.hint }}</small>
+                        <strong>{{ goal.label }}</strong>
+                        <small>{{ goal.hint }}</small>
                       </span>
                     </button>
                   }
@@ -428,7 +429,7 @@
                 [matTooltip]="
                   'Maksymalnie ' +
                   maxFocusAreas +
-                  ' kierunki analizy. To ustawia akcenty wyniku; glebokoscia steruje reasoning effort.'
+                  ' sekcje deep. Pozostale sekcje beda compact; glebokoscia eksploracji steruje reasoning effort.'
                 "
                 matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
@@ -837,12 +838,13 @@
               <div>
                 <p class="section-eyebrow">AI result</p>
                 <h2>{{ result.httpMethod }} {{ result.endpointPath }}</h2>
-                <p class="field-hint">{{ result.userIntentSummary || result.audienceSummary }}</p>
+                <p class="field-hint">{{ result.aiResponse?.overview?.markdown || selectedGoalLabel() }}</p>
               </div>
               <div class="flow-explorer-result__badges">
                 <span [class]="jobStatusPillClass(result.status)">{{ result.status }}</span>
-                <span [class]="confidencePillClass(result.aiResponse?.confidence || result.confidence)">
-                  {{ result.aiResponse?.confidence || result.confidence || 'confidence n/a' }}
+                <span class="status-pill status-pill--queued">{{ result.goal || analysisGoal() }}</span>
+                <span [class]="confidencePillClass(result.aiResponse?.confidence || '')">
+                  {{ result.aiResponse?.confidence || 'confidence n/a' }}
                 </span>
               </div>
             </summary>
@@ -850,12 +852,12 @@
             <div class="flow-explorer-collapsible__body">
             <div class="flow-explorer-result-summary">
               <div>
-                <span class="field-label">Intent</span>
-                <p>{{ result.aiResponse?.userIntentSummary || result.userIntentSummary || 'n/a' }}</p>
+                <span class="field-label">Goal</span>
+                <p>{{ result.goal || analysisGoal() }}</p>
               </div>
               <div>
                 <span class="field-label">Audience</span>
-                <p>{{ result.aiResponse?.audienceSummary || result.audienceSummary || 'n/a' }}</p>
+                <p>{{ result.aiResponse?.audience || 'business_or_system_analyst_tester' }}</p>
               </div>
               <div>
                 <span class="field-label">Branch</span>
@@ -863,122 +865,102 @@
               </div>
             </div>
 
-            @if (hasItems(result.visibilityLimits)) {
-              <div class="flow-explorer-result-band">
-                <span class="field-label">Visibility limits</span>
-                <ul>
-                  @for (limit of result.visibilityLimits; track $index) {
-                    <li>{{ limit }}</li>
-                  }
-                </ul>
-              </div>
-            }
-
             @if (result.aiResponse; as ai) {
-              @if (ai.endpointContract; as contract) {
-                <section class="flow-explorer-result-block" aria-label="Endpoint contract">
-                  <div class="flow-explorer-result-block__heading">
-                    <span class="material-symbols-outlined" aria-hidden="true">description</span>
-                    <div>
-                      <span class="field-label">Endpoint contract</span>
-                      <h3>{{ contract.method || result.httpMethod }} {{ contract.path || result.endpointPath }}</h3>
-                    </div>
+              <section class="flow-explorer-result-block" aria-label="Overview">
+                <div class="flow-explorer-result-block__heading">
+                  <span class="material-symbols-outlined" aria-hidden="true">summarize</span>
+                  <div>
+                    <span class="field-label">Overview</span>
+                    <h3>{{ result.httpMethod }} {{ result.endpointPath }}</h3>
                   </div>
-                  @if (contract.purpose) {
-                    <p>{{ contract.purpose }}</p>
+                  <span [class]="confidencePillClass(ai.overview.confidence || ai.confidence)">
+                    {{ ai.overview.confidence || ai.confidence || 'confidence n/a' }}
+                  </span>
+                </div>
+                <p class="flow-explorer-markdown">{{ ai.overview.markdown || 'AI did not provide an overview.' }}</p>
+                @if (hasItems(ai.overview.sourceRefs)) {
+                  <div class="flow-explorer-chip-list">
+                    @for (sourceRef of ai.overview.sourceRefs; track $index) {
+                      <span class="panel-chip">{{ sourceRef }}</span>
+                    }
+                  </div>
+                }
+              </section>
+
+              <div class="flow-explorer-section-stack">
+                @for (section of resultSections(); track section.id) {
+                  <section class="flow-explorer-result-block" [attr.aria-label]="section.title">
+                  <div class="flow-explorer-result-block__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">{{ sectionIcon(section.id) }}</span>
+                    <div>
+                      <span class="field-label">{{ section.id }}</span>
+                      <h3>{{ section.title }}</h3>
+                    </div>
+                    <span [class]="sectionModePillClass(section.mode)">{{ sectionModeLabel(section.mode) }}</span>
+                  </div>
+                  <p class="flow-explorer-markdown">{{ section.markdown || 'No confirmed details for this section.' }}</p>
+                  @if (hasItems(section.sourceRefs)) {
+                    <div class="flow-explorer-chip-list">
+                      @for (sourceRef of section.sourceRefs; track $index) {
+                        <span class="panel-chip">{{ sourceRef }}</span>
+                      }
+                    </div>
                   }
-                  <div class="flow-explorer-contract-grid">
-                    @if (hasItems(contract.parameters)) {
+                  <div class="flow-explorer-section-metadata">
+                    @if (hasItems(section.visibilityLimits)) {
                       <div>
-                        <span class="field-label">Parameters</span>
+                        <span class="field-label">Visibility limits</span>
                         <ul>
-                          @for (parameter of contract.parameters; track $index) {
-                            <li>{{ parameter }}</li>
+                          @for (limit of section.visibilityLimits; track $index) {
+                            <li>{{ limit }}</li>
                           }
                         </ul>
                       </div>
                     }
-                    @if (hasItems(contract.request)) {
+                    @if (hasItems(section.openQuestions)) {
                       <div>
-                        <span class="field-label">Request</span>
+                        <span class="field-label">Open questions</span>
                         <ul>
-                          @for (request of contract.request; track $index) {
-                            <li>{{ request }}</li>
-                          }
-                        </ul>
-                      </div>
-                    }
-                    @if (hasItems(contract.response)) {
-                      <div>
-                        <span class="field-label">Response</span>
-                        <ul>
-                          @for (response of contract.response; track $index) {
-                            <li>{{ response }}</li>
+                          @for (question of section.openQuestions; track $index) {
+                            <li>{{ question }}</li>
                           }
                         </ul>
                       </div>
                     }
                   </div>
-                </section>
-              }
+                  </section>
+                }
+              </div>
 
-              @if (hasItems(ai.flowSteps)) {
-                <section class="flow-explorer-result-block" aria-label="Flow steps">
+              @if (hasItems(ai.globalVisibilityLimits) || hasItems(ai.globalOpenQuestions)) {
+                <section class="flow-explorer-result-block" aria-label="Global visibility limits and questions">
                   <div class="flow-explorer-result-block__heading">
-                    <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
                     <div>
-                      <span class="field-label">Flow</span>
-                      <h3>Step by step</h3>
+                      <span class="field-label">Analysis limits</span>
+                      <h3>What was not fully visible</h3>
                     </div>
                   </div>
-                  <div class="flow-explorer-flow-steps">
-                    @for (step of ai.flowSteps; track step.order + step.title) {
-                      <article class="flow-explorer-flow-step">
-                        <span class="flow-explorer-flow-step__number">{{ step.order }}</span>
-                        <div>
-                          <h4>{{ step.title }}</h4>
-                          <p>{{ step.plainLanguage }}</p>
-                          @if (step.technicalGrounding || hasItems(step.sourceRefs)) {
-                            <details>
-                              <summary>Technical grounding</summary>
-                              @if (step.technicalGrounding) {
-                                <p>{{ step.technicalGrounding }}</p>
-                              }
-                              @if (hasItems(step.sourceRefs)) {
-                                <div class="flow-explorer-chip-list">
-                                  @for (sourceRef of step.sourceRefs; track $index) {
-                                    <span class="panel-chip">{{ sourceRef }}</span>
-                                  }
-                                </div>
-                              }
-                            </details>
-                          }
-                        </div>
-                      </article>
-                    }
-                  </div>
-                </section>
-              }
-
-              @if (resultSections().length > 0) {
-                <section class="flow-explorer-result-block" aria-label="Focused findings">
-                  <div class="flow-explorer-result-block__heading">
-                    <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
-                    <div>
-                      <span class="field-label">Focused findings</span>
-                      <h3>What matters for this request</h3>
-                    </div>
-                  </div>
-                  <div class="flow-explorer-section-grid">
-                    @for (section of resultSections(); track section.title) {
-                      <section class="flow-explorer-result-subsection">
-                        <h4>{{ section.title }}</h4>
+                  <div class="flow-explorer-section-metadata">
+                    @if (hasItems(ai.globalVisibilityLimits)) {
+                      <div>
+                        <span class="field-label">Visibility limits</span>
                         <ul>
-                          @for (item of section.items; track $index) {
-                            <li>{{ item }}</li>
+                          @for (limit of ai.globalVisibilityLimits; track $index) {
+                            <li>{{ limit }}</li>
                           }
                         </ul>
-                      </section>
+                      </div>
+                    }
+                    @if (hasItems(ai.globalOpenQuestions)) {
+                      <div>
+                        <span class="field-label">Open questions</span>
+                        <ul>
+                          @for (question of ai.globalOpenQuestions; track $index) {
+                            <li>{{ question }}</li>
+                          }
+                        </ul>
+                      </div>
                     }
                   </div>
                 </section>

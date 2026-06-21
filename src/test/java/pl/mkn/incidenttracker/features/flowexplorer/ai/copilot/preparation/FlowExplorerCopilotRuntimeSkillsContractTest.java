@@ -26,11 +26,16 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "flow-explorer-result-contract",
                 FlowExplorerCopilotRuntimeSkillNames.RESULT_CONTRACT_SKILL_NAME
         );
+        assertEquals(
+                "flow-explorer-goal-deep-discovery",
+                FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME
+        );
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
                 "flow-explorer-gitlab-tools",
                 "flow-explorer-operational-context-tools",
-                "flow-explorer-result-contract"
+                "flow-explorer-result-contract",
+                "flow-explorer-goal-deep-discovery"
         ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
@@ -68,9 +73,21 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertSkillContainsSections("flow-explorer-result-contract", List.of(
                 "## Rola",
                 "## Wymagany JSON Contract",
+                "## Sekcje I Kolejnosc",
                 "## Jezyk I Odbiorca",
                 "## Source References",
                 "## Confidence I Visibility Limits",
+                "## Antywzorce"
+        ));
+        assertSkillContainsSections("flow-explorer-goal-deep-discovery", List.of(
+                "## Cel",
+                "## Zasada Ogolna",
+                "## Overview",
+                "## Business flow/rules",
+                "## Validations",
+                "## Persistence",
+                "## Integrations",
+                "## Compact Vs Deep",
                 "## Antywzorce"
         ));
     }
@@ -99,7 +116,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("Nie zgaduj `projectName`, `projectPath`"));
         assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
         assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
-        assertTrue(orchestrator.contains("`focusAreas` okreslaja kierunki analizy"));
+        assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
         assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja business scope'u z hidden `ToolContext`"));

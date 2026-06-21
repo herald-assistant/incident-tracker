@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatR
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatTurn;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultResponse;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.ArrayList;
@@ -52,7 +53,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Nie zgaduj. Jezeli nie widzisz danych, powiedz co jest ograniczeniem widocznosci.
                 - Jezeli korygujesz albo doprecyzowujesz wynik initial, powiedz to jawnie.
                 - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`.
-                - `focusAreas` z initial request sa kierunkiem analizy, nie poziomem glebokosci.
+                - `focusAreas` z initial request wskazuja sekcje, ktore mialy tryb deep.
                 - `reasoningEffort` z initial request steruje glebokoscia dodatkowego czytania: low = minimalnie, medium = focused reads dla brakow, high = glebsze edge case'y i zaleznosci.
 
                 ## Initial request
@@ -62,8 +63,9 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 httpMethod: %s
                 endpointPath: %s
                 branchRef: %s
-                documentationPreset: %s
+                goal: %s
                 focusAreas: %s
+                sectionModes: %s
                 reasoningEffort: %s
 
                 ## Tool scope guidance
@@ -105,8 +107,9 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 request.contextSnapshot() != null
                         ? request.contextSnapshot().resolvedRef()
                         : request.initialRequest().branch(),
-                request.initialRequest().documentationPreset(),
+                request.initialRequest().goal(),
                 request.initialRequest().focusAreas(),
+                FlowExplorerResultSectionModeResolver.resolve(request.initialRequest().focusAreas()),
                 reasoningEffort(request.initialRequest()),
                 artifactContents.getOrDefault(INITIAL_RESULT_ARTIFACT, "- initial result unavailable"),
                 renderEvidenceSummary(request.toolEvidenceSections()),
@@ -136,21 +139,16 @@ public class FlowExplorerFollowUpPromptPreparationService {
         }
         var builder = new StringBuilder();
         appendLine(builder, "- status: " + textOrPlaceholder(result.status()));
-        appendLine(builder, "- intent: " + textOrPlaceholder(result.userIntentSummary()));
-        appendLine(builder, "- audience: " + textOrPlaceholder(result.audienceSummary()));
-        appendLine(builder, "- confidence: " + textOrPlaceholder(result.confidence()));
-        appendLine(builder, "- visibilityLimits: " + listOrNone(result.visibilityLimits()));
+        appendLine(builder, "- goal: " + textOrPlaceholder(result.goal() != null ? result.goal().name() : null));
         if (result.aiResponse() != null) {
-            appendLine(builder, "- endpoint purpose: " + (
-                    result.aiResponse().endpointContract() != null
-                            ? textOrPlaceholder(result.aiResponse().endpointContract().purpose())
-                            : "(not available)"
-            ));
-            appendLine(builder, "- flowSteps: " + result.aiResponse().flowSteps().size());
-            appendLine(builder, "- businessRules: " + listOrNone(result.aiResponse().businessRules()));
-            appendLine(builder, "- validations: " + listOrNone(result.aiResponse().validations()));
-            appendLine(builder, "- persistence: " + listOrNone(result.aiResponse().persistence()));
-            appendLine(builder, "- externalIntegrations: " + listOrNone(result.aiResponse().externalIntegrations()));
+            appendLine(builder, "- audience: " + textOrPlaceholder(result.aiResponse().audience()));
+            appendLine(builder, "- confidence: " + textOrPlaceholder(result.aiResponse().confidence()));
+            appendLine(builder, "- overview: " + textOrPlaceholder(result.aiResponse().overview().markdown()));
+            appendLine(builder, "- globalVisibilityLimits: " + listOrNone(result.aiResponse().globalVisibilityLimits()));
+            appendLine(builder, "- globalOpenQuestions: " + listOrNone(result.aiResponse().globalOpenQuestions()));
+            result.aiResponse().sections().forEach(section -> appendLine(builder,
+                    "- section " + section.id() + " (" + section.mode() + "): "
+                            + textOrPlaceholder(section.markdown())));
             appendLine(builder, "- sourceReferences: " + listOrNone(result.aiResponse().sourceReferences()));
         }
         return builder.toString().trim();

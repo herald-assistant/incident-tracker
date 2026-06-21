@@ -17,7 +17,7 @@ public record FlowExplorerJobStateSnapshot(
         String httpMethod,
         String endpointPath,
         String branch,
-        FlowExplorerDocumentationPreset documentationPreset,
+        FlowExplorerAnalysisGoal goal,
         List<FlowExplorerFocusArea> focusAreas,
         String aiModel,
         String reasoningEffort,

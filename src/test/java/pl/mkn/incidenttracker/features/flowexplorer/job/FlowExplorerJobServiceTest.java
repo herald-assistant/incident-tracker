@@ -30,10 +30,12 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMeth
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
@@ -99,14 +101,21 @@ class FlowExplorerJobServiceTest {
         assertNotNull(started.jobId());
         assertEquals("COMPLETED", started.status());
         assertEquals("feature/FLOW-42", started.branch());
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, started.goal());
         assertEquals(2, started.steps().size());
         assertTrue(started.steps().stream().allMatch(step -> "COMPLETED".equals(step.status())));
         assertNotNull(started.contextSnapshot());
         assertEquals("Flow Explorer canonical prompt", started.preparedPrompt());
-        assertEquals("Tester chce poznac GET /api/customers/{id}.", started.result().userIntentSummary());
-        assertEquals("high", started.result().confidence());
-        assertEquals("Pobranie klienta", started.result().aiResponse().endpointContract().purpose());
-        assertEquals("Controller przyjmuje request.", started.result().aiResponse().flowSteps().get(0).plainLanguage());
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, started.result().goal());
+        assertEquals("Tester chce poznac GET /api/customers/{id}.", started.result().aiResponse().overview().markdown());
+        assertEquals("high", started.result().aiResponse().confidence());
+        assertEquals(4, started.result().aiResponse().sections().size());
+        assertEquals(FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
+                started.result().aiResponse().sections().get(0).id());
+        assertEquals(FlowExplorerResultSectionMode.DEEP,
+                started.result().aiResponse().sections().get(0).mode());
+        assertEquals("Controller przyjmuje request.",
+                started.result().aiResponse().sections().get(0).markdown());
         assertSame(usage, started.result().usage());
 
         var fetched = flowExplorerJobService.getJob(started.jobId());
@@ -132,13 +141,13 @@ class FlowExplorerJobServiceTest {
         var started = flowExplorerJobService.startJob(request);
 
         assertEquals("COMPLETED", started.status());
-        assertEquals("low", started.result().confidence());
+        assertEquals("low", started.result().aiResponse().confidence());
         assertEquals(
                 "Nie udalo sie sparsowac odpowiedzi AI do kontraktu Flow Explorer.",
-                started.result().audienceSummary()
+                started.result().aiResponse().overview().markdown()
         );
-        assertTrue(started.result().visibilityLimits().contains("AI response was not valid JSON."));
-        assertFalse(started.result().aiResponse().openQuestions().isEmpty());
+        assertTrue(started.result().aiResponse().globalVisibilityLimits().contains("AI response was not valid JSON."));
+        assertFalse(started.result().aiResponse().globalOpenQuestions().isEmpty());
     }
 
     @Test
@@ -355,8 +364,8 @@ class FlowExplorerJobServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW)
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES)
         );
     }
 
@@ -367,8 +376,8 @@ class FlowExplorerJobServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
                 "medium"
@@ -456,33 +465,53 @@ class FlowExplorerJobServiceTest {
     private static String aiJson() {
         return """
                 {
-                  "userIntentSummary": "Tester chce poznac GET /api/customers/{id}.",
-                  "audienceSummary": "Endpoint pobiera klienta i zwraca jego profil.",
-                  "endpointContract": {
-                    "method": "GET",
-                    "path": "/api/customers/{id}",
-                    "purpose": "Pobranie klienta",
-                    "request": ["customerId w path"],
-                    "response": ["CustomerResponse"],
-                    "parameters": ["id"]
+                  "goal": "DEEP_DISCOVERY",
+                  "audience": "business_or_system_analyst_tester",
+                  "overview": {
+                    "markdown": "Tester chce poznac GET /api/customers/{id}.",
+                    "confidence": "high",
+                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
                   },
-                  "flowSteps": [
+                  "sections": [
                     {
-                      "order": 1,
-                      "title": "Wejscie HTTP",
-                      "plainLanguage": "Controller przyjmuje request.",
-                      "technicalGrounding": "CustomerController.getCustomer",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                      "id": "BUSINESS_FLOW_RULES",
+                      "title": "Business flow/rules",
+                      "mode": "compact",
+                      "markdown": "Controller przyjmuje request.",
+                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "VALIDATIONS",
+                      "title": "Validations",
+                      "mode": "compact",
+                      "markdown": "id jest wymagane.",
+                      "sourceRefs": [],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "PERSISTENCE",
+                      "title": "Persistence",
+                      "mode": "compact",
+                      "markdown": "Repository pobiera klienta po id.",
+                      "sourceRefs": [],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "INTEGRATIONS",
+                      "title": "Integrations",
+                      "mode": "compact",
+                      "markdown": "Brak potwierdzonych integracji downstream.",
+                      "sourceRefs": [],
+                      "visibilityLimits": [],
+                      "openQuestions": []
                     }
                   ],
-                  "businessRules": ["Klient musi istniec."],
-                  "validations": ["id jest wymagane."],
-                  "persistence": ["Repository pobiera klienta po id."],
-                  "externalIntegrations": [],
-                  "testScenarios": ["Klient istnieje."],
-                  "risksAndEdgeCases": ["Brak klienta."],
-                  "openQuestions": [],
-                  "visibilityLimits": [],
+                  "globalVisibilityLimits": [],
+                  "globalOpenQuestions": [],
                   "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
                   "confidence": "high"
                 }

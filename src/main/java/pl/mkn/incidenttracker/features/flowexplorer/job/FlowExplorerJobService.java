@@ -75,7 +75,7 @@ public class FlowExplorerJobService {
                     request.httpMethod(),
                     request.endpointPath(),
                     request.branch(),
-                    request.documentationPreset(),
+                    request.goal(),
                     request.focusAreas()
             ));
             var promptPreparation = promptPreparationService.prepare(request, contextSnapshot);

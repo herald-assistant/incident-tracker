@@ -11,13 +11,15 @@ import {
 } from '../../../core/models/analysis.models';
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import {
-  FlowExplorerAiEndpointContract,
-  FlowExplorerAiFlowStep,
   FlowExplorerAiResponse,
-  FlowExplorerDocumentationPreset,
+  FlowExplorerAnalysisGoal,
   FlowExplorerFocusArea,
   FlowExplorerJobStateSnapshot,
-  FlowExplorerResult
+  FlowExplorerResult,
+  FlowExplorerResultOverview,
+  FlowExplorerResultSection,
+  FlowExplorerResultSectionId,
+  FlowExplorerResultSectionMode
 } from '../models/flow-explorer.models';
 
 export const FLOW_EXPLORER_EXPORT_SCHEMA = 'incident-tracker.flow-explorer-export';
@@ -101,9 +103,8 @@ export function normalizeFlowExplorerJob(job: unknown): FlowExplorerJobStateSnap
     httpMethod: normalizeString(jobObject['httpMethod']),
     endpointPath: normalizeString(jobObject['endpointPath']),
     branch: normalizeString(jobObject['branch']),
-    documentationPreset:
-      (normalizeString(jobObject['documentationPreset']) || 'ANALYST_OVERVIEW') as FlowExplorerDocumentationPreset,
-    focusAreas: normalizeStringArray(jobObject['focusAreas']) as FlowExplorerFocusArea[],
+    goal: normalizeGoal(jobObject['goal']),
+    focusAreas: normalizeFocusAreas(jobObject['focusAreas']),
     aiModel: normalizeString(jobObject['aiModel']),
     reasoningEffort: normalizeString(jobObject['reasoningEffort']),
     status: normalizeString(jobObject['status']),
@@ -209,10 +210,7 @@ function normalizeResult(result: unknown): FlowExplorerResult {
     httpMethod: normalizeString(resultObject?.['httpMethod']),
     endpointPath: normalizeString(resultObject?.['endpointPath']),
     branch: normalizeString(resultObject?.['branch']),
-    userIntentSummary: normalizeString(resultObject?.['userIntentSummary']),
-    audienceSummary: normalizeString(resultObject?.['audienceSummary']),
-    confidence: normalizeString(resultObject?.['confidence']),
-    visibilityLimits: normalizeStringArray(resultObject?.['visibilityLimits']),
+    goal: normalizeGoal(resultObject?.['goal']),
     prompt: normalizeString(resultObject?.['prompt']),
     aiResponse: asObject(resultObject?.['aiResponse'])
       ? normalizeAiResponse(resultObject?.['aiResponse'])
@@ -224,48 +222,65 @@ function normalizeResult(result: unknown): FlowExplorerResult {
 function normalizeAiResponse(response: unknown): FlowExplorerAiResponse {
   const responseObject = asObject(response);
   return {
-    userIntentSummary: normalizeString(responseObject?.['userIntentSummary']),
-    audienceSummary: normalizeString(responseObject?.['audienceSummary']),
-    endpointContract: asObject(responseObject?.['endpointContract'])
-      ? normalizeEndpointContract(responseObject?.['endpointContract'])
-      : null,
-    flowSteps: Array.isArray(responseObject?.['flowSteps'])
-      ? responseObject['flowSteps'].map((step, index) => normalizeFlowStep(step, index))
-      : [],
-    businessRules: normalizeStringArray(responseObject?.['businessRules']),
-    validations: normalizeStringArray(responseObject?.['validations']),
-    persistence: normalizeStringArray(responseObject?.['persistence']),
-    externalIntegrations: normalizeStringArray(responseObject?.['externalIntegrations']),
-    testScenarios: normalizeStringArray(responseObject?.['testScenarios']),
-    risksAndEdgeCases: normalizeStringArray(responseObject?.['risksAndEdgeCases']),
-    openQuestions: normalizeStringArray(responseObject?.['openQuestions']),
-    visibilityLimits: normalizeStringArray(responseObject?.['visibilityLimits']),
+    goal: normalizeGoal(responseObject?.['goal']),
+    audience: normalizeString(responseObject?.['audience']) || 'business_or_system_analyst_tester',
+    overview: normalizeOverview(responseObject?.['overview']),
+    sections: normalizeSections(responseObject?.['sections']),
+    globalVisibilityLimits: normalizeStringArray(responseObject?.['globalVisibilityLimits']),
+    globalOpenQuestions: normalizeStringArray(responseObject?.['globalOpenQuestions']),
     sourceReferences: normalizeStringArray(responseObject?.['sourceReferences']),
     confidence: normalizeString(responseObject?.['confidence'])
   };
 }
 
-function normalizeEndpointContract(contract: unknown): FlowExplorerAiEndpointContract {
-  const contractObject = asObject(contract);
+function normalizeOverview(overview: unknown): FlowExplorerResultOverview {
+  const overviewObject = asObject(overview);
   return {
-    method: normalizeString(contractObject?.['method']),
-    path: normalizeString(contractObject?.['path']),
-    purpose: normalizeString(contractObject?.['purpose']),
-    request: normalizeStringArray(contractObject?.['request']),
-    response: normalizeStringArray(contractObject?.['response']),
-    parameters: normalizeStringArray(contractObject?.['parameters'])
+    markdown: normalizeString(overviewObject?.['markdown']),
+    confidence: normalizeString(overviewObject?.['confidence']),
+    sourceRefs: normalizeStringArray(overviewObject?.['sourceRefs'])
   };
 }
 
-function normalizeFlowStep(step: unknown, index: number): FlowExplorerAiFlowStep {
-  const stepObject = asObject(step);
-  const order = normalizeNumber(stepObject?.['order']);
+function normalizeSections(sections: unknown): FlowExplorerResultSection[] {
+  const byId = new Map<FlowExplorerResultSectionId, FlowExplorerResultSection>();
+  if (Array.isArray(sections)) {
+    sections.forEach((section) => {
+      const normalized = normalizeSection(section);
+      if (normalized) {
+        byId.set(normalized.id, normalized);
+      }
+    });
+  }
+
+  return SECTION_IDS.map((id) =>
+    byId.get(id) ?? {
+      id,
+      title: sectionTitle(id),
+      mode: 'compact',
+      markdown: '',
+      sourceRefs: [],
+      visibilityLimits: [],
+      openQuestions: []
+    }
+  );
+}
+
+function normalizeSection(section: unknown): FlowExplorerResultSection | null {
+  const sectionObject = asObject(section);
+  const id = normalizeSectionId(sectionObject?.['id']);
+  if (!id) {
+    return null;
+  }
+
   return {
-    order: order > 0 ? order : index + 1,
-    title: normalizeString(stepObject?.['title']),
-    plainLanguage: normalizeString(stepObject?.['plainLanguage']),
-    technicalGrounding: normalizeString(stepObject?.['technicalGrounding']),
-    sourceRefs: normalizeStringArray(stepObject?.['sourceRefs'])
+    id,
+    title: normalizeString(sectionObject?.['title']) || sectionTitle(id),
+    mode: normalizeSectionMode(sectionObject?.['mode']),
+    markdown: normalizeString(sectionObject?.['markdown']),
+    sourceRefs: normalizeStringArray(sectionObject?.['sourceRefs']),
+    visibilityLimits: normalizeStringArray(sectionObject?.['visibilityLimits']),
+    openQuestions: normalizeStringArray(sectionObject?.['openQuestions'])
   };
 }
 
@@ -381,6 +396,25 @@ function normalizeStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+function normalizeGoal(value: unknown): FlowExplorerAnalysisGoal {
+  const normalized = normalizeString(value);
+  return isFlowExplorerGoal(normalized) ? normalized : 'DEEP_DISCOVERY';
+}
+
+function normalizeFocusAreas(value: unknown): FlowExplorerFocusArea[] {
+  return normalizeStringArray(value).filter(isFlowExplorerFocusArea);
+}
+
+function normalizeSectionId(value: unknown): FlowExplorerResultSectionId | null {
+  const normalized = normalizeString(value);
+  return isFlowExplorerSectionId(normalized) ? normalized : null;
+}
+
+function normalizeSectionMode(value: unknown): FlowExplorerResultSectionMode {
+  const normalized = normalizeString(value).toLowerCase();
+  return normalized === 'deep' ? 'deep' : 'compact';
+}
+
 function normalizeNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
@@ -395,4 +429,36 @@ function asObject(value: unknown): Record<string, unknown> | null {
   }
 
   return value as Record<string, unknown>;
+}
+
+const SECTION_IDS: FlowExplorerResultSectionId[] = [
+  'BUSINESS_FLOW_RULES',
+  'VALIDATIONS',
+  'PERSISTENCE',
+  'INTEGRATIONS'
+];
+
+function sectionTitle(id: FlowExplorerResultSectionId): string {
+  switch (id) {
+    case 'BUSINESS_FLOW_RULES':
+      return 'Business flow/rules';
+    case 'VALIDATIONS':
+      return 'Validations';
+    case 'PERSISTENCE':
+      return 'Persistence';
+    case 'INTEGRATIONS':
+      return 'Integrations';
+  }
+}
+
+function isFlowExplorerGoal(value: string): value is FlowExplorerAnalysisGoal {
+  return value === 'DEEP_DISCOVERY' || value === 'TEST_SCENARIOS' || value === 'RISK_DETECTION';
+}
+
+function isFlowExplorerFocusArea(value: string): value is FlowExplorerFocusArea {
+  return SECTION_IDS.includes(value as FlowExplorerResultSectionId);
+}
+
+function isFlowExplorerSectionId(value: string): value is FlowExplorerResultSectionId {
+  return SECTION_IDS.includes(value as FlowExplorerResultSectionId);
 }

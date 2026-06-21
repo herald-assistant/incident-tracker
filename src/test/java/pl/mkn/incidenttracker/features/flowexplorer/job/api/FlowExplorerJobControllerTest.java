@@ -6,8 +6,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerAiEndpointContract;
-import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerAiFlowStep;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerAiResponse;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextCoverage;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
@@ -18,6 +16,10 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerReposito
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.FlowExplorerJobService;
 import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultOverview;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSection;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.incidenttracker.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.incidenttracker.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
@@ -58,8 +60,8 @@ class FlowExplorerJobControllerTest {
                                   "systemId": "crm-service",
                                   "endpointId": "GET:/api/customers/{id}",
                                   "branch": "feature/FLOW-42",
-                                  "documentationPreset": "ANALYST_OVERVIEW",
-                                  "focusAreas": ["BUSINESS_FLOW"],
+                                  "goal": "DEEP_DISCOVERY",
+                                  "focusAreas": ["BUSINESS_FLOW_RULES"],
                                   "userInstructions": "Opisz to jezykiem testera.",
                                   "model": "gpt-5.4",
                                   "reasoningEffort": "medium"
@@ -70,8 +72,8 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.systemId").value("crm-service"))
                 .andExpect(jsonPath("$.endpointId").value("GET:/api/customers/{id}"))
                 .andExpect(jsonPath("$.branch").value("feature/FLOW-42"))
-                .andExpect(jsonPath("$.documentationPreset").value("ANALYST_OVERVIEW"))
-                .andExpect(jsonPath("$.focusAreas[0]").value("BUSINESS_FLOW"))
+                .andExpect(jsonPath("$.goal").value("DEEP_DISCOVERY"))
+                .andExpect(jsonPath("$.focusAreas[0]").value("BUSINESS_FLOW_RULES"))
                 .andExpect(jsonPath("$.aiModel").value("gpt-5.4"))
                 .andExpect(jsonPath("$.reasoningEffort").value("medium"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
@@ -83,8 +85,10 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.contextSnapshot.coverage.endpointResolved").value(true))
                 .andExpect(jsonPath("$.contextSnapshot.flowNodes[0].methods[0].methodName").value("getCustomer"))
                 .andExpect(jsonPath("$.contextSnapshot.snippetCards[0].content").value(org.hamcrest.Matchers.containsString("getCustomer")))
-                .andExpect(jsonPath("$.result.audienceSummary").value("Context ready."))
-                .andExpect(jsonPath("$.result.aiResponse.endpointContract.purpose").value("Pobranie klienta"));
+                .andExpect(jsonPath("$.result.goal").value("DEEP_DISCOVERY"))
+                .andExpect(jsonPath("$.result.aiResponse.overview.markdown").value("Context ready."))
+                .andExpect(jsonPath("$.result.aiResponse.sections[0].id").value("BUSINESS_FLOW_RULES"))
+                .andExpect(jsonPath("$.result.aiResponse.sections[0].mode").value("DEEP"));
 
         verify(flowExplorerJobService).startJob(new FlowExplorerJobStartRequest(
                 "crm-service",
@@ -92,8 +96,8 @@ class FlowExplorerJobControllerTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "Opisz to jezykiem testera.",
                 "gpt-5.4",
                 "medium"
@@ -215,8 +219,8 @@ class FlowExplorerJobControllerTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "gpt-5.4",
                 "medium",
                 "COMPLETED",
@@ -260,10 +264,7 @@ class FlowExplorerJobControllerTest {
                         null,
                         null,
                         "feature/FLOW-42",
-                        "Context ready.",
-                        "Context ready.",
-                        "HIGH",
-                        List.of(),
+                        FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                         "Flow Explorer canonical prompt",
                         aiResponse(),
                         null
@@ -273,29 +274,22 @@ class FlowExplorerJobControllerTest {
 
     private static FlowExplorerAiResponse aiResponse() {
         return new FlowExplorerAiResponse(
-                "Tester chce poznac endpoint.",
-                "Context ready.",
-                new FlowExplorerAiEndpointContract(
-                        "GET",
-                        "/api/customers/{id}",
-                        "Pobranie klienta",
-                        List.of("customerId"),
-                        List.of("CustomerResponse"),
-                        List.of("id")
-                ),
-                List.of(new FlowExplorerAiFlowStep(
-                        1,
-                        "Wejscie HTTP",
-                        "Controller przyjmuje request.",
-                        "CustomerController.getCustomer",
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                "business_or_system_analyst_tester",
+                new FlowExplorerResultOverview(
+                        "Context ready.",
+                        "high",
                         List.of("crm-service:CustomerController.java:L12-L24")
+                ),
+                List.of(new FlowExplorerResultSection(
+                        FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
+                        "Business flow/rules",
+                        FlowExplorerResultSectionMode.DEEP,
+                        "Controller przyjmuje request.",
+                        List.of("crm-service:CustomerController.java:L12-L24"),
+                        List.of(),
+                        List.of()
                 )),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
                 List.of(),
                 List.of(),
                 List.of("crm-service:CustomerController.java:L12-L24"),

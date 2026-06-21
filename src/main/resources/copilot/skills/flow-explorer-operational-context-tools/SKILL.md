@@ -67,13 +67,13 @@ predicate albo mapowania. To jest praca GitLab tools.
 
 Operational context moze wzbogacic:
 
-- `audienceSummary`,
-- business purpose endpointu,
-- `businessRules`,
-- `externalIntegrations`,
-- `risksAndEdgeCases`,
-- `openQuestions`,
-- `visibilityLimits`,
+- `overview.markdown`,
+- `BUSINESS_FLOW_RULES`,
+- `VALIDATIONS`, gdy katalog wyjasnia regule albo warunek biznesowy,
+- `PERSISTENCE`, gdy katalog pomaga nazwac bounded context albo dane,
+- `INTEGRATIONS`, gdy katalog pomaga nazwac system, handoff albo ownership,
+- `globalOpenQuestions` i `section.openQuestions`,
+- `globalVisibilityLimits` i `section.visibilityLimits`,
 - source refs dla katalogu albo handoffu.
 
 Formuluj to prostym jezykiem dla analityka/testera. Oddzielaj "katalog mowi"

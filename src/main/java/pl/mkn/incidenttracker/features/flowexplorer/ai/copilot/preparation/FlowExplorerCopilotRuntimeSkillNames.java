@@ -1,5 +1,7 @@
 package pl.mkn.incidenttracker.features.flowexplorer.ai.copilot.preparation;
 
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
+
 import java.util.List;
 
 final class FlowExplorerCopilotRuntimeSkillNames {
@@ -8,14 +10,23 @@ final class FlowExplorerCopilotRuntimeSkillNames {
     static final String GITLAB_TOOLS_SKILL_NAME = "flow-explorer-gitlab-tools";
     static final String OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME = "flow-explorer-operational-context-tools";
     static final String RESULT_CONTRACT_SKILL_NAME = "flow-explorer-result-contract";
+    static final String DEEP_DISCOVERY_SKILL_NAME = "flow-explorer-goal-deep-discovery";
 
-    static List<String> allSkillNames() {
-        return List.of(
+    static List<String> initialSkillNames(FlowExplorerAnalysisGoal goal) {
+        var skillNames = new java.util.ArrayList<>(List.of(
                 STARTER_SKILL_NAME,
                 GITLAB_TOOLS_SKILL_NAME,
                 OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME,
                 RESULT_CONTRACT_SKILL_NAME
-        );
+        ));
+        if (goal == FlowExplorerAnalysisGoal.DEEP_DISCOVERY) {
+            skillNames.add(DEEP_DISCOVERY_SKILL_NAME);
+        }
+        return List.copyOf(skillNames);
+    }
+
+    static List<String> allSkillNames() {
+        return initialSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY);
     }
 
     static List<String> followUpSkillNames() {

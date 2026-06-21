@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMeth
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
@@ -40,8 +40,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
         assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`"));
         assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
-        assertTrue(prompt.contains("`focusAreas` traktuj jako kierunki analizy"));
+        assertTrue(prompt.contains("`focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`"));
         assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));
+        assertTrue(prompt.contains("sectionModes"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Context clipping notes"));
         assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
@@ -59,7 +60,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("[CONTROLLER]"));
         assertTrue(prompt.contains("getCustomer L12-L24"));
         assertTrue(prompt.contains("public CustomerResponse getCustomer"));
-        assertTrue(prompt.contains("\"flowSteps\""));
+        assertTrue(prompt.contains("\"overview\""));
+        assertTrue(prompt.contains("\"sections\""));
+        assertTrue(prompt.contains("BUSINESS_FLOW_RULES"));
         assertTrue(prompt.contains("\"confidence\": \"high|medium|low\""));
     }
 
@@ -85,8 +88,8 @@ class FlowExplorerPromptPreparationServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.TEST_PREPARATION,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4-mini",
                 "high"

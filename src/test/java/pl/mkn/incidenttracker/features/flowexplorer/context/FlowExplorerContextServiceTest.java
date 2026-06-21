@@ -54,7 +54,7 @@ class FlowExplorerContextServiceTest {
                 org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
                 org.mockito.ArgumentMatchers.any(FlowExplorerRepositoryContext.class),
                 org.mockito.ArgumentMatchers.anyList(),
-                org.mockito.ArgumentMatchers.eq(pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset.TECHNICAL_HANDOFF),
+                org.mockito.ArgumentMatchers.eq(pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal.DEEP_DISCOVERY),
                 org.mockito.ArgumentMatchers.eq(List.of(pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE))
         )).thenReturn(new FlowExplorerSnippetCardResult(
                 List.of(snippetCard()),
@@ -69,7 +69,7 @@ class FlowExplorerContextServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset.TECHNICAL_HANDOFF,
+                pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE)
         ));
 

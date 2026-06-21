@@ -6,6 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultOverview;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSection;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,56 +33,86 @@ public class FlowExplorerAiResponseParser {
         }
 
         return new FlowExplorerAiResponse(
-                text(node, "userIntentSummary"),
-                text(node, "audienceSummary"),
-                endpointContract(node.get("endpointContract")),
-                flowSteps(node.get("flowSteps")),
-                textList(node.get("businessRules")),
-                textList(node.get("validations")),
-                textList(node.get("persistence")),
-                textList(node.get("externalIntegrations")),
-                textList(node.get("testScenarios")),
-                textList(node.get("risksAndEdgeCases")),
-                textList(node.get("openQuestions")),
-                textList(node.get("visibilityLimits")),
+                goal(text(node, "goal")),
+                text(node, "audience"),
+                overview(node.get("overview")),
+                sections(node.get("sections")),
+                textList(node.get("globalVisibilityLimits")),
+                textList(node.get("globalOpenQuestions")),
                 textList(node.get("sourceReferences")),
                 confidence(text(node, "confidence"))
         );
     }
 
-    private FlowExplorerAiEndpointContract endpointContract(JsonNode node) {
+    private FlowExplorerResultOverview overview(JsonNode node) {
         if (node == null || !node.isObject()) {
             return null;
         }
-        return new FlowExplorerAiEndpointContract(
-                text(node, "method"),
-                text(node, "path"),
-                text(node, "purpose"),
-                textList(node.get("request")),
-                textList(node.get("response")),
-                textList(node.get("parameters"))
+        return new FlowExplorerResultOverview(
+                text(node, "markdown"),
+                confidence(text(node, "confidence")),
+                textList(node.get("sourceRefs"))
         );
     }
 
-    private List<FlowExplorerAiFlowStep> flowSteps(JsonNode node) {
+    private List<FlowExplorerResultSection> sections(JsonNode node) {
         if (node == null || !node.isArray()) {
             return List.of();
         }
 
-        var steps = new ArrayList<FlowExplorerAiFlowStep>();
-        for (var step : node) {
-            if (!step.isObject()) {
+        var sections = new ArrayList<FlowExplorerResultSection>();
+        for (var section : node) {
+            if (!section.isObject()) {
                 continue;
             }
-            steps.add(new FlowExplorerAiFlowStep(
-                    step.hasNonNull("order") ? step.get("order").asInt() : steps.size() + 1,
-                    text(step, "title"),
-                    text(step, "plainLanguage"),
-                    text(step, "technicalGrounding"),
-                    textList(step.get("sourceRefs"))
+            var sectionId = sectionId(text(section, "id"));
+            if (sectionId == null) {
+                continue;
+            }
+            sections.add(new FlowExplorerResultSection(
+                    sectionId,
+                    text(section, "title"),
+                    sectionMode(text(section, "mode")),
+                    text(section, "markdown"),
+                    textList(section.get("sourceRefs")),
+                    textList(section.get("visibilityLimits")),
+                    textList(section.get("openQuestions"))
             ));
         }
-        return List.copyOf(steps);
+        return List.copyOf(sections);
+    }
+
+    private FlowExplorerAnalysisGoal goal(String value) {
+        if (!StringUtils.hasText(value)) {
+            return FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
+        }
+        try {
+            return FlowExplorerAnalysisGoal.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
+        }
+    }
+
+    private FlowExplorerResultSectionId sectionId(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return FlowExplorerResultSectionId.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private FlowExplorerResultSectionMode sectionMode(String value) {
+        if (!StringUtils.hasText(value)) {
+            return FlowExplorerResultSectionMode.COMPACT;
+        }
+        try {
+            return FlowExplorerResultSectionMode.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return FlowExplorerResultSectionMode.COMPACT;
+        }
     }
 
     private List<String> textList(JsonNode node) {

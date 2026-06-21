@@ -270,7 +270,7 @@ public class FlowExplorerContextService {
                 resolvedRef,
                 selectedRepository,
                 flowNodes,
-                request.documentationPreset(),
+                request.goal(),
                 request.focusAreas()
         );
     }

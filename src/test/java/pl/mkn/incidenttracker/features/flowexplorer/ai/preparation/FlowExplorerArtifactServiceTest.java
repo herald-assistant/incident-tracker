@@ -9,7 +9,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMeth
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
@@ -43,8 +43,10 @@ class FlowExplorerArtifactServiceTest {
         assertEquals("flow-explorer-artifacts-v1", contextJson.get("artifactFormatVersion").asText());
         assertEquals("crm-service", contextJson.get("applicationName").asText());
         assertEquals("crm-service", contextJson.get("systemId").asText());
+        assertEquals("TEST_SCENARIOS", contextJson.get("goal").asText());
         assertEquals("feature/FLOW-42", contextJson.get("branchRef").asText());
         assertEquals("feature/FLOW-42", contextJson.at("/contextSnapshot/branchRef").asText());
+        assertEquals("DEEP", contextJson.at("/sectionModes/0/mode").asText());
         assertTrue(contextJson.at("/contextSnapshot/gitLabGroup").isMissingNode());
         assertEquals("crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
                 contextJson.at("/contextSnapshot/snippetCards/0/id").asText());
@@ -80,7 +82,9 @@ class FlowExplorerArtifactServiceTest {
         assertEquals(1, coverageJson.at("/coverage/snippetCardCount").asInt());
         assertEquals(0, coverageJson.at("/contextClippingNotes").size());
         assertTrue(artifactContents.get(FlowExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT)
-                .contains("\"flowSteps\""));
+                .contains("\"overview\""));
+        assertTrue(artifactContents.get(FlowExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT)
+                .contains("\"sections\""));
     }
 
     @Test
@@ -113,8 +117,8 @@ class FlowExplorerArtifactServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.TEST_PREPARATION,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "Skup sie na jezyku zrozumialym dla testera.",
                 null,
                 null

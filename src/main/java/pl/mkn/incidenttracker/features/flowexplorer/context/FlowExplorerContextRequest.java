@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.features.flowexplorer.context;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 
 import java.util.List;
@@ -13,7 +13,7 @@ public record FlowExplorerContextRequest(
         String httpMethod,
         String endpointPath,
         String branch,
-        FlowExplorerDocumentationPreset documentationPreset,
+        FlowExplorerAnalysisGoal goal,
         List<FlowExplorerFocusArea> focusAreas
 ) {
 
@@ -23,9 +23,9 @@ public record FlowExplorerContextRequest(
         httpMethod = normalize(httpMethod);
         endpointPath = normalize(endpointPath);
         branch = normalize(branch);
-        documentationPreset = documentationPreset != null
-                ? documentationPreset
-                : FlowExplorerDocumentationPreset.ANALYST_OVERVIEW;
+        goal = goal != null
+                ? goal
+                : FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
         focusAreas = focusAreas != null
                 ? focusAreas.stream().filter(Objects::nonNull).toList()
                 : List.of();

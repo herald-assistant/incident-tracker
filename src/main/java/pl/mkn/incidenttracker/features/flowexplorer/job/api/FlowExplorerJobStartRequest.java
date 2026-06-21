@@ -21,8 +21,8 @@ public record FlowExplorerJobStartRequest(
         String endpointPath,
         @Size(max = 160, message = "branch must not exceed 160 characters")
         String branch,
-        FlowExplorerDocumentationPreset documentationPreset,
-        @Size(max = 6, message = "focusAreas must contain at most 6 values")
+        FlowExplorerAnalysisGoal goal,
+        @Size(max = 4, message = "focusAreas must contain at most 4 values")
         List<FlowExplorerFocusArea> focusAreas,
         @Size(max = 4000, message = "userInstructions must not exceed 4000 characters")
         String userInstructions,
@@ -38,9 +38,9 @@ public record FlowExplorerJobStartRequest(
         httpMethod = normalize(httpMethod);
         endpointPath = normalize(endpointPath);
         branch = normalize(branch);
-        documentationPreset = documentationPreset != null
-                ? documentationPreset
-                : FlowExplorerDocumentationPreset.ANALYST_OVERVIEW;
+        goal = goal != null
+                ? goal
+                : FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
         focusAreas = focusAreas != null
                 ? focusAreas.stream().filter(Objects::nonNull).toList()
                 : List.of();

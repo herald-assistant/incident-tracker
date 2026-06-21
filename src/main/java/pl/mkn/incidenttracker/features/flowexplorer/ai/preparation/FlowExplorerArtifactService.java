@@ -12,6 +12,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 
 import java.time.Instant;
@@ -203,33 +204,26 @@ public class FlowExplorerArtifactService {
     public String responseContract() {
         return """
                 {
-                  "userIntentSummary": "string",
-                  "audienceSummary": "string",
-                  "endpointContract": {
-                    "method": "string",
-                    "path": "string",
-                    "purpose": "string",
-                    "request": ["string"],
-                    "response": ["string"],
-                    "parameters": ["string"]
+                  "goal": "DEEP_DISCOVERY|TEST_SCENARIOS|RISK_DETECTION",
+                  "audience": "business_or_system_analyst_tester",
+                  "overview": {
+                    "markdown": "string",
+                    "confidence": "high|medium|low",
+                    "sourceRefs": ["string"]
                   },
-                  "flowSteps": [
+                  "sections": [
                     {
-                      "order": 1,
+                      "id": "BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
                       "title": "string",
-                      "plainLanguage": "string",
-                      "technicalGrounding": "string",
-                      "sourceRefs": ["string"]
+                      "mode": "compact|deep",
+                      "markdown": "string",
+                      "sourceRefs": ["string"],
+                      "visibilityLimits": ["string"],
+                      "openQuestions": ["string"]
                     }
                   ],
-                  "businessRules": ["string"],
-                  "validations": ["string"],
-                  "persistence": ["string"],
-                  "externalIntegrations": ["string"],
-                  "testScenarios": ["string"],
-                  "risksAndEdgeCases": ["string"],
-                  "openQuestions": ["string"],
-                  "visibilityLimits": ["string"],
+                  "globalVisibilityLimits": ["string"],
+                  "globalOpenQuestions": ["string"],
                   "sourceReferences": ["string"],
                   "confidence": "high|medium|low"
                 }
@@ -289,8 +283,9 @@ public class FlowExplorerArtifactService {
         payload.put("httpMethod", request.httpMethod());
         payload.put("endpointPath", request.endpointPath());
         payload.put("branchRef", contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch());
-        payload.put("documentationPreset", request.documentationPreset());
+        payload.put("goal", request.goal());
         payload.put("focusAreas", request.focusAreas());
+        payload.put("sectionModes", FlowExplorerResultSectionModeResolver.resolve(request.focusAreas()));
         payload.put("userInstructionsPresent", StringUtils.hasText(request.userInstructions()));
         payload.put("contextSnapshot", contextSnapshotManifest(contextSnapshot));
         return renderJson(payload);

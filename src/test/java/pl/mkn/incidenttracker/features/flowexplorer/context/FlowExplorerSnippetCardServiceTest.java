@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.features.flowexplorer.context;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
@@ -49,7 +49,7 @@ class FlowExplorerSnippetCardServiceTest {
                         node("src/main/java/app/CustomerRepository.java", "SPRING_DATA_REPOSITORY", "findCustomer", 8, 12),
                         node("src/main/java/app/CustomerMapper.java", "MAPPER", "toResponse", 20, 32)
                 ),
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.PERSISTENCE)
         );
 
@@ -94,8 +94,8 @@ class FlowExplorerSnippetCardServiceTest {
                                 index * 10 + 5
                         ))
                         .toList(),
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW)
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES)
         );
 
         assertEquals(20, result.cards().size());
@@ -123,7 +123,7 @@ class FlowExplorerSnippetCardServiceTest {
                 "main",
                 repository(),
                 List.of(node("src/main/java/app/CustomerController.java", "CONTROLLER", "getCustomer", 12, 24)),
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of()
         );
 
@@ -150,7 +150,7 @@ class FlowExplorerSnippetCardServiceTest {
                 "main",
                 repository(),
                 List.of(node("src/main/java/app/CustomerController.java", "CONTROLLER", "getCustomer", 12, 24)),
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of()
         );
 
@@ -167,7 +167,7 @@ class FlowExplorerSnippetCardServiceTest {
                 "main",
                 null,
                 List.of(node("src/main/java/app/CustomerController.java", "CONTROLLER", "getCustomer", 12, 24)),
-                FlowExplorerDocumentationPreset.ANALYST_OVERVIEW,
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of()
         );
 

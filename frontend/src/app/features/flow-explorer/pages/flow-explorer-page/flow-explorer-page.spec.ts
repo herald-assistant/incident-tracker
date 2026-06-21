@@ -161,7 +161,6 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
-    selectPreset(fixture, 'Test preparation');
     toggleFocusArea(fixture, 'Validations');
     selectAiModel(fixture, 'GPT-5.4 mini');
     selectReasoningEffort(fixture, 'High');
@@ -180,8 +179,8 @@ describe('FlowExplorerPageComponent', () => {
       httpMethod: 'GET',
       endpointPath: '/api/customers/{id}',
       branch: 'main',
-      documentationPreset: 'TEST_PREPARATION',
-      focusAreas: ['BUSINESS_FLOW', 'VALIDATIONS'],
+      goal: 'DEEP_DISCOVERY',
+      focusAreas: ['BUSINESS_FLOW_RULES', 'VALIDATIONS'],
       userInstructions: 'Skup sie na negatywnych scenariuszach walidacji statusu klienta.',
       model: 'gpt-5.4-mini',
       reasoningEffort: 'high'
@@ -206,10 +205,11 @@ describe('FlowExplorerPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('AI result');
-    expect(compiled.textContent).toContain('Endpoint contract');
-    expect(compiled.textContent).toContain('Finds customer details by id.');
-    expect(compiled.textContent).toContain('Load customer');
-    expect(compiled.textContent).toContain('Customer id is required.');
+    expect(compiled.textContent).toContain('Overview');
+    expect(compiled.textContent).toContain('Deep Discovery');
+    expect(compiled.textContent).toContain('The endpoint reads the requested customer');
+    expect(compiled.textContent).toContain('Business flow/rules');
+    expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
     expect(compiled.textContent).toContain('Tokens 2,820');
   });
@@ -288,7 +288,6 @@ describe('FlowExplorerPageComponent', () => {
           currentStepLabel: 'AI result ready',
           result: {
             ...flowExplorerResult(),
-            userIntentSummary: 'Fallback result',
             aiResponse: null
           }
         })
@@ -304,7 +303,7 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Fallback result');
+    expect(compiled.textContent).toContain('Deep Discovery');
     expect(compiled.textContent).toContain('structured response body is not available');
   });
 
@@ -470,10 +469,6 @@ function openEndpointSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[1]?.click();
 }
 
-function openPresetSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[2]?.click();
-}
-
 function openFocusAreasSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
 }
@@ -498,14 +493,6 @@ function selectEndpoint(fixture: ComponentFixture<FlowExplorerPageComponent>, pa
     nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select-option__select')
   ).find((button) => button.textContent?.includes(path));
   endpointButton?.click();
-  fixture.detectChanges();
-}
-
-function selectPreset(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
-  const nativeElement = fixture.nativeElement as HTMLElement;
-  openPresetSelect(nativeElement);
-  fixture.detectChanges();
-  buttonContaining(nativeElement, label)?.click();
   fixture.detectChanges();
 }
 
@@ -717,8 +704,8 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     httpMethod: 'GET',
     endpointPath: '/api/customers/{id}',
     branch: 'main',
-    documentationPreset: 'ANALYST_OVERVIEW',
-    focusAreas: ['BUSINESS_FLOW'],
+    goal: 'DEEP_DISCOVERY',
+    focusAreas: ['BUSINESS_FLOW_RULES'],
     aiModel: 'gpt-5-mini',
     reasoningEffort: 'medium',
     status: 'QUEUED',
@@ -878,10 +865,7 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
     httpMethod: 'GET',
     endpointPath: '/api/customers/{id}',
     branch: 'main',
-    userIntentSummary: 'Explain customer lookup for testers.',
-    audienceSummary: 'Tester and analyst friendly endpoint description.',
-    confidence: 'high',
-    visibilityLimits: ['No runtime database records were queried.'],
+    goal: 'DEEP_DISCOVERY',
     prompt: 'canonical prompt',
     usage: {
       inputTokens: 2100,
@@ -898,33 +882,53 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       contextMessages: 8
     },
     aiResponse: {
-      userIntentSummary: 'Explain customer lookup for testers.',
-      audienceSummary: 'Tester and analyst friendly endpoint description.',
-      endpointContract: {
-        method: 'GET',
-        path: '/api/customers/{id}',
-        purpose: 'Finds customer details by id.',
-        request: ['Path id identifies the customer.'],
-        response: ['CustomerResponse with profile and status.'],
-        parameters: ['id: required path parameter.']
+      goal: 'DEEP_DISCOVERY',
+      audience: 'business_or_system_analyst_tester',
+      overview: {
+        markdown: 'The endpoint reads the requested customer and returns its current CRM profile.',
+        confidence: 'high',
+        sourceRefs: ['CustomerController.getCustomer L12-L24']
       },
-      flowSteps: [
+      sections: [
         {
-          order: 1,
-          title: 'Load customer',
-          plainLanguage: 'The endpoint reads the requested customer and returns its current profile.',
-          technicalGrounding: 'CustomerController delegates to CustomerService.',
-          sourceRefs: ['CustomerController.getCustomer L12-L24']
+          id: 'BUSINESS_FLOW_RULES',
+          title: 'Business flow/rules',
+          mode: 'deep',
+          markdown: 'The controller delegates customer lookup to the CRM service and returns the profile when it is available.',
+          sourceRefs: ['CustomerController.getCustomer L12-L24'],
+          visibilityLimits: [],
+          openQuestions: []
+        },
+        {
+          id: 'VALIDATIONS',
+          title: 'Validations',
+          mode: 'deep',
+          markdown: 'Customer id is required before the lookup can continue.',
+          sourceRefs: ['CustomerService.getCustomer L30-L44'],
+          visibilityLimits: [],
+          openQuestions: []
+        },
+        {
+          id: 'PERSISTENCE',
+          title: 'Persistence',
+          mode: 'compact',
+          markdown: 'CustomerRepository.findById loads the aggregate.',
+          sourceRefs: ['CustomerRepository.findById L10-L18'],
+          visibilityLimits: [],
+          openQuestions: []
+        },
+        {
+          id: 'INTEGRATIONS',
+          title: 'Integrations',
+          mode: 'compact',
+          markdown: 'No external system call is visible in the initial flow.',
+          sourceRefs: [],
+          visibilityLimits: ['No runtime database records were queried.'],
+          openQuestions: ['Confirm expected status code for inactive customers.']
         }
       ],
-      businessRules: ['Only active customer profiles are returned.'],
-      validations: ['Customer id is required.'],
-      persistence: ['CustomerRepository.findById loads the aggregate.'],
-      externalIntegrations: ['No external system call is visible in the initial flow.'],
-      testScenarios: ['Missing id should be rejected by routing or validation.'],
-      risksAndEdgeCases: ['Customer not found behavior depends on service mapping.'],
-      openQuestions: ['Confirm expected status code for inactive customers.'],
-      visibilityLimits: ['No runtime database records were queried.'],
+      globalVisibilityLimits: ['No runtime database records were queried.'],
+      globalOpenQuestions: ['Confirm expected status code for inactive customers.'],
       sourceReferences: ['CustomerService.getCustomer L30-L44'],
       confidence: 'high'
     }

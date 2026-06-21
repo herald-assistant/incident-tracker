@@ -2,9 +2,11 @@ package pl.mkn.incidenttracker.features.flowexplorer.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FlowExplorerAiResponseParserTest {
@@ -15,44 +17,50 @@ class FlowExplorerAiResponseParserTest {
     void shouldParseValidJsonResponse() {
         var response = parser.parse("""
                 {
-                  "userIntentSummary": "Tester chce poznac endpoint klienta.",
-                  "audienceSummary": "Endpoint pobiera klienta po id.",
-                  "endpointContract": {
-                    "method": "GET",
-                    "path": "/api/customers/{id}",
-                    "purpose": "Pobranie klienta.",
-                    "request": ["id w path"],
-                    "response": ["CustomerResponse"],
-                    "parameters": ["id"]
+                  "goal": "DEEP_DISCOVERY",
+                  "audience": "business_or_system_analyst_tester",
+                  "overview": {
+                    "markdown": "Tester chce poznac endpoint klienta.",
+                    "confidence": "HIGH",
+                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
                   },
-                  "flowSteps": [
+                  "sections": [
                     {
-                      "order": 1,
-                      "title": "Controller",
-                      "plainLanguage": "Przyjmuje request.",
-                      "technicalGrounding": "CustomerController#getCustomer",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                      "id": "BUSINESS_FLOW_RULES",
+                      "title": "Business flow/rules",
+                      "mode": "deep",
+                      "markdown": "Controller przyjmuje request i pobiera profil klienta.",
+                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "VALIDATIONS",
+                      "title": "Validations",
+                      "mode": "compact",
+                      "markdown": "id jest wymagane.",
+                      "sourceRefs": [],
+                      "visibilityLimits": [],
+                      "openQuestions": []
                     }
                   ],
-                  "businessRules": ["Klient musi istniec."],
-                  "validations": ["id jest wymagane."],
-                  "persistence": ["CustomerRepository"],
-                  "externalIntegrations": [],
-                  "testScenarios": ["Brak klienta zwraca 404."],
-                  "risksAndEdgeCases": ["Brak uprawnien."],
-                  "openQuestions": [],
-                  "visibilityLimits": ["Nie widac runtime data."],
+                  "globalVisibilityLimits": ["Nie widac runtime data."],
+                  "globalOpenQuestions": [],
                   "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
                   "confidence": "HIGH"
                 }
                 """);
 
-        assertEquals("Tester chce poznac endpoint klienta.", response.userIntentSummary());
-        assertEquals("GET", response.endpointContract().method());
-        assertEquals("/api/customers/{id}", response.endpointContract().path());
-        assertEquals(1, response.flowSteps().size());
-        assertEquals("Controller", response.flowSteps().get(0).title());
-        assertEquals("Klient musi istniec.", response.businessRules().get(0));
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, response.goal());
+        assertEquals("business_or_system_analyst_tester", response.audience());
+        assertEquals("Tester chce poznac endpoint klienta.", response.overview().markdown());
+        assertEquals("high", response.overview().confidence());
+        assertEquals(2, response.sections().size());
+        assertEquals(FlowExplorerResultSectionId.BUSINESS_FLOW_RULES, response.sections().get(0).id());
+        assertEquals(FlowExplorerResultSectionMode.DEEP, response.sections().get(0).mode());
+        assertEquals("Controller przyjmuje request i pobiera profil klienta.", response.sections().get(0).markdown());
+        assertEquals("id jest wymagane.", response.sections().get(1).markdown());
+        assertEquals("Nie widac runtime data.", response.globalVisibilityLimits().get(0));
         assertEquals("high", response.confidence());
     }
 
@@ -61,11 +69,11 @@ class FlowExplorerAiResponseParserTest {
         var response = parser.parse("""
                 Odpowiedz:
                 ```json
-                {"audienceSummary":"OK","confidence":"medium"}
+                {"overview":{"markdown":"OK"},"confidence":"medium"}
                 ```
                 """);
 
-        assertEquals("OK", response.audienceSummary());
+        assertEquals("OK", response.overview().markdown());
         assertEquals("medium", response.confidence());
     }
 
@@ -73,9 +81,10 @@ class FlowExplorerAiResponseParserTest {
     void shouldReturnFallbackForInvalidJson() {
         var response = parser.parse("to nie jest json");
 
-        assertNull(response.userIntentSummary());
+        assertEquals("Nie udalo sie sparsowac odpowiedzi AI do kontraktu Flow Explorer.",
+                response.overview().markdown());
         assertEquals("low", response.confidence());
-        assertTrue(response.visibilityLimits().stream()
+        assertTrue(response.globalVisibilityLimits().stream()
                 .anyMatch(limit -> limit.contains("not valid JSON")));
     }
 }

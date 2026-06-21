@@ -3,7 +3,7 @@ package pl.mkn.incidenttracker.features.flowexplorer.context;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryPort;
@@ -36,7 +36,7 @@ public class FlowExplorerSnippetCardService {
             String resolvedRef,
             FlowExplorerRepositoryContext repository,
             List<FlowExplorerFlowNode> flowNodes,
-            FlowExplorerDocumentationPreset preset,
+            FlowExplorerAnalysisGoal goal,
             List<FlowExplorerFocusArea> focusAreas
     ) {
         if (repository == null || !StringUtils.hasText(repository.projectName())) {
@@ -48,7 +48,7 @@ public class FlowExplorerSnippetCardService {
             );
         }
 
-        var eligibleNodes = eligibleNodes(flowNodes, preset, focusAreas);
+        var eligibleNodes = eligibleNodes(flowNodes, goal, focusAreas);
         if (eligibleNodes.isEmpty()) {
             return FlowExplorerSnippetCardResult.empty();
         }
@@ -106,7 +106,7 @@ public class FlowExplorerSnippetCardService {
 
     private List<FlowExplorerFlowNode> eligibleNodes(
             List<FlowExplorerFlowNode> flowNodes,
-            FlowExplorerDocumentationPreset preset,
+            FlowExplorerAnalysisGoal goal,
             List<FlowExplorerFocusArea> focusAreas
     ) {
         var safeFocusAreas = focusAreas != null
@@ -118,7 +118,7 @@ public class FlowExplorerSnippetCardService {
                 .filter(node -> !node.methods().isEmpty())
                 .filter(node -> !methodSelectors(node).isEmpty())
                 .sorted(Comparator
-                        .comparingInt((FlowExplorerFlowNode node) -> priority(node, preset, safeFocusAreas))
+                        .comparingInt((FlowExplorerFlowNode node) -> priority(node, goal, safeFocusAreas))
                         .thenComparing(FlowExplorerFlowNode::filePath))
                 .toList()
                 : List.of();
@@ -126,7 +126,7 @@ public class FlowExplorerSnippetCardService {
 
     private int priority(
             FlowExplorerFlowNode node,
-            FlowExplorerDocumentationPreset preset,
+            FlowExplorerAnalysisGoal goal,
             Set<FlowExplorerFocusArea> focusAreas
     ) {
         var role = normalizeRole(node.role());
@@ -135,20 +135,11 @@ public class FlowExplorerSnippetCardService {
         if (focusAreas.contains(FlowExplorerFocusArea.PERSISTENCE) && persistenceRole(role)) {
             score -= 35;
         }
-        if (focusAreas.contains(FlowExplorerFocusArea.EXTERNAL_INTEGRATIONS) && externalIntegrationRole(role)) {
+        if (focusAreas.contains(FlowExplorerFocusArea.INTEGRATIONS) && externalIntegrationRole(role)) {
             score -= 35;
         }
         if (focusAreas.contains(FlowExplorerFocusArea.VALIDATIONS) && validationRole(role)) {
             score -= 25;
-        }
-        if (preset == FlowExplorerDocumentationPreset.TECHNICAL_HANDOFF && technicalRole(role)) {
-            score -= 15;
-        }
-        if (preset == FlowExplorerDocumentationPreset.CHANGE_IMPACT && changeImpactRole(role)) {
-            score -= 15;
-        }
-        if (preset == FlowExplorerDocumentationPreset.TEST_PREPARATION && validationRole(role)) {
-            score -= 10;
         }
 
         return Math.max(0, score);
@@ -185,10 +176,6 @@ public class FlowExplorerSnippetCardService {
                 || externalIntegrationRole(role)
                 || "MAPPER".equals(role)
                 || "CONFIGURATION".equals(role);
-    }
-
-    private boolean changeImpactRole(String role) {
-        return technicalRole(role) || "DOMAIN_MODEL".equals(role) || "WEB_MODEL".equals(role);
     }
 
     private MethodSliceAttempt tryBuildMethodSliceCard(

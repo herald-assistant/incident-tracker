@@ -65,7 +65,8 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 : sessionConfigRequestFactory.create(
                         toolSessionContext.copilotSessionId(),
                         toolAccessPolicy,
-                        aiOptions
+                        aiOptions,
+                        request != null ? request.goal() : null
                 );
         var runRequest = new CopilotRunRequest(
                 toolSessionContext.analysisRunId(),

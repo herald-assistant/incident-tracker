@@ -10,8 +10,7 @@ import {
 } from '../../../../core/models/analysis.models';
 import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
 import {
-  FlowExplorerAiResponse,
-  FlowExplorerDocumentationPreset,
+  FlowExplorerAnalysisGoal,
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerEndpointOption,
   FlowExplorerEndpointParameter,
@@ -43,11 +42,6 @@ interface FlowExplorerChoice<T extends string> {
   disabled?: boolean;
 }
 
-interface FlowExplorerResultSection {
-  title: string;
-  items: string[];
-}
-
 const POLL_INTERVAL_MS = 1500;
 const MAX_FOCUS_AREAS = 4;
 const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
@@ -57,34 +51,31 @@ const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
   models: []
 };
 
-const DOCUMENTATION_PRESETS: FlowExplorerChoice<FlowExplorerDocumentationPreset>[] = [
+const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
   {
-    value: 'ANALYST_OVERVIEW',
-    label: 'Analyst overview',
-    hint: 'Business-friendly explanation of endpoint behavior.'
+    value: 'DEEP_DISCOVERY',
+    label: 'Deep Discovery',
+    hint: 'Complex endpoint understanding across flow, rules, data and integrations.'
   },
   {
-    value: 'TEST_PREPARATION',
-    label: 'Test preparation',
-    hint: 'Focus on scenarios, validations and edge cases.'
+    value: 'TEST_SCENARIOS',
+    label: 'Test scenarios',
+    hint: 'Coming next: test coverage and data preparation.',
+    disabled: true
   },
   {
-    value: 'CHANGE_IMPACT',
-    label: 'Change impact',
-    hint: 'Highlight dependencies and areas likely to be affected.'
-  },
-  {
-    value: 'TECHNICAL_HANDOFF',
-    label: 'Technical handoff',
-    hint: 'More concrete implementation grounding for delivery work.'
+    value: 'RISK_DETECTION',
+    label: 'Risk detection',
+    hint: 'Coming next: risks, gaps and regression areas.',
+    disabled: true
   }
 ];
 
 const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
   {
-    value: 'BUSINESS_FLOW',
-    label: 'Business flow',
-    hint: 'Plain-language request path and decisions.'
+    value: 'BUSINESS_FLOW_RULES',
+    label: 'Business flow/rules',
+    hint: 'Deepen request path, decisions and business rules.'
   },
   {
     value: 'VALIDATIONS',
@@ -97,19 +88,9 @@ const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
     hint: 'Repositories, entities and stored state touched by the flow.'
   },
   {
-    value: 'EXTERNAL_INTEGRATIONS',
-    label: 'External integrations',
-    hint: 'Outbound clients, queues and handoffs.'
-  },
-  {
-    value: 'TEST_SCENARIOS',
-    label: 'Test scenarios',
-    hint: 'Useful happy path, negative and regression checks.'
-  },
-  {
-    value: 'RISKS_AND_OPEN_QUESTIONS',
-    label: 'Risks',
-    hint: 'Unclear behavior, assumptions and visibility limits.'
+    value: 'INTEGRATIONS',
+    label: 'Integrations',
+    hint: 'Deepen outbound clients, queues, events and handoffs.'
   }
 ];
 
@@ -125,7 +106,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
-  readonly documentationPresets = DOCUMENTATION_PRESETS;
+  readonly analysisGoals = ANALYSIS_GOALS;
   readonly focusAreaOptions = FOCUS_AREA_OPTIONS;
   readonly maxFocusAreas = MAX_FOCUS_AREAS;
 
@@ -140,15 +121,15 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly endpointSearch = signal('');
   readonly systemSelectOpen = signal(false);
   readonly endpointSelectOpen = signal(false);
-  readonly presetSelectOpen = signal(false);
+  readonly goalSelectOpen = signal(false);
   readonly focusAreasSelectOpen = signal(false);
   readonly aiModelSelectOpen = signal(false);
   readonly reasoningEffortSelectOpen = signal(false);
   readonly branch = signal('');
   readonly selectedSystemId = signal('');
   readonly selectedEndpointId = signal('');
-  readonly documentationPreset = signal<FlowExplorerDocumentationPreset>('ANALYST_OVERVIEW');
-  readonly focusAreas = signal<FlowExplorerFocusArea[]>(['BUSINESS_FLOW']);
+  readonly analysisGoal = signal<FlowExplorerAnalysisGoal>('DEEP_DISCOVERY');
+  readonly focusAreas = signal<FlowExplorerFocusArea[]>(['BUSINESS_FLOW_RULES']);
   readonly selectedAiModel = signal('');
   readonly selectedReasoningEffort = signal('');
   readonly userInstructions = signal('');
@@ -281,8 +262,8 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     return this.selectedSystem() ? this.endpointState() : 'waiting for application';
   });
-  readonly selectedPresetLabel = computed(() => this.selectedPresetChoice().label);
-  readonly selectedPresetMeta = computed(() => this.selectedPresetChoice().hint);
+  readonly selectedGoalLabel = computed(() => this.selectedGoalChoice().label);
+  readonly selectedGoalMeta = computed(() => this.selectedGoalChoice().hint);
   readonly focusAreasLabel = computed(() => {
     const selected = this.selectedFocusAreaChoices();
     if (selected.length === 0) {
@@ -397,11 +378,7 @@ export class FlowExplorerPageComponent implements OnInit {
     return selected ? this.reasoningEffortHint(selected) : 'backend default exploration depth';
   });
   readonly resultSections = computed(() => {
-    const aiResponse = this.job()?.result?.aiResponse;
-    if (!aiResponse) {
-      return [];
-    }
-    return this.buildResultSections(aiResponse);
+    return this.job()?.result?.aiResponse?.sections ?? [];
   });
   constructor() {
     this.destroyRef.onDestroy(() => this.stopPolling());
@@ -417,7 +394,7 @@ export class FlowExplorerPageComponent implements OnInit {
   protected closeCustomSelects(): void {
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
-    this.presetSelectOpen.set(false);
+    this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
     this.reasoningEffortSelectOpen.set(false);
@@ -465,7 +442,7 @@ export class FlowExplorerPageComponent implements OnInit {
     const willOpen = !this.systemSelectOpen();
     this.systemSelectOpen.set(willOpen);
     this.endpointSelectOpen.set(false);
-    this.presetSelectOpen.set(false);
+    this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
     this.reasoningEffortSelectOpen.set(false);
@@ -478,15 +455,15 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     this.endpointSelectOpen.update((isOpen) => !isOpen);
     this.systemSelectOpen.set(false);
-    this.presetSelectOpen.set(false);
+    this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
     this.reasoningEffortSelectOpen.set(false);
   }
 
-  protected togglePresetSelect(event: Event): void {
+  protected toggleGoalSelect(event: Event): void {
     event.stopPropagation();
-    this.presetSelectOpen.update((isOpen) => !isOpen);
+    this.goalSelectOpen.update((isOpen) => !isOpen);
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
@@ -499,7 +476,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.focusAreasSelectOpen.update((isOpen) => !isOpen);
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
-    this.presetSelectOpen.set(false);
+    this.goalSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
     this.reasoningEffortSelectOpen.set(false);
   }
@@ -509,7 +486,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.aiModelSelectOpen.update((isOpen) => !isOpen);
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
-    this.presetSelectOpen.set(false);
+    this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.reasoningEffortSelectOpen.set(false);
   }
@@ -519,7 +496,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.reasoningEffortSelectOpen.update((isOpen) => !isOpen);
     this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
-    this.presetSelectOpen.set(false);
+    this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
   }
@@ -536,10 +513,10 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectEndpoint(endpoint);
   }
 
-  protected selectPresetFromDropdown(value: FlowExplorerDocumentationPreset, event: Event): void {
+  protected selectGoalFromDropdown(value: FlowExplorerAnalysisGoal, event: Event): void {
     event.stopPropagation();
-    this.presetSelectOpen.set(false);
-    this.selectPreset(value);
+    this.goalSelectOpen.set(false);
+    this.selectGoal(value);
   }
 
   protected toggleFocusAreaFromDropdown(value: FlowExplorerFocusArea, event: Event): void {
@@ -614,12 +591,13 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set(endpoint.endpointId);
   }
 
-  protected selectPreset(value: FlowExplorerDocumentationPreset): void {
-    if (this.documentationPreset() === value) {
+  protected selectGoal(value: FlowExplorerAnalysisGoal): void {
+    const goal = ANALYSIS_GOALS.find((candidate) => candidate.value === value);
+    if (!goal || goal.disabled || this.analysisGoal() === value) {
       return;
     }
     this.resetJobState();
-    this.documentationPreset.set(value);
+    this.analysisGoal.set(value);
   }
 
   protected toggleFocusArea(value: FlowExplorerFocusArea): void {
@@ -841,8 +819,8 @@ export class FlowExplorerPageComponent implements OnInit {
       : 'flow-explorer-select-option';
   }
 
-  protected presetOptionClass(value: FlowExplorerDocumentationPreset): string {
-    return this.documentationPreset() === value
+  protected goalOptionClass(value: FlowExplorerAnalysisGoal): string {
+    return this.analysisGoal() === value
       ? 'flow-explorer-select-option flow-explorer-select-option--selected'
       : 'flow-explorer-select-option';
   }
@@ -904,6 +882,31 @@ export class FlowExplorerPageComponent implements OnInit {
         return 'status-pill status-pill--error';
       default:
         return 'status-pill status-pill--queued';
+    }
+  }
+
+  protected sectionModePillClass(mode: string): string {
+    return normalizeSearch(mode) === 'deep'
+      ? 'status-pill status-pill--done'
+      : 'status-pill status-pill--queued';
+  }
+
+  protected sectionModeLabel(mode: string): string {
+    return normalizeSearch(mode) === 'deep' ? 'deep' : 'compact';
+  }
+
+  protected sectionIcon(sectionId: string): string {
+    switch (sectionId) {
+      case 'BUSINESS_FLOW_RULES':
+        return 'account_tree';
+      case 'VALIDATIONS':
+        return 'rule';
+      case 'PERSISTENCE':
+        return 'database';
+      case 'INTEGRATIONS':
+        return 'hub';
+      default:
+        return 'article';
     }
   }
 
@@ -1045,8 +1048,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedSystemId.set(job.systemId);
     this.selectedEndpointId.set(job.endpointId);
     this.branch.set(job.branch || this.branch());
-    this.documentationPreset.set(job.documentationPreset || 'ANALYST_OVERVIEW');
-    this.focusAreas.set(job.focusAreas.length ? job.focusAreas.slice(0, MAX_FOCUS_AREAS) : ['BUSINESS_FLOW']);
+    this.analysisGoal.set(job.goal || 'DEEP_DISCOVERY');
+    this.focusAreas.set(job.focusAreas.length ? job.focusAreas.slice(0, MAX_FOCUS_AREAS) : ['BUSINESS_FLOW_RULES']);
     this.selectedAiModel.set(job.aiModel || '');
     this.selectedReasoningEffort.set(job.reasoningEffort || '');
     this.syncReasoningEffortSelection();
@@ -1066,7 +1069,7 @@ export class FlowExplorerPageComponent implements OnInit {
       httpMethod: selectedEndpoint.method || selectedEndpoint.methods[0],
       endpointPath: selectedEndpoint.path,
       branch: this.branch().trim() || undefined,
-      documentationPreset: this.documentationPreset(),
+      goal: this.analysisGoal(),
       focusAreas: this.focusAreas(),
       userInstructions: userInstructions || undefined,
       model: selectedAiModel || undefined,
@@ -1120,10 +1123,10 @@ export class FlowExplorerPageComponent implements OnInit {
     );
   }
 
-  private selectedPresetChoice(): FlowExplorerChoice<FlowExplorerDocumentationPreset> {
+  private selectedGoalChoice(): FlowExplorerChoice<FlowExplorerAnalysisGoal> {
     return (
-      DOCUMENTATION_PRESETS.find((preset) => preset.value === this.documentationPreset()) ??
-      DOCUMENTATION_PRESETS[0]
+      ANALYSIS_GOALS.find((goal) => goal.value === this.analysisGoal()) ??
+      ANALYSIS_GOALS[0]
     );
   }
 
@@ -1218,23 +1221,6 @@ export class FlowExplorerPageComponent implements OnInit {
       default:
         return 'Focused reads for missing primary flow details.';
     }
-  }
-
-  private buildResultSections(aiResponse: FlowExplorerAiResponse): FlowExplorerResultSection[] {
-    return [
-      { title: 'Business rules', items: aiResponse.businessRules },
-      { title: 'Validations', items: aiResponse.validations },
-      { title: 'Persistence', items: aiResponse.persistence },
-      { title: 'External integrations', items: aiResponse.externalIntegrations },
-      { title: 'Test scenarios', items: aiResponse.testScenarios },
-      { title: 'Risks and edge cases', items: aiResponse.risksAndEdgeCases },
-      { title: 'Open questions', items: aiResponse.openQuestions }
-    ]
-      .map((section) => ({
-        ...section,
-        items: section.items.filter((item) => item.trim().length > 0)
-      }))
-      .filter((section) => section.items.length > 0);
   }
 
 }

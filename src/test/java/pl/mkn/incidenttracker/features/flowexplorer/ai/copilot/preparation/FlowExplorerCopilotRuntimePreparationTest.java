@@ -23,7 +23,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMeth
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerDocumentationPreset;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
@@ -127,13 +127,17 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var request = factory.create(
                 "flow-explorer-job-123",
                 policy,
-                request().aiOptions()
+                request().aiOptions(),
+                request().goal()
         );
 
         assertEquals("flow-explorer-job-123", request.sessionId());
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
-        assertSkillDirectories(request.skillDirectories());
+        assertSkillDirectories(
+                request.skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY)
+        );
         assertTrue(request.effectiveAvailableToolNames().contains("skill"));
         assertEquals("gpt-5.4", request.modelSelection().model());
         assertEquals("medium", request.modelSelection().reasoningEffort());
@@ -204,7 +208,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 ),
                 runRequest.sessionConfigRequest().availableToolNames()
         );
-        assertSkillDirectories(runRequest.sessionConfigRequest().skillDirectories());
+        assertSkillDirectories(
+                runRequest.sessionConfigRequest().skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY)
+        );
         assertFalse(assembly.toolAccessPolicy().databaseToolsEnabled());
 
         verify(toolFactory).createToolDefinitions(
@@ -294,8 +301,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerDocumentationPreset.TEST_PREPARATION,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
                 "medium"

@@ -16,7 +16,9 @@ describe('flow-explorer-import-export utils', () => {
     expect(envelope.version).toBe(1);
     expect(imported.exportedAt).toBe(exportedAt);
     expect(imported.job.jobId).toBe('flow-job-1');
-    expect(imported.job.result?.aiResponse?.flowSteps[0]?.title).toBe('Load customer');
+    expect(imported.job.goal).toBe('DEEP_DISCOVERY');
+    expect(imported.job.result?.aiResponse?.sections[0]?.title).toBe('Business flow/rules');
+    expect(imported.job.result?.aiResponse?.sections[0]?.markdown).toContain('Load customer aggregate');
   });
 
   it('should reject non-terminal Flow Explorer exports', () => {
@@ -47,8 +49,8 @@ function flowExplorerJob(
     httpMethod: 'GET',
     endpointPath: '/api/customers/{id}',
     branch: 'main',
-    documentationPreset: 'ANALYST_OVERVIEW',
-    focusAreas: ['BUSINESS_FLOW'],
+    goal: 'DEEP_DISCOVERY',
+    focusAreas: ['BUSINESS_FLOW_RULES'],
     aiModel: 'gpt-5-mini',
     reasoningEffort: 'medium',
     status: 'COMPLETED',
@@ -74,33 +76,57 @@ function flowExplorerJob(
       httpMethod: 'GET',
       endpointPath: '/api/customers/{id}',
       branch: 'main',
-      userIntentSummary: 'Explain customer lookup.',
-      audienceSummary: 'Tester friendly.',
-      confidence: 'high',
-      visibilityLimits: [],
+      goal: 'DEEP_DISCOVERY',
       prompt: 'canonical prompt',
       usage: null,
       aiResponse: {
-        userIntentSummary: 'Explain customer lookup.',
-        audienceSummary: 'Tester friendly.',
-        endpointContract: null,
-        flowSteps: [
+        goal: 'DEEP_DISCOVERY',
+        audience: 'business_or_system_analyst_tester',
+        overview: {
+          markdown: 'Explain customer lookup.',
+          confidence: 'high',
+          sourceRefs: ['CustomerController.getCustomer L12-L24']
+        },
+        sections: [
           {
-            order: 1,
-            title: 'Load customer',
-            plainLanguage: 'Load a customer aggregate.',
-            technicalGrounding: 'CustomerService.getCustomer',
-            sourceRefs: ['CustomerService.getCustomer L30-L44']
+            id: 'BUSINESS_FLOW_RULES',
+            title: 'Business flow/rules',
+            mode: 'deep',
+            markdown: 'Load customer aggregate and return the CRM profile.',
+            sourceRefs: ['CustomerService.getCustomer L30-L44'],
+            visibilityLimits: [],
+            openQuestions: []
+          },
+          {
+            id: 'VALIDATIONS',
+            title: 'Validations',
+            mode: 'compact',
+            markdown: 'Customer id is required.',
+            sourceRefs: [],
+            visibilityLimits: [],
+            openQuestions: []
+          },
+          {
+            id: 'PERSISTENCE',
+            title: 'Persistence',
+            mode: 'compact',
+            markdown: 'CustomerRepository.findById loads the aggregate.',
+            sourceRefs: [],
+            visibilityLimits: [],
+            openQuestions: []
+          },
+          {
+            id: 'INTEGRATIONS',
+            title: 'Integrations',
+            mode: 'compact',
+            markdown: 'No external integration is visible in initial evidence.',
+            sourceRefs: [],
+            visibilityLimits: [],
+            openQuestions: []
           }
         ],
-        businessRules: [],
-        validations: [],
-        persistence: [],
-        externalIntegrations: [],
-        testScenarios: [],
-        risksAndEdgeCases: [],
-        openQuestions: [],
-        visibilityLimits: [],
+        globalVisibilityLimits: [],
+        globalOpenQuestions: [],
         sourceReferences: [],
         confidence: 'high'
       }
