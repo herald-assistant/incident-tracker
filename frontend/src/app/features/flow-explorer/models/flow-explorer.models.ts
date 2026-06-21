@@ -1,5 +1,7 @@
 import {
   AnalysisAiActivityEvent,
+  AnalysisChatMessageResponse,
+  AnalysisJobStepResponse,
   AnalysisAiToolFeedback,
   AnalysisAiUsage,
   AnalysisEvidenceSection
@@ -26,10 +28,6 @@ export type FlowExplorerJobStatus =
   | 'COMPLETED'
   | 'FAILED'
   | string;
-
-export type FlowExplorerChatMessageRole = 'USER' | 'ASSISTANT' | string;
-
-export type FlowExplorerChatMessageStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | string;
 
 export interface FlowExplorerSystemOption {
   systemId: string;
@@ -154,22 +152,6 @@ export interface FlowExplorerChatMessageRequest {
   message: string;
 }
 
-export interface FlowExplorerChatMessageResponse {
-  id: string;
-  role: FlowExplorerChatMessageRole;
-  status: FlowExplorerChatMessageStatus;
-  content: string;
-  errorCode: string;
-  errorMessage: string;
-  createdAt: string;
-  updatedAt: string;
-  completedAt: string;
-  toolEvidenceSections: AnalysisEvidenceSection[];
-  aiActivityEvents: AnalysisAiActivityEvent[];
-  toolFeedback: AnalysisAiToolFeedback[];
-  prompt: string;
-}
-
 export interface FlowExplorerJobStateSnapshot {
   jobId: string;
   systemId: string;
@@ -189,24 +171,15 @@ export interface FlowExplorerJobStateSnapshot {
   createdAt: string;
   updatedAt: string;
   completedAt: string;
-  steps: FlowExplorerJobStep[];
+  steps: AnalysisJobStepResponse[];
   contextSnapshot: unknown | null;
   contextSections: AnalysisEvidenceSection[];
   toolEvidenceSections: AnalysisEvidenceSection[];
   aiActivityEvents: AnalysisAiActivityEvent[];
   toolFeedback: AnalysisAiToolFeedback[];
-  chatMessages: FlowExplorerChatMessageResponse[];
+  chatMessages: AnalysisChatMessageResponse[];
   preparedPrompt: string;
   result: FlowExplorerResult | null;
-}
-
-export interface FlowExplorerJobStep {
-  code: string;
-  label: string;
-  status: string;
-  message: string;
-  startedAt: string;
-  completedAt: string;
 }
 
 export interface FlowExplorerResult {

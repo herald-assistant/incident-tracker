@@ -1,0 +1,166 @@
+<details class="analysis-chat panel-card collapsible-panel" [open]="openByDefault()" [attr.aria-label]="ariaLabel()">
+  <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
+    <div>
+      <p class="section-eyebrow">{{ eyebrow() }}</p>
+      <h3>{{ title() }}</h3>
+    </div>
+    <p class="analysis-chat__hint collapsible-panel__hint">{{ hint() }}</p>
+    <span
+      [class]="isSubmitting() || hasActiveAssistantMessage() ? 'status-pill status-pill--running' : 'panel-chip'"
+    >
+      {{ statusLabel() }}
+    </span>
+    <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+      expand_more
+    </span>
+  </summary>
+
+  <div class="analysis-chat__body collapsible-panel__body">
+    <div class="analysis-chat__messages" aria-live="polite">
+      @if (!messages().length) {
+        <div class="empty-state">
+          {{ emptyText() }}
+        </div>
+      } @else {
+        @for (message of messages(); track message.id) {
+          <article
+            #chatMessageElement
+            class="chat-message"
+            [class.chat-message--user]="message.role === 'USER'"
+            [class.chat-message--assistant]="message.role === 'ASSISTANT'"
+            [class.chat-message--failed]="message.status === 'FAILED'"
+          >
+            <div class="chat-message__header">
+              <div class="chat-message__identity">
+                <strong>{{ chatMessageTitle(message) }}</strong>
+                <span>{{ chatMessageMeta(message) }}</span>
+              </div>
+              @if (canCopyChatMessage(message)) {
+                <button
+                  class="chat-message__copy-button"
+                  type="button"
+                  data-clipboard-exclude
+                  [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
+                  [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
+                  (click)="copyChatMessage(chatMessageElement, message)"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
+                  </span>
+                </button>
+              } @else if (isLastPendingAssistantMessage(message, messages())) {
+                <span
+                  class="chat-message__copy-loader"
+                  data-clipboard-exclude
+                  aria-label="AI przygotowuje odpowiedź"
+                  title="AI przygotowuje odpowiedź"
+                ></span>
+              }
+            </div>
+
+            <div class="chat-message__body">
+              @if (message.status === 'IN_PROGRESS') {
+                <p class="chat-message__pending">
+                  {{ pendingText() }}
+                </p>
+              } @else if (message.status === 'FAILED') {
+                <p class="chat-message__error">
+                  {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
+                </p>
+              } @else if (message.role === 'ASSISTANT') {
+                <app-markdown-content [content]="message.content"></app-markdown-content>
+              } @else {
+                <p class="chat-message__text">{{ message.content }}</p>
+              }
+            </div>
+
+            @if (message.toolEvidenceSections.length > 0) {
+              <details class="chat-message__evidence">
+                <summary>Dane pobrane w tej odpowiedzi</summary>
+                <div class="chat-message__evidence-sections">
+                  @for (section of message.toolEvidenceSections; track section.provider + section.category) {
+                    <section class="chat-evidence-section">
+                      <h4>{{ evidenceSectionTitle(section) }}</h4>
+                      @for (item of section.items; track item.title + $index) {
+                        <details class="chat-evidence-item">
+                          <summary>{{ item.title }}</summary>
+                          <div class="attribute-list">
+                            @for (attribute of item.attributes; track attribute.name + $index) {
+                              <div class="attribute-row attribute-row--block">
+                                <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+                                <pre class="attribute-block">{{ attribute.value }}</pre>
+                              </div>
+                            }
+                          </div>
+                        </details>
+                      }
+                    </section>
+                  }
+                </div>
+              </details>
+            }
+
+            @if (message.toolFeedback.length > 0) {
+              <details class="chat-message__tool-feedback">
+                <summary>Feedback jakości tooli</summary>
+                <div class="chat-tool-feedback-list">
+                  @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
+                    <article class="chat-tool-feedback">
+                      <div class="chat-tool-feedback__header">
+                        <strong>{{ toolFeedbackTarget(feedback) }}</strong>
+                        <span>{{ toolFeedbackMeta(feedback) }}</span>
+                      </div>
+                      <p>{{ feedback.summaryForOperator }}</p>
+                      @if (feedback.suggestedImprovement) {
+                        <p class="chat-tool-feedback__suggestion">
+                          {{ feedback.suggestedImprovement }}
+                        </p>
+                      }
+                    </article>
+                  }
+                </div>
+              </details>
+            }
+          </article>
+        }
+      }
+    </div>
+
+    <form class="analysis-chat__form" novalidate (submit)="submit($event)">
+      <label class="field-label" for="analysisFollowUpChatMessage">{{ inputLabel() }}</label>
+      <textarea
+        id="analysisFollowUpChatMessage"
+        class="chat-input"
+        rows="4"
+        [placeholder]="placeholder()"
+        [value]="messageText()"
+        [disabled]="!canUseChat() || isSubmitting() || hasActiveAssistantMessage()"
+        (input)="onMessageChanged($any($event.target).value)"
+      ></textarea>
+
+      <div class="analysis-chat__actions">
+        <button
+          class="primary-button"
+          type="submit"
+          [disabled]="!canSubmit()"
+          [class.is-loading]="isSubmitting()"
+          [attr.aria-busy]="isSubmitting()"
+        >
+          <span class="button-label">
+            {{ isSubmitting() || hasActiveAssistantMessage() ? submittingLabel() : submitLabel() }}
+          </span>
+          <span class="button-spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      @if (displayedError()) {
+        <p class="form-error">{{ displayedError() }}</p>
+      }
+      @if (needsAuth()) {
+        <button class="secondary-button secondary-button--accent" type="button" (click)="connectAuth.emit()">
+          {{ authActionLabel() }}
+        </button>
+      }
+    </form>
+  </div>
+</details>

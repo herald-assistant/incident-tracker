@@ -176,7 +176,7 @@ describe('FlowExplorerPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('COMPLETED');
     expect(compiled.textContent).toContain('AI result ready');
-    expect(compiled.textContent).toContain('Prepared prompt preview');
+    expect(compiled.textContent).toContain('Prompt po przygotowaniu deterministic context');
   });
 
   it('should render structured AI result for a completed job', () => {
@@ -256,7 +256,7 @@ describe('FlowExplorerPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const chatInput = compiled.querySelector(
-      '.flow-explorer-chat-composer__textarea'
+      '.chat-input'
     ) as HTMLTextAreaElement;
     expect(compiled.textContent).toContain('Wczytany plik: flow-explorer-export.json');
     expect(compiled.textContent).toContain('AI result');
@@ -363,18 +363,17 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Analysis trace');
-    expect(compiled.textContent).toContain('1 events');
-    expect(compiled.textContent).toContain('1 evidence items');
-    expect(compiled.textContent).toContain('1 feedback');
-    expect(compiled.textContent).toContain('GitLab · code-search');
+    expect(compiled.textContent).toContain('Przebieg pracy Copilota');
+    expect(compiled.textContent).toContain('Tok działania AI');
+    expect(compiled.textContent).toContain('Tools');
     expect(compiled.textContent).toContain('CustomerController.getCustomer');
-    expect(compiled.textContent).toContain('Read endpoint context');
+    expect(compiled.textContent).toContain('Endpoint handler.');
     expect(compiled.textContent).toContain('gitlab_read_repository_file');
+    expect(compiled.textContent).toContain('Payload zdarzenia');
     expect(compiled.textContent).toContain('Tool response contained the focused handler method.');
   });
 
-  it('should render an empty trace state when no trace data was captured', () => {
+  it('should render shared workflow progress when no Copilot trace was captured', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
@@ -385,7 +384,9 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('No AI trace or tool evidence was captured for this run.');
+    expect(compiled.textContent).toContain('Przebieg analizy');
+    expect(compiled.textContent).toContain('Deterministic endpoint context');
+    expect(compiled.textContent).toContain('Context coverage');
   });
 
   it('should send follow-up chat messages for a completed Flow Explorer job', () => {
@@ -545,7 +546,7 @@ function setTextareaValue(nativeElement: HTMLElement, value: string): void {
 
 function setChatTextareaValue(nativeElement: HTMLElement, value: string): void {
   const textarea = nativeElement.querySelector(
-    '.flow-explorer-chat-composer__textarea'
+    '.chat-input'
   ) as HTMLTextAreaElement;
   textarea.value = value;
   textarea.dispatchEvent(new Event('input'));
@@ -645,7 +646,7 @@ function endpointInventory(): FlowExplorerEndpointInventoryResponse {
 }
 
 function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): FlowExplorerJobStateSnapshot {
-  return {
+  const snapshot: FlowExplorerJobStateSnapshot = {
     jobId: 'flow-job-1',
     systemId: 'crm-service',
     endpointId: 'crm-api:GET /api/customers/{id}',
@@ -675,6 +676,88 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     result: null,
     ...overrides
   };
+  return {
+    ...snapshot,
+    steps: overrides.steps ?? defaultWorkflowSteps(snapshot),
+    contextSections: overrides.contextSections ?? defaultContextSections()
+  };
+}
+
+function defaultWorkflowSteps(
+  snapshot: FlowExplorerJobStateSnapshot
+): FlowExplorerJobStateSnapshot['steps'] {
+  const contextStatus =
+    snapshot.status === 'QUEUED'
+      ? 'PENDING'
+      : snapshot.status === 'COLLECTING_CONTEXT'
+        ? 'IN_PROGRESS'
+        : 'COMPLETED';
+  const aiStatus =
+    snapshot.status === 'COMPLETED'
+      ? 'COMPLETED'
+      : snapshot.status === 'ANALYZING'
+        ? 'IN_PROGRESS'
+        : 'PENDING';
+
+  return [
+    {
+      code: 'DETERMINISTIC_CONTEXT',
+      label: 'Deterministic endpoint context',
+      phase: 'CONTEXT',
+      status: contextStatus,
+      message:
+        contextStatus === 'IN_PROGRESS'
+          ? 'Backend buduje deterministic endpoint context.'
+          : 'Backend zbudowal deterministic endpoint context.',
+      itemCount: contextStatus === 'COMPLETED' ? 2 : null,
+      startedAt: '2026-06-18T10:00:00Z',
+      completedAt: contextStatus === 'COMPLETED' ? '2026-06-18T10:00:01Z' : '',
+      consumesEvidence: [],
+      producesEvidence: [{ provider: 'flow-explorer', category: 'endpoint-context' }],
+      usage: null
+    },
+    {
+      code: 'AI_ANALYSIS',
+      label: 'AI endpoint documentation',
+      phase: 'AI',
+      status: aiStatus,
+      message:
+        aiStatus === 'COMPLETED'
+          ? 'AI przygotowalo dokumentacje endpointu.'
+          : 'AI buduje dokumentacje endpointu.',
+      itemCount: null,
+      startedAt: aiStatus === 'PENDING' ? '' : '2026-06-18T10:00:01Z',
+      completedAt: aiStatus === 'COMPLETED' ? '2026-06-18T10:00:03Z' : '',
+      consumesEvidence: [{ provider: 'flow-explorer', category: 'endpoint-context' }],
+      producesEvidence: [],
+      usage: snapshot.result?.usage ?? null
+    }
+  ];
+}
+
+function defaultContextSections(): FlowExplorerJobStateSnapshot['contextSections'] {
+  return [
+    {
+      provider: 'flow-explorer',
+      category: 'endpoint-context',
+      items: [
+        {
+          title: 'Endpoint target',
+          attributes: [
+            { name: 'systemId', value: 'crm-service' },
+            { name: 'endpointPath', value: '/api/customers/{id}' }
+          ]
+        },
+        {
+          title: 'Context coverage',
+          attributes: [
+            { name: 'flowNodeCount', value: '1' },
+            { name: 'snippetCardCount', value: '1' }
+          ]
+        }
+      ]
+    }
+  ];
 }
 
 function completedChatMessages(): FlowExplorerJobStateSnapshot['chatMessages'] {

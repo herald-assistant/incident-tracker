@@ -4,7 +4,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceAttributes;
-import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 
 import java.util.ArrayList;
 import java.util.Arrays;

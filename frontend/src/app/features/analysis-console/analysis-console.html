@@ -263,164 +263,19 @@
               ></app-analysis-steps-panel>
             </section>
 
-            <details class="analysis-chat panel-card collapsible-panel">
-              <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
-                <div>
-                  <p class="section-eyebrow">Follow-up</p>
-                  <h3>Kontynuacja analizy</h3>
-                </div>
-                <p class="analysis-chat__hint collapsible-panel__hint">{{ chatHint() }}</p>
-                <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-                  expand_more
-                </span>
-              </summary>
-
-              <div class="analysis-chat__body collapsible-panel__body">
-                <div class="analysis-chat__messages" aria-live="polite">
-                  @if (!currentJob.chatMessages.length) {
-                    <div class="empty-state">
-                      Po zakończeniu analizy możesz dopytać AI o wynik albo zlecić dodatkową weryfikację.
-                    </div>
-                  } @else {
-                    @for (message of currentJob.chatMessages; track message.id) {
-                      <article
-                        #chatMessageElement
-                        class="chat-message"
-                        [class.chat-message--user]="message.role === 'USER'"
-                        [class.chat-message--assistant]="message.role === 'ASSISTANT'"
-                        [class.chat-message--failed]="message.status === 'FAILED'"
-                      >
-                        <div class="chat-message__header">
-                          <div class="chat-message__identity">
-                            <strong>{{ chatMessageTitle(message) }}</strong>
-                            <span>{{ chatMessageMeta(message) }}</span>
-                          </div>
-                          @if (canCopyChatMessage(message)) {
-                            <button
-                              class="chat-message__copy-button"
-                              type="button"
-                              data-clipboard-exclude
-                              [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
-                              [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
-                              (click)="copyChatMessage(chatMessageElement, message)"
-                            >
-                              <span class="material-symbols-outlined" aria-hidden="true">
-                                {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
-                              </span>
-                            </button>
-                          } @else if (isLastPendingAssistantMessage(message, currentJob.chatMessages)) {
-                            <span
-                              class="chat-message__copy-loader"
-                              data-clipboard-exclude
-                              aria-label="AI przygotowuje odpowiedź"
-                              title="AI przygotowuje odpowiedź"
-                            ></span>
-                          }
-                        </div>
-
-                        <div class="chat-message__body">
-                          @if (message.status === 'IN_PROGRESS') {
-                            <p class="chat-message__pending">
-                              AI analizuje polecenie i w razie potrzeby korzysta z dostępnych narzędzi.
-                            </p>
-                          } @else if (message.status === 'FAILED') {
-                            <p class="chat-message__error">
-                              {{ message.errorMessage || 'Nie udało się przygotować odpowiedzi.' }}
-                            </p>
-                          } @else if (message.role === 'ASSISTANT') {
-                            <app-markdown-content [content]="message.content"></app-markdown-content>
-                          } @else {
-                            <p class="chat-message__text">{{ message.content }}</p>
-                          }
-                        </div>
-
-                        @if (message.toolEvidenceSections.length > 0) {
-                          <details class="chat-message__evidence">
-                            <summary>Dane pobrane w tej odpowiedzi</summary>
-                            <div class="chat-message__evidence-sections">
-                              @for (section of message.toolEvidenceSections; track section.provider + section.category) {
-                                <section class="chat-evidence-section">
-                                  <h4>{{ evidenceSectionTitle(section) }}</h4>
-                                  @for (item of section.items; track item.title + $index) {
-                                    <details class="chat-evidence-item">
-                                      <summary>{{ item.title }}</summary>
-                                      <div class="attribute-list">
-                                        @for (attribute of item.attributes; track attribute.name + $index) {
-                                          <div class="attribute-row attribute-row--block">
-                                            <span class="attribute-name">{{ attribute.name | attributeName }}</span>
-                                            <pre class="attribute-block">{{ attribute.value }}</pre>
-                                          </div>
-                                        }
-                                      </div>
-                                    </details>
-                                  }
-                                </section>
-                              }
-                            </div>
-                          </details>
-                        }
-
-                        @if (message.toolFeedback.length > 0) {
-                          <details class="chat-message__tool-feedback">
-                            <summary>Feedback jakości tooli</summary>
-                            <div class="chat-tool-feedback-list">
-                              @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
-                                <article class="chat-tool-feedback">
-                                  <div class="chat-tool-feedback__header">
-                                    <strong>{{ toolFeedbackTarget(feedback) }}</strong>
-                                    <span>{{ toolFeedbackMeta(feedback) }}</span>
-                                  </div>
-                                  <p>{{ feedback.summaryForOperator }}</p>
-                                  @if (feedback.suggestedImprovement) {
-                                    <p class="chat-tool-feedback__suggestion">
-                                      {{ feedback.suggestedImprovement }}
-                                    </p>
-                                  }
-                                </article>
-                              }
-                            </div>
-                          </details>
-                        }
-                      </article>
-                    }
-                  }
-                </div>
-
-                <form class="analysis-chat__form" novalidate (submit)="submitChat($event)">
-                  <label class="field-label" for="analysisChatMessage">Wiadomość do AI</label>
-                  <textarea
-                    id="analysisChatMessage"
-                    class="chat-input"
-                    rows="4"
-                    placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
-                    [formControl]="chatMessageControl"
-                    (input)="clearChatError()"
-                  ></textarea>
-
-                  <div class="analysis-chat__actions">
-                    <button
-                      class="primary-button"
-                      type="submit"
-                      [disabled]="!canUseChat() || isChatSubmitting()"
-                      [class.is-loading]="isChatSubmitting()"
-                      [attr.aria-busy]="isChatSubmitting()"
-                    >
-                      <span class="button-label">Wyślij</span>
-                      <span class="button-spinner" aria-hidden="true"></span>
-                    </button>
-                  </div>
-
-                  @if (chatError()) {
-                    <p class="form-error">{{ chatError() }}</p>
-                  }
-                  @if (chatNeedsGithubAuth()) {
-                    <button class="secondary-button secondary-button--accent" type="button" (click)="connectGithub()">
-                      {{ authActionLabel() }}
-                    </button>
-                  }
-                </form>
-              </div>
-            </details>
+            <app-analysis-follow-up-chat
+              [messages]="currentJob.chatMessages"
+              [hint]="chatHint()"
+              [error]="chatError()"
+              [canUseChat]="canUseChat()"
+              [isSubmitting]="isChatSubmitting()"
+              [needsAuth]="chatNeedsGithubAuth()"
+              [authActionLabel]="authActionLabel()"
+              placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
+              (sendMessage)="submitChat($event)"
+              (clearError)="clearChatError()"
+              (connectAuth)="connectGithub()"
+            ></app-analysis-follow-up-chat>
           </div>
         </div>
       }

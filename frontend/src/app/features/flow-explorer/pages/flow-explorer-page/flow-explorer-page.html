@@ -895,240 +895,39 @@
         }
 
         @if (job()?.result || chatMessages().length > 0) {
-          <section class="analysis-card flow-explorer-chat" aria-label="Flow Explorer follow-up chat">
-            <details class="flow-explorer-collapsible" open>
-            <summary class="section-heading flow-explorer-chat__heading flow-explorer-collapsible__summary">
-              <div>
-                <p class="section-eyebrow">Follow-up chat</p>
-                <h2>Ask about this endpoint</h2>
-                <p class="field-hint">{{ chatHint() }}</p>
-              </div>
-              @if (hasActiveChatMessage()) {
-                <span class="status-pill status-pill--running">answering</span>
-              } @else {
-                <span class="panel-chip">{{ chatMessages().length }} messages</span>
-              }
-            </summary>
-
-            <div class="flow-explorer-collapsible__body">
-            @if (chatMessages().length > 0) {
-              <div class="flow-explorer-chat-list" aria-live="polite">
-                @for (message of chatMessages(); track message.id) {
-                  <article [class]="chatMessageClass(message)">
-                    <header>
-                      <span class="flow-explorer-chat-message__meta">{{ chatMessageMeta(message) }}</span>
-                      <span [class]="jobStatusPillClass(message.status)">{{ message.status }}</span>
-                    </header>
-
-                    @if (message.content) {
-                      <p>{{ message.content }}</p>
-                    } @else if (message.status === 'IN_PROGRESS') {
-                      <p class="field-hint">AI przygotowuje odpowiedz...</p>
-                    }
-
-                    @if (message.errorMessage) {
-                      <div class="flow-explorer-message flow-explorer-message--error" role="alert">
-                        <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                        <p>{{ message.errorMessage }}</p>
-                      </div>
-                    }
-
-                    @if (
-                      chatEvidenceItemCount(message) > 0 ||
-                      message.aiActivityEvents.length > 0 ||
-                      message.toolFeedback.length > 0
-                    ) {
-                      <div class="flow-explorer-chat-message__trace">
-                        @if (chatEvidenceItemCount(message) > 0) {
-                          <span class="panel-chip">{{ chatEvidenceItemCount(message) }} evidence items</span>
-                        }
-                        @if (message.aiActivityEvents.length > 0) {
-                          <span class="panel-chip">{{ message.aiActivityEvents.length }} events</span>
-                        }
-                        @if (message.toolFeedback.length > 0) {
-                          <span class="panel-chip">{{ message.toolFeedback.length }} feedback</span>
-                        }
-                      </div>
-                    }
-                  </article>
-                }
-              </div>
-            } @else {
-              <div class="empty-state">Brak pytan follow-up dla tej analizy.</div>
-            }
-
-            @if (chatError()) {
-              <div class="flow-explorer-message flow-explorer-message--error" role="alert">
-                <span class="material-symbols-outlined" aria-hidden="true">error</span>
-                <p>{{ chatError() }}</p>
-              </div>
-            }
-
-            <div class="flow-explorer-chat-composer">
-              <label class="form-field">
-                <span class="field-label">Pytanie follow-up</span>
-                <textarea
-                  #chatInput
-                  class="text-input flow-explorer-chat-composer__textarea"
-                  rows="4"
-                  placeholder="Np. ktore walidacje warto pokryc testami regresji?"
-                  spellcheck="false"
-                  [value]="chatMessage()"
-                  [disabled]="!isChatAvailable() || isSendingChat() || hasActiveChatMessage()"
-                  (input)="onChatMessageChanged(chatInput.value)"
-                ></textarea>
-              </label>
-              <button
-                class="primary-button"
-                type="button"
-                [disabled]="!canSendChat()"
-                (click)="sendChatMessage()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">send</span>
-                <span>
-                  @if (isSendingChat() || hasActiveChatMessage()) {
-                    Sending...
-                  } @else {
-                    Send
-                  }
-                </span>
-              </button>
-            </div>
-            </div>
-            </details>
-          </section>
+          <app-analysis-follow-up-chat
+            [messages]="chatMessages()"
+            [hint]="chatHint()"
+            [error]="chatError()"
+            [canUseChat]="isChatAvailable()"
+            [isSubmitting]="isSendingChat()"
+            [openByDefault]="true"
+            eyebrow="Follow-up chat"
+            title="Ask about this endpoint"
+            emptyText="Brak pytan follow-up dla tej analizy."
+            inputLabel="Pytanie follow-up"
+            placeholder="Np. ktore walidacje warto pokryc testami regresji?"
+            pendingText="AI przygotowuje odpowiedz i w razie potrzeby korzysta z dozwolonych tools Flow Explorera."
+            submitLabel="Send"
+            submittingLabel="Sending..."
+            ariaLabel="Flow Explorer follow-up chat"
+            (sendMessage)="sendChatMessage($event)"
+            (clearError)="clearChatError()"
+          ></app-analysis-follow-up-chat>
         }
 
         @if (job(); as snapshot) {
-          <section class="analysis-card flow-explorer-trace" aria-label="Analysis trace">
-            <details>
-              <summary class="flow-explorer-trace__summary">
-                <div>
-                  <p class="section-eyebrow">Analysis trace</p>
-                  <h2>AI activity and tool evidence</h2>
-                  <p class="field-hint">
-                    Transparentny zapis pracy AI, tool calls i feedbacku. Glowny wynik pozostaje powyzej.
-                  </p>
-                </div>
-                <div class="flow-explorer-trace__counters">
-                  <span class="panel-chip">{{ snapshot.aiActivityEvents.length }} events</span>
-                  <span class="panel-chip">{{ toolEvidenceItemCount() }} evidence items</span>
-                  <span class="panel-chip">{{ snapshot.toolFeedback.length }} feedback</span>
-                  <span class="material-symbols-outlined flow-explorer-trace__icon" aria-hidden="true">
-                    expand_more
-                  </span>
-                </div>
-              </summary>
-
-              <div class="flow-explorer-trace__body">
-                @if (hasTraceData()) {
-                  @if (snapshot.toolEvidenceSections.length > 0) {
-                    <section class="flow-explorer-trace-block" aria-label="Tool evidence">
-                      <div class="flow-explorer-trace-block__heading">
-                        <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
-                        <div>
-                          <span class="field-label">Tool evidence</span>
-                          <h3>Captured context from tools</h3>
-                        </div>
-                      </div>
-                      <div class="flow-explorer-evidence-list">
-                        @for (section of snapshot.toolEvidenceSections; track section.provider + section.category) {
-                          <details class="flow-explorer-evidence-section">
-                            <summary>
-                              <span>{{ evidenceSectionTitle(section.provider, section.category) }}</span>
-                              <span class="panel-chip">{{ section.items.length }} items</span>
-                            </summary>
-                            <div class="flow-explorer-evidence-items">
-                              @for (item of section.items; track item.title + $index) {
-                                <article class="flow-explorer-evidence-item">
-                                  <h4>{{ item.title }}</h4>
-                                  @if (evidenceAttributePreview(item).length > 0) {
-                                    <dl>
-                                      @for (attribute of evidenceAttributePreview(item); track attribute.name + $index) {
-                                        <div>
-                                          <dt>{{ attribute.name }}</dt>
-                                          <dd>{{ attribute.value }}</dd>
-                                        </div>
-                                      }
-                                    </dl>
-                                  }
-                                  @if (item.attributes.length > evidenceAttributePreview(item).length) {
-                                    <span class="field-hint">
-                                      {{ item.attributes.length - evidenceAttributePreview(item).length }}
-                                      more attributes hidden in compact view.
-                                    </span>
-                                  }
-                                </article>
-                              }
-                            </div>
-                          </details>
-                        }
-                      </div>
-                    </section>
-                  }
-
-                  @if (sortedAiActivityEvents().length > 0) {
-                    <section class="flow-explorer-trace-block" aria-label="AI activity events">
-                      <div class="flow-explorer-trace-block__heading">
-                        <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
-                        <div>
-                          <span class="field-label">AI activity</span>
-                          <h3>Chronological runtime events</h3>
-                        </div>
-                      </div>
-                      <div class="flow-explorer-activity-list">
-                        @for (event of sortedAiActivityEvents(); track event.eventId || $index) {
-                          <article class="flow-explorer-activity-item">
-                            <span [class]="jobStatusPillClass(event.status)">{{ event.status || 'INFO' }}</span>
-                            <div>
-                              <h4>{{ activityEventTitle(event) }}</h4>
-                              @if (event.summary) {
-                                <p>{{ event.summary }}</p>
-                              }
-                              @if (activityEventMeta(event)) {
-                                <span class="field-hint">{{ activityEventMeta(event) }}</span>
-                              }
-                            </div>
-                          </article>
-                        }
-                      </div>
-                    </section>
-                  }
-
-                  @if (snapshot.toolFeedback.length > 0) {
-                    <section class="flow-explorer-trace-block" aria-label="Tool feedback">
-                      <div class="flow-explorer-trace-block__heading">
-                        <span class="material-symbols-outlined" aria-hidden="true">rate_review</span>
-                        <div>
-                          <span class="field-label">Tool feedback</span>
-                          <h3>AI quality notes about tool responses</h3>
-                        </div>
-                      </div>
-                      <div class="flow-explorer-feedback-list">
-                        @for (feedback of snapshot.toolFeedback; track feedback.feedbackId || $index) {
-                          <article class="flow-explorer-feedback-item">
-                            <div>
-                              <h4>{{ toolFeedbackTitle(feedback) }}</h4>
-                              @if (feedback.summaryForOperator) {
-                                <p>{{ feedback.summaryForOperator }}</p>
-                              }
-                              @if (feedback.suggestedImprovement) {
-                                <p>{{ feedback.suggestedImprovement }}</p>
-                              }
-                            </div>
-                            @if (feedbackMeta(feedback)) {
-                              <span class="panel-chip">{{ feedbackMeta(feedback) }}</span>
-                            }
-                          </article>
-                        }
-                      </div>
-                    </section>
-                  }
-                } @else {
-                  <div class="empty-state">No AI trace or tool evidence was captured for this run.</div>
-                }
-              </div>
-            </details>
+          <section class="flow-explorer-shared-trace" aria-label="Przebieg pracy Copilota">
+            <app-analysis-steps-panel
+              [steps]="snapshot.steps"
+              [evidenceSections]="snapshot.contextSections"
+              [toolEvidenceSections]="snapshot.toolEvidenceSections"
+              [aiActivityEvents]="snapshot.aiActivityEvents"
+              [toolFeedback]="snapshot.toolFeedback"
+              [preparedPrompt]="snapshot.preparedPrompt"
+              [result]="null"
+              [finalResultAvailable]="!!snapshot.result"
+            ></app-analysis-steps-panel>
           </section>
         }
       </section>

@@ -3,6 +3,8 @@ package pl.mkn.incidenttracker.features.flowexplorer.job.api;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
+import pl.mkn.incidenttracker.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -27,13 +29,13 @@ public record FlowExplorerJobStateSnapshot(
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt,
-        List<FlowExplorerJobStepResponse> steps,
+        List<AnalysisJobStepResponse> steps,
         FlowExplorerContextSnapshot contextSnapshot,
         List<AnalysisEvidenceSection> contextSections,
         List<AnalysisEvidenceSection> toolEvidenceSections,
         List<AnalysisAiActivityEvent> aiActivityEvents,
         List<AnalysisAiToolFeedback> toolFeedback,
-        List<FlowExplorerChatMessageResponse> chatMessages,
+        List<AnalysisChatMessageResponse> chatMessages,
         String preparedPrompt,
         FlowExplorerResultResponse result
 ) {

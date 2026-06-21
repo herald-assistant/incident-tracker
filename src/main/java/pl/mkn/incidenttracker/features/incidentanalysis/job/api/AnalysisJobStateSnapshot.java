@@ -3,6 +3,8 @@ package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
+import pl.mkn.incidenttracker.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;

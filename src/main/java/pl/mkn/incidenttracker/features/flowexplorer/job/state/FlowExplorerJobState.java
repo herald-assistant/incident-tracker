@@ -1,19 +1,26 @@
 package pl.mkn.incidenttracker.features.flowexplorer.job.state;
 
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMethod;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerAiResponse;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatTurn;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerChatMessageResponse;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStepResponse;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultResponse;
 import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
+import pl.mkn.incidenttracker.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisJobStepResponse;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 import org.springframework.util.StringUtils;
 
@@ -31,11 +38,16 @@ public final class FlowExplorerJobState {
     private static final String STEP_DETERMINISTIC_CONTEXT_LABEL = "Deterministic endpoint context";
     private static final String STEP_AI_ANALYSIS = "AI_ANALYSIS";
     private static final String STEP_AI_ANALYSIS_LABEL = "AI endpoint documentation";
+    private static final String PHASE_CONTEXT = "CONTEXT";
+    private static final String PHASE_AI = "AI";
+    private static final AnalysisEvidenceReference FLOW_CONTEXT_EVIDENCE =
+            new AnalysisEvidenceReference("flow-explorer", "endpoint-context");
 
     private final String jobId;
     private final FlowExplorerJobStartRequest request;
     private final Instant createdAt;
-    private final List<FlowExplorerJobStepResponse> steps;
+    private final List<AnalysisJobStepResponse> steps;
+    private final List<AnalysisEvidenceSection> contextSections;
     private final List<AnalysisEvidenceSection> toolEvidenceSections;
     private final List<AnalysisAiActivityEvent> aiActivityEvents;
     private final List<AnalysisAiToolFeedback> toolFeedback;
@@ -58,6 +70,7 @@ public final class FlowExplorerJobState {
         this.createdAt = Instant.now();
         this.updatedAt = createdAt;
         this.steps = new ArrayList<>();
+        this.contextSections = new ArrayList<>();
         this.toolEvidenceSections = new ArrayList<>();
         this.aiActivityEvents = new ArrayList<>();
         this.toolFeedback = new ArrayList<>();
@@ -71,13 +84,17 @@ public final class FlowExplorerJobState {
         currentStepCode = STEP_DETERMINISTIC_CONTEXT;
         currentStepLabel = STEP_DETERMINISTIC_CONTEXT_LABEL;
         updatedAt = now;
-        replaceStep(new FlowExplorerJobStepResponse(
+        replaceStep(new AnalysisJobStepResponse(
                 STEP_DETERMINISTIC_CONTEXT,
                 STEP_DETERMINISTIC_CONTEXT_LABEL,
+                PHASE_CONTEXT,
                 "IN_PROGRESS",
                 "Backend buduje deterministic endpoint context.",
+                null,
                 now,
-                null
+                null,
+                List.of(),
+                List.of(FLOW_CONTEXT_EVIDENCE)
         ));
     }
 
@@ -89,18 +106,25 @@ public final class FlowExplorerJobState {
         updatedAt = now;
         preparedPrompt = prompt;
         this.contextSnapshot = contextSnapshot;
+        replaceContextSections(contextSnapshot);
         completeStep(
                 STEP_DETERMINISTIC_CONTEXT,
                 STEP_DETERMINISTIC_CONTEXT_LABEL,
-                "Backend zbudowal deterministic endpoint context i przygotowal prompt."
+                PHASE_CONTEXT,
+                "Backend zbudowal deterministic endpoint context i przygotowal prompt.",
+                contextItemCount()
         );
-        replaceStep(new FlowExplorerJobStepResponse(
+        replaceStep(new AnalysisJobStepResponse(
                 STEP_AI_ANALYSIS,
                 STEP_AI_ANALYSIS_LABEL,
+                PHASE_AI,
                 "IN_PROGRESS",
                 "AI buduje dokumentacje endpointu na podstawie context snapshotu, artefaktow i dozwolonych tools.",
+                null,
                 now,
-                null
+                null,
+                List.of(FLOW_CONTEXT_EVIDENCE),
+                List.of()
         ));
     }
 
@@ -132,7 +156,14 @@ public final class FlowExplorerJobState {
         updatedAt = now;
         completedAt = now;
         preparedPrompt = prompt;
-        completeStep(STEP_AI_ANALYSIS, STEP_AI_ANALYSIS_LABEL, "AI przygotowalo dokumentacje endpointu.");
+        completeStep(
+                STEP_AI_ANALYSIS,
+                STEP_AI_ANALYSIS_LABEL,
+                PHASE_AI,
+                "AI przygotowalo dokumentacje endpointu.",
+                null,
+                usage
+        );
         result = resultFromAi(aiResponse, usage, prompt);
     }
 
@@ -144,13 +175,17 @@ public final class FlowExplorerJobState {
         updatedAt = now;
         completedAt = now;
         if (currentStepCode != null) {
-            replaceStep(new FlowExplorerJobStepResponse(
+            replaceStep(new AnalysisJobStepResponse(
                     currentStepCode,
                     currentStepLabel,
+                    phaseForStep(currentStepCode),
                     STATUS_FAILED,
                     errorMessage,
+                    null,
                     currentStepStartedAt(currentStepCode, now),
-                    now
+                    now,
+                    consumesEvidenceForStep(currentStepCode),
+                    producesEvidenceForStep(currentStepCode)
             ));
         }
     }
@@ -164,14 +199,19 @@ public final class FlowExplorerJobState {
         completedAt = now;
         preparedPrompt = prompt;
         this.contextSnapshot = contextSnapshot;
+        replaceContextSections(contextSnapshot);
         steps.clear();
-        steps.add(new FlowExplorerJobStepResponse(
+        steps.add(new AnalysisJobStepResponse(
                 STEP_DETERMINISTIC_CONTEXT,
                 STEP_DETERMINISTIC_CONTEXT_LABEL,
+                PHASE_CONTEXT,
                 STATUS_COMPLETED,
                 "Backend zbudowal deterministic endpoint context bez uruchamiania AI.",
+                contextItemCount(),
                 createdAt,
-                now
+                now,
+                List.of(),
+                List.of(FLOW_CONTEXT_EVIDENCE)
         ));
         result = new FlowExplorerResultResponse(
                 STATUS_COMPLETED,
@@ -286,7 +326,7 @@ public final class FlowExplorerJobState {
                 completedAt,
                 List.copyOf(steps),
                 contextSnapshot,
-                List.of(),
+                List.copyOf(contextSections),
                 List.copyOf(toolEvidenceSections),
                 List.copyOf(aiActivityEvents),
                 List.copyOf(toolFeedback),
@@ -343,27 +383,43 @@ public final class FlowExplorerJobState {
         updatedAt = Instant.now();
     }
 
-    private void completeStep(String code, String label, String message) {
+    private void completeStep(String code, String label, String phase, String message, Integer itemCount) {
+        completeStep(code, label, phase, message, itemCount, null);
+    }
+
+    private void completeStep(
+            String code,
+            String label,
+            String phase,
+            String message,
+            Integer itemCount,
+            AnalysisAiUsage usage
+    ) {
         var now = Instant.now();
-        replaceStep(new FlowExplorerJobStepResponse(
+        replaceStep(new AnalysisJobStepResponse(
                 code,
                 label,
+                phase,
                 STATUS_COMPLETED,
                 message,
+                itemCount,
                 currentStepStartedAt(code, createdAt),
-                now
+                now,
+                consumesEvidenceForStep(code),
+                producesEvidenceForStep(code),
+                usage
         ));
     }
 
     private Instant currentStepStartedAt(String code, Instant fallback) {
         return steps.stream()
                 .filter(step -> code.equals(step.code()))
-                .map(FlowExplorerJobStepResponse::startedAt)
+                .map(AnalysisJobStepResponse::startedAt)
                 .findFirst()
                 .orElse(fallback);
     }
 
-    private void replaceStep(FlowExplorerJobStepResponse nextStep) {
+    private void replaceStep(AnalysisJobStepResponse nextStep) {
         for (var index = 0; index < steps.size(); index++) {
             if (nextStep.code().equals(steps.get(index).code())) {
                 steps.set(index, nextStep);
@@ -371,6 +427,181 @@ public final class FlowExplorerJobState {
             }
         }
         steps.add(nextStep);
+    }
+
+    private String phaseForStep(String code) {
+        return STEP_AI_ANALYSIS.equals(code) ? PHASE_AI : PHASE_CONTEXT;
+    }
+
+    private List<AnalysisEvidenceReference> consumesEvidenceForStep(String code) {
+        return STEP_AI_ANALYSIS.equals(code) ? List.of(FLOW_CONTEXT_EVIDENCE) : List.of();
+    }
+
+    private List<AnalysisEvidenceReference> producesEvidenceForStep(String code) {
+        return STEP_DETERMINISTIC_CONTEXT.equals(code) ? List.of(FLOW_CONTEXT_EVIDENCE) : List.of();
+    }
+
+    private void replaceContextSections(FlowExplorerContextSnapshot snapshot) {
+        contextSections.clear();
+        contextSections.addAll(contextSections(snapshot));
+    }
+
+    private int contextItemCount() {
+        return contextSections.stream()
+                .mapToInt(section -> section.items().size())
+                .sum();
+    }
+
+    private static List<AnalysisEvidenceSection> contextSections(FlowExplorerContextSnapshot snapshot) {
+        if (snapshot == null) {
+            return List.of();
+        }
+
+        var items = new ArrayList<AnalysisEvidenceItem>();
+        items.add(endpointItem(snapshot));
+        items.add(coverageItem(snapshot));
+        snapshot.repositories().stream()
+                .map(FlowExplorerJobState::repositoryItem)
+                .forEach(items::add);
+        snapshot.flowNodes().stream()
+                .map(FlowExplorerJobState::flowNodeItem)
+                .forEach(items::add);
+        snapshot.snippetCards().stream()
+                .map(FlowExplorerJobState::snippetCardItem)
+                .forEach(items::add);
+
+        if (!snapshot.limitations().isEmpty()) {
+            items.add(new AnalysisEvidenceItem(
+                    "Visibility and parser limitations",
+                    List.of(attribute("limitations", String.join("\n", snapshot.limitations())))
+            ));
+        }
+
+        if (!snapshot.suggestedNextReads().isEmpty()) {
+            items.add(new AnalysisEvidenceItem(
+                    "Suggested next reads",
+                    List.of(attribute("suggestedNextReads", String.join("\n", snapshot.suggestedNextReads())))
+            ));
+        }
+
+        return List.of(new AnalysisEvidenceSection(
+                FLOW_CONTEXT_EVIDENCE.provider(),
+                FLOW_CONTEXT_EVIDENCE.category(),
+                items
+        ));
+    }
+
+    private static AnalysisEvidenceItem endpointItem(FlowExplorerContextSnapshot snapshot) {
+        return new AnalysisEvidenceItem(
+                "Endpoint target",
+                List.of(
+                        attribute("systemId", snapshot.systemId()),
+                        attribute("systemName", snapshot.systemName()),
+                        attribute("requestedBranch", snapshot.requestedBranch()),
+                        attribute("resolvedRef", snapshot.resolvedRef()),
+                        attribute("endpointId", snapshot.endpointId()),
+                        attribute("httpMethod", snapshot.httpMethod()),
+                        attribute("endpointPath", snapshot.endpointPath()),
+                        attribute("endpointConfidence", snapshot.endpoint() != null ? snapshot.endpoint().confidence() : "")
+                )
+        );
+    }
+
+    private static AnalysisEvidenceItem coverageItem(FlowExplorerContextSnapshot snapshot) {
+        var coverage = snapshot.coverage();
+        if (coverage == null) {
+            return new AnalysisEvidenceItem("Context coverage", List.of());
+        }
+
+        return new AnalysisEvidenceItem(
+                "Context coverage",
+                List.of(
+                        attribute("endpointResolved", coverage.endpointResolved()),
+                        attribute("repositoryRefCount", coverage.repositoryRefCount()),
+                        attribute("attemptedRepositoryCount", coverage.attemptedRepositoryCount()),
+                        attribute("flowNodeCount", coverage.flowNodeCount()),
+                        attribute("methodCount", coverage.methodCount()),
+                        attribute("relationCount", coverage.relationCount()),
+                        attribute("snippetCardCount", coverage.snippetCardCount()),
+                        attribute("snippetCharacterCount", coverage.snippetCharacterCount()),
+                        attribute("snippetBudgetReached", coverage.snippetBudgetReached()),
+                        attribute("unresolvedReferenceCount", coverage.unresolvedReferenceCount()),
+                        attribute("limitationCount", coverage.limitationCount()),
+                        attribute("maxDepthReached", coverage.maxDepthReached()),
+                        attribute("maxFilesReached", coverage.maxFilesReached()),
+                        attribute("readFileLimitReached", coverage.readFileLimitReached()),
+                        attribute("confidence", coverage.confidence())
+                )
+        );
+    }
+
+    private static AnalysisEvidenceItem repositoryItem(FlowExplorerRepositoryContext repository) {
+        return new AnalysisEvidenceItem(
+                "Repository: " + fallback(repository.repositoryId(), repository.projectName()),
+                List.of(
+                        attribute("repositoryId", repository.repositoryId()),
+                        attribute("projectName", repository.projectName()),
+                        attribute("projectPath", repository.projectPath()),
+                        attribute("resolvedRef", repository.resolvedRef()),
+                        attribute("attempted", repository.attempted()),
+                        attribute("selected", repository.selected()),
+                        attribute("limitations", String.join("\n", repository.limitations()))
+                )
+        );
+    }
+
+    private static AnalysisEvidenceItem flowNodeItem(FlowExplorerFlowNode node) {
+        return new AnalysisEvidenceItem(
+                "Flow node: " + fallback(node.role(), node.filePath()),
+                List.of(
+                        attribute("role", node.role()),
+                        attribute("filePath", node.filePath()),
+                        attribute("methods", methods(node.methods())),
+                        attribute("reason", node.reason()),
+                        attribute("confidence", node.confidence()),
+                        attribute("limitations", String.join("\n", node.limitations()))
+                )
+        );
+    }
+
+    private static AnalysisEvidenceItem snippetCardItem(FlowExplorerSnippetCard card) {
+        return new AnalysisEvidenceItem(
+                "Snippet card: " + fallback(card.role(), card.filePath()),
+                List.of(
+                        attribute("projectName", card.projectName()),
+                        attribute("filePath", card.filePath()),
+                        attribute("methods", methods(card.methods())),
+                        attribute("requestedLines", lineRange(card.requestedStartLine(), card.requestedEndLine())),
+                        attribute("returnedLines", lineRange(card.returnedStartLine(), card.returnedEndLine())),
+                        attribute("totalLines", card.totalLines()),
+                        attribute("truncated", card.truncated()),
+                        attribute("characterCount", card.characterCount()),
+                        attribute("reason", card.reason()),
+                        attribute("limitations", String.join("\n", card.limitations()))
+                )
+        );
+    }
+
+    private static String methods(List<FlowExplorerFlowMethod> methods) {
+        return methods.stream()
+                .map(method -> "%s %s".formatted(method.methodName(), lineRange(method.lineStart(), method.lineEnd())))
+                .toList()
+                .toString();
+    }
+
+    private static String lineRange(int startLine, int endLine) {
+        if (startLine <= 0 || endLine <= 0) {
+            return "";
+        }
+        return "L%d-L%d".formatted(startLine, endLine);
+    }
+
+    private static AnalysisEvidenceAttribute attribute(String name, Object value) {
+        return new AnalysisEvidenceAttribute(name, value != null ? String.valueOf(value) : "");
+    }
+
+    private static String fallback(String primary, String secondary) {
+        return StringUtils.hasText(primary) ? primary : secondary;
     }
 
     private void upsertSection(List<AnalysisEvidenceSection> sections, AnalysisEvidenceSection section) {
@@ -523,8 +754,8 @@ public final class FlowExplorerJobState {
             this.updatedAt = completedAt;
         }
 
-        private FlowExplorerChatMessageResponse snapshot() {
-            return new FlowExplorerChatMessageResponse(
+        private AnalysisChatMessageResponse snapshot() {
+            return new AnalysisChatMessageResponse(
                     id,
                     role.name(),
                     status.name(),

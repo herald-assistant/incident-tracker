@@ -10,8 +10,12 @@ Najwazniejsze granice:
   `capabilityInfo`.
 - `components/app-shell` jest wlascicielem sidebaru, kontekstowego topbaru,
   breadcrumbow i capability info tooltipa.
-- `core` trzyma male reusable serwisy, modele i utils frontendu.
+- `core` trzyma male reusable serwisy, modele i utils frontendu, w tym
+  wspolne kontrakty HTTP zasilajace przekrojowe elementy UI.
 - `features` trzyma dedicated feature screens i workbench screens.
+- `components` trzyma wspolne elementy UI, szczegolnie te, ktore maja byc
+  identyczne miedzy feature'ami: przebieg analizy, tok pracy AI, follow-up
+  chat, evidence/result panels, import/export controls i podobne wzorce pracy.
 - `operational-context` trzyma ekran katalogu Operational Context i jego
   komponenty pomocnicze.
 
@@ -55,6 +59,13 @@ Te dane pobieraj z backendu przez shared/operator API:
 
 UI nie powinno zalezec od typow Copilot SDK ani od backendowych klas Javy.
 Trzymaj kontrakty w TypeScript modelach na granicy HTTP.
+
+Jezeli dwa feature'y potrzebuja tego samego rodzaju danych do UI, np. kroku
+analizy, zdarzenia AI, wiadomosci follow-up, evidence section, usage albo
+feedbacku tooli, preferuj jeden wspolny model w `core/models` i jeden wspolny
+komponent w `components`. Lokalne modele/komponenty feature'a sa uzasadnione
+tylko dla danych i prezentacji, ktore faktycznie sa merytorycznie specyficzne
+dla danego problemu.
 
 ## Testy
 

@@ -1,7 +1,6 @@
-package pl.mkn.incidenttracker.features.incidentanalysis.job.api;
+package pl.mkn.incidenttracker.shared.ai;
 
-import pl.mkn.incidenttracker.shared.ai.AnalysisAiUsage;
-import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +18,11 @@ public record AnalysisJobStepResponse(
         List<AnalysisEvidenceReference> producesEvidence,
         AnalysisAiUsage usage
 ) {
+
+    public AnalysisJobStepResponse {
+        consumesEvidence = consumesEvidence != null ? List.copyOf(consumesEvidence) : List.of();
+        producesEvidence = producesEvidence != null ? List.copyOf(producesEvidence) : List.of();
+    }
 
     public AnalysisJobStepResponse(
             String code,

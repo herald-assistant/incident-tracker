@@ -1,21 +1,22 @@
 import {
   AnalysisAiActivityEvent,
+  AnalysisChatMessageResponse,
   AnalysisAiToolFeedback,
   AnalysisAiUsage,
   AnalysisEvidenceAttribute,
+  AnalysisEvidenceReference,
   AnalysisEvidenceItem,
-  AnalysisEvidenceSection
+  AnalysisEvidenceSection,
+  AnalysisJobStepResponse
 } from '../../../core/models/analysis.models';
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import {
   FlowExplorerAiEndpointContract,
   FlowExplorerAiFlowStep,
   FlowExplorerAiResponse,
-  FlowExplorerChatMessageResponse,
   FlowExplorerDocumentationPreset,
   FlowExplorerFocusArea,
   FlowExplorerJobStateSnapshot,
-  FlowExplorerJobStep,
   FlowExplorerResult
 } from '../models/flow-explorer.models';
 
@@ -145,19 +146,36 @@ export function buildFlowExplorerExportFileName(
   return `flow-explorer-${systemId}-${endpoint}-${status}-${formatFileTimestamp(exportedAt)}.json`;
 }
 
-function normalizeStep(step: unknown): FlowExplorerJobStep {
+function normalizeStep(step: unknown): AnalysisJobStepResponse {
   const stepObject = asObject(step);
   return {
     code: normalizeString(stepObject?.['code']),
     label: normalizeString(stepObject?.['label']),
+    phase: normalizeString(stepObject?.['phase']),
     status: normalizeString(stepObject?.['status']),
     message: normalizeString(stepObject?.['message']),
+    itemCount: normalizeNullableNumber(stepObject?.['itemCount']),
     startedAt: normalizeString(stepObject?.['startedAt']),
-    completedAt: normalizeString(stepObject?.['completedAt'])
+    completedAt: normalizeString(stepObject?.['completedAt']),
+    consumesEvidence: Array.isArray(stepObject?.['consumesEvidence'])
+      ? stepObject['consumesEvidence'].map(normalizeEvidenceReference)
+      : [],
+    producesEvidence: Array.isArray(stepObject?.['producesEvidence'])
+      ? stepObject['producesEvidence'].map(normalizeEvidenceReference)
+      : [],
+    usage: normalizeUsage(stepObject?.['usage'])
   };
 }
 
-function normalizeChatMessage(message: unknown): FlowExplorerChatMessageResponse {
+function normalizeEvidenceReference(reference: unknown): AnalysisEvidenceReference {
+  const referenceObject = asObject(reference);
+  return {
+    provider: normalizeString(referenceObject?.['provider']),
+    category: normalizeString(referenceObject?.['category'])
+  };
+}
+
+function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
   const messageObject = asObject(message);
   return {
     id: normalizeString(messageObject?.['id']),

@@ -10,7 +10,7 @@ import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogEntry;
 import pl.mkn.incidenttracker.integrations.elasticsearch.ElasticLogPort;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
-import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisStepPhase;
 
 import java.util.ArrayList;

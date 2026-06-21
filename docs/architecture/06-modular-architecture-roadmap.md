@@ -73,6 +73,25 @@ common/shared -> features.*
 common/shared -> api/shared-operator
 ```
 
+## Shared UI/UX Contracts
+
+Modularnosc feature'ow nie oznacza dowolnosci w UI. Nowy feature powinien
+dostarczyc wlasny prompt, policy i merytoryczny result contract, ale
+powtarzalne elementy pracy operatora maja byc wspolne kontraktowo i wizualnie:
+
+- kroki runu i ich evidence references,
+- activity trace AI, tool calls, tool evidence i feedback tooli,
+- follow-up chat,
+- usage/cost, visibility limits, confidence, warnings i source refs,
+- import/export oraz stany empty/loading/error.
+
+Backendowe kontrakty dla tych elementow powinny byc neutralne i mieszkac w
+`shared`, jezeli zasilaja wiecej niz jeden feature. Frontend powinien uzywac
+modeli z `core` i komponentow z `components`, a feature screen powinien
+mapowac swoje dane, copy i akcje do wspolnego wzorca. Lokalny komponent albo
+DTO jest poprawny tylko wtedy, gdy element niesie unikalna semantyke danego
+feature'a, a nie tylko inna etykiete tego samego workflow.
+
 ## Docelowe Pakiety Java
 
 Nazwy pakietow nie moga miec myslnikow, wiec praktyczny target w Javie:

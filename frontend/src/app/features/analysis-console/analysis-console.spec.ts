@@ -215,7 +215,6 @@ describe('AnalysisConsoleComponent auth flow', () => {
     const component = fixture.componentInstance;
     component.job.set(completedJob());
     (component as unknown as { activeAnalysisId: string }).activeAnalysisId = 'analysis-1';
-    component.chatMessageControl.setValue('Sprawdź jeszcze repozytorium.');
     analysisApi.sendChatMessage.mockReturnValueOnce(
       throwError(() => new HttpErrorResponse({
         status: 401,
@@ -228,7 +227,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
       }))
     );
 
-    component.submitChat(new Event('submit'));
+    component.submitChat('Sprawdź jeszcze repozytorium.');
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

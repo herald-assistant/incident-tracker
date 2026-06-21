@@ -12,6 +12,20 @@ Nie mieszaj tych pojec:
 - workbench pozwala recznie testowac capability, debugowac integracje i
   zebrac input do dalszej analizy.
 
+## Shared Feature UX
+
+Dedicated feature moze miec wlasny start request, prompt, policy i
+merytoryczny result contract, ale przekrojowe elementy workflow powinny byc
+wspolne. Przed dodaniem lokalnego UI/modelu dla przebiegu analizy, toku pracy
+AI, follow-up chatu, evidence/tool feedbacku, usage/cost, import/export albo
+powtarzalnych fragmentow wyniku, sprawdz `core/models` i `components`.
+
+Jezeli nowy feature potrzebuje podobnego zachowania jak istniejacy feature,
+najpierw wydziel albo rozszerz shared komponent/model. Lokalny feature screen
+powinien tylko mapowac swoje dane, teksty i akcje do wspolnego wzorca. Celem
+jest to, zeby operator po poznaniu jednego feature'a rozpoznawal te same
+elementy pracy w kolejnych feature'ach.
+
 ## Incident Analysis
 
 Incident Analysis ma byc codziennym workspace'em, nie landing page.

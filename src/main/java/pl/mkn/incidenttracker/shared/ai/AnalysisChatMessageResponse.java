@@ -1,13 +1,11 @@
-package pl.mkn.incidenttracker.features.flowexplorer.job.api;
+package pl.mkn.incidenttracker.shared.ai;
 
-import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
-import pl.mkn.incidenttracker.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
 import java.util.List;
 
-public record FlowExplorerChatMessageResponse(
+public record AnalysisChatMessageResponse(
         String id,
         String role,
         String status,
@@ -23,7 +21,7 @@ public record FlowExplorerChatMessageResponse(
         String prompt
 ) {
 
-    public FlowExplorerChatMessageResponse {
+    public AnalysisChatMessageResponse {
         toolEvidenceSections = toolEvidenceSections != null ? List.copyOf(toolEvidenceSections) : List.of();
         aiActivityEvents = aiActivityEvents != null ? List.copyOf(aiActivityEvents) : List.of();
         toolFeedback = toolFeedback != null ? List.copyOf(toolFeedback) : List.of();

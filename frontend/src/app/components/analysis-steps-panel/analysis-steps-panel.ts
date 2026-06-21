@@ -535,6 +535,7 @@ export class AnalysisStepsPanelComponent {
   readonly toolFeedback = input<AnalysisAiToolFeedback[]>([]);
   readonly preparedPrompt = input<string>('');
   readonly result = input<AnalysisResultResponse | null>(null);
+  readonly finalResultAvailable = input(false);
 
   private readonly selectedStepKey = signal<string | null>(null);
   private readonly copiedLogRowKey = signal<string | null>(null);
@@ -657,7 +658,7 @@ export class AnalysisStepsPanelComponent {
 
     effect(
       () => {
-        const openPanelsByDefault = this.result() === null;
+        const openPanelsByDefault = this.result() === null && !this.finalResultAvailable();
         this.progressPanelOpen.set(openPanelsByDefault);
         this.aiWorkflowPanelOpen.set(openPanelsByDefault);
       },
@@ -1087,12 +1088,15 @@ function resolvePreparedPrompt(
 
 function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean {
   const normalizedStepCode = String(stepCode || '').toUpperCase();
-  return normalizedStepCode === 'OPERATIONAL_CONTEXT';
+  return normalizedStepCode === 'OPERATIONAL_CONTEXT' || normalizedStepCode === 'DETERMINISTIC_CONTEXT';
 }
 
 function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
   if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
     return 'Prompt po dopasowaniu kontekstu operacyjnego';
+  }
+  if (String(stepCode || '').toUpperCase() === 'DETERMINISTIC_CONTEXT') {
+    return 'Prompt po przygotowaniu deterministic context';
   }
 
   return 'Prompt przygotowany do wysłania do Copilota';
@@ -1101,6 +1105,9 @@ function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
 function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
   if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
     return 'To jest finalny prompt złożony z evidence i lokalnego kontekstu operacyjnego jeszcze przed wywołaniem AI. Jeśli Copilot nie odpowie, możesz skopiować go stąd i uruchomić we własnym narzędziu.';
+  }
+  if (String(stepCode || '').toUpperCase() === 'DETERMINISTIC_CONTEXT') {
+    return 'To jest finalny prompt Flow Explorera po zbudowaniu endpoint contextu i snippet cards. Mozesz go skopiowac do diagnostyki runu albo recznej weryfikacji.';
   }
 
   return 'To jest dokładny input, który zasila końcową analizę AI. Gdy sesja Copilota nie zadziała, ten prompt zostaje dostępny do ręcznego użycia poza aplikacją.';

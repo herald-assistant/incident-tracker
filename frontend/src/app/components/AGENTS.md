@@ -7,6 +7,12 @@ komponenty prezentacji analizy. Komponent wspolny powinien byc reusable w
 ramach `Team Delivery Workspace`, a nie zakodowany pod pojedynczy route, jesli
 nie jest to jawnie komponent analizy.
 
+Komponenty dla powtarzalnych elementow analitycznych sa preferowanym miejscem
+dla UI/UX wspolnego miedzy feature'ami: przebieg runu, tok pracy AI, follow-up
+chat, evidence/tool feedback, usage/cost, import/export i powtarzalne fragmenty
+prezentacji wyniku. Feature screen powinien dostarczac dane, copy i handler
+akcji, ale nie duplikowac struktury, zachowan ani styli tych samych elementow.
+
 ## App shell
 
 `app-shell` jest jedynym wlascicielem:
@@ -29,6 +35,9 @@ statycznego opisu capability, dodaj go do route data jako `capabilityInfo`.
   alternatywy.
 - Shared components powinny uzywac tokenow CSS, a nie lokalnych jednorazowych
   kolorow.
+- Shared components powinny byc parametryzowane tekstem i stanami, ale miec
+  jeden znany model interakcji. Nie tworz wariantu tylko po to, zeby feature
+  mial inna etykiete albo inny pusty komunikat.
 
 ## Czego unikac
 

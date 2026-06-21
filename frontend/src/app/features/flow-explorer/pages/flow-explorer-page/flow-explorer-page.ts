@@ -3,16 +3,9 @@ import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal }
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import {
-  AnalysisAiActivityEvent,
-  AnalysisAiToolFeedback,
-  AnalysisEvidenceAttribute,
-  AnalysisEvidenceItem,
-  ApiErrorResponse
-} from '../../../../core/models/analysis.models';
+import { ApiErrorResponse } from '../../../../core/models/analysis.models';
 import {
   FlowExplorerAiResponse,
-  FlowExplorerChatMessageResponse,
   FlowExplorerDocumentationPreset,
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerEndpointOption,
@@ -32,6 +25,8 @@ import {
   normalizeFlowExplorerJob,
   parseImportedFlowExplorerAnalysis
 } from '../../utils/flow-explorer-import-export.utils';
+import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
+import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -108,7 +103,7 @@ const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
 
 @Component({
   selector: 'app-flow-explorer-page',
-  imports: [MatTooltipModule],
+  imports: [MatTooltipModule, AnalysisFollowUpChatComponent, AnalysisStepsPanelComponent],
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
 })
@@ -144,7 +139,6 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly exportState = signal<FlowExplorerExportState | null>(null);
   readonly jobError = signal('');
   readonly isSubmitting = signal(false);
-  readonly chatMessage = signal('');
   readonly chatError = signal('');
   readonly isSendingChat = signal(false);
 
@@ -207,13 +201,6 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     return 'Pytania korzystaja z wyniku, deterministic contextu i dozwolonych tools dla Flow Explorera.';
   });
-  readonly canSendChat = computed(
-    () =>
-      this.isChatAvailable() &&
-      !this.isSendingChat() &&
-      !this.hasActiveChatMessage() &&
-      this.chatMessage().trim().length > 0
-  );
   readonly focusAreaLimitReached = computed(() => this.focusAreas().length >= MAX_FOCUS_AREAS);
   readonly systemCountLabel = computed(() => {
     const count = this.systems().length;
@@ -300,25 +287,6 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     return this.buildResultSections(aiResponse);
   });
-  readonly sortedAiActivityEvents = computed(() => {
-    const events = this.job()?.aiActivityEvents ?? [];
-    return [...events].sort(
-      (left, right) => this.timestampMs(left.timestamp) - this.timestampMs(right.timestamp)
-    );
-  });
-  readonly toolEvidenceItemCount = computed(() =>
-    (this.job()?.toolEvidenceSections ?? []).reduce((total, section) => total + section.items.length, 0)
-  );
-  readonly hasTraceData = computed(() => {
-    const job = this.job();
-    return Boolean(
-      job &&
-        (job.toolEvidenceSections.length > 0 ||
-          job.aiActivityEvents.length > 0 ||
-          job.toolFeedback.length > 0)
-    );
-  });
-
   constructor() {
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
@@ -508,17 +476,14 @@ export class FlowExplorerPageComponent implements OnInit {
     this.userInstructions.set(value);
   }
 
-  protected onChatMessageChanged(value: string): void {
-    this.chatMessage.set(value);
-    if (this.chatError()) {
-      this.chatError.set('');
-    }
+  protected clearChatError(): void {
+    this.chatError.set('');
   }
 
-  protected sendChatMessage(): void {
+  protected sendChatMessage(message: string): void {
     const job = this.job();
-    const message = this.chatMessage().trim();
-    if (!job || !message || !this.canSendChat()) {
+    const trimmedMessage = message.trim();
+    if (!job || !trimmedMessage || !this.isChatAvailable() || this.isSendingChat() || this.hasActiveChatMessage()) {
       return;
     }
 
@@ -526,12 +491,11 @@ export class FlowExplorerPageComponent implements OnInit {
     this.chatError.set('');
 
     this.flowExplorerApi
-      .sendChatMessage(job.jobId, { message })
+      .sendChatMessage(job.jobId, { message: trimmedMessage })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (snapshot) => {
           this.isSendingChat.set(false);
-          this.chatMessage.set('');
           this.applyJobSnapshot(snapshot, {
             origin: 'live',
             exportedAt: '',
@@ -604,7 +568,6 @@ export class FlowExplorerPageComponent implements OnInit {
       this.stopPolling();
       this.isSubmitting.set(false);
       this.isSendingChat.set(false);
-      this.chatMessage.set('');
       this.chatError.set('');
       this.jobError.set('');
       this.applyJobSnapshot(imported.job, {
@@ -778,51 +741,6 @@ export class FlowExplorerPageComponent implements OnInit {
     return `$${value.toFixed(4)}`;
   }
 
-  protected activityEventTitle(event: AnalysisAiActivityEvent): string {
-    return event.title || event.summary || event.toolName || event.type || 'AI activity';
-  }
-
-  protected activityEventMeta(event: AnalysisAiActivityEvent): string {
-    return [event.category, event.type, event.toolName, this.formatTimestamp(event.timestamp)]
-      .filter(Boolean)
-      .join(' · ');
-  }
-
-  protected evidenceSectionTitle(provider: string, category: string): string {
-    return [provider, category].filter(Boolean).join(' · ') || 'Tool evidence';
-  }
-
-  protected evidenceAttributePreview(item: AnalysisEvidenceItem): AnalysisEvidenceAttribute[] {
-    return item.attributes.filter((attribute) => attribute.value).slice(0, 4);
-  }
-
-  protected toolFeedbackTitle(feedback: AnalysisAiToolFeedback): string {
-    return feedback.targetToolName || feedback.targetToolCallId || 'Tool feedback';
-  }
-
-  protected feedbackMeta(feedback: AnalysisAiToolFeedback): string {
-    return [feedback.usefulness, feedback.expectedDataReceived, feedback.confidence].filter(Boolean).join(' · ');
-  }
-
-  protected chatMessageClass(message: FlowExplorerChatMessageResponse): string {
-    const role = normalizeSearch(message.role || 'assistant');
-    return `flow-explorer-chat-message flow-explorer-chat-message--${role}`;
-  }
-
-  protected chatRoleLabel(message: FlowExplorerChatMessageResponse): string {
-    return message.role === 'USER' ? 'You' : 'AI';
-  }
-
-  protected chatMessageMeta(message: FlowExplorerChatMessageResponse): string {
-    return [this.chatRoleLabel(message), this.formatTimestamp(message.updatedAt || message.createdAt)]
-      .filter(Boolean)
-      .join(' · ');
-  }
-
-  protected chatEvidenceItemCount(message: FlowExplorerChatMessageResponse): number {
-    return (message.toolEvidenceSections ?? []).reduce((total, section) => total + section.items.length, 0);
-  }
-
   private loadConfig(): void {
     this.flowExplorerApi
       .getConfig()
@@ -882,7 +800,6 @@ export class FlowExplorerPageComponent implements OnInit {
     this.exportState.set(null);
     this.jobError.set('');
     this.isSubmitting.set(false);
-    this.chatMessage.set('');
     this.chatError.set('');
     this.isSendingChat.set(false);
   }
@@ -1022,25 +939,6 @@ export class FlowExplorerPageComponent implements OnInit {
       .filter((section) => section.items.length > 0);
   }
 
-  private formatTimestamp(value: string): string {
-    const timestamp = this.timestampMs(value);
-    if (!timestamp) {
-      return '';
-    }
-    return new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(timestamp);
-  }
-
-  private timestampMs(value: string): number {
-    if (!value) {
-      return 0;
-    }
-    const timestamp = Date.parse(value);
-    return Number.isNaN(timestamp) ? 0 : timestamp;
-  }
 }
 
 function normalizeSearch(value: string): string {

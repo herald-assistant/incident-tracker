@@ -126,6 +126,14 @@ Zasady granic:
 - `common` i neutralne kontrakty nie sa miejscem na wszystko. Wyciagaj tam
   tylko male, stabilne elementy, ktore faktycznie sa wspolne dla kilku
   capability albo feature'ow.
+- Widoki feature'ow oraz ich zasilanie powinny reuse'owac wspolne modele,
+  komponenty i mechanizmy UI/UX dla powtarzalnych elementow pracy operatora:
+  przebieg runu, tok pracy AI, tool evidence, follow-up chat, import/export,
+  usage/cost i inne przekrojowe fragmenty analizy. Feature-specific pozostaje
+  glowny request, prompt, policy i kontrakt merytorycznego rezultatu, ale
+  drobniejsze elementy wyniku tez powinny korzystac ze spojnych komponentow i
+  wzorcow prezentacji, zeby dodanie nowego feature'a nie wymagalo od
+  uzytkownika nauki nowego interfejsu dla znanych czynnosci.
 - Usuwajac cykle importow, preferuj przeniesienie kontraktu do warstwy, ktora
   jest jego wlascicielem. Nie lam granic tylko po to, zeby szybciej zamknac
   compile-time graph.
@@ -228,8 +236,8 @@ Zasady granic:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`
   oraz listener aktualizacji tool evidence.
 - `src/main/java/pl/mkn/incidenttracker/shared/ai`
-  Neutralne DTO preferencji wykonania AI oraz usage/token/cost dla flow, job
-  UI i feature'ow.
+  Neutralne DTO preferencji wykonania AI, usage/token/cost oraz wspolne
+  kontrakty zasilajace UI przebiegu pracy i follow-up chatu dla feature'ow.
 - `src/main/java/pl/mkn/incidenttracker/api`
   Globalny kontrakt bledow HTTP i docelowe miejsce na shared/operator API
   niezalezne od jednego feature'a. Nie przenos tu orchestration feature'a,

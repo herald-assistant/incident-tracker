@@ -24,6 +24,14 @@ explorer albo natural-language data diagnostics.
   hidden context i kontrakt odpowiedzi.
 - Nowy feature nie powinien importowac `features.incidentanalysis`; reuse ma
   isc przez `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
+- Kontrakty zasilajace przekrojowe UI, np. kroki runu, referencje evidence,
+  wiadomosci follow-up, usage/cost, aktywnosc AI i feedback tooli, powinny
+  mieszkac w `shared` jezeli sa uzywane przez wiecej niz jeden feature. Nowy
+  feature nie powinien tworzyc lokalnego DTO tylko dlatego, ze pierwszy
+  wlasciciel kontraktu byl incidentowy albo flow-explorerowy.
+- Glowny result contract pozostaje feature-specific, ale drobniejsze elementy
+  prezentacji wyniku powinny byc modelowane tak, zeby frontend mogl reuse'owac
+  wspolne komponenty i znane wzorce UX.
 - URL-e publiczne moga nadal uzywac product-facing nazwy `analysis`, nawet gdy
   implementacja Javy mieszka pod `features.incidentanalysis`.
 

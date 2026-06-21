@@ -1,4 +1,4 @@
-package pl.mkn.incidenttracker.features.incidentanalysis.evidence;
+package pl.mkn.incidenttracker.shared.evidence;
 
 public record AnalysisEvidenceReference(
         String provider,

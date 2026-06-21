@@ -47,6 +47,28 @@ marketingowych hero, dekoracyjnych gradientow ani duzych kart opisowych jako
 dominujacej kompozycji. Funkcjonalnosc i czytelnosc zlozonych analiz sa
 wazniejsze niz efekt "cool".
 
+## Spojnosc Feature UX
+
+Dodawanie kolejnych feature'ow nie powinno oznaczac, ze uzytkownik uczy sie
+od nowa tych samych czynnosci. Przekrojowe elementy workflow maja miec wspolne
+modele, komponenty i mechanizmy prezentacji:
+
+- przebieg runu i status krokow,
+- tok pracy AI, tool calls, tool evidence i feedback tooli,
+- follow-up chat po wyniku,
+- usage/token/cost i limity widocznosci,
+- import/export oraz stany empty/loading/error,
+- powtarzalne drobne elementy rezultatu, np. sekcje evidence, source refs,
+  visibility limits, confidence, warnings i next actions.
+
+Glowny rezultat analizy moze i czesto powinien byc feature-specific, bo Flow
+Explorer, Incident Analysis i Data Diagnostics odpowiadaja na inne pytania.
+Jednak jego mniejsze klocki UI/UX powinny wpisywac sie w poznane juz wzorce,
+zeby nowy feature byl rozszerzeniem workspace'u, a nie osobnym narzedziem z
+wlasnym jezykiem interakcji. Jezeli drugi feature potrzebuje podobnego panelu
+albo modelu zasilania, kierunek domyslny to wydzielenie shared modelu i
+komponentu, a nie lokalna kopia.
+
 ## Planowane rodziny feature'ow
 
 ### Incident analysis
@@ -168,6 +190,11 @@ Feature moze zalezec od platformy, tools i integracji. Platforma, tools,
 integracje, shared i common nie moga zalezec od feature'a. Feature'y nie
 powinny zalezec od siebie nawzajem.
 
+Wspolne elementy job/run UI, activity trace, evidence, follow-up chat,
+usage/cost i podobne kontrakty zasilajace frontend powinny trafiac do
+`shared`/frontend `core` oraz wspolnych komponentow. Feature-specific zostaja
+te pola i widoki, ktore niosa unikalna semantyke danego problemu.
+
 ## Zasada utrzymaniowa
 
 Kazda nowa potrzeba powinna zaczynac sie od pytania:
@@ -193,4 +220,6 @@ np. flow explorer albo functional logic explorer, ktory:
 4. korzysta z adapterow `integrations`,
 5. nie importuje `features.incidentanalysis`,
 6. publikuje przebieg przez wspolny run/event model, gdy ten zostanie
-   wprowadzony.
+   wprowadzony,
+7. reuse'uje wspolne modele i komponenty UI dla znanych elementow workflow,
+   takich jak przebieg, AI activity, follow-up chat, evidence i usage.

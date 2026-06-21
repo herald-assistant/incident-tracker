@@ -18,6 +18,12 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerReposito
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.FlowExplorerJobService;
 import pl.mkn.incidenttracker.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
+import pl.mkn.incidenttracker.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisJobStepResponse;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceItem;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
 import java.util.List;
@@ -70,6 +76,10 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.reasoningEffort").value("medium"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.steps", hasSize(1)))
+                .andExpect(jsonPath("$.steps[0].phase").value("CONTEXT"))
+                .andExpect(jsonPath("$.steps[0].itemCount").value(1))
+                .andExpect(jsonPath("$.steps[0].producesEvidence[0].provider").value("flow-explorer"))
+                .andExpect(jsonPath("$.contextSections[0].provider").value("flow-explorer"))
                 .andExpect(jsonPath("$.contextSnapshot.coverage.endpointResolved").value(true))
                 .andExpect(jsonPath("$.contextSnapshot.flowNodes[0].methods[0].methodName").value("getCustomer"))
                 .andExpect(jsonPath("$.contextSnapshot.snippetCards[0].content").value(org.hamcrest.Matchers.containsString("getCustomer")))
@@ -163,7 +173,7 @@ class FlowExplorerJobControllerTest {
     private static FlowExplorerJobStateSnapshot snapshotWithChat(String jobId) {
         var instant = Instant.parse("2026-04-12T18:00:00Z");
         return snapshot(jobId, List.of(
-                new FlowExplorerChatMessageResponse(
+                new AnalysisChatMessageResponse(
                         "message-1",
                         "USER",
                         "COMPLETED",
@@ -178,7 +188,7 @@ class FlowExplorerJobControllerTest {
                         List.of(),
                         null
                 ),
-                new FlowExplorerChatMessageResponse(
+                new AnalysisChatMessageResponse(
                         "message-2",
                         "ASSISTANT",
                         "COMPLETED",
@@ -196,7 +206,7 @@ class FlowExplorerJobControllerTest {
         ));
     }
 
-    private static FlowExplorerJobStateSnapshot snapshot(String jobId, List<FlowExplorerChatMessageResponse> chatMessages) {
+    private static FlowExplorerJobStateSnapshot snapshot(String jobId, List<AnalysisChatMessageResponse> chatMessages) {
         var instant = Instant.parse("2026-04-12T18:00:00Z");
         return new FlowExplorerJobStateSnapshot(
                 jobId,
@@ -217,16 +227,27 @@ class FlowExplorerJobControllerTest {
                 instant,
                 instant,
                 instant,
-                List.of(new FlowExplorerJobStepResponse(
+                List.of(new AnalysisJobStepResponse(
                         "DETERMINISTIC_CONTEXT",
                         "Deterministic endpoint context",
+                        "CONTEXT",
                         "COMPLETED",
                         "Context done.",
+                        1,
                         instant,
-                        instant
+                        instant,
+                        List.of(),
+                        List.of(new AnalysisEvidenceReference("flow-explorer", "endpoint-context"))
                 )),
                 contextSnapshot(),
-                List.of(),
+                List.of(new AnalysisEvidenceSection(
+                        "flow-explorer",
+                        "endpoint-context",
+                        List.of(new AnalysisEvidenceItem(
+                                "Context coverage",
+                                List.of(new AnalysisEvidenceAttribute("flowNodeCount", "1"))
+                        ))
+                )),
                 List.of(),
                 List.of(),
                 List.of(),

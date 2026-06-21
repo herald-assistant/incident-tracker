@@ -258,6 +258,50 @@ Propozycja rozwiazania:
 
 ## Kolejnosc realizacji
 
+### 000. Wspolny kontrakt i widok przebiegu pracy Copilota
+
+- [x] Omowic krok i zatwierdzic zakres.
+- [x] Przeniesc kontrakt referencji evidence do `shared.evidence`.
+- [x] Przeniesc kontrakt kroku pracy Copilota do `shared.ai`.
+- [x] Dostosowac Incident Tracker do wspolnego kontraktu bez legacy wrapperow.
+- [x] Dostosowac Flow Explorer do wspolnego kontraktu bez legacy wrapperow.
+- [x] Flow Explorer ma publikowac deterministic endpoint context jako
+  `contextSections`, zeby wspolny panel mial te same dane co Incident Tracker.
+- [x] Flow Explorer ma uzywac tego samego komponentu UI
+  `app-analysis-steps-panel`.
+- [x] Uruchomic testy celowane BE/FE po unifikacji.
+
+Cel kroku:
+
+Zanim zaczniemy poprawiac jakosc merytoryczna odpowiedzi, kazdy feature ma
+pokazywac przebieg pracy Copilota w tym samym kontrakcie i tym samym widoku.
+To usuwa drift miedzy Incident Trackerem i Flow Explorerem oraz daje jedno
+miejsce do dalszego rozwijania podgladu krokow, evidence, promptu, activity i
+tool feedbacku.
+
+### 000a. Wspolny kontrakt i komponent follow-up chatu
+
+- [x] Omowic krok i zatwierdzic zakres.
+- [x] Przeniesc kontrakt odpowiedzi wiadomosci follow-up do `shared.ai`.
+- [x] Dostosowac Incident Tracker do wspolnego kontraktu chatu bez legacy DTO.
+- [x] Dostosowac Flow Explorer do wspolnego kontraktu chatu bez legacy DTO.
+- [x] Wydzielic wspolny komponent FE `app-analysis-follow-up-chat`.
+- [x] Podpiac Incident Tracker pod wspolny komponent bez utraty lepszego UI:
+  markdown, kopiowanie, evidence i feedback tooli per wiadomosc.
+- [x] Podpiac Flow Explorer pod wspolny komponent z tekstami dopasowanymi do
+  endpoint follow-up.
+- [x] Usunac lokalny legacy markup/style/metody chatu z Flow Explorera.
+- [x] Uruchomic testy celowane BE/FE po unifikacji.
+
+Cel kroku:
+
+Follow-up chat jest wspolnym wzorcem pracy po wyniku AI, a nie detalem
+pojedynczego feature'a. Incident Tracker mial dojrzalszy chat, dlatego jego
+zachowanie zostaje przeniesione do shared komponentu i podlaczone rowniez pod
+Flow Explorer. Feature'y nadal decyduja o dostepnosci chatu i wywolaniu
+wlasnego endpointu, ale nie duplikuja prezentacji wiadomosci, evidence,
+feedbacku tooli ani kopiowania.
+
 ### 001. Baseline quality report model
 
 - [ ] Omowic krok i zatwierdzic zakres.
@@ -405,9 +449,36 @@ ulatwia egzekwowanie kolejnych krokow i mierzenie poprawy.
 
 Status: accepted.
 
+### 002. Wspolny przebieg pracy Copilota przed quality improvements
+
+Decyzja: przed usprawnieniami merytorycznymi Flow Explorera ujednolicamy
+kontrakt i UI przebiegu pracy Copilota z Incident Trackerem. Flow Explorer nie
+utrzymuje wlasnego, uproszczonego widoku trace ani osobnego DTO kroku joba.
+
+Powod: lokalny trace Flow Explorera powodowal drift kontraktowy i UI. Panel
+Incident Trackera jest czytelniejszy, pokazuje szczegoly evidence/activity i
+powinien byc wspolnym wzorcem dla kolejnych feature'ow analitycznych.
+
+Status: implemented and verified.
+
+### 003. Wspolny follow-up chat przed quality improvements
+
+Decyzja: follow-up chat ma miec wspolny publiczny model wiadomosci i wspolny
+komponent frontendowy. Incident Tracker i Flow Explorer nie utrzymuja osobnych
+DTO odpowiedzi chatu ani osobnych implementacji prezentacji wiadomosci.
+
+Powod: chat po analizie ma ten sam cel produktowy w kazdym feature: dopytanie
+AI o wynik, pokazanie odpowiedzi, evidence/tool feedbacku i umozliwienie
+kopiowania. Lokalny chat Flow Explorera byl ubozszy i powodowal UI/contract
+drift wzgledem Incident Trackera.
+
+Status: implemented and verified.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
+- [x] 000. Wspolny kontrakt i widok przebiegu pracy Copilota.
+- [x] 000a. Wspolny kontrakt i komponent follow-up chatu.
 - [ ] 001. Baseline quality report model.
 - [ ] 002. Canonical tool inputs artifact.
 - [ ] 003. Snippet ranking pod primary flow i focus areas.

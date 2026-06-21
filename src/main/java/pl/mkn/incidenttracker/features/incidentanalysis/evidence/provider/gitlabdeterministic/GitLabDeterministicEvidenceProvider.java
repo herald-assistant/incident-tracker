@@ -19,7 +19,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabSourceResolveSess
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
-import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisStepPhase;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
 import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment.DeploymentContextResolver;

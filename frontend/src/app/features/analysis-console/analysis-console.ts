@@ -16,10 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
-  AnalysisAiToolFeedback,
   ApiErrorResponse,
-  AnalysisChatMessageResponse,
-  AnalysisEvidenceSection,
   AnalysisJobStateSnapshot,
   ExportState,
   GitHubAuthStatus,
@@ -31,15 +28,13 @@ import {
   buildAnalysisActionsHint,
   buildJobBannerMessage,
   defaultErrorMessage,
-  formatDateTime,
-  formatEvidenceSectionTitle,
   formatStatus,
   hasInProgressChat,
   isTerminalStatus,
   statusClassName,
   valueOrFallback
 } from '../../core/utils/analysis-display.utils';
-import { copyElementToClipboard, copyTextToClipboard } from '../../core/utils/clipboard.utils';
+import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import {
   buildExportEnvelope,
   buildExportFileName,
@@ -53,9 +48,8 @@ import {
   GITHUB_AI_CREDIT_USD
 } from '../../core/utils/analysis-ai-usage-cost.utils';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
+import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
-import { MarkdownContentComponent } from '../../components/markdown-content/markdown-content';
-import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 
 const POLL_INTERVAL_MS = 1500;
 const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
@@ -81,9 +75,8 @@ type RunContextItem = {
     ReactiveFormsModule,
     MatTooltipModule,
     AnalysisFinalResultComponent,
-    AnalysisStepsPanelComponent,
-    MarkdownContentComponent,
-    AttributeNamePipe
+    AnalysisFollowUpChatComponent,
+    AnalysisStepsPanelComponent
   ],
   templateUrl: './analysis-console.html',
   styleUrl: './analysis-console.scss'
@@ -100,10 +93,6 @@ export class AnalysisConsoleComponent {
   });
   readonly aiModelControl = new FormControl('', { nonNullable: true });
   readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
-  readonly chatMessageControl = new FormControl('', {
-    nonNullable: true,
-    validators: [Validators.required]
-  });
 
   readonly isLoading = signal(false);
   readonly isChatSubmitting = signal(false);
@@ -121,7 +110,6 @@ export class AnalysisConsoleComponent {
   readonly githubAuthError = signal('');
   readonly githubReauthRequiredByError = signal(false);
   readonly chatNeedsGithubAuth = signal(false);
-  readonly copiedChatMessageId = signal<string | null>(null);
   readonly copiedPreparedPrompt = signal(false);
 
   readonly aiModelOptions = computed<SelectOption[]>(() => {
@@ -254,14 +242,12 @@ export class AnalysisConsoleComponent {
 
   private activeAnalysisId: string | null = null;
   private pollHandle: number | null = null;
-  private chatCopyFeedbackHandle: number | null = null;
   private promptCopyFeedbackHandle: number | null = null;
 
   constructor() {
     this.loadGithubAuthStatus();
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
-      this.clearChatCopyFeedback();
       this.clearPromptCopyFeedback();
     });
   }
@@ -429,14 +415,12 @@ export class AnalysisConsoleComponent {
     this.clearFormError();
   }
 
-  submitChat(event: Event): void {
-    event.preventDefault();
-
+  submitChat(message: string): void {
     const currentJob = this.job();
     const analysisId = this.activeAnalysisId || currentJob?.analysisId || '';
-    const message = this.chatMessageControl.value.trim();
+    const trimmedMessage = message.trim();
 
-    if (!message) {
+    if (!trimmedMessage) {
       this.chatError.set('Wpisz pytanie albo polecenie do AI.');
       return;
     }
@@ -453,20 +437,15 @@ export class AnalysisConsoleComponent {
 
     this.chatError.set('');
     this.isChatSubmitting.set(true);
-    this.chatMessageControl.disable({ emitEvent: false });
 
     this.analysisApi
-      .sendChatMessage(analysisId, { message })
+      .sendChatMessage(analysisId, { message: trimmedMessage })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => {
-          this.isChatSubmitting.set(false);
-          this.chatMessageControl.enable({ emitEvent: false });
-        })
+        finalize(() => this.isChatSubmitting.set(false))
       )
       .subscribe({
         next: (job) => {
-          this.chatMessageControl.setValue('', { emitEvent: false });
           this.activeAnalysisId = job.analysisId;
           this.applyJob(job, {
             origin: 'live',
@@ -488,62 +467,6 @@ export class AnalysisConsoleComponent {
           this.chatNeedsGithubAuth.set(this.isGithubAuthError(transportError.code));
         }
       });
-  }
-
-  protected chatMessageTitle(message: AnalysisChatMessageResponse): string {
-    if (message.role === 'USER') {
-      return 'Operator';
-    }
-    if (message.status === 'IN_PROGRESS') {
-      return 'AI odpowiada';
-    }
-    if (message.status === 'FAILED') {
-      return 'AI zakończyło odpowiedź błędem';
-    }
-    return 'AI';
-  }
-
-  protected chatMessageMeta(message: AnalysisChatMessageResponse): string {
-    const status = message.role === 'ASSISTANT' ? formatStatus(message.status) : '';
-    const timestamp = formatDateTime(message.completedAt || message.updatedAt || message.createdAt);
-    return [status, timestamp].filter(Boolean).join(' · ');
-  }
-
-  protected canCopyChatMessage(message: AnalysisChatMessageResponse): boolean {
-    return message.status !== 'IN_PROGRESS';
-  }
-
-  protected isLastPendingAssistantMessage(
-    message: AnalysisChatMessageResponse,
-    messages: AnalysisChatMessageResponse[]
-  ): boolean {
-    return (
-      message.role === 'ASSISTANT' &&
-      message.status === 'IN_PROGRESS' &&
-      messages.length > 0 &&
-      messages[messages.length - 1]?.id === message.id
-    );
-  }
-
-  protected evidenceSectionTitle(section: AnalysisEvidenceSection): string {
-    return formatEvidenceSectionTitle(section);
-  }
-
-  protected toolFeedbackTarget(feedback: AnalysisAiToolFeedback): string {
-    return feedback.targetToolCallId
-      ? `${feedback.targetToolName || 'tool'} (${feedback.targetToolCallId})`
-      : feedback.targetToolName || 'tool';
-  }
-
-  protected toolFeedbackMeta(feedback: AnalysisAiToolFeedback): string {
-    return [
-      toolFeedbackUsefulnessLabel(feedback.usefulness),
-      toolFeedbackIssueLabel(feedback.issueCategory),
-      toolFeedbackImprovementLabel(feedback.improvementArea),
-      feedback.confidence ? `pewność: ${feedback.confidence}` : ''
-    ]
-      .filter(Boolean)
-      .join(' · ');
   }
 
   protected statusLabel(status: string): string {
@@ -599,30 +522,6 @@ export class AnalysisConsoleComponent {
     }, 1600);
   }
 
-  protected async copyChatMessage(
-    messageElement: HTMLElement,
-    message: AnalysisChatMessageResponse
-  ): Promise<void> {
-    const copied = await copyElementToClipboard(messageElement);
-    if (!copied) {
-      this.chatError.set('Nie udało się skopiować wiadomości do schowka.');
-      return;
-    }
-
-    this.chatError.set('');
-    this.copiedChatMessageId.set(message.id);
-    if (this.chatCopyFeedbackHandle !== null) {
-      window.clearTimeout(this.chatCopyFeedbackHandle);
-    }
-
-    this.chatCopyFeedbackHandle = window.setTimeout(() => {
-      if (this.copiedChatMessageId() === message.id) {
-        this.copiedChatMessageId.set(null);
-      }
-      this.chatCopyFeedbackHandle = null;
-    }, 1600);
-  }
-
   private pollAnalysis(analysisId: string): void {
     this.analysisApi
       .getAnalysis(analysisId)
@@ -666,14 +565,6 @@ export class AnalysisConsoleComponent {
       window.clearTimeout(this.pollHandle);
       this.pollHandle = null;
     }
-  }
-
-  private clearChatCopyFeedback(): void {
-    if (this.chatCopyFeedbackHandle !== null) {
-      window.clearTimeout(this.chatCopyFeedbackHandle);
-      this.chatCopyFeedbackHandle = null;
-    }
-    this.copiedChatMessageId.set(null);
   }
 
   private clearPromptCopyFeedback(): void {
@@ -1101,51 +992,4 @@ function formatDurationMs(value: number): string {
   }
 
   return `${formatTokenCount(value)} ms`;
-}
-
-function toolFeedbackUsefulnessLabel(value: string): string {
-  const labels: Record<string, string> = {
-    useful: 'użyteczne',
-    partial: 'częściowe',
-    not_useful: 'nieprzydatne',
-    invalid: 'niepoprawne',
-    error: 'błąd'
-  };
-  return labels[value] || value || '';
-}
-
-function toolFeedbackIssueLabel(value: string): string {
-  const labels: Record<string, string> = {
-    no_issue: 'bez problemu',
-    no_data: 'brak danych',
-    wrong_scope: 'zły zakres',
-    incomplete: 'niepełne',
-    too_much_noise: 'szum',
-    ambiguous_result: 'niejednoznaczne',
-    stale_data: 'nieświeże dane',
-    access_error: 'błąd dostępu',
-    tool_error: 'błąd toola',
-    schema_or_format_issue: 'schema/format',
-    missing_operational_context: 'brak opctx',
-    missing_code_scope: 'brak scope kodu',
-    model_misused_tool: 'złe użycie przez AI',
-    other: 'inne'
-  };
-  return labels[value] || value || '';
-}
-
-function toolFeedbackImprovementLabel(value: string): string {
-  const labels: Record<string, string> = {
-    none: 'bez usprawnień',
-    tool_contract: 'kontrakt toola',
-    tool_description: 'opis toola',
-    tool_policy: 'polityka tooli',
-    adapter_result: 'wynik adaptera',
-    operational_context_data: 'dane opctx',
-    code_search_scope: 'scope kodu',
-    database_mapping: 'mapowanie DB',
-    ui_presentation: 'prezentacja UI',
-    other: 'inne'
-  };
-  return labels[value] || value || '';
 }

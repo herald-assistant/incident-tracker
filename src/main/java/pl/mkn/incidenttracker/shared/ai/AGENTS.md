@@ -16,7 +16,10 @@ Obecnie obejmuje:
   user-visible trace aktywnosci AI bez typow Copilot SDK,
 - `AnalysisAiToolFeedback` oraz mapper `AnalysisAiToolFeedbackEvidenceMapper`
   jako user-visible kontrakt feedbacku tooli, transportowany przez neutralne
-  `AnalysisEvidenceSection`.
+  `AnalysisEvidenceSection`,
+- `AnalysisJobStepResponse` i `AnalysisChatMessageResponse` jako neutralne
+  kontrakty zasilajace wspolne komponenty UI przebiegu pracy i follow-up
+  chatu w wielu feature'ach.
 
 ## Zasady
 
@@ -24,5 +27,8 @@ Obecnie obejmuje:
   `agenttools.*` ani `integrations.*`.
 - Trzymaj tu tylko neutralne dane, ktore nie zakladaja Copilota,
   `correlationId`, branchy, srodowiska ani konkretnego feature'a.
+- Kontrakty zasilajace UI moga opisywac role typu `status`, `usage`,
+  `toolFeedback`, `evidence references` albo `chat message`, ale nie moga
+  wymagac incidentowego, flow-explorerowego ani innego feature-specific pola.
 - Endpointy HTTP, DTO odpowiedzi API i mapowanie z platformowego katalogu
   modeli trzymaj w `api.*`, nie tutaj.

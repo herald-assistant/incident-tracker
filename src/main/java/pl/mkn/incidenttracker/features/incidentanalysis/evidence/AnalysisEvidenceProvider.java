@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.features.incidentanalysis.evidence;
 
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 
 import java.util.List;
 

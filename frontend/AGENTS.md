@@ -38,6 +38,16 @@ Glowny shell ma trzy grupy nawigacji:
 - V1 jest jasnym motywem, ale style maja byc oparte o tokeny CSS i gotowe na
   przyszle warianty.
 - UI ma byc spokojne, korporacyjne, czytelne i gesto informacyjne.
+- Powtarzalne elementy pracy analitycznej musza byc spojne miedzy feature'ami:
+  przebieg runu, tok pracy AI, tool evidence, follow-up chat, import/export,
+  usage/cost, empty/error/loading states i drobne elementy prezentacji wyniku.
+  Zanim dodasz lokalny markup, model albo styl w feature screen, sprawdz czy
+  istnieje shared komponent/model w `core` albo `components`; jezeli wzorzec
+  ma zostac uzyty przez wiecej niz jeden feature, wydziel go zamiast kopiowac.
+- Result body moze byc feature-specific, bo odpowiada na inny problem
+  produktowy, ale jego powtarzalne fragmenty UI/UX powinny uzywac poznanych
+  juz wzorcow, zeby uzytkownik nie uczyl sie nowego interfejsu dla tej samej
+  czynnosci.
 - Nie dodawaj marketingowych hero do narzedzi codziennej pracy.
 - Nie uzywaj dekoracyjnych gradientow/orbow ani duzych opisowych kart jako
   glownej kompozycji.

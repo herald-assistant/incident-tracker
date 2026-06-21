@@ -6,7 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.incidenttracker.features.incidentanalysis.evidence.AnalysisEvidenceReference;
+import pl.mkn.incidenttracker.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.incidenttracker.shared.ai.AnalysisJobStepResponse;
+import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.AnalysisJobService;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
@@ -199,6 +201,7 @@ class AnalysisJobControllerTest {
                                 Instant.parse("2026-04-12T18:02:00Z"),
                                 Instant.parse("2026-04-12T18:02:00Z"),
                                 Instant.parse("2026-04-12T18:02:00Z"),
+                                List.of(),
                                 List.of(),
                                 List.of(),
                                 null
