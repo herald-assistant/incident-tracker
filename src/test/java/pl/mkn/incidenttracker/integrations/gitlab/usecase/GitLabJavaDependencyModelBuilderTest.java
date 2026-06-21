@@ -137,6 +137,40 @@ class GitLabJavaDependencyModelBuilderTest {
     }
 
     @Test
+    void shouldDetectAutowiredSetterInjectionWithLazyParameter() {
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+                package com.example.crm.customer;
+
+                import org.springframework.beans.factory.annotation.Autowired;
+                import org.springframework.context.annotation.Lazy;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                class CustomerController {
+                    private CustomerActivationService customerActivationService;
+
+                    @Autowired
+                    public void setCustomerActivationService(@Lazy CustomerActivationService customerActivationService) {
+                        this.customerActivationService = customerActivationService;
+                    }
+                }
+                """);
+
+        var model = builder.build(astFile, "CustomerController");
+
+        assertEquals(1, model.injectedDependencies().size());
+        assertDependency(
+                model.injectedDependencies().get(0),
+                "customerActivationService",
+                "CustomerActivationService",
+                GitLabJavaInjectionSource.AUTOWIRED_SETTER,
+                null
+        );
+        assertEquals(List.of("Autowired", "Lazy"), model.injectedDependencies().get(0).annotations());
+        assertEquals(GitLabEndpointUseCaseConfidence.HIGH, model.injectedDependencies().get(0).confidence());
+    }
+
+    @Test
     void shouldDetectAutowiredConstructorInjectionWithParameterQualifier() {
         var astFile = astFile("src/main/java/com/example/crm/customer/CustomerSyncService.java", """
                 package com.example.crm.customer;

@@ -308,6 +308,153 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     }
 
     @Test
+    void shouldTraverseAutowiredSetterInjectedBranchAndConstructorInjectedBranch() {
+        var sources = new LinkedHashMap<String, String>();
+        sources.put(path("api/CustomerController.java"), """
+                package com.example.crm.customer.api;
+
+                import com.example.crm.customer.application.CustomerAuditFacade;
+                import com.example.crm.customer.application.CustomerActivationService;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.beans.factory.annotation.Autowired;
+                import org.springframework.context.annotation.Lazy;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequiredArgsConstructor
+                class CustomerController {
+                    private final CustomerAuditFacade customerAuditFacade;
+                    private CustomerActivationService customerActivationService;
+
+                    @Autowired
+                    public void setCustomerActivationService(@Lazy CustomerActivationService customerActivationService) {
+                        this.customerActivationService = customerActivationService;
+                    }
+
+                    public void activateCustomer(CustomerActivationRequest request) {
+                        customerActivationService.activate(request);
+                        customerAuditFacade.recordActivation(request);
+                    }
+                }
+                """);
+        sources.put(path("api/CustomerActivationRequest.java"), """
+                package com.example.crm.customer.api;
+
+                record CustomerActivationRequest(String customerId) {
+                }
+                """);
+        sources.put(path("application/CustomerActivationService.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.api.CustomerActivationRequest;
+                import com.example.crm.customer.domain.CustomerCommandRepositoryPort;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Service;
+
+                @Service
+                @RequiredArgsConstructor
+                class CustomerActivationService {
+                    private final CustomerCommandRepositoryPort customerCommandRepository;
+
+                    public void activate(CustomerActivationRequest request) {
+                        customerCommandRepository.saveActivation(request.customerId());
+                    }
+                }
+                """);
+        sources.put(path("application/CustomerAuditFacade.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.api.CustomerActivationRequest;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Component;
+
+                @Component
+                @RequiredArgsConstructor
+                class CustomerAuditFacade {
+                    private final CustomerAuditService customerAuditService;
+
+                    public void recordActivation(CustomerActivationRequest request) {
+                        customerAuditService.recordActivation(request.customerId());
+                    }
+                }
+                """);
+        sources.put(path("application/CustomerAuditService.java"), """
+                package com.example.crm.customer.application;
+
+                import org.springframework.stereotype.Service;
+
+                @Service
+                class CustomerAuditService {
+                    public void recordActivation(String customerId) {
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerCommandRepositoryPort.java"), """
+                package com.example.crm.customer.domain;
+
+                interface CustomerCommandRepositoryPort {
+                    void saveActivation(String customerId);
+                }
+                """);
+        sources.put(path("adapter/out/CustomerJpaCommandRepository.java"), """
+                package com.example.crm.customer.adapter.out;
+
+                import com.example.crm.customer.domain.CustomerCommandRepositoryPort;
+                import org.springframework.stereotype.Repository;
+
+                @Repository
+                class CustomerJpaCommandRepository implements CustomerCommandRepositoryPort {
+                    public void saveActivation(String customerId) {
+                    }
+                }
+                """);
+        stubRepository(sources);
+        var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
+
+        var result = traversalService.traverse(
+                session,
+                new GitLabEndpointUseCaseEndpointContext(
+                        "POST /api/customers/activation -> CustomerController#activateCustomer",
+                        List.of("POST"),
+                        "/api/customers/activation",
+                        null,
+                        "com.example.crm.customer.api.CustomerController",
+                        "activateCustomer",
+                        path("api/CustomerController.java"),
+                        1,
+                        30,
+                        List.of("CustomerActivationRequest"),
+                        List.of(),
+                        List.of(),
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of(),
+                        List.of()
+                ),
+                new GitLabEndpointUseCaseLimits(6, 30, 80, false, false, 0, false)
+        );
+
+        var byPath = filesByPath(result);
+        assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
+                byPath.get(path("application/CustomerActivationService.java")).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.DOMAIN_MODEL,
+                byPath.get(path("application/CustomerAuditFacade.java")).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
+                byPath.get(path("application/CustomerAuditService.java")).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_PORT,
+                byPath.get(path("domain/CustomerCommandRepositoryPort.java")).role());
+        assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_IMPLEMENTATION,
+                byPath.get(path("adapter/out/CustomerJpaCommandRepository.java")).role());
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INJECTED_PORT_CALL
+                        && relation.to().contains("CustomerActivationService#activate")));
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INJECTED_PORT_CALL
+                        && relation.to().contains("CustomerAuditFacade#recordActivation")));
+        assertFalse(result.unresolved().stream()
+                .anyMatch(reference -> String.valueOf(reference.symbol()).contains("CustomerActivationService")));
+    }
+
+    @Test
     void shouldTreatLombokBuilderAsGeneratedTerminalCall() {
         var sources = new LinkedHashMap<String, String>();
         sources.put(path("api/CustomerController.java"), """

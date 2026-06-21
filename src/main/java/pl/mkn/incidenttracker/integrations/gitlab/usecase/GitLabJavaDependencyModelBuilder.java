@@ -6,6 +6,8 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
@@ -112,6 +114,9 @@ public class GitLabJavaDependencyModelBuilder {
         for (var dependency : autowiredFieldDependencies(astFile, type)) {
             dependencies.putIfAbsent(dependencyKey(dependency), dependency);
         }
+        for (var dependency : autowiredSetterDependencies(astFile, type)) {
+            dependencies.putIfAbsent(dependencyKey(dependency), dependency);
+        }
         for (var dependency : constructorDependencies(astFile, type)) {
             dependencies.putIfAbsent(dependencyKey(dependency), dependency);
         }
@@ -160,6 +165,38 @@ public class GitLabJavaDependencyModelBuilder {
                                 variable,
                                 GitLabJavaInjectionSource.AUTOWIRED_FIELD
                         )))
+                .filter(dependency -> dependency != null)
+                .toList();
+    }
+
+    private List<GitLabJavaInjectedDependency> autowiredSetterDependencies(
+            GitLabJavaAstFile astFile,
+            TypeDeclaration<?> type
+    ) {
+        return immediateMethods(type).stream()
+                .filter(method -> hasAnnotation(method, "Autowired"))
+                .filter(method -> !method.getParameters().isEmpty())
+                .flatMap(method -> method.getParameters().stream()
+                        .map(parameter -> {
+                            var typeName = parameter.getType().asString();
+                            if (skipDependencyType(astFile, typeName)) {
+                                return null;
+                            }
+                            return new GitLabJavaInjectedDependency(
+                                    parameter.getNameAsString(),
+                                    typeName,
+                                    GitLabJavaInjectionSource.AUTOWIRED_SETTER,
+                                    setterQualifier(method, parameter),
+                                    qualifiedTypeName(astFile, type),
+                                    astFile.path(),
+                                    parameter.getBegin().map(position -> position.line)
+                                            .orElse(method.getBegin().map(position -> position.line).orElse(0)),
+                                    parameter.getEnd().map(position -> position.line)
+                                            .orElse(method.getEnd().map(position -> position.line).orElse(0)),
+                                    joinAnnotationNames(method, parameter),
+                                    GitLabEndpointUseCaseConfidence.HIGH
+                            );
+                        }))
                 .filter(dependency -> dependency != null)
                 .toList();
     }
@@ -298,6 +335,12 @@ public class GitLabJavaDependencyModelBuilder {
                 .toList();
     }
 
+    private List<MethodDeclaration> immediateMethods(TypeDeclaration<?> type) {
+        return type.findAll(MethodDeclaration.class).stream()
+                .filter(method -> method.findAncestor(TypeDeclaration.class).orElse(null) == type)
+                .toList();
+    }
+
     private boolean hasAnnotation(NodeWithAnnotations<?> node, String annotationName) {
         return node.getAnnotations().stream()
                 .map(annotation -> simpleName(annotation.getNameAsString()))
@@ -326,6 +369,13 @@ public class GitLabJavaDependencyModelBuilder {
                 .findFirst()
                 .map(this::qualifierValue)
                 .orElse(null);
+    }
+
+    private String setterQualifier(MethodDeclaration method, Parameter parameter) {
+        var parameterQualifier = qualifier(parameter.getAnnotations());
+        return StringUtils.hasText(parameterQualifier)
+                ? parameterQualifier
+                : qualifier(method.getAnnotations());
     }
 
     private String qualifierValue(AnnotationExpr annotation) {

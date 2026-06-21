@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.integrations.gitlab.usecase;
 
 import com.github.javaparser.ast.body.ConstructorDeclaration;
+import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.ClassExpr;
@@ -239,7 +240,10 @@ public class GitLabEndpointUseCaseTraversalService {
             if (processVariableDomainCall(session, state, astFile, node, currentSymbol, localTypes, methodCall)) {
                 continue;
             }
-            processStaticCall(session, state, astFile, node, currentSymbol, methodCall);
+            if (processStaticCall(session, state, astFile, node, currentSymbol, methodCall)) {
+                continue;
+            }
+            addUnresolvedFieldScopedCall(session, state, astFile, match, dependenciesByName, localTypes, methodCall);
         }
 
         for (var creation : directObjectCreations(method)) {
@@ -550,6 +554,44 @@ public class GitLabEndpointUseCaseTraversalService {
                 "Static helper called from traversed flow."
         ));
         return true;
+    }
+
+    private void addUnresolvedFieldScopedCall(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabEndpointUseCaseTraversalState state,
+            GitLabJavaAstFile astFile,
+            GitLabJavaMethodMatch match,
+            Map<String, GitLabJavaInjectedDependency> dependenciesByName,
+            Map<String, String> localTypes,
+            MethodCallExpr methodCall
+    ) {
+        var scope = methodCall.getScope().orElse(null);
+        var scopeName = simpleScopeName(scope);
+        if (!StringUtils.hasText(scopeName)
+                || dependenciesByName.containsKey(scopeName)
+                || localTypes.containsKey(scopeName)
+                || isAccessorLike(methodCall.getNameAsString())) {
+            return;
+        }
+        var scopeText = scope != null ? scope.toString() : null;
+        if (looksLikeTypeName(scopeText) || isConstantLike(scopeText)) {
+            return;
+        }
+
+        var fieldTypeName = fieldTypeName(astFile, match.declaringTypeQualifiedName(), scopeName);
+        if (!StringUtils.hasText(fieldTypeName)) {
+            return;
+        }
+
+        var resolved = sourceResolver.resolveType(session, astFile, fieldTypeName);
+        var candidates = resolved.resolved() ? List.of(resolved.filePath()) : List.<String>of();
+        state.addUnresolved(
+                symbol(fieldTypeName, methodCall.getNameAsString()),
+                astFile.path(),
+                "Scoped method call uses a class field that is not recognized as an injected dependency or local type; traversal may omit this branch.",
+                List.of(scopeName, fieldTypeName, methodCall.getNameAsString()),
+                candidates
+        );
     }
 
     private boolean isLombokGeneratedStaticCall(
@@ -1209,6 +1251,20 @@ public class GitLabEndpointUseCaseTraversalService {
                 .map(type -> (TypeDeclaration<?>) type)
                 .filter(type -> simpleName.equals(type.getNameAsString())
                         || normalizeTypeName(typeName).endsWith("." + type.getNameAsString()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String fieldTypeName(GitLabJavaAstFile astFile, String typeName, String fieldName) {
+        var type = findType(astFile, typeName);
+        if (type == null || !StringUtils.hasText(fieldName)) {
+            return null;
+        }
+        return type.findAll(FieldDeclaration.class).stream()
+                .filter(field -> field.findAncestor(TypeDeclaration.class).orElse(null) == type)
+                .flatMap(field -> field.getVariables().stream())
+                .filter(variable -> fieldName.equals(variable.getNameAsString()))
+                .map(variable -> variable.getType().asString())
                 .findFirst()
                 .orElse(null);
     }
