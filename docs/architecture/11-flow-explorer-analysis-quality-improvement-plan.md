@@ -319,14 +319,14 @@ sciezek repozytorium i file pathow.
 
 ### 002. Tool policy dla redundantnego discovery
 
-- [ ] Omowic krok i zatwierdzic zakres.
-- [ ] Dodac Flow Explorer policy blokujaca redundantny context rebuild w
+- [x] Omowic krok i zatwierdzic zakres.
+- [x] Dodac Flow Explorer policy blokujaca redundantny context rebuild w
   initial run.
-- [ ] Ograniczyc repository rediscovery, gdy selected repository scope jest
+- [x] Ograniczyc repository rediscovery, gdy selected repository scope jest
   znany.
-- [ ] Zwrocic modelowi czytelny denied message z instrukcja uzycia artifacts.
-- [ ] Zostawic follow-up z osobna, ostrozniejsza polityka.
-- [ ] Dodac testy CRM-specific i zanonimizowane.
+- [x] Zwrocic modelowi czytelny denied message z instrukcja uzycia artifacts.
+- [x] Zostawic follow-up z osobna, ostrozniejsza polityka.
+- [x] Dodac testy CRM-specific i zanonimizowane.
 
 Cel kroku:
 
@@ -506,13 +506,32 @@ calli i ograniczyc rediscovery.
 
 Status: implemented and verified.
 
+### 006. Tool policy dla redundantnego discovery
+
+Decyzja: Flow Explorer dodaje feature-owned
+`FlowExplorerCopilotRedundantDiscoveryPolicy`, ktora dziala tylko dla ukrytego
+runtime contextu `flowExplorerFeature=flow-explorer` i
+`flowExplorerRunKind=initial`. Policy blokuje
+`gitlab_build_endpoint_use_case_context`, gdy deterministic endpoint context
+jest juz osadzony w artefaktach initial runu, oraz
+`gitlab_list_available_repositories`, gdy repository scope jest juz resolved.
+
+Powod: canonical tool inputs i prompt guidance zmniejszaja ryzyko, ale nie
+gwarantuja, ze model nie wykona kosztownego rediscovery. Twarda policy zamienia
+redundantny tool call w czytelny denied result z instrukcja uzycia
+`flow-explorer/canonical-tool-inputs.md`, `compact-flow-manifest.md` i focused
+GitLab reads. Follow-up pozostaje nieblokowany, bo tam uzytkownik moze
+potrzebowac dodatkowego discovery po nowym pytaniu.
+
+Status: implemented and verified.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
 - [x] 000. Wspolny kontrakt i widok przebiegu pracy Copilota.
 - [x] 000a. Wspolny kontrakt i komponent follow-up chatu.
 - [x] 001. Canonical tool inputs artifact.
-- [ ] 002. Tool policy dla redundantnego discovery.
+- [x] 002. Tool policy dla redundantnego discovery.
 - [ ] 003. Snippet ranking pod primary flow i focus areas.
 - [ ] 004. Baseline quality report model.
 - [ ] 005. Ranking i grupowanie limitations/next reads.

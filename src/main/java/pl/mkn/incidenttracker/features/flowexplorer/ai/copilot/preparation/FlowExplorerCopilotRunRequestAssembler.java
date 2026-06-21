@@ -50,7 +50,8 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 runReference,
                 request,
                 contextSnapshot,
-                preparation
+                preparation,
+                followUp
         );
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT);
         var toolAccessPolicy = toolAccessPolicyFactory.create(registeredTools);

@@ -102,7 +102,17 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals("flow-explorer-job-123", sessionContext.copilotSessionId());
         assertEquals("job-123", hiddenContext.get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals("flow-explorer-job-123", hiddenContext.get(AgentToolContextKeys.COPILOT_SESSION_ID));
-        assertEquals(2, hiddenContext.size());
+        assertEquals(6, hiddenContext.size());
+        assertEquals(
+                FlowExplorerCopilotToolContextKeys.FEATURE_VALUE,
+                hiddenContext.get(FlowExplorerCopilotToolContextKeys.FEATURE)
+        );
+        assertEquals(
+                FlowExplorerCopilotToolContextKeys.RUN_KIND_INITIAL,
+                hiddenContext.get(FlowExplorerCopilotToolContextKeys.RUN_KIND)
+        );
+        assertEquals(true, hiddenContext.get(FlowExplorerCopilotToolContextKeys.ENDPOINT_CONTEXT_EMBEDDED));
+        assertEquals(true, hiddenContext.get(FlowExplorerCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED));
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.CORRELATION_ID));
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_GROUP));
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_BRANCH));
@@ -231,9 +241,14 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 preparation()
         );
         var runRequest = assembly.runRequest();
+        var hiddenContext = assembly.toolSessionContext().hiddenContext();
 
         assertEquals("follow-up-123", runRequest.runReference());
         assertEquals("Flow Explorer canonical prompt", runRequest.prompt());
+        assertEquals(
+                FlowExplorerCopilotToolContextKeys.RUN_KIND_FOLLOW_UP,
+                hiddenContext.get(FlowExplorerCopilotToolContextKeys.RUN_KIND)
+        );
         assertSkillDirectories(
                 runRequest.sessionConfigRequest().skillDirectories(),
                 FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
