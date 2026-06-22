@@ -452,6 +452,228 @@ class GitLabRepositoryEndpointServiceTest {
     }
 
     @Test
+    void shouldResolveClassQualifiedEndpointConstantsFromRegularImport() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var controllerPath = "crm-exposure/crm-exposure-service/src/main/java/com/example/crm/exposure/api/CustomerExposureController.java";
+        var constantsPath = "crm-exposure/crm-exposure-service/src/main/java/com/example/crm/exposure/contract/CustomerExposureUris.java";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-exposure-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-exposure-service",
+                "main",
+                controllerPath,
+                "Matched @RestController.",
+                9
+        )));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-exposure-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-exposure-service", "main", null))
+                .thenReturn(List.of());
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-exposure-service",
+                "main",
+                controllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-exposure-service",
+                "main",
+                controllerPath,
+                """
+                        package com.example.crm.exposure.api;
+
+                        import java.math.BigDecimal;
+                        import java.util.List;
+                        import java.util.Map;
+                        import org.springframework.web.bind.annotation.PathVariable;
+                        import org.springframework.web.bind.annotation.PostMapping;
+                        import org.springframework.web.bind.annotation.RequestBody;
+                        import org.springframework.web.bind.annotation.RequestMapping;
+                        import org.springframework.web.bind.annotation.RestController;
+                        import com.example.crm.exposure.contract.CustomerExposureUris;
+
+                        @RestController
+                        @RequestMapping(CustomerExposureUris.EXPOSURE_BASE_URI)
+                        class CustomerExposureController {
+
+                          @PostMapping
+                          Map<String, BigDecimal> getExposure(@RequestBody List<String> customerIds) {
+                            return Map.of();
+                          }
+
+                          @PostMapping(CustomerExposureUris.TOTAL_EXPOSURE_URI)
+                          BigDecimal getTotalExposure(@RequestBody List<String> customerIds) {
+                            return BigDecimal.ZERO;
+                          }
+
+                          @PostMapping(CustomerExposureUris.EXPOSURE_RECALCULATION_URI)
+                          void recalculateExposure(@PathVariable(CustomerExposureUris.PATH_VARIABLE_CASE_ID) String id) {
+                          }
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-exposure-service",
+                "main",
+                constantsPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-exposure-service",
+                "main",
+                constantsPath,
+                """
+                        package com.example.crm.exposure.contract;
+
+                        public final class CustomerExposureUris {
+                          public static final String EXPOSURE_BASE_URI = "/api/crm/exposures";
+                          public static final String TOTAL_EXPOSURE_URI = "/group-total";
+                          public static final String PATH_VARIABLE_CASE_ID = "caseId";
+                          public static final String EXPOSURE_RECALCULATION_URI = "/{" + PATH_VARIABLE_CASE_ID + "}/recalculate";
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-exposure-service",
+                "main",
+                null,
+                null,
+                20
+        ));
+
+        assertEquals(3, result.endpoints().size());
+        assertTrue(result.endpoints().stream()
+                .anyMatch(endpoint -> "POST /api/crm/exposures -> com.example.crm.exposure.api.CustomerExposureController#getExposure"
+                        .equals(endpoint.endpointId())));
+        assertTrue(result.endpoints().stream()
+                .anyMatch(endpoint -> "POST /api/crm/exposures/group-total -> com.example.crm.exposure.api.CustomerExposureController#getTotalExposure"
+                        .equals(endpoint.endpointId())));
+        var recalculationEndpoint = result.endpoints().stream()
+                .filter(endpoint -> "recalculateExposure".equals(endpoint.handlerMethod()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("/api/crm/exposures/{caseId}/recalculate", recalculationEndpoint.path());
+        assertEquals("caseId", recalculationEndpoint.documentation().parameters().get(0).name());
+        assertEquals(List.of(), recalculationEndpoint.limitations());
+    }
+
+    @Test
+    void shouldResolveClassQualifiedEndpointConstantsFromSamePackage() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var controllerPath = "crm-product/crm-product-service/src/main/java/com/example/crm/product/api/CustomerProductController.java";
+        var constantsPath = "crm-product/crm-product-service/src/main/java/com/example/crm/product/api/CustomerProductUris.java";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-product-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-product-service",
+                "main",
+                controllerPath,
+                "Matched @RestController.",
+                14
+        )));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-product-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-product-service", "main", null))
+                .thenReturn(List.of());
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-product-service",
+                "main",
+                controllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-product-service",
+                "main",
+                controllerPath,
+                """
+                        package com.example.crm.product.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.RequestParam;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        @RestController
+                        class CustomerProductController {
+
+                          @GetMapping(CustomerProductUris.NOT_SUPPORTED_PRODUCTS_URI)
+                          Map<String, CustomerProductStatus> getNotSupportedProducts(@RequestParam("customerId") List<String> customerIds) {
+                            return Map.of();
+                          }
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-product-service",
+                "main",
+                constantsPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-product-service",
+                "main",
+                constantsPath,
+                """
+                        package com.example.crm.product.api;
+
+                        public final class CustomerProductUris {
+                          static final String PRODUCT_ROOT_URI = "/api/crm/products";
+                          public static final String NOT_SUPPORTED_PRODUCTS_URI = PRODUCT_ROOT_URI + "/not-supported-products";
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-product-service",
+                "main",
+                null,
+                null,
+                20
+        ));
+
+        assertEquals(1, result.endpoints().size());
+        var endpoint = result.endpoints().get(0);
+        assertEquals("GET /api/crm/products/not-supported-products -> com.example.crm.product.api.CustomerProductController#getNotSupportedProducts",
+                endpoint.endpointId());
+        assertEquals("/api/crm/products/not-supported-products", endpoint.path());
+        assertEquals(List.of(), endpoint.limitations());
+    }
+
+    @Test
     void shouldResolveTransitiveStaticImportedEndpointConstants() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var endpointService = new GitLabRepositoryEndpointService(repositoryPort);

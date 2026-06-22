@@ -90,8 +90,14 @@ public class GitLabRepositoryEndpointService {
     private static final Pattern REQUEST_METHOD_PATTERN = Pattern.compile("RequestMethod\\.([A-Z]+)");
     private static final Pattern STRING_LITERAL_PATTERN = Pattern.compile("\"([^\"]*)\"");
     private static final Pattern IDENTIFIER_BEFORE_PAREN_PATTERN = Pattern.compile("([A-Za-z_$][\\w$]*)\\s*\\(");
+    private static final Pattern IMPORT_PATTERN = Pattern.compile(
+            "(?m)^\\s*import\\s+(?!static\\b)([\\w.]+|[\\w.]+\\.\\*)\\s*;"
+    );
     private static final Pattern STATIC_IMPORT_PATTERN = Pattern.compile(
             "(?m)^\\s*import\\s+static\\s+([\\w.]+)\\.([A-Za-z_$][\\w$]*|\\*)\\s*;"
+    );
+    private static final Pattern CLASS_QUALIFIED_CONSTANT_PATTERN = Pattern.compile(
+            "\\b([A-Z][A-Za-z0-9_$]*(?:Uris|Urls|Paths|Routes|Endpoints?|Params?|Resources?))\\.([A-Za-z_$][\\w$]*)\\b"
     );
     private static final Pattern STRING_CONSTANT_PATTERN = Pattern.compile(
             "(?s)\\b((?:(?:public|protected|private)\\s+)?(?:(?:static|final)\\s+)+String)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*([^;]+);"
@@ -414,16 +420,16 @@ public class GitLabRepositoryEndpointService {
             Map<String, String> constants,
             List<String> diagnostics,
             Set<String> visitedImportedClasses,
-            int depth
+        int depth
     ) {
         if (depth >= MAX_STATIC_CONSTANT_IMPORT_DEPTH) {
-            if (!staticImportedEndpointConstantClasses(content).isEmpty()) {
+            if (!endpointConstantClasses(content).isEmpty()) {
                 diagnostics.add("Java string constant import traversal reached depth limit at " + filePath + ".");
             }
             return;
         }
 
-        for (var importedClass : staticImportedEndpointConstantClasses(content)) {
+        for (var importedClass : endpointConstantClasses(content)) {
             if (!visitedImportedClasses.add(importedClass)) {
                 continue;
             }
@@ -463,18 +469,56 @@ public class GitLabRepositoryEndpointService {
         }
     }
 
-    private Set<String> staticImportedEndpointConstantClasses(String content) {
+    private Set<String> endpointConstantClasses(String content) {
         var importedClasses = new LinkedHashSet<String>();
-        var matcher = STATIC_IMPORT_PATTERN.matcher(content != null ? content : "");
-        while (matcher.find()) {
-            var importedClass = matcher.group(1);
-            var importedMember = matcher.group(2);
+        var packageName = extractPackageName(content);
+        var normalImports = javaImportClasses(content);
+
+        var staticImportMatcher = STATIC_IMPORT_PATTERN.matcher(content != null ? content : "");
+        while (staticImportMatcher.find()) {
+            var importedClass = staticImportMatcher.group(1);
+            var importedMember = staticImportMatcher.group(2);
             if (!likelyEndpointConstantImport(importedClass, importedMember)) {
                 continue;
             }
             importedClasses.add(importedClass);
         }
+
+        for (var entry : normalImports.entrySet()) {
+            if (likelyEndpointConstantClassName(entry.getKey())) {
+                importedClasses.add(entry.getValue());
+            }
+        }
+
+        var classQualifiedMatcher = CLASS_QUALIFIED_CONSTANT_PATTERN.matcher(content != null ? content : "");
+        while (classQualifiedMatcher.find()) {
+            var ownerClassName = classQualifiedMatcher.group(1);
+            var constantName = classQualifiedMatcher.group(2);
+            if (!likelyEndpointConstantImport(ownerClassName, constantName)) {
+                continue;
+            }
+
+            var importedClass = normalImports.get(ownerClassName);
+            if (StringUtils.hasText(importedClass)) {
+                importedClasses.add(importedClass);
+            } else if (StringUtils.hasText(packageName)) {
+                importedClasses.add(packageName + "." + ownerClassName);
+            }
+        }
         return importedClasses;
+    }
+
+    private Map<String, String> javaImportClasses(String content) {
+        var imports = new LinkedHashMap<String, String>();
+        var matcher = IMPORT_PATTERN.matcher(content != null ? content : "");
+        while (matcher.find()) {
+            var importedClass = matcher.group(1);
+            if (importedClass.endsWith(".*")) {
+                continue;
+            }
+            imports.putIfAbsent(simpleName(importedClass), importedClass);
+        }
+        return imports;
     }
 
     private GitLabRepositoryFileContent readJavaStringConstantFile(
@@ -600,21 +644,26 @@ public class GitLabRepositoryEndpointService {
     }
 
     private boolean likelyEndpointConstantImport(String importedClass, String importedMember) {
-        var className = simpleName(importedClass).toLowerCase(Locale.ROOT);
+        var className = simpleName(importedClass);
         var memberName = importedMember != null ? importedMember.toLowerCase(Locale.ROOT) : "";
-        return className.contains("uri")
-                || className.contains("url")
-                || className.contains("path")
-                || className.contains("route")
-                || className.contains("endpoint")
-                || className.contains("param")
-                || className.contains("resource")
+        return likelyEndpointConstantClassName(className)
                 || memberName.contains("uri")
                 || memberName.contains("url")
                 || memberName.contains("path")
                 || memberName.contains("route")
                 || memberName.contains("endpoint")
                 || memberName.contains("param");
+    }
+
+    private boolean likelyEndpointConstantClassName(String className) {
+        var normalized = className != null ? className.toLowerCase(Locale.ROOT) : "";
+        return normalized.contains("uri")
+                || normalized.contains("url")
+                || normalized.contains("path")
+                || normalized.contains("route")
+                || normalized.contains("endpoint")
+                || normalized.contains("param")
+                || normalized.contains("resource");
     }
 
     private void addStringConstants(
@@ -2579,9 +2628,6 @@ public class GitLabRepositoryEndpointService {
             if (!StringUtils.hasText(normalized)) {
                 return null;
             }
-            if (isStringLiteral(normalized)) {
-                return unescapeJavaString(normalized.substring(1, normalized.length() - 1));
-            }
 
             var parts = splitTopLevel(normalized, '+');
             if (parts.size() > 1) {
@@ -2594,6 +2640,10 @@ public class GitLabRepositoryEndpointService {
                     resolved.append(value);
                 }
                 return resolved.toString();
+            }
+
+            if (isStringLiteral(normalized)) {
+                return unescapeJavaString(normalized.substring(1, normalized.length() - 1));
             }
 
             var constantExpression = expressions.get(normalized);
