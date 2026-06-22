@@ -17,6 +17,9 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchExceptio
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
@@ -62,6 +65,9 @@ class GitLabRepositorySearchControllerTest {
 
     @MockitoBean
     private GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
+
+    @MockitoBean
+    private GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
 
     @Test
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {
@@ -345,6 +351,68 @@ class GitLabRepositorySearchControllerTest {
     }
 
     @Test
+    void shouldReadOpenApiEndpointSliceForValidRequest() throws Exception {
+        when(gitLabOpenApiEndpointSliceService.readEndpointSlice(any(GitLabOpenApiEndpointSliceRequest.class)))
+                .thenReturn(new GitLabOpenApiEndpointSliceResponse(
+                        "CRM",
+                        "crm-customer-api",
+                        "release-candidate",
+                        "src/main/resources/openapi/customer-api.yml",
+                        "OK",
+                        "openapi",
+                        "3.0.3",
+                        "POST",
+                        "/api/customers/{customerId}/cases",
+                        "/api/customers/{id}/cases",
+                        "createCustomerCase",
+                        "Create CRM customer case",
+                        "Creates a CRM case for an existing customer.",
+                        List.of("Customer Cases"),
+                        "crm-customer-api:src/main/resources/openapi/customer-api.yml#POST /api/customers/{id}/cases",
+                        "# OpenAPI endpoint contract\n\n```json\n{\"operationId\":\"createCustomerCase\"}\n```",
+                        82,
+                        false,
+                        List.of()
+                ));
+
+        mockMvc.perform(post("/api/gitlab/repository/openapi-endpoint-slice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "CRM",
+                                  "projectName": "crm-customer-api",
+                                  "branch": "release-candidate",
+                                  "filePath": "src/main/resources/openapi/customer-api.yml",
+                                  "httpMethod": "POST",
+                                  "endpointPath": "/api/customers/{customerId}/cases",
+                                  "includeReferencedSchemas": true,
+                                  "schemaDepth": 2,
+                                  "maxCharacters": 20000
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.group").value("CRM"))
+                .andExpect(jsonPath("$.projectName").value("crm-customer-api"))
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.specType").value("openapi"))
+                .andExpect(jsonPath("$.matchedPath").value("/api/customers/{id}/cases"))
+                .andExpect(jsonPath("$.operationId").value("createCustomerCase"))
+                .andExpect(jsonPath("$.sourceRef").value("crm-customer-api:src/main/resources/openapi/customer-api.yml#POST /api/customers/{id}/cases"));
+
+        verify(gitLabOpenApiEndpointSliceService).readEndpointSlice(argThat(request ->
+                "CRM".equals(request.group())
+                        && "crm-customer-api".equals(request.projectName())
+                        && "release-candidate".equals(request.branch())
+                        && "src/main/resources/openapi/customer-api.yml".equals(request.filePath())
+                        && "POST".equals(request.httpMethod())
+                        && "/api/customers/{customerId}/cases".equals(request.endpointPath())
+                        && Boolean.TRUE.equals(request.includeReferencedSchemas())
+                        && request.schemaDepth() == 2
+                        && request.maxCharacters() == 20000
+        ));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenGitLabSearchFindsNoCandidates() throws Exception {
         when(gitLabRepositorySearchService.search(any(GitLabRepositorySearchRequest.class)))
                 .thenThrow(new GitLabRepositorySearchException(
@@ -445,6 +513,29 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"));
 
         verifyNoInteractions(gitLabRepositoryFilesByPathApiService);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidOpenApiEndpointSliceRequest() throws Exception {
+        mockMvc.perform(post("/api/gitlab/repository/openapi-endpoint-slice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "",
+                                  "projectName": "",
+                                  "branch": "",
+                                  "filePath": "",
+                                  "httpMethod": "",
+                                  "endpointPath": "",
+                                  "schemaDepth": 99,
+                                  "maxCharacters": 999999
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+
+        verifyNoInteractions(gitLabOpenApiEndpointSliceService);
     }
 
 }

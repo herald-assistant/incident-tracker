@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryFileCandidate;
@@ -12,6 +13,7 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabProperties;
 import pl.mkn.incidenttracker.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
@@ -304,6 +306,7 @@ class GitLabMcpToolsTest {
                 mock(GitLabRepositoryEndpointService.class),
                 endpointUseCaseContextService,
                 mock(GitLabJavaMethodSliceService.class),
+                new GitLabOpenApiEndpointSliceService(mock(GitLabRepositoryPort.class), new ObjectMapper()),
                 gitLabProperties("CRM/backend")
         );
         when(endpointUseCaseContextService.buildContext(any(), any(), any()))

@@ -21,6 +21,8 @@ import {
   GitLabJavaMethodSlicePayload,
   GitLabJavaMethodSliceMethodSelector,
   GitLabJavaMethodSliceResponse,
+  GitLabOpenApiEndpointSlicePayload,
+  GitLabOpenApiEndpointSliceResponse,
   GitLabRepositoryEndpoint,
   GitLabRepositoryEndpointParameterDocumentation,
   GitLabRepositoryEndpointsPayload,
@@ -39,6 +41,7 @@ type GitLabJsonResponseKey =
   | 'endpoint-use-case-context'
   | 'repository-files-by-path'
   | 'java-method-slice'
+  | 'openapi-endpoint-slice'
   | 'source-resolve';
 type GitLabToolKey = GitLabJsonResponseKey;
 type GitLabJsonPayloadKey = 'request' | 'response';
@@ -135,6 +138,14 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/repository/java-method-slice',
     summary:
       'Pobiera kompaktowy wycinek klasy Java: wybraną metodę, potrzebne importy, pola i bliskie helpery.'
+  },
+  {
+    key: 'openapi-endpoint-slice',
+    label: 'OpenAPI Endpoint Slice',
+    category: 'Source content',
+    endpoint: '/api/gitlab/repository/openapi-endpoint-slice',
+    summary:
+      'Pobiera z OpenAPI/Swagger YAML tylko kontrakt wskazanego endpointu, bez czytania pełnego pliku.'
   },
   {
     key: 'source-resolve',
@@ -301,6 +312,42 @@ export class GitLabEvidenceConsoleComponent {
     })
   });
 
+  readonly gitLabOpenApiEndpointSliceForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    filePath: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    httpMethod: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    endpointPath: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    includeReferencedSchemas: new FormControl(true, { nonNullable: true }),
+    schemaDepth: new FormControl('2', {
+      nonNullable: true,
+      validators: [Validators.min(0), Validators.max(4)]
+    }),
+    maxCharacters: new FormControl('20000', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(50000)]
+    })
+  });
+
   readonly gitLabSourceForm = new FormGroup({
     groupPath: new FormControl('', {
       nonNullable: true,
@@ -333,6 +380,9 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabJavaMethodSliceState = signal<ToolState>(
     this.idleState('Podaj plik i metodę albo linię, aby pobrać kompaktowy slice klasy Java.')
   );
+  readonly gitLabOpenApiEndpointSliceState = signal<ToolState>(
+    this.idleState('Podaj plik OpenAPI YAML, metodę i path endpointu, aby pobrać tylko kontrakt tej operacji.')
+  );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
   );
@@ -355,6 +405,10 @@ export class GitLabEvidenceConsoleComponent {
 
   readonly gitLabJavaMethodSliceResult = computed(() =>
     this.asGitLabJavaMethodSliceResult(this.gitLabJavaMethodSliceState().response)
+  );
+
+  readonly gitLabOpenApiEndpointSliceResult = computed(() =>
+    this.asGitLabOpenApiEndpointSliceResult(this.gitLabOpenApiEndpointSliceState().response)
   );
 
   readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
@@ -385,6 +439,9 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'java-method-slice':
         this.submitGitLabJavaMethodSlice();
+        return;
+      case 'openapi-endpoint-slice':
+        this.submitGitLabOpenApiEndpointSlice();
         return;
       case 'source-resolve':
         this.submitGitLabSource();
@@ -434,6 +491,16 @@ export class GitLabEvidenceConsoleComponent {
           includeRelevantFields: true,
           includeRelevantImports: true,
           maxCharacters: '8000'
+        });
+        return;
+      case 'openapi-endpoint-slice':
+        this.gitLabOpenApiEndpointSliceForm.patchValue({
+          filePath: '',
+          httpMethod: '',
+          endpointPath: '',
+          includeReferencedSchemas: true,
+          schemaDepth: '2',
+          maxCharacters: '20000'
         });
         return;
       case 'source-resolve':
@@ -717,6 +784,50 @@ export class GitLabEvidenceConsoleComponent {
       this.evidenceApi.readGitLabJavaMethodSlice(payload),
       payload,
       '/api/gitlab/repository/java-method-slice'
+    );
+  }
+
+  submitGitLabOpenApiEndpointSlice(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabOpenApiEndpointSliceForm)) {
+      this.gitLabOpenApiEndpointSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+
+    if (this.gitLabOpenApiEndpointSliceForm.invalid) {
+      this.gitLabOpenApiEndpointSliceForm.markAllAsTouched();
+      this.gitLabOpenApiEndpointSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij filePath, HTTP method i endpoint path dla OpenAPI Endpoint Slice.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabOpenApiEndpointSlicePayload = {
+      group: this.gitLabOpenApiEndpointSliceForm.controls.group.value.trim(),
+      projectName: this.gitLabOpenApiEndpointSliceForm.controls.projectName.value.trim(),
+      branch: this.gitLabOpenApiEndpointSliceForm.controls.branch.value.trim(),
+      filePath: this.gitLabOpenApiEndpointSliceForm.controls.filePath.value.trim(),
+      httpMethod: this.gitLabOpenApiEndpointSliceForm.controls.httpMethod.value.trim().toUpperCase(),
+      endpointPath: this.gitLabOpenApiEndpointSliceForm.controls.endpointPath.value.trim(),
+      includeReferencedSchemas:
+        this.gitLabOpenApiEndpointSliceForm.controls.includeReferencedSchemas.value,
+      schemaDepth: this.optionalNumber(this.gitLabOpenApiEndpointSliceForm.controls.schemaDepth.value),
+      maxCharacters: this.optionalNumber(this.gitLabOpenApiEndpointSliceForm.controls.maxCharacters.value)
+    };
+
+    this.runRequest(
+      this.gitLabOpenApiEndpointSliceState,
+      this.evidenceApi.readGitLabOpenApiEndpointSlice(payload),
+      payload,
+      '/api/gitlab/repository/openapi-endpoint-slice'
     );
   }
 
@@ -1441,7 +1552,8 @@ export class GitLabEvidenceConsoleComponent {
       toolKey === 'endpoint-inventory' ||
       toolKey === 'endpoint-use-case-context' ||
       toolKey === 'repository-files-by-path' ||
-      toolKey === 'java-method-slice'
+      toolKey === 'java-method-slice' ||
+      toolKey === 'openapi-endpoint-slice'
     );
   }
 
@@ -1543,6 +1655,8 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabRepositoryFilesByPathState;
       case 'java-method-slice':
         return this.gitLabJavaMethodSliceState;
+      case 'openapi-endpoint-slice':
+        return this.gitLabOpenApiEndpointSliceState;
       case 'source-resolve':
         return this.gitLabSourceState;
       default:
@@ -1607,6 +1721,19 @@ export class GitLabEvidenceConsoleComponent {
     const record = response as Partial<GitLabJavaMethodSliceResponse>;
     return typeof record.status === 'string' && Array.isArray(record.candidates)
       ? (record as GitLabJavaMethodSliceResponse)
+      : null;
+  }
+
+  private asGitLabOpenApiEndpointSliceResult(
+    response: unknown
+  ): GitLabOpenApiEndpointSliceResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabOpenApiEndpointSliceResponse>;
+    return typeof record.status === 'string' && typeof record.filePath === 'string'
+      ? (record as GitLabOpenApiEndpointSliceResponse)
       : null;
   }
 

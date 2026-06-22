@@ -38,8 +38,9 @@ public class FlowExplorerPromptPreparationService {
                 - Nie opisuj pelnych klas, jezeli wystarczy metoda, rola node'a albo kontrakt endpointu.
                 - Wynik ma zawsze zawierac `overview` oraz dokladnie cztery sekcje: BUSINESS_FLOW_RULES, VALIDATIONS, PERSISTENCE, INTEGRATIONS.
                 - Dla kazdej sekcji ustaw `mode` zgodnie z `sectionModes`; `deep` oznacza bardziej szczegolowa odpowiedz, `compact` oznacza zwarta, ale nadal konkretna odpowiedz.
-                - Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`; to jest initial evidence przygotowane deterministycznie.
+                - Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`; to jest initial evidence przygotowane deterministycznie.
                 - Nie powtarzaj GitLab tool calls dla kodu, ktory jest juz widoczny w `snippet-cards.md`.
+                - Jezeli `openapi-endpoint-contract.md` jest dostepny, uzyj go jako kontraktu API request/response/parameters/security dla wybranego endpointu. Nie czytaj pelnego OpenAPI YAML.
                 - Zawsze zbuduj primary endpoint flow, a `focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`.
                 - Glebokosc eksploracji wynika z `reasoningEffort`: low = artifact-first i minimalne tool calls, medium = focused reads dla brakow primary flow, high = glebsze edge case'y i zaleznosci, nadal przez canonical inputs.
                 - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do primary flow albo sekcji deep zgodnie z reasoningEffort; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
@@ -93,6 +94,9 @@ public class FlowExplorerPromptPreparationService {
                 %s
 
                 ## Snippet cards
+                %s
+
+                ## OpenAPI endpoint contract
                 %s
 
                 ## Known limitations
@@ -154,6 +158,10 @@ public class FlowExplorerPromptPreparationService {
                 artifactContents.getOrDefault(
                         FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT,
                         "- no snippet cards collected"
+                ),
+                artifactContents.getOrDefault(
+                        FlowExplorerArtifactService.OPENAPI_ENDPOINT_CONTRACT_ARTIFACT,
+                        "- no OpenAPI endpoint contract collected"
                 ),
                 artifactService.renderLimitations(contextSnapshot),
                 artifactContents.getOrDefault(

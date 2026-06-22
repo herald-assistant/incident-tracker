@@ -108,8 +108,10 @@ Preferuj source refs w formie:
 
 - `flow-explorer/compact-flow-manifest.md`,
 - `flow-explorer/snippet-cards.md`,
+- `flow-explorer/openapi-endpoint-contract.md`,
 - `projectName:path:Lx-Ly`,
 - `tool:gitlab_read_java_method_slice`,
+- `tool:gitlab_read_openapi_endpoint_slice`,
 - `tool:opctx_get_entity`.
 
 Nie wymyslaj plikow, metod ani linii. Jezeli source ref jest niepewny, wpisz

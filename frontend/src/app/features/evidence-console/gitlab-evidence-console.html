@@ -368,6 +368,86 @@
               }
             }
 
+            @case ('openapi-endpoint-slice') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">OpenAPI file path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="src/main/resources/openapi/customer-api.yml"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.filePath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">HTTP method</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. POST"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.httpMethod"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Endpoint path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. /api/customers/{customerId}/cases"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.endpointPath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Schema depth</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="0"
+                    max="4"
+                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.schemaDepth"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max chars</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="50000"
+                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.maxCharacters"
+                  />
+                </label>
+              </div>
+
+              <label class="toggle-row">
+                <input
+                  type="checkbox"
+                  [formControl]="gitLabOpenApiEndpointSliceForm.controls.includeReferencedSchemas"
+                />
+                <span>Include referenced schemas</span>
+              </label>
+
+              @if (
+                controlInvalid(gitLabOpenApiEndpointSliceForm.controls.filePath) ||
+                controlInvalid(gitLabOpenApiEndpointSliceForm.controls.httpMethod) ||
+                controlInvalid(gitLabOpenApiEndpointSliceForm.controls.endpointPath) ||
+                controlInvalid(gitLabOpenApiEndpointSliceForm.controls.schemaDepth) ||
+                controlInvalid(gitLabOpenApiEndpointSliceForm.controls.maxCharacters)
+              ) {
+                <p class="form-error">Pola `filePath`, `HTTP method` i `Endpoint path` są wymagane, a limity muszą mieścić się w zakresie.</p>
+              }
+            }
+
             @case ('source-resolve') {
               <div class="form-grid">
                 <label class="form-field">
@@ -896,6 +976,70 @@
                 @if (sliceResult.limitations.length > 0) {
                   <ul class="context-list">
                     @for (limitation of sliceResult.limitations; track limitation) {
+                      <li>{{ limitation }}</li>
+                    }
+                  </ul>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'openapi-endpoint-slice' && gitLabOpenApiEndpointSliceResult(); as openApiResult) {
+              <section class="context-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">OpenAPI Endpoint Slice</p>
+                    <h3>{{ openApiResult.status }} · {{ openApiResult.httpMethod }} {{ openApiResult.matchedPath || openApiResult.endpointPath }}</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    @if (openApiResult.specType || openApiResult.specVersion) {
+                      <span class="panel-chip">{{ openApiResult.specType || 'spec' }} {{ openApiResult.specVersion || '' }}</span>
+                    }
+                    <span class="panel-chip">{{ openApiResult.returnedCharacters }} chars</span>
+                    @if (openApiResult.truncated) {
+                      <span class="panel-chip panel-chip--warning">truncated</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="endpoint-card__meta">
+                  <span>{{ openApiResult.projectName }}</span>
+                  <span>{{ openApiResult.branch }}</span>
+                  <span>{{ openApiResult.filePath }}</span>
+                  @if (openApiResult.operationId) {
+                    <span>{{ openApiResult.operationId }}</span>
+                  }
+                </div>
+
+                @if (openApiResult.summary || openApiResult.description) {
+                  <div class="endpoint-card__details">
+                    @if (openApiResult.summary) {
+                      <h4>{{ openApiResult.summary }}</h4>
+                    }
+                    @if (openApiResult.description) {
+                      <p>{{ openApiResult.description }}</p>
+                    }
+                    @if (openApiResult.tags.length > 0) {
+                      <div class="endpoint-card__meta">
+                        @for (tag of openApiResult.tags; track tag) {
+                          <span>{{ tag }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (openApiResult.content) {
+                  <textarea
+                    class="json-output source-output source-output--slice"
+                    readonly
+                    spellcheck="false"
+                    [value]="openApiResult.content"
+                  ></textarea>
+                }
+
+                @if (openApiResult.limitations.length > 0) {
+                  <ul class="context-list">
+                    @for (limitation of openApiResult.limitations; track limitation) {
                       <li>{{ limitation }}</li>
                     }
                   </ul>

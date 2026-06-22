@@ -55,6 +55,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Nie generuj ponownie calego initial resultu. Odpowiedz tylko na aktualne pytanie uzytkownika.
                 - Follow-up sluzy do wyjatkow, doprecyzowan i waskich dopytan, nie do ratowania powierzchownego initial resultu.
                 - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`.
+                - Jezeli `openapi-endpoint-contract.md` jest dostepny, uzyj go dla pytan o kontrakt API, request, response, parametry, security albo setup walidacji. Nie czytaj pelnego OpenAPI YAML.
                 - `focusAreas` z initial request wskazuja sekcje, ktore mialy tryb deep.
                 - `reasoningEffort` z initial request steruje glebokoscia dodatkowego czytania: low = minimalnie, medium = focused reads dla brakow, high = glebsze edge case'y i zaleznosci.
 
@@ -109,6 +110,9 @@ public class FlowExplorerFollowUpPromptPreparationService {
 
                 ## Snippet cards
                 %s
+
+                ## OpenAPI endpoint contract
+                %s
                 """.formatted(
                 request.initialRequest().systemId(),
                 request.initialRequest().systemId(),
@@ -138,6 +142,10 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 artifactContents.getOrDefault(
                         FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT,
                         "- no snippet cards collected"
+                ),
+                artifactContents.getOrDefault(
+                        FlowExplorerArtifactService.OPENAPI_ENDPOINT_CONTRACT_ARTIFACT,
+                        "- no OpenAPI endpoint contract collected"
                 )
         ).trim();
 

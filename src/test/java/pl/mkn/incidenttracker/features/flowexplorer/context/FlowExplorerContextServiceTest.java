@@ -34,10 +34,12 @@ class FlowExplorerContextServiceTest {
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService =
             mock(GitLabEndpointUseCaseContextService.class);
     private final FlowExplorerSnippetCardService snippetCardService = mock(FlowExplorerSnippetCardService.class);
+    private final FlowExplorerOpenApiContractService openApiContractService = mock(FlowExplorerOpenApiContractService.class);
     private final FlowExplorerContextService service = new FlowExplorerContextService(
             repositoryScopeService,
             gitLabEndpointUseCaseContextService,
-            snippetCardService
+            snippetCardService,
+            openApiContractService
     );
 
     @Test
@@ -61,6 +63,16 @@ class FlowExplorerContextServiceTest {
                 List.of("Snippet card budget reached before all eligible flow nodes were embedded."),
                 true,
                 0
+        ));
+        when(openApiContractService.buildEndpointContracts(
+                org.mockito.ArgumentMatchers.eq("platform/backend"),
+                org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
+                org.mockito.ArgumentMatchers.any(FlowExplorerRepositoryContext.class),
+                org.mockito.ArgumentMatchers.anyList(),
+                org.mockito.ArgumentMatchers.any(FlowExplorerContextRequest.class)
+        )).thenReturn(new FlowExplorerOpenApiContractResult(
+                List.of(),
+                List.of("OpenAPI contract not detected.")
         ));
 
         var snapshot = service.buildContext(new FlowExplorerContextRequest(
@@ -96,6 +108,8 @@ class FlowExplorerContextServiceTest {
         assertEquals("src/main/java/com/example/billing/BillingController.java", snapshot.snippetCards().get(0).filePath());
         assertEquals(1, snapshot.coverage().snippetCardCount());
         assertTrue(snapshot.coverage().snippetBudgetReached());
+        assertTrue(snapshot.openApiEndpointContracts().isEmpty());
+        assertTrue(snapshot.limitations().contains("OpenAPI contract not detected."));
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabEndpointUseCaseContextRequest.class);
         verify(gitLabEndpointUseCaseContextService).buildContext(

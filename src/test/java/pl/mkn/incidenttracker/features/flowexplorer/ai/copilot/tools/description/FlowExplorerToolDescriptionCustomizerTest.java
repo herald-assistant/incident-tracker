@@ -47,6 +47,19 @@ class FlowExplorerToolDescriptionCustomizerTest {
     }
 
     @Test
+    void shouldAppendFlowExplorerGuidanceForOpenApiEndpointSlice() {
+        var description = customizer.customize(
+                FLOW_EXPLORER_CONTEXT,
+                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
+                "Reads OpenAPI endpoint slice."
+        );
+
+        assertTrue(description.contains("OpenAPI/Swagger YAML"));
+        assertTrue(description.contains("Prefer this over gitlab_read_repository_file"));
+        assertTrue(description.contains("schemaDepth"));
+    }
+
+    @Test
     void shouldNotAppendFlowExplorerGuidanceForIncidentSession() {
         var description = customizer.customize(
                 INCIDENT_CONTEXT,

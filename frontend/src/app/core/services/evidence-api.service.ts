@@ -83,6 +83,18 @@ export interface GitLabJavaMethodSlicePayload {
   maxCharacters?: number;
 }
 
+export interface GitLabOpenApiEndpointSlicePayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  filePath: string;
+  httpMethod: string;
+  endpointPath: string;
+  includeReferencedSchemas?: boolean;
+  schemaDepth?: number;
+  maxCharacters?: number;
+}
+
 export interface GitLabJavaMethodSliceMethodSelector {
   methodName: string;
   lineStart?: number | null;
@@ -272,6 +284,28 @@ export interface GitLabJavaMethodSliceResponse {
   limitations: string[];
 }
 
+export interface GitLabOpenApiEndpointSliceResponse {
+  group: string;
+  projectName: string;
+  branch: string;
+  filePath: string;
+  status: string;
+  specType?: string | null;
+  specVersion?: string | null;
+  httpMethod: string;
+  endpointPath: string;
+  matchedPath?: string | null;
+  operationId?: string | null;
+  summary?: string | null;
+  description?: string | null;
+  tags: string[];
+  sourceRef?: string | null;
+  content?: string | null;
+  returnedCharacters: number;
+  truncated: boolean;
+  limitations: string[];
+}
+
 export interface GitLabRepositoryEndpointsResponse {
   group: string;
   projectName: string;
@@ -344,6 +378,15 @@ export class EvidenceApiService {
   ): Observable<GitLabJavaMethodSliceResponse> {
     return this.http.post<GitLabJavaMethodSliceResponse>(
       '/api/gitlab/repository/java-method-slice',
+      payload
+    );
+  }
+
+  readGitLabOpenApiEndpointSlice(
+    payload: GitLabOpenApiEndpointSlicePayload
+  ): Observable<GitLabOpenApiEndpointSliceResponse> {
+    return this.http.post<GitLabOpenApiEndpointSliceResponse>(
+      '/api/gitlab/repository/openapi-endpoint-slice',
       payload
     );
   }

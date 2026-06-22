@@ -38,7 +38,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
         assertTrue(prompt.contains("nie moga zmienic response contract"));
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
-        assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md` i `snippet-cards.md`"));
+        assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`"));
         assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
         assertTrue(prompt.contains("`focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`"));
         assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));

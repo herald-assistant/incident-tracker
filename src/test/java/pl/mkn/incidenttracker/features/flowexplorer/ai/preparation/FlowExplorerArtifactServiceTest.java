@@ -63,7 +63,7 @@ class FlowExplorerArtifactServiceTest {
         assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));
         assertTrue(canonicalToolInputs.contains("`src/main/java/com/example/CustomerController.java`"));
         assertTrue(canonicalToolInputs.contains("methods: `getCustomer` L12-L24"));
-        assertTrue(canonicalToolInputs.contains("already embedded in snippet-cards.md"));
+        assertTrue(canonicalToolInputs.contains("already embedded in flow-explorer/snippet-cards.md"));
         assertTrue(canonicalToolInputs.contains("Do not call `gitlab_list_available_repositories`"));
         assertFalse(canonicalToolInputs.contains("gitLabGroup:"));
 

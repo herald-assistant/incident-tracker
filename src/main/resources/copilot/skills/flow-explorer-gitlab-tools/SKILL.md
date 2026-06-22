@@ -37,6 +37,7 @@ Flow Explorer moze korzystac z:
 - `gitlab_read_repository_file_chunks`,
 - `gitlab_read_repository_file_outline`,
 - `gitlab_read_java_method_slice`,
+- `gitlab_read_openapi_endpoint_slice`,
 - `gitlab_find_flow_context`.
 
 GitLab tools nie czytaja business scope'u z hidden `ToolContext`. Gdy wolanie
@@ -60,15 +61,18 @@ Preferowana kolejnosc:
 2. Jezeli endpoint albo flow spine jest niepelny, uzyj
    `gitlab_build_endpoint_use_case_context`.
 3. Jezeli znasz plik, ale nie metode, uzyj `gitlab_read_repository_file_outline`.
-4. Jezeli znasz jedna albo kilka metod, uzyj jako pierwszy focused read
+4. Jezeli potrzebujesz kontraktu endpointu z OpenAPI/Swagger YAML, uzyj
+   `gitlab_read_openapi_endpoint_slice`. Nie czytaj calego pliku YAML ani
+   surowego chunku, jezeli znasz `httpMethod`, `endpointPath` i `filePath`.
+5. Jezeli znasz jedna albo kilka metod, uzyj jako pierwszy focused read
    `gitlab_read_java_method_slice`, bo zwraca wybrane metody razem z
    potrzebnymi polami, importami i prywatnymi helperami bez dumpu calej klasy.
-5. Jezeli znasz tylko zakres linii albo parser Java nie rozstrzygnal metody,
+6. Jezeli znasz tylko zakres linii albo parser Java nie rozstrzygnal metody,
    uzyj `gitlab_read_repository_file_chunk` albo
    `gitlab_read_repository_file_chunks`.
-6. Jezeli potrzebujesz kilku znanych plikow, uzyj
+7. Jezeli potrzebujesz kilku znanych plikow, uzyj
    `gitlab_read_repository_files_by_path`.
-7. `gitlab_read_repository_file` traktuj jako wyjatek dla malego pliku albo
+8. `gitlab_read_repository_file` traktuj jako wyjatek dla malego pliku albo
    sytuacji, w ktorej outline/chunk nie wystarcza.
 
 ## Co Czytac Wedlug Focus Area
@@ -110,6 +114,8 @@ glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
   scenariusze, ryzyka albo edge case'y.
 - Nie czytaj pelnych DTO/modeli, jezeli nazwa typu i kontrakt endpointu
   wystarczaja.
+- Nie czytaj pelnego OpenAPI YAML, jezeli `gitlab_read_openapi_endpoint_slice`
+  moze zwrocic operacje endpointu i powiazane schema/components.
 - Nie czytaj mappera tylko dlatego, ze istnieje. Czytaj go, gdy zmienia
   request/response semantics, walidacje albo edge case.
 - Nie rozszerzaj flow poza wybrany endpoint bez powodu wynikajacego z

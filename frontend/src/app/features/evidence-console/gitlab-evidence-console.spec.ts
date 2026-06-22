@@ -6,6 +6,7 @@ import { provideRouter } from '@angular/router';
 import {
   GitLabEndpointUseCaseContextResponse,
   GitLabJavaMethodSliceResponse,
+  GitLabOpenApiEndpointSliceResponse,
   GitLabRepositoryEndpointsResponse,
   GitLabRepositoryFilesByPathResponse
 } from '../../core/services/evidence-api.service';
@@ -79,7 +80,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(6);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(7);
     expect(compiled.querySelector('.workbench-header')).toBeNull();
     expect(compiled.querySelector('.gitlab-result')).toBeFalsy();
     expect(compiled.textContent).not.toContain('Kopiuj JSON');
@@ -272,6 +273,30 @@ describe('GitLabEvidenceConsoleComponent', () => {
     const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice');
     expect(sourceOutput?.value).toContain('public CustomerModel getCustomer(CustomerId customerId)');
     expect(sourceOutput?.value).toContain('// ... omitted');
+  });
+
+  it('should render OpenAPI endpoint slice response with focused contract content', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.selectedToolKey.set('openapi-endpoint-slice');
+    fixture.componentInstance.gitLabOpenApiEndpointSliceState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildOpenApiEndpointSliceResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('OpenAPI Endpoint Slice');
+    expect(compiled.textContent).toContain('OK · POST /api/customers/{id}/cases');
+    expect(compiled.textContent).toContain('openapi 3.0.3');
+    expect(compiled.textContent).toContain('createCustomerCase');
+    expect(compiled.textContent).toContain('Create CRM customer case');
+
+    const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice');
+    expect(sourceOutput?.value).toContain('"operationId" : "createCustomerCase"');
+    expect(sourceOutput?.value).toContain('"CreateCustomerCaseRequest"');
   });
 
   it('should populate Java method slice form from selected use-case method', () => {
@@ -616,6 +641,52 @@ function buildJavaMethodSliceResponse(): GitLabJavaMethodSliceResponse {
     omittedFieldCount: 0,
     omittedMethodCount: 3,
     candidates: [],
+    limitations: []
+  };
+}
+
+function buildOpenApiEndpointSliceResponse(): GitLabOpenApiEndpointSliceResponse {
+  return {
+    group: 'CRM',
+    projectName: 'crm-customer-service',
+    branch: 'main',
+    filePath: 'src/main/resources/openapi/customer-api.yml',
+    status: 'OK',
+    specType: 'openapi',
+    specVersion: '3.0.3',
+    httpMethod: 'POST',
+    endpointPath: '/api/customers/{customerId}/cases',
+    matchedPath: '/api/customers/{id}/cases',
+    operationId: 'createCustomerCase',
+    summary: 'Create CRM customer case',
+    description: 'Creates a case for an existing CRM customer.',
+    tags: ['Customer Cases'],
+    sourceRef:
+      'crm-customer-service:src/main/resources/openapi/customer-api.yml#POST /api/customers/{id}/cases',
+    content: [
+      '# OpenAPI endpoint contract',
+      '',
+      '```json',
+      '{',
+      '  "paths" : {',
+      '    "/api/customers/{id}/cases" : {',
+      '      "post" : {',
+      '        "operationId" : "createCustomerCase"',
+      '      }',
+      '    }',
+      '  },',
+      '  "referencedComponents" : {',
+      '    "schemas" : {',
+      '      "CreateCustomerCaseRequest" : {',
+      '        "type" : "object"',
+      '      }',
+      '    }',
+      '  }',
+      '}',
+      '```'
+    ].join('\n'),
+    returnedCharacters: 420,
+    truncated: false,
     limitations: []
   };
 }

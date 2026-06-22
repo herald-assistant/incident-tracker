@@ -9,6 +9,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowMethod;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerFlowNode;
+import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerOpenApiEndpointContract;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -30,6 +31,7 @@ public class FlowExplorerArtifactService {
     static final String CANONICAL_TOOL_INPUTS_ARTIFACT = "flow-explorer/canonical-tool-inputs.md";
     static final String COMPACT_FLOW_MANIFEST_ARTIFACT = "flow-explorer/compact-flow-manifest.md";
     static final String SNIPPET_CARDS_ARTIFACT = "flow-explorer/snippet-cards.md";
+    static final String OPENAPI_ENDPOINT_CONTRACT_ARTIFACT = "flow-explorer/openapi-endpoint-contract.md";
     static final String COVERAGE_ARTIFACT = "flow-explorer/coverage.json";
     static final String RESPONSE_CONTRACT_ARTIFACT = "flow-explorer/response-contract.json";
 
@@ -41,56 +43,66 @@ public class FlowExplorerArtifactService {
             FlowExplorerJobStartRequest request,
             FlowExplorerContextSnapshot contextSnapshot
     ) {
-        return List.of(
-                artifact(
-                        CONTEXT_SNAPSHOT_ARTIFACT,
-                        "Flow Explorer deterministic context snapshot",
-                        "context-snapshot",
-                        contextSnapshot != null ? contextSnapshot.flowNodes().size() : 0,
-                        "application/json",
-                        renderContextSnapshot(request, contextSnapshot)
-                ),
-                artifact(
-                        CANONICAL_TOOL_INPUTS_ARTIFACT,
-                        "Canonical model-facing inputs for Flow Explorer tools",
-                        "canonical-tool-inputs",
-                        canonicalToolInputCount(contextSnapshot),
-                        "text/markdown",
-                        renderCanonicalToolInputs(request, contextSnapshot)
-                ),
-                artifact(
-                        COMPACT_FLOW_MANIFEST_ARTIFACT,
-                        "Compact flow manifest for prompt grounding",
-                        "compact-flow-manifest",
-                        compactFlowManifestNodeCount(contextSnapshot),
-                        "text/markdown",
-                        renderCompactFlowManifest(contextSnapshot)
-                ),
-                artifact(
-                        SNIPPET_CARDS_ARTIFACT,
-                        "Endpoint method snippet cards embedded in the initial prompt",
-                        "snippet-cards",
-                        contextSnapshot != null ? contextSnapshot.snippetCards().size() : 0,
-                        "text/markdown",
-                        renderSnippetCards(contextSnapshot)
-                ),
-                artifact(
-                        COVERAGE_ARTIFACT,
-                        "Flow Explorer deterministic context coverage",
-                        "coverage",
-                        null,
-                        "application/json",
-                        renderCoverage(contextSnapshot)
-                ),
-                artifact(
-                        RESPONSE_CONTRACT_ARTIFACT,
-                        "Required Flow Explorer JSON response contract",
-                        "response-contract",
-                        null,
-                        "application/json",
-                        responseContract()
-                )
-        );
+        var artifacts = new ArrayList<CopilotRenderedArtifact>();
+        artifacts.add(artifact(
+                CONTEXT_SNAPSHOT_ARTIFACT,
+                "Flow Explorer deterministic context snapshot",
+                "context-snapshot",
+                contextSnapshot != null ? contextSnapshot.flowNodes().size() : 0,
+                "application/json",
+                renderContextSnapshot(request, contextSnapshot)
+        ));
+        artifacts.add(artifact(
+                CANONICAL_TOOL_INPUTS_ARTIFACT,
+                "Canonical model-facing inputs for Flow Explorer tools",
+                "canonical-tool-inputs",
+                canonicalToolInputCount(contextSnapshot),
+                "text/markdown",
+                renderCanonicalToolInputs(request, contextSnapshot)
+        ));
+        artifacts.add(artifact(
+                COMPACT_FLOW_MANIFEST_ARTIFACT,
+                "Compact flow manifest for prompt grounding",
+                "compact-flow-manifest",
+                compactFlowManifestNodeCount(contextSnapshot),
+                "text/markdown",
+                renderCompactFlowManifest(contextSnapshot)
+        ));
+        artifacts.add(artifact(
+                SNIPPET_CARDS_ARTIFACT,
+                "Endpoint method snippet cards embedded in the initial prompt",
+                "snippet-cards",
+                contextSnapshot != null ? contextSnapshot.snippetCards().size() : 0,
+                "text/markdown",
+                renderSnippetCards(contextSnapshot)
+        ));
+        if (hasOpenApiEndpointContract(contextSnapshot)) {
+            artifacts.add(artifact(
+                    OPENAPI_ENDPOINT_CONTRACT_ARTIFACT,
+                    "OpenAPI endpoint contract slice embedded in the initial prompt",
+                    "openapi-endpoint-contract",
+                    contextSnapshot.openApiEndpointContracts().size(),
+                    "text/markdown",
+                    renderOpenApiEndpointContracts(contextSnapshot)
+            ));
+        }
+        artifacts.add(artifact(
+                COVERAGE_ARTIFACT,
+                "Flow Explorer deterministic context coverage",
+                "coverage",
+                null,
+                "application/json",
+                renderCoverage(contextSnapshot)
+        ));
+        artifacts.add(artifact(
+                RESPONSE_CONTRACT_ARTIFACT,
+                "Required Flow Explorer JSON response contract",
+                "response-contract",
+                null,
+                "application/json",
+                responseContract()
+        ));
+        return List.copyOf(artifacts);
     }
 
     public Map<String, String> toArtifactContentMap(List<CopilotRenderedArtifact> artifacts) {
@@ -127,6 +139,16 @@ public class FlowExplorerArtifactService {
                 .map(this::snippetCard)
                 .reduce((left, right) -> left + System.lineSeparator() + System.lineSeparator() + right)
                 .orElse("- no snippet cards collected");
+    }
+
+    public String renderOpenApiEndpointContracts(FlowExplorerContextSnapshot contextSnapshot) {
+        if (!hasOpenApiEndpointContract(contextSnapshot)) {
+            return "- no OpenAPI endpoint contract collected";
+        }
+        return contextSnapshot.openApiEndpointContracts().stream()
+                .map(this::openApiEndpointContract)
+                .reduce((left, right) -> left + System.lineSeparator() + System.lineSeparator() + right)
+                .orElse("- no OpenAPI endpoint contract collected");
     }
 
     public String renderCanonicalToolInputs(
@@ -183,7 +205,9 @@ public class FlowExplorerArtifactService {
                     .append(fileInput.methods().isEmpty()
                             ? ""
                             : " methods: " + String.join(", ", fileInput.methods()))
-                    .append(fileInput.snippetEmbedded() ? " (already embedded in snippet-cards.md)" : "")
+                    .append(StringUtils.hasText(fileInput.embeddedArtifact())
+                            ? " (already embedded in " + fileInput.embeddedArtifact() + ")"
+                            : "")
                     .append(System.lineSeparator()));
         }
         builder.append(System.lineSeparator());
@@ -312,9 +336,31 @@ public class FlowExplorerArtifactService {
         manifest.put("snippetCards", contextSnapshot.snippetCards().stream()
                 .map(this::snippetCardManifest)
                 .toList());
+        manifest.put("openApiEndpointContracts", contextSnapshot.openApiEndpointContracts().stream()
+                .map(this::openApiEndpointContractManifest)
+                .toList());
         manifest.put("limitations", contextSnapshot.limitations());
         manifest.put("suggestedNextReads", contextSnapshot.suggestedNextReads());
         manifest.put("coverage", contextSnapshot.coverage());
+        return manifest;
+    }
+
+    private Map<String, Object> openApiEndpointContractManifest(FlowExplorerOpenApiEndpointContract contract) {
+        var manifest = new LinkedHashMap<String, Object>();
+        manifest.put("projectName", contract.projectName());
+        manifest.put("filePath", contract.filePath());
+        manifest.put("httpMethod", contract.httpMethod());
+        manifest.put("endpointPath", contract.endpointPath());
+        manifest.put("matchedPath", contract.matchedPath());
+        manifest.put("operationId", contract.operationId());
+        manifest.put("summary", contract.summary());
+        manifest.put("description", contract.description());
+        manifest.put("tags", contract.tags());
+        manifest.put("sourceRef", contract.sourceRef());
+        manifest.put("truncated", contract.truncated());
+        manifest.put("characterCount", contract.characterCount());
+        manifest.put("limitations", contract.limitations());
+        manifest.put("contentArtifact", OPENAPI_ENDPOINT_CONTRACT_ARTIFACT);
         return manifest;
     }
 
@@ -378,6 +424,13 @@ public class FlowExplorerArtifactService {
             notes.add(truncatedCardCount
                     + " snippet card(s) were truncated by GitLab read output limits; treat affected snippets as partial evidence.");
         }
+        var truncatedOpenApiContractCount = contextSnapshot.openApiEndpointContracts().stream()
+                .filter(FlowExplorerOpenApiEndpointContract::truncated)
+                .count();
+        if (truncatedOpenApiContractCount > 0) {
+            notes.add(truncatedOpenApiContractCount
+                    + " OpenAPI endpoint contract slice(s) were truncated; request/response schema evidence may be partial.");
+        }
         return List.copyOf(notes);
     }
 
@@ -427,7 +480,21 @@ public class FlowExplorerArtifactService {
                     selectedProjectName,
                     node.filePath().trim(),
                     methods,
-                    false
+                    null
+            ));
+        }
+
+        for (var contract : contextSnapshot.openApiEndpointContracts()) {
+            if (!StringUtils.hasText(contract.filePath())) {
+                continue;
+            }
+            var projectName = StringUtils.hasText(contract.projectName()) ? contract.projectName().trim() : selectedProjectName;
+            var key = canonicalFileKey(projectName, contract.filePath());
+            inputs.putIfAbsent(key, new CanonicalFileInput(
+                    projectName,
+                    contract.filePath().trim(),
+                    List.of(),
+                    OPENAPI_ENDPOINT_CONTRACT_ARTIFACT
             ));
         }
 
@@ -445,7 +512,7 @@ public class FlowExplorerArtifactService {
                     projectName,
                     card.filePath().trim(),
                     methods,
-                    true
+                    SNIPPET_CARDS_ARTIFACT
             ));
         }
 
@@ -513,6 +580,31 @@ public class FlowExplorerArtifactService {
         ).trim();
     }
 
+    private String openApiEndpointContract(FlowExplorerOpenApiEndpointContract contract) {
+        var summary = StringUtils.hasText(contract.summary())
+                ? System.lineSeparator() + "summary: " + contract.summary()
+                : "";
+        var description = StringUtils.hasText(contract.description())
+                ? System.lineSeparator() + "description: " + contract.description()
+                : "";
+        return """
+                - OPENAPI_CONTRACT %s `%s %s` matched `%s`%s%s
+                %s
+                """.formatted(
+                contract.sourceRef(),
+                contract.httpMethod(),
+                contract.endpointPath(),
+                safe(contract.matchedPath()),
+                summary,
+                description,
+                contract.content()
+        ).trim();
+    }
+
+    private boolean hasOpenApiEndpointContract(FlowExplorerContextSnapshot contextSnapshot) {
+        return contextSnapshot != null && !contextSnapshot.openApiEndpointContracts().isEmpty();
+    }
+
     private String lineRange(int lineStart, int lineEnd) {
         if (lineStart <= 0) {
             return "";
@@ -524,7 +616,7 @@ public class FlowExplorerArtifactService {
             String projectName,
             String filePath,
             List<String> methods,
-            boolean snippetEmbedded
+            String embeddedArtifact
     ) {
 
         private CanonicalFileInput {

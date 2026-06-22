@@ -614,6 +614,31 @@ deterministycznie znalezionych node'ow.
 
 Status: implemented and verified.
 
+### 009. Endpoint-specific OpenAPI contract artifact
+
+Decyzja: zamiast pozwalac AI czytac pelne pliki OpenAPI/Swagger YAML,
+dodajemy reusable GitLab capability `gitlab_read_openapi_endpoint_slice`.
+Integracja czyta wskazany plik z repozytorium, waliduje rozszerzenie YAML,
+parsuje dokument, sprawdza wersje manifestu (`openapi` 3.x albo `swagger`
+2.0), filtruje wybrany `path` + `method` i zwraca tylko dane endpointu:
+operation, path-level parameters oraz lokalne `$ref` components do
+skonfigurowanej glebokosci. Jezeli deterministic endpoint context wykryje
+konfiguracje OpenAPI/YAML dla danego use case'u, Flow Explorer od razu osadza
+wynik jako artefakt `flow-explorer/openapi-endpoint-contract.md` w initial
+prompt.
+
+Powod: pelny OpenAPI YAML bywa bardzo kosztowny tokenowo i rozprasza model
+kontraktami innych endpointow. Endpoint-specific slice daje modelowi request,
+response, parameters, security i powiazane schematy bez szumu, a jednoczesnie
+zachowuje mozliwosc focused tool calla w follow-upie. To wpisuje sie w zasade:
+deterministycznie dolaczamy tylko evidence, ktore wnosi wartosc dla wybranego
+endpointu.
+
+Status: implemented and verified. GitLab tool workbench ma tez operatorowy
+tester `OpenAPI Endpoint Slice`, ktory wywoluje
+`/api/gitlab/repository/openapi-endpoint-slice` i pozwala recznie sprawdzic
+ten sam contract slicing bez uruchamiania calego Flow Explorera.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
@@ -623,6 +648,7 @@ Status: implemented and verified.
 - [x] 002. Tool policy dla redundantnego discovery.
 - [x] 003. Skill guidance i UI sterowania modelem AI.
 - [x] 003a. Initial context limits i clipping notes.
+- [x] 003b. Endpoint-specific OpenAPI contract artifact + GitLab tool workbench tester.
 - [ ] 004. Snippet ranking pod primary flow i focus areas.
 - [ ] 005. Baseline quality report model.
 - [ ] 006. Ranking i grupowanie limitations/next reads.

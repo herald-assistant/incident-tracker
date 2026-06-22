@@ -58,9 +58,19 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }
+        if (GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE.equals(normalizedToolName)) {
+            return List.of(
+                    "Use when an OpenAPI/Swagger YAML file is known and endpoint contract details are needed.",
+                    "Prefer this over gitlab_read_repository_file, file_chunk or file_chunks for OpenAPI YAML.",
+                    "Use httpMethod, endpointPath, branchRef, projectName and filePath exactly from Flow Explorer artifacts when available.",
+                    "Keep schemaDepth low; increase it only when request/response schemas are still unclear.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
         if (GitLabToolNames.READ_REPOSITORY_FILE.equals(normalizedToolName)) {
             return List.of(
                     "Expensive in Flow Explorer. Use only when method slice, outline or focused chunks are insufficient.",
+                    "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Do not use to browse a full bean when snippet-cards.md already contains the endpoint method.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
@@ -76,6 +86,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
             return List.of(
                     "Fallback when Java method slice does not fit, parser context is missing or a line range is the only grounded input.",
+                    "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Keep ranges tight and tied to a specific preset/focus area gap.",
                     "Always provide reason as one short Polish sentence for the operator."
             );

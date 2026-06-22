@@ -12,6 +12,9 @@ import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositoryEndpointServic
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
@@ -28,6 +31,7 @@ public class GitLabRepositorySearchController {
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
     private final GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
     private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
+    private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
 
     @PostMapping("/search")
     public GitLabRepositorySearchResponse search(@Valid @RequestBody GitLabRepositorySearchRequest request) {
@@ -64,6 +68,13 @@ public class GitLabRepositorySearchController {
             @Valid @RequestBody GitLabJavaMethodSliceRequest request
     ) {
         return gitLabJavaMethodSliceService.readMethodSlice(request);
+    }
+
+    @PostMapping("/openapi-endpoint-slice")
+    public GitLabOpenApiEndpointSliceResponse readOpenApiEndpointSlice(
+            @Valid @RequestBody GitLabOpenApiEndpointSliceRequest request
+    ) {
+        return gitLabOpenApiEndpointSliceService.readEndpointSlice(request);
     }
 
 }

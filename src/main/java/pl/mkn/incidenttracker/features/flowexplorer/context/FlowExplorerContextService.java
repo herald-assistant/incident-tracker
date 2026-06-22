@@ -26,6 +26,7 @@ public class FlowExplorerContextService {
     private final FlowExplorerRepositoryScopeService repositoryScopeService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
     private final FlowExplorerSnippetCardService snippetCardService;
+    private final FlowExplorerOpenApiContractService openApiContractService;
 
     public FlowExplorerContextSnapshot buildContext(FlowExplorerContextRequest request) {
         var scope = repositoryScopeService.resolve(request.systemId(), request.branch());
@@ -91,6 +92,10 @@ public class FlowExplorerContextService {
                 ? snippetCards(scope.gitLabGroup(), scope.resolvedRef(), finalRepositoryContexts, flowNodes, request)
                 : FlowExplorerSnippetCardResult.empty();
         limitations.addAll(snippetCardResult.limitations());
+        var openApiContractResult = endpointResolved
+                ? openApiContracts(scope.gitLabGroup(), scope.resolvedRef(), finalRepositoryContexts, flowNodes, request)
+                : FlowExplorerOpenApiContractResult.empty();
+        limitations.addAll(openApiContractResult.limitations());
         var coverage = coverage(
                 endpointResolved,
                 scope.repositoryRefCount(),
@@ -116,6 +121,7 @@ public class FlowExplorerContextService {
                 flowNodes,
                 relations,
                 snippetCardResult.cards(),
+                openApiContractResult.contracts(),
                 distinct(limitations),
                 suggestedNextReads,
                 coverage
@@ -272,6 +278,26 @@ public class FlowExplorerContextService {
                 flowNodes,
                 request.goal(),
                 request.focusAreas()
+        );
+    }
+
+    private FlowExplorerOpenApiContractResult openApiContracts(
+            String gitLabGroup,
+            String resolvedRef,
+            List<FlowExplorerRepositoryContext> repositories,
+            List<FlowExplorerFlowNode> flowNodes,
+            FlowExplorerContextRequest request
+    ) {
+        var selectedRepository = repositories.stream()
+                .filter(FlowExplorerRepositoryContext::selected)
+                .findFirst()
+                .orElse(null);
+        return openApiContractService.buildEndpointContracts(
+                gitLabGroup,
+                resolvedRef,
+                selectedRepository,
+                flowNodes,
+                request
         );
     }
 

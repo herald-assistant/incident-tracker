@@ -34,6 +34,8 @@ Zacznij od artefaktow:
 - `flow-explorer/canonical-tool-inputs.md`,
 - `flow-explorer/compact-flow-manifest.md`,
 - `flow-explorer/snippet-cards.md`,
+- `flow-explorer/openapi-endpoint-contract.md`, jezeli endpoint ma wykryty
+  kontrakt OpenAPI/Swagger,
 - `flow-explorer/coverage.json`,
 - `flow-explorer/response-contract.json`.
 
@@ -46,6 +48,11 @@ snippetow. Pelny kod initial evidence jest w `snippet-cards.md`. Nie dociagaj
 ponownie GitLab tools fragmentow, ktore sa juz widoczne w snippet cards, chyba
 ze potrzebujesz sprawdzic konkretny brak wzgledem `goal`, `sectionModes` albo
 `userInstructions`.
+
+`openapi-endpoint-contract.md`, jezeli jest dostepny, jest deterministycznym
+wycinkiem OpenAPI/Swagger tylko dla wybranego endpointu. Uzywaj go dla
+request/response, parametrow, security i schema. Nie czytaj pelnego YAML-a
+OpenAPI, gdy ten artefakt wystarcza.
 
 `canonical-tool-inputs.md` jest krotka sciaga argumentow do tools. Przed
 kazdym GitLab albo operational context tool call sprawdz ten artefakt i uzyj
@@ -106,32 +113,34 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
    `overview` i sekcji `BUSINESS_FLOW_RULES`.
 4. Przeczytaj `snippet-cards.md` jako high-value code evidence, nie jako pelny
    dump kodu.
-5. Zmapuj flow:
+5. Przeczytaj `openapi-endpoint-contract.md`, jezeli istnieje, jako kontrakt
+   API widoczny dla konsumenta endpointu.
+6. Zmapuj flow:
    - wejscie HTTP,
    - walidacje i decyzje,
    - logika biznesowa,
    - persistence code-first,
    - integracje zewnetrzne,
    - response albo error boundary.
-6. Przetlumacz nazwy klas, metod i modeli na nazwy czynnosci systemowych,
+7. Przetlumacz nazwy klas, metod i modeli na nazwy czynnosci systemowych,
    regul, stanow danych i handoffow. Nie zwracaj mapy klas/metod jako glownej
    dokumentacji.
-7. Jezeli brakuje nazwy domenowej, sprawdz operational context/glossary przez
+8. Jezeli brakuje nazwy domenowej, sprawdz operational context/glossary przez
    `opctx_search` albo `opctx_get_entity`, o ile moze to zmienic brzmienie
    dokumentacji.
-8. Jezeli implementacja sugeruje wartosciowy termin ubiquitous language, ale
+9. Jezeli implementacja sugeruje wartosciowy termin ubiquitous language, ale
    glossary go nie zawiera, uzyj roboczej nazwy jako inferencji, dopisz
    pytanie/limit widocznosci i zglos brak przez `record_tool_feedback` z
    `issueCategory=missing_operational_context` oraz
    `improvementArea=operational_context_data`.
-9. Sprawdz `coverage.json` i limitations. Braki wpisuj do
+10. Sprawdz `coverage.json` i limitations. Braki wpisuj do
    `globalVisibilityLimits` albo `visibilityLimits` danej sekcji, chyba ze
    mozna je tanio uzupelnic toolami.
-10. Wypelnij `Overview` i cztery sekcje zgodnie z goal-specific skillem.
-11. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
+11. Wypelnij `Overview` i cztery sekcje zgodnie z goal-specific skillem.
+12. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
    dotyczy kodu aplikacji, przekaz tez `applicationName`, znany `projectName`
    i `filePath` z `canonical-tool-inputs.md`.
-12. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
+13. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
 
 ## Zasady Kosztowe
 

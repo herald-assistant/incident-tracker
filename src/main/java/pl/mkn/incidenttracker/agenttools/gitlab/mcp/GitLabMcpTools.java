@@ -1,6 +1,7 @@
 package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -18,6 +19,9 @@ import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceRe
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
 import pl.mkn.incidenttracker.integrations.gitlab.source.GitLabJavaMethodSliceService;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
+import pl.mkn.incidenttracker.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -62,6 +66,7 @@ import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPO
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_JAVA_METHOD_SLICE;
+import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE;
 import static pl.mkn.incidenttracker.agenttools.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES;
 
 @Component
@@ -100,6 +105,7 @@ public class GitLabMcpTools {
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
     private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
+    private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
     private final GitLabToolScopeResolver scopeResolver;
 
     @Autowired
@@ -109,6 +115,7 @@ public class GitLabMcpTools {
             GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
             GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService,
             GitLabJavaMethodSliceService gitLabJavaMethodSliceService,
+            GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService,
             GitLabProperties gitLabProperties
     ) {
         this.gitLabRepositoryPort = gitLabRepositoryPort;
@@ -116,6 +123,7 @@ public class GitLabMcpTools {
         this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
         this.gitLabEndpointUseCaseContextService = gitLabEndpointUseCaseContextService;
         this.gitLabJavaMethodSliceService = gitLabJavaMethodSliceService;
+        this.gitLabOpenApiEndpointSliceService = gitLabOpenApiEndpointSliceService;
         this.scopeResolver = new GitLabToolScopeResolver(gitLabProperties, operationalContextPort);
     }
 
@@ -131,6 +139,7 @@ public class GitLabMcpTools {
                 gitLabRepositoryEndpointService,
                 defaultEndpointUseCaseContextService(gitLabRepositoryPort, gitLabRepositoryEndpointService),
                 new GitLabJavaMethodSliceService(gitLabRepositoryPort),
+                new GitLabOpenApiEndpointSliceService(gitLabRepositoryPort, new ObjectMapper()),
                 gitLabProperties
         );
     }
@@ -654,6 +663,90 @@ public class GitLabMcpTools {
                 response.returnedCharacters(),
                 response.truncated(),
                 response.candidates().size(),
+                response.limitations().size()
+        );
+
+        return response;
+    }
+
+    @Tool(
+            name = READ_OPENAPI_ENDPOINT_SLICE,
+            description = """
+                    Read a focused OpenAPI/Swagger YAML slice for one concrete endpoint operation from a GitLab repository.
+                    The tool validates that the file is YAML, parses the OpenAPI/Swagger manifest, checks supported version
+                    (OpenAPI 3.x or Swagger 2.0), filters paths to the requested httpMethod + endpointPath, and returns only
+                    the operation plus locally referenced schemas/components up to schemaDepth. Prefer this over reading a
+                    full OpenAPI YAML file when endpoint contract details are needed.
+                    """
+    )
+    public GitLabOpenApiEndpointSliceResponse readOpenApiEndpointSlice(
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
+            String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
+            @ToolParam(description = "Repository OpenAPI YAML file path.")
+            String filePath,
+            @ToolParam(description = "HTTP method, for example GET, POST, PUT or DELETE.")
+            String httpMethod,
+            @ToolParam(description = "Endpoint path from prompt, artifact or previous tool result.")
+            String endpointPath,
+            @ToolParam(required = false, description = "Include local $ref schemas/components used by this operation. Defaults to true.")
+            Boolean includeReferencedSchemas,
+            @ToolParam(required = false, description = "Maximum local $ref traversal depth. Defaults to 2 and is capped by the server.")
+            Integer schemaDepth,
+            @ToolParam(required = false, description = "Maximum returned characters. Defaults to 20000 and is capped by the server.")
+            Integer maxCharacters,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta kontrakt OpenAPI endpointu.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
+
+        log.info(
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} httpMethod={} endpointPath={} schemaDepth={} maxCharacters={}",
+                READ_OPENAPI_ENDPOINT_SLICE,
+                scope.runReference(),
+                scope.group(),
+                scope.branch(),
+                scope.applicationName(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                projectName,
+                filePath,
+                httpMethod,
+                endpointPath,
+                schemaDepth,
+                maxCharacters
+        );
+
+        var response = gitLabOpenApiEndpointSliceService.readEndpointSlice(new GitLabOpenApiEndpointSliceRequest(
+                scope.group(),
+                projectName,
+                scope.branch(),
+                filePath,
+                httpMethod,
+                endpointPath,
+                includeReferencedSchemas,
+                schemaDepth,
+                maxCharacters
+        ));
+
+        log.info(
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} status={} matchedPath={} returnedCharacters={} truncated={} limitationCount={}",
+                READ_OPENAPI_ENDPOINT_SLICE,
+                scope.runReference(),
+                response.group(),
+                response.branch(),
+                scope.applicationName(),
+                response.projectName(),
+                response.filePath(),
+                response.status(),
+                response.matchedPath(),
+                response.returnedCharacters(),
+                response.truncated(),
                 response.limitations().size()
         );
 

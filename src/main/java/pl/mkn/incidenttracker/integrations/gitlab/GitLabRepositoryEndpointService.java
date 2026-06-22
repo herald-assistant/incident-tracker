@@ -816,11 +816,11 @@ public class GitLabRepositoryEndpointService {
             ControllerImplementation implementation
     ) {
         return List.of(
-                "%s:%s lines %d-%d via gitlab_read_repository_file_chunk".formatted(
+                "%s:%s %s %s via gitlab_read_openapi_endpoint_slice".formatted(
                         projectName,
                         operation.filePath(),
-                        operation.lineStart(),
-                        operation.lineStart()
+                        operation.httpMethod(),
+                        operation.path()
                 ),
                 "%s:%s lines %d-%d via gitlab_read_repository_file_chunk".formatted(
                         projectName,
