@@ -28,6 +28,7 @@ class FlowExplorerToolDescriptionCustomizerTest {
         assertTrue(description.contains("Flow Explorer guidance:"));
         assertTrue(description.contains("snippet-cards.md is insufficient"));
         assertTrue(description.contains("canonical-tool-inputs.md"));
+        assertTrue(description.contains("compact-flow-manifest.md"));
         assertTrue(description.contains("methodSelectors"));
         assertTrue(description.contains("lineStart is optional"));
         assertTrue(description.contains("Always provide reason as one short Polish sentence"));

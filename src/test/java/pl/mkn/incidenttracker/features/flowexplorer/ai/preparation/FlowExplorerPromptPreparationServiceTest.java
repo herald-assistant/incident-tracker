@@ -38,6 +38,16 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
         assertTrue(prompt.contains("nie moga zmienic response contract"));
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
+        assertTrue(prompt.contains("Runtime skills usage contract"));
+        assertTrue(prompt.contains("uzyj built-in tool `skill`"));
+        assertTrue(prompt.contains("nie czekaj, az uzytkownik poprosi o skille"));
+        assertTrue(prompt.contains("MUST = pobierz przez `skill` i zastosuj"));
+        assertTrue(prompt.contains("MUST: flow-explorer-orchestrator"));
+        assertTrue(prompt.contains("MUST: flow-explorer-result-contract"));
+        assertTrue(prompt.contains("MUST: flow-explorer-goal-test-scenarios"));
+        assertTrue(prompt.contains("SHOULD: flow-explorer-operational-context-tools"));
+        assertTrue(prompt.contains("SHOULD: flow-explorer-gitlab-tools"));
+        assertTrue(prompt.contains("COULD: record_tool_feedback"));
         assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`"));
         assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
         assertTrue(prompt.contains("`focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`"));
@@ -49,16 +59,19 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`"));
         assertTrue(prompt.contains("GitLab tools do not read endpoint business scope from hidden ToolContext"));
         assertTrue(prompt.contains("pass `branchRef` explicitly from `canonical-tool-inputs.md`"));
-        assertTrue(prompt.contains("Pass `applicationName`, known `projectName` and `filePath` values"));
+        assertTrue(prompt.contains("Pass `applicationName`, known `projectName` and `branchRef` values"));
+        assertTrue(prompt.contains("Pass `filePath` and method selectors from `compact-flow-manifest.md`"));
         assertTrue(prompt.contains("Do not pass `gitLabGroup`"));
         assertTrue(prompt.contains("Do not call repository discovery or endpoint context rebuild"));
         assertTrue(prompt.contains("context-snapshot.json` jest manifestem bez pelnego kodu snippetow"));
         assertTrue(prompt.contains("Canonical tool inputs"));
         assertTrue(prompt.contains("selected projectName: `crm-service`"));
-        assertTrue(prompt.contains("`src/main/java/com/example/CustomerController.java` methods: `getCustomer` L12-L24"));
+        assertTrue(prompt.contains("File And Method Scope"));
+        assertTrue(prompt.contains("Use `flow-explorer/compact-flow-manifest.md` as the canonical filePath + methodSelector list"));
         assertTrue(prompt.contains("Compact flow manifest"));
         assertTrue(prompt.contains("[CONTROLLER]"));
         assertTrue(prompt.contains("getCustomer L12-L24"));
+        assertTrue(prompt.contains("embedded: flow-explorer/snippet-cards.md"));
         assertTrue(prompt.contains("public CustomerResponse getCustomer"));
         assertTrue(prompt.contains("\"overview\""));
         assertTrue(prompt.contains("\"sections\""));
@@ -83,9 +96,20 @@ class FlowExplorerPromptPreparationServiceTest {
         var prompt = preparation.prompt();
 
         assertTrue(prompt.contains("goal: RISK_DETECTION"));
+        assertTrue(prompt.contains("MUST: flow-explorer-goal-risk-detection"));
         assertTrue(prompt.contains("focusAreas: [VALIDATIONS, INTEGRATIONS]"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Skup sie na ryzykach regresji CRM."));
+    }
+
+    @Test
+    void shouldRenderDeepDiscoveryGoalSkillInCanonicalPrompt() {
+        var preparation = service.prepare(deepDiscoveryRequest(), contextSnapshot());
+        var prompt = preparation.prompt();
+
+        assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
+        assertTrue(prompt.contains("MUST: flow-explorer-goal-deep-discovery"));
+        assertTrue(prompt.contains("Szukaj pelnego przeplywu biznesowo-systemowego"));
     }
 
     private static FlowExplorerContextSnapshot contextSnapshot() {
@@ -117,6 +141,21 @@ class FlowExplorerPromptPreparationServiceTest {
                 FlowExplorerAnalysisGoal.RISK_DETECTION,
                 List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
                 "Skup sie na ryzykach regresji CRM.",
+                "gpt-5.4-mini",
+                "high"
+        );
+    }
+
+    private static FlowExplorerJobStartRequest deepDiscoveryRequest() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.PERSISTENCE),
+                "Pokaz flow biznesowo.",
                 "gpt-5.4-mini",
                 "high"
         );

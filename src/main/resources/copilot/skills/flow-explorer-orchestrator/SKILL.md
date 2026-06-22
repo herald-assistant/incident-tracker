@@ -54,12 +54,14 @@ wycinkiem OpenAPI/Swagger tylko dla wybranego endpointu. Uzywaj go dla
 request/response, parametrow, security i schema. Nie czytaj pelnego YAML-a
 OpenAPI, gdy ten artefakt wystarcza.
 
-`canonical-tool-inputs.md` jest krotka sciaga argumentow do tools. Przed
-kazdym GitLab albo operational context tool call sprawdz ten artefakt i uzyj
-wartosci z niego dokladnie. Nie zgaduj `projectName`, `projectPath`,
-`branchRef` ani `filePath`, jezeli sa tam podane. Nie uruchamiaj repository
-discovery ani endpoint context rebuild tylko po to, zeby potwierdzic wartosci
-z tego artefaktu.
+`canonical-tool-inputs.md` jest krotka sciaga scope'u repozytorium, brancha i
+argumentow ogolnych do tools. `compact-flow-manifest.md` jest kanoniczna lista
+`filePath`, metod, rol flow i powodow wlaczenia pliku do endpoint flow. Przed
+kazdym GitLab albo operational context tool call sprawdz oba artefakty i uzyj
+wartosci z nich dokladnie. Nie zgaduj `projectName`, `projectPath`,
+`branchRef` ani `filePath`, jezeli sa podane w tych artefaktach. Nie uruchamiaj
+repository discovery ani endpoint context rebuild tylko po to, zeby potwierdzic
+te wartosci.
 
 Zakres model-facing jest jawny w promptcie i artefaktach. Szczegolnie wazne
 pola to:
@@ -106,8 +108,9 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
 ## Algorytm Pracy
 
 1. Przeczytaj `context-snapshot.json` i `compact-flow-manifest.md`.
-2. Przeczytaj `canonical-tool-inputs.md`, zeby ustalic kanoniczne wartosci dla
-   ewentualnych tool calli.
+2. Przeczytaj `canonical-tool-inputs.md`, zeby ustalic kanoniczne wartosci
+   repo/branch dla ewentualnych tool calli; filePath i metody bierz z
+   `compact-flow-manifest.md`.
 3. Ustal endpoint contract: metoda, path, controller, handler i glowny use
    case service. Nie zwracaj go jako osobnego top-level pola; wykorzystaj go w
    `overview` i sekcji `BUSINESS_FLOW_RULES`.
@@ -138,8 +141,9 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
    mozna je tanio uzupelnic toolami.
 11. Wypelnij `Overview` i cztery sekcje zgodnie z goal-specific skillem.
 12. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
-   dotyczy kodu aplikacji, przekaz tez `applicationName`, znany `projectName`
-   i `filePath` z `canonical-tool-inputs.md`.
+   dotyczy kodu aplikacji, przekaz tez `applicationName` i znany `projectName`
+   z `canonical-tool-inputs.md` oraz `filePath` i metody z
+   `compact-flow-manifest.md` albo `openapi-endpoint-contract.md`.
 13. Zwroc JSON zgodny ze skillem `flow-explorer-result-contract`.
 
 ## Zasady Kosztowe

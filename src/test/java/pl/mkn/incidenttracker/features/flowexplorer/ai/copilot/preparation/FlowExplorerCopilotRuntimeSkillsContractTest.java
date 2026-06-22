@@ -145,6 +145,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("`branchRef`"));
         assertTrue(orchestrator.contains("`applicationName`"));
         assertTrue(orchestrator.contains("`flow-explorer/canonical-tool-inputs.md`"));
+        assertTrue(orchestrator.contains("`compact-flow-manifest.md` jest kanoniczna lista"));
         assertTrue(orchestrator.contains("Nie zgaduj `projectName`, `projectPath`"));
         assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
         assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
@@ -153,6 +154,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja business scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
+        assertTrue(gitLabTools.contains("`filePath` i `methodSelectors` z `flow-explorer/compact-flow-manifest.md`"));
         assertTrue(gitLabTools.contains("`branchRef`"));
         assertTrue(gitLabTools.contains("`applicationName`"));
         assertTrue(gitLabTools.contains("Nie uzywaj `gitlab_list_available_repositories`"));

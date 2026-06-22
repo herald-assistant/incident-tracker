@@ -41,13 +41,15 @@ Flow Explorer moze korzystac z:
 - `gitlab_find_flow_context`.
 
 GitLab tools nie czytaja business scope'u z hidden `ToolContext`. Gdy wolanie
-GitLab toola wymaga scope'u, przekaz jawnie wartosci z
-`flow-explorer/canonical-tool-inputs.md`:
+GitLab toola wymaga scope'u, przekaz jawnie wartosci z artefaktow Flow
+Explorera:
 
-- `branchRef`,
+- `branchRef` z `flow-explorer/canonical-tool-inputs.md`,
 - `applicationName` jako nazwe aplikacji/systemu, jezeli pomaga zawęzic scope,
-- `projectName`,
-- `filePath`, `chunks` albo `methodSelectors` zgodnie z konkretnym toolem.
+- `projectName` z `flow-explorer/canonical-tool-inputs.md`,
+- `filePath` i `methodSelectors` z `flow-explorer/compact-flow-manifest.md`,
+- `filePath` z `flow-explorer/openapi-endpoint-contract.md`, jezeli czytasz
+  kontrakt OpenAPI.
 
 Nie przekazuj `gitLabGroup`. Backend rozstrzyga GitLab group przez operational
 context albo konfiguracje `analysis.gitlab.group`.
@@ -94,9 +96,11 @@ glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
 - Nie czytaj ponownie metod, ktore sa juz obecne w `snippet-cards.md`, chyba ze
   pytanie wymaga innego overloadu, helpera albo powiazanego pliku.
 - Do kazdego GitLab tool call dodaj `branchRef` z
-  `canonical-tool-inputs.md`. Jezeli artefakt podaje `applicationName`,
+  `canonical-tool-inputs.md`. Jezeli artefakty podaja `applicationName`,
   `projectName` albo `filePath`, przekaz te wartosci dokladnie, chyba ze wynik
-  poprzedniego toola wskazal precyzyjniejszy scope.
+  poprzedniego toola wskazal precyzyjniejszy scope. `projectName` bierz z
+  `canonical-tool-inputs.md`, a `filePath` i metody flow z
+  `compact-flow-manifest.md`.
 - Dla `gitlab_read_java_method_slice` podawaj `methodSelectors` z minimalnym
   inputem: zwykle wystarczy `methodName`. `lineStart` jest opcjonalne; uzyj go
   tylko gdy chcesz zawęzic wynik do jednego konkretnego overloadu. Gdy
@@ -104,7 +108,8 @@ glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
   wybranej klasie.
 - Nie uzywaj `gitlab_list_available_repositories` ani
   `gitlab_build_endpoint_use_case_context` do potwierdzania `projectName`,
-  `branchRef` albo `filePath`, ktore sa juz w `canonical-tool-inputs.md`.
+  `branchRef` z `canonical-tool-inputs.md` ani `filePath` z
+  `compact-flow-manifest.md`.
 - Dla `reasoningEffort=low` wykonaj dodatkowy GitLab read tylko dla krytycznej
   luki, ktora moze zmienic wynik dla uzytkownika.
 - Dla `reasoningEffort=medium` czytaj brakujace metody primary flow i

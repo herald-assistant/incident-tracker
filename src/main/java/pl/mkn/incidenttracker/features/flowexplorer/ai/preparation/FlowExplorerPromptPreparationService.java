@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 
@@ -44,9 +45,12 @@ public class FlowExplorerPromptPreparationService {
                 - Zawsze zbuduj primary endpoint flow, a `focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`.
                 - Glebokosc eksploracji wynika z `reasoningEffort`: low = artifact-first i minimalne tool calls, medium = focused reads dla brakow primary flow, high = glebsze edge case'y i zaleznosci, nadal przez canonical inputs.
                 - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do primary flow albo sekcji deep zgodnie z reasoningEffort; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
-                - Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` i uzyj wartosci z tego artefaktu zamiast rediscovery.
+                - Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` oraz `compact-flow-manifest.md`: scope repo/branch bierz z canonical, a filePath/metody z manifestu.
                 - `context-snapshot.json` jest manifestem bez pelnego kodu snippetow; pelny kod jest w `snippet-cards.md`.
                 - Artefakty sa logicznym payloadem sesji, a kluczowe tresci sa osadzone inline ponizej.
+
+                ## Runtime skills usage contract
+                %s
 
                 ## User request
                 applicationName: %s
@@ -65,9 +69,10 @@ public class FlowExplorerPromptPreparationService {
                 ## Tool scope guidance
                 - GitLab tools do not read endpoint business scope from hidden ToolContext.
                 - When calling GitLab tools, pass `branchRef` explicitly from `canonical-tool-inputs.md`.
-                - Pass `applicationName`, known `projectName` and `filePath` values from `canonical-tool-inputs.md` when the tool needs repository scope.
+                - Pass `applicationName`, known `projectName` and `branchRef` values from `canonical-tool-inputs.md`.
+                - Pass `filePath` and method selectors from `compact-flow-manifest.md` or `openapi-endpoint-contract.md` when the tool needs code scope.
                 - Do not pass `gitLabGroup`; backend resolves it through operational context or configuration.
-                - Do not call repository discovery or endpoint context rebuild when `canonical-tool-inputs.md` already contains the needed project, branch and file path.
+                - Do not call repository discovery or endpoint context rebuild when `canonical-tool-inputs.md` and `compact-flow-manifest.md` already contain the needed project, branch and flow file paths.
 
                 ## Deterministic context coverage
                 endpointResolved: %s
@@ -105,6 +110,7 @@ public class FlowExplorerPromptPreparationService {
                 ## Required JSON response contract
                 %s
                 """.formatted(
+                runtimeSkillsUsageContract(request),
                 request.systemId(),
                 request.systemId(),
                 request.endpointId(),
@@ -170,6 +176,62 @@ public class FlowExplorerPromptPreparationService {
                 )
         ).trim();
         return new FlowExplorerPromptPreparation(prompt, artifacts, artifactContents);
+    }
+
+    private String runtimeSkillsUsageContract(FlowExplorerJobStartRequest request) {
+        return """
+                Dostepne runtime skills sa podlaczone jako skill directories w tej sesji.
+                Jezeli potrzebujesz pelnego playbooka, uzyj built-in tool `skill` dla nazwy skillu samodzielnie; nie czekaj, az uzytkownik poprosi o skille.
+                Priorytety: MUST = pobierz przez `skill` i zastosuj przed finalna odpowiedzia; SHOULD = pobierz i zastosuj, gdy spelniona jest opisana sytuacja; COULD = opcjonalnie, gdy poprawi jakosc albo jawnie nazwie ograniczenie.
+
+                MUST: flow-explorer-orchestrator
+                - Uzyj przed interpretacja artefaktow, zeby utrzymac primary endpoint flow, goal, focusAreas i reasoningEffort.
+                - Pilnuje, ze wynik jest dokumentacja przeplywu systemowego, a kod jest evidence, nie jezykiem glownej narracji.
+
+                MUST: flow-explorer-result-contract
+                - Uzyj przed finalna odpowiedzia initial run.
+                - Pilnuje JSON-only, overview, dokladnie czterech sekcji, sourceRefs, confidence, visibilityLimits i openQuestions.
+
+                %s
+
+                SHOULD: flow-explorer-operational-context-tools
+                - Uzyj, gdy trzeba nazwac proces, bounded context, system, integracje, ownerow, glossary albo handoff jezykiem biznesowo-systemowym.
+                - Uzyj szczegolnie wtedy, gdy odpowiedz zaczyna brzmiec jak opis implementacji zamiast opisu zachowania systemu.
+                - Jezeli operational context ma luke, wpisz ograniczenie i zglos ja przez `record_tool_feedback`.
+
+                SHOULD: flow-explorer-gitlab-tools
+                - Uzyj, gdy initial evidence nie wystarcza do primary flow albo sekcji w trybie `deep`.
+                - Preferuj `gitlab_read_java_method_slice` dla konkretnej metody, a pelny `gitlab_read_repository_file` tylko gdy slice/outline nie wystarcza.
+                - Nie powtarzaj odczytow kodu, ktory jest juz w `snippet-cards.md`.
+
+                COULD: record_tool_feedback
+                - Uzyj dla brakow katalogu operational context, glossary, ownerow, integracji albo code-search scope, jezeli luka obniza jakosc biznesowa wyniku.
+
+                COULD: flow-explorer-gitlab-tools + flow-explorer-operational-context-tools
+                - Uzyj razem tylko wtedy, gdy laczenie kodu i operational context realnie zmieni odpowiedz albo widocznosc ograniczen.
+                """.formatted(goalSkillUsage(request != null ? request.goal() : null));
+    }
+
+    private String goalSkillUsage(FlowExplorerAnalysisGoal goal) {
+        if (goal == FlowExplorerAnalysisGoal.TEST_SCENARIOS) {
+            return """
+                    MUST: flow-explorer-goal-test-scenarios
+                    - Uzyj przed wypelnieniem sekcji merytorycznych dla celu TEST_SCENARIOS.
+                    - Szukaj regul, walidacji, stanow danych, integracji i wariantow, ktore daja konkretne scenariusze testowe bez przepisywania implementacji.
+                    """.stripTrailing();
+        }
+        if (goal == FlowExplorerAnalysisGoal.RISK_DETECTION) {
+            return """
+                    MUST: flow-explorer-goal-risk-detection
+                    - Uzyj przed wypelnieniem sekcji merytorycznych dla celu RISK_DETECTION.
+                    - Szukaj ryzyk regresji, ukrytych zaleznosci, efektow ubocznych, integracji i ograniczen widocznosci.
+                    """.stripTrailing();
+        }
+        return """
+                MUST: flow-explorer-goal-deep-discovery
+                - Uzyj przed wypelnieniem sekcji merytorycznych dla celu DEEP_DISCOVERY.
+                - Szukaj pelnego przeplywu biznesowo-systemowego, reguly domenowej, walidacji, zapisu danych, handoffow i integracji.
+                """.stripTrailing();
     }
 
     private String userInstructions(String userInstructions) {

@@ -43,7 +43,7 @@ public class FlowExplorerCopilotRedundantDiscoveryPolicy implements CopilotToolI
             reject(
                     request,
                     "Repository scope is already resolved for this Flow Explorer initial run.",
-                    "Nie wykonuj repository rediscovery. Uzyj `projectName`, `projectPath`, `branchRef` i `filePath` z `flow-explorer/canonical-tool-inputs.md`; jezeli potrzebujesz kodu, wykonaj focused GitLab read na konkretnym pliku albo metodzie."
+                    "Nie wykonuj repository rediscovery. Uzyj `projectName`, `projectPath` i `branchRef` z `flow-explorer/canonical-tool-inputs.md` oraz `filePath` z `flow-explorer/compact-flow-manifest.md`; jezeli potrzebujesz kodu, wykonaj focused GitLab read na konkretnym pliku albo metodzie."
             );
         }
     }

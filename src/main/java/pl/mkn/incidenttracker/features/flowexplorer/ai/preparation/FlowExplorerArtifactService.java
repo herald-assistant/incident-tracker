@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -118,9 +119,10 @@ public class FlowExplorerArtifactService {
             return "- endpoint flow not resolved";
         }
         var nodes = contextSnapshot.flowNodes();
+        var embeddedSnippetFilePaths = embeddedSnippetFilePaths(contextSnapshot);
         var renderedManifest = nodes.stream()
                 .limit(COMPACT_FLOW_MANIFEST_MAX_NODES)
-                .map(this::flowNodeLine)
+                .map(node -> flowNodeLine(node, embeddedSnippetFilePaths))
                 .reduce((left, right) -> left + System.lineSeparator() + right)
                 .orElse("- endpoint flow not resolved");
         if (nodes.size() <= COMPACT_FLOW_MANIFEST_MAX_NODES) {
@@ -192,29 +194,34 @@ public class FlowExplorerArtifactService {
         }
         builder.append(System.lineSeparator());
 
-        builder.append("## Canonical File Paths").append(System.lineSeparator());
-        var fileInputs = canonicalFileInputs(contextSnapshot);
-        if (fileInputs.isEmpty()) {
-            builder.append("- no canonical file paths resolved").append(System.lineSeparator());
-        } else {
-            fileInputs.forEach(fileInput -> builder.append("- ")
+        builder.append("## File And Method Scope").append(System.lineSeparator());
+        builder.append("- Use `").append(COMPACT_FLOW_MANIFEST_ARTIFACT)
+                .append("` as the canonical filePath + methodSelector list for endpoint flow reads.")
+                .append(System.lineSeparator());
+        builder.append("- Combine manifest `filePath` and methods with `projectName` and `branchRef` from this artifact.")
+                .append(System.lineSeparator());
+        builder.append("- Prefer code already marked as embedded in `").append(SNIPPET_CARDS_ARTIFACT)
+                .append("`; read GitLab only for concrete gaps.")
+                .append(System.lineSeparator()).append(System.lineSeparator());
+
+        var additionalFileInputs = additionalArtifactFileInputs(contextSnapshot);
+        if (!additionalFileInputs.isEmpty()) {
+            builder.append("## Additional Artifact File Paths").append(System.lineSeparator());
+            additionalFileInputs.forEach(fileInput -> builder.append("- ")
                     .append(StringUtils.hasText(fileInput.projectName())
                             ? "`" + fileInput.projectName() + "` "
                             : "")
                     .append("`").append(fileInput.filePath()).append("`")
-                    .append(fileInput.methods().isEmpty()
-                            ? ""
-                            : " methods: " + String.join(", ", fileInput.methods()))
                     .append(StringUtils.hasText(fileInput.embeddedArtifact())
                             ? " (already embedded in " + fileInput.embeddedArtifact() + ")"
                             : "")
                     .append(System.lineSeparator()));
+            builder.append(System.lineSeparator());
         }
-        builder.append(System.lineSeparator());
 
         builder.append("## Preferred GitLab Tool Arguments").append(System.lineSeparator());
         builder.append("- Always pass `branchRef` exactly as listed above.").append(System.lineSeparator());
-        builder.append("- Use listed `projectName` and `filePath` values exactly; do not derive them from application labels.")
+        builder.append("- Use listed `projectName` values and manifest `filePath` values exactly; do not derive them from application labels.")
                 .append(System.lineSeparator());
         builder.append("- For `gitlab_read_java_method_slice`, prefer `methodSelectors` with only `methodName`; `lineStart` is optional and only narrows overloads.")
                 .append(System.lineSeparator());
@@ -444,7 +451,7 @@ public class FlowExplorerArtifactService {
 
     private int canonicalToolInputCount(FlowExplorerContextSnapshot contextSnapshot) {
         return contextSnapshot != null
-                ? contextSnapshot.repositories().size() + canonicalFileInputs(contextSnapshot).size()
+                ? contextSnapshot.repositories().size() + additionalArtifactFileInputs(contextSnapshot).size()
                 : 0;
     }
 
@@ -455,7 +462,7 @@ public class FlowExplorerArtifactService {
         return Math.min(contextSnapshot.flowNodes().size(), COMPACT_FLOW_MANIFEST_MAX_NODES);
     }
 
-    private List<CanonicalFileInput> canonicalFileInputs(FlowExplorerContextSnapshot contextSnapshot) {
+    private List<CanonicalFileInput> additionalArtifactFileInputs(FlowExplorerContextSnapshot contextSnapshot) {
         if (contextSnapshot == null) {
             return List.of();
         }
@@ -465,27 +472,18 @@ public class FlowExplorerArtifactService {
                 .map(FlowExplorerRepositoryContext::projectName)
                 .findFirst()
                 .orElse(null);
+        var manifestFilePaths = contextSnapshot.flowNodes().stream()
+                .map(FlowExplorerFlowNode::filePath)
+                .filter(StringUtils::hasText)
+                .map(FlowExplorerArtifactService::filePathKey)
+                .collect(java.util.stream.Collectors.toSet());
         var inputs = new LinkedHashMap<String, CanonicalFileInput>();
-
-        for (var node : contextSnapshot.flowNodes()) {
-            if (!StringUtils.hasText(node.filePath())) {
-                continue;
-            }
-            var methods = node.methods().stream()
-                    .map(this::methodSelectorLabel)
-                    .filter(StringUtils::hasText)
-                    .toList();
-            var key = canonicalFileKey(selectedProjectName, node.filePath());
-            inputs.putIfAbsent(key, new CanonicalFileInput(
-                    selectedProjectName,
-                    node.filePath().trim(),
-                    methods,
-                    null
-            ));
-        }
 
         for (var contract : contextSnapshot.openApiEndpointContracts()) {
             if (!StringUtils.hasText(contract.filePath())) {
+                continue;
+            }
+            if (manifestFilePaths.contains(filePathKey(contract.filePath()))) {
                 continue;
             }
             var projectName = StringUtils.hasText(contract.projectName()) ? contract.projectName().trim() : selectedProjectName;
@@ -493,7 +491,6 @@ public class FlowExplorerArtifactService {
             inputs.putIfAbsent(key, new CanonicalFileInput(
                     projectName,
                     contract.filePath().trim(),
-                    List.of(),
                     OPENAPI_ENDPOINT_CONTRACT_ARTIFACT
             ));
         }
@@ -502,16 +499,14 @@ public class FlowExplorerArtifactService {
             if (!StringUtils.hasText(card.filePath())) {
                 continue;
             }
+            if (manifestFilePaths.contains(filePathKey(card.filePath()))) {
+                continue;
+            }
             var projectName = StringUtils.hasText(card.projectName()) ? card.projectName().trim() : selectedProjectName;
-            var methods = card.methods().stream()
-                    .map(this::methodSelectorLabel)
-                    .filter(StringUtils::hasText)
-                    .toList();
             var key = canonicalFileKey(projectName, card.filePath());
             inputs.put(key, new CanonicalFileInput(
                     projectName,
                     card.filePath().trim(),
-                    methods,
                     SNIPPET_CARDS_ARTIFACT
             ));
         }
@@ -519,20 +514,28 @@ public class FlowExplorerArtifactService {
         return List.copyOf(inputs.values());
     }
 
+    private Set<String> embeddedSnippetFilePaths(FlowExplorerContextSnapshot contextSnapshot) {
+        if (contextSnapshot == null) {
+            return Set.of();
+        }
+        return contextSnapshot.snippetCards().stream()
+                .map(FlowExplorerSnippetCard::filePath)
+                .filter(StringUtils::hasText)
+                .map(FlowExplorerArtifactService::filePathKey)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
     private static boolean hasRepositoryIdentity(FlowExplorerRepositoryContext repository) {
         return repository != null
                 && (StringUtils.hasText(repository.projectName()) || StringUtils.hasText(repository.projectPath()));
     }
 
-    private String methodSelectorLabel(FlowExplorerFlowMethod method) {
-        if (method == null || !StringUtils.hasText(method.methodName())) {
-            return "";
-        }
-        return "`" + method.methodName().trim() + "`" + lineRange(method.lineStart(), method.lineEnd());
-    }
-
     private String canonicalFileKey(String projectName, String filePath) {
         return safe(projectName) + ":" + safe(filePath);
+    }
+
+    private static String filePathKey(String filePath) {
+        return StringUtils.hasText(filePath) ? filePath.trim() : "";
     }
 
     private void appendKeyValue(StringBuilder builder, String key, String value) {
@@ -544,15 +547,18 @@ public class FlowExplorerArtifactService {
         return StringUtils.hasText(value) ? value.trim() : "<missing>";
     }
 
-    private String flowNodeLine(FlowExplorerFlowNode node) {
+    private String flowNodeLine(FlowExplorerFlowNode node, Set<String> embeddedSnippetFilePaths) {
         var methods = node.methods().isEmpty()
                 ? "methods: none"
                 : "methods: " + node.methods().stream()
                 .map(method -> method.methodName() + lineRange(method.lineStart(), method.lineEnd()))
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("none");
+        var embedded = embeddedSnippetFilePaths.contains(filePathKey(node.filePath()))
+                ? " embedded: " + SNIPPET_CARDS_ARTIFACT
+                : "";
         var reason = StringUtils.hasText(node.reason()) ? " reason: " + node.reason() : "";
-        return "- [%s] %s %s%s".formatted(node.role(), node.filePath(), methods, reason);
+        return "- [%s] %s %s%s%s".formatted(node.role(), node.filePath(), methods, embedded, reason);
     }
 
     private String snippetCard(FlowExplorerSnippetCard card) {
@@ -615,12 +621,7 @@ public class FlowExplorerArtifactService {
     private record CanonicalFileInput(
             String projectName,
             String filePath,
-            List<String> methods,
             String embeddedArtifact
     ) {
-
-        private CanonicalFileInput {
-            methods = methods != null ? List.copyOf(methods) : List.of();
-        }
     }
 }

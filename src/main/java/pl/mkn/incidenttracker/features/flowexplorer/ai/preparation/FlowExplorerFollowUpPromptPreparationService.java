@@ -54,7 +54,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Jezeli korygujesz albo doprecyzowujesz wynik initial, powiedz to jawnie.
                 - Nie generuj ponownie calego initial resultu. Odpowiedz tylko na aktualne pytanie uzytkownika.
                 - Follow-up sluzy do wyjatkow, doprecyzowan i waskich dopytan, nie do ratowania powierzchownego initial resultu.
-                - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`.
+                - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` oraz `compact-flow-manifest.md`: scope repo/branch bierz z canonical, a filePath/metody z manifestu.
                 - Jezeli `openapi-endpoint-contract.md` jest dostepny, uzyj go dla pytan o kontrakt API, request, response, parametry, security albo setup walidacji. Nie czytaj pelnego OpenAPI YAML.
                 - `focusAreas` z initial request wskazuja sekcje, ktore mialy tryb deep.
                 - `reasoningEffort` z initial request steruje glebokoscia dodatkowego czytania: low = minimalnie, medium = focused reads dla brakow, high = glebsze edge case'y i zaleznosci.
@@ -83,9 +83,10 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 ## Tool scope guidance
                 - GitLab tools do not read endpoint business scope from hidden ToolContext.
                 - When calling GitLab tools, pass `branchRef` explicitly from `canonical-tool-inputs.md`.
-                - Pass `applicationName`, known `projectName` and `filePath` values from `canonical-tool-inputs.md` when the tool needs repository scope.
+                - Pass `applicationName`, known `projectName` and `branchRef` values from `canonical-tool-inputs.md`.
+                - Pass `filePath` and method selectors from `compact-flow-manifest.md` or `openapi-endpoint-contract.md` when the tool needs code scope.
                 - Do not pass `gitLabGroup`; backend resolves it through operational context or configuration.
-                - Do not call repository discovery or endpoint context rebuild when `canonical-tool-inputs.md` already contains the needed project, branch and file path.
+                - Do not call repository discovery or endpoint context rebuild when `canonical-tool-inputs.md` and `compact-flow-manifest.md` already contain the needed project, branch and flow file paths.
 
                 ## Initial result summary
                 %s

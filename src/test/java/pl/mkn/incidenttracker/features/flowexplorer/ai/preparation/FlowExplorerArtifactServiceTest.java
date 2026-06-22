@@ -61,15 +61,18 @@ class FlowExplorerArtifactServiceTest {
         assertTrue(canonicalToolInputs.contains("branchRef: `feature/FLOW-42`"));
         assertTrue(canonicalToolInputs.contains("selected projectName: `crm-service`"));
         assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));
-        assertTrue(canonicalToolInputs.contains("`src/main/java/com/example/CustomerController.java`"));
-        assertTrue(canonicalToolInputs.contains("methods: `getCustomer` L12-L24"));
-        assertTrue(canonicalToolInputs.contains("already embedded in flow-explorer/snippet-cards.md"));
+        assertTrue(canonicalToolInputs.contains("## File And Method Scope"));
+        assertTrue(canonicalToolInputs.contains("compact-flow-manifest.md` as the canonical filePath + methodSelector list"));
+        assertTrue(canonicalToolInputs.contains("manifest `filePath` values"));
+        assertFalse(canonicalToolInputs.contains("`src/main/java/com/example/CustomerController.java` methods"));
+        assertFalse(canonicalToolInputs.contains("already embedded in flow-explorer/snippet-cards.md"));
         assertTrue(canonicalToolInputs.contains("Do not call `gitlab_list_available_repositories`"));
         assertFalse(canonicalToolInputs.contains("gitLabGroup:"));
 
         var manifest = artifactContents.get(FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT);
         assertTrue(manifest.contains("[CONTROLLER]"));
         assertTrue(manifest.contains("getCustomer L12-L24"));
+        assertTrue(manifest.contains("embedded: flow-explorer/snippet-cards.md"));
         assertTrue(!manifest.contains("public CustomerResponse getCustomer"));
 
         var snippets = artifactContents.get(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT);

@@ -48,6 +48,7 @@ class FlowExplorerCopilotRedundantDiscoveryPolicyTest {
         assertEquals("denied_by_flow_explorer_policy", result.get("status"));
         assertEquals(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES, result.get("toolName"));
         assertTrue(result.get("instruction").toString().contains("canonical-tool-inputs.md"));
+        assertTrue(result.get("instruction").toString().contains("compact-flow-manifest.md"));
         assertTrue(result.get("instruction").toString().contains("projectName"));
     }
 
