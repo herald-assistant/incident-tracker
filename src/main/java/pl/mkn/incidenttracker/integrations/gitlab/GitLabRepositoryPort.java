@@ -8,6 +8,16 @@ public interface GitLabRepositoryPort {
 
     List<GitLabRepositoryFileCandidate> searchCandidateFiles(GitLabRepositorySearchQuery query);
 
+    default List<GitLabRepositoryFileCandidate> searchRepositoryFilesByContent(
+            String group,
+            String projectName,
+            String branch,
+            List<String> searchTerms,
+            int maxResultsPerTerm
+    ) {
+        return List.of();
+    }
+
     List<GitLabRepositoryFile> listRepositoryFiles(
             String group,
             String projectName,

@@ -639,6 +639,24 @@ tester `OpenAPI Endpoint Slice`, ktory wywoluje
 `/api/gitlab/repository/openapi-endpoint-slice` i pozwala recznie sprawdzic
 ten sam contract slicing bez uruchamiania calego Flow Explorera.
 
+### 010. Endpoint inventory search-first zamiast skanowania wszystkich Java
+
+Decyzja: endpoint inventory nie traktuje juz wszystkich produkcyjnych plikow
+Java jako kandydatow endpointow. Najpierw uzywa GitLab content search po
+neutralnych sygnalach Spring REST i kontraktow API: `@RestController`,
+`@Controller`, `@RequestMapping`, `RouterFunctions.route`, `RouterFunction<`
+oraz `@RepositoryRestResource`. Dopiero znalezione pliki kandydackie sa
+czytane i parsowane. Repository tree zostaje fallbackiem, gdy search nie
+zwroci sygnalow, oraz pomocnicza sciezka dla wykrywania plikow OpenAPI/YAML.
+
+Powod: warning typu `top 120 of 591 production Java source files` opisywal
+zly problem i sugerowal, ze trzeba czytac cale repo. Dla Spring REST
+wystarczy czytac pliki z sygnalami endpointow, w tym interfejsy API z
+adnotacjami. To zmniejsza liczbe GitLab `readFile`, przyspiesza inventory i
+zmienia semantyke metryk na `Spring REST endpoint candidate files`.
+
+Status: implemented and verified.
+
 ## Checklist status
 
 - [x] Utworzono plan usprawnien po analizie realnego exportu.
@@ -649,6 +667,7 @@ ten sam contract slicing bez uruchamiania calego Flow Explorera.
 - [x] 003. Skill guidance i UI sterowania modelem AI.
 - [x] 003a. Initial context limits i clipping notes.
 - [x] 003b. Endpoint-specific OpenAPI contract artifact + GitLab tool workbench tester.
+- [x] 003c. Endpoint inventory search-first zamiast skanowania wszystkich Java.
 - [ ] 004. Snippet ranking pod primary flow i focus areas.
 - [ ] 005. Baseline quality report model.
 - [ ] 006. Ranking i grupowanie limitations/next reads.

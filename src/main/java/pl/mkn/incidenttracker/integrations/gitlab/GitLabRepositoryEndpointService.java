@@ -22,6 +22,8 @@ public class GitLabRepositoryEndpointService {
 
     private static final int DEFAULT_MAX_SCANNED_FILES = 120;
     private static final int MAX_SCANNED_FILES = 250;
+    private static final int ENDPOINT_SEARCH_RESULTS_PER_TERM = 100;
+    private static final int OPENAPI_SEARCH_RESULTS_PER_TERM = 50;
     private static final int MAX_CONTROLLER_FILE_CHARACTERS = 80_000;
     private static final int MAX_OPENAPI_FILE_CHARACTERS = 260_000;
     private static final int MAX_OPENAPI_FILES = 30;
@@ -35,6 +37,18 @@ public class GitLabRepositoryEndpointService {
 
     private static final Set<String> SOURCE_FILE_SUFFIXES = Set.of(".java");
     private static final Set<String> OPENAPI_FILE_SUFFIXES = Set.of(".yaml", ".yml");
+    private static final List<String> ENDPOINT_DISCOVERY_TERMS = List.of(
+            "@RestController",
+            "@Controller",
+            "@RequestMapping",
+            "RouterFunctions.route",
+            "RouterFunction<",
+            "@RepositoryRestResource"
+    );
+    private static final List<String> OPENAPI_DISCOVERY_TERMS = List.of(
+            "openapi:",
+            "swagger:"
+    );
     private static final Set<String> HTTP_METHODS = Set.of(
             "GET",
             "POST",
@@ -153,12 +167,18 @@ public class GitLabRepositoryEndpointService {
     ) {
         var limitations = new ArrayList<String>();
 
-        var repositoryFiles = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
-        var candidateFiles = candidateFiles(repositoryFiles);
+        var endpointDiscovery = endpointCandidateFiles(group, projectName, branch, limitations);
+        var candidateFiles = endpointDiscovery.files();
         var scannedFiles = candidateFiles.stream()
                 .limit(maxScannedFiles)
                 .toList();
-        var openApiFiles = openApiCandidateFiles(repositoryFiles);
+        var openApiFiles = openApiCandidateFiles(
+                group,
+                projectName,
+                branch,
+                endpointDiscovery.repositoryTreeFiles(),
+                limitations
+        );
         var scannedOpenApiFiles = openApiFiles.stream()
                 .limit(MAX_OPENAPI_FILES)
                 .toList();
@@ -217,14 +237,11 @@ public class GitLabRepositoryEndpointService {
         endpoints = new ArrayList<>(mergeOpenApiDocumentation(endpoints, openApiOperations));
         endpoints.addAll(openApiBackedEndpoints(projectName, openApiOperations, controllerImplementations, endpoints));
 
-        if (repositoryFiles.isEmpty()) {
-            limitations.add("No repository files were returned by GitLab for the repository root.");
-        }
-        if (candidateFiles.isEmpty() && !repositoryFiles.isEmpty()) {
-            limitations.add("Repository tree was read, but no production Java source files were eligible for endpoint parsing.");
+        if (candidateFiles.isEmpty()) {
+            limitations.add("No Spring REST endpoint candidate files were found by GitLab search or repository tree fallback.");
         }
         if (scannedFileLimitReached) {
-            limitations.add("Endpoint parsing scanned the top %d of %d production Java source files; increase maxScannedFiles for broader inventory."
+            limitations.add("Endpoint parsing scanned the top %d of %d Spring REST endpoint candidate files; increase maxScannedFiles for broader inventory."
                     .formatted(scannedFiles.size(), candidateFiles.size()));
         }
 
@@ -1388,9 +1405,36 @@ public class GitLabRepositoryEndpointService {
         return StringUtils.hasText(responseType) ? List.of(responseType) : List.of();
     }
 
-    private List<GitLabRepositoryFile> openApiCandidateFiles(List<GitLabRepositoryFile> repositoryFiles) {
-        return repositoryFiles.stream()
+    private List<GitLabRepositoryFile> openApiCandidateFiles(
+            String group,
+            String projectName,
+            String branch,
+            List<GitLabRepositoryFile> knownRepositoryTreeFiles,
+            List<String> limitations
+    ) {
+        var searchedFiles = searchFilesByContent(
+                group,
+                projectName,
+                branch,
+                OPENAPI_DISCOVERY_TERMS,
+                OPENAPI_SEARCH_RESULTS_PER_TERM
+        ).stream()
+                .filter(file -> isOpenApiSpecFile(file.filePath()))
+                .toList();
+        if (!searchedFiles.isEmpty()) {
+            return sortOpenApiFiles(searchedFiles);
+        }
+
+        var repositoryFiles = knownRepositoryTreeFiles != null && !knownRepositoryTreeFiles.isEmpty()
+                ? knownRepositoryTreeFiles
+                : repositoryTreeFiles(group, projectName, branch, limitations, "OpenAPI contract discovery");
+        return sortOpenApiFiles(repositoryFiles.stream()
                 .filter(file -> file != null && isOpenApiSpecFile(file.filePath()))
+                .toList());
+    }
+
+    private List<GitLabRepositoryFile> sortOpenApiFiles(List<GitLabRepositoryFile> files) {
+        return deduplicateFiles(files).stream()
                 .sorted(Comparator.comparingInt((GitLabRepositoryFile file) -> openApiCandidateScore(file.filePath())).reversed()
                         .thenComparing(GitLabRepositoryFile::filePath))
                 .toList();
@@ -1418,13 +1462,106 @@ public class GitLabRepositoryEndpointService {
         return score;
     }
 
+    private EndpointCandidateDiscovery endpointCandidateFiles(
+            String group,
+            String projectName,
+            String branch,
+            List<String> limitations
+    ) {
+        var searchedFiles = searchFilesByContent(
+                group,
+                projectName,
+                branch,
+                ENDPOINT_DISCOVERY_TERMS,
+                ENDPOINT_SEARCH_RESULTS_PER_TERM
+        ).stream()
+                .filter(file -> isProductionJavaSource(file.filePath()))
+                .filter(file -> !isTestSource(file.filePath()))
+                .toList();
+        if (!searchedFiles.isEmpty()) {
+            return new EndpointCandidateDiscovery(sortEndpointCandidateFiles(searchedFiles), List.of());
+        }
+
+        var repositoryFiles = repositoryTreeFiles(group, projectName, branch, limitations, "Spring REST endpoint discovery");
+        var fallbackFiles = sortEndpointCandidateFiles(candidateFiles(repositoryFiles));
+        if (!fallbackFiles.isEmpty()) {
+            limitations.add("GitLab endpoint candidate search returned no Spring REST signals; repository tree fallback selected likely endpoint files by path.");
+        }
+        return new EndpointCandidateDiscovery(fallbackFiles, repositoryFiles);
+    }
+
     private List<GitLabRepositoryFile> candidateFiles(List<GitLabRepositoryFile> repositoryFiles) {
         return repositoryFiles.stream()
                 .filter(file -> file != null && isProductionJavaSource(file.filePath()))
                 .filter(file -> !isTestSource(file.filePath()))
+                .filter(file -> likelyEndpointSourceFile(file.filePath()))
+                .toList();
+    }
+
+    private List<GitLabRepositoryFile> sortEndpointCandidateFiles(List<GitLabRepositoryFile> files) {
+        return deduplicateFiles(files).stream()
                 .sorted(Comparator.comparingInt((GitLabRepositoryFile file) -> candidateScore(file.filePath())).reversed()
                         .thenComparing(GitLabRepositoryFile::filePath))
                 .toList();
+    }
+
+    private List<GitLabRepositoryFile> searchFilesByContent(
+            String group,
+            String projectName,
+            String branch,
+            List<String> searchTerms,
+            int maxResultsPerTerm
+    ) {
+        try {
+            var candidates = gitLabRepositoryPort.searchRepositoryFilesByContent(
+                    group,
+                    projectName,
+                    branch,
+                    searchTerms,
+                    maxResultsPerTerm
+            );
+            if (candidates == null) {
+                return List.of();
+            }
+            return candidates.stream()
+                    .filter(candidate -> candidate != null && StringUtils.hasText(candidate.filePath()))
+                    .map(candidate -> new GitLabRepositoryFile(
+                            group,
+                            projectName,
+                            branch,
+                            candidate.filePath()
+                    ))
+                    .toList();
+        } catch (RuntimeException exception) {
+            return List.of();
+        }
+    }
+
+    private List<GitLabRepositoryFile> repositoryTreeFiles(
+            String group,
+            String projectName,
+            String branch,
+            List<String> limitations,
+            String purpose
+    ) {
+        try {
+            var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+            return files != null ? files : List.of();
+        } catch (RuntimeException exception) {
+            limitations.add(purpose + " repository tree fallback failed: " + safeMessage(exception));
+            return List.of();
+        }
+    }
+
+    private List<GitLabRepositoryFile> deduplicateFiles(List<GitLabRepositoryFile> files) {
+        var deduplicated = new LinkedHashMap<String, GitLabRepositoryFile>();
+        for (var file : files != null ? files : List.<GitLabRepositoryFile>of()) {
+            if (file == null || !StringUtils.hasText(file.filePath())) {
+                continue;
+            }
+            deduplicated.putIfAbsent(file.filePath(), file);
+        }
+        return List.copyOf(deduplicated.values());
     }
 
     private int candidateScore(String filePath) {
@@ -1448,6 +1585,9 @@ public class GitLabRepositoryEndpointService {
         if (normalized.contains("/api/") || normalized.contains("/web/") || normalized.contains("/rest/")) {
             score += 60;
         }
+        if (normalized.contains("/contract/") || normalized.contains("/contracts/")) {
+            score += 40;
+        }
         if (normalized.contains("/adapter/in/") || normalized.contains("/inbound/")) {
             score += 30;
         }
@@ -1455,6 +1595,10 @@ public class GitLabRepositoryEndpointService {
             score -= 40;
         }
         return score;
+    }
+
+    private boolean likelyEndpointSourceFile(String filePath) {
+        return candidateScore(filePath) > 0;
     }
 
     private boolean likelyControllerFile(String filePath) {
@@ -1889,6 +2033,16 @@ public class GitLabRepositoryEndpointService {
         private EndpointInventory {
             endpoints = endpoints != null ? List.copyOf(endpoints) : List.of();
             limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
+    }
+
+    private record EndpointCandidateDiscovery(
+            List<GitLabRepositoryFile> files,
+            List<GitLabRepositoryFile> repositoryTreeFiles
+    ) {
+        private EndpointCandidateDiscovery {
+            files = files != null ? List.copyOf(files) : List.of();
+            repositoryTreeFiles = repositoryTreeFiles != null ? List.copyOf(repositoryTreeFiles) : List.of();
         }
     }
 

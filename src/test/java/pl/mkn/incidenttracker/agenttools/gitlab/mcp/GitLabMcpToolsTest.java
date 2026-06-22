@@ -277,8 +277,8 @@ class GitLabMcpToolsTest {
         assertEquals("feature/FLOW-1", response.branch());
         assertEquals("/api/customers", response.endpointPathPrefix());
         assertEquals("GET", response.httpMethod());
-        assertEquals(2, response.candidateFileCount());
-        assertEquals(2, response.scannedFileCount());
+        assertEquals(1, response.candidateFileCount());
+        assertEquals(1, response.scannedFileCount());
         assertFalse(response.scannedFileLimitReached());
         assertEquals(1, response.endpoints().size());
 

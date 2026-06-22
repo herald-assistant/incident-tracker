@@ -123,6 +123,43 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     @Override
+    public List<GitLabRepositoryFileCandidate> searchRepositoryFilesByContent(
+            String group,
+            String projectName,
+            String branch,
+            List<String> searchTerms,
+            int maxResultsPerTerm
+    ) {
+        var normalizedTerms = distinctSearchTerms(searchTerms, List.of());
+        if (!StringUtils.hasText(group)
+                || !StringUtils.hasText(projectName)
+                || !StringUtils.hasText(branch)
+                || normalizedTerms.isEmpty()) {
+            return List.of();
+        }
+
+        var candidateScores = new LinkedHashMap<String, CandidateAccumulator>();
+        var safeMaxResultsPerTerm = maxResultsPerTerm > 0
+                ? maxResultsPerTerm
+                : properties.getSearchResultsPerTerm();
+
+        for (var searchTerm : normalizedTerms) {
+            for (var blobMatch : searchProjectBlobs(group, projectName, branch, searchTerm, safeMaxResultsPerTerm)) {
+                var key = projectName + "::" + blobMatch.path();
+                candidateScores.computeIfAbsent(
+                                key,
+                                ignored -> new CandidateAccumulator(group, projectName, branch, blobMatch.path()))
+                        .registerMatch(searchTerm);
+            }
+        }
+
+        return candidateScores.values().stream()
+                .sorted((left, right) -> Integer.compare(right.matchScore(), left.matchScore()))
+                .map(CandidateAccumulator::toCandidate)
+                .toList();
+    }
+
+    @Override
     public List<GitLabRepositoryFile> listRepositoryFiles(
             String group,
             String projectName,
@@ -305,9 +342,19 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     private List<GitLabBlobSearchResult> searchProjectBlobs(String group, String projectName, String branch, String searchTerm) {
+        return searchProjectBlobs(group, projectName, branch, searchTerm, properties.getSearchResultsPerTerm());
+    }
+
+    private List<GitLabBlobSearchResult> searchProjectBlobs(
+            String group,
+            String projectName,
+            String branch,
+            String searchTerm,
+            int maxResults
+    ) {
         try {
             var results = restClient().get()
-                    .uri(projectSearchUri(group, projectName, branch, searchTerm))
+                    .uri(projectSearchUri(group, projectName, branch, searchTerm, maxResults))
                     .retrieve()
                     .body(GitLabBlobSearchResult[].class);
 
@@ -453,12 +500,22 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     private URI projectSearchUri(String group, String projectName, String branch, String searchTerm) {
+        return projectSearchUri(group, projectName, branch, searchTerm, properties.getSearchResultsPerTerm());
+    }
+
+    private URI projectSearchUri(
+            String group,
+            String projectName,
+            String branch,
+            String searchTerm,
+            int maxResults
+    ) {
         return URI.create(apiBaseUrl()
                 + "/projects/" + encodePathSegment(group + "/" + projectName)
                 + "/search?scope=blobs"
                 + "&search=" + encodeQueryParam(searchTerm)
                 + "&ref=" + encodeQueryParam(branch)
-                + "&per_page=" + properties.getSearchResultsPerTerm());
+                + "&per_page=" + Math.max(1, maxResults));
     }
 
     private URI rawFileUri(String group, String projectName, String branch, String filePath) {

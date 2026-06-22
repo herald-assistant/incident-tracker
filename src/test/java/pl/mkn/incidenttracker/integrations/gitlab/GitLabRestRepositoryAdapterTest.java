@@ -120,6 +120,42 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldSearchRepositoryFilesByContentTermsWithoutGlobalCandidateLimit() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/search?scope=blobs&search=@RestController&ref=release/2026.04&per_page=100"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "path": "src/main/java/com/example/crm/customer/api/CustomerController.java"
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        var candidates = adapter.searchRepositoryFilesByContent(
+                "CRM/runtime",
+                "crm-customer-api",
+                "release/2026.04",
+                List.of("@RestController"),
+                100
+        );
+
+        assertEquals(1, candidates.size());
+        assertEquals("CRM/runtime", candidates.get(0).group());
+        assertEquals("crm-customer-api", candidates.get(0).projectName());
+        assertEquals("release/2026.04", candidates.get(0).branch());
+        assertEquals("src/main/java/com/example/crm/customer/api/CustomerController.java", candidates.get(0).filePath());
+        assertTrue(candidates.get(0).matchReason().contains("@RestController"));
+
+        server.verify();
+    }
+
+    @Test
     void shouldResolveNestedProjectPathBeforeSearchingRepositoryCandidates() {
         var properties = gitLabProperties("CRM");
         var restClientBuilder = RestClient.builder();
