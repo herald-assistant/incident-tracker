@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -96,11 +97,24 @@ public class GitLabRepositoryEndpointService {
     private static final Pattern STATIC_IMPORT_PATTERN = Pattern.compile(
             "(?m)^\\s*import\\s+static\\s+([\\w.]+)\\.([A-Za-z_$][\\w$]*|\\*)\\s*;"
     );
-    private static final Pattern CLASS_QUALIFIED_CONSTANT_PATTERN = Pattern.compile(
-            "\\b([A-Z][A-Za-z0-9_$]*(?:Uris|Urls|Paths|Routes|Endpoints?|Params?|Resources?))\\.([A-Za-z_$][\\w$]*)\\b"
+    private static final Pattern CLASS_QUALIFIED_REFERENCE_PATTERN = Pattern.compile(
+            "\\b([A-Z][A-Za-z0-9_$]*)\\.([A-Za-z_$][\\w$]*)\\b"
+    );
+    private static final Pattern CONSTANT_REFERENCE_PATTERN = Pattern.compile(
+            "\\b([A-Z][A-Z0-9_$]*(?:_[A-Z0-9_$]+)*)\\b"
     );
     private static final Pattern STRING_CONSTANT_PATTERN = Pattern.compile(
             "(?s)\\b((?:(?:public|protected|private)\\s+)?(?:(?:static|final)\\s+)+String)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*([^;]+);"
+    );
+    private static final Set<String> ENDPOINT_CONSTANT_ANNOTATIONS = Set.of(
+            "RequestMapping",
+            "GetMapping",
+            "PostMapping",
+            "PutMapping",
+            "PatchMapping",
+            "DeleteMapping",
+            "PathVariable",
+            "RequestParam"
     );
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
@@ -199,6 +213,7 @@ public class GitLabRepositoryEndpointService {
         var endpoints = new ArrayList<GitLabRepositoryEndpoint>();
         var controllerImplementations = new ArrayList<ControllerImplementation>();
         var openApiOperations = new ArrayList<OpenApiOperation>();
+        var constantResolutionContext = new JavaStringConstantResolutionContext(endpointDiscovery.repositoryTreeFiles());
 
         for (var file : scannedFiles) {
             try {
@@ -219,7 +234,8 @@ public class GitLabRepositoryEndpointService {
                         branch,
                         content.filePath(),
                         content.content(),
-                        fileLimitations
+                        fileLimitations,
+                        constantResolutionContext
                 );
                 endpoints.addAll(parseEndpointFile(
                         projectName,
@@ -388,6 +404,26 @@ public class GitLabRepositoryEndpointService {
             String content,
             List<String> limitations
     ) {
+        return javaStringConstantResolver(
+                group,
+                projectName,
+                branch,
+                filePath,
+                content,
+                limitations,
+                null
+        );
+    }
+
+    private JavaStringConstantResolver javaStringConstantResolver(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            String content,
+            List<String> limitations,
+            JavaStringConstantResolutionContext resolutionContext
+    ) {
         var constants = new LinkedHashMap<String, String>();
         var diagnostics = new ArrayList<String>();
         addStringConstants(constants, extractPackageName(content), firstDeclaredTypeName(content), content);
@@ -404,6 +440,7 @@ public class GitLabRepositoryEndpointService {
                 content,
                 constants,
                 diagnostics,
+                resolutionContext,
                 new LinkedHashSet<>(),
                 0
         );
@@ -419,17 +456,22 @@ public class GitLabRepositoryEndpointService {
             String content,
             Map<String, String> constants,
             List<String> diagnostics,
+            JavaStringConstantResolutionContext resolutionContext,
             Set<String> visitedImportedClasses,
-        int depth
+            int depth
     ) {
+        var importedClasses = depth == 0
+                ? endpointConstantClasses(content)
+                : stringConstantDependencyClasses(content);
+
         if (depth >= MAX_STATIC_CONSTANT_IMPORT_DEPTH) {
-            if (!endpointConstantClasses(content).isEmpty()) {
+            if (!importedClasses.isEmpty()) {
                 diagnostics.add("Java string constant import traversal reached depth limit at " + filePath + ".");
             }
             return;
         }
 
-        for (var importedClass : endpointConstantClasses(content)) {
+        for (var importedClass : importedClasses) {
             if (!visitedImportedClasses.add(importedClass)) {
                 continue;
             }
@@ -440,7 +482,8 @@ public class GitLabRepositoryEndpointService {
                     branch,
                     filePath,
                     importedClass,
-                    diagnostics
+                    diagnostics,
+                    resolutionContext
             );
             if (importedContent == null) {
                 continue;
@@ -463,6 +506,7 @@ public class GitLabRepositoryEndpointService {
                     importedContent.content(),
                     constants,
                     diagnostics,
+                    resolutionContext,
                     visitedImportedClasses,
                     depth + 1
             );
@@ -470,42 +514,213 @@ public class GitLabRepositoryEndpointService {
     }
 
     private Set<String> endpointConstantClasses(String content) {
+        return javaStringConstantClassesForExpressions(content, endpointAnnotationConstantExpressions(content));
+    }
+
+    private Set<String> stringConstantDependencyClasses(String content) {
+        return javaStringConstantClassesForExpressions(content, stringConstantExpressions(content));
+    }
+
+    private Set<String> javaStringConstantClassesForExpressions(String content, List<String> expressions) {
         var importedClasses = new LinkedHashSet<String>();
+        if (expressions == null || expressions.isEmpty()) {
+            return importedClasses;
+        }
+
         var packageName = extractPackageName(content);
         var normalImports = javaImportClasses(content);
+        var staticImports = new LinkedHashMap<String, String>();
+        var wildcardStaticImports = new LinkedHashSet<String>();
 
         var staticImportMatcher = STATIC_IMPORT_PATTERN.matcher(content != null ? content : "");
         while (staticImportMatcher.find()) {
             var importedClass = staticImportMatcher.group(1);
             var importedMember = staticImportMatcher.group(2);
-            if (!likelyEndpointConstantImport(importedClass, importedMember)) {
-                continue;
-            }
-            importedClasses.add(importedClass);
-        }
-
-        for (var entry : normalImports.entrySet()) {
-            if (likelyEndpointConstantClassName(entry.getKey())) {
-                importedClasses.add(entry.getValue());
+            if ("*".equals(importedMember)) {
+                wildcardStaticImports.add(importedClass);
+            } else {
+                staticImports.putIfAbsent(importedMember, importedClass);
             }
         }
 
-        var classQualifiedMatcher = CLASS_QUALIFIED_CONSTANT_PATTERN.matcher(content != null ? content : "");
-        while (classQualifiedMatcher.find()) {
-            var ownerClassName = classQualifiedMatcher.group(1);
-            var constantName = classQualifiedMatcher.group(2);
-            if (!likelyEndpointConstantImport(ownerClassName, constantName)) {
+        for (var reference : javaStringConstantReferences(expressions)) {
+            if (StringUtils.hasText(reference.ownerClassName())) {
+                if (!likelyEndpointConstantImport(reference.ownerClassName(), reference.memberName())) {
+                    continue;
+                }
+                var importedClass = normalImports.get(reference.ownerClassName());
+                if (StringUtils.hasText(importedClass)) {
+                    importedClasses.add(importedClass);
+                } else if (StringUtils.hasText(packageName)) {
+                    importedClasses.add(packageName + "." + reference.ownerClassName());
+                }
                 continue;
             }
 
-            var importedClass = normalImports.get(ownerClassName);
+            var importedClass = staticImports.get(reference.memberName());
             if (StringUtils.hasText(importedClass)) {
-                importedClasses.add(importedClass);
-            } else if (StringUtils.hasText(packageName)) {
-                importedClasses.add(packageName + "." + ownerClassName);
+                if (likelyEndpointConstantImport(importedClass, reference.memberName())) {
+                    importedClasses.add(importedClass);
+                }
+            }
+            for (var wildcardImportedClass : wildcardStaticImports) {
+                if (likelyEndpointConstantImport(wildcardImportedClass, reference.memberName())) {
+                    importedClasses.add(wildcardImportedClass);
+                }
             }
         }
         return importedClasses;
+    }
+
+    private List<String> endpointAnnotationConstantExpressions(String content) {
+        var expressions = new LinkedHashSet<String>();
+        for (var annotationText : javaAnnotationSegments(content, ENDPOINT_CONSTANT_ANNOTATIONS)) {
+            var annotationName = annotationName(annotationText);
+            if (!httpMethods(annotationName, annotationText).isEmpty()) {
+                expressions.addAll(annotationPathExpressions(annotationText));
+                continue;
+            }
+            if ("PathVariable".equals(annotationName) || "RequestParam".equals(annotationName)) {
+                addIfText(expressions, annotationRawAttribute(annotationText, "name"));
+                addIfText(expressions, annotationRawAttribute(annotationText, "value"));
+                addIfText(expressions, annotationDefaultRawAttribute(annotationText));
+            }
+        }
+        return List.copyOf(expressions);
+    }
+
+    private List<String> stringConstantExpressions(String content) {
+        var expressions = new ArrayList<String>();
+        var matcher = STRING_CONSTANT_PATTERN.matcher(content != null ? content : "");
+        while (matcher.find()) {
+            var declaration = matcher.group(1);
+            if (!declaration.contains("static") || !declaration.contains("final")) {
+                continue;
+            }
+            addIfText(expressions, matcher.group(3));
+        }
+        return List.copyOf(expressions);
+    }
+
+    private List<JavaStringConstantReference> javaStringConstantReferences(List<String> expressions) {
+        var references = new ArrayList<JavaStringConstantReference>();
+        for (var expression : expressions != null ? expressions : List.<String>of()) {
+            if (!StringUtils.hasText(expression)) {
+                continue;
+            }
+
+            var expressionWithoutStrings = withoutStringLiterals(expression);
+            var classQualifiedMatcher = CLASS_QUALIFIED_REFERENCE_PATTERN.matcher(expressionWithoutStrings);
+            var withoutClassQualifiedReferences = classQualifiedMatcher.replaceAll(" ");
+            classQualifiedMatcher.reset();
+            while (classQualifiedMatcher.find()) {
+                references.add(new JavaStringConstantReference(
+                        classQualifiedMatcher.group(1),
+                        classQualifiedMatcher.group(2)
+                ));
+            }
+
+            var constantMatcher = CONSTANT_REFERENCE_PATTERN.matcher(withoutClassQualifiedReferences);
+            while (constantMatcher.find()) {
+                references.add(new JavaStringConstantReference(null, constantMatcher.group(1)));
+            }
+        }
+        return references;
+    }
+
+    private List<String> javaAnnotationSegments(String content, Set<String> simpleNames) {
+        if (!StringUtils.hasText(content)) {
+            return List.of();
+        }
+        var segments = new ArrayList<String>();
+        var matcher = ANNOTATION_NAME_PATTERN.matcher(content);
+        while (matcher.find()) {
+            var qualifiedName = matcher.group(1);
+            var dotIndex = qualifiedName.lastIndexOf('.');
+            var simpleName = dotIndex >= 0 ? qualifiedName.substring(dotIndex + 1) : qualifiedName;
+            if (!simpleNames.contains(simpleName)) {
+                continue;
+            }
+
+            var argumentsStart = nextNonWhitespaceIndex(content, matcher.end());
+            if (argumentsStart < content.length() && content.charAt(argumentsStart) == '(') {
+                var argumentsEnd = matchingParenthesisEnd(content, argumentsStart);
+                if (argumentsEnd > argumentsStart) {
+                    segments.add(content.substring(matcher.start(), argumentsEnd + 1));
+                }
+            } else {
+                var lineEnd = content.indexOf('\n', matcher.end());
+                segments.add(content.substring(matcher.start(), lineEnd >= 0 ? lineEnd : content.length()));
+            }
+        }
+        return List.copyOf(segments);
+    }
+
+    private int nextNonWhitespaceIndex(String content, int startIndex) {
+        var index = startIndex;
+        while (index < content.length() && Character.isWhitespace(content.charAt(index))) {
+            index++;
+        }
+        return index;
+    }
+
+    private int matchingParenthesisEnd(String content, int openIndex) {
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+        for (var index = openIndex; index < content.length(); index++) {
+            var character = content.charAt(index);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (character == '\\') {
+                    escaped = true;
+                } else if (character == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (character == '"') {
+                inString = true;
+                continue;
+            }
+            if (character == '(') {
+                depth++;
+            } else if (character == ')') {
+                depth--;
+                if (depth == 0) {
+                    return index;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private String withoutStringLiterals(String expression) {
+        var result = new StringBuilder();
+        var inString = false;
+        var escaped = false;
+        for (var index = 0; index < expression.length(); index++) {
+            var character = expression.charAt(index);
+            if (inString) {
+                result.append(' ');
+                if (escaped) {
+                    escaped = false;
+                } else if (character == '\\') {
+                    escaped = true;
+                } else if (character == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (character == '"') {
+                inString = true;
+                result.append(' ');
+            } else {
+                result.append(character);
+            }
+        }
+        return result.toString();
     }
 
     private Map<String, String> javaImportClasses(String content) {
@@ -527,7 +742,43 @@ public class GitLabRepositoryEndpointService {
             String branch,
             String currentFilePath,
             String importedClass,
-            List<String> diagnostics
+            List<String> diagnostics,
+            JavaStringConstantResolutionContext resolutionContext
+    ) {
+        if (resolutionContext != null) {
+            var cachedLookup = resolutionContext.constantFileLookup(importedClass);
+            if (cachedLookup != null) {
+                if (StringUtils.hasText(cachedLookup.diagnostic())) {
+                    diagnostics.add(cachedLookup.diagnostic());
+                }
+                return cachedLookup.content();
+            }
+        }
+
+        var lookup = readJavaStringConstantFileLookup(
+                group,
+                projectName,
+                branch,
+                currentFilePath,
+                importedClass,
+                resolutionContext
+        );
+        if (resolutionContext != null) {
+            resolutionContext.constantFileLookup(importedClass, lookup);
+        }
+        if (StringUtils.hasText(lookup.diagnostic())) {
+            diagnostics.add(lookup.diagnostic());
+        }
+        return lookup.content();
+    }
+
+    private JavaStringConstantFileLookup readJavaStringConstantFileLookup(
+            String group,
+            String projectName,
+            String branch,
+            String currentFilePath,
+            String importedClass,
+            JavaStringConstantResolutionContext resolutionContext
     ) {
         var failures = new ArrayList<String>();
         var directPath = javaSourcePathForClass(currentFilePath, importedClass);
@@ -539,7 +790,7 @@ public class GitLabRepositoryEndpointService {
                 failures
         );
         if (directContent != null) {
-            return directContent;
+            return new JavaStringConstantFileLookup(directContent, null);
         }
 
         var searchContent = readFirstJavaStringConstantFileCandidate(
@@ -550,23 +801,25 @@ public class GitLabRepositoryEndpointService {
                 failures
         );
         if (searchContent != null) {
-            return searchContent;
+            return new JavaStringConstantFileLookup(searchContent, null);
         }
 
         var treeContent = readFirstJavaStringConstantFileCandidate(
                 group,
                 projectName,
                 branch,
-                repositoryTreeJavaStringConstantFilePaths(group, projectName, branch, importedClass),
+                repositoryTreeJavaStringConstantFilePaths(group, projectName, branch, importedClass, resolutionContext),
                 failures
         );
         if (treeContent != null) {
-            return treeContent;
+            return new JavaStringConstantFileLookup(treeContent, null);
         }
 
-        diagnostics.add("Could not resolve Java string constants from static import "
-                + importedClass + ". Tried: " + abbreviate(String.join(", ", failures), 420));
-        return null;
+        return new JavaStringConstantFileLookup(
+                null,
+                "Could not resolve Java string constants from static import "
+                        + importedClass + ". Tried: " + abbreviate(String.join(", ", failures), 420)
+        );
     }
 
     private GitLabRepositoryFileContent readFirstJavaStringConstantFileCandidate(
@@ -620,10 +873,11 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
-            String importedClass
+            String importedClass,
+            JavaStringConstantResolutionContext resolutionContext
     ) {
         try {
-            var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+            var files = repositoryTreeFilesForJavaStringConstants(group, projectName, branch, resolutionContext);
             return files.stream()
                     .filter(file -> file != null && javaSourcePathMatchesClass(file.filePath(), importedClass))
                     .sorted(Comparator.comparing(GitLabRepositoryFile::filePath))
@@ -632,6 +886,23 @@ public class GitLabRepositoryEndpointService {
         } catch (RuntimeException exception) {
             return List.of();
         }
+    }
+
+    private List<GitLabRepositoryFile> repositoryTreeFilesForJavaStringConstants(
+            String group,
+            String projectName,
+            String branch,
+            JavaStringConstantResolutionContext resolutionContext
+    ) {
+        if (resolutionContext != null && resolutionContext.repositoryTreeLoaded()) {
+            return resolutionContext.repositoryTreeFiles();
+        }
+        var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+        var safeFiles = files != null ? files : List.<GitLabRepositoryFile>of();
+        if (resolutionContext != null) {
+            resolutionContext.repositoryTreeFiles(safeFiles);
+        }
+        return safeFiles;
     }
 
     private boolean javaSourcePathMatchesClass(String filePath, String importedClass) {
@@ -2514,6 +2785,12 @@ public class GitLabRepositoryEndpointService {
         return List.copyOf(deduplicated);
     }
 
+    private void addIfText(Collection<String> values, String value) {
+        if (StringUtils.hasText(value)) {
+            values.add(value.trim());
+        }
+    }
+
     private String abbreviate(String value, int limit) {
         if (value == null || value.length() <= limit) {
             return value;
@@ -2596,6 +2873,51 @@ public class GitLabRepositoryEndpointService {
         private EndpointCandidateDiscovery {
             files = files != null ? List.copyOf(files) : List.of();
             repositoryTreeFiles = repositoryTreeFiles != null ? List.copyOf(repositoryTreeFiles) : List.of();
+        }
+    }
+
+    private record JavaStringConstantReference(
+            String ownerClassName,
+            String memberName
+    ) {
+    }
+
+    private record JavaStringConstantFileLookup(
+            GitLabRepositoryFileContent content,
+            String diagnostic
+    ) {
+    }
+
+    private static final class JavaStringConstantResolutionContext {
+
+        private final Map<String, JavaStringConstantFileLookup> constantFileLookups = new LinkedHashMap<>();
+        private List<GitLabRepositoryFile> repositoryTreeFiles;
+        private boolean repositoryTreeLoaded;
+
+        private JavaStringConstantResolutionContext(List<GitLabRepositoryFile> repositoryTreeFiles) {
+            this.repositoryTreeFiles = repositoryTreeFiles != null ? List.copyOf(repositoryTreeFiles) : List.of();
+            this.repositoryTreeLoaded = repositoryTreeFiles != null && !repositoryTreeFiles.isEmpty();
+        }
+
+        private JavaStringConstantFileLookup constantFileLookup(String importedClass) {
+            return constantFileLookups.get(importedClass);
+        }
+
+        private void constantFileLookup(String importedClass, JavaStringConstantFileLookup lookup) {
+            constantFileLookups.put(importedClass, lookup);
+        }
+
+        private List<GitLabRepositoryFile> repositoryTreeFiles() {
+            return repositoryTreeFiles;
+        }
+
+        private void repositoryTreeFiles(List<GitLabRepositoryFile> repositoryTreeFiles) {
+            this.repositoryTreeFiles = repositoryTreeFiles != null ? List.copyOf(repositoryTreeFiles) : List.of();
+            this.repositoryTreeLoaded = true;
+        }
+
+        private boolean repositoryTreeLoaded() {
+            return repositoryTreeLoaded;
         }
     }
 
