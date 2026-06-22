@@ -331,6 +331,127 @@ class GitLabRepositoryEndpointServiceTest {
     }
 
     @Test
+    void shouldResolveStaticImportedEndpointConstantsFromAnotherModule() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var controllerPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java";
+        var wrongSameModuleConstantsPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
+        var constantsPath = "crm-case/crm-case-api/src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                "Matched @RestController.",
+                10
+        )));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("class CustomerCaseUris")),
+                eq(20)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-case-service",
+                "main",
+                constantsPath,
+                "Matched URI constants.",
+                3
+        )));
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", null))
+                .thenReturn(List.of());
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                """
+                        package com.example.crm.casehandling.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        import static com.example.crm.casehandling.api.CustomerCaseUris.CASE_DETAIL_URI;
+
+                        @RestController
+                        class CustomerCaseController {
+
+                          @GetMapping(CASE_DETAIL_URI)
+                          CustomerCaseResponse getCase(String caseId) {
+                            return new CustomerCaseResponse(caseId);
+                          }
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                wrongSameModuleConstantsPath,
+                80_000
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                constantsPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                constantsPath,
+                """
+                        package com.example.crm.casehandling.api;
+
+                        public final class CustomerCaseUris {
+                          public static final String CASE_ROOT_URI = "/api/crm/customer-cases";
+                          public static final String CASE_DETAIL_URI = CASE_ROOT_URI + "/{caseId}";
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-case-service",
+                "main",
+                null,
+                null,
+                20
+        ));
+
+        assertEquals(1, result.endpoints().size());
+        var endpoint = result.endpoints().get(0);
+        assertEquals("GET /api/crm/customer-cases/{caseId} -> com.example.crm.casehandling.api.CustomerCaseController#getCase",
+                endpoint.endpointId());
+        assertEquals("/api/crm/customer-cases/{caseId}", endpoint.path());
+        assertEquals(List.of(), endpoint.limitations());
+    }
+
+    @Test
     void shouldDiscoverEndpointCandidatesBySpringRestSignalsBeforeRepositoryTreeFallback() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var endpointService = new GitLabRepositoryEndpointService(repositoryPort);

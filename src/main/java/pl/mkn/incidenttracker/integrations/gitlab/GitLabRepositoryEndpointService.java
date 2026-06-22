@@ -382,10 +382,11 @@ public class GitLabRepositoryEndpointService {
             List<String> limitations
     ) {
         var constants = new LinkedHashMap<String, String>();
+        var diagnostics = new ArrayList<String>();
         addStringConstants(constants, extractPackageName(content), firstDeclaredTypeName(content), content);
 
         if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(branch)) {
-            return new JavaStringConstantResolver(constants);
+            return new JavaStringConstantResolver(constants, diagnostics);
         }
 
         var importedClasses = new LinkedHashSet<String>();
@@ -400,32 +401,152 @@ public class GitLabRepositoryEndpointService {
         }
 
         for (var importedClass : importedClasses) {
-            var importedFilePath = javaSourcePathForClass(filePath, importedClass);
+            var importedContent = readJavaStringConstantFile(
+                    group,
+                    projectName,
+                    branch,
+                    filePath,
+                    importedClass,
+                    diagnostics
+            );
+            if (importedContent == null) {
+                continue;
+            }
+            if (importedContent.truncated()) {
+                diagnostics.add("Java string constants file was truncated before endpoint parsing: "
+                        + importedContent.filePath());
+            }
+            addStringConstants(
+                    constants,
+                    packageName(importedClass),
+                    simpleName(importedClass),
+                    importedContent.content()
+            );
+        }
+
+        return new JavaStringConstantResolver(constants, diagnostics);
+    }
+
+    private GitLabRepositoryFileContent readJavaStringConstantFile(
+            String group,
+            String projectName,
+            String branch,
+            String currentFilePath,
+            String importedClass,
+            List<String> diagnostics
+    ) {
+        var failures = new ArrayList<String>();
+        var directPath = javaSourcePathForClass(currentFilePath, importedClass);
+        var directContent = readFirstJavaStringConstantFileCandidate(
+                group,
+                projectName,
+                branch,
+                List.of(directPath),
+                failures
+        );
+        if (directContent != null) {
+            return directContent;
+        }
+
+        var searchContent = readFirstJavaStringConstantFileCandidate(
+                group,
+                projectName,
+                branch,
+                searchJavaStringConstantFilePaths(group, projectName, branch, importedClass),
+                failures
+        );
+        if (searchContent != null) {
+            return searchContent;
+        }
+
+        var treeContent = readFirstJavaStringConstantFileCandidate(
+                group,
+                projectName,
+                branch,
+                repositoryTreeJavaStringConstantFilePaths(group, projectName, branch, importedClass),
+                failures
+        );
+        if (treeContent != null) {
+            return treeContent;
+        }
+
+        diagnostics.add("Could not resolve Java string constants from static import "
+                + importedClass + ". Tried: " + abbreviate(String.join(", ", failures), 420));
+        return null;
+    }
+
+    private GitLabRepositoryFileContent readFirstJavaStringConstantFileCandidate(
+            String group,
+            String projectName,
+            String branch,
+            List<String> candidatePaths,
+            List<String> failures
+    ) {
+        for (var candidatePath : deduplicate(candidatePaths)) {
             try {
-                var importedContent = gitLabRepositoryPort.readFile(
+                return gitLabRepositoryPort.readFile(
                         group,
                         projectName,
                         branch,
-                        importedFilePath,
+                        candidatePath,
                         MAX_CONSTANT_FILE_CHARACTERS
                 );
-                if (importedContent.truncated()) {
-                    limitations.add("Java string constants file was truncated before endpoint parsing: "
-                            + importedFilePath);
-                }
-                addStringConstants(
-                        constants,
-                        packageName(importedClass),
-                        simpleName(importedClass),
-                        importedContent.content()
-                );
             } catch (RuntimeException exception) {
-                limitations.add("Could not resolve Java string constants from static import "
-                        + importedClass + ": " + safeMessage(exception));
+                failures.add(candidatePath + " (" + safeMessage(exception) + ")");
             }
         }
+        return null;
+    }
 
-        return new JavaStringConstantResolver(constants);
+    private List<String> searchJavaStringConstantFilePaths(
+            String group,
+            String projectName,
+            String branch,
+            String importedClass
+    ) {
+        try {
+            var simpleClassName = simpleName(importedClass);
+            return gitLabRepositoryPort.searchRepositoryFilesByContent(
+                            group,
+                            projectName,
+                            branch,
+                            List.of("class " + simpleClassName, "interface " + simpleClassName, simpleClassName),
+                            20
+                    ).stream()
+                    .filter(candidate -> candidate != null && javaSourcePathMatchesClass(candidate.filePath(), importedClass))
+                    .sorted(Comparator.comparing(GitLabRepositoryFileCandidate::filePath))
+                    .map(GitLabRepositoryFileCandidate::filePath)
+                    .toList();
+        } catch (RuntimeException exception) {
+            return List.of();
+        }
+    }
+
+    private List<String> repositoryTreeJavaStringConstantFilePaths(
+            String group,
+            String projectName,
+            String branch,
+            String importedClass
+    ) {
+        try {
+            var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+            return files.stream()
+                    .filter(file -> file != null && javaSourcePathMatchesClass(file.filePath(), importedClass))
+                    .sorted(Comparator.comparing(GitLabRepositoryFile::filePath))
+                    .map(GitLabRepositoryFile::filePath)
+                    .toList();
+        } catch (RuntimeException exception) {
+            return List.of();
+        }
+    }
+
+    private boolean javaSourcePathMatchesClass(String filePath, String importedClass) {
+        if (!StringUtils.hasText(filePath) || !StringUtils.hasText(importedClass)) {
+            return false;
+        }
+        var normalizedPath = filePath.replace('\\', '/');
+        var classPath = importedClass.replace('.', '/') + ".java";
+        return normalizedPath.endsWith(classPath);
     }
 
     private boolean likelyEndpointConstantImport(String importedClass, String importedMember) {
@@ -535,6 +656,7 @@ public class GitLabRepositoryEndpointService {
                         var limitations = new ArrayList<String>(inheritedLimitations != null ? inheritedLimitations : List.of());
                         if (StringUtils.hasText(pathExpression)) {
                             limitations.add("Endpoint path uses an expression or constant that was not fully resolved: " + pathExpression);
+                            limitations.addAll(constantResolver.diagnostics());
                         }
                         if (!controller.controllerLike()) {
                             limitations.add("Class has mapping annotations but was not explicitly marked as RestController/Controller.");
@@ -2380,12 +2502,14 @@ public class GitLabRepositoryEndpointService {
 
     private static final class JavaStringConstantResolver {
 
-        private static final JavaStringConstantResolver EMPTY = new JavaStringConstantResolver(Map.of());
+        private static final JavaStringConstantResolver EMPTY = new JavaStringConstantResolver(Map.of(), List.of());
 
         private final Map<String, String> expressions;
+        private final List<String> diagnostics;
 
-        private JavaStringConstantResolver(Map<String, String> expressions) {
+        private JavaStringConstantResolver(Map<String, String> expressions, List<String> diagnostics) {
             this.expressions = expressions != null ? Map.copyOf(expressions) : Map.of();
+            this.diagnostics = diagnostics != null ? List.copyOf(diagnostics) : List.of();
         }
 
         private static JavaStringConstantResolver empty() {
@@ -2394,6 +2518,10 @@ public class GitLabRepositoryEndpointService {
 
         private String resolve(String expression) {
             return resolve(expression, new LinkedHashSet<>());
+        }
+
+        private List<String> diagnostics() {
+            return diagnostics;
         }
 
         private String resolve(String expression, Set<String> resolving) {
