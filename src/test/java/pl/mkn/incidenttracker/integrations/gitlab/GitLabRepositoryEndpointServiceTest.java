@@ -452,6 +452,152 @@ class GitLabRepositoryEndpointServiceTest {
     }
 
     @Test
+    void shouldResolveTransitiveStaticImportedEndpointConstants() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var controllerPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/lookup/CustomerLookupController.java";
+        var sameModuleLookupUrisPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/lookup/CustomerLookupUris.java";
+        var lookupUrisPath = "crm-case/crm-case-api/src/main/java/com/example/crm/casehandling/lookup/CustomerLookupUris.java";
+        var caseUrisPath = "crm-case/crm-case-api/src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                "Matched @RestController.",
+                10
+        )));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("class CustomerLookupUris")),
+                eq(20)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-case-service",
+                "main",
+                lookupUrisPath,
+                "Matched lookup URI constants.",
+                3
+        )));
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", null))
+                .thenReturn(List.of());
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                """
+                        package com.example.crm.casehandling.lookup;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.PathVariable;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        import static com.example.crm.casehandling.lookup.CustomerLookupUris.LOOKUP_DISTRICT_BY_CODE_URI;
+
+                        @RestController
+                        class CustomerLookupController {
+
+                          @GetMapping(LOOKUP_DISTRICT_BY_CODE_URI)
+                          CustomerLookupDistrictResponse getDistrict(@PathVariable String districtCode) {
+                            return new CustomerLookupDistrictResponse(districtCode);
+                          }
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                sameModuleLookupUrisPath,
+                80_000
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                lookupUrisPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                lookupUrisPath,
+                """
+                        package com.example.crm.casehandling.lookup;
+
+                        import static com.example.crm.casehandling.api.CustomerCaseUris.CASE_ROOT_URI;
+
+                        public final class CustomerLookupUris {
+                          public static final String LOOKUP_ROOT_URI = CASE_ROOT_URI + "/lookups";
+                          public static final String LOOKUP_DISTRICTS_URI = LOOKUP_ROOT_URI + "/districts";
+                          public static final String LOOKUP_DISTRICT_BY_CODE_URI = LOOKUP_DISTRICTS_URI + "/{districtCode}";
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                caseUrisPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                caseUrisPath,
+                """
+                        package com.example.crm.casehandling.api;
+
+                        public final class CustomerCaseUris {
+                          public static final String CASE_ROOT_URI = "/api/crm/customer-cases";
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-case-service",
+                "main",
+                null,
+                null,
+                20
+        ));
+
+        assertEquals(1, result.endpoints().size());
+        var endpoint = result.endpoints().get(0);
+        assertEquals("GET /api/crm/customer-cases/lookups/districts/{districtCode} -> com.example.crm.casehandling.lookup.CustomerLookupController#getDistrict",
+                endpoint.endpointId());
+        assertEquals("/api/crm/customer-cases/lookups/districts/{districtCode}", endpoint.path());
+        assertEquals(List.of(), endpoint.limitations());
+    }
+
+    @Test
     void shouldDiscoverEndpointCandidatesBySpringRestSignalsBeforeRepositoryTreeFallback() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var endpointService = new GitLabRepositoryEndpointService(repositoryPort);

@@ -26,6 +26,7 @@ public class GitLabRepositoryEndpointService {
     private static final int OPENAPI_SEARCH_RESULTS_PER_TERM = 50;
     private static final int MAX_CONTROLLER_FILE_CHARACTERS = 80_000;
     private static final int MAX_CONSTANT_FILE_CHARACTERS = 80_000;
+    private static final int MAX_STATIC_CONSTANT_IMPORT_DEPTH = 4;
     private static final int MAX_OPENAPI_FILE_CHARACTERS = 260_000;
     private static final int MAX_OPENAPI_FILES = 30;
     private static final int MAX_SIGNATURE_LINES = 8;
@@ -389,18 +390,44 @@ public class GitLabRepositoryEndpointService {
             return new JavaStringConstantResolver(constants, diagnostics);
         }
 
-        var importedClasses = new LinkedHashSet<String>();
-        var matcher = STATIC_IMPORT_PATTERN.matcher(content != null ? content : "");
-        while (matcher.find()) {
-            var importedClass = matcher.group(1);
-            var importedMember = matcher.group(2);
-            if (!likelyEndpointConstantImport(importedClass, importedMember)) {
-                continue;
+        addImportedStringConstants(
+                group,
+                projectName,
+                branch,
+                filePath,
+                content,
+                constants,
+                diagnostics,
+                new LinkedHashSet<>(),
+                0
+        );
+
+        return new JavaStringConstantResolver(constants, diagnostics);
+    }
+
+    private void addImportedStringConstants(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            String content,
+            Map<String, String> constants,
+            List<String> diagnostics,
+            Set<String> visitedImportedClasses,
+            int depth
+    ) {
+        if (depth >= MAX_STATIC_CONSTANT_IMPORT_DEPTH) {
+            if (!staticImportedEndpointConstantClasses(content).isEmpty()) {
+                diagnostics.add("Java string constant import traversal reached depth limit at " + filePath + ".");
             }
-            importedClasses.add(importedClass);
+            return;
         }
 
-        for (var importedClass : importedClasses) {
+        for (var importedClass : staticImportedEndpointConstantClasses(content)) {
+            if (!visitedImportedClasses.add(importedClass)) {
+                continue;
+            }
+
             var importedContent = readJavaStringConstantFile(
                     group,
                     projectName,
@@ -422,9 +449,32 @@ public class GitLabRepositoryEndpointService {
                     simpleName(importedClass),
                     importedContent.content()
             );
+            addImportedStringConstants(
+                    group,
+                    projectName,
+                    branch,
+                    importedContent.filePath(),
+                    importedContent.content(),
+                    constants,
+                    diagnostics,
+                    visitedImportedClasses,
+                    depth + 1
+            );
         }
+    }
 
-        return new JavaStringConstantResolver(constants, diagnostics);
+    private Set<String> staticImportedEndpointConstantClasses(String content) {
+        var importedClasses = new LinkedHashSet<String>();
+        var matcher = STATIC_IMPORT_PATTERN.matcher(content != null ? content : "");
+        while (matcher.find()) {
+            var importedClass = matcher.group(1);
+            var importedMember = matcher.group(2);
+            if (!likelyEndpointConstantImport(importedClass, importedMember)) {
+                continue;
+            }
+            importedClasses.add(importedClass);
+        }
+        return importedClasses;
     }
 
     private GitLabRepositoryFileContent readJavaStringConstantFile(
