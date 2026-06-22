@@ -25,6 +25,7 @@ public class GitLabRepositoryEndpointService {
     private static final int ENDPOINT_SEARCH_RESULTS_PER_TERM = 100;
     private static final int OPENAPI_SEARCH_RESULTS_PER_TERM = 50;
     private static final int MAX_CONTROLLER_FILE_CHARACTERS = 80_000;
+    private static final int MAX_CONSTANT_FILE_CHARACTERS = 80_000;
     private static final int MAX_OPENAPI_FILE_CHARACTERS = 260_000;
     private static final int MAX_OPENAPI_FILES = 30;
     private static final int MAX_SIGNATURE_LINES = 8;
@@ -86,9 +87,14 @@ public class GitLabRepositoryEndpointService {
     private static final Pattern CLASS_PATTERN = Pattern.compile("\\b(?:class|interface|record)\\s+([A-Za-z_$][\\w$]*)\\b");
     private static final Pattern ANNOTATION_NAME_PATTERN = Pattern.compile("@([A-Za-z_$][\\w$.]*)");
     private static final Pattern REQUEST_METHOD_PATTERN = Pattern.compile("RequestMethod\\.([A-Z]+)");
-    private static final Pattern ATTRIBUTE_PATH_PATTERN = Pattern.compile("\\b(?:value|path)\\s*=\\s*(\\{[^}]*}|\"[^\"]*\")");
     private static final Pattern STRING_LITERAL_PATTERN = Pattern.compile("\"([^\"]*)\"");
     private static final Pattern IDENTIFIER_BEFORE_PAREN_PATTERN = Pattern.compile("([A-Za-z_$][\\w$]*)\\s*\\(");
+    private static final Pattern STATIC_IMPORT_PATTERN = Pattern.compile(
+            "(?m)^\\s*import\\s+static\\s+([\\w.]+)\\.([A-Za-z_$][\\w$]*|\\*)\\s*;"
+    );
+    private static final Pattern STRING_CONSTANT_PATTERN = Pattern.compile(
+            "(?s)\\b((?:(?:public|protected|private)\\s+)?(?:(?:static|final)\\s+)+String)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*([^;]+);"
+    );
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final GitLabRepositoryAnalysisCache analysisCache;
@@ -200,7 +206,21 @@ public class GitLabRepositoryEndpointService {
                 if (content.truncated()) {
                     fileLimitations.add("File content was truncated before endpoint parsing.");
                 }
-                endpoints.addAll(parseEndpointFile(projectName, content.filePath(), content.content(), fileLimitations));
+                var constantResolver = javaStringConstantResolver(
+                        group,
+                        projectName,
+                        branch,
+                        content.filePath(),
+                        content.content(),
+                        fileLimitations
+                );
+                endpoints.addAll(parseEndpointFile(
+                        projectName,
+                        content.filePath(),
+                        content.content(),
+                        fileLimitations,
+                        constantResolver
+                ));
                 controllerImplementations.addAll(parseControllerImplementations(
                         content.filePath(),
                         content.content()
@@ -260,6 +280,22 @@ public class GitLabRepositoryEndpointService {
             String content,
             List<String> inheritedLimitations
     ) {
+        return parseEndpointFile(
+                projectName,
+                filePath,
+                content,
+                inheritedLimitations,
+                javaStringConstantResolver(null, projectName, null, filePath, content, inheritedLimitations)
+        );
+    }
+
+    private List<GitLabRepositoryEndpoint> parseEndpointFile(
+            String projectName,
+            String filePath,
+            String content,
+            List<String> inheritedLimitations,
+            JavaStringConstantResolver constantResolver
+    ) {
         if (!StringUtils.hasText(content)) {
             return List.of();
         }
@@ -309,7 +345,7 @@ public class GitLabRepositoryEndpointService {
 
             var className = className(trimmedLine);
             if (className != null) {
-                controller = buildControllerContext(packageName, className, pendingAnnotations, filePath);
+                controller = buildControllerContext(packageName, className, pendingAnnotations, filePath, constantResolver);
                 pendingAnnotations.clear();
                 continue;
             }
@@ -323,7 +359,8 @@ public class GitLabRepositoryEndpointService {
                             controller,
                             pendingAnnotations,
                             signature,
-                            inheritedLimitations
+                            inheritedLimitations,
+                            constantResolver
                     ));
                     pendingAnnotations.clear();
                     continue;
@@ -336,15 +373,146 @@ public class GitLabRepositoryEndpointService {
         return List.copyOf(endpoints);
     }
 
+    private JavaStringConstantResolver javaStringConstantResolver(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            String content,
+            List<String> limitations
+    ) {
+        var constants = new LinkedHashMap<String, String>();
+        addStringConstants(constants, extractPackageName(content), firstDeclaredTypeName(content), content);
+
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(branch)) {
+            return new JavaStringConstantResolver(constants);
+        }
+
+        var importedClasses = new LinkedHashSet<String>();
+        var matcher = STATIC_IMPORT_PATTERN.matcher(content != null ? content : "");
+        while (matcher.find()) {
+            var importedClass = matcher.group(1);
+            var importedMember = matcher.group(2);
+            if (!likelyEndpointConstantImport(importedClass, importedMember)) {
+                continue;
+            }
+            importedClasses.add(importedClass);
+        }
+
+        for (var importedClass : importedClasses) {
+            var importedFilePath = javaSourcePathForClass(filePath, importedClass);
+            try {
+                var importedContent = gitLabRepositoryPort.readFile(
+                        group,
+                        projectName,
+                        branch,
+                        importedFilePath,
+                        MAX_CONSTANT_FILE_CHARACTERS
+                );
+                if (importedContent.truncated()) {
+                    limitations.add("Java string constants file was truncated before endpoint parsing: "
+                            + importedFilePath);
+                }
+                addStringConstants(
+                        constants,
+                        packageName(importedClass),
+                        simpleName(importedClass),
+                        importedContent.content()
+                );
+            } catch (RuntimeException exception) {
+                limitations.add("Could not resolve Java string constants from static import "
+                        + importedClass + ": " + safeMessage(exception));
+            }
+        }
+
+        return new JavaStringConstantResolver(constants);
+    }
+
+    private boolean likelyEndpointConstantImport(String importedClass, String importedMember) {
+        var className = simpleName(importedClass).toLowerCase(Locale.ROOT);
+        var memberName = importedMember != null ? importedMember.toLowerCase(Locale.ROOT) : "";
+        return className.contains("uri")
+                || className.contains("url")
+                || className.contains("path")
+                || className.contains("route")
+                || className.contains("endpoint")
+                || className.contains("param")
+                || className.contains("resource")
+                || memberName.contains("uri")
+                || memberName.contains("url")
+                || memberName.contains("path")
+                || memberName.contains("route")
+                || memberName.contains("endpoint")
+                || memberName.contains("param");
+    }
+
+    private void addStringConstants(
+            Map<String, String> constants,
+            String packageName,
+            String className,
+            String content
+    ) {
+        if (!StringUtils.hasText(content)) {
+            return;
+        }
+
+        var matcher = STRING_CONSTANT_PATTERN.matcher(content);
+        while (matcher.find()) {
+            var declaration = matcher.group(1);
+            if (!declaration.contains("static") || !declaration.contains("final")) {
+                continue;
+            }
+
+            var constantName = matcher.group(2).trim();
+            var expression = matcher.group(3).trim();
+            constants.putIfAbsent(constantName, expression);
+            if (StringUtils.hasText(className)) {
+                constants.putIfAbsent(className + "." + constantName, expression);
+            }
+            if (StringUtils.hasText(packageName) && StringUtils.hasText(className)) {
+                constants.putIfAbsent(packageName + "." + className + "." + constantName, expression);
+            }
+        }
+    }
+
+    private String javaSourcePathForClass(String currentFilePath, String fullyQualifiedClassName) {
+        var classPath = fullyQualifiedClassName.replace('.', '/') + ".java";
+        var normalizedCurrentPath = currentFilePath != null ? currentFilePath.replace('\\', '/') : "";
+        for (var sourceRoot : List.of("src/main/java/", "src/test/java/")) {
+            var rootIndex = normalizedCurrentPath.indexOf(sourceRoot);
+            if (rootIndex >= 0) {
+                return normalizedCurrentPath.substring(0, rootIndex) + sourceRoot + classPath;
+            }
+        }
+        return "src/main/java/" + classPath;
+    }
+
+    private String firstDeclaredTypeName(String content) {
+        if (!StringUtils.hasText(content)) {
+            return null;
+        }
+        var matcher = CLASS_PATTERN.matcher(content);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String packageName(String fullyQualifiedClassName) {
+        if (!StringUtils.hasText(fullyQualifiedClassName)) {
+            return null;
+        }
+        var dotIndex = fullyQualifiedClassName.lastIndexOf('.');
+        return dotIndex > 0 ? fullyQualifiedClassName.substring(0, dotIndex) : null;
+    }
+
     private List<GitLabRepositoryEndpoint> buildEndpoints(
             String projectName,
             String filePath,
             ControllerContext controller,
             List<AnnotationBlock> methodAnnotationBlocks,
             MethodSignature signature,
-            List<String> inheritedLimitations
+            List<String> inheritedLimitations,
+            JavaStringConstantResolver constantResolver
     ) {
-        var methodMappings = mappings(methodAnnotationBlocks);
+        var methodMappings = mappings(methodAnnotationBlocks, constantResolver);
         if (methodMappings.isEmpty()) {
             return List.of();
         }
@@ -380,7 +548,11 @@ public class GitLabRepositoryEndpointService {
                         var lineStart = methodMapping.lineStart();
                         var lineEnd = signature.lineEnd();
                         var confidence = confidence(pathExpression, controller.controllerLike(), inheritedLimitations);
-                        var documentation = documentationFromJavaAnnotations(methodAnnotationBlocks, signature);
+                        var documentation = documentationFromJavaAnnotations(
+                                methodAnnotationBlocks,
+                                signature,
+                                constantResolver
+                        );
 
                         endpoints.add(new GitLabRepositoryEndpoint(
                                 endpointId,
@@ -410,7 +582,8 @@ public class GitLabRepositoryEndpointService {
 
     private GitLabRepositoryEndpointDocumentation documentationFromJavaAnnotations(
             List<AnnotationBlock> methodAnnotationBlocks,
-            MethodSignature signature
+            MethodSignature signature,
+            JavaStringConstantResolver constantResolver
     ) {
         var summary = (String) null;
         var description = (String) null;
@@ -431,7 +604,7 @@ public class GitLabRepositoryEndpointService {
             }
         }
 
-        var parameters = methodParameterDocumentations(signature.parameters());
+        var parameters = methodParameterDocumentations(signature.parameters(), constantResolver);
         var source = hasOpenApiAnnotation
                 ? DOCUMENTATION_SOURCE_JAVA_OPENAPI_ANNOTATION
                 : parameters.isEmpty() ? null : DOCUMENTATION_SOURCE_SPRING_SIGNATURE;
@@ -447,11 +620,12 @@ public class GitLabRepositoryEndpointService {
     }
 
     private List<GitLabRepositoryEndpointParameterDocumentation> methodParameterDocumentations(
-            List<String> parameters
+            List<String> parameters,
+            JavaStringConstantResolver constantResolver
     ) {
         var documented = new ArrayList<GitLabRepositoryEndpointParameterDocumentation>();
         for (var parameter : parameters != null ? parameters : List.<String>of()) {
-            var documentation = methodParameterDocumentation(parameter);
+            var documentation = methodParameterDocumentation(parameter, constantResolver);
             if (documentation == null) {
                 continue;
             }
@@ -465,7 +639,10 @@ public class GitLabRepositoryEndpointService {
         return List.copyOf(documented);
     }
 
-    private GitLabRepositoryEndpointParameterDocumentation methodParameterDocumentation(String parameterText) {
+    private GitLabRepositoryEndpointParameterDocumentation methodParameterDocumentation(
+            String parameterText,
+            JavaStringConstantResolver constantResolver
+    ) {
         if (!StringUtils.hasText(parameterText) || annotationSegment(parameterText, "RequestHeader") != null) {
             return null;
         }
@@ -487,8 +664,8 @@ public class GitLabRepositoryEndpointService {
         }
 
         var name = firstText(
-                parameterBindingName(pathVariableAnnotation),
-                parameterBindingName(requestParamAnnotation)
+                parameterBindingName(pathVariableAnnotation, constantResolver),
+                parameterBindingName(requestParamAnnotation, constantResolver)
         );
         name = firstText(name, annotationStringAttribute(parameterAnnotation, "name"));
         name = firstText(name, javaParameterName(parameterText));
@@ -526,15 +703,26 @@ public class GitLabRepositoryEndpointService {
         return null;
     }
 
-    private String parameterBindingName(String annotationText) {
+    private String parameterBindingName(String annotationText, JavaStringConstantResolver constantResolver) {
         if (!StringUtils.hasText(annotationText)) {
             return null;
         }
-        return firstText(
+        var literalName = firstText(
                 annotationStringAttribute(annotationText, "name"),
                 firstText(
                         annotationStringAttribute(annotationText, "value"),
                         annotationDefaultStringAttribute(annotationText)
+                )
+        );
+        if (StringUtils.hasText(literalName)) {
+            return literalName;
+        }
+
+        return firstText(
+                resolveStringConstant(annotationRawAttribute(annotationText, "name"), constantResolver),
+                firstText(
+                        resolveStringConstant(annotationRawAttribute(annotationText, "value"), constantResolver),
+                        resolveStringConstant(annotationDefaultRawAttribute(annotationText), constantResolver)
                 )
         );
     }
@@ -575,6 +763,18 @@ public class GitLabRepositoryEndpointService {
         if (!StringUtils.hasText(annotationText)) {
             return null;
         }
+        var arguments = annotationDefaultRawAttribute(annotationText);
+        if (!StringUtils.hasText(arguments)) {
+            return null;
+        }
+        var matcher = STRING_LITERAL_PATTERN.matcher(arguments);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private String annotationDefaultRawAttribute(String annotationText) {
+        if (!StringUtils.hasText(annotationText)) {
+            return null;
+        }
         var open = annotationText.indexOf('(');
         var close = annotationText.lastIndexOf(')');
         if (open < 0 || close <= open) {
@@ -584,8 +784,7 @@ public class GitLabRepositoryEndpointService {
         if (arguments.contains("=")) {
             return null;
         }
-        var matcher = STRING_LITERAL_PATTERN.matcher(arguments);
-        return matcher.find() ? matcher.group(1).trim() : null;
+        return arguments;
     }
 
     private String annotationRawAttribute(String annotationText, String attributeName) {
@@ -594,8 +793,141 @@ public class GitLabRepositoryEndpointService {
         }
         var matcher = Pattern.compile("\\b"
                 + Pattern.quote(attributeName)
-                + "\\s*=\\s*(\\{[^}]*}|\"[^\"]*\"|[A-Za-z_$][\\w$.]*)").matcher(annotationText);
-        return matcher.find() ? matcher.group(1).trim() : null;
+                + "\\s*=").matcher(annotationText);
+        if (!matcher.find()) {
+            return null;
+        }
+        return readAnnotationExpression(annotationText, matcher.end());
+    }
+
+    private String readAnnotationExpression(String annotationText, int startIndex) {
+        var expression = new StringBuilder();
+        var inString = false;
+        var escaped = false;
+        var depth = 0;
+        for (var index = startIndex; index < annotationText.length(); index++) {
+            var character = annotationText.charAt(index);
+            if (inString) {
+                expression.append(character);
+                if (escaped) {
+                    escaped = false;
+                } else if (character == '\\') {
+                    escaped = true;
+                } else if (character == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (character == '"') {
+                inString = true;
+                expression.append(character);
+                continue;
+            }
+            if (character == '{' || character == '(' || character == '[') {
+                depth++;
+                expression.append(character);
+                continue;
+            }
+            if (character == '}' || character == ')' || character == ']') {
+                if (depth == 0) {
+                    break;
+                }
+                depth--;
+                expression.append(character);
+                continue;
+            }
+            if (character == ',' && depth == 0) {
+                break;
+            }
+            expression.append(character);
+        }
+        var value = expression.toString().trim();
+        return StringUtils.hasText(value) ? value : null;
+    }
+
+    private List<String> resolveStringValues(String expression, JavaStringConstantResolver constantResolver) {
+        if (!StringUtils.hasText(expression)) {
+            return List.of();
+        }
+
+        return expressionListItems(expression).stream()
+                .map(item -> resolveStringConstant(item, constantResolver))
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    private String resolveStringConstant(String expression, JavaStringConstantResolver constantResolver) {
+        if (!StringUtils.hasText(expression)) {
+            return null;
+        }
+        var resolver = constantResolver != null ? constantResolver : JavaStringConstantResolver.empty();
+        return resolver.resolve(expression);
+    }
+
+    private List<String> expressionListItems(String expression) {
+        var trimmed = expression.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            var inner = trimmed.substring(1, trimmed.length() - 1).trim();
+            if (!StringUtils.hasText(inner)) {
+                return List.of();
+            }
+            return splitTopLevel(inner, ',');
+        }
+        return List.of(trimmed);
+    }
+
+    private static List<String> splitTopLevel(String expression, char delimiter) {
+        var items = new ArrayList<String>();
+        var current = new StringBuilder();
+        var inString = false;
+        var escaped = false;
+        var depth = 0;
+        for (var index = 0; index < expression.length(); index++) {
+            var character = expression.charAt(index);
+            if (inString) {
+                current.append(character);
+                if (escaped) {
+                    escaped = false;
+                } else if (character == '\\') {
+                    escaped = true;
+                } else if (character == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (character == '"') {
+                inString = true;
+                current.append(character);
+                continue;
+            }
+            if (character == '{' || character == '(' || character == '[') {
+                depth++;
+                current.append(character);
+                continue;
+            }
+            if (character == '}' || character == ')' || character == ']') {
+                depth = Math.max(0, depth - 1);
+                current.append(character);
+                continue;
+            }
+            if (character == delimiter && depth == 0) {
+                var item = current.toString().trim();
+                if (StringUtils.hasText(item)) {
+                    items.add(item);
+                }
+                current.setLength(0);
+                continue;
+            }
+            current.append(character);
+        }
+
+        var item = current.toString().trim();
+        if (StringUtils.hasText(item)) {
+            items.add(item);
+        }
+        return List.copyOf(items);
     }
 
     private boolean booleanAttribute(String annotationText, String attributeName, boolean defaultValue) {
@@ -1164,14 +1496,15 @@ public class GitLabRepositoryEndpointService {
             String packageName,
             String className,
             List<AnnotationBlock> annotations,
-            String filePath
+            String filePath,
+            JavaStringConstantResolver constantResolver
     ) {
         var qualifiedClassName = StringUtils.hasText(packageName) ? packageName + "." + className : className;
         var annotationNames = annotationNames(annotations);
         if (annotationNames.contains("FeignClient")) {
             return null;
         }
-        var mappings = mappings(annotations);
+        var mappings = mappings(annotations, constantResolver);
         var controllerLike = annotationNames.stream().anyMatch(name ->
                 "RestController".equals(name)
                         || "Controller".equals(name)
@@ -1186,7 +1519,10 @@ public class GitLabRepositoryEndpointService {
         );
     }
 
-    private List<MappingDefinition> mappings(List<AnnotationBlock> annotationBlocks) {
+    private List<MappingDefinition> mappings(
+            List<AnnotationBlock> annotationBlocks,
+            JavaStringConstantResolver constantResolver
+    ) {
         var mappings = new ArrayList<MappingDefinition>();
         for (var block : annotationBlocks) {
             var annotationName = annotationName(block.text());
@@ -1195,11 +1531,11 @@ public class GitLabRepositoryEndpointService {
                 continue;
             }
 
-            var paths = annotationPaths(block.text());
+            var paths = annotationPaths(block.text(), constantResolver);
             mappings.add(new MappingDefinition(
                     httpMethods,
                     paths,
-                    paths.isEmpty() ? pathExpression(block.text()) : null,
+                    paths.isEmpty() ? pathExpression(block.text(), constantResolver) : null,
                     List.of(annotationName),
                     block.startLine()
             ));
@@ -1207,35 +1543,16 @@ public class GitLabRepositoryEndpointService {
         return List.copyOf(mappings);
     }
 
-    private List<String> annotationPaths(String annotationText) {
+    private List<String> annotationPaths(String annotationText, JavaStringConstantResolver constantResolver) {
         var paths = new LinkedHashSet<String>();
-        var attributeMatcher = ATTRIBUTE_PATH_PATTERN.matcher(annotationText);
-        while (attributeMatcher.find()) {
-            addPathLiterals(paths, attributeMatcher.group(1));
-        }
-
-        if (paths.isEmpty()) {
-            var open = annotationText.indexOf('(');
-            var close = annotationText.lastIndexOf(')');
-            if (open >= 0 && close > open) {
-                var arguments = annotationText.substring(open + 1, close).trim();
-                if (arguments.startsWith("\"") || arguments.startsWith("{")) {
-                    addPathLiterals(paths, arguments);
+        for (var expression : annotationPathExpressions(annotationText)) {
+            for (var value : resolveStringValues(expression, constantResolver)) {
+                if (isPathLiteral(value)) {
+                    paths.add(value.trim());
                 }
             }
         }
-
         return List.copyOf(paths);
-    }
-
-    private void addPathLiterals(LinkedHashSet<String> paths, String expression) {
-        var matcher = STRING_LITERAL_PATTERN.matcher(expression);
-        while (matcher.find()) {
-            var candidate = matcher.group(1);
-            if (isPathLiteral(candidate)) {
-                paths.add(candidate.trim());
-            }
-        }
     }
 
     private boolean isPathLiteral(String value) {
@@ -1252,17 +1569,32 @@ public class GitLabRepositoryEndpointService {
                 && trimmed.length() <= 120);
     }
 
-    private String pathExpression(String annotationText) {
-        var open = annotationText.indexOf('(');
-        var close = annotationText.lastIndexOf(')');
-        if (open < 0 || close <= open) {
-            return null;
+    private String pathExpression(String annotationText, JavaStringConstantResolver constantResolver) {
+        var unresolved = new ArrayList<String>();
+        for (var expression : annotationPathExpressions(annotationText)) {
+            if (resolveStringValues(expression, constantResolver).isEmpty()) {
+                unresolved.add(expression);
+            }
         }
-        var expression = annotationText.substring(open + 1, close).trim();
-        if (!StringUtils.hasText(expression) || expression.contains("\"")) {
-            return null;
+        return unresolved.isEmpty() ? null : abbreviate(String.join(", ", unresolved), 220);
+    }
+
+    private List<String> annotationPathExpressions(String annotationText) {
+        var expressions = new LinkedHashSet<String>();
+        for (var attributeName : List.of("value", "path")) {
+            var expression = annotationRawAttribute(annotationText, attributeName);
+            if (StringUtils.hasText(expression)) {
+                expressions.add(expression);
+            }
         }
-        return abbreviate(expression, 220);
+
+        if (expressions.isEmpty()) {
+            var expression = annotationDefaultRawAttribute(annotationText);
+            if (StringUtils.hasText(expression)) {
+                expressions.add(expression);
+            }
+        }
+        return List.copyOf(expressions);
     }
 
     private List<String> httpMethods(String annotationName, String annotationText) {
@@ -2043,6 +2375,139 @@ public class GitLabRepositoryEndpointService {
         private EndpointCandidateDiscovery {
             files = files != null ? List.copyOf(files) : List.of();
             repositoryTreeFiles = repositoryTreeFiles != null ? List.copyOf(repositoryTreeFiles) : List.of();
+        }
+    }
+
+    private static final class JavaStringConstantResolver {
+
+        private static final JavaStringConstantResolver EMPTY = new JavaStringConstantResolver(Map.of());
+
+        private final Map<String, String> expressions;
+
+        private JavaStringConstantResolver(Map<String, String> expressions) {
+            this.expressions = expressions != null ? Map.copyOf(expressions) : Map.of();
+        }
+
+        private static JavaStringConstantResolver empty() {
+            return EMPTY;
+        }
+
+        private String resolve(String expression) {
+            return resolve(expression, new LinkedHashSet<>());
+        }
+
+        private String resolve(String expression, Set<String> resolving) {
+            var normalized = stripOuterParentheses(expression != null ? expression.trim() : "");
+            if (!StringUtils.hasText(normalized)) {
+                return null;
+            }
+            if (isStringLiteral(normalized)) {
+                return unescapeJavaString(normalized.substring(1, normalized.length() - 1));
+            }
+
+            var parts = splitTopLevel(normalized, '+');
+            if (parts.size() > 1) {
+                var resolved = new StringBuilder();
+                for (var part : parts) {
+                    var value = resolve(part, resolving);
+                    if (value == null) {
+                        return null;
+                    }
+                    resolved.append(value);
+                }
+                return resolved.toString();
+            }
+
+            var constantExpression = expressions.get(normalized);
+            if (constantExpression == null) {
+                return null;
+            }
+            if (!resolving.add(normalized)) {
+                return null;
+            }
+            try {
+                return resolve(constantExpression, resolving);
+            } finally {
+                resolving.remove(normalized);
+            }
+        }
+
+        private static boolean isStringLiteral(String expression) {
+            return expression.length() >= 2
+                    && expression.startsWith("\"")
+                    && expression.endsWith("\"");
+        }
+
+        private static String stripOuterParentheses(String expression) {
+            var stripped = expression;
+            while (stripped.startsWith("(") && stripped.endsWith(")")
+                    && outerParenthesesWrapExpression(stripped)) {
+                stripped = stripped.substring(1, stripped.length() - 1).trim();
+            }
+            return stripped;
+        }
+
+        private static boolean outerParenthesesWrapExpression(String expression) {
+            var depth = 0;
+            var inString = false;
+            var escaped = false;
+            for (var index = 0; index < expression.length(); index++) {
+                var character = expression.charAt(index);
+                if (inString) {
+                    if (escaped) {
+                        escaped = false;
+                    } else if (character == '\\') {
+                        escaped = true;
+                    } else if (character == '"') {
+                        inString = false;
+                    }
+                    continue;
+                }
+                if (character == '"') {
+                    inString = true;
+                    continue;
+                }
+                if (character == '(') {
+                    depth++;
+                } else if (character == ')') {
+                    depth--;
+                    if (depth == 0 && index < expression.length() - 1) {
+                        return false;
+                    }
+                }
+            }
+            return depth == 0;
+        }
+
+        private static String unescapeJavaString(String value) {
+            var result = new StringBuilder();
+            var escaped = false;
+            for (var index = 0; index < value.length(); index++) {
+                var character = value.charAt(index);
+                if (!escaped) {
+                    if (character == '\\') {
+                        escaped = true;
+                    } else {
+                        result.append(character);
+                    }
+                    continue;
+                }
+
+                switch (character) {
+                    case 'n' -> result.append('\n');
+                    case 'r' -> result.append('\r');
+                    case 't' -> result.append('\t');
+                    case 'b' -> result.append('\b');
+                    case 'f' -> result.append('\f');
+                    case '"', '\'', '\\' -> result.append(character);
+                    default -> result.append(character);
+                }
+                escaped = false;
+            }
+            if (escaped) {
+                result.append('\\');
+            }
+            return result.toString();
         }
     }
 

@@ -217,6 +217,120 @@ class GitLabRepositoryEndpointServiceTest {
     }
 
     @Test
+    void shouldResolveStaticImportedEndpointAndParameterConstants() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var controllerPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java";
+        var constantsPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                "Matched @RestController.",
+                12
+        )));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-case-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-case-service", "main", null))
+                .thenReturn(List.of());
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                controllerPath,
+                """
+                        package com.example.crm.casehandling.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.PathVariable;
+                        import org.springframework.web.bind.annotation.RequestParam;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        import static com.example.crm.casehandling.api.CustomerCaseUris.CASE_DETAIL_URI;
+                        import static com.example.crm.casehandling.api.CustomerCaseUris.CASE_ID_PARAM;
+                        import static com.example.crm.casehandling.api.CustomerCaseUris.INCLUDE_HISTORY_PARAM;
+
+                        @RestController
+                        class CustomerCaseController {
+
+                          @GetMapping(CASE_DETAIL_URI)
+                          CustomerCaseResponse getCase(@PathVariable(CASE_ID_PARAM) String id,
+                                                       @RequestParam(name = INCLUDE_HISTORY_PARAM, required = false)
+                                                       boolean withHistory) {
+                            return new CustomerCaseResponse(id);
+                          }
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-case-service",
+                "main",
+                constantsPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-case-service",
+                "main",
+                constantsPath,
+                """
+                        package com.example.crm.casehandling.api;
+
+                        public final class CustomerCaseUris {
+                          public static final String CASE_ROOT_URI = "/api/crm/customer-cases";
+                          public static final String CASE_DETAIL_URI = CASE_ROOT_URI + "/{caseId}";
+                          public static final String CASE_ID_PARAM = "caseId";
+                          public static final String INCLUDE_HISTORY_PARAM = "includeHistory";
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-case-service",
+                "main",
+                null,
+                null,
+                20
+        ));
+
+        assertEquals(1, result.endpoints().size());
+        var endpoint = result.endpoints().get(0);
+        assertEquals("GET /api/crm/customer-cases/{caseId} -> com.example.crm.casehandling.api.CustomerCaseController#getCase",
+                endpoint.endpointId());
+        assertEquals("/api/crm/customer-cases/{caseId}", endpoint.path());
+        assertEquals(null, endpoint.pathExpression());
+        assertTrue(endpoint.limitations().stream()
+                .noneMatch(limitation -> limitation.contains("not fully resolved")));
+        assertEquals(2, endpoint.documentation().parameters().size());
+        assertEquals("caseId", endpoint.documentation().parameters().get(0).name());
+        assertEquals("path", endpoint.documentation().parameters().get(0).in());
+        assertEquals("includeHistory", endpoint.documentation().parameters().get(1).name());
+        assertEquals("query", endpoint.documentation().parameters().get(1).in());
+    }
+
+    @Test
     void shouldDiscoverEndpointCandidatesBySpringRestSignalsBeforeRepositoryTreeFallback() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
