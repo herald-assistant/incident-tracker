@@ -70,6 +70,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_REPOSITORY_FILE.equals(normalizedToolName)) {
             return List.of(
                     "Expensive in Flow Explorer. Use only when method slice, outline or focused chunks are insufficient.",
+                    "maxCharacters returns a prefix of the file; if truncated=true, continue with gitlab_read_repository_file_chunk instead of inferring the rest.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Do not use to browse a full bean when snippet-cards.md already contains the endpoint method.",
                     "Always provide reason as one short Polish sentence for the operator."
@@ -78,6 +79,8 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE.equals(normalizedToolName)) {
             return List.of(
                     "Use when you know a file but need method names before choosing a focused read.",
+                    "Use typeSummaries, constructorSummaries, methodSummaries and fieldSummaries because annotations are attached to the Java element where they appear.",
+                    "For deep persistence analysis, use fieldSummaries and methodSummaries before mapping persisted data and sources.",
                     "Follow with gitlab_read_java_method_slice for concrete Java methods whenever possible.",
                     "Always provide reason as one short Polish sentence for the operator."
             );

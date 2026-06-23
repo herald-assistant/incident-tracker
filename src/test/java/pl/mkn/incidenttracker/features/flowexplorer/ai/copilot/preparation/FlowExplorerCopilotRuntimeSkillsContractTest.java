@@ -69,6 +69,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Rola Wobec Orkiestratora",
                 "## Dozwolone Tools",
                 "## Strategia Czytania Kodu",
+                "## Szybka Strategia Dla Slabszych Modeli",
                 "## Co Czytac Wedlug Focus Area",
                 "## Zasady Kosztowe",
                 "## Wklad Do Wyniku"
@@ -141,6 +142,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
     void shouldDescribeExplicitGitLabToolScopeForFlowExplorer() throws Exception {
         var orchestrator = Files.readString(SKILLS_ROOT.resolve("flow-explorer-orchestrator").resolve("SKILL.md"));
         var gitLabTools = Files.readString(SKILLS_ROOT.resolve("flow-explorer-gitlab-tools").resolve("SKILL.md"));
+        var deepDiscovery = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-deep-discovery").resolve("SKILL.md"));
 
         assertTrue(orchestrator.contains("`branchRef`"));
         assertTrue(orchestrator.contains("`applicationName`"));
@@ -155,13 +157,26 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja business scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
         assertTrue(gitLabTools.contains("`filePath` i `methodSelectors` z `flow-explorer/compact-flow-manifest.md`"));
+        assertTrue(gitLabTools.contains("Nie zaczynaj od `gitlab_read_repository_file`"));
+        assertTrue(gitLabTools.contains("`truncated=true`, traktuj go jako prefix"));
+        assertTrue(gitLabTools.contains("korzystajac z `totalLines`, `returnedStartLine` i"));
         assertTrue(gitLabTools.contains("`branchRef`"));
         assertTrue(gitLabTools.contains("`applicationName`"));
         assertTrue(gitLabTools.contains("Nie uzywaj `gitlab_list_available_repositories`"));
         assertTrue(gitLabTools.contains("Nie przekazuj `gitLabGroup`"));
         assertTrue(gitLabTools.contains("Focus area wskazuje kierunek"));
         assertTrue(gitLabTools.contains("Glebokoscia steruje `reasoningEffort`"));
+        assertTrue(gitLabTools.contains("`typeSummaries`, `fieldSummaries`"));
+        assertTrue(gitLabTools.contains("Adnotacje sa przypiete do"));
+        assertTrue(gitLabTools.contains("adnotacje metod z"));
+        assertTrue(gitLabTools.contains("Dla `sectionModes.PERSISTENCE=deep` oczekuj tabeli"));
+        assertTrue(gitLabTools.contains("czy wartosc pochodzi z requestu"));
         assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
+
+        assertTrue(deepDiscovery.contains("persistence result jako oczekiwany element wyniku"));
+        assertTrue(deepDiscovery.contains("tabele danych"));
+        assertTrue(deepDiscovery.contains("Skad pochodzi wartosc"));
+        assertTrue(deepDiscovery.contains("Nie wymyslaj nazw tabel ani kolumn"));
     }
 
     private static void assertSkillContainsSections(String skillName, List<String> requiredSections) throws Exception {

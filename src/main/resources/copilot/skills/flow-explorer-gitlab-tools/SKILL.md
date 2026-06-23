@@ -63,6 +63,11 @@ Preferowana kolejnosc:
 2. Jezeli endpoint albo flow spine jest niepelny, uzyj
    `gitlab_build_endpoint_use_case_context`.
 3. Jezeli znasz plik, ale nie metode, uzyj `gitlab_read_repository_file_outline`.
+   Outline zwraca `typeSummaries`, `fieldSummaries`,
+   `constructorSummaries` i `methodSummaries`. Adnotacje sa przypiete do
+   elementu Java, na ktorym leza: typu, pola, konstruktora albo metody.
+   Traktuj `fieldSummaries` jako neutralny zarys modelu, a nie automatyczna
+   inferencje tabel/kolumn.
 4. Jezeli potrzebujesz kontraktu endpointu z OpenAPI/Swagger YAML, uzyj
    `gitlab_read_openapi_endpoint_slice`. Nie czytaj calego pliku YAML ani
    surowego chunku, jezeli znasz `httpMethod`, `endpointPath` i `filePath`.
@@ -77,6 +82,32 @@ Preferowana kolejnosc:
 8. `gitlab_read_repository_file` traktuj jako wyjatek dla malego pliku albo
    sytuacji, w ktorej outline/chunk nie wystarcza.
 
+## Szybka Strategia Dla Slabszych Modeli
+
+Gdy nie jest jasne, ktorego GitLab toola uzyc, trzymaj sie tej sciezki:
+
+1. Nie zaczynaj od `gitlab_read_repository_file`. Najpierw sprawdz, czy
+   `snippet-cards.md` juz zawiera potrzebny kod.
+2. Jezeli znasz metode z `compact-flow-manifest.md`, uzyj
+   `gitlab_read_java_method_slice`.
+3. Jezeli znasz tylko zakres linii albo metoda nie parsuje sie jako Java, uzyj
+   `gitlab_read_repository_file_chunk`. Czytaj waskie okna, zwykle 80-140
+   linii, np. 1-120, 121-240, tylko gdy poprzedni wynik nie wystarczyl.
+4. Jezeli potrzebujesz kilku konkretnych fragmentow naraz, uzyj
+   `gitlab_read_repository_file_chunks` zamiast kilku osobnych calli.
+5. Jezeli znasz plik, ale nie wiesz, ktora metoda jest wazna, uzyj
+   `gitlab_read_repository_file_outline`, a potem method slice albo chunk.
+6. `maxCharacters` w `gitlab_read_repository_file` nie oznacza pelnego pliku;
+   to limit zwroconych znakow od poczatku pliku. Gdy wynik ma
+   `truncated=true`, traktuj go jako prefix, nie jako caly plik.
+7. Po `truncated=true` nie wnioskuj o dalszej czesci pliku. Jezeli dalsza czesc
+   jest potrzebna, kontynuuj przez `gitlab_read_repository_file_chunk` na
+   kolejnych liniach, korzystajac z `totalLines`, `returnedStartLine` i
+   `returnedEndLine`.
+8. Pelny `gitlab_read_repository_file` jest dopuszczalny tylko dla malego pliku
+   albo gdy outline, method slice i chunk nie moga odpowiedziec na konkretne
+   pytanie.
+
 ## Co Czytac Wedlug Focus Area
 
 Focus area wskazuje kierunek, w ktorym masz poglębic juz ustalony primary flow.
@@ -86,7 +117,13 @@ glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
 - `BUSINESS_FLOW_RULES`: controller, use case service, decyzje biznesowe.
 - `VALIDATIONS`: request model, validator, guard clause, error boundary.
 - `PERSISTENCE`: repository method, query predicate, entity status fields,
-  transactional boundary.
+  transactional boundary. Dla `sectionModes.PERSISTENCE=deep` oczekuj tabeli
+  danych aktualizowanych/tworzonych/usuwanych ze zrodlem wartosci. Uzyj
+  `gitlab_read_repository_file_outline` na encji/modelu/DTO/mapperze, zeby
+  zebrac `fieldSummaries`, `typeSummaries` i adnotacje metod z
+  `methodSummaries`, a potem `gitlab_read_java_method_slice` albo waski chunk
+  na serwisie/mapperze, zeby ustalic, czy wartosc pochodzi z requestu, bazy,
+  integracji, konfiguracji czy wyliczenia w logice.
 - `INTEGRATIONS`: client, adapter, request mapper, response handling,
   retry/error handling.
 

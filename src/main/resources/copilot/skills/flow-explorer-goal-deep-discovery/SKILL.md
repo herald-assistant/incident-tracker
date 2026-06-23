@@ -131,6 +131,32 @@ Oprocz compact dodaj:
 - pola/statusy/stany, ktore sa wazne dla analityka/testera,
 - ryzyko niepelnej widocznosci modeli, mapperow albo repozytoriow.
 
+Dla `deep` traktuj persistence result jako oczekiwany element wyniku, jezeli
+endpoint tworzy, aktualizuje albo usuwa dane. Pokaz tabele danych
+aktualizowanych, tworzonych albo usuwanych, a nie tylko liste klas
+implementacyjnych.
+
+Minimalny format tabeli w `persistence.deep`:
+
+| Obiekt/encja albo tabela | Pole/dane | Operacja | Skad pochodzi wartosc | Transformacja/regula | Evidence | Pewnosc/limit |
+| --- | --- | --- | --- | --- | --- | --- |
+
+W kolumnie `Skad pochodzi wartosc` rozrozniaj:
+
+- request/input endpointu,
+- istniejacy stan z bazy,
+- system zewnetrzny albo integracja,
+- wartosc wyliczona w logice,
+- wartosc domyslna, konfiguracja albo stala,
+- brak widocznosci z powodu nieprzeczytanego mappera/modelu/repozytorium.
+
+Nie wymyslaj nazw tabel ani kolumn, gdy evidence pokazuje tylko pola Java.
+Jezeli widzisz adnotacje encji, DDL albo query, mozesz uzyc widocznej nazwy
+tabeli/kolumny. Jezeli widzisz tylko model Java, pisz `encja/model Java` i
+nazwe pola z evidence. Zrodlo wartosci wyprowadzaj z request DTO, mappera,
+serwisu, repository query albo odpowiedzi integracji; gdy tego nie widac,
+wpisz limit widocznosci zamiast zgadywania.
+
 ## Integrations
 
 ### compact

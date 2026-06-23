@@ -1,6 +1,23 @@
 package pl.mkn.incidenttracker.agenttools.gitlab.mcp;
 
 import lombok.extern.slf4j.Slf4j;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParseStart;
+import com.github.javaparser.Providers;
+import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.AnnotationDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
+import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.RecordDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -36,6 +53,10 @@ import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindCla
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextCandidate;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaConstructorSummary;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaFieldSummary;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaMethodSummary;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaTypeSummary;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListAvailableRepositoriesToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabListRepositoryEndpointsToolResponse;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileChunksToolResponse;
@@ -82,24 +103,15 @@ public class GitLabMcpTools {
     private static final int MAX_BATCH_CHUNKS = 8;
     private static final int MAX_BATCH_FILES_BY_PATH = 100;
     private static final int MAX_IMPORTS = 40;
-    private static final int MAX_CLASSES = 20;
-    private static final int MAX_ANNOTATIONS = 40;
-    private static final int MAX_METHOD_SIGNATURES = 80;
+    private static final int MAX_TYPE_SUMMARIES = 20;
+    private static final int MAX_FIELD_SUMMARIES = 80;
+    private static final int MAX_CONSTRUCTOR_SUMMARIES = 40;
+    private static final int MAX_METHOD_SUMMARIES = 80;
     private static final int MAX_RECOMMENDED_NEXT_READS = 8;
     private static final int PREVIEW_MAX_CHARACTERS = 200;
 
     private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^\\s*package\\s+([\\w.]+)\\s*;");
     private static final Pattern IMPORT_PATTERN = Pattern.compile("(?m)^\\s*import\\s+(?:static\\s+)?[\\w.*]+\\s*;");
-    private static final Pattern CLASS_PATTERN = Pattern.compile(
-            "(?m)^\\s*(?:(?:public|protected|private|abstract|final|sealed|non-sealed|static)\\s+)*(?:class|interface|enum|record)\\s+[A-Za-z_$][\\w$]*\\b.*$"
-    );
-    private static final Pattern ANNOTATION_PATTERN = Pattern.compile(
-            "(?m)^\\s*@[A-Za-z_$][\\w$.]*(?:\\([^\\r\\n]*\\))?\\s*$"
-    );
-    private static final Pattern METHOD_SIGNATURE_START_PATTERN = Pattern.compile(
-            "^(?:(?:public|protected|private|static|final|abstract|synchronized|default|native|strictfp|sealed|non-sealed)\\s+)*(?:<[^>]+>\\s+)?(?:[\\w$@.<>\\[\\],?]+\\s+)?[A-Za-z_$][\\w$]*\\s*\\("
-    );
-
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
@@ -1019,7 +1031,8 @@ public class GitLabMcpTools {
             name = READ_REPOSITORY_FILE_OUTLINE,
             description = """
                     Read a lightweight outline of a GitLab repository file in the resolved GitLab group and explicit branchRef:
-                    package, imports summary, class/interface names, annotations, method signatures and inferred file role.
+                    package, imports summary, type summaries, field summaries, constructor summaries, method summaries and inferred file role.
+                    Type, constructor, method and field annotations are attached to the element where they appear.
                     Use before reading a full file when the model needs to understand the class role in the broader flow without loading all code.
                     """
     )
@@ -1067,7 +1080,7 @@ public class GitLabMcpTools {
         var inferredRole = inferRole(filePath, fileContent != null ? fileContent.content() : null);
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} packageName={} importCount={} classCount={} annotationCount={} methodSignatureCount={} inferredRole={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} packageName={} importCount={} typeSummaryCount={} fieldSummaryCount={} constructorSummaryCount={} methodSummaryCount={} inferredRole={} truncated={}",
                 READ_REPOSITORY_FILE_OUTLINE,
                 scope.runReference(),
                 responseGroup(fileContent, scope.group()),
@@ -1077,9 +1090,10 @@ public class GitLabMcpTools {
                 responseFilePath(fileContent, filePath),
                 outline.packageName(),
                 outline.imports().size(),
-                outline.classes().size(),
-                outline.annotations().size(),
-                outline.methodSignatures().size(),
+                outline.typeSummaries().size(),
+                outline.fieldSummaries().size(),
+                outline.constructorSummaries().size(),
+                outline.methodSummaries().size(),
                 inferredRole,
                 fileContent != null && fileContent.truncated()
         );
@@ -1091,9 +1105,10 @@ public class GitLabMcpTools {
                 responseFilePath(fileContent, filePath),
                 outline.packageName(),
                 outline.imports(),
-                outline.classes(),
-                outline.annotations(),
-                outline.methodSignatures(),
+                outline.typeSummaries(),
+                outline.fieldSummaries(),
+                outline.constructorSummaries(),
+                outline.methodSummaries(),
                 inferredRole,
                 fileContent != null && fileContent.truncated()
         );
@@ -1527,22 +1542,196 @@ public class GitLabMcpTools {
 
     FileOutline buildOutline(String content) {
         if (!StringUtils.hasText(content)) {
-            return new FileOutline(null, List.of(), List.of(), List.of(), List.of());
+            return new FileOutline(null, List.of(), List.of(), List.of(), List.of(), List.of());
         }
 
         var packageName = extractPackageName(content);
         var imports = limitList(deduplicate(extractMatches(content, IMPORT_PATTERN)), MAX_IMPORTS);
-        var classes = limitList(deduplicate(extractMatches(content, CLASS_PATTERN)), MAX_CLASSES);
-        var annotations = limitList(deduplicate(extractMatches(content, ANNOTATION_PATTERN)), MAX_ANNOTATIONS);
-        var methodSignatures = limitList(deduplicate(extractMethodSignatures(content)), MAX_METHOD_SIGNATURES);
+        var javaOutline = extractJavaOutline(content);
 
         return new FileOutline(
                 packageName,
                 imports,
-                classes,
-                annotations,
-                methodSignatures
+                javaOutline.typeSummaries(),
+                javaOutline.fieldSummaries(),
+                javaOutline.constructorSummaries(),
+                javaOutline.methodSummaries()
         );
+    }
+
+    private JavaOutline extractJavaOutline(String content) {
+        try {
+            var javaParser = new JavaParser(new ParserConfiguration()
+                    .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21));
+            var result = javaParser.parse(ParseStart.COMPILATION_UNIT, Providers.provider(content));
+            if (!result.isSuccessful() || result.getResult().isEmpty()) {
+                return JavaOutline.empty();
+            }
+            var compilationUnit = result.getResult().get();
+            var sourceLines = content.lines().toList();
+            var typeSummaries = limitList(compilationUnit.findAll(TypeDeclaration.class).stream()
+                    .map(type -> typeSummary(type, sourceLines))
+                    .sorted(Comparator.comparingInt(GitLabJavaTypeSummary::lineStart))
+                    .toList(), MAX_TYPE_SUMMARIES);
+            var fieldSummaries = limitList(compilationUnit.findAll(FieldDeclaration.class).stream()
+                    .flatMap(field -> field.getVariables().stream()
+                            .map(variable -> fieldSummary(field, variable)))
+                    .sorted(Comparator.comparingInt(GitLabJavaFieldSummary::lineStart))
+                    .toList(), MAX_FIELD_SUMMARIES);
+            var constructorSummaries = limitList(compilationUnit.findAll(ConstructorDeclaration.class).stream()
+                    .map(this::constructorSummary)
+                    .sorted(Comparator.comparingInt(GitLabJavaConstructorSummary::lineStart))
+                    .toList(), MAX_CONSTRUCTOR_SUMMARIES);
+            var methodSummaries = limitList(compilationUnit.findAll(MethodDeclaration.class).stream()
+                    .map(this::methodSummary)
+                    .sorted(Comparator.comparingInt(GitLabJavaMethodSummary::lineStart))
+                    .toList(), MAX_METHOD_SUMMARIES);
+            return new JavaOutline(typeSummaries, fieldSummaries, constructorSummaries, methodSummaries);
+        } catch (RuntimeException exception) {
+            return JavaOutline.empty();
+        }
+    }
+
+    private GitLabJavaTypeSummary typeSummary(TypeDeclaration<?> type, List<String> sourceLines) {
+        return new GitLabJavaTypeSummary(
+                type.getNameAsString(),
+                type.getFullyQualifiedName().orElse(type.getNameAsString()),
+                typeKind(type),
+                typeDeclarationLine(type, sourceLines),
+                lineStart(type),
+                lineEnd(type),
+                modifierKeywords(type.getModifiers()),
+                annotationTexts(type.getAnnotations())
+        );
+    }
+
+    private GitLabJavaFieldSummary fieldSummary(
+            FieldDeclaration field,
+            VariableDeclarator variable
+    ) {
+        return new GitLabJavaFieldSummary(
+                declaringTypeName(field),
+                variable.getNameAsString(),
+                variable.getType().asString(),
+                lineStart(field),
+                lineEnd(field),
+                modifierKeywords(field.getModifiers()),
+                annotationTexts(field.getAnnotations())
+        );
+    }
+
+    private GitLabJavaConstructorSummary constructorSummary(ConstructorDeclaration constructor) {
+        return new GitLabJavaConstructorSummary(
+                declaringTypeName(constructor),
+                normalizeWhitespace(constructor.getDeclarationAsString(true, false, true)),
+                lineStart(constructor),
+                lineEnd(constructor),
+                modifierKeywords(constructor.getModifiers()),
+                annotationTexts(constructor.getAnnotations())
+        );
+    }
+
+    private GitLabJavaMethodSummary methodSummary(MethodDeclaration method) {
+        return new GitLabJavaMethodSummary(
+                declaringTypeName(method),
+                normalizeWhitespace(method.getDeclarationAsString(true, false, true)),
+                lineStart(method),
+                lineEnd(method),
+                modifierKeywords(method.getModifiers()),
+                annotationTexts(method.getAnnotations())
+        );
+    }
+
+    private String declaringTypeName(Node node) {
+        var declaringType = node.findAncestor(TypeDeclaration.class).orElse(null);
+        if (declaringType == null) {
+            return null;
+        }
+        var fullyQualifiedName = declaringType.getFullyQualifiedName();
+        if (fullyQualifiedName.isPresent()) {
+            return String.valueOf(fullyQualifiedName.get());
+        }
+        return declaringType.getNameAsString();
+    }
+
+    private String typeKind(TypeDeclaration<?> type) {
+        if (type instanceof ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+            return classOrInterfaceDeclaration.isInterface() ? "interface" : "class";
+        }
+        if (type instanceof EnumDeclaration) {
+            return "enum";
+        }
+        if (type instanceof RecordDeclaration) {
+            return "record";
+        }
+        if (type instanceof AnnotationDeclaration) {
+            return "annotation";
+        }
+        return "type";
+    }
+
+    private String declarationLine(Node node, List<String> sourceLines) {
+        var lineStart = lineStart(node);
+        if (lineStart > 0 && lineStart <= sourceLines.size()) {
+            return sourceLines.get(lineStart - 1).trim();
+        }
+        return null;
+    }
+
+    private String typeDeclarationLine(TypeDeclaration<?> type, List<String> sourceLines) {
+        var startLine = lineStart(type);
+        var endLine = lineEnd(type);
+        var upperBound = endLine > 0 ? Math.min(endLine, sourceLines.size()) : sourceLines.size();
+        for (var lineNumber = Math.max(startLine, 1); lineNumber <= upperBound; lineNumber++) {
+            var line = sourceLines.get(lineNumber - 1).trim();
+            if (looksLikeTypeDeclaration(line, type)) {
+                return line;
+            }
+        }
+        return declarationLine(type, sourceLines);
+    }
+
+    private boolean looksLikeTypeDeclaration(String line, TypeDeclaration<?> type) {
+        if (!StringUtils.hasText(line) || line.startsWith("@") || !line.contains(type.getNameAsString())) {
+            return false;
+        }
+        return switch (typeKind(type)) {
+            case "class" -> line.contains("class ");
+            case "interface" -> line.contains("interface ");
+            case "enum" -> line.contains("enum ");
+            case "record" -> line.contains("record ");
+            case "annotation" -> line.contains("@interface ");
+            default -> true;
+        };
+    }
+
+    private List<String> modifierKeywords(NodeList<Modifier> modifiers) {
+        return modifiers.stream()
+                .map(modifier -> modifier.getKeyword().asString())
+                .toList();
+    }
+
+    private List<String> annotationTexts(NodeList<AnnotationExpr> annotations) {
+        return annotations.stream()
+                .map(annotation -> normalizeWhitespace(annotation.toString()))
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    private String normalizeWhitespace(String value) {
+        return StringUtils.hasText(value) ? value.replaceAll("\\s+", " ").trim() : value;
+    }
+
+    private int lineStart(Node node) {
+        return node.getRange()
+                .map(range -> range.begin.line)
+                .orElse(0);
+    }
+
+    private int lineEnd(Node node) {
+        return node.getRange()
+                .map(range -> range.end.line)
+                .orElse(0);
     }
 
     String simpleName(String value) {
@@ -1644,7 +1833,7 @@ public class GitLabMcpTools {
         return normalizedPath;
     }
 
-    private List<String> limitList(List<String> values, int maxItems) {
+    private <T> List<T> limitList(List<T> values, int maxItems) {
         if (values.size() <= maxItems) {
             return List.copyOf(values);
         }
@@ -1767,138 +1956,6 @@ public class GitLabMcpTools {
         return matches;
     }
 
-    private List<String> extractMethodSignatures(String content) {
-        var signatures = new ArrayList<String>();
-        StringBuilder currentSignature = null;
-        var parenthesisBalance = 0;
-
-        for (var rawLine : content.split("\\R")) {
-            var line = stripInlineComment(rawLine);
-            if (!StringUtils.hasText(line)) {
-                continue;
-            }
-
-            if (currentSignature == null) {
-                if (!looksLikeMethodSignatureStart(line)) {
-                    continue;
-                }
-
-                currentSignature = new StringBuilder(line.trim());
-                parenthesisBalance = parenthesisBalance(line);
-            } else {
-                currentSignature.append(' ').append(line.trim());
-                parenthesisBalance += parenthesisBalance(line);
-            }
-
-            if (parenthesisBalance <= 0 && endsMethodSignature(line)) {
-                var normalizedSignature = normalizeMethodSignature(currentSignature.toString());
-                if (StringUtils.hasText(normalizedSignature)) {
-                    signatures.add(normalizedSignature);
-                }
-
-                currentSignature = null;
-                parenthesisBalance = 0;
-
-                if (signatures.size() >= MAX_METHOD_SIGNATURES) {
-                    break;
-                }
-            }
-        }
-
-        if (currentSignature != null && signatures.size() < MAX_METHOD_SIGNATURES) {
-            var normalizedSignature = normalizeMethodSignature(currentSignature.toString());
-            if (StringUtils.hasText(normalizedSignature)) {
-                signatures.add(normalizedSignature);
-            }
-        }
-
-        return signatures;
-    }
-
-    private boolean looksLikeMethodSignatureStart(String line) {
-        var trimmed = line.trim();
-        if (!StringUtils.hasText(trimmed)
-                || trimmed.startsWith("@")
-                || trimmed.startsWith("//")
-                || trimmed.startsWith("/*")
-                || trimmed.startsWith("*")
-                || !trimmed.contains("(")
-                || trimmed.contains("->")) {
-            return false;
-        }
-
-        var normalized = trimmed.toLowerCase(Locale.ROOT);
-        if (normalized.startsWith("if(")
-                || normalized.startsWith("if (")
-                || normalized.startsWith("for(")
-                || normalized.startsWith("for (")
-                || normalized.startsWith("while(")
-                || normalized.startsWith("while (")
-                || normalized.startsWith("switch(")
-                || normalized.startsWith("switch (")
-                || normalized.startsWith("catch(")
-                || normalized.startsWith("catch (")
-                || normalized.startsWith("return ")
-                || normalized.startsWith("throw ")
-                || normalized.startsWith("new ")
-                || normalized.startsWith("do ")
-                || normalized.startsWith("else ")
-                || normalized.startsWith("case ")) {
-            return false;
-        }
-
-        return METHOD_SIGNATURE_START_PATTERN.matcher(trimmed).find();
-    }
-
-    private int parenthesisBalance(String line) {
-        var balance = 0;
-
-        for (var index = 0; index < line.length(); index++) {
-            var character = line.charAt(index);
-            if (character == '(') {
-                balance++;
-            } else if (character == ')') {
-                balance--;
-            }
-        }
-
-        return balance;
-    }
-
-    private boolean endsMethodSignature(String line) {
-        var trimmed = line.trim();
-        return trimmed.endsWith("{")
-                || trimmed.endsWith(";")
-                || trimmed.endsWith(")")
-                || trimmed.contains(" throws ");
-    }
-
-    private String normalizeMethodSignature(String signature) {
-        var normalized = signature;
-        var braceIndex = normalized.indexOf('{');
-        if (braceIndex >= 0) {
-            normalized = normalized.substring(0, braceIndex);
-        }
-
-        var semicolonIndex = normalized.indexOf(';');
-        if (semicolonIndex >= 0) {
-            normalized = normalized.substring(0, semicolonIndex);
-        }
-
-        normalized = normalized.replaceAll("\\s+", " ").trim();
-        return normalized.contains("(") ? normalized : null;
-    }
-
-    private String stripInlineComment(String rawLine) {
-        if (rawLine == null) {
-            return "";
-        }
-
-        var commentIndex = rawLine.indexOf("//");
-        var withoutComment = commentIndex >= 0 ? rawLine.substring(0, commentIndex) : rawLine;
-        return withoutComment.trim();
-    }
-
     private String abbreviate(String value, int maxCharacters) {
         if (!StringUtils.hasText(value)) {
             return null;
@@ -1968,10 +2025,22 @@ public class GitLabMcpTools {
     record FileOutline(
             String packageName,
             List<String> imports,
-            List<String> classes,
-            List<String> annotations,
-            List<String> methodSignatures
+            List<GitLabJavaTypeSummary> typeSummaries,
+            List<GitLabJavaFieldSummary> fieldSummaries,
+            List<GitLabJavaConstructorSummary> constructorSummaries,
+            List<GitLabJavaMethodSummary> methodSummaries
     ) {
+    }
+
+    private record JavaOutline(
+            List<GitLabJavaTypeSummary> typeSummaries,
+            List<GitLabJavaFieldSummary> fieldSummaries,
+            List<GitLabJavaConstructorSummary> constructorSummaries,
+            List<GitLabJavaMethodSummary> methodSummaries
+    ) {
+        private static JavaOutline empty() {
+            return new JavaOutline(List.of(), List.of(), List.of(), List.of());
+        }
     }
 
 }

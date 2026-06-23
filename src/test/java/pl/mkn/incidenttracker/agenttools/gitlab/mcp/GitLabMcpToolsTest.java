@@ -29,6 +29,8 @@ import pl.mkn.incidenttracker.integrations.operationalcontext.OperationalContext
 import pl.mkn.incidenttracker.agenttools.context.AgentToolContextKeys;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaMethodSummary;
+import pl.mkn.incidenttracker.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaFieldSummary;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -761,11 +763,22 @@ class GitLabMcpToolsTest {
                         package com.example.crm.billing;
 
                         import java.util.List;
+                        import org.springframework.beans.factory.annotation.Autowired;
                         import org.springframework.stereotype.Service;
+                        import org.springframework.transaction.annotation.Transactional;
 
                         @Service
                         public class CustomerBillingService {
+                            private final CustomerPolicy customerPolicy;
+                            @Deprecated
+                            private PaymentPort paymentPort;
 
+                            @Autowired
+                            public CustomerBillingService(CustomerPolicy customerPolicy) {
+                                this.customerPolicy = customerPolicy;
+                            }
+
+                            @Transactional
                             public OrderResult processOrder(String customerId) {
                                 return OrderResult.success(customerId);
                             }
@@ -798,19 +811,58 @@ class GitLabMcpToolsTest {
         assertIterableEquals(
                 List.of(
                         "import java.util.List;",
-                        "import org.springframework.stereotype.Service;"
+                        "import org.springframework.beans.factory.annotation.Autowired;",
+                        "import org.springframework.stereotype.Service;",
+                        "import org.springframework.transaction.annotation.Transactional;"
                 ),
                 response.imports()
         );
-        assertIterableEquals(List.of("public class CustomerBillingService {"), response.classes());
-        assertIterableEquals(List.of("@Service"), response.annotations());
+        assertEquals(1, response.typeSummaries().size());
+        var typeSummary = response.typeSummaries().get(0);
+        assertEquals("CustomerBillingService", typeSummary.name());
+        assertTrue(typeSummary.qualifiedName().endsWith("CustomerBillingService"));
+        assertEquals("class", typeSummary.kind());
+        assertEquals("public class CustomerBillingService {", typeSummary.declaration());
+        assertIterableEquals(List.of("public"), typeSummary.modifiers());
+        assertIterableEquals(List.of("@Service"), typeSummary.annotations());
+        assertTrue(typeSummary.lineStart() > 0);
+        assertTrue(typeSummary.lineEnd() >= typeSummary.lineStart());
+        assertIterableEquals(
+                List.of("customerPolicy", "paymentPort"),
+                response.fieldSummaries().stream().map(GitLabJavaFieldSummary::name).toList()
+        );
+        var policyField = response.fieldSummaries().get(0);
+        assertTrue(policyField.declaringTypeName().endsWith("CustomerBillingService"));
+        assertEquals("CustomerPolicy", policyField.type());
+        assertIterableEquals(List.of("private", "final"), policyField.modifiers());
+        assertTrue(policyField.annotations().isEmpty());
+        assertTrue(policyField.lineStart() > 0);
+        assertTrue(policyField.lineEnd() >= policyField.lineStart());
+        var paymentPortField = response.fieldSummaries().get(1);
+        assertEquals("PaymentPort", paymentPortField.type());
+        assertIterableEquals(List.of("private"), paymentPortField.modifiers());
+        assertIterableEquals(List.of("@Deprecated"), paymentPortField.annotations());
+        assertEquals(1, response.constructorSummaries().size());
+        var constructorSummary = response.constructorSummaries().get(0);
+        assertTrue(constructorSummary.declaringTypeName().endsWith("CustomerBillingService"));
+        assertEquals("public CustomerBillingService(CustomerPolicy customerPolicy)", constructorSummary.signature());
+        assertIterableEquals(List.of("public"), constructorSummary.modifiers());
+        assertIterableEquals(List.of("@Autowired"), constructorSummary.annotations());
+        assertTrue(constructorSummary.lineStart() > 0);
+        assertTrue(constructorSummary.lineEnd() >= constructorSummary.lineStart());
         assertIterableEquals(
                 List.of(
                         "public OrderResult processOrder(String customerId)",
                         "private void validate(Customer customer)"
                 ),
-                response.methodSignatures()
+                response.methodSummaries().stream().map(GitLabJavaMethodSummary::signature).toList()
         );
+        var processOrderSummary = response.methodSummaries().get(0);
+        assertIterableEquals(List.of("public"), processOrderSummary.modifiers());
+        assertIterableEquals(List.of("@Transactional"), processOrderSummary.annotations());
+        var validateSummary = response.methodSummaries().get(1);
+        assertIterableEquals(List.of("private"), validateSummary.modifiers());
+        assertTrue(validateSummary.annotations().isEmpty());
         assertEquals("service-or-orchestrator", response.inferredRole());
         assertFalse(response.truncated());
     }
@@ -1121,8 +1173,50 @@ class GitLabMcpToolsTest {
         assertEquals("configuration", tools.inferRole("src/main/java/pl/mkn/config/BillingConfiguration.java", "@Configuration"));
         assertEquals("read-file-if-short", tools.recommendReadStrategy("src/main/resources/application.yml", "configuration"));
         assertEquals(1, tools.rolePriority("entrypoint"));
-        assertEquals(List.of("@Configuration", "@Bean"), outline.annotations());
-        assertEquals(List.of("Scheduler billingJobScheduler()"), outline.methodSignatures());
+        assertIterableEquals(List.of("@Configuration"), outline.typeSummaries().get(0).annotations());
+        assertTrue(outline.fieldSummaries().isEmpty());
+        assertEquals(List.of("Scheduler billingJobScheduler()"), outline.methodSummaries().stream()
+                .map(GitLabJavaMethodSummary::signature)
+                .toList());
+        assertIterableEquals(List.of("@Bean"), outline.methodSummaries().get(0).annotations());
+    }
+
+    @Test
+    void shouldExtractNeutralJavaFieldSummariesWithAnnotations() {
+        var tools = new GitLabMcpTools(mock(GitLabRepositoryPort.class));
+
+        var outline = tools.buildOutline("""
+                package pl.mkn.customer;
+
+                import jakarta.persistence.Column;
+                import jakarta.persistence.Entity;
+                import jakarta.persistence.Id;
+
+                @Entity
+                public class CustomerEntity {
+                    @Id
+                    private Long id;
+
+                    @Column(name = "customer_status")
+                    private CustomerStatus status;
+
+                    private final CustomerSource source = CustomerSource.REQUEST;
+                }
+                """);
+
+        assertIterableEquals(
+                List.of("id", "status", "source"),
+                outline.fieldSummaries().stream().map(GitLabJavaFieldSummary::name).toList()
+        );
+        assertIterableEquals(List.of("@Entity"), outline.typeSummaries().get(0).annotations());
+        var statusField = outline.fieldSummaries().get(1);
+        assertTrue(statusField.declaringTypeName().endsWith("CustomerEntity"));
+        assertEquals("CustomerStatus", statusField.type());
+        assertIterableEquals(List.of("private"), statusField.modifiers());
+        assertTrue(statusField.annotations().stream().anyMatch(annotation -> annotation.contains("@Column")));
+        assertFalse(statusField.annotations().stream().anyMatch(annotation -> annotation.contains("inferredColumnName")));
+        var sourceField = outline.fieldSummaries().get(2);
+        assertIterableEquals(List.of("private", "final"), sourceField.modifiers());
     }
 
     @Test

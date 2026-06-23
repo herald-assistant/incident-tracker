@@ -61,6 +61,36 @@ class FlowExplorerToolDescriptionCustomizerTest {
     }
 
     @Test
+    void shouldWarnThatFullFileReadsMayBeOnlyPrefix() {
+        var description = customizer.customize(
+                FLOW_EXPLORER_CONTEXT,
+                GitLabToolNames.READ_REPOSITORY_FILE,
+                "Reads repository file."
+        );
+
+        assertTrue(description.contains("maxCharacters returns a prefix of the file"));
+        assertTrue(description.contains("if truncated=true"));
+        assertTrue(description.contains("gitlab_read_repository_file_chunk"));
+    }
+
+    @Test
+    void shouldAppendPersistenceGuidanceForFileOutline() {
+        var description = customizer.customize(
+                FLOW_EXPLORER_CONTEXT,
+                GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE,
+                "Reads repository file outline."
+        );
+
+        assertTrue(description.contains("method names before choosing a focused read"));
+        assertTrue(description.contains("deep persistence analysis"));
+        assertTrue(description.contains("fieldSummaries"));
+        assertTrue(description.contains("typeSummaries"));
+        assertTrue(description.contains("constructorSummaries"));
+        assertTrue(description.contains("methodSummaries"));
+        assertTrue(description.contains("annotations are attached to the Java element"));
+    }
+
+    @Test
     void shouldNotAppendFlowExplorerGuidanceForIncidentSession() {
         var description = customizer.customize(
                 INCIDENT_CONTEXT,

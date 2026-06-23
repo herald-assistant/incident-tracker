@@ -328,12 +328,15 @@ public class GitLabToolEvidenceMapper {
             addAttribute(attributes, "packageName", response.packageName());
             addAttribute(attributes, "inferredRole", response.inferredRole());
             addAttribute(attributes, "truncated", String.valueOf(response.truncated()));
-            addAttribute(attributes, "classCount", String.valueOf(safeList(response.classes()).size()));
-            addAttribute(attributes, "methodSignatureCount", String.valueOf(safeList(response.methodSignatures()).size()));
+            addAttribute(attributes, "typeSummaryCount", String.valueOf(safeList(response.typeSummaries()).size()));
+            addAttribute(attributes, "fieldSummaryCount", String.valueOf(safeList(response.fieldSummaries()).size()));
+            addAttribute(attributes, "constructorSummaryCount", String.valueOf(safeList(response.constructorSummaries()).size()));
+            addAttribute(attributes, "methodSummaryCount", String.valueOf(safeList(response.methodSummaries()).size()));
             addJsonAttribute(attributes, "imports", response.imports());
-            addJsonAttribute(attributes, "classes", response.classes());
-            addJsonAttribute(attributes, "annotations", response.annotations());
-            addJsonAttribute(attributes, "methodSignatures", response.methodSignatures());
+            addJsonAttribute(attributes, "typeSummaries", response.typeSummaries());
+            addJsonAttribute(attributes, "fieldSummaries", response.fieldSummaries());
+            addJsonAttribute(attributes, "constructorSummaries", response.constructorSummaries());
+            addJsonAttribute(attributes, "methodSummaries", response.methodSummaries());
 
             return sessionEvidence.appendItem(
                     GITLAB_PROVIDER,

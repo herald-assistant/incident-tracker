@@ -130,9 +130,49 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                           "filePath": "src/main/java/com/example/crm/customer/CustomerService.java",
                           "packageName": "com.example.crm.customer",
                           "imports": ["java.time.Duration"],
-                          "classes": ["CustomerService"],
-                          "annotations": ["Service"],
-                          "methodSignatures": ["void handle(Customer customer)"],
+                          "typeSummaries": [
+                            {
+                              "name": "CustomerService",
+                              "qualifiedName": "com.example.crm.customer.CustomerService",
+                              "kind": "class",
+                              "declaration": "public class CustomerService {",
+                              "lineStart": 10,
+                              "lineEnd": 42,
+                              "modifiers": ["public"],
+                              "annotations": ["@Service"]
+                            }
+                          ],
+                          "fieldSummaries": [
+                            {
+                              "declaringTypeName": "com.example.crm.customer.CustomerService",
+                              "name": "customerRepository",
+                              "type": "CustomerRepository",
+                              "lineStart": 12,
+                              "lineEnd": 12,
+                              "modifiers": ["private", "final"],
+                              "annotations": []
+                            }
+                          ],
+                          "constructorSummaries": [
+                            {
+                              "declaringTypeName": "com.example.crm.customer.CustomerService",
+                              "signature": "public CustomerService(CustomerRepository customerRepository)",
+                              "lineStart": 14,
+                              "lineEnd": 16,
+                              "modifiers": ["public"],
+                              "annotations": ["@Autowired"]
+                            }
+                          ],
+                          "methodSummaries": [
+                            {
+                              "declaringTypeName": "com.example.crm.customer.CustomerService",
+                              "signature": "void handle(Customer customer)",
+                              "lineStart": 18,
+                              "lineEnd": 24,
+                              "modifiers": [],
+                              "annotations": ["@Transactional"]
+                            }
+                          ],
                           "inferredRole": "service-or-orchestrator",
                           "truncated": false
                         }
@@ -294,7 +334,15 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
 
         var outlineAttributes = attributes(lastSection.items().get(2));
         assertEquals("gitlab_read_repository_file_outline", outlineAttributes.get("toolName"));
-        assertTrue(outlineAttributes.get("classes").contains("CustomerService"));
+        assertEquals("1", outlineAttributes.get("typeSummaryCount"));
+        assertEquals("1", outlineAttributes.get("fieldSummaryCount"));
+        assertEquals("1", outlineAttributes.get("constructorSummaryCount"));
+        assertEquals("1", outlineAttributes.get("methodSummaryCount"));
+        assertTrue(outlineAttributes.get("typeSummaries").contains("CustomerService"));
+        assertTrue(outlineAttributes.get("typeSummaries").contains("@Service"));
+        assertTrue(outlineAttributes.get("fieldSummaries").contains("customerRepository"));
+        assertTrue(outlineAttributes.get("constructorSummaries").contains("@Autowired"));
+        assertTrue(outlineAttributes.get("methodSummaries").contains("@Transactional"));
         assertEquals("3", outlineAttributes.get("toolCaptureOrder"));
 
         var flowAttributes = attributes(lastSection.items().get(3));

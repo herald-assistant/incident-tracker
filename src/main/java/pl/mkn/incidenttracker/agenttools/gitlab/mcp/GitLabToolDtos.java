@@ -326,12 +326,79 @@ public final class GitLabToolDtos {
             String filePath,
             String packageName,
             List<String> imports,
-            List<String> classes,
-            List<String> annotations,
-            List<String> methodSignatures,
+            List<GitLabJavaTypeSummary> typeSummaries,
+            List<GitLabJavaFieldSummary> fieldSummaries,
+            List<GitLabJavaConstructorSummary> constructorSummaries,
+            List<GitLabJavaMethodSummary> methodSummaries,
             String inferredRole,
             boolean truncated
     ) {
+        public GitLabReadRepositoryFileOutlineToolResponse {
+            imports = imports != null ? List.copyOf(imports) : List.of();
+            typeSummaries = typeSummaries != null ? List.copyOf(typeSummaries) : List.of();
+            fieldSummaries = fieldSummaries != null ? List.copyOf(fieldSummaries) : List.of();
+            constructorSummaries = constructorSummaries != null ? List.copyOf(constructorSummaries) : List.of();
+            methodSummaries = methodSummaries != null ? List.copyOf(methodSummaries) : List.of();
+        }
+    }
+
+    public record GitLabJavaTypeSummary(
+            String name,
+            String qualifiedName,
+            String kind,
+            String declaration,
+            int lineStart,
+            int lineEnd,
+            List<String> modifiers,
+            List<String> annotations
+    ) {
+        public GitLabJavaTypeSummary {
+            modifiers = modifiers != null ? List.copyOf(modifiers) : List.of();
+            annotations = annotations != null ? List.copyOf(annotations) : List.of();
+        }
+    }
+
+    public record GitLabJavaFieldSummary(
+            String declaringTypeName,
+            String name,
+            String type,
+            int lineStart,
+            int lineEnd,
+            List<String> modifiers,
+            List<String> annotations
+    ) {
+        public GitLabJavaFieldSummary {
+            modifiers = modifiers != null ? List.copyOf(modifiers) : List.of();
+            annotations = annotations != null ? List.copyOf(annotations) : List.of();
+        }
+    }
+
+    public record GitLabJavaConstructorSummary(
+            String declaringTypeName,
+            String signature,
+            int lineStart,
+            int lineEnd,
+            List<String> modifiers,
+            List<String> annotations
+    ) {
+        public GitLabJavaConstructorSummary {
+            modifiers = modifiers != null ? List.copyOf(modifiers) : List.of();
+            annotations = annotations != null ? List.copyOf(annotations) : List.of();
+        }
+    }
+
+    public record GitLabJavaMethodSummary(
+            String declaringTypeName,
+            String signature,
+            int lineStart,
+            int lineEnd,
+            List<String> modifiers,
+            List<String> annotations
+    ) {
+        public GitLabJavaMethodSummary {
+            modifiers = modifiers != null ? List.copyOf(modifiers) : List.of();
+            annotations = annotations != null ? List.copyOf(annotations) : List.of();
+        }
     }
 
     public record GitLabReadRepositoryFileToolResponse(
