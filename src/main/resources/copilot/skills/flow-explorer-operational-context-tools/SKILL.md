@@ -105,6 +105,21 @@ Operational context moze wzbogacic:
 Formuluj to prostym jezykiem dla analityka/testera. Oddzielaj "katalog mowi"
 od "kod potwierdza".
 
+### SOURCE Dla Persistence Deep
+
+Gdy `sectionModes.PERSISTENCE=DEEP`, operational context moze byc potrzebny do
+nadania biznesowej nazwy zrodlu zapisywanych danych. Jezeli GitLab pokazuje, ze
+wartosc zapisywana do bazy pochodzi z integracji, klienta, adaptera albo
+odpowiedzi innego komponentu, uzyj katalogu, glossary, handoffu albo relacji
+systemu, zeby nazwac `SOURCE` biznesowo.
+
+W tabeli wyniku `SOURCE` musi byc `GENERATED`, `REQUEST`, `CALCULATED` albo
+biznesowa nazwa systemu/komponentu zewnetrznego. Nie wpisuj jako `SOURCE` nazw
+klas, beanow, klientow technicznych, repozytoriow ani endpointow. Jezeli
+katalog nie rozstrzyga technicznej nazwy integracji do nazwy biznesowej,
+oznacz to jako `visibilityLimit` albo `openQuestion` i zglos luke przez
+`record_tool_feedback`, jezeli feedback tool jest dostepny.
+
 ## Kiedy Wrocic Do Orkiestratora
 
 Wroc, gdy:

@@ -53,6 +53,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
         assertTrue(prompt.contains("`OFF` oznacza, ze sekcji nie wolno zwracac w `sections`"));
         assertTrue(prompt.contains("Nigdy nie zwracaj `mode=off`"));
+        assertTrue(prompt.contains("`sectionModes.PERSISTENCE=DEEP` i endpoint zapisuje dane"));
+        assertTrue(prompt.contains("`TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`"));
+        assertTrue(prompt.contains("`GENERATED`, `REQUEST`, `CALCULATED`"));
         assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));
         assertTrue(prompt.contains("sectionModes"));
         assertTrue(prompt.contains("activeSectionIds"));

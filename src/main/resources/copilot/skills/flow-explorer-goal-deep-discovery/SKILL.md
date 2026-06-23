@@ -132,30 +132,45 @@ Oprocz compact dodaj:
 - ryzyko niepelnej widocznosci modeli, mapperow albo repozytoriow.
 
 Dla `deep` traktuj persistence result jako oczekiwany element wyniku, jezeli
-endpoint tworzy, aktualizuje albo usuwa dane. Pokaz tabele danych
-aktualizowanych, tworzonych albo usuwanych, a nie tylko liste klas
-implementacyjnych.
+endpoint tworzy, aktualizuje albo usuwa dane. Pokaz biznesowe mapowanie ORM:
+ktora tabela i kolumna sa zapisywane oraz skad pochodzi zapisywana wartosc.
+Nie pokazuj listy klas implementacyjnych jako rezultatu analizy.
 
 Minimalny format tabeli w `persistence.deep`:
 
-| Obiekt/encja albo tabela | Pole/dane | Operacja | Skad pochodzi wartosc | Transformacja/regula | Evidence | Pewnosc/limit |
-| --- | --- | --- | --- | --- | --- | --- |
+| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
+| --- | --- | --- | --- |
 
-W kolumnie `Skad pochodzi wartosc` rozrozniaj:
+`SOURCE` jest obowiazkowe dla kazdej zapisywanej kolumny i musi byc jedna z
+ponizszych wartosci:
 
-- request/input endpointu,
-- istniejacy stan z bazy,
-- system zewnetrzny albo integracja,
-- wartosc wyliczona w logice,
-- wartosc domyslna, konfiguracja albo stala,
-- brak widocznosci z powodu nieprzeczytanego mappera/modelu/repozytorium.
+- `GENERATED` - wartosc powstaje po stronie persistence/systemu bez danych od
+  uzytkownika,
+- `REQUEST` - wartosc pochodzi z requestu endpointu,
+- `CALCULATED` - wartosc jest wyliczona przez logike analizowanego flow,
+- biznesowa nazwa systemu albo komponentu, np. `System X`, jezeli zapisywana
+  wartosc pochodzi z dedykowanego systemu zewnetrznego.
 
-Nie wymyslaj nazw tabel ani kolumn, gdy evidence pokazuje tylko pola Java.
-Jezeli widzisz adnotacje encji, DDL albo query, mozesz uzyc widocznej nazwy
-tabeli/kolumny. Jezeli widzisz tylko model Java, pisz `encja/model Java` i
-nazwe pola z evidence. Zrodlo wartosci wyprowadzaj z request DTO, mappera,
-serwisu, repository query albo odpowiedzi integracji; gdy tego nie widac,
-wpisz limit widocznosci zamiast zgadywania.
+`SOURCE DETAILS` opisuje sciezke danych w jezyku przyjaznym dla
+analityka/testera, np. `req.body.customer.email`, `param.customer.name`,
+`resp.address.street`, albo krotka regule dla `CALCULATED`. Dla zrodel
+zewnetrznych uzywaj biznesowej nazwy systemu lub komponentu z operational
+context, glossary, handoffu albo widocznego kontraktu integracji; nie uzywaj
+nazwy klienta technicznego, klasy, beana ani repozytorium jako `SOURCE`.
+
+Nie koncz `PERSISTENCE=DEEP` bez ustalenia `SOURCE` dla zapisywanych danych.
+Zrodlo wartosci wyprowadzaj z request DTO, mappera, serwisu, odpowiedzi
+integracji, konfiguracji albo reguly biznesowej. Jezeli brakuje widocznosci,
+czytaj kolejne waskie fragmenty kodu zwiazane z flow, az potwierdzisz zrodlo
+albo trafisz na twardy limit widocznosci. Dopiero wtedy dodaj
+`visibilityLimits` albo `openQuestions`; nie wpisuj technicznego placeholdera
+w `SOURCE`.
+
+Mapowanie ORM, DDL albo query moze sluzyc do ustalenia `TABLE_NAME` i `COLUMN`,
+ale szczegoly implementacyjne nie sa trescia tabeli wynikowej. Nie wstawiaj do
+tabeli adnotacji, nazw klas, metod ani frameworkowych szczegolow persistence.
+Evidence trzymaj w `sourceRefs`, a nie w kolumnach `SOURCE` lub
+`SOURCE DETAILS`.
 
 ## Integrations
 

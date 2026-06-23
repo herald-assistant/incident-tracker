@@ -143,6 +143,9 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         var orchestrator = Files.readString(SKILLS_ROOT.resolve("flow-explorer-orchestrator").resolve("SKILL.md"));
         var gitLabTools = Files.readString(SKILLS_ROOT.resolve("flow-explorer-gitlab-tools").resolve("SKILL.md"));
         var deepDiscovery = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-deep-discovery").resolve("SKILL.md"));
+        var resultContract = Files.readString(SKILLS_ROOT.resolve("flow-explorer-result-contract").resolve("SKILL.md"));
+        var operationalContextTools = Files.readString(
+                SKILLS_ROOT.resolve("flow-explorer-operational-context-tools").resolve("SKILL.md"));
 
         assertTrue(orchestrator.contains("`branchRef`"));
         assertTrue(orchestrator.contains("`applicationName`"));
@@ -171,15 +174,29 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(gitLabTools.contains("Glebokoscia nadal steruje"));
         assertTrue(gitLabTools.contains("`typeSummaries`, `fieldSummaries`"));
         assertTrue(gitLabTools.contains("Adnotacje sa przypiete do"));
-        assertTrue(gitLabTools.contains("adnotacje metod z"));
-        assertTrue(gitLabTools.contains("Dla `sectionModes.PERSISTENCE=DEEP` oczekuj tabeli"));
-        assertTrue(gitLabTools.contains("czy wartosc pochodzi z requestu"));
+        assertTrue(gitLabTools.contains("`TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`"));
+        assertTrue(gitLabTools.contains("Ustal `SOURCE` dla kazdej zapisywanej"));
+        assertTrue(gitLabTools.contains("Nie koncz persistence deep na polach encji"));
+        assertTrue(gitLabTools.contains("nazwac `SOURCE` biznesowo"));
         assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
 
-        assertTrue(deepDiscovery.contains("persistence result jako oczekiwany element wyniku"));
-        assertTrue(deepDiscovery.contains("tabele danych"));
-        assertTrue(deepDiscovery.contains("Skad pochodzi wartosc"));
-        assertTrue(deepDiscovery.contains("Nie wymyslaj nazw tabel ani kolumn"));
+        assertTrue(deepDiscovery.contains("| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |"));
+        assertTrue(deepDiscovery.contains("`SOURCE` jest obowiazkowe"));
+        assertTrue(deepDiscovery.contains("`GENERATED`"));
+        assertTrue(deepDiscovery.contains("`REQUEST`"));
+        assertTrue(deepDiscovery.contains("`CALCULATED`"));
+        assertTrue(deepDiscovery.contains("biznesowa nazwa systemu albo komponentu"));
+        assertTrue(deepDiscovery.contains("Nie koncz `PERSISTENCE=DEEP` bez ustalenia `SOURCE`"));
+        assertTrue(deepDiscovery.contains("szczegoly implementacyjne nie sa trescia tabeli wynikowej"));
+
+        assertTrue(resultContract.contains("## Persistence Deep Contract"));
+        assertTrue(resultContract.contains("`SOURCE` jest polem kontrolowanym"));
+        assertTrue(resultContract.contains("Dozwolone wartosci to tylko"));
+        assertTrue(resultContract.contains("Nie wpisuj w `SOURCE` ani `SOURCE DETAILS` nazw klas"));
+
+        assertTrue(operationalContextTools.contains("### SOURCE Dla Persistence Deep"));
+        assertTrue(operationalContextTools.contains("nazwac `SOURCE` biznesowo"));
+        assertTrue(operationalContextTools.contains("Nie wpisuj jako `SOURCE` nazw"));
     }
 
     private static void assertSkillContainsSections(String skillName, List<String> requiredSections) throws Exception {

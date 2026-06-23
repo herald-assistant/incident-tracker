@@ -124,12 +124,17 @@ kontrakt zakresu.
 - `VALIDATIONS`: request model, validator, guard clause, error boundary.
 - `PERSISTENCE`: repository method, query predicate, entity status fields,
   transactional boundary. Dla `sectionModes.PERSISTENCE=DEEP` oczekuj tabeli
-  danych aktualizowanych/tworzonych/usuwanych ze zrodlem wartosci. Uzyj
-  `gitlab_read_repository_file_outline` na encji/modelu/DTO/mapperze, zeby
-  zebrac `fieldSummaries`, `typeSummaries` i adnotacje metod z
-  `methodSummaries`, a potem `gitlab_read_java_method_slice` albo waski chunk
-  na serwisie/mapperze, zeby ustalic, czy wartosc pochodzi z requestu, bazy,
-  integracji, konfiguracji czy wyliczenia w logice.
+  `TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS` dla danych
+  aktualizowanych/tworzonych/usuwanych. Ustal `SOURCE` dla kazdej zapisywanej
+  kolumny jako `GENERATED`, `REQUEST`, `CALCULATED` albo biznesowa nazwe
+  systemu/komponentu zewnetrznego. Nie koncz persistence deep na polach encji:
+  outline encji/modelu pomaga ustalic tabele i kolumny, ale zrodlo wartosci
+  znajdz przez request DTO/form, mapper, service, helper, konfiguracje,
+  odpowiedz integracji albo response DTO. Jezeli kod pokazuje tylko techniczna
+  nazwe klienta/adaptera, uzyj operational context/glossary/handoffu, zeby
+  nazwac `SOURCE` biznesowo. Gdy widzisz zapis, czytaj kolejne waskie fragmenty
+  powiazane z flow, az zrodlo zostanie potwierdzone albo pojawi sie twardy
+  limit widocznosci.
 - `INTEGRATIONS`: client, adapter, request mapper, response handling,
   retry/error handling.
 

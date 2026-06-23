@@ -110,6 +110,28 @@ albo glossary go nie potwierdza, mozesz uzyc roboczej nazwy jako inferencji.
 Dodaj wtedy limit widocznosci albo pytanie otwarte i nie prezentuj tej nazwy
 jako potwierdzonego slownika domeny.
 
+## Persistence Deep Contract
+
+Gdy aktywna sekcja `PERSISTENCE` ma `mode=deep` i endpoint zapisuje dane,
+`sections[].markdown` dla tej sekcji musi zawierac biznesowa tabele mapowania:
+
+| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
+| --- | --- | --- | --- |
+
+`SOURCE` jest polem kontrolowanym. Dozwolone wartosci to tylko:
+
+- `GENERATED`,
+- `REQUEST`,
+- `CALCULATED`,
+- biznesowa nazwa systemu albo komponentu zewnetrznego, gdy wartosc pochodzi z
+  dedykowanego systemu.
+
+Nie wpisuj w `SOURCE` ani `SOURCE DETAILS` nazw klas, metod, beanow,
+frameworkow, repozytoriow ani szczegolow implementacyjnych. Te informacje moga
+byc tylko w `sourceRefs` albo `sourceReferences`. Jezeli nie potrafisz
+potwierdzic zrodla po dostepnym kodzie i tools, wpisz limit widocznosci albo
+pytanie otwarte zamiast technicznego placeholdera.
+
 ## Source References
 
 Preferuj source refs w formie:
