@@ -6,6 +6,8 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 
 import java.util.List;
@@ -22,6 +24,7 @@ public class FlowExplorerPromptPreparationService {
     public FlowExplorerPromptPreparation prepare(FlowExplorerJobStartRequest request, FlowExplorerContextSnapshot contextSnapshot) {
         var artifacts = artifactService.renderArtifacts(request, contextSnapshot);
         var artifactContents = artifactService.toArtifactContentMap(artifacts);
+        var sectionModes = request.resolvedSectionModes();
         var prompt = """
                 # Flow Explorer canonical prompt
 
@@ -37,12 +40,13 @@ public class FlowExplorerPromptPreparationService {
                 - `userInstructions` sa doprecyzowaniem intencji uzytkownika, nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Nie zgaduj. Jezeli kontekst nie wystarcza, wpisz ograniczenie w `visibilityLimits` albo pytanie w `openQuestions`.
                 - Nie opisuj pelnych klas, jezeli wystarczy metoda, rola node'a albo kontrakt endpointu.
-                - Wynik ma zawsze zawierac `overview` oraz dokladnie cztery sekcje: BUSINESS_FLOW_RULES, VALIDATIONS, PERSISTENCE, INTEGRATIONS.
-                - Dla kazdej sekcji ustaw `mode` zgodnie z `sectionModes`; `deep` oznacza bardziej szczegolowa odpowiedz, `compact` oznacza zwarta, ale nadal konkretna odpowiedz.
+                - Wynik ma zawsze zawierac `overview` oraz tylko aktywne sekcje z `sectionModes`.
+                - `sectionModes` jest zrodlem prawdy dla sekcji wyniku: `OFF` oznacza, ze sekcji nie wolno zwracac w `sections`; `COMPACT` i `DEEP` oznaczaja, ze sekcja musi byc zwrocona.
+                - Dla aktywnych sekcji ustaw `mode` zgodnie z `sectionModes`: `deep` oznacza bardziej szczegolowa odpowiedz, `compact` oznacza zwarta, ale nadal konkretna odpowiedz. Nigdy nie zwracaj `mode=off`.
                 - Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`; to jest initial evidence przygotowane deterministycznie.
                 - Nie powtarzaj GitLab tool calls dla kodu, ktory jest juz widoczny w `snippet-cards.md`.
                 - Jezeli `openapi-endpoint-contract.md` jest dostepny, uzyj go jako kontraktu API request/response/parameters/security dla wybranego endpointu. Nie czytaj pelnego OpenAPI YAML.
-                - Zawsze zbuduj primary endpoint flow, a `focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`.
+                - Zawsze zrozum primary endpoint flow jako podstawe overview. `focusAreas` to kompatybilny skrot dla sekcji `DEEP`; o zwracanych sekcjach decyduje `sectionModes`.
                 - Glebokosc eksploracji wynika z `reasoningEffort`: low = artifact-first i minimalne tool calls, medium = focused reads dla brakow primary flow, high = glebsze edge case'y i zaleznosci, nadal przez canonical inputs.
                 - Pelniejsze czytanie kodu wykonuj przez GitLab tools dopiero wtedy, gdy brakuje go do primary flow albo sekcji deep zgodnie z reasoningEffort; preferuj `gitlab_read_java_method_slice` dla konkretnych metod.
                 - Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` oraz `compact-flow-manifest.md`: scope repo/branch bierz z canonical, a filePath/metody z manifestu.
@@ -62,6 +66,7 @@ public class FlowExplorerPromptPreparationService {
                 goal: %s
                 focusAreas: %s
                 sectionModes: %s
+                activeSectionIds: %s
                 reasoningEffort: %s
                 userInstructions:
                 %s
@@ -119,7 +124,8 @@ public class FlowExplorerPromptPreparationService {
                 contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch(),
                 request.goal(),
                 request.focusAreas(),
-                FlowExplorerResultSectionModeResolver.resolve(request.focusAreas()),
+                renderSectionModes(sectionModes),
+                renderActiveSectionIds(sectionModes),
                 reasoningEffort(request),
                 userInstructions(request.userInstructions()),
                 contextSnapshot != null && contextSnapshot.coverage() != null
@@ -185,12 +191,12 @@ public class FlowExplorerPromptPreparationService {
                 Priorytety: MUST = pobierz przez `skill` i zastosuj przed finalna odpowiedzia; SHOULD = pobierz i zastosuj, gdy spelniona jest opisana sytuacja; COULD = opcjonalnie, gdy poprawi jakosc albo jawnie nazwie ograniczenie.
 
                 MUST: flow-explorer-orchestrator
-                - Uzyj przed interpretacja artefaktow, zeby utrzymac primary endpoint flow, goal, focusAreas i reasoningEffort.
+                - Uzyj przed interpretacja artefaktow, zeby utrzymac primary endpoint flow, goal, sectionModes, focusAreas i reasoningEffort.
                 - Pilnuje, ze wynik jest dokumentacja przeplywu systemowego, a kod jest evidence, nie jezykiem glownej narracji.
 
                 MUST: flow-explorer-result-contract
                 - Uzyj przed finalna odpowiedzia initial run.
-                - Pilnuje JSON-only, overview, dokladnie czterech sekcji, sourceRefs, confidence, visibilityLimits i openQuestions.
+                - Pilnuje JSON-only, overview, tylko aktywnych sekcji z sectionModes, sourceRefs, confidence, visibilityLimits i openQuestions.
 
                 %s
 
@@ -260,5 +266,23 @@ public class FlowExplorerPromptPreparationService {
                 ))
                 .reduce((left, right) -> left + System.lineSeparator() + right)
                 .orElse("- none");
+    }
+
+    private String renderSectionModes(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
+        if (sectionModes == null || sectionModes.isEmpty()) {
+            return "[]";
+        }
+        return sectionModes.stream()
+                .map(assignment -> "%s=%s".formatted(assignment.id(), assignment.mode()))
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("[]");
+    }
+
+    private String renderActiveSectionIds(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
+        var active = FlowExplorerResultSectionModeResolver.activeOnly(sectionModes).stream()
+                .filter(assignment -> assignment.mode() != FlowExplorerResultSectionMode.OFF)
+                .map(assignment -> assignment.id().name())
+                .toList();
+        return active.isEmpty() ? "[]" : active.toString();
     }
 }

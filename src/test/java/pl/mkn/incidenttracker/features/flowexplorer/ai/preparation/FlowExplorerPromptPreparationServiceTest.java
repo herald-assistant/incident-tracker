@@ -50,9 +50,12 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("COULD: record_tool_feedback"));
         assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`"));
         assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
-        assertTrue(prompt.contains("`focusAreas` traktuja tylko o tym, ktore sekcje maja tryb `deep`"));
+        assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
+        assertTrue(prompt.contains("`OFF` oznacza, ze sekcji nie wolno zwracac w `sections`"));
+        assertTrue(prompt.contains("Nigdy nie zwracaj `mode=off`"));
         assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));
         assertTrue(prompt.contains("sectionModes"));
+        assertTrue(prompt.contains("activeSectionIds"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Context clipping notes"));
         assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
@@ -125,6 +128,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                null,
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4-mini",
                 "high"
@@ -140,6 +144,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.RISK_DETECTION,
                 List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
+                null,
                 "Skup sie na ryzykach regresji CRM.",
                 "gpt-5.4-mini",
                 "high"
@@ -155,6 +160,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.PERSISTENCE),
+                null,
                 "Pokaz flow biznesowo.",
                 "gpt-5.4-mini",
                 "high"

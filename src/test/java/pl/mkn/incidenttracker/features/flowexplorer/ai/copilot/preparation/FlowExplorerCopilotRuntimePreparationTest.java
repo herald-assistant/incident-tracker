@@ -356,6 +356,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                null,
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
                 "medium"
@@ -371,6 +372,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES, FlowExplorerFocusArea.VALIDATIONS),
+                null,
                 "Skup sie na scenariuszach regresyjnych CRM.",
                 "gpt-5.4",
                 "high"
@@ -386,6 +388,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.RISK_DETECTION,
                 List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
+                null,
                 "Skup sie na ryzykach regresji CRM.",
                 "gpt-5.4",
                 "high"

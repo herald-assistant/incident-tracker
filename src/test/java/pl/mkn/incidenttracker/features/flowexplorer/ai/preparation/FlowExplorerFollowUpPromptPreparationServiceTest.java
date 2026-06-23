@@ -45,11 +45,13 @@ class FlowExplorerFollowUpPromptPreparationServiceTest {
         assertTrue(prompt.contains("# Flow Explorer follow-up prompt"));
         assertTrue(prompt.contains("Nie generuj ponownie calego initial resultu"));
         assertTrue(prompt.contains("Follow-up sluzy do wyjatkow, doprecyzowan i waskich dopytan"));
-        assertTrue(prompt.contains("Uzywaj stalych punktow odniesienia: Overview, Business flow/rules, Validations, Persistence, Integrations"));
+        assertTrue(prompt.contains("Uzywaj stalych punktow odniesienia: Overview oraz aktywne sekcje initial resultu"));
+        assertTrue(prompt.contains("Sekcja OFF mogla byc celowo pominieta w initial result"));
         assertTrue(prompt.contains("Jezeli pytanie dotyczy sekcji `DEEP`, najpierw wykorzystaj initial result"));
         assertTrue(prompt.contains("Jezeli pytanie dotyczy sekcji `COMPACT`, mozesz dociagnac szczegoly przez dozwolone tools"));
         assertTrue(prompt.contains("reasoningEffort: medium"));
-        assertTrue(prompt.contains("sectionModes: [FlowExplorerResultSectionModeAssignment[id=BUSINESS_FLOW_RULES"));
+        assertTrue(prompt.contains("sectionModes: BUSINESS_FLOW_RULES=DEEP"));
+        assertTrue(prompt.contains("activeSectionIds: [BUSINESS_FLOW_RULES, VALIDATIONS, PERSISTENCE, INTEGRATIONS]"));
         assertTrue(prompt.contains("## Current user follow-up"));
         assertTrue(prompt.contains("Ktore walidacje statusu klienta sa juz potwierdzone?"));
         assertTrue(prompt.contains("- user: Czy endpoint obsluguje brak klienta?"));
@@ -100,6 +102,7 @@ class FlowExplorerFollowUpPromptPreparationServiceTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                null,
                 "Skup sie na walidacjach CRM.",
                 "gpt-5.4-mini",
                 "medium"

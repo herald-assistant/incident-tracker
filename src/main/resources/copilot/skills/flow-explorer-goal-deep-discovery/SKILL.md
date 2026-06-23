@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-goal-deep-discovery
-description: Goal-specific template dla Flow Explorer Deep Discovery - kompleksowe zrozumienie endpointu przez Overview i cztery sekcje compact/deep.
+description: Goal-specific template dla Flow Explorer Deep Discovery - kompleksowe zrozumienie endpointu przez Overview i aktywne sekcje sectionModes compact/deep.
 ---
 
 # Flow Explorer Goal: Deep Discovery

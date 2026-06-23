@@ -6,6 +6,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysis
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 
 import java.util.List;
 
@@ -220,7 +221,7 @@ class FlowExplorerAiResponseParserTest {
 
     @Test
     void shouldValidateSectionModesAgainstFocusAreas() {
-        var response = parser.parse(
+        var response = parser.parseForFocusAreas(
                 responseJsonWithModes("TEST_SCENARIOS", "deep", "deep", "compact", "compact"),
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES, FlowExplorerFocusArea.VALIDATIONS)
@@ -231,6 +232,33 @@ class FlowExplorerAiResponseParserTest {
         assertEquals(FlowExplorerResultSectionMode.DEEP, response.sections().get(1).mode());
         assertEquals(FlowExplorerResultSectionMode.COMPACT, response.sections().get(2).mode());
         assertEquals(FlowExplorerResultSectionMode.COMPACT, response.sections().get(3).mode());
+    }
+
+    @Test
+    void shouldAllowOffSectionToBeOmitted() {
+        var response = parser.parse(
+                responseJsonWithoutPersistence("DEEP_DISCOVERY", "deep", "compact", "compact"),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                sectionModesWithPersistenceOff()
+        );
+
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, response.goal());
+        assertEquals(3, response.sections().size());
+        assertEquals(FlowExplorerResultSectionId.BUSINESS_FLOW_RULES, response.sections().get(0).id());
+        assertEquals(FlowExplorerResultSectionId.VALIDATIONS, response.sections().get(1).id());
+        assertEquals(FlowExplorerResultSectionId.INTEGRATIONS, response.sections().get(2).id());
+        assertTrue(response.sections().stream().noneMatch(section -> section.id() == FlowExplorerResultSectionId.PERSISTENCE));
+    }
+
+    @Test
+    void shouldReturnFallbackWhenOffSectionIsReturned() {
+        var response = parser.parse(
+                responseJsonWithModes("DEEP_DISCOVERY", "deep", "compact", "off", "compact"),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                sectionModesWithPersistenceOff()
+        );
+
+        assertFallback(response, "sections must contain exactly the active sectionModes items");
     }
 
     @Test
@@ -273,7 +301,7 @@ class FlowExplorerAiResponseParserTest {
                 }
                 """);
 
-        assertFallback(response, "sections must contain exactly four items");
+        assertFallback(response, "sections must contain exactly the active sectionModes items");
     }
 
     @Test
@@ -299,13 +327,13 @@ class FlowExplorerAiResponseParserTest {
 
     @Test
     void shouldReturnFallbackWhenSectionModeDoesNotMatchFocusAreas() {
-        var response = parser.parse(
+        var response = parser.parseForFocusAreas(
                 responseJsonWithModes("TEST_SCENARIOS", "compact", "deep", "compact", "compact"),
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES, FlowExplorerFocusArea.VALIDATIONS)
         );
 
-        assertFallback(response, "section.mode does not match request focusAreas");
+        assertFallback(response, "section.mode does not match request sectionModes");
     }
 
     @Test
@@ -396,5 +424,73 @@ class FlowExplorerAiResponseParserTest {
                   "confidence": "high"%s
                 }
                 """.formatted(goal, businessMode, validationsMode, persistenceMode, integrationsMode, extraTopLevelFields);
+    }
+
+    private static String responseJsonWithoutPersistence(
+            String goal,
+            String businessMode,
+            String validationsMode,
+            String integrationsMode
+    ) {
+        return """
+                {
+                  "goal": "%s",
+                  "audience": "business_or_system_analyst_tester",
+                  "overview": {
+                    "markdown": "Overview dla CRM customer lookup.",
+                    "confidence": "high",
+                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                  },
+                  "sections": [
+                    {
+                      "id": "BUSINESS_FLOW_RULES",
+                      "title": "Business flow/rules",
+                      "mode": "%s",
+                      "markdown": "CRM customer lookup business behavior.",
+                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "VALIDATIONS",
+                      "title": "Validations",
+                      "mode": "%s",
+                      "markdown": "CRM customer id validation.",
+                      "sourceRefs": ["crm-service:CustomerService.java:L30-L44"],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    },
+                    {
+                      "id": "INTEGRATIONS",
+                      "title": "Integrations",
+                      "mode": "%s",
+                      "markdown": "No external integration is visible in initial CRM flow.",
+                      "sourceRefs": [],
+                      "visibilityLimits": [],
+                      "openQuestions": []
+                    }
+                  ],
+                  "globalVisibilityLimits": [],
+                  "globalOpenQuestions": [],
+                  "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
+                  "confidence": "high"
+                }
+                """.formatted(goal, businessMode, validationsMode, integrationsMode);
+    }
+
+    private static List<FlowExplorerResultSectionModeAssignment> sectionModesWithPersistenceOff() {
+        return List.of(
+                assignment(FlowExplorerResultSectionId.BUSINESS_FLOW_RULES, FlowExplorerResultSectionMode.DEEP),
+                assignment(FlowExplorerResultSectionId.VALIDATIONS, FlowExplorerResultSectionMode.COMPACT),
+                assignment(FlowExplorerResultSectionId.PERSISTENCE, FlowExplorerResultSectionMode.OFF),
+                assignment(FlowExplorerResultSectionId.INTEGRATIONS, FlowExplorerResultSectionMode.COMPACT)
+        );
+    }
+
+    private static FlowExplorerResultSectionModeAssignment assignment(
+            FlowExplorerResultSectionId id,
+            FlowExplorerResultSectionMode mode
+    ) {
+        return new FlowExplorerResultSectionModeAssignment(id, id.title(), mode);
     }
 }

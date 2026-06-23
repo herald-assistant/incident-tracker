@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-orchestrator
-description: Glowny starter Flow Explorera - stabilizuje endpoint flow na podstawie artefaktow, traktuje goal jako cel analizy, focusAreas jako tryby sekcji i reasoningEffort jako glebokosc eksploracji.
+description: Glowny starter Flow Explorera - stabilizuje endpoint flow na podstawie artefaktow, traktuje goal jako cel analizy, sectionModes jako zakres sekcji i reasoningEffort jako glebokosc eksploracji.
 ---
 
 # Skill Orkiestratora Flow Explorera
@@ -84,13 +84,21 @@ rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
 `goal` okresla cel pracy uzytkownika. Jezeli zaladowany jest skill celu, np.
 `flow-explorer-goal-deep-discovery`, zastosuj jego template i zasady.
 
-`focusAreas` nie sa celem. Wskazuja, ktore z czterech sekcji maja miec tryb
-`deep`. Sekcje bez focus area maja tryb `compact`, ale nadal musza byc
-konkretne i przydatne.
+`sectionModes` sa zrodlem prawdy dla sekcji wyniku:
+
+- `OFF` oznacza: nie zwracaj tej sekcji w `sections`,
+- `COMPACT` oznacza: zwroc sekcje zwiezle, ale konkretnie,
+- `DEEP` oznacza: zwroc sekcje bardziej szczegolowo i czytaj dodatkowe evidence
+  tylko wtedy, gdy jest potrzebne.
+
+`focusAreas` nie sa celem. Sa kompatybilnym skrotem dla sekcji `DEEP` i moga
+pomoc w priorytetyzacji evidence, ale o tym, ktore sekcje wolno zwrocic,
+decyduje `sectionModes`.
 
 Zawsze najpierw zbuduj glowny flow endpointu: HTTP entrypoint -> use case /
 service -> walidacje/mapowanie -> persistence/integracje -> response/error
-boundary. Dopiero potem wypelnij cztery sekcje zgodnie z `sectionModes`.
+boundary. Dopiero potem wypelnij `overview` i tylko aktywne sekcje zgodnie z
+`sectionModes`.
 
 `reasoningEffort` okresla glebokosc eksploracji:
 
@@ -139,7 +147,8 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
 10. Sprawdz `coverage.json` i limitations. Braki wpisuj do
    `globalVisibilityLimits` albo `visibilityLimits` danej sekcji, chyba ze
    mozna je tanio uzupelnic toolami.
-11. Wypelnij `Overview` i cztery sekcje zgodnie z goal-specific skillem.
+11. Wypelnij `Overview` i aktywne sekcje zgodnie z goal-specific skillem oraz
+   `sectionModes`; sekcje `OFF` pomin calkowicie.
 12. Gdy uzywasz GitLab tools, zawsze przekaz jawny `branchRef`; jezeli tool
    dotyczy kodu aplikacji, przekaz tez `applicationName` i znany `projectName`
    z `canonical-tool-inputs.md` oraz `filePath` i metody z

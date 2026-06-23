@@ -20,6 +20,7 @@ describe('flow-explorer-import-export utils', () => {
     expect(envelope.payload.resultContract).toBe(FLOW_EXPLORER_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.resultContract).toBe(FLOW_EXPLORER_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.request.goal).toBe('DEEP_DISCOVERY');
+    expect(envelope.payload.diagnostics.request.sectionModes[0]?.mode).toBe('DEEP');
     expect(envelope.payload.diagnostics.result.sectionModes.BUSINESS_FLOW_RULES).toBe('deep');
     expect(envelope.payload.diagnostics.context.snippetCardCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.contextEvidenceItemCount).toBe(1);
@@ -92,6 +93,31 @@ describe('flow-explorer-import-export utils', () => {
     );
   });
 
+  it('should import a result with an off section omitted', () => {
+    const job = flowExplorerJob({
+      focusAreas: ['BUSINESS_FLOW_RULES'],
+      sectionModes: [
+        { id: 'BUSINESS_FLOW_RULES', title: 'Business flow/rules', mode: 'DEEP' },
+        { id: 'VALIDATIONS', title: 'Validations', mode: 'COMPACT' },
+        { id: 'PERSISTENCE', title: 'Persistence', mode: 'COMPACT' },
+        { id: 'INTEGRATIONS', title: 'Integrations', mode: 'OFF' }
+      ]
+    });
+    job.result!.aiResponse!.sections = job.result!.aiResponse!.sections.filter(
+      (section) => section.id !== 'INTEGRATIONS'
+    );
+    const envelope = buildFlowExplorerExportEnvelope(job, '2026-06-18T10:00:00Z');
+
+    const imported = parseImportedFlowExplorerAnalysis(envelope);
+
+    expect(imported.job.sectionModes.find((sectionMode) => sectionMode.id === 'INTEGRATIONS')?.mode).toBe('OFF');
+    expect(imported.job.result?.aiResponse?.sections.map((section) => section.id)).toEqual([
+      'BUSINESS_FLOW_RULES',
+      'VALIDATIONS',
+      'PERSISTENCE'
+    ]);
+  });
+
   it('should build a stable download file name', () => {
     expect(buildFlowExplorerExportFileName(flowExplorerJob(), '2026-06-18T10:00:00')).toBe(
       'flow-explorer-crm-service-api-customers-id-completed-20260618-100000.json'
@@ -111,6 +137,12 @@ function flowExplorerJob(
     branch: 'main',
     goal: 'DEEP_DISCOVERY',
     focusAreas: ['BUSINESS_FLOW_RULES'],
+    sectionModes: [
+      { id: 'BUSINESS_FLOW_RULES', title: 'Business flow/rules', mode: 'DEEP' },
+      { id: 'VALIDATIONS', title: 'Validations', mode: 'COMPACT' },
+      { id: 'PERSISTENCE', title: 'Persistence', mode: 'COMPACT' },
+      { id: 'INTEGRATIONS', title: 'Integrations', mode: 'COMPACT' }
+    ],
     aiModel: 'gpt-5-mini',
     reasoningEffort: 'medium',
     status: 'COMPLETED',

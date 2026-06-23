@@ -70,7 +70,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Dozwolone Tools",
                 "## Strategia Czytania Kodu",
                 "## Szybka Strategia Dla Slabszych Modeli",
-                "## Co Czytac Wedlug Focus Area",
+                "## Co Czytac Wedlug Section Modes",
                 "## Zasady Kosztowe",
                 "## Wklad Do Wyniku"
         ));
@@ -151,6 +151,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("Nie zgaduj `projectName`, `projectPath`"));
         assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
         assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
+        assertTrue(orchestrator.contains("`sectionModes` sa zrodlem prawdy dla sekcji wyniku"));
+        assertTrue(orchestrator.contains("`OFF` oznacza: nie zwracaj tej sekcji w `sections`"));
         assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
         assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
 
@@ -164,12 +166,13 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(gitLabTools.contains("`applicationName`"));
         assertTrue(gitLabTools.contains("Nie uzywaj `gitlab_list_available_repositories`"));
         assertTrue(gitLabTools.contains("Nie przekazuj `gitLabGroup`"));
-        assertTrue(gitLabTools.contains("Focus area wskazuje kierunek"));
-        assertTrue(gitLabTools.contains("Glebokoscia steruje `reasoningEffort`"));
+        assertTrue(gitLabTools.contains("`sectionModes` wskazuje, ktore obszary maja byc zwrocone"));
+        assertTrue(gitLabTools.contains("`OFF` oznacza, ze nie czytaj dodatkowego kodu tylko dla tej sekcji"));
+        assertTrue(gitLabTools.contains("Glebokoscia nadal steruje"));
         assertTrue(gitLabTools.contains("`typeSummaries`, `fieldSummaries`"));
         assertTrue(gitLabTools.contains("Adnotacje sa przypiete do"));
         assertTrue(gitLabTools.contains("adnotacje metod z"));
-        assertTrue(gitLabTools.contains("Dla `sectionModes.PERSISTENCE=deep` oczekuj tabeli"));
+        assertTrue(gitLabTools.contains("Dla `sectionModes.PERSISTENCE=DEEP` oczekuj tabeli"));
         assertTrue(gitLabTools.contains("czy wartosc pochodzi z requestu"));
         assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
 

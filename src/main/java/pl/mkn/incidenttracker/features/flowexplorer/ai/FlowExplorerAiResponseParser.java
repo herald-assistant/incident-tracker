@@ -12,10 +12,10 @@ import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultOv
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSection;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -39,19 +39,27 @@ public class FlowExplorerAiResponseParser {
         return parseValidated(assistantContent, null, null);
     }
 
-    public FlowExplorerAiResponse parse(
+    public FlowExplorerAiResponse parseForFocusAreas(
             String assistantContent,
             FlowExplorerAnalysisGoal requestedGoal,
             List<FlowExplorerFocusArea> focusAreas
     ) {
-        return parseValidated(assistantContent, requestedGoal, focusAreas)
-                .withRequestContext(requestedGoal, focusAreas);
+        return parse(assistantContent, requestedGoal, FlowExplorerResultSectionModeResolver.resolve(focusAreas));
+    }
+
+    public FlowExplorerAiResponse parse(
+            String assistantContent,
+            FlowExplorerAnalysisGoal requestedGoal,
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
+    ) {
+        return parseValidated(assistantContent, requestedGoal, sectionModes)
+                .withRequestContext(requestedGoal, sectionModes);
     }
 
     private FlowExplorerAiResponse parseValidated(
             String assistantContent,
             FlowExplorerAnalysisGoal requestedGoal,
-            List<FlowExplorerFocusArea> focusAreas
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
         if (!StringUtils.hasText(assistantContent)) {
             return FlowExplorerAiResponse.parseFallback("AI response was empty.");
@@ -61,7 +69,7 @@ public class FlowExplorerAiResponseParser {
         if (node == null || !node.isObject()) {
             return FlowExplorerAiResponse.parseFallback("AI response was not valid JSON.");
         }
-        var validationError = validationError(node, requestedGoal, focusAreas);
+        var validationError = validationError(node, requestedGoal, sectionModes);
         if (StringUtils.hasText(validationError)) {
             return FlowExplorerAiResponse.parseFallback(validationError);
         }
@@ -81,7 +89,7 @@ public class FlowExplorerAiResponseParser {
     private String validationError(
             JsonNode node,
             FlowExplorerAnalysisGoal requestedGoal,
-            List<FlowExplorerFocusArea> focusAreas
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
         for (var legacyField : LEGACY_TOP_LEVEL_FIELDS) {
             if (node.has(legacyField)) {
@@ -120,16 +128,24 @@ public class FlowExplorerAiResponseParser {
         if (sections == null || !sections.isArray()) {
             return "AI response contract violation: sections must be an array.";
         }
-        if (sections.size() != FlowExplorerResultSectionId.values().length) {
-            return "AI response contract violation: sections must contain exactly four items.";
+
+        var expectedAssignments = sectionModes != null
+                ? sectionModes
+                : FlowExplorerResultSectionModeResolver.resolve(null);
+        var validateModes = sectionModes != null;
+        var expectedActiveAssignments = FlowExplorerResultSectionModeResolver.activeOnly(expectedAssignments);
+        if (sections.size() != expectedActiveAssignments.size()) {
+            return "AI response contract violation: sections must contain exactly the active sectionModes items.";
         }
 
-        var expectedModes = FlowExplorerResultSectionModeResolver.resolve(focusAreas).stream()
+        var expectedModes = expectedAssignments.stream()
                 .collect(java.util.stream.Collectors.toMap(
                         assignment -> assignment.id(),
                         assignment -> assignment.mode()
                 ));
-        var validateModes = focusAreas != null;
+        var expectedActiveIds = expectedActiveAssignments.stream()
+                .map(FlowExplorerResultSectionModeAssignment::id)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         var sectionIds = new LinkedHashSet<FlowExplorerResultSectionId>();
 
         for (var section : sections) {
@@ -143,12 +159,16 @@ public class FlowExplorerAiResponseParser {
             if (!sectionIds.add(sectionId)) {
                 return "AI response contract violation: sections must not contain duplicate ids.";
             }
+            if (!expectedActiveIds.contains(sectionId)) {
+                return "AI response contract violation: section " + sectionId.name()
+                        + " is OFF or not requested in active sectionModes.";
+            }
             var sectionMode = sectionModeStrict(text(section, "mode"));
-            if (sectionMode == null) {
+            if (sectionMode == null || sectionMode == FlowExplorerResultSectionMode.OFF) {
                 return "AI response contract violation: section.mode must be compact or deep.";
             }
             if (validateModes && expectedModes.get(sectionId) != sectionMode) {
-                return "AI response contract violation: section.mode does not match request focusAreas.";
+                return "AI response contract violation: section.mode does not match request sectionModes.";
             }
             if (!StringUtils.hasText(text(section, "markdown"))) {
                 return "AI response contract violation: section.markdown is required for " + sectionId.name() + ".";
@@ -161,8 +181,8 @@ public class FlowExplorerAiResponseParser {
             }
         }
 
-        if (!sectionIds.equals(EnumSet.allOf(FlowExplorerResultSectionId.class))) {
-            return "AI response contract violation: sections must include all required ids.";
+        if (!sectionIds.equals(expectedActiveIds)) {
+            return "AI response contract violation: sections must include all active sectionModes ids.";
         }
         return null;
     }

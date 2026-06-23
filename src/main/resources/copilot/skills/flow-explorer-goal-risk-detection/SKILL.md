@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-goal-risk-detection
-description: Goal-specific template dla Flow Explorer Risk detection - wykrywanie ryzyk, luk widocznosci, regresji i pytan otwartych w czterech sekcjach compact/deep.
+description: Goal-specific template dla Flow Explorer Risk detection - wykrywanie ryzyk, luk widocznosci, regresji i pytan otwartych w aktywnych sekcjach sectionModes compact/deep.
 ---
 
 # Flow Explorer Goal: Risk Detection
@@ -16,7 +16,7 @@ zalezne od danych albo systemow zewnetrznych oraz ktore pytania trzeba
 wyjasnic przed testami, zmiana albo odbiorem.
 
 Nie zwracaj osobnego top-level pola `risks`. Ryzyka wpisuj w
-`overview.markdown` i cztery stale sekcje kontraktu.
+`overview.markdown` i aktywne sekcje kontraktu wynikajace z `sectionModes`.
 
 ## Zasada Ogolna
 

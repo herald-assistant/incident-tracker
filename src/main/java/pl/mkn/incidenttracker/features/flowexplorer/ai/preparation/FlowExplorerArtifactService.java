@@ -13,7 +13,6 @@ import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerOpenApiE
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.incidenttracker.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.incidenttracker.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 
 import java.time.Instant;
@@ -244,9 +243,9 @@ public class FlowExplorerArtifactService {
                   },
                   "sections": [
                     {
-                      "id": "BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
+                      "id": "only active sectionModes ids: BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
                       "title": "string",
-                      "mode": "compact|deep",
+                      "mode": "compact|deep, never off",
                       "markdown": "string",
                       "sourceRefs": ["string"],
                       "visibilityLimits": ["string"],
@@ -316,7 +315,7 @@ public class FlowExplorerArtifactService {
         payload.put("branchRef", contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch());
         payload.put("goal", request.goal());
         payload.put("focusAreas", request.focusAreas());
-        payload.put("sectionModes", FlowExplorerResultSectionModeResolver.resolve(request.focusAreas()));
+        payload.put("sectionModes", request.resolvedSectionModes());
         payload.put("userInstructionsPresent", StringUtils.hasText(request.userInstructions()));
         payload.put("contextSnapshot", contextSnapshotManifest(contextSnapshot));
         return renderJson(payload);

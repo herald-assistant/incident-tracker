@@ -108,16 +108,22 @@ Gdy nie jest jasne, ktorego GitLab toola uzyc, trzymaj sie tej sciezki:
    albo gdy outline, method slice i chunk nie moga odpowiedziec na konkretne
    pytanie.
 
-## Co Czytac Wedlug Focus Area
+## Co Czytac Wedlug Section Modes
 
-Focus area wskazuje kierunek, w ktorym masz poglębic juz ustalony primary flow.
-Nie oznacza, ze inne elementy flow mozna pominac, ani ze wolno zwiekszyc
-glebokosc eksploracji bez uzasadnienia. Glebokoscia steruje `reasoningEffort`.
+`sectionModes` wskazuje, ktore obszary maja byc zwrocone w wyniku i z jaka
+glebokoscia. `OFF` oznacza, ze nie czytaj dodatkowego kodu tylko dla tej sekcji
+i nie przygotowuj jej materialu wynikowego. `COMPACT` oznacza zwarta odpowiedz
+oparta glownie o initial evidence. `DEEP` oznacza, ze mozna poglębic juz
+ustalony primary flow, jezeli brakuje evidence. Glebokoscia nadal steruje
+`reasoningEffort`.
+
+`focusAreas` traktuj jako kompatybilny skrot dla sekcji `DEEP`, nie jako pelny
+kontrakt zakresu.
 
 - `BUSINESS_FLOW_RULES`: controller, use case service, decyzje biznesowe.
 - `VALIDATIONS`: request model, validator, guard clause, error boundary.
 - `PERSISTENCE`: repository method, query predicate, entity status fields,
-  transactional boundary. Dla `sectionModes.PERSISTENCE=deep` oczekuj tabeli
+  transactional boundary. Dla `sectionModes.PERSISTENCE=DEEP` oczekuj tabeli
   danych aktualizowanych/tworzonych/usuwanych ze zrodlem wartosci. Uzyj
   `gitlab_read_repository_file_outline` na encji/modelu/DTO/mapperze, zeby
   zebrac `fieldSummaries`, `typeSummaries` i adnotacje metod z

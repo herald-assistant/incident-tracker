@@ -24,7 +24,23 @@ export type FlowExplorerResultSectionId =
   | 'PERSISTENCE'
   | 'INTEGRATIONS';
 
-export type FlowExplorerResultSectionMode = 'COMPACT' | 'DEEP' | 'compact' | 'deep';
+export type FlowExplorerSectionMode = 'OFF' | 'COMPACT' | 'DEEP';
+export type FlowExplorerResultSectionMode =
+  | FlowExplorerSectionMode
+  | 'off'
+  | 'compact'
+  | 'deep';
+
+export interface FlowExplorerSectionModeRequest {
+  id: FlowExplorerResultSectionId;
+  mode: FlowExplorerSectionMode;
+}
+
+export interface FlowExplorerSectionModeAssignment {
+  id: FlowExplorerResultSectionId;
+  title: string;
+  mode: FlowExplorerSectionMode;
+}
 
 export type FlowExplorerJobStatus =
   | 'QUEUED'
@@ -148,6 +164,7 @@ export interface FlowExplorerJobStartRequest {
   branch?: string;
   goal?: FlowExplorerAnalysisGoal;
   focusAreas?: FlowExplorerFocusArea[];
+  sectionModes?: FlowExplorerSectionModeRequest[];
   userInstructions?: string;
   model?: string;
   reasoningEffort?: string;
@@ -166,6 +183,7 @@ export interface FlowExplorerJobStateSnapshot {
   branch: string;
   goal: FlowExplorerAnalysisGoal;
   focusAreas: FlowExplorerFocusArea[];
+  sectionModes: FlowExplorerSectionModeAssignment[];
   aiModel: string;
   reasoningEffort: string;
   status: FlowExplorerJobStatus;

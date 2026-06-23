@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-result-contract
-description: Kontrakt odpowiedzi Flow Explorera - JSON-only, Overview plus cztery sekcje, compact/deep, source refs, confidence i visibility limits.
+description: Kontrakt odpowiedzi Flow Explorera - JSON-only, Overview plus aktywne sekcje sectionModes, compact/deep, source refs, confidence i visibility limits.
 ---
 
 # Skill Kontraktu Wyniku Flow Explorera
@@ -11,8 +11,8 @@ obiektem JSON. Nie zwracaj Markdown poza stringami pol `markdown`.
 ## Rola
 
 Ten skill nie diagnozuje kodu i nie wybiera tools. Pilnuje finalnego ksztaltu
-odpowiedzi Flow Explorera, zeby UI moglo zawsze pokazac ten sam uklad:
-`Overview` oraz cztery stale sekcje.
+odpowiedzi Flow Explorera, zeby UI moglo pokazac `Overview` oraz tylko te
+sekcje, ktore uzytkownik wlaczyl w `sectionModes`.
 
 ## Wymagany JSON Contract
 
@@ -29,9 +29,9 @@ Zwroc dokladnie jeden obiekt JSON zgodny z polami:
   },
   "sections": [
     {
-      "id": "BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
-      "title": "string",
-      "mode": "compact|deep",
+                      "id": "BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
+                      "title": "string",
+                      "mode": "compact|deep",
       "markdown": "string",
       "sourceRefs": ["string"],
       "visibilityLimits": ["string"],
@@ -51,7 +51,11 @@ Nie dodawaj top-level pol spoza kontraktu. Nie przywracaj pol legacy:
 
 ## Sekcje I Kolejnosc
 
-`sections` musi miec dokladnie cztery elementy w tej kolejnosci:
+`sections` musi miec dokladnie tyle elementow, ile sekcji aktywnych wynika z
+`sectionModes`. Sekcje aktywne to tylko tryby `COMPACT` i `DEEP`. Sekcja z
+trybem `OFF` ma nie pojawic sie w tablicy `sections`.
+
+Zachowaj kolejnosc aktywnych sekcji wedlug stalego porzadku:
 
 1. `BUSINESS_FLOW_RULES` / `Business flow/rules`
 2. `VALIDATIONS` / `Validations`
@@ -60,8 +64,12 @@ Nie dodawaj top-level pol spoza kontraktu. Nie przywracaj pol legacy:
 
 Kazda sekcja musi miec `mode` zgodny z `sectionModes` z promptu:
 
-- `deep`, gdy requestowe focus area wskazuje dana sekcje,
-- `compact`, gdy dana sekcja nie byla wskazana.
+- `deep`, gdy `sectionModes.<SECTION>=DEEP`,
+- `compact`, gdy `sectionModes.<SECTION>=COMPACT`.
+
+Nie zwracaj sekcji `OFF`. Nie ustawiaj `mode` na `off`. `OFF` nie jest
+slabszym `compact`, tylko decyzja uzytkownika, ze dana sekcja nie jest
+oczekiwana w wyniku.
 
 `compact` nie znaczy powierzchownie. Compact ma zawierac najwazniejsze fakty,
 decyzje i ograniczenia widocznosci w zwartej formie.
@@ -141,6 +149,7 @@ Nie:
 - mieszaj source refs z hipotezami,
 - tworz dlugiego technicznego eseju,
 - zaczynaj akapitow od nazw klas, metod albo beanow,
-- pomijaj ktoras z czterech sekcji,
-- traktuj `focusAreas` jako pozwolenie na pominiecie sekcji compact,
+- zwracaj sekcje oznaczone jako `OFF`,
+- traktuj `OFF` jako pusta sekcje albo `compact`,
+- traktuj `focusAreas` jako zrodlo prawdy, gdy prompt zawiera `sectionModes`,
 - przenos scenariuszy testowych albo ryzyk do osobnych top-level pol.

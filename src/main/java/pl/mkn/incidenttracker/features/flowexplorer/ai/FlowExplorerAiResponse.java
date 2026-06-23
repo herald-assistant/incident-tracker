@@ -1,7 +1,6 @@
 package pl.mkn.incidenttracker.features.flowexplorer.ai;
 
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
-import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultOverview;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSection;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionId;
@@ -53,9 +52,9 @@ public record FlowExplorerAiResponse(
 
     public FlowExplorerAiResponse withRequestContext(
             FlowExplorerAnalysisGoal requestedGoal,
-            List<FlowExplorerFocusArea> focusAreas
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
-        var assignments = FlowExplorerResultSectionModeResolver.resolve(focusAreas);
+        var assignments = FlowExplorerResultSectionModeResolver.activeOnly(sectionModes);
         var sectionsById = new LinkedHashMap<FlowExplorerResultSectionId, FlowExplorerResultSection>();
         for (var section : sections) {
             if (section != null && section.id() != null) {

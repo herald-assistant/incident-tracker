@@ -421,16 +421,12 @@
 
           <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">
-              <span class="field-label">Focus areas</span>
+              <span class="field-label">Section modes</span>
               <span
                 class="flow-explorer-label-help"
                 tabindex="0"
-                aria-label="Focus areas field help"
-                [matTooltip]="
-                  'Maksymalnie ' +
-                  maxFocusAreas +
-                  ' sekcje deep. Pozostale sekcje beda compact; glebokoscia eksploracji steruje reasoning effort.'
-                "
+                aria-label="Section modes field help"
+                matTooltip="Off usuwa sekcje z oczekiwanego wyniku. Compact zwraca ja zwiezle. Deep priorytetyzuje ja w analizie."
                 matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
@@ -455,35 +451,37 @@
 
             @if (focusAreasSelectOpen()) {
               <div
-                class="flow-explorer-select__menu"
-                role="listbox"
-                aria-label="Focus area options"
-                aria-multiselectable="true"
+                class="flow-explorer-select__menu flow-explorer-select__menu--section-modes"
+                role="group"
+                aria-label="Section mode options"
               >
-                <div class="flow-explorer-select__options">
+                <div class="flow-explorer-section-mode-menu">
                   @for (focusArea of focusAreaOptions; track focusArea.value) {
-                    <button
-                      [class]="focusAreaSelectOptionClass(focusArea.value)"
-                      type="button"
-                      role="option"
-                      [disabled]="
-                        isSubmitting() ||
-                        isJobActive() ||
-                        (!isFocusAreaSelected(focusArea.value) && focusAreaLimitReached())
-                      "
-                      [attr.aria-selected]="isFocusAreaSelected(focusArea.value)"
-                      (click)="toggleFocusAreaFromDropdown(focusArea.value, $event)"
-                    >
+                    <div class="flow-explorer-section-mode-row">
                       <span class="flow-explorer-select-option__body">
                         <strong>{{ focusArea.label }}</strong>
                         <small>{{ focusArea.hint }}</small>
                       </span>
-                      @if (isFocusAreaSelected(focusArea.value)) {
-                        <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
-                          check
-                        </span>
-                      }
-                    </button>
+                      <span
+                        class="flow-explorer-mode-segment"
+                        role="radiogroup"
+                        [attr.aria-label]="focusArea.label + ' mode'"
+                      >
+                        @for (mode of sectionModeOptions; track mode.value) {
+                          <button
+                            [class]="sectionModeButtonClass(focusArea.value, mode.value)"
+                            type="button"
+                            role="radio"
+                            [disabled]="isSubmitting() || isJobActive()"
+                            [attr.aria-checked]="sectionModeFor(focusArea.value) === mode.value"
+                            [title]="mode.hint"
+                            (click)="selectSectionModeFromDropdown(focusArea.value, mode.value, $event)"
+                          >
+                            {{ mode.label }}
+                          </button>
+                        }
+                      </span>
+                    </div>
                   }
                 </div>
               </div>

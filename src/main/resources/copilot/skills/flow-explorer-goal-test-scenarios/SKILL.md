@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-goal-test-scenarios
-description: Goal-specific template dla Flow Explorer Test scenarios - przygotowanie scenariuszy testowych, danych i regresji w czterech sekcjach compact/deep.
+description: Goal-specific template dla Flow Explorer Test scenarios - przygotowanie scenariuszy testowych, danych i regresji w aktywnych sekcjach sectionModes compact/deep.
 ---
 
 # Flow Explorer Goal: Test Scenarios
@@ -16,11 +16,12 @@ warunki sa negatywne, jakie zaleznosci moga blokowac test i gdzie sa luki
 widocznosci.
 
 Nie zwracaj osobnego top-level pola `testScenarios`. Scenariusze testowe
-wpisuj w `overview.markdown` i cztery stale sekcje kontraktu.
+wpisuj w `overview.markdown` i aktywne sekcje kontraktu wynikajace z
+`sectionModes`.
 
 ## Zasada Ogolna
 
-Kazda sekcja ma odpowiadac na inne pytanie testowe:
+Kazda aktywna sekcja ma odpowiadac na inne pytanie testowe:
 
 - `BUSINESS_FLOW_RULES`: jakie sciezki biznesowe i warianty procesu pokryc,
 - `VALIDATIONS`: jakie dane, stany i bledy powinny zostac odrzucone,
@@ -158,7 +159,7 @@ na tej podstawie przygotowac przypadki testowe bez typowego follow-upu.
 Nie:
 
 - tworz jednej generycznej listy "happy path / negative path" bez powiazania z
-  czterema sekcjami,
+  aktywnymi sekcjami,
 - powtarzaj tego samego scenariusza w kazdej sekcji,
 - wymyslaj kody bledow, jezeli nie sa widoczne,
 - opisuj testow technicznych bez wartosci dla analityka/testera,

@@ -19,7 +19,9 @@ import {
   FlowExplorerResultOverview,
   FlowExplorerResultSection,
   FlowExplorerResultSectionId,
-  FlowExplorerResultSectionMode
+  FlowExplorerResultSectionMode,
+  FlowExplorerSectionMode,
+  FlowExplorerSectionModeAssignment
 } from '../models/flow-explorer.models';
 
 export const FLOW_EXPLORER_EXPORT_SCHEMA = 'incident-tracker.flow-explorer-export';
@@ -51,13 +53,14 @@ export interface FlowExplorerExportDiagnostics {
   request: {
     goal: FlowExplorerAnalysisGoal;
     focusAreas: FlowExplorerFocusArea[];
+    sectionModes: FlowExplorerSectionModeAssignment[];
     aiModel: string;
     reasoningEffort: string;
   };
   result: {
     goal: FlowExplorerAnalysisGoal;
     confidence: string;
-    sectionModes: Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>;
+    sectionModes: Partial<Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>>;
     sourceReferenceCount: number;
     visibilityLimitCount: number;
     openQuestionCount: number;
@@ -145,6 +148,7 @@ export function buildFlowExplorerExportDiagnostics(
     request: {
       goal: job.goal,
       focusAreas: job.focusAreas,
+      sectionModes: job.sectionModes,
       aiModel: job.aiModel,
       reasoningEffort: job.reasoningEffort
     },
@@ -227,6 +231,9 @@ export function normalizeFlowExplorerJob(job: unknown): FlowExplorerJobStateSnap
   if (!jobObject) {
     throw new Error('Plik eksportu nie zawiera poprawnego obiektu Flow Explorer joba.');
   }
+  const focusAreas = normalizeFocusAreas(jobObject['focusAreas']);
+  const sectionModes = normalizeSectionModeAssignments(jobObject['sectionModes'], focusAreas);
+  const activeSectionIds = activeSectionIdsFor(sectionModes);
 
   return {
     jobId: normalizeString(jobObject['jobId']),
@@ -236,7 +243,8 @@ export function normalizeFlowExplorerJob(job: unknown): FlowExplorerJobStateSnap
     endpointPath: normalizeString(jobObject['endpointPath']),
     branch: normalizeString(jobObject['branch']),
     goal: normalizeGoal(jobObject['goal']),
-    focusAreas: normalizeFocusAreas(jobObject['focusAreas']),
+    focusAreas,
+    sectionModes,
     aiModel: normalizeString(jobObject['aiModel']),
     reasoningEffort: normalizeString(jobObject['reasoningEffort']),
     status: normalizeString(jobObject['status']),
@@ -265,7 +273,7 @@ export function normalizeFlowExplorerJob(job: unknown): FlowExplorerJobStateSnap
       ? jobObject['chatMessages'].map(normalizeChatMessage)
       : [],
     preparedPrompt: normalizeString(jobObject['preparedPrompt']),
-    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
+    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result'], activeSectionIds) : null
   };
 }
 
@@ -333,7 +341,7 @@ function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
   };
 }
 
-function normalizeResult(result: unknown): FlowExplorerResult {
+function normalizeResult(result: unknown, activeSectionIds: FlowExplorerResultSectionId[]): FlowExplorerResult {
   const resultObject = asObject(result);
   assertNoLegacyResultFields(resultObject);
   return {
@@ -346,20 +354,23 @@ function normalizeResult(result: unknown): FlowExplorerResult {
     goal: normalizeGoal(resultObject?.['goal']),
     prompt: normalizeString(resultObject?.['prompt']),
     aiResponse: asObject(resultObject?.['aiResponse'])
-      ? normalizeAiResponse(resultObject?.['aiResponse'])
+      ? normalizeAiResponse(resultObject?.['aiResponse'], activeSectionIds)
       : null,
     usage: normalizeUsage(resultObject?.['usage'])
   };
 }
 
-function normalizeAiResponse(response: unknown): FlowExplorerAiResponse {
+function normalizeAiResponse(
+  response: unknown,
+  activeSectionIds: FlowExplorerResultSectionId[]
+): FlowExplorerAiResponse {
   const responseObject = asObject(response);
   assertNoLegacyResultFields(responseObject);
   return {
     goal: normalizeGoal(responseObject?.['goal']),
     audience: normalizeString(responseObject?.['audience']) || 'business_or_system_analyst_tester',
     overview: normalizeOverview(responseObject?.['overview']),
-    sections: normalizeSections(responseObject?.['sections']),
+    sections: normalizeSections(responseObject?.['sections'], activeSectionIds),
     globalVisibilityLimits: normalizeStringArray(responseObject?.['globalVisibilityLimits']),
     globalOpenQuestions: normalizeStringArray(responseObject?.['globalOpenQuestions']),
     sourceReferences: normalizeStringArray(responseObject?.['sourceReferences']),
@@ -376,26 +387,37 @@ function normalizeOverview(overview: unknown): FlowExplorerResultOverview {
   };
 }
 
-function normalizeSections(sections: unknown): FlowExplorerResultSection[] {
+function normalizeSections(
+  sections: unknown,
+  activeSectionIds: FlowExplorerResultSectionId[]
+): FlowExplorerResultSection[] {
   if (!Array.isArray(sections)) {
-    throw new Error('Flow Explorer result nie zawiera wymaganych czterech sekcji.');
+    throw new Error('Flow Explorer result nie zawiera wymaganej listy sekcji.');
   }
 
   const byId = new Map<FlowExplorerResultSectionId, FlowExplorerResultSection>();
   sections.forEach((section) => {
     const normalized = normalizeSection(section);
+    if (normalizeString(normalized.mode).toLowerCase() === 'off') {
+      throw new Error(`Flow Explorer result zawiera sekcję ${normalized.id} z trybem OFF.`);
+    }
     if (byId.has(normalized.id)) {
       throw new Error(`Flow Explorer result zawiera zdublowaną sekcję ${normalized.id}.`);
     }
     byId.set(normalized.id, normalized);
   });
 
-  const missingSectionIds = SECTION_IDS.filter((id) => !byId.has(id));
+  const unexpectedSectionIds = Array.from(byId.keys()).filter((id) => !activeSectionIds.includes(id));
+  if (unexpectedSectionIds.length > 0) {
+    throw new Error(`Flow Explorer result zawiera sekcje oznaczone jako OFF: ${unexpectedSectionIds.join(', ')}.`);
+  }
+
+  const missingSectionIds = activeSectionIds.filter((id) => !byId.has(id));
   if (missingSectionIds.length > 0) {
     throw new Error(`Flow Explorer result nie zawiera sekcji: ${missingSectionIds.join(', ')}.`);
   }
 
-  return SECTION_IDS.map((id) => byId.get(id) as FlowExplorerResultSection);
+  return activeSectionIds.map((id) => byId.get(id) as FlowExplorerResultSection);
 }
 
 function normalizeSection(section: unknown): FlowExplorerResultSection {
@@ -588,12 +610,11 @@ function listMarkdown(title: string, items: string[]): string {
 
 function sectionModeIndex(
   sections: FlowExplorerResultSection[]
-): Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode> {
-  return SECTION_IDS.reduce((index, id) => {
-    const section = sections.find((candidate) => candidate.id === id);
-    index[id] = normalizeSectionMode(section?.mode);
+): Partial<Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>> {
+  return sections.reduce((index, section) => {
+    index[section.id] = normalizeSectionMode(section.mode);
     return index;
-  }, {} as Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>);
+  }, {} as Partial<Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>>);
 }
 
 function diagnosticClippingNotes(
@@ -621,7 +642,7 @@ function diagnosticArtifactSummary(
       name: 'flow-explorer-result.md',
       kind: 'user-facing-markdown',
       included: Boolean(resultMarkdown),
-      itemCount: 5,
+      itemCount: 1 + job.result.aiResponse.sections.length,
       characterCount: resultMarkdown.length
     },
     {
@@ -736,6 +757,47 @@ function normalizeFocusAreas(value: unknown): FlowExplorerFocusArea[] {
   return Array.from(new Set(focusAreas.filter(isFlowExplorerFocusArea)));
 }
 
+function normalizeSectionModeAssignments(
+  value: unknown,
+  focusAreas: FlowExplorerFocusArea[]
+): FlowExplorerSectionModeAssignment[] {
+  const byId = new Map<FlowExplorerResultSectionId, FlowExplorerSectionMode>();
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      const itemObject = asObject(item);
+      const id = normalizeSectionId(itemObject?.['id']);
+      const mode = normalizeRequestedSectionMode(itemObject?.['mode']);
+      if (id && mode) {
+        byId.set(id, mode);
+      }
+    });
+  }
+
+  if (byId.size === 0) {
+    focusAreas.forEach((focusArea) => byId.set(focusArea, 'DEEP'));
+  }
+
+  return SECTION_IDS.map((id) => ({
+    id,
+    title: sectionTitle(id),
+    mode: byId.get(id) ?? 'COMPACT'
+  }));
+}
+
+function activeSectionIdsFor(sectionModes: FlowExplorerSectionModeAssignment[]): FlowExplorerResultSectionId[] {
+  return sectionModes
+    .filter((sectionMode) => sectionMode.mode !== 'OFF')
+    .map((sectionMode) => sectionMode.id);
+}
+
+function normalizeRequestedSectionMode(value: unknown): FlowExplorerSectionMode | null {
+  const normalized = normalizeString(value).toUpperCase();
+  if (normalized === 'OFF' || normalized === 'COMPACT' || normalized === 'DEEP') {
+    return normalized;
+  }
+  return null;
+}
+
 function normalizeSectionId(value: unknown): FlowExplorerResultSectionId | null {
   const normalized = normalizeString(value);
   return isFlowExplorerSectionId(normalized) ? normalized : null;
@@ -743,7 +805,13 @@ function normalizeSectionId(value: unknown): FlowExplorerResultSectionId | null 
 
 function normalizeSectionMode(value: unknown): FlowExplorerResultSectionMode {
   const normalized = normalizeString(value).toLowerCase();
-  return normalized === 'deep' ? 'deep' : 'compact';
+  if (normalized === 'deep') {
+    return 'deep';
+  }
+  if (normalized === 'off') {
+    return 'off';
+  }
+  return 'compact';
 }
 
 function normalizeNumber(value: unknown): number {

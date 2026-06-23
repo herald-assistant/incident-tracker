@@ -24,6 +24,8 @@ public record FlowExplorerJobStartRequest(
         FlowExplorerAnalysisGoal goal,
         @Size(max = 4, message = "focusAreas must contain at most 4 values")
         List<FlowExplorerFocusArea> focusAreas,
+        @Size(max = 4, message = "sectionModes must contain at most 4 values")
+        List<FlowExplorerSectionModeRequest> sectionModes,
         @Size(max = 4000, message = "userInstructions must not exceed 4000 characters")
         String userInstructions,
         @Size(max = 80, message = "model must not exceed 80 characters")
@@ -41,9 +43,20 @@ public record FlowExplorerJobStartRequest(
         goal = goal != null
                 ? goal
                 : FlowExplorerAnalysisGoal.DEEP_DISCOVERY;
+        sectionModes = sectionModes != null
+                ? sectionModes.stream()
+                .filter(Objects::nonNull)
+                .filter(selection -> selection.id() != null && selection.mode() != null)
+                .toList()
+                : List.of();
         focusAreas = focusAreas != null
                 ? focusAreas.stream().filter(Objects::nonNull).toList()
                 : List.of();
+        if (!sectionModes.isEmpty()) {
+            focusAreas = FlowExplorerResultSectionModeResolver.deepFocusAreas(
+                    FlowExplorerResultSectionModeResolver.resolve(focusAreas, sectionModes)
+            );
+        }
         userInstructions = normalize(userInstructions);
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
@@ -57,6 +70,10 @@ public record FlowExplorerJobStartRequest(
 
     public AnalysisAiOptions aiOptions() {
         return new AnalysisAiOptions(model, reasoningEffort);
+    }
+
+    public List<FlowExplorerResultSectionModeAssignment> resolvedSectionModes() {
+        return FlowExplorerResultSectionModeResolver.resolve(focusAreas, sectionModes);
     }
 
     private static String normalize(String value) {

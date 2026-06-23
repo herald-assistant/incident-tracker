@@ -19,6 +19,7 @@ public record FlowExplorerJobStateSnapshot(
         String branch,
         FlowExplorerAnalysisGoal goal,
         List<FlowExplorerFocusArea> focusAreas,
+        List<FlowExplorerResultSectionModeAssignment> sectionModes,
         String aiModel,
         String reasoningEffort,
         String status,
@@ -42,6 +43,7 @@ public record FlowExplorerJobStateSnapshot(
 
     public FlowExplorerJobStateSnapshot {
         focusAreas = focusAreas != null ? List.copyOf(focusAreas) : List.of();
+        sectionModes = sectionModes != null ? List.copyOf(sectionModes) : List.of();
         steps = steps != null ? List.copyOf(steps) : List.of();
         contextSections = contextSections != null ? List.copyOf(contextSections) : List.of();
         toolEvidenceSections = toolEvidenceSections != null ? List.copyOf(toolEvidenceSections) : List.of();

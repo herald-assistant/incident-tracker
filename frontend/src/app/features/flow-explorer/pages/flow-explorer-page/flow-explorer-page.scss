@@ -275,6 +275,10 @@
   max-height: min(400px, calc(100vh - 320px));
 }
 
+.flow-explorer-select__menu--section-modes {
+  width: min(620px, calc(100vw - 32px));
+}
+
 .flow-explorer-select__search {
   gap: 5px;
 }
@@ -282,6 +286,68 @@
 .flow-explorer-select__options {
   display: grid;
   gap: 7px;
+}
+
+.flow-explorer-section-mode-menu {
+  display: grid;
+  gap: 8px;
+}
+
+.flow-explorer-section-mode-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, auto);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.flow-explorer-mode-segment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 210px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
+.flow-explorer-mode-segment__button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.flow-explorer-mode-segment__button:last-child {
+  border-right: 0;
+}
+
+.flow-explorer-mode-segment__button:hover,
+.flow-explorer-mode-segment__button:focus-visible {
+  background: rgba(12, 102, 228, 0.08);
+  color: var(--primary-dark);
+  outline: none;
+}
+
+.flow-explorer-mode-segment__button--selected {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.flow-explorer-mode-segment__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .flow-explorer-select-option {
@@ -995,6 +1061,7 @@ article.flow-explorer-select-option {
   .flow-explorer-target-preview,
   .flow-explorer-select-option,
   .flow-explorer-select-option__select,
+  .flow-explorer-section-mode-row,
   .flow-explorer-scope-grid,
   .flow-explorer-job__grid,
   .flow-explorer-result-summary,
@@ -1011,6 +1078,10 @@ article.flow-explorer-select-option {
   .flow-explorer-run-actions .primary-button,
   .flow-explorer-run-actions .secondary-button {
     width: 100%;
+  }
+
+  .flow-explorer-mode-segment {
+    min-width: 0;
   }
 
   .flow-explorer-endpoint-info {

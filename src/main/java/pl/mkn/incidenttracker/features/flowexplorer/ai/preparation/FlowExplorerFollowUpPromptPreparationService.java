@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatR
 import pl.mkn.incidenttracker.features.flowexplorer.ai.FlowExplorerFollowUpChatTurn;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultResponse;
+import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.incidenttracker.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
 
@@ -26,6 +27,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
 
     public FlowExplorerPromptPreparation prepare(FlowExplorerFollowUpChatRequest request) {
         var artifacts = new ArrayList<CopilotRenderedArtifact>();
+        var sectionModes = request.initialRequest().resolvedSectionModes();
         artifacts.addAll(artifactService.renderArtifacts(request.initialRequest(), request.contextSnapshot())
                 .stream()
                 .filter(artifact -> !FlowExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT.equals(artifact.displayName()))
@@ -56,13 +58,14 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Follow-up sluzy do wyjatkow, doprecyzowan i waskich dopytan, nie do ratowania powierzchownego initial resultu.
                 - Przed nowym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md` oraz `compact-flow-manifest.md`: scope repo/branch bierz z canonical, a filePath/metody z manifestu.
                 - Jezeli `openapi-endpoint-contract.md` jest dostepny, uzyj go dla pytan o kontrakt API, request, response, parametry, security albo setup walidacji. Nie czytaj pelnego OpenAPI YAML.
-                - `focusAreas` z initial request wskazuja sekcje, ktore mialy tryb deep.
+                - `sectionModes` z initial request wskazuja, ktore sekcje byly aktywne, deep albo off. Sekcja OFF mogla byc celowo pominieta w initial result.
+                - `focusAreas` z initial request sa kompatybilnym skrotem dla sekcji, ktore mialy tryb deep.
                 - `reasoningEffort` z initial request steruje glebokoscia dodatkowego czytania: low = minimalnie, medium = focused reads dla brakow, high = glebsze edge case'y i zaleznosci.
 
                 ## Follow-up answer contract
                 - Zacznij od krotkiej bezposredniej odpowiedzi na pytanie.
                 - Nastepnie podaj tylko te szczegoly, ktore sa potrzebne do decyzji analityka/testera.
-                - Uzywaj stalych punktow odniesienia: Overview, Business flow/rules, Validations, Persistence, Integrations.
+                - Uzywaj stalych punktow odniesienia: Overview oraz aktywne sekcje initial resultu. Nie sugeruj, ze sekcja OFF byla przeanalizowana w initial run.
                 - Jezeli pytanie dotyczy sekcji `DEEP`, najpierw wykorzystaj initial result, initial artifacts i juz zebrane evidence; tool call wykonaj tylko gdy pytanie wychodzi poza znany material albo wskazuje sprzecznosc.
                 - Jezeli pytanie dotyczy sekcji `COMPACT`, mozesz dociagnac szczegoly przez dozwolone tools, ale tylko wasko do pytania i zgodnie z `reasoningEffort`.
                 - Gdy uzywasz tools, wyjasnij jednym zdaniem co nowego wniosly wzgledem initial resultu.
@@ -78,6 +81,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 goal: %s
                 focusAreas: %s
                 sectionModes: %s
+                activeSectionIds: %s
                 reasoningEffort: %s
 
                 ## Tool scope guidance
@@ -125,7 +129,8 @@ public class FlowExplorerFollowUpPromptPreparationService {
                         : request.initialRequest().branch(),
                 request.initialRequest().goal(),
                 request.initialRequest().focusAreas(),
-                FlowExplorerResultSectionModeResolver.resolve(request.initialRequest().focusAreas()),
+                renderSectionModes(sectionModes),
+                renderActiveSectionIds(sectionModes),
                 reasoningEffort(request.initialRequest()),
                 artifactContents.getOrDefault(INITIAL_RESULT_ARTIFACT, "- initial result unavailable"),
                 renderEvidenceSummary(request.toolEvidenceSections()),
@@ -252,5 +257,22 @@ public class FlowExplorerFollowUpPromptPreparationService {
             builder.append(System.lineSeparator());
         }
         builder.append(line);
+    }
+
+    private String renderSectionModes(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
+        if (sectionModes == null || sectionModes.isEmpty()) {
+            return "[]";
+        }
+        return sectionModes.stream()
+                .map(assignment -> "%s=%s".formatted(assignment.id(), assignment.mode()))
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("[]");
+    }
+
+    private String renderActiveSectionIds(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
+        var active = FlowExplorerResultSectionModeResolver.activeOnly(sectionModes).stream()
+                .map(assignment -> assignment.id().name())
+                .toList();
+        return active.isEmpty() ? "[]" : active.toString();
     }
 }

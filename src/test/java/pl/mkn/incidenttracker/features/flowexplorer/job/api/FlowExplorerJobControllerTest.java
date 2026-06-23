@@ -62,6 +62,12 @@ class FlowExplorerJobControllerTest {
                                   "branch": "feature/FLOW-42",
                                   "goal": "DEEP_DISCOVERY",
                                   "focusAreas": ["BUSINESS_FLOW_RULES"],
+                                  "sectionModes": [
+                                    {"id": "BUSINESS_FLOW_RULES", "mode": "DEEP"},
+                                    {"id": "VALIDATIONS", "mode": "COMPACT"},
+                                    {"id": "PERSISTENCE", "mode": "OFF"},
+                                    {"id": "INTEGRATIONS", "mode": "COMPACT"}
+                                  ],
                                   "userInstructions": "Opisz to jezykiem testera.",
                                   "model": "gpt-5.4",
                                   "reasoningEffort": "medium"
@@ -74,6 +80,8 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.branch").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.goal").value("DEEP_DISCOVERY"))
                 .andExpect(jsonPath("$.focusAreas[0]").value("BUSINESS_FLOW_RULES"))
+                .andExpect(jsonPath("$.sectionModes[0].id").value("BUSINESS_FLOW_RULES"))
+                .andExpect(jsonPath("$.sectionModes[0].mode").value("DEEP"))
                 .andExpect(jsonPath("$.aiModel").value("gpt-5.4"))
                 .andExpect(jsonPath("$.reasoningEffort").value("medium"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
@@ -98,6 +106,24 @@ class FlowExplorerJobControllerTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                List.of(
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
+                                FlowExplorerResultSectionMode.DEEP
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.VALIDATIONS,
+                                FlowExplorerResultSectionMode.COMPACT
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.PERSISTENCE,
+                                FlowExplorerResultSectionMode.OFF
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.INTEGRATIONS,
+                                FlowExplorerResultSectionMode.COMPACT
+                        )
+                ),
                 "Opisz to jezykiem testera.",
                 "gpt-5.4",
                 "medium"
@@ -221,6 +247,7 @@ class FlowExplorerJobControllerTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                FlowExplorerResultSectionModeResolver.resolve(List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES)),
                 "gpt-5.4",
                 "medium",
                 "COMPLETED",

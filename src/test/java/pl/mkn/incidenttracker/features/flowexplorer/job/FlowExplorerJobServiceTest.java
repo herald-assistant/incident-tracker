@@ -390,6 +390,7 @@ class FlowExplorerJobServiceTest {
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                null,
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
                 "medium"

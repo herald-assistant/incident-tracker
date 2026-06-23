@@ -94,7 +94,7 @@ public class FlowExplorerJobService {
             var aiResponse = responseParser.parse(
                     executionResult.content(),
                     request.goal(),
-                    request.focusAreas()
+                    request.resolvedSectionModes()
             );
 
             job.markAiCompleted(aiResponse, executionResult.usage(), promptPreparation.prompt());

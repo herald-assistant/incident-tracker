@@ -312,6 +312,7 @@ public final class FlowExplorerJobState {
                 contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch(),
                 request.goal(),
                 request.focusAreas(),
+                request.resolvedSectionModes(),
                 request.aiOptions().model(),
                 request.aiOptions().reasoningEffort(),
                 status,
@@ -342,7 +343,7 @@ public final class FlowExplorerJobState {
         var response = (aiResponse != null
                 ? aiResponse
                 : FlowExplorerAiResponse.parseFallback("AI response was not available."))
-                .withRequestContext(request.goal(), request.focusAreas());
+                .withRequestContext(request.goal(), request.resolvedSectionModes());
         return new FlowExplorerResultResponse(
                 STATUS_COMPLETED,
                 request.systemId(),
@@ -362,7 +363,7 @@ public final class FlowExplorerJobState {
                 ? contextSnapshot.coverage().confidence()
                 : "low";
         var limitations = contextSnapshot != null ? contextSnapshot.limitations() : List.<String>of();
-        var sections = FlowExplorerResultSectionModeResolver.resolve(request.focusAreas()).stream()
+        var sections = FlowExplorerResultSectionModeResolver.activeOnly(request.resolvedSectionModes()).stream()
                 .map(assignment -> new FlowExplorerResultSection(
                         assignment.id(),
                         assignment.title(),

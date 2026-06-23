@@ -19,6 +19,9 @@ import {
   FlowExplorerFocusArea,
   FlowExplorerJobStartRequest,
   FlowExplorerJobStateSnapshot,
+  FlowExplorerResultSectionId,
+  FlowExplorerSectionMode,
+  FlowExplorerSectionModeRequest,
   FlowExplorerSystemOption
 } from '../../models/flow-explorer.models';
 import { FlowExplorerApiService } from '../../services/flow-explorer-api.service';
@@ -56,7 +59,6 @@ interface FlowExplorerUsageStat {
 }
 
 const POLL_INTERVAL_MS = 1500;
-const MAX_FOCUS_AREAS = 4;
 const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
   defaultModel: '',
   defaultReasoningEffort: '',
@@ -105,6 +107,31 @@ const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
   }
 ];
 
+const SECTION_MODE_OPTIONS: FlowExplorerChoice<FlowExplorerSectionMode>[] = [
+  {
+    value: 'OFF',
+    label: 'Off',
+    hint: 'Do not ask AI to return this section.'
+  },
+  {
+    value: 'COMPACT',
+    label: 'Compact',
+    hint: 'Return the section in a concise form.'
+  },
+  {
+    value: 'DEEP',
+    label: 'Deep',
+    hint: 'Prioritize this section and return more detail.'
+  }
+];
+
+const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
+  { id: 'BUSINESS_FLOW_RULES', mode: 'DEEP' },
+  { id: 'VALIDATIONS', mode: 'COMPACT' },
+  { id: 'PERSISTENCE', mode: 'COMPACT' },
+  { id: 'INTEGRATIONS', mode: 'COMPACT' }
+];
+
 @Component({
   selector: 'app-flow-explorer-page',
   imports: [
@@ -125,7 +152,7 @@ export class FlowExplorerPageComponent implements OnInit {
 
   readonly analysisGoals = ANALYSIS_GOALS;
   readonly focusAreaOptions = FOCUS_AREA_OPTIONS;
-  readonly maxFocusAreas = MAX_FOCUS_AREAS;
+  readonly sectionModeOptions = SECTION_MODE_OPTIONS;
 
   readonly catalogState = signal<CatalogState>('empty');
   readonly endpointState = signal<EndpointState>('idle');
@@ -146,7 +173,7 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly selectedSystemId = signal('');
   readonly selectedEndpointId = signal('');
   readonly analysisGoal = signal<FlowExplorerAnalysisGoal>('DEEP_DISCOVERY');
-  readonly focusAreas = signal<FlowExplorerFocusArea[]>(['BUSINESS_FLOW_RULES']);
+  readonly sectionModes = signal<FlowExplorerSectionModeRequest[]>(copySectionModes(DEFAULT_SECTION_MODES));
   readonly selectedAiModel = signal('');
   readonly selectedReasoningEffort = signal('');
   readonly userInstructions = signal('');
@@ -220,7 +247,11 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     return 'Pytania korzystaja z wyniku, deterministic contextu i dozwolonych tools dla Flow Explorera.';
   });
-  readonly focusAreaLimitReached = computed(() => this.focusAreas().length >= MAX_FOCUS_AREAS);
+  readonly focusAreas = computed<FlowExplorerFocusArea[]>(() =>
+    this.sectionModes()
+      .filter((sectionMode) => sectionMode.mode === 'DEEP')
+      .map((sectionMode) => sectionMode.id)
+  );
   readonly systemCountLabel = computed(() => {
     const count = this.systems().length;
     return count === 1 ? '1 application' : `${count} applications`;
@@ -283,21 +314,16 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly selectedGoalLabel = computed(() => this.selectedGoalChoice().label);
   readonly selectedGoalMeta = computed(() => this.selectedGoalChoice().hint);
   readonly focusAreasLabel = computed(() => {
-    const selected = this.selectedFocusAreaChoices();
-    if (selected.length === 0) {
-      return 'Select focus areas';
+    const counts = this.sectionModeCounts();
+    if (counts.off === this.sectionModes().length) {
+      return 'Overview only';
     }
-    if (selected.length === 1) {
-      return selected[0].label;
-    }
-    return `${selected[0].label} + ${selected.length - 1}`;
+    return `${counts.deep} deep / ${counts.compact} compact / ${counts.off} off`;
   });
   readonly focusAreasMeta = computed(() => {
-    const selected = this.selectedFocusAreaChoices();
-    if (selected.length === 0) {
-      return `0 / ${MAX_FOCUS_AREAS} selected`;
-    }
-    return `${selected.length} / ${MAX_FOCUS_AREAS}: ${selected.map((choice) => choice.label).join(', ')}`;
+    return this.sectionModes()
+      .map((sectionMode) => `${sectionTitle(sectionMode.id)} ${this.sectionModeLabel(sectionMode.mode)}`)
+      .join(' · ');
   });
   readonly aiModelOptions = computed<FlowExplorerChoice<string>[]>(() => {
     if (this.isAiModelOptionsLoading()) {
@@ -396,7 +422,9 @@ export class FlowExplorerPageComponent implements OnInit {
     return selected ? this.reasoningEffortHint(selected) : 'backend default exploration depth';
   });
   readonly resultSections = computed(() => {
-    return this.job()?.result?.aiResponse?.sections ?? [];
+    return (this.job()?.result?.aiResponse?.sections ?? []).filter(
+      (section) => normalizeSearch(section.mode) !== 'off'
+    );
   });
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -540,9 +568,13 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectGoal(value);
   }
 
-  protected toggleFocusAreaFromDropdown(value: FlowExplorerFocusArea, event: Event): void {
+  protected selectSectionModeFromDropdown(
+    sectionId: FlowExplorerResultSectionId,
+    mode: FlowExplorerSectionMode,
+    event: Event
+  ): void {
     event.stopPropagation();
-    this.toggleFocusArea(value);
+    this.selectSectionMode(sectionId, mode);
   }
 
   protected selectAiModelFromDropdown(value: string, event: Event): void {
@@ -621,18 +653,16 @@ export class FlowExplorerPageComponent implements OnInit {
     this.analysisGoal.set(value);
   }
 
-  protected toggleFocusArea(value: FlowExplorerFocusArea): void {
-    const selected = this.focusAreas();
-    if (selected.includes(value)) {
-      this.resetJobState();
-      this.focusAreas.set(selected.filter((candidate) => candidate !== value));
-      return;
-    }
-    if (selected.length >= MAX_FOCUS_AREAS) {
+  protected selectSectionMode(sectionId: FlowExplorerResultSectionId, mode: FlowExplorerSectionMode): void {
+    if (this.sectionModeFor(sectionId) === mode) {
       return;
     }
     this.resetJobState();
-    this.focusAreas.set([...selected, value]);
+    this.sectionModes.update((sectionModes) =>
+      sectionModes.map((sectionMode) =>
+        sectionMode.id === sectionId ? { ...sectionMode, mode } : sectionMode
+      )
+    );
   }
 
   protected onUserInstructionsChanged(value: string): void {
@@ -783,8 +813,8 @@ export class FlowExplorerPageComponent implements OnInit {
     }, 1600);
   }
 
-  protected isFocusAreaSelected(value: FlowExplorerFocusArea): boolean {
-    return this.focusAreas().includes(value);
+  protected sectionModeFor(sectionId: FlowExplorerResultSectionId): FlowExplorerSectionMode {
+    return this.sectionModes().find((sectionMode) => sectionMode.id === sectionId)?.mode ?? 'COMPACT';
   }
 
   protected statusPillClass(): string {
@@ -862,10 +892,16 @@ export class FlowExplorerPageComponent implements OnInit {
       : 'flow-explorer-select-option';
   }
 
-  protected focusAreaSelectOptionClass(value: FlowExplorerFocusArea): string {
-    return this.isFocusAreaSelected(value)
-      ? 'flow-explorer-select-option flow-explorer-select-option--selected'
-      : 'flow-explorer-select-option';
+  protected sectionModeButtonClass(
+    sectionId: FlowExplorerResultSectionId,
+    mode: FlowExplorerSectionMode
+  ): string {
+    return [
+      'flow-explorer-mode-segment__button',
+      this.sectionModeFor(sectionId) === mode ? 'flow-explorer-mode-segment__button--selected' : ''
+    ]
+      .filter(Boolean)
+      .join(' ');
   }
 
   protected aiModelOptionClass(value: string): string {
@@ -923,13 +959,25 @@ export class FlowExplorerPageComponent implements OnInit {
   }
 
   protected sectionModePillClass(mode: string): string {
-    return normalizeSearch(mode) === 'deep'
-      ? 'status-pill status-pill--done'
-      : 'status-pill status-pill--queued';
+    switch (normalizeSearch(mode)) {
+      case 'deep':
+        return 'status-pill status-pill--done';
+      case 'off':
+        return 'status-pill status-pill--error';
+      default:
+        return 'status-pill status-pill--queued';
+    }
   }
 
   protected sectionModeLabel(mode: string): string {
-    return normalizeSearch(mode) === 'deep' ? 'deep' : 'compact';
+    switch (normalizeSearch(mode)) {
+      case 'deep':
+        return 'deep';
+      case 'off':
+        return 'off';
+      default:
+        return 'compact';
+    }
   }
 
   protected sectionIcon(sectionId: string): string {
@@ -1090,7 +1138,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set(job.endpointId);
     this.branch.set(job.branch || this.branch());
     this.analysisGoal.set(job.goal || 'DEEP_DISCOVERY');
-    this.focusAreas.set(job.focusAreas.length ? job.focusAreas.slice(0, MAX_FOCUS_AREAS) : ['BUSINESS_FLOW_RULES']);
+    this.sectionModes.set(normalizeSectionModes(job.sectionModes, job.focusAreas));
     this.selectedAiModel.set(job.aiModel || '');
     this.selectedReasoningEffort.set(job.reasoningEffort || '');
     this.syncReasoningEffortSelection();
@@ -1112,6 +1160,7 @@ export class FlowExplorerPageComponent implements OnInit {
       branch: this.branch().trim() || undefined,
       goal: this.analysisGoal(),
       focusAreas: this.focusAreas(),
+      sectionModes: this.sectionModes(),
       userInstructions: userInstructions || undefined,
       model: selectedAiModel || undefined,
       reasoningEffort: selectedReasoningEffort || undefined
@@ -1171,9 +1220,23 @@ export class FlowExplorerPageComponent implements OnInit {
     );
   }
 
-  private selectedFocusAreaChoices(): FlowExplorerChoice<FlowExplorerFocusArea>[] {
-    const selected = this.focusAreas();
-    return FOCUS_AREA_OPTIONS.filter((focusArea) => selected.includes(focusArea.value));
+  private sectionModeCounts(): { off: number; compact: number; deep: number } {
+    return this.sectionModes().reduce(
+      (counts, sectionMode) => {
+        switch (sectionMode.mode) {
+          case 'OFF':
+            counts.off += 1;
+            break;
+          case 'DEEP':
+            counts.deep += 1;
+            break;
+          default:
+            counts.compact += 1;
+        }
+        return counts;
+      },
+      { off: 0, compact: 0, deep: 0 }
+    );
   }
 
   private normalizeAiModelOptions(
@@ -1401,4 +1464,52 @@ function formatDurationMs(value: number): string {
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function copySectionModes(sectionModes: FlowExplorerSectionModeRequest[]): FlowExplorerSectionModeRequest[] {
+  return sectionModes.map((sectionMode) => ({ ...sectionMode }));
+}
+
+function normalizeSectionModes(
+  sectionModes: unknown,
+  focusAreas: FlowExplorerFocusArea[] = []
+): FlowExplorerSectionModeRequest[] {
+  const byId = new Map<FlowExplorerResultSectionId, FlowExplorerSectionMode>();
+  if (Array.isArray(sectionModes)) {
+    sectionModes.forEach((candidate) => {
+      if (!candidate || typeof candidate !== 'object') {
+        return;
+      }
+      const value = candidate as Partial<FlowExplorerSectionModeRequest>;
+      if (isSectionId(value.id) && isSectionMode(value.mode)) {
+        byId.set(value.id, value.mode);
+      }
+    });
+  }
+
+  if (byId.size === 0) {
+    focusAreas.forEach((focusArea) => byId.set(focusArea, 'DEEP'));
+  }
+
+  return DEFAULT_SECTION_MODES.map((sectionMode) => ({
+    id: sectionMode.id,
+    mode: byId.get(sectionMode.id) ?? 'COMPACT'
+  }));
+}
+
+function sectionTitle(sectionId: FlowExplorerResultSectionId): string {
+  return FOCUS_AREA_OPTIONS.find((option) => option.value === sectionId)?.label ?? sectionId;
+}
+
+function isSectionId(value: unknown): value is FlowExplorerResultSectionId {
+  return (
+    value === 'BUSINESS_FLOW_RULES' ||
+    value === 'VALIDATIONS' ||
+    value === 'PERSISTENCE' ||
+    value === 'INTEGRATIONS'
+  );
+}
+
+function isSectionMode(value: unknown): value is FlowExplorerSectionMode {
+  return value === 'OFF' || value === 'COMPACT' || value === 'DEEP';
 }

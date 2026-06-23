@@ -162,7 +162,7 @@ describe('FlowExplorerPageComponent', () => {
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
     selectGoal(fixture, 'Test scenarios');
-    toggleFocusArea(fixture, 'Validations');
+    selectSectionMode(fixture, 'Validations', 'Deep');
     selectAiModel(fixture, 'GPT-5.4 mini');
     selectReasoningEffort(fixture, 'High');
     setTextareaValue(
@@ -182,6 +182,12 @@ describe('FlowExplorerPageComponent', () => {
       branch: 'main',
       goal: 'TEST_SCENARIOS',
       focusAreas: ['BUSINESS_FLOW_RULES', 'VALIDATIONS'],
+      sectionModes: [
+        { id: 'BUSINESS_FLOW_RULES', mode: 'DEEP' },
+        { id: 'VALIDATIONS', mode: 'DEEP' },
+        { id: 'PERSISTENCE', mode: 'COMPACT' },
+        { id: 'INTEGRATIONS', mode: 'COMPACT' }
+      ],
       userInstructions: 'Skup sie na negatywnych scenariuszach walidacji statusu klienta.',
       model: 'gpt-5.4-mini',
       reasoningEffort: 'high'
@@ -201,7 +207,7 @@ describe('FlowExplorerPageComponent', () => {
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
     selectGoal(fixture, 'Risk detection');
-    toggleFocusArea(fixture, 'Integrations');
+    selectSectionMode(fixture, 'Integrations', 'Deep');
     fixture.detectChanges();
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
@@ -215,6 +221,12 @@ describe('FlowExplorerPageComponent', () => {
       branch: 'main',
       goal: 'RISK_DETECTION',
       focusAreas: ['BUSINESS_FLOW_RULES', 'INTEGRATIONS'],
+      sectionModes: [
+        { id: 'BUSINESS_FLOW_RULES', mode: 'DEEP' },
+        { id: 'VALIDATIONS', mode: 'COMPACT' },
+        { id: 'PERSISTENCE', mode: 'COMPACT' },
+        { id: 'INTEGRATIONS', mode: 'DEEP' }
+      ],
       userInstructions: undefined,
       model: undefined,
       reasoningEffort: undefined
@@ -573,11 +585,21 @@ function selectEndpoint(fixture: ComponentFixture<FlowExplorerPageComponent>, pa
   fixture.detectChanges();
 }
 
-function toggleFocusArea(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
+function selectSectionMode(
+  fixture: ComponentFixture<FlowExplorerPageComponent>,
+  sectionLabel: string,
+  modeLabel: string
+): void {
   const nativeElement = fixture.nativeElement as HTMLElement;
   openFocusAreasSelect(nativeElement);
   fixture.detectChanges();
-  buttonContaining(nativeElement, label)?.click();
+  const row = Array.from(
+    nativeElement.querySelectorAll<HTMLElement>('.flow-explorer-section-mode-row')
+  ).find((candidate) => candidate.textContent?.includes(sectionLabel));
+  const button = Array.from(row?.querySelectorAll<HTMLButtonElement>('button') ?? []).find(
+    (candidate) => candidate.textContent?.trim() === modeLabel
+  );
+  button?.click();
   fixture.detectChanges();
 }
 
@@ -853,6 +875,7 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     branch: 'main',
     goal: 'DEEP_DISCOVERY',
     focusAreas: ['BUSINESS_FLOW_RULES'],
+    sectionModes: defaultSectionModes(),
     aiModel: 'gpt-5-mini',
     reasoningEffort: 'medium',
     status: 'QUEUED',
@@ -879,6 +902,15 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     steps: overrides.steps ?? defaultWorkflowSteps(snapshot),
     contextSections: overrides.contextSections ?? defaultContextSections()
   };
+}
+
+function defaultSectionModes(): FlowExplorerJobStateSnapshot['sectionModes'] {
+  return [
+    { id: 'BUSINESS_FLOW_RULES', title: 'Business flow/rules', mode: 'DEEP' },
+    { id: 'VALIDATIONS', title: 'Validations', mode: 'COMPACT' },
+    { id: 'PERSISTENCE', title: 'Persistence', mode: 'COMPACT' },
+    { id: 'INTEGRATIONS', title: 'Integrations', mode: 'COMPACT' }
+  ];
 }
 
 function defaultWorkflowSteps(
