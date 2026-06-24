@@ -388,41 +388,47 @@ Do rozstrzygniecia:
 
 ### AI response contract MVP
 
+Aktualny kontrakt Flow Explorera jest goal-based i zostal doprecyzowany w
+`docs/architecture/12-flow-explorer-goal-based-result-contract-plan.md`.
+Initial run zwraca twardy JSON z `overview` oraz tylko aktywnymi sekcjami z
+`sectionModes`; sekcja flow ma identyfikator `FUNCTIONAL_FLOW` i tytul
+`Functional flow`.
+
 Roboczy JSON-only contract:
 
 ```json
 {
-  "userIntentSummary": "string",
-  "audienceSummary": "string",
-  "endpointContract": {
-    "method": "string",
-    "path": "string",
-    "purpose": "string",
-    "request": ["string"],
-    "response": ["string"],
-    "parameters": ["string"]
+  "goal": "DEEP_DISCOVERY|TEST_SCENARIOS|RISK_DETECTION",
+  "audience": "string",
+  "overview": {
+    "summary": "string",
+    "primaryFlow": "string",
+    "sourceRefs": ["string"]
   },
-  "flowSteps": [
+  "sections": [
     {
-      "order": 1,
-      "title": "string",
-      "plainLanguage": "string",
-      "technicalGrounding": "string",
-      "sourceRefs": ["string"]
+      "id": "FUNCTIONAL_FLOW|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
+      "title": "Functional flow|Validations|Persistence|Integrations",
+      "mode": "compact|deep",
+      "markdown": "string",
+      "sourceRefs": ["string"],
+      "visibilityLimits": ["string"],
+      "openQuestions": ["string"]
     }
   ],
-  "businessRules": ["string"],
-  "validations": ["string"],
-  "persistence": ["string"],
-  "externalIntegrations": ["string"],
-  "testScenarios": ["string"],
-  "risksAndEdgeCases": ["string"],
-  "openQuestions": ["string"],
-  "visibilityLimits": ["string"],
+  "globalVisibilityLimits": ["string"],
+  "globalOpenQuestions": ["string"],
   "sourceReferences": ["string"],
   "confidence": "high|medium|low"
 }
 ```
+
+`FUNCTIONAL_FLOW.markdown` ma opisywac flow w kolejnosci wystapienia:
+autoryzacja/autentykacja, walidacja wejscia, dociagniecie danych, kalkulacje,
+reguly funkcjonalne, rozgalezienia, koordynacja/routing, handoffy i efekty
+uboczne. Evidence, ograniczenia widocznosci i pytania otwarte nie sa czescia
+glownego markdownu sekcji; trafiaja do `sourceRefs`, `visibilityLimits` i
+`openQuestions`, ktore UI pokazuje jako osobne zwijane elementy.
 
 ## Deterministic context gathering MVP
 

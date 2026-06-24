@@ -56,6 +56,11 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Sekcja `FUNCTIONAL_FLOW` musi miec tytul `Functional flow`"));
         assertTrue(prompt.contains("`Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`"));
         assertTrue(prompt.contains("`Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`"));
+        assertTrue(prompt.contains("W `FUNCTIONAL_FLOW.markdown` nie zwracaj dlugich ciagow tekstu"));
+        assertTrue(prompt.contains("Poziom szczegolow `FUNCTIONAL_FLOW` musi wynikac ze zlozonosci flow"));
+        assertTrue(prompt.contains("Nie pomijaj istotnych faktow"));
+        assertTrue(prompt.contains("Techniczne typy, statusy, enumy, stale i wartosci graniczne"));
+        assertTrue(prompt.contains("gdy maja znaczenie funkcjonalne"));
         assertTrue(prompt.contains("Nie umieszczaj evidence, source refs ani ograniczen widocznosci w glownym `markdown`"));
         assertTrue(prompt.contains("Punkt `Akcent goal` w sekcji `FUNCTIONAL_FLOW` dopasuj do `goal`"));
         assertTrue(prompt.contains("`sectionModes.PERSISTENCE=DEEP` i endpoint zapisuje dane"));

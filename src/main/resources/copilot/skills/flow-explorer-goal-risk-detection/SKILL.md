@@ -74,12 +74,18 @@ Nie zmieniaj nazw punktow. W `RISK_DETECTION` punkt `Akcent goal` ma wskazac
 ryzyka, skutki i sposob zamkniecia ryzyka dla functional flow.
 Evidence, source refs i ograniczenia widocznosci przekazuj w osobnych polach
 `sourceRefs`, `visibilityLimits` i `openQuestions`, nie w glownym markdownie.
+Kazdy punkt `FUNCTIONAL_FLOW` formatuj jako czytelna liste albo kroki, a nie
+jako jeden dlugi akapit. Poziom szczegolow dopasuj do zlozonosci flow: nie
+pomijaj istotnych ryzyk, warunkow, kalkulacji, rozgalezien ani handoffow tylko
+po to, zeby odpowiedz byla krotsza.
 
 ### compact
 
 Zwroc:
 
-- 2-4 najwazniejsze ryzyka dotyczace sensu funkcjonalnego endpointu,
+- najwazniejsze ryzyka dotyczace sensu funkcjonalnego endpointu; jezeli flow
+  jest zlozony, pokaz tyle ryzyk, ile trzeba do uzytecznej oceny zgodnej z
+  `goal`,
 - ryzyka wynikajace z kolejnosci flow: auth/authz, walidacja inputu,
   dociagniecie danych, kalkulacje/decyzje, persistence jako etap,
   event/request/odpowiedz,

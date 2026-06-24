@@ -61,12 +61,17 @@ Nie zmieniaj nazw punktow. W `TEST_SCENARIOS` punkt `Akcent goal` ma wskazac
 konkretne sciezki i warunki do pokrycia testami.
 Evidence, source refs i ograniczenia widocznosci przekazuj w osobnych polach
 `sourceRefs`, `visibilityLimits` i `openQuestions`, nie w glownym markdownie.
+Kazdy punkt `FUNCTIONAL_FLOW` formatuj jako czytelna liste albo kroki, a nie
+jako jeden dlugi akapit. Poziom szczegolow dopasuj do zlozonosci flow: nie
+pomijaj istotnych sciezek, regul, kalkulacji, rozgalezien ani handoffow tylko po
+to, zeby odpowiedz byla krotsza.
 
 ### compact
 
 Zwróć:
 
-- 2-4 najwazniejsze sciezki flow do pokrycia testami,
+- najwazniejsze sciezki flow do pokrycia testami; jezeli flow jest zlozony,
+  pokaz tyle sciezek, ile trzeba do uzytecznego pokrycia zgodnego z `goal`,
 - kolejnosc etapow, ktore tester ma odtworzyc: auth/authz, walidacja inputu,
   pobranie danych, kalkulacje/decyzje, wzmianka o persistence,
   event/request/odpowiedz,

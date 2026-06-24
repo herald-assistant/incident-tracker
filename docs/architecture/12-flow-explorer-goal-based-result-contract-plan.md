@@ -70,7 +70,7 @@ Flow Explorer ma trzy cele analizy:
 
 Focus areas nie sa celami. Sa obszarami, ktore steruja glebokoscia sekcji:
 
-- `BUSINESS_FLOW_RULES` / `Business flow/rules`
+- `FUNCTIONAL_FLOW` / `Functional flow`
 - `VALIDATIONS` / `Validations`
 - `PERSISTENCE` / `Persistence`
 - `INTEGRATIONS` / `Integrations`
@@ -80,24 +80,47 @@ cele analizy.
 
 ### Sekcje rezultatu
 
-Kazdy wynik initial run ma zawsze:
+Kazdy wynik initial run ma zawsze `Overview` oraz sekcje aktywne wedlug
+`sectionModes`. Kanoniczne obszary wyniku to:
 
 1. `Overview`
-2. `Business flow/rules`
+2. `Functional flow`
 3. `Validations`
 4. `Persistence`
 5. `Integrations`
 
-Kazda z czterech sekcji szczegolowych ma tryb:
+Kazda aktywna sekcja szczegolowa ma tryb:
 
 - `compact` - gdy focus area nie jest zaznaczony,
 - `deep` - gdy focus area jest zaznaczony.
+
+Sekcja moze miec tez tryb `OFF`, jezeli uzytkownik ja wylaczy w
+`sectionModes`; wtedy nie pojawia sie w `sections`. `sectionModes` jest
+zrodlem prawdy dla transportu, a `focusAreas` sa skrotem ustawiajacym wybrane
+sekcje na `deep`.
 
 `compact` nie znaczy powierzchownie. Compact ma zawierac najwazniejsze fakty,
 decyzje, zaleznosci i ograniczenia widocznosci w zwartej formie.
 
 `deep` ma pokazac konkretne reguly, warianty, przypadki brzegowe, source refs,
 otwarte pytania i ograniczenia widocznosci dla danego obszaru.
+
+`Functional flow` jest glowna sekcja przebiegu; domyslnie prowadzi interpretacje
+endpointu od wejscia do efektow ubocznych. Jej markdown ma stala, flow-first
+strukture:
+
+- `Cel funkcjonalny`,
+- `Flow krok po kroku`,
+- `Koordynacja i routing`,
+- `Kalkulacje i reguly funkcjonalne`,
+- `Rozgalezienia zalezne od kontekstu`,
+- `Handoffy i efekty uboczne`,
+- `Akcent goal`.
+
+Evidence, source refs, ograniczenia widocznosci i pytania otwarte nie sa
+punktami glownego markdownu `Functional flow`. Sa przekazywane przez osobne
+pola `sourceRefs`, `visibilityLimits` i `openQuestions`, ktore UI pokazuje w
+zwijanych elementach tak samo jak przy innych sekcjach.
 
 ### Transport i UI
 
@@ -123,8 +146,8 @@ Przykladowy ksztalt docelowego kontraktu:
   },
   "sections": [
     {
-      "id": "BUSINESS_FLOW_RULES",
-      "title": "Business flow/rules",
+      "id": "FUNCTIONAL_FLOW",
+      "title": "Functional flow",
       "mode": "compact|deep",
       "markdown": "string",
       "sourceRefs": ["string"],
@@ -140,8 +163,9 @@ Przykladowy ksztalt docelowego kontraktu:
 ```
 
 Ostateczny ksztalt DTO moze zostac doprecyzowany w kroku kontraktowym, ale
-nie powinien wracac do luznych list typu `businessRules`,
-`testScenarios`, `risksAndEdgeCases` jako rownorzednych top-level pol.
+nie powinien wracac do luznych list tematycznych jako rownorzednych top-level
+pol. Perspektywa celu analizy ma mieszkac w `goal`, `overview` i aktywnych
+sekcjach.
 
 ## Zasady skilli
 
@@ -156,7 +180,7 @@ Skill celu opisuje:
 - kiedy dany cel jest uzywany,
 - jak interpretowac evidence,
 - jak wypelniac Overview,
-- jak wypelniac kazda z czterech sekcji,
+- jak wypelniac kazda aktywna sekcje,
 - co oznacza `compact` i `deep` w tym celu,
 - jakiego rodzaju wnioski sa wartosciowe dla nietechnicznego uczestnika
   procesu wytworczego,
@@ -166,7 +190,7 @@ Skill celu opisuje:
 Wspolny skill `flow-explorer-result-contract` zostaje odpowiedzialny za:
 
 - twardy JSON-only transport,
-- zawsze ten sam uklad Overview + 4 sekcje,
+- zawsze ten sam uklad Overview + aktywne sekcje wedlug `sectionModes`,
 - reguly confidence/source refs/visibility limits/open questions,
 - zasade: initial result ma byc samowystarczalny dla wiekszosci potrzeb,
 - zasade: follow-up chat nie sluzy do nadrabiania zbyt ogolnej odpowiedzi.
@@ -217,17 +241,17 @@ Co wykonujemy:
 - zastapic obecne `FlowExplorerDocumentationPreset` celami:
   `DEEP_DISCOVERY`, `TEST_SCENARIOS`, `RISK_DETECTION`,
 - zastapic obecne focus areas czterema obszarami:
-  `BUSINESS_FLOW_RULES`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
-- usunac stare wartosci bez legacy mapperow,
+  `FUNCTIONAL_FLOW`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
+- usunac stare wartosci bez mapperow kompatybilnosci wstecznej,
 - zaprojektowac i wprowadzic nowy DTO wyniku:
-  Overview + lista/cztery sekcje z `id`, `title`, `mode`, `markdown`,
+  Overview + lista aktywnych sekcji z `id`, `title`, `mode`, `markdown`,
   `sourceRefs`, `visibilityLimits`, `openQuestions`,
 - dodac resolver trybu sekcji:
   zaznaczony focus area -> `deep`, brak focus area -> `compact`,
 - dostosowac parser AI response do nowego shape'u, ale bez goal-specific
   semantyki,
 - dostosowac job state do nowego result DTO,
-- usunac stare pola resultu bez legacy fallbackow,
+- usunac stare pola resultu bez fallbackow kompatybilnosci wstecznej,
 - dodac testy CRM-specific i zanonimizowane.
 
 Ryzyka:
@@ -241,7 +265,7 @@ Wykonano:
 - dodano `FlowExplorerAnalysisGoal` z wartosciami `DEEP_DISCOVERY`,
   `TEST_SCENARIOS`, `RISK_DETECTION`,
 - ograniczono `FlowExplorerFocusArea` do:
-  `BUSINESS_FLOW_RULES`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
+  `FUNCTIONAL_FLOW`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
 - usunieto `FlowExplorerDocumentationPreset` oraz stare DTO
   `FlowExplorerAiEndpointContract` i `FlowExplorerAiFlowStep`,
 - wprowadzono DTO wyniku:
@@ -276,7 +300,7 @@ Co wykonujemy:
 - dodac `flow-explorer-goal-deep-discovery`,
 - skill ma zawierac konkretny template dla:
   - Overview,
-  - Business flow/rules compact/deep,
+  - Functional flow compact/deep,
   - Validations compact/deep,
   - Persistence compact/deep,
   - Integrations compact/deep,
@@ -284,10 +308,12 @@ Co wykonujemy:
   a follow-up jest wyjatkiem,
 - zmienic prompt preparation tak, aby dla `DEEP_DISCOVERY` ladowal i wskazywal
   wlasciwy goal skill,
-- przekazywac do promptu cztery sekcje i tryby `compact/deep`,
+- przekazywac do promptu `sectionModes`, aktywne sekcje i tryby
+  `compact/deep`,
 - dostosowac UI composer tak, aby `Deep Discovery` byl pierwszym dzialajacym
   celem,
-- przebudowac bazowy UI result view pod Overview + 4 stale sekcje,
+- przebudowac bazowy UI result view pod Overview + aktywne sekcje w stalej
+  kolejnosci,
 - dodac parser/prompt/UI tests dla `DEEP_DISCOVERY`,
 - wykonac pierwszy smoke test albo fixture oceny rezultatu dla CRM-specific
   endpointu.
@@ -302,12 +328,12 @@ Ryzyka:
 Wykonano:
 
 - przebudowano `flow-explorer-result-contract` na JSON-only transport z
-  `Overview` oraz czterema stalymi sekcjami,
+  `Overview` oraz aktywnymi sekcjami z `sectionModes`,
 - zaktualizowano `flow-explorer-orchestrator`, zeby uzywal `goal`,
   `sectionModes`, `focusAreas` jako trybow sekcji i `reasoningEffort` jako
   glebokosci eksploracji,
 - dodano runtime skill `flow-explorer-goal-deep-discovery` z konkretnym
-  template'em dla `Overview`, `Business flow/rules`, `Validations`,
+  template'em dla `Overview`, `Functional flow`, `Validations`,
   `Persistence`, `Integrations` oraz trybow `compact`/`deep`,
 - zaktualizowano playbooki `flow-explorer-gitlab-tools` i
   `flow-explorer-operational-context-tools` do nowych nazw sekcji i pol wyniku,
@@ -317,9 +343,10 @@ Wykonano:
   z domyslnym i aktywnym celem `Deep Discovery`,
 - pozostale cele (`Test scenarios`, `Risk detection`) sa widoczne w UI jako
   zaplanowane, ale zablokowane do czasu ich vertical slice'ow,
-- result view renderuje `Overview` oraz cztery sekcje AI response z badge
+- result view renderuje `Overview` oraz aktywne sekcje AI response z badge
   `compact`/`deep`, source refs, visibility limits i open questions,
-- import/export Flow Explorera obsluguje nowy result shape bez legacy mapperow,
+- import/export Flow Explorera obsluguje nowy result shape bez mapperow
+  kompatybilnosci wstecznej,
 - testy backendowe i frontendowe zaktualizowano na CRM-specific,
   zanonimizowanych fixture'ach,
 - produkcyjny bundle Angulara zostal odswiezony w `src/main/resources/static`.
@@ -339,7 +366,7 @@ Co wykonujemy:
 
 - dodac `flow-explorer-goal-test-scenarios`,
 - template celu ma wymagac scenariuszy testowych w kazdej sekcji:
-  - Business flow/rules -> scenariusze procesowe i warunki biznesowe,
+  - Functional flow -> scenariusze procesowe i warunki biznesowe,
   - Validations -> przypadki negatywne i wymagane dane,
   - Persistence -> dane wejscia/wyjscia, stany zapisane, regresje danych,
   - Integrations -> zaleznosci systemowe, handoffy i awarie integracji,
@@ -356,7 +383,7 @@ Ryzyka:
 Wykonano:
 
 - dodano runtime skill `flow-explorer-goal-test-scenarios` z konkretnym
-  template'em dla `Overview`, `Business flow/rules`, `Validations`,
+  template'em dla `Overview`, `Functional flow`, `Validations`,
   `Persistence`, `Integrations` oraz trybow `compact`/`deep`,
 - initial run dla `TEST_SCENARIOS` laduje teraz goal-specific skill testowy i
   nie laduje skilla `DEEP_DISCOVERY`,
@@ -366,7 +393,7 @@ Wykonano:
 - test UI potwierdza, ze wybor `Test scenarios` trafia do request payload jako
   `goal: TEST_SCENARIOS`,
 - dodano CRM-specific, zanonimizowany fixture parsera AI response dla
-  `TEST_SCENARIOS` z czterema sekcjami,
+  `TEST_SCENARIOS` z aktywnymi sekcjami,
 - produkcyjny bundle Angulara zostal odswiezony w `src/main/resources/static`.
 
 ### 004. Risk detection vertical slice
@@ -383,7 +410,7 @@ Co wykonujemy:
 
 - dodac `flow-explorer-goal-risk-detection`,
 - template celu ma wymagac ryzyk w kazdej sekcji:
-  - Business flow/rules -> ryzyka niezrozumianych regul i wariantow procesu,
+  - Functional flow -> ryzyka niezrozumianych regul i wariantow procesu,
   - Validations -> ryzyka brakujacych walidacji albo zlych danych,
   - Persistence -> ryzyka stanu, transakcji, read/write i migracji danych,
   - Integrations -> ryzyka handoffow, awarii downstream/upstream i opoznien,
@@ -400,7 +427,7 @@ Ryzyka:
 Wykonano:
 
 - dodano runtime skill `flow-explorer-goal-risk-detection` z konkretnym
-  template'em dla `Overview`, `Business flow/rules`, `Validations`,
+  template'em dla `Overview`, `Functional flow`, `Validations`,
   `Persistence`, `Integrations` oraz trybow `compact`/`deep`,
 - skill wymaga rozroznienia ryzyk na: `Fakt z evidence`, `Inferencja`,
   `Luka widocznosci` i `Pytanie otwarte`,
@@ -413,7 +440,7 @@ Wykonano:
   `goal: RISK_DETECTION`,
 - prompt preparation test potwierdza `RISK_DETECTION` w canonical prompt,
 - dodano CRM-specific, zanonimizowany fixture parsera AI response dla
-  `RISK_DETECTION` z czterema sekcjami.
+  `RISK_DETECTION` z aktywnymi sekcjami.
 
 ### 005. Cross-goal parser hardening i response validation
 
@@ -428,12 +455,12 @@ nad template'ami zbyt wcześnie.
 Co wykonujemy:
 
 - parser ma wymagac poprawnego JSON bez Markdown poza polami `markdown`,
-- parser ma wymagac dokladnie czterech sekcji o znanych `id`,
+- parser ma wymagac dokladnie aktywnych sekcji wynikajacych z `sectionModes`,
 - parser ma weryfikowac `mode` sekcji wobec requestowych focus areas,
 - parser ma wymagac `overview.markdown` i `section.markdown`,
 - parser ma zachowac `visibilityLimits`, `openQuestions`, `confidence` i
   `sourceRefs`,
-- parser ma odrzucac stare top-level pola jako kontrakt legacy,
+- parser ma odrzucac top-level pola spoza aktualnej allowlisty kontraktu,
 - dodac testy negatywne i pozytywne dla wszystkich trzech celow.
 
 Ryzyka:
@@ -448,14 +475,14 @@ Wykonano:
 - parser wymaga znanego `goal` i dla initial job waliduje zgodnosc goal z
   requestem,
 - parser wymaga `overview.markdown`,
-- parser wymaga dokladnie czterech sekcji z id:
-  `BUSINESS_FLOW_RULES`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
+- parser wymaga dokladnie aktywnych sekcji z id:
+  `FUNCTIONAL_FLOW`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`,
 - parser wymaga `section.markdown` w kazdej sekcji,
 - parser waliduje `section.mode` wobec requestowych `focusAreas` w initial
   jobie,
-- parser odrzuca legacy top-level pola:
-  `endpointContract`, `flowSteps`, `businessRules`, `testScenarios`,
-  `risksAndEdgeCases`,
+- parser odrzuca top-level pola spoza aktualnej allowlisty:
+  `goal`, `audience`, `overview`, `sections`, `globalVisibilityLimits`,
+  `globalOpenQuestions`, `sourceReferences`, `confidence`,
 - parser wymaga listowego shape'u dla pol:
   `sourceRefs`, `visibilityLimits`, `openQuestions`,
   `globalVisibilityLimits`, `globalOpenQuestions`, `sourceReferences`,
@@ -485,7 +512,7 @@ Co wykonujemy:
   nietechnicznym,
 - dopracowac result view:
   - Overview,
-  - Business flow/rules,
+  - Functional flow,
   - Validations,
   - Persistence,
   - Integrations,
@@ -512,7 +539,7 @@ Ryzyka:
 
 Wykonano:
 
-- result view Flow Explorera renderuje `overview.markdown` i markdown czterech
+- result view Flow Explorera renderuje `overview.markdown` i markdown aktywnych
   sekcji przez wspolny `MarkdownContentComponent` (`app-markdown-content`),
 - naglowek wyniku pokazuje tekstowy skrot overview bez surowej skladni
   Markdown,
@@ -530,7 +557,8 @@ Status: [x]
 Potrzeba:
 
 Zmiana kontraktu wyniku oznacza, ze export/import Flow Explorera oraz
-diagnostic artifacts musza opisywac nowy result shape bez legacy pol.
+diagnostic artifacts musza opisywac nowy result shape bez pol poprzedniego
+kontraktu.
 
 Co wykonujemy:
 
@@ -544,7 +572,7 @@ Co wykonujemy:
   - artifacts,
   - clipping notes,
   - usage/activity/tool evidence,
-- user-facing export ma renderowac Overview + cztery sekcje bez surowego kodu,
+- user-facing export ma renderowac Overview + aktywne sekcje bez surowego kodu,
   jezeli ten tryb zostal juz rozdzielony,
 - dodac testy import/export.
 
@@ -565,14 +593,13 @@ Wykonano:
   goal, focus areas, section modes, targetem endpointu, coverage contextu,
   clipping notes, usage flag, licznikami evidence/activity/tool feedback oraz
   lista artefaktow diagnostycznych,
-- export zawiera user-facing `resultMarkdown` z Overview + czterema sekcjami
+- export zawiera user-facing `resultMarkdown` z Overview + aktywnymi sekcjami
   bez surowego kodu,
-- import odrzuca legacy top-level pola resultu:
-  `endpointContract`, `flowSteps`, `businessRules`, `testScenarios`,
-  `risksAndEdgeCases`,
-- import odrzuca niekompletny zestaw czterech sekcji,
+- import odrzuca pola `result` i `aiResponse` spoza aktualnej allowlisty
+  kontraktu,
+- import odrzuca niekompletny zestaw aktywnych sekcji,
 - dodano CRM-specific, zanonimizowane testy FE dla exportu v2, diagnostics,
-  odrzucenia legacy pol i odrzucenia niepelnych sekcji,
+  odrzucenia nieobslugiwanych pol i odrzucenia niepelnych sekcji,
 - wykonano `npm test -- --watch=false`.
 
 ### 008. Follow-up chat alignment
@@ -587,7 +614,7 @@ odtwarzania calej analizy od nowa. Ma sluzyc do doprecyzowania wyjatkow.
 Co wykonujemy:
 
 - prompt follow-up ma streszczac goal, section modes i wynik initial,
-- follow-up ma rozumiec cztery sekcje jako stale punkty odniesienia,
+- follow-up ma rozumiec aktywne sekcje jako stale punkty odniesienia,
 - jezeli uzytkownik pyta o obszar, ktory byl `compact`, AI moze dociagnac
   szczegol przez tools zgodnie z reasoning effort i tool policy,
 - jezeli uzytkownik pyta o obszar `deep`, AI ma najpierw wykorzystac initial
@@ -604,9 +631,9 @@ Wykonano:
 - follow-up prompt ma jawny answer contract: bezposrednia odpowiedz na pytanie,
   tylko potrzebne szczegoly, bez generowania calego initial resultu od nowa,
 - prompt wskazuje stale punkty odniesienia:
-  Overview, Business flow/rules, Validations, Persistence, Integrations,
+  Overview, Functional flow, Validations, Persistence, Integrations,
 - initial result w follow-up artifact jest renderowany sekcyjnie z goal,
-  confidence, Overview, czterema sekcjami, mode, source refs, visibility
+  confidence, Overview, aktywnymi sekcjami, mode, source refs, visibility
   limits i open questions,
 - sekcje `DEEP` maja byc najpierw obslugiwane z initial result, initial
   artifacts i zebranych evidence; tool call tylko gdy pytanie wychodzi poza
@@ -618,7 +645,7 @@ Wykonano:
 - dodano CRM-specific, zanonimizowany test `FlowExplorerFollowUpPromptPreparationServiceTest`,
 - rozszerzono `FlowExplorerJobServiceTest`, zeby potwierdzal przekazanie do
   follow-up prompt preparation initial requestu, context snapshotu, wyniku z
-  czterema sekcjami i aktualnego pytania uzytkownika,
+  aktywnymi sekcjami i aktualnego pytania uzytkownika,
 - wykonano `mvn -q "-Dtest=FlowExplorerFollowUpPromptPreparationServiceTest,FlowExplorerJobServiceTest" test`,
 - wykonano `mvn -q "-Dtest=FlowExplorer*Test,PackageDependencyGuardTest" test`.
 
@@ -680,7 +707,8 @@ Ryzyka:
   chat i import/export mechanics, ale merytoryczny result renderer moze byc
   feature-specific.
 - Nie importujemy `features.incidentanalysis` do Flow Explorera.
-- Nie utrzymujemy legacy mapperow dla starych presetow/focus areas.
+- Nie utrzymujemy mapperow kompatybilnosci wstecznej dla starych
+  presetow/focus areas.
 
 ## Decision log
 
@@ -697,7 +725,7 @@ Status: accepted.
 ### 002. Focus areas steruja trybem sekcji
 
 Decyzja: focus areas zostaja ograniczone do czterech obszarow wyniku:
-`BUSINESS_FLOW_RULES`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`.
+`FUNCTIONAL_FLOW`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`.
 Zaznaczony focus ustawia sekcje na `deep`, brak zaznaczenia ustawia `compact`.
 
 Powod: test scenarios i risks sa celami analizy, nie obszarami wyniku.
@@ -736,22 +764,21 @@ najpierw `Deep Discovery`, potem `Test scenarios`, a na koncu
 jednym kroku.
 
 Powod: `Deep Discovery` jest najlepszym pierwszym dowodem nowego modelu,
-poniewaz sprawdza caly uklad Overview + cztery sekcje + compact/deep bez
+poniewaz sprawdza caly uklad Overview + aktywne sekcje + compact/deep bez
 dodatkowej presji generowania scenariuszy albo ryzyk. Po jego ocenie mozna
 lepiej napisac template'y dla kolejnych celow i uniknac powielenia bledow w
 trzech skillach naraz.
 
 Status: accepted.
 
-### 006. Backendowy fundament kontraktu wdrozony bez legacy mapperow
+### 006. Backendowy fundament kontraktu wdrozony bez mapperow kompatybilnosci
 
 Decyzja: krok 001 zostal zamkniety jako backendowy fundament kontraktu.
 Backend nie przyjmuje juz `documentationPreset`, starych focus areas ani
-starych top-level pol resultu typu `endpointContract`, `flowSteps`,
-`businessRules`, `testScenarios`, `risksAndEdgeCases`.
+top-level pol spoza aktualnej allowlisty kontraktu.
 
 Powod: kontrakt Flow Explorera ma byc dalej rozwijany cel po celu na jednym
-stabilnym modelu `goal` + `Overview` + cztery sekcje z trybem
+stabilnym modelu `goal` + `Overview` + aktywne sekcje z trybem
 `compact`/`deep`. Utrzymywanie starych DTO lub mapperow zwiekszaloby ryzyko,
 ze prompt, UI albo import/export zaczna korzystac z poprzedniego modelu.
 
@@ -773,7 +800,7 @@ Status: implemented.
 
 Decyzja: `TEST_SCENARIOS` jest drugim aktywnym celem Flow Explorera. Ma wlasny
 runtime skill, jest wybierany przez initial session config i jest dostepny w UI
-bez feature flaga albo legacy mapperow.
+bez feature flaga albo mapperow kompatybilnosci wstecznej.
 
 Powod: po ustabilizowaniu `Deep Discovery` mozemy wdrazac kolejne cele pionowo.
 `Test scenarios` wnosi odrebna wartosc dla testerow i analitykow: initial
@@ -786,7 +813,7 @@ Status: implemented.
 
 Decyzja: `RISK_DETECTION` jest trzecim aktywnym celem Flow Explorera. Ma wlasny
 runtime skill, jest wybierany przez initial session config i jest dostepny w UI
-bez feature flaga albo legacy mapperow.
+bez feature flaga albo mapperow kompatybilnosci wstecznej.
 
 Powod: po wdrozeniu rozpoznania flow i scenariuszy testowych mozemy domknac
 zestaw celow o ocene ryzyk. Wynik ma nie tylko wskazywac ryzyka, ale tez
@@ -798,9 +825,10 @@ Status: implemented.
 ### 010. Parser waliduje shape kontraktu, nie jakosc merytoryczna
 
 Decyzja: parser Flow Explorera waliduje twardy shape odpowiedzi AI: czysty JSON,
-znany `goal`, cztery wymagane sekcje, wymagane pola `markdown`, zgodnosc
-`mode` z `focusAreas` oraz brak legacy top-level pol. Parser nie ocenia, czy
-opis jest merytorycznie wystarczajaco dobry.
+znany `goal`, dokladnie aktywne sekcje z `sectionModes`, wymagane pola
+`markdown`, zgodnosc `mode` z requestem oraz brak top-level pol spoza
+allowlisty kontraktu. Parser dodatkowo pilnuje stalej struktury markdownu
+`FUNCTIONAL_FLOW`.
 
 Powod: backend, UI, import/export i follow-up chat potrzebuja stabilnego
 kontraktu transportowego. Ocena jakosci rezultatu powinna zostac w skillach,

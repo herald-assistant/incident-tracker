@@ -114,8 +114,26 @@ punkty, w tej kolejnosci:
   warianty flow, dla `TEST_SCENARIOS` sciezki do pokrycia testami, dla
   `RISK_DETECTION` ryzyka i pytania wokol functional flow.
 
-Compact ma wypelnic kazdy punkt jednym krotkim zdaniem albo lista po sredniku.
-Deep moze rozwinac punkty, ale nie zmienia ich nazw ani kolejnosci.
+Kazdy z tych punktow ma byc czytelny jako lista albo kroki, a nie jako jeden
+dlugi ciag tekstu. Jezeli punkt zawiera wiecej niz jeden krok, warunek, regule,
+wariant, kalkulacje, handoff albo efekt, rozbij go na osobne elementy, np.
+numerowane kroki `1. ...`, `2. ...` albo wypunktowanie `- nazwa: opis`.
+Jedno zdanie jest akceptowalne tylko wtedy, gdy punkt naprawde ma jeden prosty
+fakt.
+
+Compact ma wypelnic kazdy punkt zwarta lista najwazniejszych faktow. Deep moze
+rozwinac punkty dluzszymi listami i opisami, ale nie zmienia ich nazw ani
+kolejnosci. Poziom szczegolow ma wynikac ze zlozonosci flow: nie pomijaj
+istotnych krokow, regul, kalkulacji, warunkow, rozgalezien ani handoffow tylko
+po to, zeby odpowiedz byla krotsza. Dluzsza odpowiedz jest poprawna, jezeli
+jest potrzebna do kompletnego i uzytecznego opisu zgodnego z `goal`.
+
+Techniczne typy, statusy, enumy, stale i wartosci graniczne cytuj w
+`FUNCTIONAL_FLOW.markdown`, gdy maja znaczenie funkcjonalne: steruja routingiem,
+wyborem wariantu, rozgalezieniem, kalkulacja, walidacja, klasyfikacja, statusem
+wynikowym albo handoffem. Nie cytuj ich jako czysto technicznego detalu; zawsze
+dodaj krotkie wyjasnienie, jaki warunek albo efekt funkcjonalny z nich wynika.
+
 Nie umieszczaj source refs, evidence ani ograniczen widocznosci w glownym
 `markdown` tej sekcji. UI pokazuje je osobno jako zwijane elementy z pol
 `sourceRefs`, `visibilityLimits` i `openQuestions`.
@@ -146,6 +164,11 @@ W narracji uzywaj:
 Nazwy techniczne wolno pokazac w `markdown` tylko wtedy, gdy sa potrzebne
 odbiorcy do rozroznienia kontraktu API, pola request/response, statusu, eventu,
 kolejki albo systemu. Same klasy/metody nie sa dobra nazwa biznesowa.
+
+Wyjatkiem, ktory nalezy opisac w wyniku, sa techniczne wartosci majace znaczenie
+funkcjonalne: typy, statusy, enumy, stale, progi, limity i wartosci graniczne,
+od ktorych zalezy routing, rozgalezienie, walidacja, kalkulacja, klasyfikacja,
+persystencja, publikacja zdarzenia albo request downstream.
 
 Kazdy fakt techniczny ma byc przetlumaczony na to, co endpoint robi, czego
 wymaga, co zapisuje, z czym sie komunikuje albo co moze byc niewidoczne.
@@ -214,7 +237,8 @@ Nie:
 - wpisuj "brak" jako confidence,
 - ukrywaj limity widocznosci,
 - mieszaj source refs z hipotezami,
-- tworz dlugiego technicznego eseju,
+- tworz dlugiego technicznego eseju bez struktury; dluzsza odpowiedz jest
+  akceptowalna, gdy zlozony flow wymaga wiecej krokow i list,
 - zaczynaj akapitow od nazw klas, metod albo beanow,
 - zwracaj sekcje oznaczone jako `OFF`,
 - traktuj `OFF` jako pusta sekcje albo `compact`,

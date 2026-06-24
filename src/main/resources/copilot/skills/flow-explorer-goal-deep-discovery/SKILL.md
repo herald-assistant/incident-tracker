@@ -75,6 +75,10 @@ Nie zmieniaj nazw punktow. W `DEEP_DISCOVERY` punkt `Akcent goal` ma pokazac
 najwazniejsze warianty flow i ich znaczenie dla zrozumienia endpointu.
 Evidence, source refs i ograniczenia widocznosci przekazuj w osobnych polach
 `sourceRefs`, `visibilityLimits` i `openQuestions`, nie w glownym markdownie.
+Kazdy punkt `FUNCTIONAL_FLOW` formatuj jako czytelna liste albo kroki, a nie
+jako jeden dlugi akapit. Poziom szczegolow dopasuj do zlozonosci flow: nie
+pomijaj istotnych etapow, regul, kalkulacji, rozgalezien ani handoffow tylko po
+to, zeby odpowiedz byla krotsza.
 
 ### compact
 

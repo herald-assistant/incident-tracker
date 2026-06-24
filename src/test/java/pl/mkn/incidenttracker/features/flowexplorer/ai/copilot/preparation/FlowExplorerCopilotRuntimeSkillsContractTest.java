@@ -199,6 +199,10 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(resultContract.contains("**Rozgalezienia zalezne od kontekstu:**"));
         assertTrue(resultContract.contains("**Handoffy i efekty uboczne:**"));
         assertTrue(resultContract.contains("**Akcent goal:**"));
+        assertTrue(resultContract.contains("Kazdy z tych punktow ma byc czytelny jako lista albo kroki"));
+        assertTrue(resultContract.contains("Poziom szczegolow ma wynikac ze zlozonosci flow"));
+        assertTrue(resultContract.contains("Techniczne typy, statusy, enumy, stale i wartosci graniczne"));
+        assertTrue(resultContract.contains("gdy maja znaczenie funkcjonalne"));
         assertTrue(resultContract.contains("UI pokazuje je osobno jako zwijane elementy"));
         assertTrue(resultContract.contains("`SOURCE` jest polem kontrolowanym"));
         assertTrue(resultContract.contains("Dozwolone wartosci to tylko"));

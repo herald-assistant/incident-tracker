@@ -568,7 +568,7 @@ Minimalny backend:
   "entrypoints": [],
   "microservices": [],
   "endpoints": [],
-  "businessRules": [],
+  "functionalFlow": [],
   "dataObjects": [],
   "integrations": [],
   "sequence": [],
