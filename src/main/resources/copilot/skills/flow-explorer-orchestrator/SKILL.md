@@ -76,7 +76,7 @@ pola to:
 - file paths, methods i line ranges ze snippet cards oraz manifestu.
 
 Hidden `ToolContext` jest tylko techniczna mechanika runtime. Nie zakladaj, ze
-zawiera business scope endpointu. Nie przekazuj `gitLabGroup` do tools; backend
+zawiera functional scope endpointu. Nie przekazuj `gitLabGroup` do tools; backend
 rozstrzyga GitLab group po `applicationName`/`projectName` i konfiguracji.
 
 ## Sterowanie Analiza
@@ -121,7 +121,7 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
    `compact-flow-manifest.md`.
 3. Ustal endpoint contract: metoda, path, controller, handler i glowny use
    case service. Nie zwracaj go jako osobnego top-level pola; wykorzystaj go w
-   `overview` i sekcji `BUSINESS_FLOW_RULES`.
+   `overview` i sekcji `FUNCTIONAL_FLOW`.
 4. Przeczytaj `snippet-cards.md` jako high-value code evidence, nie jako pelny
    dump kodu.
 5. Przeczytaj `openapi-endpoint-contract.md`, jezeli istnieje, jako kontrakt
@@ -129,7 +129,7 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
 6. Zmapuj flow:
    - wejscie HTTP,
    - walidacje i decyzje,
-   - logika biznesowa,
+   - warunki funkcjonalne i decyzje domenowe widoczne w kodzie,
    - persistence code-first,
    - integracje zewnetrzne,
    - response albo error boundary.

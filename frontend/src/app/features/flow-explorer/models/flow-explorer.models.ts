@@ -13,13 +13,13 @@ export type FlowExplorerAnalysisGoal =
   | 'RISK_DETECTION';
 
 export type FlowExplorerFocusArea =
-  | 'BUSINESS_FLOW_RULES'
+  | 'FUNCTIONAL_FLOW'
   | 'VALIDATIONS'
   | 'PERSISTENCE'
   | 'INTEGRATIONS';
 
 export type FlowExplorerResultSectionId =
-  | 'BUSINESS_FLOW_RULES'
+  | 'FUNCTIONAL_FLOW'
   | 'VALIDATIONS'
   | 'PERSISTENCE'
   | 'INTEGRATIONS';

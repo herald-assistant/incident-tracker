@@ -181,9 +181,9 @@ describe('FlowExplorerPageComponent', () => {
       endpointPath: '/api/customers/{id}',
       branch: 'main',
       goal: 'TEST_SCENARIOS',
-      focusAreas: ['BUSINESS_FLOW_RULES', 'VALIDATIONS'],
+      focusAreas: ['FUNCTIONAL_FLOW', 'VALIDATIONS'],
       sectionModes: [
-        { id: 'BUSINESS_FLOW_RULES', mode: 'DEEP' },
+        { id: 'FUNCTIONAL_FLOW', mode: 'DEEP' },
         { id: 'VALIDATIONS', mode: 'DEEP' },
         { id: 'PERSISTENCE', mode: 'COMPACT' },
         { id: 'INTEGRATIONS', mode: 'COMPACT' }
@@ -220,9 +220,9 @@ describe('FlowExplorerPageComponent', () => {
       endpointPath: '/api/customers/{id}',
       branch: 'main',
       goal: 'RISK_DETECTION',
-      focusAreas: ['BUSINESS_FLOW_RULES', 'INTEGRATIONS'],
+      focusAreas: ['FUNCTIONAL_FLOW', 'INTEGRATIONS'],
       sectionModes: [
-        { id: 'BUSINESS_FLOW_RULES', mode: 'DEEP' },
+        { id: 'FUNCTIONAL_FLOW', mode: 'DEEP' },
         { id: 'VALIDATIONS', mode: 'COMPACT' },
         { id: 'PERSISTENCE', mode: 'COMPACT' },
         { id: 'INTEGRATIONS', mode: 'DEEP' }
@@ -246,17 +246,26 @@ describe('FlowExplorerPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const markdownBlocks = compiled.querySelectorAll('app-markdown-content.flow-explorer-markdown');
     const referenceLists = compiled.querySelectorAll<HTMLDetailsElement>('details.flow-explorer-reference-list');
+    const appendix = compiled.querySelector<HTMLDetailsElement>('details.flow-explorer-result-appendix');
     expect(compiled.textContent).toContain('AI result');
     expect(compiled.textContent).toContain('Overview');
     expect(compiled.textContent).toContain('Deep Discovery');
     expect(compiled.textContent).toContain('The endpoint reads the requested customer');
     expect(markdownBlocks.length).toBe(5);
     expect(markdownBlocks[0]?.querySelector('strong')?.textContent).toBe('The endpoint');
+    expect(compiled.querySelector('.flow-explorer-result-summary')).toBeNull();
     expect(compiled.querySelector('.flow-explorer-result__heading .field-hint')).toBeNull();
-    expect(referenceLists.length).toBe(5);
+    expect(referenceLists.length).toBe(4);
     referenceLists.forEach((referenceList) => expect(referenceList.open).toBe(false));
     expect(referenceLists[0]?.querySelector('summary')?.textContent).toContain('References');
-    expect(compiled.textContent).toContain('Business flow/rules');
+    expect(appendix?.open).toBe(false);
+    expect(appendix?.querySelector('summary')?.textContent).toContain(
+      'Limits, questions and references'
+    );
+    expect(appendix?.querySelector('summary')?.textContent).toContain('1 limits');
+    expect(appendix?.querySelector('summary')?.textContent).toContain('1 questions');
+    expect(appendix?.querySelector('summary')?.textContent).toContain('1 references');
+    expect(compiled.textContent).toContain('Functional flow');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
     expect(compiled.textContent).toContain('Tokens');
@@ -291,7 +300,7 @@ describe('FlowExplorerPageComponent', () => {
 
       expect(clipboard.write).toHaveBeenCalledTimes(1);
       expect(copiedText).toContain('The endpoint reads the requested customer');
-      expect(copiedText).toContain('Business flow/rules');
+      expect(copiedText).toContain('Functional flow');
       expect(copiedText).not.toContain('Copy result');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
     } finally {
@@ -358,9 +367,23 @@ describe('FlowExplorerPageComponent', () => {
     const chatInput = compiled.querySelector(
       '.chat-input'
     ) as HTMLTextAreaElement;
+    const topLevelSections = Array.from(
+      compiled.querySelectorAll<HTMLDetailsElement>('details.flow-explorer-collapsible')
+    );
+    const sectionByEyebrow = new Map(
+      topLevelSections.map((section) => [
+        section.querySelector('.section-eyebrow')?.textContent?.trim(),
+        section
+      ])
+    );
     expect(compiled.textContent).toContain('Wczytany plik: flow-explorer-export.json');
     expect(compiled.textContent).toContain('AI result');
     expect(compiled.textContent).toContain('Importowany zapis jest tylko do odczytu');
+    expect(sectionByEyebrow.get('Flow Explorer')?.open).toBe(false);
+    expect(sectionByEyebrow.get('Job state')?.open).toBe(false);
+    expect(sectionByEyebrow.get('AI result')?.open).toBe(true);
+    expect(compiled.querySelector<HTMLDetailsElement>('details.analysis-chat')?.open).toBe(false);
+    expect(compiled.querySelector<HTMLDetailsElement>('details.panel-card--progress')?.open).toBe(false);
     expect(chatInput.disabled).toBe(true);
   });
 
@@ -874,7 +897,7 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     endpointPath: '/api/customers/{id}',
     branch: 'main',
     goal: 'DEEP_DISCOVERY',
-    focusAreas: ['BUSINESS_FLOW_RULES'],
+    focusAreas: ['FUNCTIONAL_FLOW'],
     sectionModes: defaultSectionModes(),
     aiModel: 'gpt-5-mini',
     reasoningEffort: 'medium',
@@ -906,7 +929,7 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
 
 function defaultSectionModes(): FlowExplorerJobStateSnapshot['sectionModes'] {
   return [
-    { id: 'BUSINESS_FLOW_RULES', title: 'Business flow/rules', mode: 'DEEP' },
+    { id: 'FUNCTIONAL_FLOW', title: 'Functional flow', mode: 'DEEP' },
     { id: 'VALIDATIONS', title: 'Validations', mode: 'COMPACT' },
     { id: 'PERSISTENCE', title: 'Persistence', mode: 'COMPACT' },
     { id: 'INTEGRATIONS', title: 'Integrations', mode: 'COMPACT' }
@@ -1070,8 +1093,8 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       },
       sections: [
         {
-          id: 'BUSINESS_FLOW_RULES',
-          title: 'Business flow/rules',
+          id: 'FUNCTIONAL_FLOW',
+          title: 'Functional flow',
           mode: 'deep',
           markdown: 'The controller delegates customer lookup to the CRM service and returns the profile when it is available.',
           sourceRefs: ['CustomerController.getCustomer L12-L24'],

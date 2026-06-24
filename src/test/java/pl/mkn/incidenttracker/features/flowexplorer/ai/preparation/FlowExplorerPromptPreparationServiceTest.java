@@ -53,6 +53,11 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
         assertTrue(prompt.contains("`OFF` oznacza, ze sekcji nie wolno zwracac w `sections`"));
         assertTrue(prompt.contains("Nigdy nie zwracaj `mode=off`"));
+        assertTrue(prompt.contains("Sekcja `FUNCTIONAL_FLOW` musi miec tytul `Functional flow`"));
+        assertTrue(prompt.contains("`Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`"));
+        assertTrue(prompt.contains("`Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`"));
+        assertTrue(prompt.contains("Nie umieszczaj evidence, source refs ani ograniczen widocznosci w glownym `markdown`"));
+        assertTrue(prompt.contains("Punkt `Akcent goal` w sekcji `FUNCTIONAL_FLOW` dopasuj do `goal`"));
         assertTrue(prompt.contains("`sectionModes.PERSISTENCE=DEEP` i endpoint zapisuje dane"));
         assertTrue(prompt.contains("`TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`"));
         assertTrue(prompt.contains("`GENERATED`, `REQUEST`, `CALCULATED`"));
@@ -63,7 +68,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Context clipping notes"));
         assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
         assertTrue(prompt.contains("Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`"));
-        assertTrue(prompt.contains("GitLab tools do not read endpoint business scope from hidden ToolContext"));
+        assertTrue(prompt.contains("GitLab tools do not read endpoint functional scope from hidden ToolContext"));
         assertTrue(prompt.contains("pass `branchRef` explicitly from `canonical-tool-inputs.md`"));
         assertTrue(prompt.contains("Pass `applicationName`, known `projectName` and `branchRef` values"));
         assertTrue(prompt.contains("Pass `filePath` and method selectors from `compact-flow-manifest.md`"));
@@ -81,7 +86,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("public CustomerResponse getCustomer"));
         assertTrue(prompt.contains("\"overview\""));
         assertTrue(prompt.contains("\"sections\""));
-        assertTrue(prompt.contains("BUSINESS_FLOW_RULES"));
+        assertTrue(prompt.contains("FUNCTIONAL_FLOW"));
         assertTrue(prompt.contains("\"confidence\": \"high|medium|low\""));
     }
 
@@ -115,7 +120,7 @@ class FlowExplorerPromptPreparationServiceTest {
 
         assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
         assertTrue(prompt.contains("MUST: flow-explorer-goal-deep-discovery"));
-        assertTrue(prompt.contains("Szukaj pelnego przeplywu biznesowo-systemowego"));
+        assertTrue(prompt.contains("Szukaj pelnego functional flow"));
     }
 
     private static FlowExplorerContextSnapshot contextSnapshot() {
@@ -130,7 +135,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4-mini",
@@ -164,7 +169,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.PERSISTENCE),
                 null,
-                "Pokaz flow biznesowo.",
+                "Pokaz flow funkcjonalny.",
                 "gpt-5.4-mini",
                 "high"
         );

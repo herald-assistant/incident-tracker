@@ -61,9 +61,9 @@ class FlowExplorerJobControllerTest {
                                   "endpointId": "GET:/api/customers/{id}",
                                   "branch": "feature/FLOW-42",
                                   "goal": "DEEP_DISCOVERY",
-                                  "focusAreas": ["BUSINESS_FLOW_RULES"],
+                                  "focusAreas": ["FUNCTIONAL_FLOW"],
                                   "sectionModes": [
-                                    {"id": "BUSINESS_FLOW_RULES", "mode": "DEEP"},
+                                    {"id": "FUNCTIONAL_FLOW", "mode": "DEEP"},
                                     {"id": "VALIDATIONS", "mode": "COMPACT"},
                                     {"id": "PERSISTENCE", "mode": "OFF"},
                                     {"id": "INTEGRATIONS", "mode": "COMPACT"}
@@ -79,8 +79,8 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.endpointId").value("GET:/api/customers/{id}"))
                 .andExpect(jsonPath("$.branch").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.goal").value("DEEP_DISCOVERY"))
-                .andExpect(jsonPath("$.focusAreas[0]").value("BUSINESS_FLOW_RULES"))
-                .andExpect(jsonPath("$.sectionModes[0].id").value("BUSINESS_FLOW_RULES"))
+                .andExpect(jsonPath("$.focusAreas[0]").value("FUNCTIONAL_FLOW"))
+                .andExpect(jsonPath("$.sectionModes[0].id").value("FUNCTIONAL_FLOW"))
                 .andExpect(jsonPath("$.sectionModes[0].mode").value("DEEP"))
                 .andExpect(jsonPath("$.aiModel").value("gpt-5.4"))
                 .andExpect(jsonPath("$.reasoningEffort").value("medium"))
@@ -95,7 +95,7 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.contextSnapshot.snippetCards[0].content").value(org.hamcrest.Matchers.containsString("getCustomer")))
                 .andExpect(jsonPath("$.result.goal").value("DEEP_DISCOVERY"))
                 .andExpect(jsonPath("$.result.aiResponse.overview.markdown").value("Context ready."))
-                .andExpect(jsonPath("$.result.aiResponse.sections[0].id").value("BUSINESS_FLOW_RULES"))
+                .andExpect(jsonPath("$.result.aiResponse.sections[0].id").value("FUNCTIONAL_FLOW"))
                 .andExpect(jsonPath("$.result.aiResponse.sections[0].mode").value("DEEP"));
 
         verify(flowExplorerJobService).startJob(new FlowExplorerJobStartRequest(
@@ -105,10 +105,10 @@ class FlowExplorerJobControllerTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 List.of(
                         new FlowExplorerSectionModeRequest(
-                                FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
+                                FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
                                 FlowExplorerResultSectionMode.DEEP
                         ),
                         new FlowExplorerSectionModeRequest(
@@ -246,8 +246,8 @@ class FlowExplorerJobControllerTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
-                FlowExplorerResultSectionModeResolver.resolve(List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES)),
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
+                FlowExplorerResultSectionModeResolver.resolve(List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW)),
                 "gpt-5.4",
                 "medium",
                 "COMPLETED",
@@ -309,8 +309,8 @@ class FlowExplorerJobControllerTest {
                         List.of("crm-service:CustomerController.java:L12-L24")
                 ),
                 List.of(new FlowExplorerResultSection(
-                        FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
-                        "Business flow/rules",
+                        FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
+                        "Functional flow",
                         FlowExplorerResultSectionMode.DEEP,
                         "Controller przyjmuje request.",
                         List.of("crm-service:CustomerController.java:L12-L24"),

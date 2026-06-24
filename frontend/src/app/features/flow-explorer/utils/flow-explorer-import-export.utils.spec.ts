@@ -21,20 +21,20 @@ describe('flow-explorer-import-export utils', () => {
     expect(envelope.payload.diagnostics.resultContract).toBe(FLOW_EXPLORER_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.request.goal).toBe('DEEP_DISCOVERY');
     expect(envelope.payload.diagnostics.request.sectionModes[0]?.mode).toBe('DEEP');
-    expect(envelope.payload.diagnostics.result.sectionModes.BUSINESS_FLOW_RULES).toBe('deep');
+    expect(envelope.payload.diagnostics.result.sectionModes.FUNCTIONAL_FLOW).toBe('deep');
     expect(envelope.payload.diagnostics.context.snippetCardCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.contextEvidenceItemCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.toolEvidenceItemCount).toBe(1);
     expect(envelope.payload.diagnostics.artifacts.map((artifact) => artifact.name)).toContain(
       'flow-explorer-result.md'
     );
-    expect(envelope.payload.diagnostics.resultMarkdown).toContain('## Business flow/rules');
+    expect(envelope.payload.diagnostics.resultMarkdown).toContain('## Functional flow');
     expect(envelope.payload.diagnostics.resultMarkdown).not.toContain('class CustomerService');
     expect(imported.exportedAt).toBe(exportedAt);
     expect(imported.job.jobId).toBe('flow-job-1');
     expect(imported.job.goal).toBe('DEEP_DISCOVERY');
-    expect(imported.job.result?.aiResponse?.sections[0]?.title).toBe('Business flow/rules');
-    expect(imported.job.result?.aiResponse?.sections[0]?.markdown).toContain('Load customer aggregate');
+    expect(imported.job.result?.aiResponse?.sections[0]?.title).toBe('Functional flow');
+    expect(imported.job.result?.aiResponse?.sections[0]?.markdown).toContain('Flow krok po kroku');
   });
 
   it('should build diagnostics for the current goal-based result contract', () => {
@@ -72,13 +72,13 @@ describe('flow-explorer-import-export utils', () => {
     );
   });
 
-  it('should reject legacy top-level result fields on import', () => {
+  it('should reject unsupported ai response fields on import', () => {
     const envelope = buildFlowExplorerExportEnvelope(flowExplorerJob(), '2026-06-18T10:00:00Z');
     const payload = envelope.payload.job.result?.aiResponse as unknown as Record<string, unknown>;
-    payload['businessRules'] = [];
+    payload['extraNotes'] = [];
 
     expect(() => parseImportedFlowExplorerAnalysis(envelope)).toThrow(
-      'Flow Explorer export zawiera legacy pola wyniku: businessRules.'
+      'Flow Explorer aiResponse zawiera nieobsługiwane pola: extraNotes.'
     );
   });
 
@@ -95,9 +95,9 @@ describe('flow-explorer-import-export utils', () => {
 
   it('should import a result with an off section omitted', () => {
     const job = flowExplorerJob({
-      focusAreas: ['BUSINESS_FLOW_RULES'],
+      focusAreas: ['FUNCTIONAL_FLOW'],
       sectionModes: [
-        { id: 'BUSINESS_FLOW_RULES', title: 'Business flow/rules', mode: 'DEEP' },
+        { id: 'FUNCTIONAL_FLOW', title: 'Functional flow', mode: 'DEEP' },
         { id: 'VALIDATIONS', title: 'Validations', mode: 'COMPACT' },
         { id: 'PERSISTENCE', title: 'Persistence', mode: 'COMPACT' },
         { id: 'INTEGRATIONS', title: 'Integrations', mode: 'OFF' }
@@ -112,7 +112,7 @@ describe('flow-explorer-import-export utils', () => {
 
     expect(imported.job.sectionModes.find((sectionMode) => sectionMode.id === 'INTEGRATIONS')?.mode).toBe('OFF');
     expect(imported.job.result?.aiResponse?.sections.map((section) => section.id)).toEqual([
-      'BUSINESS_FLOW_RULES',
+      'FUNCTIONAL_FLOW',
       'VALIDATIONS',
       'PERSISTENCE'
     ]);
@@ -136,9 +136,9 @@ function flowExplorerJob(
     endpointPath: '/api/customers/{id}',
     branch: 'main',
     goal: 'DEEP_DISCOVERY',
-    focusAreas: ['BUSINESS_FLOW_RULES'],
+    focusAreas: ['FUNCTIONAL_FLOW'],
     sectionModes: [
-      { id: 'BUSINESS_FLOW_RULES', title: 'Business flow/rules', mode: 'DEEP' },
+      { id: 'FUNCTIONAL_FLOW', title: 'Functional flow', mode: 'DEEP' },
       { id: 'VALIDATIONS', title: 'Validations', mode: 'COMPACT' },
       { id: 'PERSISTENCE', title: 'Persistence', mode: 'COMPACT' },
       { id: 'INTEGRATIONS', title: 'Integrations', mode: 'COMPACT' }
@@ -316,10 +316,17 @@ function flowExplorerJob(
         },
         sections: [
           {
-            id: 'BUSINESS_FLOW_RULES',
-            title: 'Business flow/rules',
+            id: 'FUNCTIONAL_FLOW',
+            title: 'Functional flow',
             mode: 'deep',
-            markdown: 'Load customer aggregate and return the CRM profile.',
+            markdown:
+              '- **Cel funkcjonalny:** pokazac profil klienta CRM.\n' +
+              '- **Flow krok po kroku:** 1. system przyjmuje request; 2. waliduje id; 3. dociaga profil klienta; 4. zwraca dane bez zapisu stanu.\n' +
+              '- **Koordynacja i routing:** sciezka zalezy od identyfikatora klienta i statusu profilu.\n' +
+              '- **Kalkulacje i reguly funkcjonalne:** profil jest widoczny tylko dla potwierdzonego klienta CRM.\n' +
+              '- **Rozgalezienia zalezne od kontekstu:** brak rekordu konczy flow kontrolowanym brakiem danych.\n' +
+              '- **Handoffy i efekty uboczne:** endpoint odczytuje dane i zwraca odpowiedz; szczegoly danych sa w sekcji Persistence.\n' +
+              '- **Akcent goal:** wskazac glowne warianty funkcjonalne.',
             sourceRefs: ['CustomerService.getCustomer L30-L44'],
             visibilityLimits: [],
             openQuestions: []

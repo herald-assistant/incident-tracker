@@ -243,7 +243,7 @@ public class FlowExplorerArtifactService {
                   },
                   "sections": [
                     {
-                      "id": "only active sectionModes ids: BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
+                      "id": "only active sectionModes ids: FUNCTIONAL_FLOW|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
                       "title": "string",
                       "mode": "compact|deep, never off",
                       "markdown": "string",

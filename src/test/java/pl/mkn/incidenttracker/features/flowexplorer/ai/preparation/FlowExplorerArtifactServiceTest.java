@@ -121,7 +121,7 @@ class FlowExplorerArtifactServiceTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
                 "Skup sie na jezyku zrozumialym dla testera.",
                 null,

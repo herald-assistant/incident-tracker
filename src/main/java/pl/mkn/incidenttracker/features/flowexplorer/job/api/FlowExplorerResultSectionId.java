@@ -1,7 +1,7 @@
 package pl.mkn.incidenttracker.features.flowexplorer.job.api;
 
 public enum FlowExplorerResultSectionId {
-    BUSINESS_FLOW_RULES("Business flow/rules", FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+    FUNCTIONAL_FLOW("Functional flow", FlowExplorerFocusArea.FUNCTIONAL_FLOW),
     VALIDATIONS("Validations", FlowExplorerFocusArea.VALIDATIONS),
     PERSISTENCE("Persistence", FlowExplorerFocusArea.PERSISTENCE),
     INTEGRATIONS("Integrations", FlowExplorerFocusArea.INTEGRATIONS);

@@ -29,7 +29,7 @@ Zwroc dokladnie jeden obiekt JSON zgodny z polami:
   },
   "sections": [
     {
-                      "id": "BUSINESS_FLOW_RULES|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
+                      "id": "FUNCTIONAL_FLOW|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
                       "title": "string",
                       "mode": "compact|deep",
       "markdown": "string",
@@ -45,9 +45,9 @@ Zwroc dokladnie jeden obiekt JSON zgodny z polami:
 }
 ```
 
-Nie dodawaj top-level pol spoza kontraktu. Nie przywracaj pol legacy:
-`userIntentSummary`, `audienceSummary`, `endpointContract`, `flowSteps`,
-`businessRules`, `testScenarios`, `risksAndEdgeCases`, `visibilityLimits`.
+Nie dodawaj top-level pol spoza kontraktu. Informacje dla innych perspektyw
+umieszczaj w aktywnych sekcjach z `sectionModes`, a nie w osobnych polach
+na poziomie calej odpowiedzi.
 
 ## Sekcje I Kolejnosc
 
@@ -57,7 +57,7 @@ trybem `OFF` ma nie pojawic sie w tablicy `sections`.
 
 Zachowaj kolejnosc aktywnych sekcji wedlug stalego porzadku:
 
-1. `BUSINESS_FLOW_RULES` / `Business flow/rules`
+1. `FUNCTIONAL_FLOW` / `Functional flow`
 2. `VALIDATIONS` / `Validations`
 3. `PERSISTENCE` / `Persistence`
 4. `INTEGRATIONS` / `Integrations`
@@ -77,6 +77,51 @@ decyzje i ograniczenia widocznosci w zwartej formie.
 `deep` ma zawierac konkretne reguly, warianty, edge case'y, source refs,
 otwarte pytania i limity widocznosci dla danej sekcji.
 
+## Functional Flow Contract
+
+Sekcja `FUNCTIONAL_FLOW` ma tytul `Functional flow`. Jej glownym elementem jest
+chronologiczny flow endpointu: co system robi po kolei, jakie decyzje/warunki
+sa widoczne w implementacji, jaki jest efekt dla procesu, uzytkownika albo
+danych oraz gdzie termin domenowy jest potwierdzony albo tylko inferowany.
+
+`sections[].markdown` dla `FUNCTIONAL_FLOW` zawsze formatuj jako te same
+punkty, w tej kolejnosci:
+
+- **Cel funkcjonalny:** po co endpoint istnieje z perspektywy procesu albo
+  uzytkownika.
+- **Flow krok po kroku:** uporzadkowany przebieg w kolejnosci wystapienia,
+  np. autentykacja/autoryzacja, walidacja inputu, dociagniecie danych,
+  kalkulacje, decyzje, wzmianka o persistence, publikacja zdarzen/kolejka,
+  request downstream albo odpowiedz. Nie pomijaj etapu tylko dlatego, ze jest
+  techniczny, jezeli zmienia zachowanie funkcjonalne.
+- **Koordynacja i routing:** jak endpoint wybiera dalsza sciezke na podstawie
+  inputu, dociagnietych danych, stalych, konfiguracji, typu obiektu, statusu
+  albo kontekstu procesu.
+- **Kalkulacje i reguly funkcjonalne:** szczegolowo opisz wyliczenia, reguly,
+  transformacje, priorytety, klasyfikacje, statusy wynikowe i zaleznosci
+  miedzy danymi. Jezeli to sa reguly biznesowe widoczne w kodzie, nazwij je w
+  jezyku domenowym, ale nie obiecuj, ze jest to pelny katalog reguly poza
+  analizowanym kodem.
+- **Rozgalezienia zalezne od kontekstu:** warianty happy path, alternate path,
+  brak danych, inny status, inny typ klienta/sprawy/obiektu, feature flag,
+  konfiguracja albo upstream/downstream context. Dla kazdego wariantu wskaz
+  warunek i efekt.
+- **Handoffy i efekty uboczne:** tylko w zakresie flow: wspomnij, ze endpoint
+  zapisuje stan, publikuje event, wysyla request, zleca prace kolejce albo
+  zwraca odpowiedz. Szczegoly persistence zostaw sekcji `PERSISTENCE`, a
+  szczegoly integracji sekcji `INTEGRATIONS`.
+- **Akcent goal:** material zalezy od `goal`: dla `DEEP_DISCOVERY` najwazniejsze
+  warianty flow, dla `TEST_SCENARIOS` sciezki do pokrycia testami, dla
+  `RISK_DETECTION` ryzyka i pytania wokol functional flow.
+
+Compact ma wypelnic kazdy punkt jednym krotkim zdaniem albo lista po sredniku.
+Deep moze rozwinac punkty, ale nie zmienia ich nazw ani kolejnosci.
+Nie umieszczaj source refs, evidence ani ograniczen widocznosci w glownym
+`markdown` tej sekcji. UI pokazuje je osobno jako zwijane elementy z pol
+`sourceRefs`, `visibilityLimits` i `openQuestions`.
+Jezeli nie masz potwierdzonego terminu domenowego, nazwij go jako inferencje i
+dodaj limit widocznosci albo pytanie otwarte.
+
 ## Jezyk I Odbiorca
 
 Pisz po polsku, prostym jezykiem dla analityka albo testera. Glowne pola
@@ -92,7 +137,7 @@ W narracji uzywaj:
 
 - celu endpointu,
 - czynnosci systemowych,
-- reguly biznesowej albo decyzyjnej,
+- warunku funkcjonalnego albo decyzji widocznej w kodzie,
 - stanu danych przed/po,
 - walidacji i odrzucen,
 - integracji, eventu, kolejki albo handoffu,

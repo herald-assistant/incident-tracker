@@ -94,7 +94,7 @@ Przyklad CRM-specific, zanonimizowany:
 Operational context moze wzbogacic:
 
 - `overview.markdown`,
-- `BUSINESS_FLOW_RULES`,
+- `FUNCTIONAL_FLOW`,
 - `VALIDATIONS`, gdy katalog wyjasnia regule albo warunek biznesowy,
 - `PERSISTENCE`, gdy katalog pomaga nazwac bounded context albo dane,
 - `INTEGRATIONS`, gdy katalog pomaga nazwac system, handoff albo ownership,

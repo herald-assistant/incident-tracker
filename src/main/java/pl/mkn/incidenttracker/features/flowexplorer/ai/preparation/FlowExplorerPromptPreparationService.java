@@ -32,7 +32,7 @@ public class FlowExplorerPromptPreparationService {
                 - Odpowiadasz dla analityka/testera lub mniej technicznej osoby.
                 - Uzywaj prostego jezyka, ale opieraj wnioski na kodzie i operational context.
                 - Kod, klasy, metody, pliki i tool calls sa evidence w tle. Nie uzywaj ich jako glownego jezyka dokumentacji.
-                - W polach `markdown` tlumacz implementacje na czynnosci systemowe, reguly biznesowe, stany danych, walidacje i handoffy.
+                - W polach `markdown` tlumacz implementacje na czynnosci systemowe, warunki funkcjonalne, stany danych, walidacje i handoffy.
                 - Nazwy klas, metod, plikow i linii trzymaj przede wszystkim w `sourceRefs` albo zwijalnych referencjach, nie w glownej narracji.
                 - Wspieraj sie operational context, zwlaszcza glossary, procesami, bounded context i integracjami, zeby nazwac flow jezykiem domenowym.
                 - Jezeli implementacja sugeruje wazny termin domenowy, ktorego brakuje w glossary/operational context, dedukuj robocza nazwe jako inferencje, wpisz limit albo pytanie otwarte i zglos brak przez `record_tool_feedback` z `issueCategory=missing_operational_context` oraz `improvementArea=operational_context_data`.
@@ -44,6 +44,10 @@ public class FlowExplorerPromptPreparationService {
                 - Wynik ma zawsze zawierac `overview` oraz tylko aktywne sekcje z `sectionModes`.
                 - `sectionModes` jest zrodlem prawdy dla sekcji wyniku: `OFF` oznacza, ze sekcji nie wolno zwracac w `sections`; `COMPACT` i `DEEP` oznaczaja, ze sekcja musi byc zwrocona.
                 - Dla aktywnych sekcji ustaw `mode` zgodnie z `sectionModes`: `deep` oznacza bardziej szczegolowa odpowiedz, `compact` oznacza zwarta, ale nadal konkretna odpowiedz. Nigdy nie zwracaj `mode=off`.
+                - Sekcja `FUNCTIONAL_FLOW` musi miec tytul `Functional flow`, a jej `markdown` musi byc opisem flow w kolejnosci wystapienia, ze stalymi punktami: `Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`, `Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`, `Handoffy i efekty uboczne`, `Akcent goal`.
+                - W `Flow krok po kroku` wypisz uporzadkowany przebieg: autentykacja/autoryzacja, walidacja inputu, dociagniecie danych, kalkulacje/reguly, decyzje, wzmianka o persistence, publikacja zdarzen/kolejka/request downstream albo odpowiedz, jezeli sa widoczne w evidence.
+                - Nie umieszczaj evidence, source refs ani ograniczen widocznosci w glownym `markdown` sekcji `FUNCTIONAL_FLOW`; do tego sluza osobne pola `sourceRefs`, `visibilityLimits` i `openQuestions`, ktore UI pokazuje jako zwijane elementy.
+                - Punkt `Akcent goal` w sekcji `FUNCTIONAL_FLOW` dopasuj do `goal`: warianty i znaczenie dla `DEEP_DISCOVERY`, sciezki testowe dla `TEST_SCENARIOS`, ryzyka i pytania do domkniecia dla `RISK_DETECTION`.
                 - Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`; to jest initial evidence przygotowane deterministycznie.
                 - Nie powtarzaj GitLab tool calls dla kodu, ktory jest juz widoczny w `snippet-cards.md`.
                 - Jezeli `openapi-endpoint-contract.md` jest dostepny, uzyj go jako kontraktu API request/response/parameters/security dla wybranego endpointu. Nie czytaj pelnego OpenAPI YAML.
@@ -73,7 +77,7 @@ public class FlowExplorerPromptPreparationService {
                 %s
 
                 ## Tool scope guidance
-                - GitLab tools do not read endpoint business scope from hidden ToolContext.
+                - GitLab tools do not read endpoint functional scope from hidden ToolContext.
                 - When calling GitLab tools, pass `branchRef` explicitly from `canonical-tool-inputs.md`.
                 - Pass `applicationName`, known `projectName` and `branchRef` values from `canonical-tool-inputs.md`.
                 - Pass `filePath` and method selectors from `compact-flow-manifest.md` or `openapi-endpoint-contract.md` when the tool needs code scope.
@@ -224,7 +228,7 @@ public class FlowExplorerPromptPreparationService {
             return """
                     MUST: flow-explorer-goal-test-scenarios
                     - Uzyj przed wypelnieniem sekcji merytorycznych dla celu TEST_SCENARIOS.
-                    - Szukaj regul, walidacji, stanow danych, integracji i wariantow, ktore daja konkretne scenariusze testowe bez przepisywania implementacji.
+                    - Szukaj warunkow funkcjonalnych, walidacji, stanow danych, integracji i wariantow, ktore daja konkretne scenariusze testowe bez przepisywania implementacji.
                     """.stripTrailing();
         }
         if (goal == FlowExplorerAnalysisGoal.RISK_DETECTION) {
@@ -237,7 +241,7 @@ public class FlowExplorerPromptPreparationService {
         return """
                 MUST: flow-explorer-goal-deep-discovery
                 - Uzyj przed wypelnieniem sekcji merytorycznych dla celu DEEP_DISCOVERY.
-                - Szukaj pelnego przeplywu biznesowo-systemowego, reguly domenowej, walidacji, zapisu danych, handoffow i integracji.
+                - Szukaj pelnego functional flow, warunkow domenowych widocznych w kodzie, walidacji, zapisu danych, handoffow i integracji.
                 """.stripTrailing();
     }
 

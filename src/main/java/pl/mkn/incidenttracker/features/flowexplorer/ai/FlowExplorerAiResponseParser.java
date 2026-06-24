@@ -25,12 +25,24 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class FlowExplorerAiResponseParser {
 
-    private static final Set<String> LEGACY_TOP_LEVEL_FIELDS = Set.of(
-            "endpointContract",
-            "flowSteps",
-            "businessRules",
-            "testScenarios",
-            "risksAndEdgeCases"
+    private static final Set<String> ALLOWED_TOP_LEVEL_FIELDS = Set.of(
+            "goal",
+            "audience",
+            "overview",
+            "sections",
+            "globalVisibilityLimits",
+            "globalOpenQuestions",
+            "sourceReferences",
+            "confidence"
+    );
+    private static final List<String> FUNCTIONAL_FLOW_MARKDOWN_LABELS = List.of(
+            "**Cel funkcjonalny:**",
+            "**Flow krok po kroku:**",
+            "**Koordynacja i routing:**",
+            "**Kalkulacje i reguly funkcjonalne:**",
+            "**Rozgalezienia zalezne od kontekstu:**",
+            "**Handoffy i efekty uboczne:**",
+            "**Akcent goal:**"
     );
 
     private final ObjectMapper objectMapper;
@@ -91,10 +103,9 @@ public class FlowExplorerAiResponseParser {
             FlowExplorerAnalysisGoal requestedGoal,
             List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
-        for (var legacyField : LEGACY_TOP_LEVEL_FIELDS) {
-            if (node.has(legacyField)) {
-                return "AI response contains legacy top-level field: " + legacyField + ".";
-            }
+        var unexpectedTopLevelField = unexpectedField(node, ALLOWED_TOP_LEVEL_FIELDS);
+        if (unexpectedTopLevelField != null) {
+            return "AI response contract violation: unexpected top-level field: " + unexpectedTopLevelField + ".";
         }
 
         var parsedGoal = goalStrict(text(node, "goal"));
@@ -154,7 +165,11 @@ public class FlowExplorerAiResponseParser {
             }
             var sectionId = sectionIdStrict(text(section, "id"));
             if (sectionId == null) {
-                return "AI response contract violation: section.id must be one of BUSINESS_FLOW_RULES, VALIDATIONS, PERSISTENCE, INTEGRATIONS.";
+                return "AI response contract violation: section.id must be one of FUNCTIONAL_FLOW, VALIDATIONS, PERSISTENCE, INTEGRATIONS.";
+            }
+            if (sectionId == FlowExplorerResultSectionId.FUNCTIONAL_FLOW
+                    && !sectionId.title().equals(text(section, "title"))) {
+                return "AI response contract violation: FUNCTIONAL_FLOW title must be Functional flow.";
             }
             if (!sectionIds.add(sectionId)) {
                 return "AI response contract violation: sections must not contain duplicate ids.";
@@ -170,8 +185,13 @@ public class FlowExplorerAiResponseParser {
             if (validateModes && expectedModes.get(sectionId) != sectionMode) {
                 return "AI response contract violation: section.mode does not match request sectionModes.";
             }
-            if (!StringUtils.hasText(text(section, "markdown"))) {
+            var markdown = text(section, "markdown");
+            if (!StringUtils.hasText(markdown)) {
                 return "AI response contract violation: section.markdown is required for " + sectionId.name() + ".";
+            }
+            var markdownError = validateSectionMarkdown(sectionId, markdown);
+            if (markdownError != null) {
+                return markdownError;
             }
             for (var fieldName : List.of("sourceRefs", "visibilityLimits", "openQuestions")) {
                 var listError = validateListField(section, sectionId.name(), fieldName);
@@ -187,12 +207,44 @@ public class FlowExplorerAiResponseParser {
         return null;
     }
 
+    private String validateSectionMarkdown(FlowExplorerResultSectionId sectionId, String markdown) {
+        if (sectionId != FlowExplorerResultSectionId.FUNCTIONAL_FLOW) {
+            return null;
+        }
+        if (markdown.contains("**Evidence") || markdown.contains("**Ograniczenia")) {
+            return "AI response contract violation: FUNCTIONAL_FLOW markdown must keep evidence and limits in sourceRefs, visibilityLimits or openQuestions.";
+        }
+        var previousIndex = -1;
+        for (var label : FUNCTIONAL_FLOW_MARKDOWN_LABELS) {
+            var index = markdown.indexOf(label);
+            if (index <= previousIndex) {
+                return "AI response contract violation: FUNCTIONAL_FLOW markdown must use the required bullet structure.";
+            }
+            previousIndex = index;
+        }
+        return null;
+    }
+
     private String validateListField(JsonNode objectNode, String owner, String fieldName) {
         var field = objectNode.get(fieldName);
         if (field == null || field.isNull() || field.isArray()) {
             return null;
         }
         return "AI response contract violation: " + owner + "." + fieldName + " must be an array.";
+    }
+
+    private String unexpectedField(JsonNode objectNode, Set<String> allowedFields) {
+        if (objectNode == null || !objectNode.isObject()) {
+            return null;
+        }
+        var fieldNames = objectNode.fieldNames();
+        while (fieldNames.hasNext()) {
+            var fieldName = fieldNames.next();
+            if (!allowedFields.contains(fieldName)) {
+                return fieldName;
+            }
+        }
+        return null;
     }
 
     private FlowExplorerResultOverview overview(JsonNode node) {

@@ -40,8 +40,8 @@ nazwe jako inferowana i zglos luke przez feedback tool jako
 
 Kazda sekcja ma patrzec na inny rodzaj ryzyka:
 
-- `BUSINESS_FLOW_RULES`: niejasne reguly, warianty procesu, decyzje i skutki
-  biznesowe,
+- `FUNCTIONAL_FLOW`: niejasne warunki funkcjonalne, warianty procesu, decyzje
+  i skutki domenowe,
 - `VALIDATIONS`: brakujace albo niejasne walidacje, odrzucenia, statusy i dane
   wejscia,
 - `PERSISTENCE`: stan danych, transakcje, read/write, duplikaty, idempotencja i
@@ -64,25 +64,40 @@ sekcji, w kazdej sekcji opisz tylko jej perspektywe.
 
 Overview nie jest pelnym rejestrem ryzyk. Ma ustawic priorytet czytania.
 
-## Business flow/rules
+## Functional flow
+
+Sekcja `FUNCTIONAL_FLOW` zawsze trzyma strukture z kontraktu wyniku:
+`Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`,
+`Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`,
+`Handoffy i efekty uboczne`, `Akcent goal`.
+Nie zmieniaj nazw punktow. W `RISK_DETECTION` punkt `Akcent goal` ma wskazac
+ryzyka, skutki i sposob zamkniecia ryzyka dla functional flow.
+Evidence, source refs i ograniczenia widocznosci przekazuj w osobnych polach
+`sourceRefs`, `visibilityLimits` i `openQuestions`, nie w glownym markdownie.
 
 ### compact
 
 Zwroc:
 
-- 2-4 najwazniejsze ryzyka dotyczace sensu biznesowego endpointu,
+- 2-4 najwazniejsze ryzyka dotyczace sensu funkcjonalnego endpointu,
+- ryzyka wynikajace z kolejnosci flow: auth/authz, walidacja inputu,
+  dociagniecie danych, kalkulacje/decyzje, persistence jako etap,
+  event/request/odpowiedz,
 - warianty procesu albo decyzje, ktore moga byc niejasne,
 - mozliwy skutek dla uzytkownika, procesu albo testow,
-- typ ryzyka: fakt, inferencja, luka widocznosci albo pytanie otwarte,
-- source refs albo visibility limit.
+- typ ryzyka: fakt, inferencja, luka widocznosci albo pytanie otwarte.
 
 ### deep
 
 Oprocz compact dodaj:
 
-- ryzyka alternatywnych sciezek biznesowych,
-- reguly, ktore wygladaja na ukryte w kodzie, konfiguracji albo upstreamie,
-- ryzyka regresji po zmianie warunku biznesowego,
+- ryzyka alternatywnych sciezek funkcjonalnych,
+- warunki, ktore wygladaja na ukryte w kodzie, konfiguracji albo upstreamie,
+- ryzyka koordynacji/routingu na podstawie inputu, dociagnietych danych,
+  stalych, statusow albo kontekstu procesu,
+- ryzyka kalkulacji, regul funkcjonalnych, klasyfikacji, transformacji i
+  priorytetow widocznych w kodzie,
+- ryzyka regresji po zmianie warunku funkcjonalnego,
 - rozroznienie: co kod potwierdza, co tylko sugeruje, czego nie widac,
 - konkretne pytania do analityka albo zespolu, jezeli oczekiwane zachowanie nie
   jest jednoznaczne.

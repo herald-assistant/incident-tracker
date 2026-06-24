@@ -23,7 +23,7 @@ Nie streszczaj kodu klasa po klasie. Zawsze tlumacz zachowanie endpointu:
 
 - co wyzwala request,
 - jaki jest glowny happy path,
-- jakie decyzje albo reguly zmieniaja zachowanie,
+- jakie decyzje albo warunki funkcjonalne zmieniaja zachowanie,
 - co moze przerwac flow,
 - jaki stan jest czytany albo zmieniany,
 - jakie systemy zewnetrzne dostaja sygnal albo dane,
@@ -65,27 +65,42 @@ dla realnego endpointu.
 
 Nie opisuj w Overview calej implementacji. Overview ma dac szybka orientacje.
 
-## Business flow/rules
+## Functional flow
+
+Sekcja `FUNCTIONAL_FLOW` zawsze trzyma strukture z kontraktu wyniku:
+`Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`,
+`Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`,
+`Handoffy i efekty uboczne`, `Akcent goal`.
+Nie zmieniaj nazw punktow. W `DEEP_DISCOVERY` punkt `Akcent goal` ma pokazac
+najwazniejsze warianty flow i ich znaczenie dla zrozumienia endpointu.
+Evidence, source refs i ograniczenia widocznosci przekazuj w osobnych polach
+`sourceRefs`, `visibilityLimits` i `openQuestions`, nie w glownym markdownie.
 
 ### compact
 
 Zwróć:
 
-- glowny przebieg requestu od wejscia HTTP do odpowiedzi,
-- najwazniejsze decyzje biznesowe albo systemowe,
-- efekt endpointu widoczny dla uzytkownika lub procesu,
-- 1-3 source refs potwierdzajace primary flow.
+- glowny przebieg requestu od wejscia HTTP do odpowiedzi albo handoffu,
+- kolejnosc najwazniejszych etapow: auth/authz, walidacja inputu, pobranie
+  danych, kalkulacje/decyzje, wzmianka o persistence, event/request/odpowiedz,
+- najwazniejsze decyzje domenowe albo systemowe widoczne w kodzie,
+- efekt endpointu widoczny dla uzytkownika lub procesu.
 
 ### deep
 
 Oprocz compact dodaj:
 
-- warianty flow i warunki przejsc,
-- reguly biznesowe, flagi, statusy, typy klienta/sprawy/obiektu, ktore
+- warianty flow i warunki przejsc w kolejnosci wystapienia,
+- warunki funkcjonalne, flagi, statusy, typy klienta/sprawy/obiektu, ktore
   zmieniaja zachowanie,
+- koordynacje i routing oparte na input, dociagnietych danych, stalych,
+  konfiguracji, statusach albo kontekście procesu,
+- szczegolowe kalkulacje, reguly funkcjonalne, klasyfikacje, transformacje i
+  priorytety widoczne w kodzie,
 - error boundary: kiedy flow konczy sie bledem, brakiem danych albo odmowa,
 - rozroznienie faktow z kodu od inferencji,
-- konkretne source refs dla kazdego istotnego wariantu.
+- persistence i integracje tylko jako etap flow, a nie szczegoly nalezace do
+  sekcji `PERSISTENCE` albo `INTEGRATIONS`.
 
 ## Validations
 
@@ -160,7 +175,7 @@ nazwy klienta technicznego, klasy, beana ani repozytorium jako `SOURCE`.
 
 Nie koncz `PERSISTENCE=DEEP` bez ustalenia `SOURCE` dla zapisywanych danych.
 Zrodlo wartosci wyprowadzaj z request DTO, mappera, serwisu, odpowiedzi
-integracji, konfiguracji albo reguly biznesowej. Jezeli brakuje widocznosci,
+integracji, konfiguracji albo warunku funkcjonalnego. Jezeli brakuje widocznosci,
 czytaj kolejne waskie fragmenty kodu zwiazane z flow, az potwierdzisz zrodlo
 albo trafisz na twardy limit widocznosci. Dopiero wtedy dodaj
 `visibilityLimits` albo `openQuestions`; nie wpisuj technicznego placeholdera

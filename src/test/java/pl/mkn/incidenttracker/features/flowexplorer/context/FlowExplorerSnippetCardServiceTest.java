@@ -95,7 +95,7 @@ class FlowExplorerSnippetCardServiceTest {
                         ))
                         .toList(),
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES)
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW)
         );
 
         assertEquals(20, result.cards().size());

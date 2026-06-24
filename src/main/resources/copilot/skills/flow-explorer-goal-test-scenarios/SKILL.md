@@ -23,7 +23,7 @@ wpisuj w `overview.markdown` i aktywne sekcje kontraktu wynikajace z
 
 Kazda aktywna sekcja ma odpowiadac na inne pytanie testowe:
 
-- `BUSINESS_FLOW_RULES`: jakie sciezki biznesowe i warianty procesu pokryc,
+- `FUNCTIONAL_FLOW`: jakie sciezki funkcjonalne i warianty procesu pokryc,
 - `VALIDATIONS`: jakie dane, stany i bledy powinny zostac odrzucone,
 - `PERSISTENCE`: jaki setup danych, stan przed/po i regresje danych sprawdzic,
 - `INTEGRATIONS`: jakie zaleznosci systemowe, handoffy i awarie integracji
@@ -51,26 +51,41 @@ dostepny.
 
 Overview nie jest pelnym planem testow. Ma ustawic kontekst i priorytet.
 
-## Business flow/rules
+## Functional flow
+
+Sekcja `FUNCTIONAL_FLOW` zawsze trzyma strukture z kontraktu wyniku:
+`Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`,
+`Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`,
+`Handoffy i efekty uboczne`, `Akcent goal`.
+Nie zmieniaj nazw punktow. W `TEST_SCENARIOS` punkt `Akcent goal` ma wskazac
+konkretne sciezki i warunki do pokrycia testami.
+Evidence, source refs i ograniczenia widocznosci przekazuj w osobnych polach
+`sourceRefs`, `visibilityLimits` i `openQuestions`, nie w glownym markdownie.
 
 ### compact
 
 Zwróć:
 
-- 2-4 najwazniejsze scenariusze procesowe/happy path,
-- warunki biznesowe, ktore zmieniaja oczekiwany wynik,
-- oczekiwane rezultaty widoczne dla uzytkownika albo procesu,
-- source refs potwierdzajace flow.
+- 2-4 najwazniejsze sciezki flow do pokrycia testami,
+- kolejnosc etapow, ktore tester ma odtworzyc: auth/authz, walidacja inputu,
+  pobranie danych, kalkulacje/decyzje, wzmianka o persistence,
+  event/request/odpowiedz,
+- warunki funkcjonalne, ktore zmieniaja oczekiwany wynik,
+- oczekiwane rezultaty widoczne dla uzytkownika albo procesu.
 
 ### deep
 
 Oprocz compact dodaj:
 
-- warianty biznesowe i alternatywne sciezki,
+- warianty funkcjonalne i alternatywne sciezki,
 - warunki wejscia, statusy, typy klienta/sprawy/obiektu albo flagi, ktore
   powinny byc przygotowane w danych testowych,
+- koordynacje/routing zalezne od inputu, dociagnietych danych, stalych,
+  konfiguracji albo kontekstu procesu,
+- kalkulacje, reguly funkcjonalne i transformacje, ktore zmieniaja oczekiwany
+  rezultat testu,
 - oczekiwany rezultat dla kazdego wariantu,
-- testy regresyjne dla decyzji biznesowych,
+- testy regresyjne dla decyzji funkcjonalnych,
 - pytania otwarte, jezeli kod nie pokazuje oczekiwanego zachowania.
 
 ## Validations

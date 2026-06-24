@@ -85,7 +85,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 reasoningEffort: %s
 
                 ## Tool scope guidance
-                - GitLab tools do not read endpoint business scope from hidden ToolContext.
+                - GitLab tools do not read endpoint functional scope from hidden ToolContext.
                 - When calling GitLab tools, pass `branchRef` explicitly from `canonical-tool-inputs.md`.
                 - Pass `applicationName`, known `projectName` and `branchRef` values from `canonical-tool-inputs.md`.
                 - Pass `filePath` and method selectors from `compact-flow-manifest.md` or `openapi-endpoint-contract.md` when the tool needs code scope.

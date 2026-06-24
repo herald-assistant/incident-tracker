@@ -343,7 +343,7 @@ function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
 
 function normalizeResult(result: unknown, activeSectionIds: FlowExplorerResultSectionId[]): FlowExplorerResult {
   const resultObject = asObject(result);
-  assertNoLegacyResultFields(resultObject);
+  assertOnlySupportedFields(resultObject, RESULT_FIELDS, 'Flow Explorer result');
   return {
     status: normalizeString(resultObject?.['status']),
     systemId: normalizeString(resultObject?.['systemId']),
@@ -365,7 +365,7 @@ function normalizeAiResponse(
   activeSectionIds: FlowExplorerResultSectionId[]
 ): FlowExplorerAiResponse {
   const responseObject = asObject(response);
-  assertNoLegacyResultFields(responseObject);
+  assertOnlySupportedFields(responseObject, AI_RESPONSE_FIELDS, 'Flow Explorer aiResponse');
   return {
     goal: normalizeGoal(responseObject?.['goal']),
     audience: normalizeString(responseObject?.['audience']) || 'business_or_system_analyst_tester',
@@ -422,14 +422,17 @@ function normalizeSections(
 
 function normalizeSection(section: unknown): FlowExplorerResultSection {
   const sectionObject = asObject(section);
-  const id = normalizeSectionId(sectionObject?.['id']);
+  const rawId = normalizeString(sectionObject?.['id']);
+  const id = normalizeSectionId(rawId);
   if (!id) {
     throw new Error('Flow Explorer result zawiera sekcję bez aktualnego identyfikatora.');
   }
+  const rawTitle = normalizeString(sectionObject?.['title']);
+  const title = rawTitle || sectionTitle(id);
 
   return {
     id,
-    title: normalizeString(sectionObject?.['title']) || sectionTitle(id),
+    title,
     mode: normalizeSectionMode(sectionObject?.['mode']),
     markdown: normalizeString(sectionObject?.['markdown']),
     sourceRefs: normalizeStringArray(sectionObject?.['sourceRefs']),
@@ -718,13 +721,18 @@ function contextStringArray(contextSnapshot: Record<string, unknown> | null, fie
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
-function assertNoLegacyResultFields(value: Record<string, unknown> | null): void {
+function assertOnlySupportedFields(
+  value: Record<string, unknown> | null,
+  allowedFields: readonly string[],
+  owner: string
+): void {
   if (!value) {
     return;
   }
-  const legacyFields = LEGACY_RESULT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(value, field));
-  if (legacyFields.length > 0) {
-    throw new Error(`Flow Explorer export zawiera legacy pola wyniku: ${legacyFields.join(', ')}.`);
+  const allowed = new Set(allowedFields);
+  const unsupported = Object.keys(value).filter((field) => !allowed.has(field));
+  if (unsupported.length > 0) {
+    throw new Error(`${owner} zawiera nieobsługiwane pola: ${unsupported.join(', ')}.`);
   }
 }
 
@@ -831,24 +839,40 @@ function asObject(value: unknown): Record<string, unknown> | null {
 }
 
 const SECTION_IDS: FlowExplorerResultSectionId[] = [
-  'BUSINESS_FLOW_RULES',
+  'FUNCTIONAL_FLOW',
   'VALIDATIONS',
   'PERSISTENCE',
   'INTEGRATIONS'
 ];
 
-const LEGACY_RESULT_FIELDS = [
-  'endpointContract',
-  'flowSteps',
-  'businessRules',
-  'testScenarios',
-  'risksAndEdgeCases'
+const RESULT_FIELDS = [
+  'status',
+  'systemId',
+  'endpointId',
+  'httpMethod',
+  'endpointPath',
+  'branch',
+  'goal',
+  'prompt',
+  'aiResponse',
+  'usage'
+];
+
+const AI_RESPONSE_FIELDS = [
+  'goal',
+  'audience',
+  'overview',
+  'sections',
+  'globalVisibilityLimits',
+  'globalOpenQuestions',
+  'sourceReferences',
+  'confidence'
 ];
 
 function sectionTitle(id: FlowExplorerResultSectionId): string {
   switch (id) {
-    case 'BUSINESS_FLOW_RULES':
-      return 'Business flow/rules';
+    case 'FUNCTIONAL_FLOW':
+      return 'Functional flow';
     case 'VALIDATIONS':
       return 'Validations';
     case 'PERSISTENCE':

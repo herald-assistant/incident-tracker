@@ -111,11 +111,11 @@ class FlowExplorerJobServiceTest {
         assertEquals("Tester chce poznac GET /api/customers/{id}.", started.result().aiResponse().overview().markdown());
         assertEquals("high", started.result().aiResponse().confidence());
         assertEquals(4, started.result().aiResponse().sections().size());
-        assertEquals(FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
+        assertEquals(FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
                 started.result().aiResponse().sections().get(0).id());
         assertEquals(FlowExplorerResultSectionMode.DEEP,
                 started.result().aiResponse().sections().get(0).mode());
-        assertEquals("Controller przyjmuje request.",
+        assertEquals(functionalFlowMarkdown(),
                 started.result().aiResponse().sections().get(0).markdown());
         assertSame(usage, started.result().usage());
 
@@ -377,7 +377,7 @@ class FlowExplorerJobServiceTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES)
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW)
         );
     }
 
@@ -389,7 +389,7 @@ class FlowExplorerJobServiceTest {
                 null,
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
@@ -487,10 +487,10 @@ class FlowExplorerJobServiceTest {
                   },
                   "sections": [
                     {
-                      "id": "BUSINESS_FLOW_RULES",
-                      "title": "Business flow/rules",
+                      "id": "FUNCTIONAL_FLOW",
+                      "title": "Functional flow",
                       "mode": "deep",
-                      "markdown": "Controller przyjmuje request.",
+                      "markdown": "%s",
                       "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": []
@@ -528,7 +528,26 @@ class FlowExplorerJobServiceTest {
                   "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
                   "confidence": "high"
                 }
-                """;
+                """.formatted(functionalFlowMarkdownJson());
+    }
+
+    private static String functionalFlowMarkdownJson() {
+        return functionalFlowMarkdown()
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n");
+    }
+
+    private static String functionalFlowMarkdown() {
+        return String.join("\n", List.of(
+                "- **Cel funkcjonalny:** pokazac profil klienta CRM w procesie obslugi klienta.",
+                "- **Flow krok po kroku:** 1. request przechodzi przez auth/authz; 2. system waliduje id klienta; 3. dociaga profil klienta; 4. sprawdza status widocznosci; 5. bez zapisu stanu zwraca profil CRM.",
+                "- **Koordynacja i routing:** sciezka zalezy od identyfikatora klienta oraz statusu profilu odczytanego z danych CRM.",
+                "- **Kalkulacje i reguly funkcjonalne:** system klasyfikuje profil jako widoczny tylko wtedy, gdy klient istnieje i status pozwala pokazac dane operatorowi.",
+                "- **Rozgalezienia zalezne od kontekstu:** brak klienta konczy flow kontrolowanym brakiem rekordu, a nieaktywny status wymaga potwierdzenia oczekiwanego zachowania.",
+                "- **Handoffy i efekty uboczne:** endpoint tylko odczytuje dane i zwraca odpowiedz; szczegoly persistence zostaja w sekcji PERSISTENCE.",
+                "- **Akcent goal:** w DEEP_DISCOVERY wskazac glowne warianty funkcjonalne i znaczenie dla procesu."
+        ));
     }
 
     private static FlowExplorerContextSnapshot contextSnapshot() {

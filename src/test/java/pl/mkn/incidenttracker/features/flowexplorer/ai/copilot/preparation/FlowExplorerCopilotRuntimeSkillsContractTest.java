@@ -85,6 +85,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Rola",
                 "## Wymagany JSON Contract",
                 "## Sekcje I Kolejnosc",
+                "## Functional Flow Contract",
                 "## Jezyk I Odbiorca",
                 "## Source References",
                 "## Confidence I Visibility Limits",
@@ -94,7 +95,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Cel",
                 "## Zasada Ogolna",
                 "## Overview",
-                "## Business flow/rules",
+                "## Functional flow",
                 "## Validations",
                 "## Persistence",
                 "## Integrations",
@@ -105,7 +106,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Cel",
                 "## Zasada Ogolna",
                 "## Overview",
-                "## Business flow/rules",
+                "## Functional flow",
                 "## Validations",
                 "## Persistence",
                 "## Integrations",
@@ -116,7 +117,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Cel",
                 "## Zasada Ogolna",
                 "## Overview",
-                "## Business flow/rules",
+                "## Functional flow",
                 "## Validations",
                 "## Persistence",
                 "## Integrations",
@@ -159,7 +160,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
         assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
 
-        assertTrue(gitLabTools.contains("GitLab tools nie czytaja business scope'u z hidden `ToolContext`"));
+        assertTrue(gitLabTools.contains("GitLab tools nie czytaja functional scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
         assertTrue(gitLabTools.contains("`filePath` i `methodSelectors` z `flow-explorer/compact-flow-manifest.md`"));
         assertTrue(gitLabTools.contains("Nie zaczynaj od `gitlab_read_repository_file`"));
@@ -190,6 +191,15 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(deepDiscovery.contains("szczegoly implementacyjne nie sa trescia tabeli wynikowej"));
 
         assertTrue(resultContract.contains("## Persistence Deep Contract"));
+        assertTrue(resultContract.contains("`FUNCTIONAL_FLOW` ma tytul `Functional flow`"));
+        assertTrue(resultContract.contains("**Cel funkcjonalny:**"));
+        assertTrue(resultContract.contains("**Flow krok po kroku:**"));
+        assertTrue(resultContract.contains("**Koordynacja i routing:**"));
+        assertTrue(resultContract.contains("**Kalkulacje i reguly funkcjonalne:**"));
+        assertTrue(resultContract.contains("**Rozgalezienia zalezne od kontekstu:**"));
+        assertTrue(resultContract.contains("**Handoffy i efekty uboczne:**"));
+        assertTrue(resultContract.contains("**Akcent goal:**"));
+        assertTrue(resultContract.contains("UI pokazuje je osobno jako zwijane elementy"));
         assertTrue(resultContract.contains("`SOURCE` jest polem kontrolowanym"));
         assertTrue(resultContract.contains("Dozwolone wartosci to tylko"));
         assertTrue(resultContract.contains("Nie wpisuj w `SOURCE` ani `SOURCE DETAILS` nazw klas"));

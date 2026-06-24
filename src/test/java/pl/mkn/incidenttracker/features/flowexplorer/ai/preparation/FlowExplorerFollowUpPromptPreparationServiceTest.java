@@ -50,8 +50,8 @@ class FlowExplorerFollowUpPromptPreparationServiceTest {
         assertTrue(prompt.contains("Jezeli pytanie dotyczy sekcji `DEEP`, najpierw wykorzystaj initial result"));
         assertTrue(prompt.contains("Jezeli pytanie dotyczy sekcji `COMPACT`, mozesz dociagnac szczegoly przez dozwolone tools"));
         assertTrue(prompt.contains("reasoningEffort: medium"));
-        assertTrue(prompt.contains("sectionModes: BUSINESS_FLOW_RULES=DEEP"));
-        assertTrue(prompt.contains("activeSectionIds: [BUSINESS_FLOW_RULES, VALIDATIONS, PERSISTENCE, INTEGRATIONS]"));
+        assertTrue(prompt.contains("sectionModes: FUNCTIONAL_FLOW=DEEP"));
+        assertTrue(prompt.contains("activeSectionIds: [FUNCTIONAL_FLOW, VALIDATIONS, PERSISTENCE, INTEGRATIONS]"));
         assertTrue(prompt.contains("## Current user follow-up"));
         assertTrue(prompt.contains("Ktore walidacje statusu klienta sa juz potwierdzone?"));
         assertTrue(prompt.contains("- user: Czy endpoint obsluguje brak klienta?"));
@@ -61,7 +61,7 @@ class FlowExplorerFollowUpPromptPreparationServiceTest {
         assertTrue(prompt.contains("Do not call repository discovery or endpoint context rebuild"));
 
         assertTrue(initialResult.contains("### Overview"));
-        assertTrue(initialResult.contains("#### BUSINESS_FLOW_RULES | Business flow/rules | mode=DEEP"));
+        assertTrue(initialResult.contains("#### FUNCTIONAL_FLOW | Functional flow | mode=DEEP"));
         assertTrue(initialResult.contains("#### VALIDATIONS | Validations | mode=COMPACT"));
         assertTrue(initialResult.contains("CRM customer id is validated before repository lookup."));
         assertTrue(initialResult.contains("- visibilityLimits: Runtime database state was not queried."));
@@ -101,7 +101,7 @@ class FlowExplorerFollowUpPromptPreparationServiceTest {
                 "/api/customers/{id}",
                 "feature/FLOW-42",
                 FlowExplorerAnalysisGoal.TEST_SCENARIOS,
-                List.of(FlowExplorerFocusArea.BUSINESS_FLOW_RULES),
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
                 "Skup sie na walidacjach CRM.",
                 "gpt-5.4-mini",
@@ -129,8 +129,8 @@ class FlowExplorerFollowUpPromptPreparationServiceTest {
                         ),
                         List.of(
                                 new FlowExplorerResultSection(
-                                        FlowExplorerResultSectionId.BUSINESS_FLOW_RULES,
-                                        "Business flow/rules",
+                                        FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
+                                        "Functional flow",
                                         FlowExplorerResultSectionMode.DEEP,
                                         "Controller delegates CRM customer lookup to CustomerService.",
                                         List.of("CustomerController.getCustomer L12-L24"),

@@ -40,7 +40,7 @@ Flow Explorer moze korzystac z:
 - `gitlab_read_openapi_endpoint_slice`,
 - `gitlab_find_flow_context`.
 
-GitLab tools nie czytaja business scope'u z hidden `ToolContext`. Gdy wolanie
+GitLab tools nie czytaja functional scope'u z hidden `ToolContext`. Gdy wolanie
 GitLab toola wymaga scope'u, przekaz jawnie wartosci z artefaktow Flow
 Explorera:
 
@@ -128,7 +128,7 @@ ustalony primary flow, jezeli brakuje evidence. Glebokoscia nadal steruje
 `focusAreas` traktuj jako kompatybilny skrot dla sekcji `DEEP`, nie jako pelny
 kontrakt zakresu.
 
-- `BUSINESS_FLOW_RULES`: controller, use case service, decyzje biznesowe.
+- `FUNCTIONAL_FLOW`: controller, use case service, decyzje i warunki funkcjonalne.
 - `VALIDATIONS`: request model, validator, guard clause, error boundary.
 - `PERSISTENCE`: repository method, query predicate, entity status fields,
   transactional boundary. Dla `sectionModes.PERSISTENCE=DEEP` oczekuj tabeli

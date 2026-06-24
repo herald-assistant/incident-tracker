@@ -70,7 +70,7 @@ const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
   {
     value: 'DEEP_DISCOVERY',
     label: 'Deep Discovery',
-    hint: 'Complex endpoint understanding across flow, rules, data and integrations.'
+    hint: 'Complex endpoint understanding across functional flow, decisions, data and integrations.'
   },
   {
     value: 'TEST_SCENARIOS',
@@ -86,9 +86,9 @@ const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
 
 const FOCUS_AREA_OPTIONS: FlowExplorerChoice<FlowExplorerFocusArea>[] = [
   {
-    value: 'BUSINESS_FLOW_RULES',
-    label: 'Business flow/rules',
-    hint: 'Deepen request path, decisions and business rules.'
+    value: 'FUNCTIONAL_FLOW',
+    label: 'Functional flow',
+    hint: 'Deepen request path, domain decisions and code-visible functional conditions.'
   },
   {
     value: 'VALIDATIONS',
@@ -126,7 +126,7 @@ const SECTION_MODE_OPTIONS: FlowExplorerChoice<FlowExplorerSectionMode>[] = [
 ];
 
 const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
-  { id: 'BUSINESS_FLOW_RULES', mode: 'DEEP' },
+  { id: 'FUNCTIONAL_FLOW', mode: 'DEEP' },
   { id: 'VALIDATIONS', mode: 'COMPACT' },
   { id: 'PERSISTENCE', mode: 'COMPACT' },
   { id: 'INTEGRATIONS', mode: 'COMPACT' }
@@ -219,6 +219,7 @@ export class FlowExplorerPageComponent implements OnInit {
     const job = this.job();
     return Boolean(job && (!this.isTerminalJobStatus(job.status) || this.hasActiveChat(job)));
   });
+  readonly isImportedResult = computed(() => this.exportState()?.origin === 'imported');
   readonly canStartJob = computed(
     () =>
       Boolean(this.selectedSystem() && this.selectedEndpoint()) &&
@@ -982,7 +983,7 @@ export class FlowExplorerPageComponent implements OnInit {
 
   protected sectionIcon(sectionId: string): string {
     switch (sectionId) {
-      case 'BUSINESS_FLOW_RULES':
+      case 'FUNCTIONAL_FLOW':
         return 'account_tree';
       case 'VALIDATIONS':
         return 'rule';
@@ -1503,7 +1504,7 @@ function sectionTitle(sectionId: FlowExplorerResultSectionId): string {
 
 function isSectionId(value: unknown): value is FlowExplorerResultSectionId {
   return (
-    value === 'BUSINESS_FLOW_RULES' ||
+    value === 'FUNCTIONAL_FLOW' ||
     value === 'VALIDATIONS' ||
     value === 'PERSISTENCE' ||
     value === 'INTEGRATIONS'
