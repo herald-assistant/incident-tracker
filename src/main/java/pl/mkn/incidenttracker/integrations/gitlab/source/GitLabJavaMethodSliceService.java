@@ -12,6 +12,7 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ThisExpr;
@@ -313,6 +314,7 @@ public class GitLabJavaMethodSliceService {
                 .flatMap(field -> field.getVariables().stream())
                 .map(VariableDeclarator::getNameAsString)
                 .forEach(fieldNames::add);
+        var accessorFieldNames = accessorFieldNames(fields);
 
         var usedFieldNames = new LinkedHashSet<String>();
         for (var method : includedMethods) {
@@ -333,6 +335,19 @@ public class GitLabJavaMethodSliceService {
                     .map(NameExpr::getNameAsString)
                     .filter(fieldNames::contains)
                     .forEach(usedFieldNames::add);
+            method.findAll(MethodCallExpr.class).stream()
+                    .filter(call -> call.findAncestor(MethodDeclaration.class).orElse(null) == method)
+                    .filter(this::isCurrentTypeAccessorCall)
+                    .filter(this::hasAccessorArgumentCount)
+                    .map(call -> accessorFieldNames.get(call.getNameAsString()))
+                    .filter(Objects::nonNull)
+                    .forEach(usedFieldNames::add);
+            method.findAll(MethodCallExpr.class).stream()
+                    .filter(call -> call.findAncestor(MethodDeclaration.class).orElse(null) == method)
+                    .filter(call -> fieldNames.contains(call.getNameAsString()))
+                    .filter(call -> isCurrentTypeBuilderSetterCall(call, declaringType))
+                    .map(MethodCallExpr::getNameAsString)
+                    .forEach(usedFieldNames::add);
         }
 
         return fields.stream()
@@ -341,6 +356,127 @@ public class GitLabJavaMethodSliceService {
                         .anyMatch(usedFieldNames::contains))
                 .sorted(Comparator.comparingInt(this::beginLine))
                 .toList();
+    }
+
+    private Map<String, String> accessorFieldNames(List<FieldDeclaration> fields) {
+        var accessors = new LinkedHashMap<String, String>();
+        for (var field : fields) {
+            for (var variable : field.getVariables()) {
+                var fieldName = variable.getNameAsString();
+                var suffix = accessorSuffix(fieldName);
+                if (!StringUtils.hasText(suffix)) {
+                    continue;
+                }
+                accessors.putIfAbsent("get" + suffix, fieldName);
+                accessors.putIfAbsent("set" + suffix, fieldName);
+                if (isBooleanField(variable)) {
+                    var booleanSuffix = booleanAccessorSuffix(fieldName);
+                    if (StringUtils.hasText(booleanSuffix)) {
+                        accessors.putIfAbsent("is" + booleanSuffix, fieldName);
+                        accessors.putIfAbsent("set" + booleanSuffix, fieldName);
+                    }
+                }
+            }
+        }
+        return accessors;
+    }
+
+    private boolean isCurrentTypeAccessorCall(MethodCallExpr call) {
+        var scope = call.getScope().orElse(null);
+        return scope == null || scope instanceof ThisExpr;
+    }
+
+    private boolean hasAccessorArgumentCount(MethodCallExpr call) {
+        var methodName = call.getNameAsString();
+        var argumentCount = call.getArguments().size();
+        if (methodName.startsWith("get") || methodName.startsWith("is")) {
+            return argumentCount == 0;
+        }
+        if (methodName.startsWith("set")) {
+            return argumentCount == 1;
+        }
+        return false;
+    }
+
+    private boolean isCurrentTypeBuilderSetterCall(MethodCallExpr call, TypeDeclaration<?> declaringType) {
+        if (call.getArguments().size() != 1) {
+            return false;
+        }
+        return call.getScope()
+                .filter(MethodCallExpr.class::isInstance)
+                .map(MethodCallExpr.class::cast)
+                .filter(scope -> builderChainStartsFromCurrentType(scope, declaringType))
+                .isPresent();
+    }
+
+    private boolean builderChainStartsFromCurrentType(MethodCallExpr call, TypeDeclaration<?> declaringType) {
+        var current = call;
+        while (current != null) {
+            if (isCurrentTypeBuilderRoot(current, declaringType)) {
+                return true;
+            }
+            current = current.getScope()
+                    .filter(MethodCallExpr.class::isInstance)
+                    .map(MethodCallExpr.class::cast)
+                    .orElse(null);
+        }
+        return false;
+    }
+
+    private boolean isCurrentTypeBuilderRoot(MethodCallExpr call, TypeDeclaration<?> declaringType) {
+        var methodName = call.getNameAsString();
+        if ("toBuilder".equals(methodName)) {
+            return call.getScope()
+                    .map(scope -> scope instanceof ThisExpr)
+                    .orElse(true);
+        }
+        if (!"builder".equals(methodName)) {
+            return false;
+        }
+        return call.getScope()
+                .map(scope -> isCurrentTypeReference(scope, declaringType))
+                .orElse(true);
+    }
+
+    private boolean isCurrentTypeReference(Expression expression, TypeDeclaration<?> declaringType) {
+        if (expression instanceof ThisExpr) {
+            return true;
+        }
+        var normalizedScope = normalizeTypeSelector(expression.toString());
+        var normalizedDeclaringType = normalize(declaringType.getNameAsString());
+        return normalizedScope != null && normalizedScope.equals(normalizedDeclaringType);
+    }
+
+    private String accessorSuffix(String fieldName) {
+        if (!StringUtils.hasText(fieldName)) {
+            return null;
+        }
+        var trimmed = fieldName.trim();
+        if (trimmed.length() == 1) {
+            return trimmed.toUpperCase(Locale.ROOT);
+        }
+        if (Character.isUpperCase(trimmed.charAt(0)) && Character.isUpperCase(trimmed.charAt(1))) {
+            return trimmed;
+        }
+        return Character.toUpperCase(trimmed.charAt(0)) + trimmed.substring(1);
+    }
+
+    private String booleanAccessorSuffix(String fieldName) {
+        if (!StringUtils.hasText(fieldName)) {
+            return null;
+        }
+        var trimmed = fieldName.trim();
+        if (trimmed.length() > 2
+                && trimmed.startsWith("is")
+                && Character.isUpperCase(trimmed.charAt(2))) {
+            return trimmed.substring(2);
+        }
+        return accessorSuffix(trimmed);
+    }
+
+    private boolean isBooleanField(VariableDeclarator variable) {
+        var type = variable.getType().asString();
+        return "boolean".equals(type) || "Boolean".equals(type) || "java.lang.Boolean".equals(type);
     }
 
     private List<ImportDeclaration> includedImports(

@@ -74,6 +74,14 @@ Preferowana kolejnosc:
 5. Jezeli znasz jedna albo kilka metod, uzyj jako pierwszy focused read
    `gitlab_read_java_method_slice`, bo zwraca wybrane metody razem z
    potrzebnymi polami, importami i prywatnymi helperami bez dumpu calej klasy.
+   Method slice probuje rozpoznac proste metody dostepowe, np.
+   `getCustomerStatus()`, `isVip()` albo `setCustomerStatus(...)`, oraz proste
+   chainy buildera tej samej klasy, np.
+   `CustomerLifecycle.builder().customerStatus(...)`, i dolaczyc pasujace pola z
+   analizowanej klasy. Nie traktuj tego jako pelnego rozwiazywania symboli:
+   jezeli metoda dostepowa albo builder moze wskazywac pole dziedziczone lub
+   spoza analizowanej klasy, a zmienia to interpretacje flow, zweryfikuj pole
+   przez `gitlab_read_repository_file_outline` dla aktualnej klasy oraz parenta.
 6. Jezeli znasz tylko zakres linii albo parser Java nie rozstrzygnal metody,
    uzyj `gitlab_read_repository_file_chunk` albo
    `gitlab_read_repository_file_chunks`.

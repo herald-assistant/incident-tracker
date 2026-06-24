@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class GitLabJavaMethodSliceServiceTest {
 
     private static final String FILE_PATH = "src/main/java/com/example/orders/OrderService.java";
+    private static final String ACCESSOR_FILE_PATH = "src/main/java/com/example/crm/customer/CustomerLifecycle.java";
 
     private final GitLabJavaMethodSliceService service = new GitLabJavaMethodSliceService(new SliceRepositoryPort());
 
@@ -100,6 +101,62 @@ class GitLabJavaMethodSliceServiceTest {
         assertTrue(response.content().contains("private OrderEntity map"));
     }
 
+    @Test
+    void shouldIncludeFieldsReferencedThroughLocalAccessorCalls() {
+        var response = service.readMethodSlice(new GitLabJavaMethodSliceRequest(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                ACCESSOR_FILE_PATH,
+                "CustomerLifecycle",
+                List.of(new GitLabJavaMethodSliceMethodSelector("shouldTriggerReview", null)),
+                true,
+                true,
+                true,
+                12_000
+        ));
+
+        assertEquals("OK", response.status());
+        assertEquals(List.of("customerStatus", "vip"), response.includedFields());
+        assertTrue(response.limitations().isEmpty());
+
+        var content = response.content();
+        assertTrue(content.contains("private CustomerStatus customerStatus;"));
+        assertTrue(content.contains("private boolean vip;"));
+        assertFalse(content.contains("private CustomerStatus ignoredStatus;"));
+        assertTrue(content.contains("getCustomerStatus().requiresReview()"));
+        assertTrue(content.contains("isVip()"));
+        assertTrue(content.contains("setCustomerStatus(nextStatus)"));
+    }
+
+    @Test
+    void shouldIncludeFieldsReferencedThroughSameTypeBuilderCalls() {
+        var response = service.readMethodSlice(new GitLabJavaMethodSliceRequest(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                ACCESSOR_FILE_PATH,
+                "CustomerLifecycle",
+                List.of(new GitLabJavaMethodSliceMethodSelector("activate", null)),
+                true,
+                true,
+                true,
+                12_000
+        ));
+
+        assertEquals("OK", response.status());
+        assertEquals(List.of("customerStatus", "vip"), response.includedFields());
+        assertTrue(response.limitations().isEmpty());
+
+        var content = response.content();
+        assertTrue(content.contains("private CustomerStatus customerStatus;"));
+        assertTrue(content.contains("private boolean vip;"));
+        assertFalse(content.contains("private CustomerStatus ignoredStatus;"));
+        assertTrue(content.contains("CustomerLifecycle.builder()"));
+        assertTrue(content.contains(".customerStatus(CustomerStatus.ACTIVE)"));
+        assertTrue(content.contains(".vip(true)"));
+    }
+
     private static final class SliceRepositoryPort implements GitLabRepositoryPort {
 
         @Override
@@ -125,7 +182,7 @@ class GitLabJavaMethodSliceServiceTest {
                 String filePath,
                 int maxCharacters
         ) {
-            return new GitLabRepositoryFileContent(group, projectName, branch, filePath, source(), false);
+            return new GitLabRepositoryFileContent(group, projectName, branch, filePath, source(filePath), false);
         }
 
         @Override
@@ -141,7 +198,14 @@ class GitLabJavaMethodSliceServiceTest {
             throw new UnsupportedOperationException("not used");
         }
 
-        private String source() {
+        private String source(String filePath) {
+            if (ACCESSOR_FILE_PATH.equals(filePath)) {
+                return accessorSource();
+            }
+            return orderSource();
+        }
+
+        private String orderSource() {
             return """
                     package com.example.orders;
 
@@ -177,6 +241,50 @@ class GitLabJavaMethodSliceServiceTest {
 
                         public void unrelated() {
                             noiseClient.call(UUID.randomUUID().toString());
+                        }
+                    }
+                    """;
+        }
+
+        private String accessorSource() {
+            return """
+                    package com.example.crm.customer;
+
+                    import lombok.Builder;
+                    import lombok.Getter;
+                    import lombok.Setter;
+
+                    @Builder(toBuilder = true)
+                    @Getter
+                    @Setter
+                    class CustomerLifecycle {
+
+                        private CustomerStatus customerStatus;
+                        private boolean vip;
+                        private CustomerStatus ignoredStatus;
+
+                        boolean shouldTriggerReview(CustomerStatus nextStatus) {
+                            setCustomerStatus(nextStatus);
+                            return getCustomerStatus().requiresReview() && isVip();
+                        }
+
+                        CustomerLifecycle activate() {
+                            return CustomerLifecycle.builder()
+                                    .customerStatus(CustomerStatus.ACTIVE)
+                                    .vip(true)
+                                    .build();
+                        }
+
+                        void unrelated() {
+                            ignoredStatus.requiresReview();
+                        }
+                    }
+
+                    enum CustomerStatus {
+                        ACTIVE;
+
+                        boolean requiresReview() {
+                            return true;
                         }
                     }
                     """;

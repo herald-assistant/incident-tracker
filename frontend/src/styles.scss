@@ -1649,6 +1649,68 @@ body .flow-tree-node__badges .confidence-pill,
   background: transparent;
 }
 
+.markdown-content table {
+  display: block;
+  width: max-content;
+  min-width: min(720px, 100%);
+  max-width: 100%;
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  border-spacing: 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+
+.markdown-content th,
+.markdown-content td {
+  min-width: 116px;
+  padding: 10px 12px;
+  border-right: 1px solid rgba(184, 198, 216, 0.74);
+  border-bottom: 1px solid rgba(184, 198, 216, 0.72);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-content th {
+  background: linear-gradient(180deg, var(--surface-alt) 0%, var(--surface-soft) 100%);
+  color: var(--primary-dark);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.markdown-content td {
+  background: var(--surface);
+  color: var(--text-main);
+}
+
+.markdown-content tbody tr:nth-child(even) td {
+  background: rgba(244, 247, 251, 0.78);
+}
+
+.markdown-content tbody tr:hover td {
+  background: rgba(12, 102, 228, 0.055);
+}
+
+.markdown-content th:last-child,
+.markdown-content td:last-child {
+  border-right: 0;
+}
+
+.markdown-content tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.markdown-content td code {
+  white-space: nowrap;
+}
+
 .markdown-content a {
   color: var(--primary-dark);
   text-decoration: none;
