@@ -1024,7 +1024,21 @@ export class FlowExplorerPageComponent implements OnInit {
   }
 
   protected followUpPromptCopyLabel(index: number): string {
-    return this.copiedFollowUpPromptIndex() === index ? 'Skopiowano prompt' : 'Kopiuj prompt';
+    return this.copiedFollowUpPromptIndex() === index ? 'Skopiowano pytanie' : 'Kopiuj pytanie';
+  }
+
+  protected followUpPromptCountLabel(count: number): string {
+    if (count === 1) {
+      return '1 sugestia';
+    }
+
+    const lastDigit = count % 10;
+    const lastTwoDigits = count % 100;
+    const pluralSuffix = lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)
+      ? 'sugestie'
+      : 'sugestii';
+
+    return `${count} ${pluralSuffix}`;
   }
 
   private loadConfig(): void {

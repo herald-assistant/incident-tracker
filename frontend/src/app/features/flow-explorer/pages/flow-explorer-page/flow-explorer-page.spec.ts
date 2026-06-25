@@ -324,7 +324,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 limits');
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 questions');
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 references');
-    expect(compiled.textContent).toContain('Dalsza eksploracja');
+    expect(compiled.textContent).toContain('Co sprawdzić dalej');
+    expect(compiled.textContent).toContain('1 sugestia');
     expect(compiled.textContent).toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
     expect(compiled.textContent).toContain('Functional flow');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
@@ -392,7 +393,7 @@ describe('FlowExplorerPageComponent', () => {
       expect(clipboard.writeText).toHaveBeenCalledWith(
         'Sprawdz, czy nieaktywny klient powinien blokowac ten flow.'
       );
-      expect(compiled.textContent).toContain('Dalsza eksploracja');
+      expect(compiled.textContent).toContain('Co sprawdzić dalej');
     } finally {
       clipboard.restore();
     }

@@ -988,21 +988,22 @@
               </div>
 
               @if (hasItems(ai.followUpPrompts)) {
-                <section class="flow-explorer-result-block flow-explorer-follow-up-prompts" aria-label="Dalsza eksploracja">
+                <section class="flow-explorer-result-block flow-explorer-follow-up-prompts" aria-label="Co sprawdzić dalej">
                   <div class="flow-explorer-result-block__heading">
-                    <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
                     <div>
-                      <span class="field-label">Next steps</span>
-                      <h3>Dalsza eksploracja</h3>
+                      <span class="field-label">Dalsze pytania</span>
+                      <h3>Co sprawdzić dalej</h3>
                     </div>
-                    <span class="panel-chip">{{ ai.followUpPrompts.length }} prompts</span>
+                    <span class="panel-chip">{{ followUpPromptCountLabel(ai.followUpPrompts.length) }}</span>
                   </div>
-                  <div class="flow-explorer-follow-up-prompts__list">
+                  <ol class="flow-explorer-follow-up-prompts__list">
                     @for (prompt of ai.followUpPrompts; track $index) {
-                      <article class="flow-explorer-follow-up-prompt">
+                      <li class="flow-explorer-follow-up-prompt">
+                        <span class="flow-explorer-follow-up-prompt__index">{{ $index + 1 }}</span>
                         <p>{{ prompt }}</p>
                         <button
-                          class="secondary-button flow-explorer-follow-up-prompt__copy"
+                          class="flow-explorer-follow-up-prompt__copy"
                           type="button"
                           data-clipboard-exclude
                           [attr.aria-label]="followUpPromptCopyLabel($index) + ': ' + prompt"
@@ -1013,9 +1014,9 @@
                             {{ copiedFollowUpPromptIndex() === $index ? 'task_alt' : 'content_copy' }}
                           </span>
                         </button>
-                      </article>
+                      </li>
                     }
-                  </div>
+                  </ol>
                 </section>
               }
 
