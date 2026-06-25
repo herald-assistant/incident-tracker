@@ -33,7 +33,8 @@ public class FlowExplorerAiResponseParser {
             "globalVisibilityLimits",
             "globalOpenQuestions",
             "sourceReferences",
-            "confidence"
+            "confidence",
+            "followUpPrompts"
     );
     private static final List<String> FUNCTIONAL_FLOW_MARKDOWN_LABELS = List.of(
             "**Cel funkcjonalny:**",
@@ -94,7 +95,8 @@ public class FlowExplorerAiResponseParser {
                 textList(node.get("globalVisibilityLimits")),
                 textList(node.get("globalOpenQuestions")),
                 textList(node.get("sourceReferences")),
-                confidence(text(node, "confidence"))
+                confidence(text(node, "confidence")),
+                textList(node.get("followUpPrompts"))
         );
     }
 
@@ -128,7 +130,12 @@ public class FlowExplorerAiResponseParser {
             return overviewListError;
         }
 
-        for (var fieldName : List.of("globalVisibilityLimits", "globalOpenQuestions", "sourceReferences")) {
+        for (var fieldName : List.of(
+                "globalVisibilityLimits",
+                "globalOpenQuestions",
+                "sourceReferences",
+                "followUpPrompts"
+        )) {
             var listError = validateListField(node, "response", fieldName);
             if (listError != null) {
                 return listError;

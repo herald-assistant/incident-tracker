@@ -40,6 +40,8 @@ public class FlowExplorerPromptPreparationService {
                 - Zwroc wylacznie poprawny JSON zgodny z response contract. Bez Markdown, bez komentarzy, bez tekstu poza JSON.
                 - `userInstructions` sa doprecyzowaniem intencji uzytkownika, nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Nie zgaduj. Jezeli kontekst nie wystarcza, wpisz ograniczenie w `visibilityLimits` albo pytanie w `openQuestions`.
+                - W `followUpPrompts` zwroc 3-5 gotowych, prostych promptow po polsku, ktore uzytkownik moze skopiowac do follow-up chatu, zeby domknac najwazniejsze limity widocznosci albo pytania otwarte.
+                - `followUpPrompts` pisz nietechnicznie: zaczynaj od celu uzytkownika, nie od nazw klas, metod, plikow ani tools. Jezeli prompt wymaga kodu albo katalogu, popros AI o sprawdzenie "w dostepnych zrodlach" zamiast wskazywac implementacje jako zadanie dla uzytkownika.
                 - Nie opisuj pelnych klas, jezeli wystarczy metoda, rola node'a albo kontrakt endpointu.
                 - Wynik ma zawsze zawierac `overview` oraz tylko aktywne sekcje z `sectionModes`.
                 - `sectionModes` jest zrodlem prawdy dla sekcji wyniku: `OFF` oznacza, ze sekcji nie wolno zwracac w `sections`; `COMPACT` i `DEEP` oznaczaja, ze sekcja musi byc zwrocona.
@@ -204,7 +206,7 @@ public class FlowExplorerPromptPreparationService {
 
                 MUST: flow-explorer-result-contract
                 - Uzyj przed finalna odpowiedzia initial run.
-                - Pilnuje JSON-only, overview, tylko aktywnych sekcji z sectionModes, sourceRefs, confidence, visibilityLimits i openQuestions.
+                - Pilnuje JSON-only, overview, tylko aktywnych sekcji z sectionModes, sourceRefs, confidence, visibilityLimits, openQuestions i followUpPrompts.
 
                 %s
 

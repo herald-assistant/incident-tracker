@@ -858,6 +858,43 @@ article.flow-explorer-select-option {
   min-width: 0;
 }
 
+.flow-explorer-follow-up-prompts__list {
+  display: grid;
+  gap: 8px;
+}
+
+.flow-explorer-follow-up-prompt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
+.flow-explorer-follow-up-prompt p {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.flow-explorer-follow-up-prompt__copy {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+.flow-explorer-follow-up-prompt__copy .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .flow-explorer-section-metadata {
   display: grid;
   gap: 8px;

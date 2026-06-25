@@ -69,7 +69,8 @@ class FlowExplorerAiResponseParserTest {
                   "globalVisibilityLimits": ["Nie widac runtime data."],
                   "globalOpenQuestions": [],
                   "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
-                  "confidence": "HIGH"
+                  "confidence": "HIGH",
+                  "followUpPrompts": ["Sprawdz, czy profil nieaktywnego klienta powinien byc widoczny dla operatora."]
                 }
                 """.formatted(functionalFlowMarkdownJson()));
 
@@ -84,6 +85,10 @@ class FlowExplorerAiResponseParserTest {
         assertEquals("id jest wymagane.", response.sections().get(1).markdown());
         assertEquals("Nie widac runtime data.", response.globalVisibilityLimits().get(0));
         assertEquals("high", response.confidence());
+        assertEquals(
+                "Sprawdz, czy profil nieaktywnego klienta powinien byc widoczny dla operatora.",
+                response.followUpPrompts().get(0)
+        );
     }
 
     @Test

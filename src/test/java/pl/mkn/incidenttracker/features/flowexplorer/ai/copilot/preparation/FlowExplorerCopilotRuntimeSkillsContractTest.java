@@ -84,6 +84,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertSkillContainsSections("flow-explorer-result-contract", List.of(
                 "## Rola",
                 "## Wymagany JSON Contract",
+                "## Follow-Up Prompts",
                 "## Sekcje I Kolejnosc",
                 "## Functional Flow Contract",
                 "## Jezyk I Odbiorca",

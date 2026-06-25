@@ -993,6 +993,38 @@
                 }
               </div>
 
+              @if (hasItems(ai.followUpPrompts)) {
+                <section class="flow-explorer-result-block flow-explorer-follow-up-prompts" aria-label="Dalsza eksploracja">
+                  <div class="flow-explorer-result-block__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+                    <div>
+                      <span class="field-label">Next steps</span>
+                      <h3>Dalsza eksploracja</h3>
+                    </div>
+                    <span class="panel-chip">{{ ai.followUpPrompts.length }} prompts</span>
+                  </div>
+                  <div class="flow-explorer-follow-up-prompts__list">
+                    @for (prompt of ai.followUpPrompts; track $index) {
+                      <article class="flow-explorer-follow-up-prompt">
+                        <p>{{ prompt }}</p>
+                        <button
+                          class="secondary-button flow-explorer-follow-up-prompt__copy"
+                          type="button"
+                          data-clipboard-exclude
+                          [attr.aria-label]="followUpPromptCopyLabel($index) + ': ' + prompt"
+                          [title]="followUpPromptCopyLabel($index)"
+                          (click)="copyFollowUpPrompt(prompt, $index)"
+                        >
+                          <span class="material-symbols-outlined" aria-hidden="true">
+                            {{ copiedFollowUpPromptIndex() === $index ? 'task_alt' : 'content_copy' }}
+                          </span>
+                        </button>
+                      </article>
+                    }
+                  </div>
+                </section>
+              }
+
               @if (hasItems(ai.globalVisibilityLimits) || hasItems(ai.globalOpenQuestions) || hasItems(ai.sourceReferences)) {
                 <section class="flow-explorer-result-block flow-explorer-result-block--appendix" aria-label="Analysis appendix">
                   <details class="flow-explorer-result-appendix">

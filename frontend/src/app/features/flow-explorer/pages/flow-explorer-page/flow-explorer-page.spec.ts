@@ -305,6 +305,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 limits');
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 questions');
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 references');
+    expect(compiled.textContent).toContain('Dalsza eksploracja');
+    expect(compiled.textContent).toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
     expect(compiled.textContent).toContain('Functional flow');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
@@ -343,6 +345,35 @@ describe('FlowExplorerPageComponent', () => {
       expect(copiedText).toContain('Functional flow');
       expect(copiedText).not.toContain('Copy result');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('should copy a recommended follow-up prompt', async () => {
+    const clipboard = mockRichClipboard();
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    try {
+      fixture.detectChanges();
+      selectSystem(fixture, 'CRM Service');
+      selectEndpoint(fixture, '/api/customers/{id}');
+
+      clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const copyButton = compiled.querySelector<HTMLButtonElement>(
+        '.flow-explorer-follow-up-prompt__copy'
+      );
+      copyButton?.click();
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      fixture.detectChanges();
+
+      expect(clipboard.writeText).toHaveBeenCalledWith(
+        'Sprawdz, czy nieaktywny klient powinien blokowac ten flow.'
+      );
+      expect(compiled.textContent).toContain('Dalsza eksploracja');
     } finally {
       clipboard.restore();
     }
@@ -745,18 +776,20 @@ interface TestClipboardItem {
 
 function mockRichClipboard(): {
   write: ReturnType<typeof vi.fn>;
+  writeText: ReturnType<typeof vi.fn>;
   restore: () => void;
 } {
   const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   const originalClipboardItem = Object.getOwnPropertyDescriptor(globalThis, 'ClipboardItem');
   const write = vi.fn(() => Promise.resolve());
+  const writeText = vi.fn(() => Promise.resolve());
   class FlowExplorerTestClipboardItem implements TestClipboardItem {
     constructor(readonly items: Record<string, Blob>) {}
   }
 
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
-    value: { write }
+    value: { write, writeText }
   });
   Object.defineProperty(globalThis, 'ClipboardItem', {
     configurable: true,
@@ -765,6 +798,7 @@ function mockRichClipboard(): {
 
   return {
     write,
+    writeText,
     restore: () => {
       restoreProperty(navigator, 'clipboard', originalClipboard);
       restoreProperty(globalThis, 'ClipboardItem', originalClipboardItem);
@@ -1176,7 +1210,8 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       globalVisibilityLimits: ['No runtime database records were queried.'],
       globalOpenQuestions: ['Confirm expected status code for inactive customers.'],
       sourceReferences: ['CustomerService.getCustomer L30-L44'],
-      confidence: 'high'
+      confidence: 'high',
+      followUpPrompts: ['Sprawdz, czy nieaktywny klient powinien blokowac ten flow.']
     }
   };
 }

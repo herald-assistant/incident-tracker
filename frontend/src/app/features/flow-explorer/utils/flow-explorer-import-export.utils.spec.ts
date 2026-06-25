@@ -22,6 +22,7 @@ describe('flow-explorer-import-export utils', () => {
     expect(envelope.payload.diagnostics.request.goal).toBe('DEEP_DISCOVERY');
     expect(envelope.payload.diagnostics.request.sectionModes[0]?.mode).toBe('DEEP');
     expect(envelope.payload.diagnostics.result.sectionModes.FUNCTIONAL_FLOW).toBe('deep');
+    expect(envelope.payload.diagnostics.result.followUpPromptCount).toBe(1);
     expect(envelope.payload.diagnostics.context.snippetCardCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.contextEvidenceItemCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.toolEvidenceItemCount).toBe(1);
@@ -29,12 +30,16 @@ describe('flow-explorer-import-export utils', () => {
       'flow-explorer-result.md'
     );
     expect(envelope.payload.diagnostics.resultMarkdown).toContain('## Functional flow');
+    expect(envelope.payload.diagnostics.resultMarkdown).toContain('### Recommended follow-up prompts');
     expect(envelope.payload.diagnostics.resultMarkdown).not.toContain('class CustomerService');
     expect(imported.exportedAt).toBe(exportedAt);
     expect(imported.job.jobId).toBe('flow-job-1');
     expect(imported.job.goal).toBe('DEEP_DISCOVERY');
     expect(imported.job.result?.aiResponse?.sections[0]?.title).toBe('Functional flow');
     expect(imported.job.result?.aiResponse?.sections[0]?.markdown).toContain('Flow krok po kroku');
+    expect(imported.job.result?.aiResponse?.followUpPrompts).toEqual([
+      'Sprawdz, czy nieaktywny klient powinien blokowac ten flow.'
+    ]);
   });
 
   it('should build diagnostics for the current goal-based result contract', () => {
@@ -362,7 +367,8 @@ function flowExplorerJob(
         globalVisibilityLimits: [],
         globalOpenQuestions: [],
         sourceReferences: [],
-        confidence: 'high'
+        confidence: 'high',
+        followUpPrompts: ['Sprawdz, czy nieaktywny klient powinien blokowac ten flow.']
       }
     },
     ...overrides

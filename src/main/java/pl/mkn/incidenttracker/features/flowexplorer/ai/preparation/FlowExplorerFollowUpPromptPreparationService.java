@@ -188,6 +188,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
             appendLine(builder, "- globalVisibilityLimits: " + listOrNone(result.aiResponse().globalVisibilityLimits()));
             appendLine(builder, "- globalOpenQuestions: " + listOrNone(result.aiResponse().globalOpenQuestions()));
             appendLine(builder, "- sourceReferences: " + listOrNone(result.aiResponse().sourceReferences()));
+            appendLine(builder, "- followUpPrompts: " + listOrNone(result.aiResponse().followUpPrompts()));
         }
         return builder.toString().trim();
     }

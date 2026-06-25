@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-result-contract
-description: Kontrakt odpowiedzi Flow Explorera - JSON-only, Overview plus aktywne sekcje sectionModes, compact/deep, source refs, confidence i visibility limits.
+description: Kontrakt odpowiedzi Flow Explorera - JSON-only, Overview plus aktywne sekcje sectionModes, compact/deep, source refs, confidence, visibility limits i gotowe follow-up prompts.
 ---
 
 # Skill Kontraktu Wyniku Flow Explorera
@@ -41,13 +41,41 @@ Zwroc dokladnie jeden obiekt JSON zgodny z polami:
   "globalVisibilityLimits": ["string"],
   "globalOpenQuestions": ["string"],
   "sourceReferences": ["string"],
-  "confidence": "high|medium|low"
+  "confidence": "high|medium|low",
+  "followUpPrompts": ["string"]
 }
 ```
 
 Nie dodawaj top-level pol spoza kontraktu. Informacje dla innych perspektyw
 umieszczaj w aktywnych sekcjach z `sectionModes`, a nie w osobnych polach
 na poziomie calej odpowiedzi.
+
+## Follow-Up Prompts
+
+`followUpPrompts` to gotowe, proste prompty do follow-up chatu. Maja pomoc
+uzytkownikowi przejsc od wyniku `medium`, limitow widocznosci albo pytan
+otwartych do nastepnego konkretnego kroku.
+
+Zwroc 3-5 promptow. Kazdy prompt ma byc samodzielnym pytaniem albo poleceniem,
+ktore uzytkownik moze skopiowac bez edycji. Pisz po polsku, nietechnicznie i
+od celu eksploracji, np. "Sprawdz, czy..." albo "Doprecyzuj, co sie dzieje,
+gdy...".
+
+Prompty powinny:
+
+- wynikac z `visibilityLimits`, `openQuestions`, `globalVisibilityLimits`,
+  `globalOpenQuestions` albo z obszarow `DEEP`, ktore zostaly tylko czesciowo
+  domkniete,
+- byc zrozumiale dla analityka/testera bez znajomosci klas, metod, plikow,
+  tooli ani linii kodu,
+- wskazywac kierunek dalszej eksploracji, np. wariant procesu, walidacje,
+  zapis danych, integracje, terminy domenowe, scenariusze testowe albo ryzyka,
+- nie obiecywac, ze AI znajdzie odpowiedz; jezeli widocznosc jest ograniczona,
+  popros o "sprawdzenie w dostepnych zrodlach" i o wskazanie limitow.
+
+Nie tworz promptow typu "przeczytaj klase X" ani "uzyj toola Y". Nazwy
+techniczne wolno dodac tylko wtedy, gdy sa potrzebne do jednoznacznego
+wskazania endpointu, pola API, statusu, eventu, tabeli albo systemu.
 
 ## Sekcje I Kolejnosc
 

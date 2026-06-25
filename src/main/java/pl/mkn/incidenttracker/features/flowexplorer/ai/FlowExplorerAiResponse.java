@@ -19,7 +19,8 @@ public record FlowExplorerAiResponse(
         List<String> globalVisibilityLimits,
         List<String> globalOpenQuestions,
         List<String> sourceReferences,
-        String confidence
+        String confidence,
+        List<String> followUpPrompts
 ) {
 
     public FlowExplorerAiResponse {
@@ -31,6 +32,30 @@ public record FlowExplorerAiResponse(
         globalOpenQuestions = copy(globalOpenQuestions);
         sourceReferences = copy(sourceReferences);
         confidence = normalizeConfidence(confidence);
+        followUpPrompts = copy(followUpPrompts);
+    }
+
+    public FlowExplorerAiResponse(
+            FlowExplorerAnalysisGoal goal,
+            String audience,
+            FlowExplorerResultOverview overview,
+            List<FlowExplorerResultSection> sections,
+            List<String> globalVisibilityLimits,
+            List<String> globalOpenQuestions,
+            List<String> sourceReferences,
+            String confidence
+    ) {
+        this(
+                goal,
+                audience,
+                overview,
+                sections,
+                globalVisibilityLimits,
+                globalOpenQuestions,
+                sourceReferences,
+                confidence,
+                List.of()
+        );
     }
 
     public static FlowExplorerAiResponse parseFallback(String visibilityLimit) {
@@ -46,7 +71,8 @@ public record FlowExplorerAiResponse(
                 List.of(visibilityLimit),
                 List.of("Popros AI o ponowienie odpowiedzi w wymaganym formacie JSON."),
                 List.of(),
-                "low"
+                "low",
+                List.of("Sprobuj ponownie wygenerowac wynik Flow Explorera w wymaganym formacie JSON, bez dodatkowego tekstu poza JSON.")
         );
     }
 
@@ -73,7 +99,8 @@ public record FlowExplorerAiResponse(
                 globalVisibilityLimits,
                 globalOpenQuestions,
                 sourceReferences,
-                confidence
+                confidence,
+                followUpPrompts
         );
     }
 

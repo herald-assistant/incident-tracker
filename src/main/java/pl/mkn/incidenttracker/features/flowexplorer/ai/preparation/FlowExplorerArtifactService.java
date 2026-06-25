@@ -255,7 +255,8 @@ public class FlowExplorerArtifactService {
                   "globalVisibilityLimits": ["string"],
                   "globalOpenQuestions": ["string"],
                   "sourceReferences": ["string"],
-                  "confidence": "high|medium|low"
+                  "confidence": "high|medium|low",
+                  "followUpPrompts": ["string"]
                 }
                 """.trim();
     }

@@ -64,6 +64,7 @@ export interface FlowExplorerExportDiagnostics {
     sourceReferenceCount: number;
     visibilityLimitCount: number;
     openQuestionCount: number;
+    followUpPromptCount: number;
   };
   context: {
     contextSnapshotIncluded: boolean;
@@ -162,7 +163,8 @@ export function buildFlowExplorerExportDiagnostics(
         aiResponse.sections.reduce((count, section) => count + section.visibilityLimits.length, 0),
       openQuestionCount:
         aiResponse.globalOpenQuestions.length +
-        aiResponse.sections.reduce((count, section) => count + section.openQuestions.length, 0)
+        aiResponse.sections.reduce((count, section) => count + section.openQuestions.length, 0),
+      followUpPromptCount: aiResponse.followUpPrompts.length
     },
     context: {
       contextSnapshotIncluded: Boolean(contextSnapshot),
@@ -374,7 +376,8 @@ function normalizeAiResponse(
     globalVisibilityLimits: normalizeStringArray(responseObject?.['globalVisibilityLimits']),
     globalOpenQuestions: normalizeStringArray(responseObject?.['globalOpenQuestions']),
     sourceReferences: normalizeStringArray(responseObject?.['sourceReferences']),
-    confidence: normalizeString(responseObject?.['confidence'])
+    confidence: normalizeString(responseObject?.['confidence']),
+    followUpPrompts: normalizeStringArray(responseObject?.['followUpPrompts'])
   };
 }
 
@@ -591,6 +594,7 @@ function renderFlowExplorerResultMarkdown(job: ExportableFlowExplorerJob): strin
     aiResponse.overview.markdown || 'No overview.',
     sourceRefsMarkdown(aiResponse.overview.sourceRefs),
     sectionMarkdown,
+    listMarkdown('Recommended follow-up prompts', aiResponse.followUpPrompts),
     listMarkdown('Global visibility limits', aiResponse.globalVisibilityLimits),
     listMarkdown('Global open questions', aiResponse.globalOpenQuestions),
     sourceRefsMarkdown(aiResponse.sourceReferences)
@@ -866,7 +870,8 @@ const AI_RESPONSE_FIELDS = [
   'globalVisibilityLimits',
   'globalOpenQuestions',
   'sourceReferences',
-  'confidence'
+  'confidence',
+  'followUpPrompts'
 ];
 
 function sectionTitle(id: FlowExplorerResultSectionId): string {

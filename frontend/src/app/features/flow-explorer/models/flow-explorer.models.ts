@@ -227,6 +227,7 @@ export interface FlowExplorerAiResponse {
   globalOpenQuestions: string[];
   sourceReferences: string[];
   confidence: string;
+  followUpPrompts: string[];
 }
 
 export interface FlowExplorerResultOverview {

@@ -36,7 +36,7 @@ import {
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
-import { copyElementToClipboard } from '../../../../core/utils/clipboard.utils';
+import { copyElementToClipboard, copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
   AnalysisAiCostEstimate,
   estimateAnalysisAiCost,
@@ -149,6 +149,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private resultCopyFeedbackHandle: number | null = null;
+  private followUpPromptCopyFeedbackHandle: number | null = null;
 
   readonly analysisGoals = ANALYSIS_GOALS;
   readonly focusAreaOptions = FOCUS_AREA_OPTIONS;
@@ -187,6 +188,7 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly aiModelOptionsError = signal('');
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
   readonly resultCopied = signal(false);
+  readonly copiedFollowUpPromptIndex = signal<number | null>(null);
 
   readonly filteredSystems = computed(() => {
     const query = normalizeSearch(this.systemSearch());
@@ -431,6 +433,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
       this.clearResultCopyFeedback();
+      this.clearFollowUpPromptCopyFeedback();
     });
   }
 
@@ -814,6 +817,22 @@ export class FlowExplorerPageComponent implements OnInit {
     }, 1600);
   }
 
+  protected async copyFollowUpPrompt(prompt: string, index: number): Promise<void> {
+    const copied = await copyTextToClipboard(prompt);
+    if (!copied) {
+      this.jobError.set('Nie udalo sie skopiowac promptu do schowka.');
+      return;
+    }
+
+    this.jobError.set('');
+    this.copiedFollowUpPromptIndex.set(index);
+    this.clearFollowUpPromptCopyFeedback();
+    this.followUpPromptCopyFeedbackHandle = window.setTimeout(() => {
+      this.copiedFollowUpPromptIndex.set(null);
+      this.followUpPromptCopyFeedbackHandle = null;
+    }, 1600);
+  }
+
   protected sectionModeFor(sectionId: FlowExplorerResultSectionId): FlowExplorerSectionMode {
     return this.sectionModes().find((sectionMode) => sectionMode.id === sectionId)?.mode ?? 'COMPACT';
   }
@@ -1004,6 +1023,10 @@ export class FlowExplorerPageComponent implements OnInit {
     return buildFlowExplorerUsageTooltip(usage ?? null);
   }
 
+  protected followUpPromptCopyLabel(index: number): string {
+    return this.copiedFollowUpPromptIndex() === index ? 'Skopiowano prompt' : 'Kopiuj prompt';
+  }
+
   private loadConfig(): void {
     this.flowExplorerApi
       .getConfig()
@@ -1088,13 +1111,23 @@ export class FlowExplorerPageComponent implements OnInit {
     this.resultCopyFeedbackHandle = null;
   }
 
+  private clearFollowUpPromptCopyFeedback(): void {
+    if (this.followUpPromptCopyFeedbackHandle === null) {
+      return;
+    }
+    window.clearTimeout(this.followUpPromptCopyFeedbackHandle);
+    this.followUpPromptCopyFeedbackHandle = null;
+  }
+
   private resetJobState(): void {
     this.stopPolling();
     this.clearResultCopyFeedback();
+    this.clearFollowUpPromptCopyFeedback();
     this.job.set(null);
     this.exportState.set(null);
     this.jobError.set('');
     this.resultCopied.set(false);
+    this.copiedFollowUpPromptIndex.set(null);
     this.isSubmitting.set(false);
     this.chatError.set('');
     this.isSendingChat.set(false);
