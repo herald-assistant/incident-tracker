@@ -687,18 +687,12 @@
         @if (selectedEndpoint(); as endpoint) {
           <div class="flow-explorer-target-preview" aria-label="Selected endpoint">
             <span class="flow-explorer-endpoint-method">{{ endpointMethodLabel(endpoint) }}</span>
-            <div>
+            <div class="flow-explorer-target-preview__copy">
               <strong>{{ endpoint.path }}</strong>
-              <span>{{ endpointDescription(endpoint) }}</span>
+              @if (endpointDescription(endpoint)) {
+                <span>{{ endpointDescription(endpoint) }}</span>
+              }
             </div>
-            @if (endpoint.controllerClass || endpoint.handlerMethod || endpointLineLabel(endpoint.source)) {
-              <span class="field-hint">
-                {{ endpoint.controllerClass }}.{{ endpoint.handlerMethod }}
-                @if (endpointLineLabel(endpoint.source)) {
-                  · {{ endpointLineLabel(endpoint.source) }}
-                }
-              </span>
-            }
           </div>
         }
 

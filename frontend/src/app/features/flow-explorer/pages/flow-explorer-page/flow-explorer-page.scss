@@ -640,13 +640,19 @@ article.flow-explorer-select-option {
 
 .flow-explorer-target-preview {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: center;
   padding: 10px 12px;
   border: 1px solid rgba(12, 102, 228, 0.22);
   border-radius: 8px;
   background: #eff6ff;
+}
+
+.flow-explorer-target-preview__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
 .flow-explorer-scope-grid {

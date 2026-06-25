@@ -157,6 +157,25 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('L12-L24');
   });
 
+  it('should keep selected endpoint preview focused on method, path and description', () => {
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+
+    const preview = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.flow-explorer-target-preview'
+    );
+
+    expect(preview?.textContent).toContain('GET');
+    expect(preview?.textContent).toContain('/api/customers/{id}');
+    expect(preview?.textContent).toContain('Customer lookup');
+    expect(preview?.textContent).not.toContain('CustomerController');
+    expect(preview?.textContent).not.toContain('getCustomer');
+    expect(preview?.textContent).not.toContain('L12-L24');
+  });
+
   it('should clear loaded endpoints when branch changes and reload with the new branch', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 

@@ -308,11 +308,11 @@
 
 .flow-node-tooltip {
   position: absolute;
-  top: 50%;
-  left: calc(100% + 8px);
+  top: calc(100% + 8px);
+  left: 0;
   z-index: 40;
   gap: 10px;
-  width: min(460px, calc(100vw - 80px));
+  width: min(560px, calc(100vw - 96px));
   max-height: min(540px, calc(100vh - 160px));
   overflow: auto;
   padding: 12px;
@@ -323,7 +323,7 @@
   color: var(--text-main);
   opacity: 0;
   pointer-events: none;
-  transform: translate(4px, -50%);
+  transform: translateY(4px);
   transition:
     opacity 120ms ease,
     transform 120ms ease;
@@ -333,7 +333,7 @@
 .flow-tree-node__info:focus-within .flow-node-tooltip {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(0, -50%);
+  transform: translateY(0);
 }
 
 .flow-node-tooltip__header {
