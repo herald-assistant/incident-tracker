@@ -210,9 +210,32 @@
   box-shadow: none;
 }
 
+.flow-explorer-select__control--loading {
+  color: var(--text-muted);
+}
+
 .flow-explorer-select__control .material-symbols-outlined {
   color: var(--text-muted);
   font-size: 22px;
+}
+
+.flow-explorer-select__indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  width: 24px;
+  height: 24px;
+}
+
+.flow-explorer-select-loader::after {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(12, 102, 228, 0.24);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  content: "";
+  animation: flowExplorerSelectLoader 0.9s linear infinite;
 }
 
 .flow-explorer-select__value,
@@ -1215,6 +1238,12 @@ article.flow-explorer-select-option {
 @keyframes flowExplorerSkeleton {
   to {
     background-position: -220% 0;
+  }
+}
+
+@keyframes flowExplorerSelectLoader {
+  to {
+    transform: rotate(360deg);
   }
 }
 

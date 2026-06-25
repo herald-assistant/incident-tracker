@@ -33,16 +33,24 @@
             </span>
             <button
               class="flow-explorer-select__control"
+              [class.flow-explorer-select__control--loading]="catalogState() === 'loading'"
               type="button"
               aria-haspopup="listbox"
               [attr.aria-expanded]="systemSelectOpen()"
+              [attr.aria-busy]="catalogState() === 'loading'"
               (click)="toggleSystemSelect($event)"
             >
               <span class="flow-explorer-select__value">
                 <strong>{{ selectedSystemLabel() }}</strong>
                 <small>{{ selectedSystemMeta() }}</small>
               </span>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              @if (catalogState() === 'loading') {
+                <span class="flow-explorer-select__indicator flow-explorer-select-loader" aria-hidden="true"></span>
+              } @else {
+                <span class="material-symbols-outlined flow-explorer-select__indicator" aria-hidden="true">
+                  expand_more
+                </span>
+              }
             </button>
 
             @if (systemSelectOpen()) {
@@ -172,17 +180,25 @@
             </span>
             <button
               class="flow-explorer-select__control"
+              [class.flow-explorer-select__control--loading]="endpointState() === 'loading'"
               type="button"
               aria-haspopup="listbox"
               [disabled]="!selectedSystem()"
               [attr.aria-expanded]="endpointSelectOpen()"
+              [attr.aria-busy]="endpointState() === 'loading'"
               (click)="toggleEndpointSelect($event)"
             >
               <span class="flow-explorer-select__value">
                 <strong>{{ selectedEndpointLabel() }}</strong>
                 <small>{{ selectedEndpointMeta() }}</small>
               </span>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              @if (endpointState() === 'loading') {
+                <span class="flow-explorer-select__indicator flow-explorer-select-loader" aria-hidden="true"></span>
+              } @else {
+                <span class="material-symbols-outlined flow-explorer-select__indicator" aria-hidden="true">
+                  expand_more
+                </span>
+              }
             </button>
 
             @if (endpointSelectOpen()) {
@@ -505,6 +521,7 @@
             </span>
             <button
               class="flow-explorer-select__control"
+              [class.flow-explorer-select__control--loading]="isAiModelOptionsLoading()"
               type="button"
               aria-haspopup="listbox"
               [disabled]="isSubmitting() || isJobActive()"
@@ -516,7 +533,13 @@
                 <strong>{{ selectedAiModelLabel() }}</strong>
                 <small>{{ selectedAiModelMeta() }}</small>
               </span>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              @if (isAiModelOptionsLoading()) {
+                <span class="flow-explorer-select__indicator flow-explorer-select-loader" aria-hidden="true"></span>
+              } @else {
+                <span class="material-symbols-outlined flow-explorer-select__indicator" aria-hidden="true">
+                  expand_more
+                </span>
+              }
             </button>
 
             @if (aiModelOptionsError()) {
@@ -568,6 +591,7 @@
             </span>
             <button
               class="flow-explorer-select__control"
+              [class.flow-explorer-select__control--loading]="isAiModelOptionsLoading()"
               type="button"
               aria-haspopup="listbox"
               [disabled]="isSubmitting() || isJobActive()"
@@ -579,7 +603,13 @@
                 <strong>{{ selectedReasoningEffortLabel() }}</strong>
                 <small>{{ selectedReasoningEffortMeta() }}</small>
               </span>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              @if (isAiModelOptionsLoading()) {
+                <span class="flow-explorer-select__indicator flow-explorer-select-loader" aria-hidden="true"></span>
+              } @else {
+                <span class="material-symbols-outlined flow-explorer-select__indicator" aria-hidden="true">
+                  expand_more
+                </span>
+              }
             </button>
 
             @if (reasoningEffortSelectOpen()) {

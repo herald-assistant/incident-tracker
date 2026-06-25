@@ -697,24 +697,123 @@
                     <div class="context-flow__layout">
                       <div class="flow-tree" role="tree" aria-label="Endpoint use-case flow tree">
                         @for (row of useCaseTree.rows; track row.node.id) {
-                          <button
-                            type="button"
+                          <div
                             [class]="flowTreeNodeClass(row.node)"
                             [style.padding-left.px]="treeNodePadding(row.depth)"
                             [attr.aria-level]="row.depth + 1"
+                            tabindex="0"
                             role="treeitem"
                             (click)="selectGitLabUseCaseTreeNode(row.node)"
+                            (keydown.enter)="selectGitLabUseCaseTreeNode(row.node)"
+                            (keydown.space)="$event.preventDefault(); selectGitLabUseCaseTreeNode(row.node)"
                           >
                             <span class="flow-tree-node__marker"></span>
-                            <span class="flow-tree-node__main">
-                              <span class="flow-tree-node__title">{{ row.node.label }}</span>
+                            <div class="flow-tree-node__main">
+                              <div class="flow-tree-node__title-row">
+                                <span class="flow-tree-node__title">{{ row.node.label }}</span>
+                                @if (row.node.file) {
+                                  <div
+                                    class="flow-tree-node__info"
+                                    tabindex="0"
+                                    aria-label="Szczegóły pliku {{ row.node.label }}"
+                                    (click)="$event.stopPropagation()"
+                                    (keydown.enter)="$event.stopPropagation()"
+                                    (keydown.space)="$event.stopPropagation()"
+                                  >
+                                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                                    <div
+                                      class="flow-node-tooltip"
+                                      role="tooltip"
+                                      (click)="$event.stopPropagation()"
+                                    >
+                                      <div class="flow-node-tooltip__header">
+                                        <div>
+                                          <span class="tool-status__label">Selected node</span>
+                                          <strong>{{ row.node.label }}</strong>
+                                        </div>
+                                        <div class="flow-node-tooltip__actions">
+                                          @if (row.node.file.methods?.length) {
+                                            <button
+                                              class="secondary-button secondary-button--compact"
+                                              type="button"
+                                              (click)="$event.stopPropagation(); useUseCaseNodeMethodsForSlice(row.node)"
+                                            >
+                                              Slice all
+                                            </button>
+                                          }
+                                          <span class="panel-chip" [title]="roleTooltip(row.node.role)">
+                                            {{ displayRole(row.node.role) }}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      @if (row.node.subtitle) {
+                                        <p class="flow-node-tooltip__path">{{ row.node.subtitle }}</p>
+                                      }
+
+                                      @if (row.node.relationKind || row.node.relationFrom || row.node.relationTo) {
+                                        <dl class="flow-node-tooltip__meta">
+                                          @if (row.node.relationKind) {
+                                            <div>
+                                              <dt>Relation</dt>
+                                              <dd>{{ displayRelationKind(row.node.relationKind) }}</dd>
+                                            </div>
+                                          }
+                                          @if (row.node.relationFrom) {
+                                            <div>
+                                              <dt>From</dt>
+                                              <dd>{{ row.node.relationFrom }}</dd>
+                                            </div>
+                                          }
+                                          @if (row.node.relationTo) {
+                                            <div>
+                                              <dt>To</dt>
+                                              <dd>{{ row.node.relationTo }}</dd>
+                                            </div>
+                                          }
+                                        </dl>
+                                      }
+
+                                      @if (row.node.file.methods?.length) {
+                                        <div class="context-method-list">
+                                          @for (method of row.node.file.methods || []; track method.methodName || $index) {
+                                            <div class="context-method-row">
+                                              <span class="context-method-row__name">{{ method.methodName }}</span>
+                                              @if (methodLineRange(method)) {
+                                                <span class="context-method-row__range">{{ methodLineRange(method) }}</span>
+                                              }
+                                              <button
+                                                class="json-icon-button context-method-row__action"
+                                                type="button"
+                                                title="Użyj w Java Method Slice"
+                                                aria-label="Użyj metody w Java Method Slice"
+                                                (click)="$event.stopPropagation(); useUseCaseMethodForSlice(row.node, method)"
+                                              >
+                                                <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+                                              </button>
+                                            </div>
+                                          }
+                                        </div>
+                                      } @else if (row.node.file.symbols.length) {
+                                        <div class="context-method-list">
+                                          @for (symbol of row.node.file.symbols; track symbol) {
+                                            <div class="context-method-row">
+                                              <span class="context-method-row__name">{{ symbol }}</span>
+                                            </div>
+                                          }
+                                        </div>
+                                      }
+                                    </div>
+                                  </div>
+                                }
+                              </div>
                               @if (row.node.subtitle) {
                                 <span class="flow-tree-node__subtitle">{{ row.node.subtitle }}</span>
                               }
                               @if (row.node.relationReason) {
                                 <span class="flow-tree-node__reason">{{ row.node.relationReason }}</span>
                               }
-                            </span>
+                            </div>
                             <span class="flow-tree-node__badges">
                               @if (row.node.relationKind) {
                                 <span class="flow-tree-node__edge" [title]="relationTooltip(row.node.relationKind, row.node.relationReason)">
@@ -730,91 +829,9 @@
                                 </span>
                               }
                             </span>
-                          </button>
+                          </div>
                         }
                       </div>
-
-                      @if (selectedGitLabUseCaseTreeNode(); as selectedNode) {
-                        <aside class="flow-node-details">
-                          <div class="flow-node-details__header">
-                            <div>
-                              <p class="tool-status__label">Selected node</p>
-                              <h4>{{ selectedNode.label }}</h4>
-                            </div>
-                            <div class="flow-node-details__actions">
-                              @if (selectedNode.file?.methods?.length) {
-                                <button
-                                  class="secondary-button secondary-button--compact"
-                                  type="button"
-                                  (click)="useUseCaseNodeMethodsForSlice(selectedNode)"
-                                >
-                                  Slice all
-                                </button>
-                              }
-                              <span class="panel-chip" [title]="roleTooltip(selectedNode.role)">
-                                {{ displayRole(selectedNode.role) }}
-                              </span>
-                            </div>
-                          </div>
-
-                          @if (selectedNode.subtitle) {
-                            <p class="flow-node-details__path">{{ selectedNode.subtitle }}</p>
-                          }
-
-                          @if (selectedNode.relationKind || selectedNode.relationFrom || selectedNode.relationTo) {
-                            <dl class="flow-node-details__meta">
-                              @if (selectedNode.relationKind) {
-                                <div>
-                                  <dt>Relation</dt>
-                                  <dd>{{ displayRelationKind(selectedNode.relationKind) }}</dd>
-                                </div>
-                              }
-                              @if (selectedNode.relationFrom) {
-                                <div>
-                                  <dt>From</dt>
-                                  <dd>{{ selectedNode.relationFrom }}</dd>
-                                </div>
-                              }
-                              @if (selectedNode.relationTo) {
-                                <div>
-                                  <dt>To</dt>
-                                  <dd>{{ selectedNode.relationTo }}</dd>
-                                </div>
-                              }
-                            </dl>
-                          }
-
-                          @if (selectedNode.file?.methods?.length) {
-                            <div class="context-method-list">
-                              @for (method of selectedNode.file?.methods || []; track method.methodName || $index) {
-                                <div class="context-method-row">
-                                  <span class="context-method-row__name">{{ method.methodName }}</span>
-                                  @if (methodLineRange(method)) {
-                                    <span class="context-method-row__range">{{ methodLineRange(method) }}</span>
-                                  }
-                                  <button
-                                    class="json-icon-button context-method-row__action"
-                                    type="button"
-                                    title="Użyj w Java Method Slice"
-                                    aria-label="Użyj metody w Java Method Slice"
-                                    (click)="useUseCaseMethodForSlice(selectedNode, method)"
-                                  >
-                                    <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-                                  </button>
-                                </div>
-                              }
-                            </div>
-                          } @else if (selectedNode.file?.symbols?.length) {
-                            <div class="context-method-list">
-                              @for (symbol of selectedNode.file?.symbols || []; track symbol) {
-                                <div class="context-method-row">
-                                  <span class="context-method-row__name">{{ symbol }}</span>
-                                </div>
-                              }
-                            </div>
-                          }
-                        </aside>
-                      }
                     </div>
                   </section>
                 } @else {

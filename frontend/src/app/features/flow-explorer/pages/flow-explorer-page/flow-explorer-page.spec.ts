@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { AnalysisAiModelOptionsResponse } from '../../../../core/models/analysis.models';
 import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
@@ -77,6 +77,46 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('2 applications');
     expect(compiled.textContent).toContain('Default backend (gpt-5.4)');
     expect(compiled.textContent).not.toContain('Customer relationship core API.');
+  });
+
+  it('should show mini loaders in async select indicators while options are loading', async () => {
+    const systems = new Subject<FlowExplorerSystemOption[]>();
+    const endpointInventoryResponse = new Subject<FlowExplorerEndpointInventoryResponse>();
+    const modelOptions = new Subject<AnalysisAiModelOptionsResponse>();
+    vi.mocked(flowExplorerApi.getSystems).mockReturnValue(systems.asObservable());
+    vi.mocked(flowExplorerApi.getEndpointInventory).mockReturnValue(endpointInventoryResponse.asObservable());
+    vi.mocked(analysisApi.getAiModelOptions).mockReturnValue(modelOptions.asObservable());
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+
+    let controls = selectControls(fixture.nativeElement);
+    expect(controls[0]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
+    expect(controls[0]?.getAttribute('aria-busy')).toBe('true');
+    expect(controls[4]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
+    expect(controls[5]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(3);
+
+    systems.next([systemOption('crm-service'), systemOption('billing-core')]);
+    systems.complete();
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+
+    controls = selectControls(fixture.nativeElement);
+    expect(controls[0]?.querySelector('.flow-explorer-select-loader')).toBeNull();
+    expect(controls[1]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
+    expect(controls[1]?.getAttribute('aria-busy')).toBe('true');
+    expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(3);
+
+    endpointInventoryResponse.next(endpointInventory());
+    endpointInventoryResponse.complete();
+    modelOptions.next(aiModelOptions());
+    modelOptions.complete();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(0);
   });
 
   it('should filter systems locally', () => {
@@ -556,6 +596,10 @@ function setInputValue(nativeElement: HTMLElement, selector: string, value: stri
   const input = nativeElement.querySelector(selector) as HTMLInputElement;
   input.value = value;
   input.dispatchEvent(new Event('input'));
+}
+
+function selectControls(nativeElement: HTMLElement): HTMLButtonElement[] {
+  return Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control'));
 }
 
 function selectSystem(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {

@@ -15,9 +15,9 @@
 .context-flow,
 .endpoint-list,
 .flow-tree,
-.flow-node-details,
+.flow-node-tooltip,
 .context-list,
-.flow-node-details__meta {
+.flow-node-tooltip__meta {
   display: grid;
   gap: 16px;
 }
@@ -28,15 +28,15 @@
 .context-results__header,
 .context-flow__header,
 .context-endpoint,
-.flow-node-details__header,
-.flow-node-details__actions {
+.flow-node-tooltip__header,
+.flow-node-tooltip__actions {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.flow-node-details__actions {
+.flow-node-tooltip__actions {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -90,7 +90,7 @@
 .endpoint-results h3,
 .context-results h3,
 .context-flow h4,
-.flow-node-details h4 {
+.flow-node-tooltip strong {
   margin: 0;
   color: var(--text-main);
   line-height: 1.25;
@@ -138,7 +138,6 @@
 
 .endpoint-results,
 .context-results,
-.flow-node-details,
 .endpoint-card {
   min-width: 0;
   border: 1px solid var(--border);
@@ -147,17 +146,12 @@
 }
 
 .endpoint-results,
-.context-results,
-.flow-node-details {
+.context-results {
   padding: 12px;
 }
 
-.flow-node-details {
-  background: var(--surface-alt);
-}
-
 .tool-status__label,
-.flow-node-details__meta dt {
+.flow-node-tooltip__meta dt {
   margin: 0 0 4px;
   color: var(--text-soft);
   font-size: 0.72rem;
@@ -165,7 +159,7 @@
   text-transform: uppercase;
 }
 
-.flow-node-details__meta dd {
+.flow-node-tooltip__meta dd {
   margin: 0;
   color: var(--text-main);
   font-size: 0.86rem;
@@ -272,11 +266,103 @@
 .flow-tree-node__reason,
 .endpoint-card__copy p,
 .context-endpoint p,
-.flow-node-details__path {
+.flow-node-tooltip__path {
   color: var(--text-muted);
   font-size: 0.76rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.flow-tree-node__title-row {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 6px;
+}
+
+.flow-tree-node__info {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.flow-tree-node__info > .material-symbols-outlined {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.flow-tree-node__info:hover,
+.flow-tree-node__info:focus-visible,
+.flow-tree-node__title-row:hover .flow-tree-node__info {
+  color: var(--primary-dark);
+  outline: none;
+}
+
+.flow-node-tooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  z-index: 40;
+  gap: 10px;
+  width: min(460px, calc(100vw - 80px));
+  max-height: min(540px, calc(100vh - 160px));
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-main);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(4px, -50%);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.flow-tree-node__title-row:hover .flow-node-tooltip,
+.flow-tree-node__info:focus-within .flow-node-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, -50%);
+}
+
+.flow-node-tooltip__header {
+  align-items: start;
+}
+
+.flow-node-tooltip__header > div:first-child {
+  min-width: 0;
+}
+
+.flow-node-tooltip strong,
+.flow-node-tooltip__path,
+.flow-node-tooltip__meta dd {
+  overflow-wrap: anywhere;
+}
+
+.flow-node-tooltip__path {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.flow-node-tooltip__meta {
+  gap: 10px;
+  margin: 0;
+}
+
+.flow-node-tooltip__meta div {
+  min-width: 0;
 }
 
 .gitlab-tool-button__state {
@@ -370,6 +456,18 @@
   .endpoint-card__main,
   .flow-tree-node {
     grid-template-columns: 1fr;
+  }
+
+  .flow-node-tooltip {
+    top: calc(100% + 8px);
+    left: 0;
+    width: min(440px, calc(100vw - 48px));
+    transform: translateY(4px);
+  }
+
+  .flow-tree-node__title-row:hover .flow-node-tooltip,
+  .flow-tree-node__info:focus-within .flow-node-tooltip {
+    transform: translateY(0);
   }
 
   .gitlab-runner__actions .primary-button,

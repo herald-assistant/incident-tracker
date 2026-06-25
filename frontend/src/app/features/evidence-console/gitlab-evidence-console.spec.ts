@@ -62,6 +62,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(injectedEdge?.getAttribute('title') || '').toContain('wstrzykniętą przez DI');
     expect(repositoryRole?.getAttribute('title') || '').toContain('adapter dostępu do danych');
     expect(confidencePill?.getAttribute('title') || '').toContain('Wysoka pewność');
+    expect(compiled.querySelector('.flow-node-details')).toBeNull();
 
     const serviceNode = fixture.componentInstance.gitLabUseCaseTree()?.rows.find(
       (row) => row.node.label === 'CustomerService.java'
@@ -70,8 +71,15 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.componentInstance.selectGitLabUseCaseTreeNode(serviceNode!);
     fixture.detectChanges();
 
-    expect(compiled.textContent).toContain('getCustomer');
-    expect(compiled.textContent).toContain('L42-L50');
+    const serviceTreeNode = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.flow-tree-node')
+    ).find((node) => node.textContent?.includes('CustomerService.java'));
+    const serviceTooltip = serviceTreeNode?.querySelector<HTMLElement>('.flow-node-tooltip');
+
+    expect(serviceTreeNode?.className).toContain('flow-tree-node--selected');
+    expect(serviceTooltip?.textContent).toContain('Selected node');
+    expect(serviceTooltip?.textContent).toContain('getCustomer');
+    expect(serviceTooltip?.textContent).toContain('L42-L50');
     expect(compiled.textContent).not.toContain('CustomerModel getCustomer(CustomerId customerId)');
   });
 

@@ -92,7 +92,9 @@
 
 .flow-tree-node {
   grid-template-columns: 8px minmax(0, 1fr) auto;
+  position: relative;
   width: 100%;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
@@ -103,10 +105,21 @@
 }
 
 .flow-tree-node__marker {
+  align-self: center;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--primary);
+}
+
+.flow-tree-node:hover,
+.flow-tree-node:focus-within {
+  z-index: 3;
+}
+
+.flow-tree-node__title {
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .endpoint-card__copy,
@@ -137,7 +150,7 @@
 
 .context-flow__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
