@@ -59,6 +59,55 @@ class GitLabJavaInterfaceImplementorResolverTest {
     }
 
     @Test
+    void shouldResolveImplementationThroughInterfaceExtendingRequestedPort() {
+        repositoryPort.add("src/main/java/com/example/platform/port/RequestedCapabilityPort.java", """
+                package com.example.platform.port;
+
+                public interface RequestedCapabilityPort {
+                    OutputDto load(Long sourceId);
+
+                    CreatedId create(InputForm inputForm);
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/platform/api/CompositeFacadeApi.java", """
+                package com.example.platform.api;
+
+                import com.example.platform.port.RequestedCapabilityPort;
+
+                public interface CompositeFacadeApi extends RequestedCapabilityPort, SecondaryCapabilityPort {
+                    OutputDto load(Long entityId);
+                }
+                """);
+        repositoryPort.add("src/main/java/com/example/platform/api/CompositeFacadeController.java", """
+                package com.example.platform.api;
+
+                public class CompositeFacadeController implements CompositeFacadeApi {
+                    @Override
+                    public OutputDto load(Long entityId) {
+                        return null;
+                    }
+                }
+                """);
+
+        var resolution = resolver.resolveImplementors(
+                session(),
+                "com.example.platform.port.RequestedCapabilityPort"
+        );
+
+        assertEquals(GitLabJavaImplementorResolutionStatus.RESOLVED, resolution.status());
+        assertEquals("com.example.platform.port.RequestedCapabilityPort", resolution.interfaceName());
+        assertEquals(1, resolution.candidates().size());
+        var candidate = resolution.candidates().get(0);
+        assertEquals("CompositeFacadeController", candidate.implementationSimpleName());
+        assertEquals("com.example.platform.api.CompositeFacadeController",
+                candidate.implementationQualifiedName());
+        assertEquals("src/main/java/com/example/platform/api/CompositeFacadeController.java",
+                candidate.filePath());
+        assertEquals(List.of("CompositeFacadeApi"), candidate.implementedTypes());
+        assertTrue(candidate.reason().contains("CompositeFacadeApi"));
+    }
+
+    @Test
     void shouldResolveNestedRepositoryPortImplementation() {
         repositoryPort.add("src/main/java/com/example/crm/customer/CustomerRepositoryPort.java", """
                 package com.example.crm.customer;
