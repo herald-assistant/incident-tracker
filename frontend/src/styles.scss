@@ -1551,6 +1551,8 @@ body .flow-tree-node__badges .confidence-pill,
 .final-analysis {
   display: grid;
   gap: 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .analysis-highlights {
@@ -1560,6 +1562,8 @@ body .flow-tree-node__badges .confidence-pill,
 
 .analysis-highlight,
 .analysis-summary {
+  min-width: 0;
+  max-width: 100%;
   padding: 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -1581,6 +1585,8 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .markdown-content {
+  min-width: 0;
+  max-width: 100%;
   color: var(--text-main);
   line-height: 1.55;
   overflow-wrap: anywhere;
@@ -1659,6 +1665,7 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .markdown-content pre {
+  max-width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
   background: #f4f7fb;
@@ -1673,9 +1680,10 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .markdown-content table {
-  display: block;
-  width: max-content;
-  min-width: min(720px, 100%);
+  display: table;
+  table-layout: auto;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   margin: 14px 0;
   border: 1px solid var(--border);
@@ -1685,17 +1693,19 @@ body .flow-tree-node__badges .confidence-pill,
   box-shadow: var(--shadow-card);
   font-size: 0.92rem;
   line-height: 1.45;
-  overflow-x: auto;
 }
 
 .markdown-content th,
 .markdown-content td {
-  min-width: 116px;
+  min-width: 0;
+  max-width: min(44rem, 76vw);
   padding: 10px 12px;
   border-right: 1px solid rgba(184, 198, 216, 0.74);
   border-bottom: 1px solid rgba(184, 198, 216, 0.72);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown-content th {
@@ -1731,7 +1741,9 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .markdown-content td code {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown-content a {

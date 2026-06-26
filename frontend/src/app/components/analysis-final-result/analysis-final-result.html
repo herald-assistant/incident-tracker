@@ -1,85 +1,88 @@
 @if (result(); as analysisResult) {
   <section class="final-analysis">
-    <div class="panel-card__header panel-card__header--compact">
+    <div class="panel-card__header panel-card__header--compact final-analysis__header">
       <div>
         <p class="section-eyebrow">Wynik</p>
         <h3>{{ status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza' }}</h3>
       </div>
+
+      @if (hasMeaningfulValue(analysisResult.confidence)) {
+        <div
+          class="final-analysis__confidence"
+          [attr.aria-label]="'Confidence: ' + analysisResult.confidence"
+        >
+          <span class="result-card-label">Confidence</span>
+          <code class="problem-badge final-analysis__confidence-value">
+            {{ analysisResult.confidence }}
+          </code>
+        </div>
+      }
     </div>
 
-    <div class="analysis-highlights">
-      @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
+    @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
+      <div class="analysis-highlights">
         <div class="analysis-highlight">
           <p class="result-card-label">Najbardziej prawdopodobny problem</p>
           <code class="problem-badge">{{ analysisResult.detectedProblem }}</code>
         </div>
-      }
-
-      @if (hasMeaningfulValue(analysisResult.confidence)) {
-        <div class="analysis-highlight">
-          <p class="result-card-label">Confidence</p>
-          <code class="problem-badge">{{ analysisResult.confidence }}</code>
-        </div>
-      }
-    </div>
-
-    @if (
-      hasMeaningfulValue(analysisResult.affectedProcess) ||
-      hasMeaningfulValue(analysisResult.affectedBoundedContext) ||
-      hasMeaningfulValue(analysisResult.affectedTeam)
-    ) {
-      <div class="analysis-context-actions">
-        <a class="secondary-button secondary-button--accent" routerLink="/operational-context">
-          Open Operational Context
-        </a>
-      </div>
-
-      <div class="analysis-highlights">
-        @if (hasMeaningfulValue(analysisResult.affectedProcess)) {
-          <div class="analysis-highlight">
-            <p class="result-card-label">Affected process</p>
-            <app-markdown-content
-              [content]="analysisResult.affectedProcess"
-              [compact]="true"
-            ></app-markdown-content>
-          </div>
-        }
-
-        @if (hasMeaningfulValue(analysisResult.affectedBoundedContext)) {
-          <div class="analysis-highlight">
-            <p class="result-card-label">Bounded context</p>
-            <app-markdown-content
-              [content]="analysisResult.affectedBoundedContext"
-              [compact]="true"
-            ></app-markdown-content>
-          </div>
-        }
-
-        @if (hasMeaningfulValue(analysisResult.affectedTeam)) {
-          <div class="analysis-highlight">
-            <p class="result-card-label">Team / handoff owner</p>
-            <app-markdown-content
-              [content]="analysisResult.affectedTeam"
-              [compact]="true"
-            ></app-markdown-content>
-          </div>
-        }
       </div>
     }
 
-    <div class="analysis-summary">
-      <p class="result-card-label">Rezultat analizy funkcjonalnej</p>
-      <app-markdown-content
-        [content]="analysisResult.functionalAnalysis || 'Brak wyniku analizy funkcjonalnej.'"
-      ></app-markdown-content>
+    <div class="analysis-result-tabs" role="tablist" aria-label="Sekcje finalnej analizy">
+      <button
+        id="analysis-tab-functional"
+        class="analysis-result-tab"
+        [class.analysis-result-tab--active]="activeAnalysisTab() === 'functional'"
+        type="button"
+        role="tab"
+        aria-controls="analysis-panel-functional"
+        [attr.aria-selected]="activeAnalysisTab() === 'functional'"
+        [attr.tabindex]="activeAnalysisTab() === 'functional' ? 0 : -1"
+        (click)="selectAnalysisTab('functional')"
+      >
+        Rezultat analizy funkcjonalnej
+      </button>
+
+      <button
+        id="analysis-tab-technical"
+        class="analysis-result-tab"
+        [class.analysis-result-tab--active]="activeAnalysisTab() === 'technical'"
+        type="button"
+        role="tab"
+        aria-controls="analysis-panel-technical"
+        [attr.aria-selected]="activeAnalysisTab() === 'technical'"
+        [attr.tabindex]="activeAnalysisTab() === 'technical' ? 0 : -1"
+        (click)="selectAnalysisTab('technical')"
+      >
+        Rezultat analizy technicznej
+      </button>
     </div>
 
-    <div class="analysis-summary">
-      <p class="result-card-label">Rezultat analizy technicznej</p>
-      <app-markdown-content
-        [content]="analysisResult.technicalAnalysis || 'Brak wyniku analizy technicznej.'"
-      ></app-markdown-content>
-    </div>
+    @if (activeAnalysisTab() === 'functional') {
+      <div
+        id="analysis-panel-functional"
+        class="analysis-summary analysis-summary--tab-panel"
+        role="tabpanel"
+        aria-labelledby="analysis-tab-functional"
+        tabindex="0"
+      >
+        <app-markdown-content
+          [content]="analysisResult.functionalAnalysis || 'Brak wyniku analizy funkcjonalnej.'"
+        ></app-markdown-content>
+      </div>
+    } @else {
+      <div
+        id="analysis-panel-technical"
+        class="analysis-summary analysis-summary--tab-panel"
+        role="tabpanel"
+        aria-labelledby="analysis-tab-technical"
+        tabindex="0"
+      >
+        <app-markdown-content
+          [content]="analysisResult.technicalAnalysis || 'Brak wyniku analizy technicznej.'"
+        ></app-markdown-content>
+      </div>
+    }
 
     @if (analysisResult.visibilityLimits.length > 0) {
       <div class="analysis-highlight">

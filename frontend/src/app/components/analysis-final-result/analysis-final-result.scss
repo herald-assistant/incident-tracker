@@ -1,16 +1,113 @@
 :host {
-  display: contents;
-}
-:host {
   display: block;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.analysis-context-actions {
+.final-analysis__header {
+  align-items: flex-start;
+}
+
+.final-analysis__confidence {
   display: flex;
-  justify-content: flex-start;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
 }
 
-.analysis-context-actions .secondary-button {
-  width: auto;
-  text-decoration: none;
+.final-analysis__confidence .result-card-label {
+  margin-bottom: 0;
+}
+
+.final-analysis__confidence-value {
+  padding: 5px 8px;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.analysis-result-tabs {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  gap: 2px;
+  margin-bottom: -15px;
+  padding: 0 8px;
+  overflow-x: auto;
+}
+
+.analysis-result-tab {
+  position: relative;
+  z-index: 1;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+}
+
+.analysis-result-tab:hover,
+.analysis-result-tab:focus-visible {
+  color: var(--primary-dark);
+}
+
+.analysis-result-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.analysis-result-tab--active {
+  z-index: 2;
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--primary-dark);
+  box-shadow: 0 -2px 8px rgba(9, 30, 66, 0.04);
+}
+
+.analysis-result-tab--active::after {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.88);
+  content: '';
+}
+
+.analysis-summary--tab-panel {
+  position: relative;
+  z-index: 1;
+  border-top-left-radius: 0;
+}
+
+.analysis-summary--tab-panel:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 860px) {
+  .final-analysis__confidence {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .analysis-result-tab {
+    flex: 1 0 max-content;
+  }
 }
