@@ -7,40 +7,49 @@ describe('analysis import/export utils', () => {
 
     const serialized = JSON.stringify(envelope);
 
+    expect(envelope.schema).toBe('tdw.analysis-export');
     expect(serialized).not.toContain('ghu_secret_token');
     expect(serialized).not.toContain('ghr_secret_refresh');
     expect(serialized).not.toContain('githubAuthCode');
     expect(serialized).not.toContain('client_secret');
   });
 
-  it('should import older job JSON without newer feedback fields', () => {
-    const olderJob = completedJob() as unknown as Record<string, unknown>;
-    delete olderJob['aiAccount'];
-    delete olderJob['toolFeedback'];
-    olderJob['chatMessages'] = [
-      {
-        id: 'chat-1',
-        role: 'ASSISTANT',
-        status: 'COMPLETED',
-        content: 'Odpowiedź',
-        errorCode: '',
-        errorMessage: '',
-        createdAt: '2026-05-02T10:06:00Z',
-        updatedAt: '2026-05-02T10:06:00Z',
-        completedAt: '2026-05-02T10:06:00Z',
-        toolEvidenceSections: [],
-        aiActivityEvents: [],
-        prompt: ''
-      }
-    ];
+  it('should import current tdw export envelopes', () => {
+    const imported = parseImportedAnalysis(
+      buildExportEnvelope(completedJob(), '2026-05-02T10:05:00Z')
+    );
 
-    const imported = parseImportedAnalysis(olderJob);
-
+    expect(imported.exportedAt).toBe('2026-05-02T10:05:00Z');
     expect(imported.job.analysisId).toBe('analysis-1');
     expect(imported.job.status).toBe('COMPLETED');
     expect(imported.job.result?.detectedProblem).toBe('DOWNSTREAM_TIMEOUT');
-    expect(imported.job.toolFeedback).toEqual([]);
-    expect(imported.job.chatMessages[0].toolFeedback).toEqual([]);
+  });
+
+  it('should reject legacy incident tracker export envelopes', () => {
+    expect(() =>
+      parseImportedAnalysis({
+        schema: 'incident-tracker.analysis-export',
+        version: 6,
+        exportedAt: '2026-05-02T10:05:00Z',
+        payload: {
+          type: 'analysis-job',
+          job: completedJob()
+        }
+      })
+    ).toThrow('Nie rozpoznano formatu importu.');
+  });
+
+  it('should reject older tdw export envelope versions', () => {
+    expect(() =>
+      parseImportedAnalysis({
+        ...buildExportEnvelope(completedJob(), '2026-05-02T10:05:00Z'),
+        version: 5
+      })
+    ).toThrow('Ten plik eksportu ma nieobsługiwaną wersję formatu.');
+  });
+
+  it('should reject raw job snapshots without export envelope', () => {
+    expect(() => parseImportedAnalysis(completedJob())).toThrow('Nie rozpoznano formatu importu.');
   });
 });
 

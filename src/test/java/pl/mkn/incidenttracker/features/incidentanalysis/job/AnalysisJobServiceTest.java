@@ -45,6 +45,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operat
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestInitialAnalysisProvider;
 
 import java.util.ArrayDeque;
@@ -108,6 +109,45 @@ class AnalysisJobServiceTest {
         assertEquals("Billing Context", completed.result().affectedBoundedContext());
         assertEquals("Core Integration Team", completed.result().affectedTeam());
         assertEquals("COMPLETED", completed.steps().get(5).status());
+    }
+
+    @Test
+    void shouldPersistCompletedInitialAnalysisRun() {
+        var persistence = new CapturingLocalRunPersistence();
+        var persistenceTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                persistenceTaskExecutor,
+                persistence
+        );
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        persistenceTaskExecutor.runNext();
+
+        assertEquals(1, persistence.snapshots.size());
+        assertEquals(started.analysisId(), persistence.snapshots.get(0).analysisId());
+        assertEquals("COMPLETED", persistence.snapshots.get(0).status());
+        assertEquals("timeout-123", persistence.requests.get(0).correlationId());
+        assertEquals("CRM/runtime", persistence.requests.get(0).gitLabGroup());
+    }
+
+    @Test
+    void shouldNotPersistFailedInitialAnalysisRun() {
+        var persistence = new CapturingLocalRunPersistence();
+        var failingTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                new FailingInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                failingTaskExecutor,
+                persistence
+        );
+
+        service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        failingTaskExecutor.runNext();
+
+        assertTrue(persistence.snapshots.isEmpty());
+        assertTrue(persistence.requests.isEmpty());
     }
 
     @Test
@@ -372,8 +412,23 @@ class AnalysisJobServiceTest {
                 initialAnalysisProvider,
                 analysisAiChatProvider,
                 taskExecutor,
+                IncidentAnalysisLocalRunPersistence.NO_OP
+        );
+    }
+
+    private AnalysisJobService analysisJobService(
+            InitialAnalysisProvider initialAnalysisProvider,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor taskExecutor,
+            IncidentAnalysisLocalRunPersistence localRunPersistence
+    ) {
+        return analysisJobService(
+                initialAnalysisProvider,
+                analysisAiChatProvider,
+                taskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),
-                auth -> new CopilotAccessToken("test-token", null, null, false)
+                auth -> new CopilotAccessToken("test-token", null, null, false),
+                localRunPersistence
         );
     }
 
@@ -383,6 +438,24 @@ class AnalysisJobServiceTest {
             TaskExecutor taskExecutor,
             AnalysisAiAuthRefResolver authRefResolver,
             CopilotAccessTokenResolver accessTokenResolver
+    ) {
+        return analysisJobService(
+                initialAnalysisProvider,
+                analysisAiChatProvider,
+                taskExecutor,
+                authRefResolver,
+                accessTokenResolver,
+                IncidentAnalysisLocalRunPersistence.NO_OP
+        );
+    }
+
+    private AnalysisJobService analysisJobService(
+            InitialAnalysisProvider initialAnalysisProvider,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor taskExecutor,
+            AnalysisAiAuthRefResolver authRefResolver,
+            CopilotAccessTokenResolver accessTokenResolver,
+            IncidentAnalysisLocalRunPersistence localRunPersistence
     ) {
         return new AnalysisJobService(
                 new AnalysisOrchestrator(
@@ -407,7 +480,8 @@ class AnalysisJobServiceTest {
                 taskExecutor,
                 authRefResolver,
                 new CopilotRunAuthMapper(),
-                accessTokenResolver
+                accessTokenResolver,
+                localRunPersistence
         );
     }
 
@@ -450,6 +524,22 @@ class AnalysisJobServiceTest {
 
         private boolean isEmpty() {
             return tasks.isEmpty();
+        }
+    }
+
+    private static final class CapturingLocalRunPersistence implements IncidentAnalysisLocalRunPersistence {
+
+        private final List<pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot> snapshots =
+                new java.util.ArrayList<>();
+        private final List<InitialAnalysisRequest> requests = new java.util.ArrayList<>();
+
+        @Override
+        public void persistCompletedInitialRun(
+                pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot snapshot,
+                InitialAnalysisRequest aiRequest
+        ) {
+            snapshots.add(snapshot);
+            requests.add(aiRequest);
         }
     }
 

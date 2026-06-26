@@ -14,9 +14,8 @@ import {
 import { isTerminalStatus } from './analysis-display.utils';
 import { formatFileTimestamp, sanitizeFileNamePart } from './json-file.utils';
 
-export const EXPORT_SCHEMA = 'incident-tracker.analysis-export';
+export const EXPORT_SCHEMA = 'tdw.analysis-export';
 export const EXPORT_VERSION = 6;
-const SUPPORTED_EXPORT_VERSIONS = new Set([2, 3, 4, 5, 6]);
 
 export function buildExportEnvelope(
   job: AnalysisJobStateSnapshot,
@@ -42,26 +41,23 @@ export function parseImportedAnalysis(payload: unknown): {
     throw new Error('Wybrany plik nie zawiera poprawnego zapisu analizy.');
   }
 
-  let exportedAt = '';
-  let jobPayload: unknown = payloadObject;
-
-  if (payloadObject['schema'] === EXPORT_SCHEMA) {
-    if (!SUPPORTED_EXPORT_VERSIONS.has(Number(payloadObject['version']))) {
-      throw new Error('Ten plik eksportu ma nieobsługiwaną wersję formatu.');
-    }
-
-    const envelopePayload = asObject(payloadObject['payload']);
-    if (!envelopePayload || envelopePayload['type'] !== 'analysis-job') {
-      throw new Error('Plik eksportu nie zawiera wyniku analizy.');
-    }
-
-    exportedAt = normalizeString(payloadObject['exportedAt']);
-    jobPayload = envelopePayload['job'];
-  } else if (!looksLikeAnalysisJob(payloadObject)) {
+  if (payloadObject['schema'] !== EXPORT_SCHEMA) {
     throw new Error(
       'Nie rozpoznano formatu importu. Wybierz plik wyeksportowany z Team Delivery Workspace.'
     );
   }
+
+  if (Number(payloadObject['version']) !== EXPORT_VERSION) {
+    throw new Error('Ten plik eksportu ma nieobsługiwaną wersję formatu.');
+  }
+
+  const envelopePayload = asObject(payloadObject['payload']);
+  if (!envelopePayload || envelopePayload['type'] !== 'analysis-job') {
+    throw new Error('Plik eksportu nie zawiera wyniku analizy.');
+  }
+
+  const exportedAt = normalizeString(payloadObject['exportedAt']);
+  const jobPayload = envelopePayload['job'];
 
   const job = normalizeAnalysisJob(jobPayload);
   if (!job.status) {
@@ -126,13 +122,6 @@ export function buildExportFileName(job: AnalysisJobStateSnapshot, exportedAt: s
   const correlationId = sanitizeFileNamePart(job.correlationId || job.analysisId || 'analysis');
   const status = sanitizeFileNamePart((job.status || 'result').toLowerCase());
   return `incident-analysis-${correlationId}-${status}-${formatFileTimestamp(exportedAt)}.json`;
-}
-
-function looksLikeAnalysisJob(payload: Record<string, unknown>): boolean {
-  return (
-    typeof payload['status'] === 'string' &&
-    ('analysisId' in payload || 'correlationId' in payload)
-  );
 }
 
 function normalizeStep(step: unknown): AnalysisJobStepResponse {

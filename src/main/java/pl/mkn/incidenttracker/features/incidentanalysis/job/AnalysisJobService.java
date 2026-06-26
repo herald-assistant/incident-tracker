@@ -6,18 +6,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobState;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.state.AnalysisJobStateListener;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
-import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRefResolver;
 
@@ -36,6 +38,7 @@ public class AnalysisJobService {
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
+    private final IncidentAnalysisLocalRunPersistence localRunPersistence;
 
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
 
@@ -55,7 +58,27 @@ public class AnalysisJobService {
                         null,
                         null,
                         false
-                )
+                ),
+                IncidentAnalysisLocalRunPersistence.NO_OP
+        );
+    }
+
+    public AnalysisJobService(
+            AnalysisOrchestrator analysisOrchestrator,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor applicationTaskExecutor,
+            AnalysisAiAuthRefResolver authRefResolver,
+            CopilotRunAuthMapper runAuthMapper,
+            CopilotAccessTokenResolver accessTokenResolver
+    ) {
+        this(
+                analysisOrchestrator,
+                analysisAiChatProvider,
+                applicationTaskExecutor,
+                authRefResolver,
+                runAuthMapper,
+                accessTokenResolver,
+                IncidentAnalysisLocalRunPersistence.NO_OP
         );
     }
 
@@ -102,6 +125,7 @@ public class AnalysisJobService {
                     new AnalysisJobStateListener(job)
             );
             job.markCompleted(execution);
+            persistCompletedInitialRun(job, execution.aiRequest());
         } catch (AnalysisDataNotFoundException exception) {
             job.markNotFound("ANALYSIS_DATA_NOT_FOUND", exception.getMessage());
         } catch (RuntimeException exception) {
@@ -116,6 +140,20 @@ public class AnalysisJobService {
                     StringUtils.hasText(exception.getMessage())
                             ? exception.getMessage()
                             : "Unexpected analysis failure."
+            );
+        }
+    }
+
+    private void persistCompletedInitialRun(AnalysisJobState job, InitialAnalysisRequest aiRequest) {
+        var snapshot = job.snapshot();
+        try {
+            localRunPersistence.persistCompletedInitialRun(snapshot, aiRequest);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to persist completed local analysis run analysisId={} correlationId={} reason={}",
+                    snapshot.analysisId(),
+                    snapshot.correlationId(),
+                    exception.getMessage()
             );
         }
     }

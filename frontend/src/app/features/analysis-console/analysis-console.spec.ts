@@ -12,6 +12,7 @@ import {
 } from '../../core/models/analysis.models';
 import { AnalysisApiService } from '../../core/services/analysis-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
+import { buildExportEnvelope } from '../../core/utils/analysis-import-export.utils';
 import { AnalysisConsoleComponent } from './analysis-console';
 
 describe('AnalysisConsoleComponent auth flow', () => {
@@ -139,7 +140,10 @@ describe('AnalysisConsoleComponent auth flow', () => {
       value: [
         {
           name: 'analysis.json',
-          text: () => Promise.resolve(JSON.stringify(completedJob()))
+          text: () =>
+            Promise.resolve(
+              JSON.stringify(buildExportEnvelope(completedJob(), '2026-05-02T10:05:00Z'))
+            )
         }
       ]
     });

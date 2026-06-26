@@ -41,6 +41,10 @@ komputerze operatora:
   zapisuje go jako lokalnego runu i nie pozwala go kontynuowac.
 - Export jest sanitizowana projekcja lokalnego runu. Zawiera tylko pola
   potrzebne do podgladu/audytu wyniku.
+- Import/export nie utrzymuje kompatybilnosci wstecznej w V1. UI i backend
+  akceptuja aktualny kontrakt `tdw.analysis-export` w aktualnej wersji; stare
+  schematy, starsze wersje envelope i surowe snapshoty joba bez envelope sa
+  odrzucane.
 - Pelny backup albo przeniesienie kontynuowalnego workspace'u oznacza
   skopiowanie calego katalogu danych, nie zwykly export JSON.
 - V1 lokalnego store jest wlaczone domyslnie w lokalnej dystrybucji JAR.
@@ -295,7 +299,7 @@ Kryteria akceptacji:
 - katalog danych jest tworzony tylko gdy lokalny store jest wlaczony,
 - lista historii nie wymaga odczytu wszystkich `runs/*/run.json`.
 
-### [ ] 003. Persistowanie zakonczonego incident job state
+### [x] 003. Persistowanie zakonczonego incident job state
 
 Cel:
 
@@ -311,17 +315,22 @@ Zakres:
 - uzupelnienie tylko minimalnego lokalnego `continuation`, bez duplikowania
   danych dostepnych juz w `exportEnvelope`.
 
-Do zatwierdzenia:
+Zatwierdzone i zaimplementowane:
 
 - zapis tylko dla zakonczonych initial runow,
 - `FAILED`, `NOT_FOUND` i przerwane runy nie sa zapisywane w V1,
-- czy w V1 zapisujemy prompt/artifacts inline czy w plikach pomocniczych.
+- w V1 zapisujemy prompt/artifacts inline jako czesc `exportEnvelope`, bez
+  plikow pomocniczych,
+- incident export schema zostala przeniesiona na `tdw.analysis-export`;
+  legacy `incident-tracker.analysis-export`, starsze wersje envelope i surowe
+  job snapshoty bez envelope nie sa wspierane.
 
 Kryteria akceptacji:
 
 - po restarcie aplikacji zakonczony run jest widoczny w store,
 - snapshot odczytany ze store pasuje do obecnego UI,
-- import/export dalej dziala bez wiedzy o lokalnych polach.
+- import/export dziala tylko dla aktualnego envelope bez wiedzy o lokalnych
+  polach.
 
 ### [ ] 004. API historii lokalnych runow
 
@@ -490,7 +499,8 @@ Zakres:
 
 - export lokalnego runu jako zwrocenie `exportEnvelope`,
 - testy, ze export usuwa pola kontynuacyjne,
-- zachowanie obecnej kompatybilnosci importu.
+- brak kompatybilnosci wstecznej importu/exportu: tylko aktualny schema i
+  version envelope.
 
 Do zatwierdzenia:
 
@@ -502,7 +512,7 @@ Kryteria akceptacji:
 
 - export nie zawiera hidden context, session id, auth metadata ani lokalnych
   sciezek,
-- import pozostaje read-only,
+- import pozostaje read-only i odrzuca stare schematy oraz stare wersje,
 - lokalny run po eksporcie nadal pozostaje kontynuowalny tylko u wlasciciela
   katalogu danych.
 
