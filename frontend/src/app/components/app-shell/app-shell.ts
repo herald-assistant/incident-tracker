@@ -63,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Analysis Features',
     items: [
       { label: 'Incident Analysis', route: '/incident-analysis', icon: 'troubleshoot' },
+      { label: 'Historia analiz', route: '/analysis-history', icon: 'history' },
       { label: 'Flow Explorer', route: '/flow-explorer', icon: 'account_tree' },
       { label: 'Functional Logic', icon: 'schema', disabled: true },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }

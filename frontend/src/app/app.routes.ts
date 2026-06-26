@@ -29,6 +29,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'analysis-history',
+        loadComponent: () =>
+          import('./features/analysis-history/analysis-history-page').then(
+            (module) => module.AnalysisHistoryPageComponent
+          ),
+        data: {
+          section: 'Analysis Features',
+          title: 'Historia analiz'
+        }
+      },
+      {
         path: 'flow-explorer',
         loadComponent: () =>
           import('./features/flow-explorer/pages/flow-explorer-page/flow-explorer-page').then(

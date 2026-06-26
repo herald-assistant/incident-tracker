@@ -1,0 +1,371 @@
+:host {
+  display: block;
+}
+
+.analysis-history-page {
+  width: min(1480px, calc(100% - 28px));
+}
+
+.analysis-history-workspace {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.42fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.analysis-history-list-panel,
+.analysis-history-detail-placeholder,
+.analysis-history-detail-content {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.analysis-history-list-panel {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 118px);
+  min-height: 520px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.analysis-history-list-panel__header,
+.analysis-history-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.analysis-history-list-panel__header h2,
+.analysis-history-detail-header h2,
+.analysis-history-empty h3,
+.analysis-history-detail-placeholder h2 {
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+
+.analysis-history-list-panel__header h2,
+.analysis-history-detail-header h2,
+.analysis-history-detail-placeholder h2 {
+  font-size: 1.08rem;
+}
+
+.analysis-history-list-panel__header p,
+.analysis-history-detail-header p,
+.analysis-history-empty p,
+.analysis-history-detail-placeholder p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  line-height: 1.48;
+}
+
+.analysis-history-icon-button,
+.analysis-history-run__actions .secondary-button,
+.analysis-history-detail-header__actions .secondary-button,
+.analysis-history-empty__action,
+.analysis-history-rename__actions .primary-button,
+.analysis-history-rename__actions .secondary-button {
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.analysis-history-icon-button .material-symbols-outlined,
+.analysis-history-run__actions .material-symbols-outlined,
+.analysis-history-detail-header__actions .material-symbols-outlined,
+.analysis-history-empty__action .material-symbols-outlined,
+.analysis-history-rename__actions .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.analysis-history-filter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.analysis-history-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 82px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.analysis-history-run-list {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.analysis-history-run {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.analysis-history-run--selected {
+  border-color: rgba(12, 102, 228, 0.34);
+  background: #eef5ff;
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.analysis-history-run__main {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.analysis-history-run__main:focus-visible {
+  outline: 2px solid rgba(12, 102, 228, 0.32);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.analysis-history-run__main strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 0.96rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.analysis-history-run__main span:last-child {
+  min-width: 0;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-history-run__feature {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: rgba(12, 102, 228, 0.1);
+  color: var(--primary-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.analysis-history-run__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.analysis-history-run__meta div,
+.analysis-history-run-context__item {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(216, 224, 235, 0.82);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.analysis-history-run__meta dt,
+.analysis-history-run-context__label {
+  color: var(--text-soft);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.analysis-history-run__meta dd,
+.analysis-history-run-context__value {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-history-run__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.analysis-history-run__actions .secondary-button {
+  min-height: 34px;
+  padding: 0 9px;
+  font-size: 0.78rem;
+}
+
+.analysis-history-danger-button {
+  color: var(--danger-text);
+}
+
+.analysis-history-danger-button:hover:not(:disabled) {
+  border-color: rgba(174, 46, 36, 0.42);
+  background: var(--danger-soft);
+}
+
+.analysis-history-rename {
+  display: grid;
+  gap: 10px;
+}
+
+.analysis-history-rename__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.analysis-history-empty,
+.analysis-history-detail-placeholder {
+  display: grid;
+  gap: 10px;
+  place-items: center;
+  min-height: 260px;
+  padding: 22px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.analysis-history-empty .material-symbols-outlined,
+.analysis-history-detail-placeholder .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 34px;
+}
+
+.analysis-history-detail-placeholder {
+  min-height: 520px;
+}
+
+.analysis-history-detail-placeholder--error .material-symbols-outlined {
+  color: var(--danger-text);
+}
+
+.analysis-history-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(12, 102, 228, 0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.analysis-history-detail-content {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.analysis-history-detail-header__actions {
+  display: inline-flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.analysis-history-run-context {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1280px) {
+  .analysis-history-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-history-list-panel {
+    position: static;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .analysis-history-run-list {
+    max-height: 560px;
+  }
+
+  .analysis-history-run-context {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .analysis-history-list-panel__header,
+  .analysis-history-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .analysis-history-filter-row,
+  .analysis-history-run__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-history-detail-header__actions {
+    justify-content: flex-start;
+  }
+
+  .analysis-history-run-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .analysis-history-page {
+    width: min(100% - 18px, 100%);
+  }
+
+  .analysis-history-list-panel,
+  .analysis-history-detail-content {
+    padding: 12px;
+  }
+
+  .analysis-history-run-context {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-history-run__actions .secondary-button,
+  .analysis-history-detail-header__actions .secondary-button,
+  .analysis-history-rename__actions .primary-button,
+  .analysis-history-rename__actions .secondary-button {
+    width: auto;
+  }
+}

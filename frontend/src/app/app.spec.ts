@@ -88,6 +88,38 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
+  it('should render the analysis history shell on the analysis history route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/analysis-history');
+    fixture.detectChanges();
+    flushUiConfig(http, 'ChatCLP');
+    http.expectOne('/analysis/runs').flush({ runs: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Historia analiz"]'
+    );
+
+    expect(compiled.querySelector('app-analysis-history-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
+      'ChatCLP'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Historia analiz'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'Historia analiz'
+    );
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('Brak lokalnych analiz');
+  });
+
   it('should collapse the left navigation into an icon rail', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);

@@ -378,7 +378,7 @@ Kryteria akceptacji:
 - lista nie zwraca ciezkich artifacts/promptow i bazuje na `index.json`,
 - detail zwraca `exportEnvelope.payload.job` jako snapshot do UI.
 
-### [ ] 005. Ekran historii analiz
+### [x] 005. Ekran historii analiz
 
 Cel:
 
@@ -389,21 +389,44 @@ Zakres:
 - route historii,
 - tabela/lista runow,
 - filtry podstawowe,
-- akcje otworz/exportuj/usun,
+- akcje otworz/exportuj/usun/zmien nazwe,
 - przejscie do szczegolow runu,
 - reuse obecnych komponentow wyniku i timeline.
 
-Do zatwierdzenia:
+Zatwierdzone decyzje:
 
-- nazwa w nawigacji,
-- minimalne filtry V1,
-- czy historia pokazuje rowniez aktywne live joby.
+- nazwa w nawigacji: `Historia analiz`,
+- route UI: `/analysis-history`, zeby nie kolidowac z backendowym JSON API
+  `/analysis/runs`,
+- minimalne filtry V1: tekstowy filtr po `name` i `feature`,
+- historia pokazuje tylko zakonczone lokalne runy zapisane w `index.json`;
+  aktywne live joby pozostaja poza historia,
+- lista na starcie pobiera tylko `GET /analysis/runs` i nie laduje ciezkich
+  `run.json`,
+- otwarcie runu doczytuje `GET /analysis/runs/{analysisId}` i mapuje
+  `exportEnvelope.payload.job` na obecny read-only widok wyniku,
+- export lokalnego runu uzywa `exportEnvelope` 1:1,
+- edycja nazwy uzywa `PATCH /analysis/runs/{analysisId}/name`,
+- usuniecie runu uzywa `DELETE /analysis/runs/{analysisId}`,
+- imported export pozostaje read-only i nie pojawia sie w historii lokalnej.
 
 Kryteria akceptacji:
 
 - uzytkownik moze znalezc poprzednia analize,
 - otwarty lokalny run wyglada jak obecny wynik analizy,
 - imported export pozostaje read-only i nie pojawia sie w historii lokalnej.
+
+Wykonane:
+
+- dodano route UI `/analysis-history` i pozycje nawigacji `Historia analiz`,
+- dodano lekki klient `AnalysisRunHistoryApiService`,
+- ekran startowo pobiera tylko `GET /analysis/runs`, a pelny run doczytuje
+  dopiero przy otwarciu albo exporcie,
+- reuse obecnych komponentow final result, timeline/evidence i read-only
+  follow-up chat,
+- akcje `Export`, `Nazwa` i `Usun` sa podlaczone do API historii,
+- Spring fallback serwuje SPA dla `/analysis-history`,
+- dodano testy frontendowe i backendowy test routingu.
 
 ### [ ] 006. Kontynuacja lokalnego runu bez `resumeSession`
 

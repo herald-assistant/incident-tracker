@@ -44,6 +44,17 @@ class FrontendPageTest {
     }
 
     @Test
+    void shouldServeAnalysisHistoryRoute() throws Exception {
+        mockMvc.perform(get("/analysis-history"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/analysis-history/analysis-1"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
     void shouldServeIntegrationRoutes() throws Exception {
         mockMvc.perform(get("/evidence"))
                 .andExpect(status().isOk())

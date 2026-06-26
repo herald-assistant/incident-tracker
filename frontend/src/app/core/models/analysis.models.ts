@@ -240,3 +240,25 @@ export interface AnalysisExportEnvelope {
     job: AnalysisJobStateSnapshot;
   };
 }
+
+export interface LocalAnalysisRunListItemResponse {
+  analysisId: string;
+  feature: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string;
+}
+
+export interface LocalAnalysisRunListResponse {
+  runs: LocalAnalysisRunListItemResponse[];
+}
+
+export interface LocalAnalysisRunDetailResponse extends LocalAnalysisRunListItemResponse {
+  exportEnvelope: AnalysisExportEnvelope;
+  continuationEnabled: boolean;
+}
+
+export interface RenameLocalAnalysisRunRequest {
+  name: string;
+}
