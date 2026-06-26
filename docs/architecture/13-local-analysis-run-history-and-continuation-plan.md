@@ -332,7 +332,7 @@ Kryteria akceptacji:
 - import/export dziala tylko dla aktualnego envelope bez wiedzy o lokalnych
   polach.
 
-### [ ] 004. API historii lokalnych runow
+### [x] 004. API historii lokalnych runow
 
 Cel:
 
@@ -346,12 +346,31 @@ Zakres:
 - `DELETE /analysis/runs/{analysisId}`,
 - DTO list item zoptymalizowane pod ekran historii.
 
-Do zatwierdzenia:
+Zatwierdzone decyzje:
 
-- nazwy endpointow,
-- czy delete usuwa tez katalog SDK session store/czysci powiazane artefakty,
-- czy imported UI state kiedykolwiek moze byc zapisany jako local read-only
-  copy.
+- endpointy V1: `GET /analysis/runs`,
+  `GET /analysis/runs/{analysisId}`,
+  `PATCH /analysis/runs/{analysisId}/name`,
+  `DELETE /analysis/runs/{analysisId}`,
+- package docelowy: `pl.mkn.incidenttracker.api.analysisruns`,
+- lista zwraca tylko lekki read model z `index.json`: `analysisId`,
+  `feature`, `name`, `createdAt`, `updatedAt`, `completedAt`; nie zwraca
+  `runPath`, promptu, evidence ani innych ciezkich danych,
+- detail zwraca bezpieczna projekcje: dane z indexu, `exportEnvelope` i
+  `continuationEnabled`; nie ujawnia `gitLabGroup`, `authMode` ani
+  `authPrincipalRef`,
+- `PATCH /name` zmienia tylko `name` w `index.json` i wymaga istniejacego wpisu
+  indexu,
+- `DELETE` w V1 usuwa tylko lokalny wpis i katalog `runs/<analysisId>/`; nie
+  usuwa zadnych przyszlych katalogow sesji SDK, bo tych metadanych jeszcze nie
+  zapisujemy,
+- brak runu zwraca `404 LOCAL_ANALYSIS_RUN_NOT_FOUND`,
+- istniejacy wpis w indexie z brakujacym albo uszkodzonym `run.json` przy
+  detail zwraca `409 LOCAL_ANALYSIS_RUN_CORRUPTED`,
+- API pracuje tylko na aktualnym lokalnym kontrakcie
+  `tdw.local-analysis-run` + `tdw.analysis-export`, bez migracji i bez wsparcia
+  legacy formatow,
+- imported UI state nie jest zapisywany jako lokalna kopia V1.
 
 Kryteria akceptacji:
 
