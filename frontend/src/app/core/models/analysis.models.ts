@@ -217,10 +217,14 @@ export interface AnalysisJobStateSnapshot {
 }
 
 export interface ExportState {
-  origin: 'live' | 'imported';
+  origin: 'live' | 'local' | 'imported';
   exportedAt: string;
   fileName: string;
   job: AnalysisJobStateSnapshot;
+  localRunId?: string;
+  localRunName?: string;
+  continuationEnabled?: boolean;
+  sourceEnvelope?: unknown;
 }
 
 export interface TransportErrorState {
@@ -255,7 +259,7 @@ export interface LocalAnalysisRunListResponse {
 }
 
 export interface LocalAnalysisRunDetailResponse extends LocalAnalysisRunListItemResponse {
-  exportEnvelope: AnalysisExportEnvelope;
+  exportEnvelope: unknown;
   continuationEnabled: boolean;
 }
 

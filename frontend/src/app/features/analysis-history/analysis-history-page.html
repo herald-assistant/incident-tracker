@@ -1,13 +1,13 @@
 <div class="page-shell analysis-history-page">
   <main class="analysis-history-workspace">
-    <section class="analysis-history-list-panel" aria-labelledby="analysis-history-list-title">
-      <div class="analysis-history-list-panel__header">
+    <section class="analysis-history-panel" aria-labelledby="analysis-history-title">
+      <div class="analysis-history-panel__header">
         <div>
-          <p class="section-eyebrow">Local runs</p>
-          <h2 id="analysis-history-list-title">Zapisane analizy</h2>
+          <p class="section-eyebrow">Local workspace</p>
+          <h2 id="analysis-history-title">Analysis History</h2>
           <p>
-            Lista korzysta z lekkiego indeksu lokalnego. Pełny run jest doczytywany dopiero po
-            otwarciu albo eksporcie.
+            Local runs from every analysis feature. The list reads only index.json; a full run is
+            loaded by the target feature screen or by export.
           </p>
         </div>
 
@@ -18,18 +18,18 @@
           (click)="loadRuns()"
         >
           <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-          <span>Odśwież</span>
+          <span>Refresh</span>
         </button>
       </div>
 
       <div class="analysis-history-filter-row">
         <label class="field-control" for="analysisHistoryFilter">
-          <span class="field-label">Filtr</span>
+          <span class="field-label">Filter</span>
           <input
             id="analysisHistoryFilter"
             class="text-input"
             type="search"
-            placeholder="Nazwa albo feature"
+            placeholder="Name or feature"
             autocomplete="off"
             [formControl]="filterControl"
           />
@@ -42,6 +42,12 @@
       @if (listError()) {
         <p class="form-error">{{ listError() }}</p>
       }
+      @if (openError()) {
+        <p class="form-error">{{ openError() }}</p>
+      }
+      @if (exportError()) {
+        <p class="form-error">{{ exportError() }}</p>
+      }
       @if (deleteError()) {
         <p class="form-error">{{ deleteError() }}</p>
       }
@@ -49,38 +55,35 @@
       @if (isListLoading()) {
         <section class="analysis-history-empty" aria-live="polite">
           <span class="analysis-history-spinner" aria-hidden="true"></span>
-          <p>Ładowanie lokalnego index.json...</p>
+          <p>Loading local index.json...</p>
         </section>
       } @else if (!runs().length) {
         <section class="analysis-history-empty">
           <span class="material-symbols-outlined" aria-hidden="true">history</span>
-          <h3>Brak lokalnych analiz</h3>
+          <h3>No local analyses</h3>
           <p>
-            Historia pojawi się po zakończeniu initial runu albo zakończonej odpowiedzi follow-up,
-            gdy backend zapisze run lokalnie.
+            Completed local runs will appear here after an initial run or a completed follow-up
+            answer is saved by the backend.
           </p>
           <a class="primary-button analysis-history-empty__action" routerLink="/incident-analysis">
             <span class="material-symbols-outlined" aria-hidden="true">troubleshoot</span>
-            <span>Uruchom analizę</span>
+            <span>Run incident analysis</span>
           </a>
         </section>
       } @else if (!filteredRuns().length) {
         <section class="analysis-history-empty">
           <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
-          <h3>Brak wyników filtra</h3>
-          <p>Zmień nazwę albo feature w polu filtra.</p>
+          <h3>No matching runs</h3>
+          <p>Change the name or feature filter.</p>
         </section>
       } @else {
-        <div class="analysis-history-run-list" aria-label="Lokalne runy analiz">
+        <div class="analysis-history-run-list" aria-label="Local analysis runs">
           @for (run of filteredRuns(); track trackRun($index, run)) {
-            <article
-              class="analysis-history-run"
-              [class.analysis-history-run--selected]="selectedRunId() === run.analysisId"
-            >
+            <article class="analysis-history-run">
               @if (renamingAnalysisId() === run.analysisId) {
                 <form class="analysis-history-rename" (submit)="saveRename($event, run)">
                   <label class="field-control" [attr.for]="'rename-' + run.analysisId">
-                    <span class="field-label">Nazwa</span>
+                    <span class="field-label">Name</span>
                     <input
                       [id]="'rename-' + run.analysisId"
                       class="text-input"
@@ -92,11 +95,11 @@
                   <div class="analysis-history-rename__actions">
                     <button class="primary-button" type="submit" [disabled]="isRenaming()">
                       <span class="material-symbols-outlined" aria-hidden="true">check</span>
-                      <span>Zapisz</span>
+                      <span>Save</span>
                     </button>
                     <button class="secondary-button" type="button" (click)="cancelRename()">
                       <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                      <span>Anuluj</span>
+                      <span>Cancel</span>
                     </button>
                   </div>
                   @if (renameError()) {
@@ -107,37 +110,38 @@
                 <button
                   class="analysis-history-run__main"
                   type="button"
-                  [attr.aria-label]="'Otwórz lokalny run ' + run.name"
+                  [disabled]="openingAnalysisId() === run.analysisId"
+                  [attr.aria-label]="'Open local run ' + run.name"
                   (click)="openRun(run)"
                 >
-                  <span class="analysis-history-run__feature">{{ featureLabel(run.feature) }}</span>
-                  <strong>{{ run.name }}</strong>
-                  <span>{{ run.analysisId }}</span>
+                  <span class="analysis-history-run__icon material-symbols-outlined" aria-hidden="true">
+                    {{ featureIcon(run.feature) }}
+                  </span>
+                  <span class="analysis-history-run__content">
+                    <span class="analysis-history-run__title-row">
+                      <strong>{{ run.name }}</strong>
+                      <span class="analysis-history-run__feature">{{ featureLabel(run.feature) }}</span>
+                    </span>
+                    <span class="analysis-history-run__meta">
+                      <span>Created {{ dateTime(run.createdAt) }}</span>
+                      <span>Completed {{ dateTime(run.completedAt) }}</span>
+                      <span>Updated {{ dateTime(run.updatedAt) }}</span>
+                    </span>
+                    <span class="analysis-history-run__id">{{ run.analysisId }}</span>
+                  </span>
+                  <span class="analysis-history-run__open">
+                    @if (openingAnalysisId() === run.analysisId) {
+                      <span class="analysis-history-spinner" aria-hidden="true"></span>
+                    } @else {
+                      <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    }
+                  </span>
                 </button>
 
-                <dl class="analysis-history-run__meta">
-                  <div>
-                    <dt>Utworzono</dt>
-                    <dd>{{ dateTime(run.createdAt) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Zakończono</dt>
-                    <dd>{{ dateTime(run.completedAt) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Aktualizacja</dt>
-                    <dd>{{ dateTime(run.updatedAt) }}</dd>
-                  </div>
-                </dl>
-
                 <div class="analysis-history-run__actions">
-                  <button class="secondary-button" type="button" (click)="openRun(run)">
-                    <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
-                    <span>Otwórz</span>
-                  </button>
                   <button class="secondary-button" type="button" (click)="startRename(run)">
                     <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                    <span>Nazwa</span>
+                    <span>Name</span>
                   </button>
                   <button
                     class="secondary-button"
@@ -146,7 +150,7 @@
                     (click)="exportRun(run)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                    <span>{{ exportingAnalysisId() === run.analysisId ? 'Eksport...' : 'Export' }}</span>
+                    <span>{{ exportingAnalysisId() === run.analysisId ? 'Exporting...' : 'Export' }}</span>
                   </button>
                   <button
                     class="secondary-button analysis-history-danger-button"
@@ -155,106 +159,13 @@
                     (click)="deleteRun(run)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    <span>{{ deletingAnalysisId() === run.analysisId ? 'Usuwanie...' : 'Usuń' }}</span>
+                    <span>{{ deletingAnalysisId() === run.analysisId ? 'Deleting...' : 'Delete' }}</span>
                   </button>
                 </div>
               }
             </article>
           }
         </div>
-      }
-    </section>
-
-    <section class="analysis-history-detail" aria-live="polite">
-      @if (isDetailLoading()) {
-        <section class="analysis-history-detail-placeholder">
-          <span class="analysis-history-spinner" aria-hidden="true"></span>
-          <h2>Ładowanie runu...</h2>
-          <p>Doczytuję run.json dopiero teraz, po wyborze analizy.</p>
-        </section>
-      } @else if (detailError()) {
-        <section class="analysis-history-detail-placeholder analysis-history-detail-placeholder--error">
-          <span class="material-symbols-outlined" aria-hidden="true">error</span>
-          <h2>Nie można otworzyć runu</h2>
-          <p>{{ detailError() }}</p>
-        </section>
-      } @else if (selectedJob(); as job) {
-        <article class="analysis-history-detail-content">
-          <section class="analysis-history-detail-header">
-            <div>
-              <p class="section-eyebrow">Read-only result</p>
-              <h2>{{ selectedDetail()?.name || job.correlationId || job.analysisId }}</h2>
-              <p>
-                Lokalny run jest odtwarzany z zapisanego exportEnvelope. Kontynuacja pracy pojawi
-                się w kolejnym kroku planu.
-              </p>
-            </div>
-            <div class="analysis-history-detail-header__actions">
-              <span [attr.class]="'status-pill ' + statusClass(job.status)">
-                {{ statusLabel(job.status) }}
-              </span>
-              @if (selectedDetail(); as detail) {
-                <button
-                  class="secondary-button secondary-button--accent"
-                  type="button"
-                  (click)="exportRun(detail)"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                  <span>Export</span>
-                </button>
-              }
-            </div>
-          </section>
-
-          <div class="analysis-history-run-context" aria-label="Local run context">
-            @for (item of runContextItems(job); track item.label) {
-              <div class="analysis-history-run-context__item">
-                <span class="analysis-history-run-context__label">{{ item.label }}</span>
-                <span class="analysis-history-run-context__value">{{ item.value }}</span>
-              </div>
-            }
-            <div class="analysis-history-run-context__item">
-              <span class="analysis-history-run-context__label">Continuation</span>
-              <span class="analysis-history-run-context__value">
-                {{ selectedDetail()?.continuationEnabled ? 'available later' : 'disabled' }}
-              </span>
-            </div>
-          </div>
-
-          @if (job.result) {
-            <app-analysis-final-result [result]="job.result" [status]="job.status"></app-analysis-final-result>
-          }
-
-          <app-analysis-steps-panel
-            [steps]="job.steps"
-            [evidenceSections]="job.evidenceSections"
-            [toolEvidenceSections]="job.toolEvidenceSections"
-            [aiActivityEvents]="job.aiActivityEvents"
-            [toolFeedback]="job.toolFeedback"
-            [preparedPrompt]="job.preparedPrompt"
-            [result]="job.result"
-            [finalResultAvailable]="true"
-          ></app-analysis-steps-panel>
-
-          <app-analysis-follow-up-chat
-            [messages]="job.chatMessages"
-            [hint]="'Historia lokalna jest w tym kroku tylko do odczytu.'"
-            [canUseChat]="false"
-            [openByDefault]="job.chatMessages.length > 0"
-            emptyText="Ten run nie ma zapisanych odpowiedzi follow-up."
-            placeholder="Kontynuacja lokalnego runu zostanie podłączona w kroku 006."
-            ariaLabel="Zapisany follow-up chat"
-          ></app-analysis-follow-up-chat>
-        </article>
-      } @else {
-        <section class="analysis-history-detail-placeholder">
-          <span class="material-symbols-outlined" aria-hidden="true">select_window</span>
-          <h2>Wybierz analizę z listy</h2>
-          <p>
-            Lista pokazuje tylko metadane z index.json. Pełny wynik, evidence i chat zostaną
-            wczytane po kliknięciu konkretnego runu.
-          </p>
-        </section>
       }
     </section>
   </main>

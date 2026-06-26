@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   AnalysisAiUsage,
@@ -20,10 +21,12 @@ import {
   AnalysisJobStateSnapshot,
   ExportState,
   GitHubAuthStatus,
+  LocalAnalysisRunDetailResponse,
   TransportErrorState
 } from '../../core/models/analysis.models';
 import { AnalysisApiService } from '../../core/services/analysis-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
+import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
 import {
   buildAnalysisActionsHint,
   buildJobBannerMessage,
@@ -68,6 +71,16 @@ type RunContextItem = {
   value: string;
   tooltip?: string;
 };
+type ExportMetadata = Pick<
+  ExportState,
+  | 'origin'
+  | 'exportedAt'
+  | 'fileName'
+  | 'localRunId'
+  | 'localRunName'
+  | 'continuationEnabled'
+  | 'sourceEnvelope'
+>;
 
 @Component({
   selector: 'app-analysis-console',
@@ -84,6 +97,8 @@ type RunContextItem = {
 export class AnalysisConsoleComponent {
   private readonly analysisApi = inject(AnalysisApiService);
   private readonly githubAuth = inject(GithubAuthService);
+  private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly responsePanel = viewChild<ElementRef<HTMLElement>>('responsePanel');
 
@@ -205,19 +220,26 @@ export class AnalysisConsoleComponent {
   readonly analysisActionsHint = computed(() => buildAnalysisActionsHint(this.exportState()));
   readonly canUseChat = computed(() => {
     const currentJob = this.job();
+    const origin = this.exportState()?.origin;
     return (
       currentJob?.status === 'COMPLETED' &&
-      this.exportState()?.origin === 'live' &&
+      origin === 'live' &&
       !hasInProgressChat(currentJob)
     );
   });
   readonly chatHint = computed(() => {
     const currentJob = this.job();
+    const exportState = this.exportState();
     if (!currentJob) {
       return 'Chat będzie dostępny po zakończeniu analizy.';
     }
-    if (this.exportState()?.origin === 'imported') {
+    if (exportState?.origin === 'imported') {
       return 'Importowany zapis jest tylko do odczytu. Chat działa dla analiz żywych w backendzie.';
+    }
+    if (exportState?.origin === 'local') {
+      return exportState.continuationEnabled
+        ? 'Lokalny run został otwarty z historii. Wysyłanie follow-up dla lokalnych runów zostanie podłączone przez API kontynuacji.'
+        : 'Ten lokalny run nie ma włączonych metadanych kontynuacji.';
     }
     if (currentJob.status !== 'COMPLETED') {
       return 'Chat będzie dostępny po zakończeniu analizy.';
@@ -246,6 +268,14 @@ export class AnalysisConsoleComponent {
 
   constructor() {
     this.loadGithubAuthStatus();
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const localRunId = params.get('localRunId')?.trim() ?? '';
+        if (localRunId) {
+          this.loadLocalAnalysisRun(localRunId);
+        }
+      });
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
       this.clearPromptCopyFeedback();
@@ -401,6 +431,12 @@ export class AnalysisConsoleComponent {
   exportAnalysis(): void {
     const exportState = this.exportState();
     if (!exportState) {
+      return;
+    }
+
+    if (exportState.origin === 'local' && exportState.sourceEnvelope) {
+      const exportedAt = exportState.exportedAt || new Date().toISOString();
+      downloadJsonFile(buildExportFileName(exportState.job, exportedAt), exportState.sourceEnvelope);
       return;
     }
 
@@ -631,6 +667,74 @@ export class AnalysisConsoleComponent {
       });
   }
 
+  private loadLocalAnalysisRun(analysisId: string): void {
+    this.stopPolling();
+    this.activeAnalysisId = null;
+    this.isLoading.set(true);
+    this.placeholderMode.set('idle');
+    this.transportError.set(null);
+    this.job.set(null);
+    this.exportState.set(null);
+    this.chatError.set('');
+    this.clearFormError();
+
+    this.historyApi
+      .getRun(analysisId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isLoading.set(false))
+      )
+      .subscribe({
+        next: (detail) => this.applyLocalAnalysisRun(detail),
+        error: (error) => {
+          const transportError = this.toTransportError(
+            error,
+            'Nie udało się wczytać lokalnego runu analizy.'
+          );
+          this.showFormError(transportError.message);
+        }
+      });
+  }
+
+  private applyLocalAnalysisRun(detail: LocalAnalysisRunDetailResponse): void {
+    try {
+      if (detail.feature !== 'incident-analysis') {
+        throw new Error(`Lokalny run ${detail.analysisId} nie jest runem Incident Analysis.`);
+      }
+
+      const imported = parseImportedAnalysis(detail.exportEnvelope);
+      this.activeAnalysisId = detail.analysisId;
+      this.applyJob(imported.job, {
+        origin: 'local',
+        exportedAt: imported.exportedAt,
+        fileName: '',
+        localRunId: detail.analysisId,
+        localRunName: detail.name,
+        continuationEnabled: detail.continuationEnabled,
+        sourceEnvelope: detail.exportEnvelope
+      });
+
+      if (imported.job.correlationId) {
+        this.correlationIdControl.setValue(imported.job.correlationId);
+      }
+      this.aiModelControl.setValue(imported.job.aiModel || '');
+      this.selectedAiModel.set(imported.job.aiModel || '');
+      this.reasoningEffortControl.setValue(imported.job.reasoningEffort || '');
+      this.syncReasoningEffortSelection();
+
+      this.scrollResponseIntoView();
+    } catch (error) {
+      this.activeAnalysisId = null;
+      this.job.set(null);
+      this.exportState.set(null);
+      this.showFormError(
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się odtworzyć lokalnego runu Incident Analysis.'
+      );
+    }
+  }
+
   private normalizeGithubAuthStatus(status: GitHubAuthStatus | null): GitHubAuthStatus | null {
     if (!status) {
       return null;
@@ -755,7 +859,7 @@ export class AnalysisConsoleComponent {
     return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
   }
 
-  private applyJob(job: AnalysisJobStateSnapshot, metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>): void {
+  private applyJob(job: AnalysisJobStateSnapshot, metadata: ExportMetadata): void {
     const normalizedJob = normalizeAnalysisJob(job);
     this.placeholderMode.set('idle');
     this.transportError.set(null);
@@ -765,7 +869,7 @@ export class AnalysisConsoleComponent {
 
   private syncExportableState(
     job: AnalysisJobStateSnapshot,
-    metadata: Pick<ExportState, 'origin' | 'exportedAt' | 'fileName'>
+    metadata: ExportMetadata
   ): void {
     if (!isTerminalStatus(job.status) || hasInProgressChat(job)) {
       this.exportState.set(null);
@@ -773,6 +877,7 @@ export class AnalysisConsoleComponent {
     }
 
     this.exportState.set({
+      ...metadata,
       origin: metadata.origin,
       exportedAt: metadata.exportedAt,
       fileName: metadata.fileName,

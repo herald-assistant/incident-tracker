@@ -63,7 +63,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Analysis Features',
     items: [
       { label: 'Incident Analysis', route: '/incident-analysis', icon: 'troubleshoot' },
-      { label: 'Historia analiz', route: '/analysis-history', icon: 'history' },
       { label: 'Flow Explorer', route: '/flow-explorer', icon: 'account_tree' },
       { label: 'Functional Logic', icon: 'schema', disabled: true },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
@@ -82,6 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Platform',
     items: [
       { label: 'Workspace Overview', route: '/', icon: 'space_dashboard', exact: true },
+      { label: 'Analysis History', route: '/analysis-history', icon: 'history' },
       { label: 'Workspace Settings', icon: 'tune', disabled: true },
       { label: 'Personalization', icon: 'palette', disabled: true },
       { label: 'Authentication', icon: 'admin_panel_settings', disabled: true },

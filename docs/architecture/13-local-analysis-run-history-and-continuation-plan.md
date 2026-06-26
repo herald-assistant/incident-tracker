@@ -200,7 +200,9 @@ Uwagi:
 
 ## Ekran Historii
 
-Nowy ekran UI, roboczo `Analysis History`.
+Nowy ekran UI, roboczo `Analysis History`, jest przekrojowym launcherem
+lokalnych runow wszystkich feature'ow, a nie osobnym ekranem merytorycznych
+szczegolow analizy.
 
 Lista powinna pokazywac:
 
@@ -212,12 +214,18 @@ Akcje:
 
 - otworz,
 - zmien nazwe,
-- kontynuuj,
 - exportuj,
 - usun z lokalnego katalogu danych.
 
-Widok szczegolow powinien reuse'owac obecne komponenty wyniku, evidence, AI
-activity, tool evidence i follow-up chat. Tryb widoku wynika ze zrodla:
+Klikniecie lokalnego runu otwiera ekran wlasciwego feature'a z parametrem
+lokalnego runu, np. `Incident Analysis` albo `Flow Explorer`. To ekran feature'a
+odtwarza wynik tak jak importowany snapshot, ale z trybem `local`, ktory moze
+uruchamiac kontynuacje pracy. Historia nie renderuje uniwersalnego detailu,
+zeby nie wymuszac incident-specific kontraktu na kolejnych feature'ach.
+
+Widok szczegolow w ekranie feature'a powinien reuse'owac obecne komponenty
+wyniku, evidence, AI activity, tool evidence i follow-up chat. Tryb widoku
+wynika ze zrodla:
 
 - `live`: polling joba,
 - `local`: odczyt z lokalnego store i mozliwy follow-up,
@@ -382,7 +390,8 @@ Kryteria akceptacji:
 
 Cel:
 
-- dodac UI do przegladania poprzednich lokalnych runow.
+- dodac przekrojowy UI do przegladania poprzednich lokalnych runow i
+  otwierania ich w ekranach wlasciwych feature'ow.
 
 Zakres:
 
@@ -390,40 +399,50 @@ Zakres:
 - tabela/lista runow,
 - filtry podstawowe,
 - akcje otworz/exportuj/usun/zmien nazwe,
-- przejscie do szczegolow runu,
-- reuse obecnych komponentow wyniku i timeline.
+- przejscie do feature screen z `localRunId`,
+- reuse obecnych komponentow wyniku i timeline w ekranie feature'a, nie w
+  historii.
 
 Zatwierdzone decyzje:
 
-- nazwa w nawigacji: `Historia analiz`,
+- nazwa w nawigacji: `Analysis History`, spojna z anglojezycznym menu,
 - route UI: `/analysis-history`, zeby nie kolidowac z backendowym JSON API
   `/analysis/runs`,
+- pozycja nawigacji znajduje sie w sekcji `Platform`, bo historia jest
+  przekrojowa dla wszystkich analiz,
 - minimalne filtry V1: tekstowy filtr po `name` i `feature`,
 - historia pokazuje tylko zakonczone lokalne runy zapisane w `index.json`;
   aktywne live joby pozostaja poza historia,
 - lista na starcie pobiera tylko `GET /analysis/runs` i nie laduje ciezkich
   `run.json`,
-- otwarcie runu doczytuje `GET /analysis/runs/{analysisId}` i mapuje
-  `exportEnvelope.payload.job` na obecny read-only widok wyniku,
+- otwarcie runu z historii nie renderuje detailu w historii; nawiguje do route
+  feature'a z `localRunId`, a ekran feature'a doczytuje
+  `GET /analysis/runs/{analysisId}` i odtwarza snapshot jako origin `local`,
 - export lokalnego runu uzywa `exportEnvelope` 1:1,
 - edycja nazwy uzywa `PATCH /analysis/runs/{analysisId}/name`,
 - usuniecie runu uzywa `DELETE /analysis/runs/{analysisId}`,
-- imported export pozostaje read-only i nie pojawia sie w historii lokalnej.
+- imported export pozostaje read-only i nie pojawia sie w historii lokalnej,
+- V1 UI obsluguje odtworzenie `incident-analysis` z lokalnego store; Flow
+  Explorer dostaje ten sam mechanizm wejscia po `localRunId`, a pelna wartosc
+  pojawi sie po persistowaniu flow runow w local store.
 
 Kryteria akceptacji:
 
 - uzytkownik moze znalezc poprzednia analize,
-- otwarty lokalny run wyglada jak obecny wynik analizy,
+- otwarty lokalny run wyglada jak obecny wynik analizy w ekranie danego
+  feature'a,
 - imported export pozostaje read-only i nie pojawia sie w historii lokalnej.
 
 Wykonane:
 
-- dodano route UI `/analysis-history` i pozycje nawigacji `Historia analiz`,
+- dodano route UI `/analysis-history` i pozycje nawigacji `Analysis History`
+  w sekcji `Platform`,
 - dodano lekki klient `AnalysisRunHistoryApiService`,
 - ekran startowo pobiera tylko `GET /analysis/runs`, a pelny run doczytuje
-  dopiero przy otwarciu albo exporcie,
-- reuse obecnych komponentow final result, timeline/evidence i read-only
-  follow-up chat,
+  dopiero ekran feature'a po `localRunId` albo akcja exportu,
+- historia jest lista belek/launcherem bez uniwersalnego detailu,
+- ekrany Incident Analysis i Flow Explorer umieja przyjac `localRunId` jako
+  wejscie origin `local`,
 - akcje `Export`, `Nazwa` i `Usun` sa podlaczone do API historii,
 - Spring fallback serwuje SPA dla `/analysis-history`,
 - dodano testy frontendowe i backendowy test routingu.

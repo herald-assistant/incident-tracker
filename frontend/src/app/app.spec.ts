@@ -102,7 +102,7 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const navLink = compiled.querySelector(
-      'a.app-shell__nav-item[aria-label="Historia analiz"]'
+      'a.app-shell__nav-item[aria-label="Analysis History"]'
     );
 
     expect(compiled.querySelector('app-analysis-history-page')).not.toBeNull();
@@ -110,14 +110,14 @@ describe('App', () => {
       'ChatCLP'
     );
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
-      'Historia analiz'
+      'Analysis History'
     );
     expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
-      'Historia analiz'
+      'Analysis History'
     );
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
-    expect(compiled.textContent).toContain('Brak lokalnych analiz');
+    expect(compiled.textContent).toContain('No local analyses');
   });
 
   it('should collapse the left navigation into an icon rail', async () => {

@@ -2,15 +2,17 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
   AnalysisJobStateSnapshot,
-  GitHubAuthStatus
+  GitHubAuthStatus,
+  LocalAnalysisRunDetailResponse
 } from '../../core/models/analysis.models';
 import { AnalysisApiService } from '../../core/services/analysis-api.service';
+import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import { buildExportEnvelope } from '../../core/utils/analysis-import-export.utils';
 import { AnalysisConsoleComponent } from './analysis-console';
@@ -160,6 +162,25 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.analysis-form__header')).toBeNull();
+  });
+
+  it('should load a local run from the analysis history route', async () => {
+    const { fixture, historyApi } = await createComponent(
+      connectedStatus(),
+      of(modelOptions()),
+      {
+        localRunId: 'analysis-1',
+        localRunDetail: localRunDetail()
+      }
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
+    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu billingowego.');
+    expect(fixture.nativeElement.textContent).toContain('Lokalny run został otwarty z historii.');
   });
 
   it('should expose detailed usage cost breakdown on the compact run context item', async () => {
@@ -326,13 +347,20 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
   async function createComponent(
     status: GitHubAuthStatus,
-    aiModelOptions$: Observable<AnalysisAiModelOptionsResponse> = of(modelOptions())
+    aiModelOptions$: Observable<AnalysisAiModelOptionsResponse> = of(modelOptions()),
+    routeOptions: {
+      localRunId?: string;
+      localRunDetail?: LocalAnalysisRunDetailResponse;
+    } = {}
   ) {
     const analysisApi = {
       getAiModelOptions: vi.fn(() => aiModelOptions$),
       startAnalysis: vi.fn(() => of(queuedJob())),
       getAnalysis: vi.fn(() => of(queuedJob())),
       sendChatMessage: vi.fn(() => of(queuedJob()))
+    };
+    const historyApi = {
+      getRun: vi.fn(() => of(routeOptions.localRunDetail ?? localRunDetail()))
     };
     const githubAuth = {
       getStatus: vi.fn(() => of(status)),
@@ -346,7 +374,18 @@ describe('AnalysisConsoleComponent auth flow', () => {
         provideAnimationsAsync('noop'),
         provideLocationMocks(),
         provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParamMap: of(
+              convertToParamMap(
+                routeOptions.localRunId ? { localRunId: routeOptions.localRunId } : {}
+              )
+            )
+          }
+        },
         { provide: AnalysisApiService, useValue: analysisApi },
+        { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         { provide: GithubAuthService, useValue: githubAuth }
       ]
     }).compileComponents();
@@ -354,6 +393,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     return {
       fixture: TestBed.createComponent(AnalysisConsoleComponent),
       analysisApi,
+      historyApi,
       githubAuth
     };
   }
@@ -457,6 +497,19 @@ function completedJob(): AnalysisJobStateSnapshot {
       prompt: 'Prepared prompt without tokens.',
       usage: null
     }
+  };
+}
+
+function localRunDetail(): LocalAnalysisRunDetailResponse {
+  return {
+    analysisId: 'analysis-1',
+    feature: 'incident-analysis',
+    name: 'Billing corr-123',
+    createdAt: '2026-05-02T10:00:00Z',
+    updatedAt: '2026-05-02T10:05:00Z',
+    completedAt: '2026-05-02T10:05:00Z',
+    exportEnvelope: buildExportEnvelope(completedJob(), '2026-05-02T10:05:00Z'),
+    continuationEnabled: true
   };
 }
 

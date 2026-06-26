@@ -1,7 +1,7 @@
 <div class="page-shell flow-explorer-page">
   <main class="flow-explorer-workspace" aria-labelledby="flowExplorerWorkspaceTitle">
     <section class="analysis-card flow-explorer-composer">
-      <details class="flow-explorer-collapsible" [open]="!isImportedResult()">
+      <details class="flow-explorer-collapsible" [open]="!isImportedResult() && !isHistoryResult()">
       <summary class="section-heading flow-explorer-composer__heading flow-explorer-collapsible__summary">
         <div>
           <p class="section-eyebrow">Flow Explorer</p>
@@ -768,10 +768,12 @@
           @if (exportState(); as snapshotExport) {
             @if (snapshotExport.origin === 'imported') {
               <span class="field-hint">Wczytany plik: {{ snapshotExport.fileName }}</span>
+            } @else if (snapshotExport.origin === 'local') {
+              <span class="field-hint">Wczytano lokalny run: {{ snapshotExport.localRunName || snapshotExport.localRunId }}</span>
             }
           }
 
-          @if (!selectedEndpoint() && exportState()?.origin !== 'imported') {
+          @if (!selectedEndpoint() && exportState()?.origin !== 'imported' && exportState()?.origin !== 'local') {
             <span class="field-hint">Wybierz endpoint, aby uruchomic analize.</span>
           }
         </div>
@@ -784,7 +786,7 @@
 
         @if (job() || jobError() || isSubmitting()) {
           <section class="analysis-card flow-explorer-job" aria-label="Flow Explorer job state">
-            <details class="flow-explorer-collapsible" [open]="!isImportedResult()">
+            <details class="flow-explorer-collapsible" [open]="!isImportedResult() && !isHistoryResult()">
             <summary class="section-heading flow-explorer-job__header flow-explorer-collapsible__summary">
               <div>
                 <p class="section-eyebrow">Job state</p>
@@ -1112,7 +1114,7 @@
             [error]="chatError()"
             [canUseChat]="isChatAvailable()"
             [isSubmitting]="isSendingChat()"
-            [openByDefault]="!isImportedResult()"
+            [openByDefault]="!isImportedResult() && !isHistoryResult()"
             eyebrow="Follow-up chat"
             title="Ask about this endpoint"
             emptyText="Brak pytan follow-up dla tej analizy."

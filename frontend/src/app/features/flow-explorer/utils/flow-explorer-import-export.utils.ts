@@ -99,10 +99,14 @@ export interface FlowExplorerDiagnosticArtifactSummary {
 }
 
 export interface FlowExplorerExportState {
-  origin: 'live' | 'imported';
+  origin: 'live' | 'local' | 'imported';
   exportedAt: string;
   fileName: string;
   job: FlowExplorerJobStateSnapshot;
+  localRunId?: string;
+  localRunName?: string;
+  continuationEnabled?: boolean;
+  sourceEnvelope?: unknown;
 }
 
 export function buildFlowExplorerExportEnvelope(

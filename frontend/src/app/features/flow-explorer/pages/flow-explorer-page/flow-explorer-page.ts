@@ -2,14 +2,17 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import {
   AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
-  ApiErrorResponse
+  ApiErrorResponse,
+  LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
 import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
+import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import {
   FlowExplorerAnalysisGoal,
   FlowExplorerEndpointInventoryResponse,
@@ -57,6 +60,17 @@ interface FlowExplorerUsageStat {
   label: string;
   value: string;
 }
+
+type FlowExplorerExportMetadata = Pick<
+  FlowExplorerExportState,
+  | 'origin'
+  | 'exportedAt'
+  | 'fileName'
+  | 'localRunId'
+  | 'localRunName'
+  | 'continuationEnabled'
+  | 'sourceEnvelope'
+>;
 
 const POLL_INTERVAL_MS = 1500;
 const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
@@ -146,6 +160,8 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
 export class FlowExplorerPageComponent implements OnInit {
   private readonly flowExplorerApi = inject(FlowExplorerApiService);
   private readonly analysisApi = inject(AnalysisApiService);
+  private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private resultCopyFeedbackHandle: number | null = null;
@@ -222,6 +238,7 @@ export class FlowExplorerPageComponent implements OnInit {
     return Boolean(job && (!this.isTerminalJobStatus(job.status) || this.hasActiveChat(job)));
   });
   readonly isImportedResult = computed(() => this.exportState()?.origin === 'imported');
+  readonly isHistoryResult = computed(() => this.exportState()?.origin === 'local');
   readonly canStartJob = computed(
     () =>
       Boolean(this.selectedSystem() && this.selectedEndpoint()) &&
@@ -241,6 +258,11 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     if (this.exportState()?.origin === 'imported') {
       return 'Importowany zapis jest tylko do odczytu. Chat dziala dla analiz zywych w backendzie.';
+    }
+    if (this.exportState()?.origin === 'local') {
+      return this.exportState()?.continuationEnabled
+        ? 'Lokalny run zostal otwarty z historii. Wysylanie follow-up dla lokalnych runow zostanie podlaczone przez API kontynuacji.'
+        : 'Ten lokalny run nie ma wlaczonych metadanych kontynuacji.';
     }
     if (job.status !== 'COMPLETED') {
       return 'Chat bedzie dostepny po zakonczeniu analizy.';
@@ -430,6 +452,14 @@ export class FlowExplorerPageComponent implements OnInit {
     );
   });
   constructor() {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const localRunId = params.get('localRunId')?.trim() ?? '';
+        if (localRunId) {
+          this.loadLocalFlowExplorerRun(localRunId);
+        }
+      });
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
       this.clearResultCopyFeedback();
@@ -796,6 +826,12 @@ export class FlowExplorerPageComponent implements OnInit {
       return;
     }
 
+    if (exportState.origin === 'local' && exportState.sourceEnvelope) {
+      const exportedAt = exportState.exportedAt || new Date().toISOString();
+      downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), exportState.sourceEnvelope);
+      return;
+    }
+
     const exportedAt = new Date().toISOString();
     const payload = buildFlowExplorerExportEnvelope(exportState.job, exportedAt);
     downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), payload);
@@ -1157,7 +1193,7 @@ export class FlowExplorerPageComponent implements OnInit {
 
   private applyJobSnapshot(
     job: FlowExplorerJobStateSnapshot,
-    metadata: Pick<FlowExplorerExportState, 'origin' | 'exportedAt' | 'fileName'>
+    metadata: FlowExplorerExportMetadata
   ): void {
     const normalizedJob = normalizeFlowExplorerJob(job);
     this.job.set(normalizedJob);
@@ -1166,7 +1202,7 @@ export class FlowExplorerPageComponent implements OnInit {
 
   private syncExportableState(
     job: FlowExplorerJobStateSnapshot,
-    metadata: Pick<FlowExplorerExportState, 'origin' | 'exportedAt' | 'fileName'>
+    metadata: FlowExplorerExportMetadata
   ): void {
     if (job.status !== 'COMPLETED' || !job.result?.aiResponse || this.hasActiveChat(job)) {
       this.exportState.set(null);
@@ -1174,11 +1210,56 @@ export class FlowExplorerPageComponent implements OnInit {
     }
 
     this.exportState.set({
+      ...metadata,
       origin: metadata.origin,
       exportedAt: metadata.exportedAt,
       fileName: metadata.fileName,
       job: normalizeFlowExplorerJob(job)
     });
+  }
+
+  private loadLocalFlowExplorerRun(analysisId: string): void {
+    this.resetJobState();
+    this.isSubmitting.set(true);
+
+    this.historyApi
+      .getRun(analysisId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isSubmitting.set(false))
+      )
+      .subscribe({
+        next: (detail) => this.applyLocalFlowExplorerRun(detail),
+        error: (error: HttpErrorResponse) => {
+          this.jobError.set(this.errorMessage(error, 'Nie udalo sie wczytac lokalnego runu Flow Explorera.'));
+        }
+      });
+  }
+
+  private applyLocalFlowExplorerRun(detail: LocalAnalysisRunDetailResponse): void {
+    try {
+      if (detail.feature !== 'flow-explorer') {
+        throw new Error(`Lokalny run ${detail.analysisId} nie jest runem Flow Explorera.`);
+      }
+
+      const imported = parseImportedFlowExplorerAnalysis(detail.exportEnvelope);
+      this.applyJobSnapshot(imported.job, {
+        origin: 'local',
+        exportedAt: imported.exportedAt,
+        fileName: '',
+        localRunId: detail.analysisId,
+        localRunName: detail.name,
+        continuationEnabled: detail.continuationEnabled,
+        sourceEnvelope: detail.exportEnvelope
+      });
+      this.syncImportedControls(imported.job);
+    } catch (error) {
+      this.jobError.set(
+        error instanceof Error
+          ? error.message
+          : 'Nie udalo sie odtworzyc lokalnego runu Flow Explorera.'
+      );
+    }
   }
 
   private syncImportedControls(job: FlowExplorerJobStateSnapshot): void {

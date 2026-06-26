@@ -1,6 +1,6 @@
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
 import {
@@ -52,20 +52,35 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Flow /customers goal');
   });
 
-  it('should load and render the selected run detail from exportEnvelope', async () => {
-    const { fixture, historyApi } = await createComponent();
+  it('should open an incident run in the feature screen without loading full run JSON in history', async () => {
+    const { fixture, historyApi, router } = await createComponent();
     const run = listRuns()[0]!;
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     fixture.componentInstance.openRun(run);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
-    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu billingowego.');
-    expect(fixture.nativeElement.textContent).toContain('Analiza techniczna timeoutu w kliencie katalogu.');
-    expect(fixture.nativeElement.textContent).toContain('Przygotuj opis do Jiry.');
-    expect(fixture.nativeElement.textContent).toContain('Historia lokalna jest w tym kroku tylko do odczytu.');
+    expect(historyApi.getRun).not.toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/incident-analysis'], {
+      queryParams: { localRunId: 'analysis-1' }
+    });
+    expect(fixture.nativeElement.textContent).not.toContain('Analiza funkcjonalna procesu billingowego.');
+  });
+
+  it('should route a flow run to the Flow Explorer feature screen', async () => {
+    const { fixture, router } = await createComponent();
+    const run = listRuns()[1]!;
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/flow-explorer'], {
+      queryParams: { localRunId: 'analysis-2' }
+    });
   });
 
   it('should export the stored envelope without rebuilding the payload', async () => {
@@ -167,7 +182,8 @@ describe('AnalysisHistoryPageComponent', () => {
 
     return {
       fixture: TestBed.createComponent(AnalysisHistoryPageComponent),
-      historyApi
+      historyApi,
+      router: TestBed.inject(Router)
     };
   }
 });

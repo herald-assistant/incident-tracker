@@ -2,50 +2,31 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import {
   ApiErrorResponse,
-  AnalysisJobStateSnapshot,
   LocalAnalysisRunDetailResponse,
   LocalAnalysisRunListItemResponse
 } from '../../core/models/analysis.models';
 import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
+import { formatDateTime } from '../../core/utils/analysis-display.utils';
 import {
-  buildExportFileName,
-  parseImportedAnalysis
-} from '../../core/utils/analysis-import-export.utils';
-import {
-  formatDateTime,
-  formatStatus,
-  statusClassName,
-  valueOrFallback
-} from '../../core/utils/analysis-display.utils';
-import { downloadJsonFile } from '../../core/utils/json-file.utils';
-import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
-import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
-import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
-
-type RunContextItem = {
-  label: string;
-  value: string;
-};
+  downloadJsonFile,
+  formatFileTimestamp,
+  sanitizeFileNamePart
+} from '../../core/utils/json-file.utils';
 
 @Component({
   selector: 'app-analysis-history-page',
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    AnalysisFinalResultComponent,
-    AnalysisFollowUpChatComponent,
-    AnalysisStepsPanelComponent
-  ],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './analysis-history-page.html',
   styleUrl: './analysis-history-page.scss'
 })
 export class AnalysisHistoryPageComponent {
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly filterControl = new FormControl('', { nonNullable: true });
@@ -55,17 +36,15 @@ export class AnalysisHistoryPageComponent {
   readonly filterText = signal('');
   readonly isListLoading = signal(false);
   readonly listError = signal('');
-  readonly selectedRunId = signal('');
-  readonly selectedDetail = signal<LocalAnalysisRunDetailResponse | null>(null);
-  readonly selectedJob = signal<AnalysisJobStateSnapshot | null>(null);
-  readonly isDetailLoading = signal(false);
-  readonly detailError = signal('');
+  readonly openingAnalysisId = signal('');
+  readonly openError = signal('');
   readonly renamingAnalysisId = signal('');
   readonly renameError = signal('');
   readonly isRenaming = signal(false);
   readonly deletingAnalysisId = signal('');
   readonly deleteError = signal('');
   readonly exportingAnalysisId = signal('');
+  readonly exportError = signal('');
 
   readonly filteredRuns = computed(() => {
     const query = this.filterText().trim().toLowerCase();
@@ -85,10 +64,10 @@ export class AnalysisHistoryPageComponent {
     const filteredCount = this.filteredRuns().length;
     const totalCount = this.runs().length;
     if (filteredCount === totalCount) {
-      return `${totalCount} ${totalCount === 1 ? 'run' : 'runy'}`;
+      return `${totalCount} ${totalCount === 1 ? 'run' : 'runs'}`;
     }
 
-    return `${filteredCount} z ${totalCount}`;
+    return `${filteredCount} of ${totalCount}`;
   });
 
   constructor() {
@@ -103,6 +82,8 @@ export class AnalysisHistoryPageComponent {
     this.isListLoading.set(true);
     this.listError.set('');
     this.deleteError.set('');
+    this.openError.set('');
+    this.exportError.set('');
 
     this.historyApi
       .listRuns()
@@ -121,36 +102,32 @@ export class AnalysisHistoryPageComponent {
   }
 
   openRun(run: LocalAnalysisRunListItemResponse): void {
-    this.selectedRunId.set(run.analysisId);
-    this.selectedDetail.set(null);
-    this.selectedJob.set(null);
-    this.detailError.set('');
-    this.isDetailLoading.set(true);
-
-    this.historyApi
-      .getRun(run.analysisId)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isDetailLoading.set(false))
-      )
-      .subscribe({
-        next: (detail) => this.applyDetail(detail),
-        error: (error) => {
-          this.detailError.set(toErrorMessage(error, 'Nie udało się wczytać lokalnego runu.'));
-        }
-      });
-  }
-
-  exportRun(run: LocalAnalysisRunListItemResponse): void {
-    const selectedDetail = this.selectedDetail();
-    const selectedJob = this.selectedJob();
-    if (selectedDetail?.analysisId === run.analysisId && selectedJob) {
-      this.downloadRunExport(selectedDetail, selectedJob);
+    const route = routeForFeature(run.feature);
+    if (!route) {
+      this.openError.set(`Feature "${run.feature || 'unknown'}" nie ma jeszcze ekranu odtwarzania lokalnych runów.`);
       return;
     }
 
+    this.openingAnalysisId.set(run.analysisId);
+    this.openError.set('');
+
+    void this.router
+      .navigate([route], {
+        queryParams: {
+          localRunId: run.analysisId
+        }
+      })
+      .then((navigated) => {
+        if (!navigated) {
+          this.openError.set('Nie udało się otworzyć lokalnego runu w ekranie feature.');
+        }
+      })
+      .finally(() => this.openingAnalysisId.set(''));
+  }
+
+  exportRun(run: LocalAnalysisRunListItemResponse): void {
     this.exportingAnalysisId.set(run.analysisId);
-    this.detailError.set('');
+    this.exportError.set('');
 
     this.historyApi
       .getRun(run.analysisId)
@@ -159,15 +136,9 @@ export class AnalysisHistoryPageComponent {
         finalize(() => this.exportingAnalysisId.set(''))
       )
       .subscribe({
-        next: (detail) => {
-          const job = this.parseDetailJob(detail, 'Nie udało się odczytać danych eksportu runu.');
-          if (!job) {
-            return;
-          }
-          this.downloadRunExport(detail, job);
-        },
+        next: (detail) => this.downloadRunExport(detail),
         error: (error) => {
-          this.detailError.set(
+          this.exportError.set(
             toErrorMessage(error, 'Nie udało się przygotować eksportu lokalnego runu.')
           );
         }
@@ -207,9 +178,6 @@ export class AnalysisHistoryPageComponent {
       .subscribe({
         next: (detail) => {
           this.replaceRunListItem(detail);
-          if (this.selectedRunId() === detail.analysisId) {
-            this.applyDetail(detail);
-          }
           this.cancelRename();
         },
         error: (error) => {
@@ -238,12 +206,6 @@ export class AnalysisHistoryPageComponent {
       .subscribe({
         next: () => {
           this.runs.set(this.runs().filter((candidate) => candidate.analysisId !== run.analysisId));
-          if (this.selectedRunId() === run.analysisId) {
-            this.selectedRunId.set('');
-            this.selectedDetail.set(null);
-            this.selectedJob.set(null);
-            this.detailError.set('');
-          }
         },
         error: (error) => {
           this.deleteError.set(toErrorMessage(error, 'Nie udało się usunąć lokalnego runu.'));
@@ -267,44 +229,22 @@ export class AnalysisHistoryPageComponent {
       : 'Unknown feature';
   }
 
+  protected featureIcon(feature: string): string {
+    if (feature === 'incident-analysis') {
+      return 'troubleshoot';
+    }
+    if (feature === 'flow-explorer') {
+      return 'account_tree';
+    }
+    return 'analytics';
+  }
+
   protected dateTime(value: string): string {
     return formatDateTime(value) || 'n/a';
   }
 
-  protected statusLabel(status: string): string {
-    return formatStatus(status);
-  }
-
-  protected statusClass(status: string): string {
-    return statusClassName(status);
-  }
-
-  protected runContextItems(job: AnalysisJobStateSnapshot): RunContextItem[] {
-    return [
-      { label: 'Correlation ID', value: job.correlationId || 'n/a' },
-      { label: 'Analysis ID', value: valueOrFallback(job.analysisId) },
-      { label: 'Environment', value: valueOrFallback(job.environment) },
-      { label: 'Branch', value: valueOrFallback(job.gitLabBranch) },
-      { label: 'Model', value: job.aiModel || 'default backend' },
-      { label: 'Reasoning', value: job.reasoningEffort || 'default backend' }
-    ];
-  }
-
   protected trackRun(_: number, run: LocalAnalysisRunListItemResponse): string {
     return run.analysisId;
-  }
-
-  private applyDetail(detail: LocalAnalysisRunDetailResponse): void {
-    const job = this.parseDetailJob(detail, 'Nie udało się odczytać danych lokalnego runu.');
-    if (!job) {
-      return;
-    }
-
-    this.selectedRunId.set(detail.analysisId);
-    this.selectedDetail.set(detail);
-    this.selectedJob.set(job);
-    this.detailError.set('');
-    this.replaceRunListItem(detail);
   }
 
   private replaceRunListItem(detail: LocalAnalysisRunDetailResponse): void {
@@ -323,24 +263,9 @@ export class AnalysisHistoryPageComponent {
     );
   }
 
-  private downloadRunExport(
-    detail: LocalAnalysisRunDetailResponse,
-    job: AnalysisJobStateSnapshot
-  ): void {
-    const exportedAt = detail.exportEnvelope?.exportedAt || new Date().toISOString();
-    downloadJsonFile(buildExportFileName(job, exportedAt), detail.exportEnvelope);
-  }
-
-  private parseDetailJob(
-    detail: LocalAnalysisRunDetailResponse,
-    fallback: string
-  ): AnalysisJobStateSnapshot | null {
-    try {
-      return parseRunJob(detail);
-    } catch (error) {
-      this.detailError.set(error instanceof Error ? error.message : fallback);
-      return null;
-    }
+  private downloadRunExport(detail: LocalAnalysisRunDetailResponse): void {
+    const exportedAt = exportedAtFromEnvelope(detail.exportEnvelope) || new Date().toISOString();
+    downloadJsonFile(buildLocalRunExportFileName(detail, exportedAt), detail.exportEnvelope);
   }
 }
 
@@ -371,8 +296,31 @@ function compareRunsByMostRecent(
   return normalizedRightTime - normalizedLeftTime;
 }
 
-function parseRunJob(detail: LocalAnalysisRunDetailResponse): AnalysisJobStateSnapshot {
-  return parseImportedAnalysis(detail.exportEnvelope).job;
+function routeForFeature(feature: string): string | null {
+  if (feature === 'incident-analysis') {
+    return '/incident-analysis';
+  }
+  if (feature === 'flow-explorer') {
+    return '/flow-explorer';
+  }
+  return null;
+}
+
+function buildLocalRunExportFileName(
+  detail: LocalAnalysisRunDetailResponse,
+  exportedAt: string
+): string {
+  const feature = sanitizeFileNamePart(detail.feature || 'analysis');
+  const name = sanitizeFileNamePart(detail.name || detail.analysisId || 'run');
+  return `${feature}-${name}-${formatFileTimestamp(exportedAt)}.json`;
+}
+
+function exportedAtFromEnvelope(envelope: unknown): string {
+  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) {
+    return '';
+  }
+  const value = (envelope as Record<string, unknown>)['exportedAt'];
+  return typeof value === 'string' ? value : '';
 }
 
 function toErrorMessage(error: unknown, fallback: string): string {

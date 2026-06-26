@@ -35,8 +35,8 @@ export const routes: Routes = [
             (module) => module.AnalysisHistoryPageComponent
           ),
         data: {
-          section: 'Analysis Features',
-          title: 'Historia analiz'
+          section: 'Platform',
+          title: 'Analysis History'
         }
       },
       {

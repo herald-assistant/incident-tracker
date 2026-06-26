@@ -181,6 +181,14 @@ export function buildAnalysisActionsHint(state: ExportState | null): string {
     return message;
   }
 
+  if (state.origin === 'local') {
+    const name = state.localRunName || state.job.correlationId || state.job.analysisId;
+    const continuation = state.continuationEnabled
+      ? ' Lokalny run ma metadane kontynuacji.'
+      : ' Ten lokalny run jest obecnie tylko do odczytu.';
+    return `Wczytano lokalny run${name ? ` ${name}` : ''}.${continuation}`;
+  }
+
   return 'Analiza zakończona. Możesz wyeksportować wynik do pliku JSON i udostępnić go dalej.';
 }
 

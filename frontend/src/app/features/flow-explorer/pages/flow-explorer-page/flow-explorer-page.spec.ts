@@ -1,9 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
-import { AnalysisAiModelOptionsResponse } from '../../../../core/models/analysis.models';
+import {
+  AnalysisAiModelOptionsResponse,
+  LocalAnalysisRunDetailResponse
+} from '../../../../core/models/analysis.models';
 import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
+import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStateSnapshot,
@@ -16,10 +21,14 @@ import { FlowExplorerPageComponent } from './flow-explorer-page';
 describe('FlowExplorerPageComponent', () => {
   let flowExplorerApi: FlowExplorerApiServiceMock;
   let analysisApi: AnalysisApiServiceMock;
+  let historyApi: AnalysisRunHistoryApiServiceMock;
 
   beforeEach(async () => {
     analysisApi = {
       getAiModelOptions: vi.fn(() => of(aiModelOptions()))
+    };
+    historyApi = {
+      getRun: vi.fn(() => of(localFlowExplorerRunDetail()))
     };
     flowExplorerApi = {
       getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
@@ -55,7 +64,14 @@ describe('FlowExplorerPageComponent', () => {
       imports: [FlowExplorerPageComponent],
       providers: [
         { provide: FlowExplorerApiService, useValue: flowExplorerApi },
-        { provide: AnalysisApiService, useValue: analysisApi }
+        { provide: AnalysisApiService, useValue: analysisApi },
+        { provide: AnalysisRunHistoryApiService, useValue: historyApi },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParamMap: of(convertToParamMap({}))
+          }
+        }
       ]
     }).compileComponents();
   });
@@ -642,6 +658,7 @@ type FlowExplorerApiServiceMock = Pick<
   'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
 >;
 type AnalysisApiServiceMock = Pick<AnalysisApiService, 'getAiModelOptions'>;
+type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun'>;
 
 function setInputValue(nativeElement: HTMLElement, selector: string, value: string): void {
   const input = nativeElement.querySelector(selector) as HTMLInputElement;
@@ -1022,6 +1039,27 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     ...snapshot,
     steps: overrides.steps ?? defaultWorkflowSteps(snapshot),
     contextSections: overrides.contextSections ?? defaultContextSections()
+  };
+}
+
+function localFlowExplorerRunDetail(): LocalAnalysisRunDetailResponse {
+  const job = jobSnapshot({
+    status: 'COMPLETED',
+    currentStepCode: 'COMPLETED',
+    currentStepLabel: 'AI result ready',
+    preparedPrompt: 'local canonical prompt',
+    result: flowExplorerResult()
+  });
+
+  return {
+    analysisId: 'flow-job-1',
+    feature: 'flow-explorer',
+    name: 'GET /api/customers/{id} Deep Discovery',
+    createdAt: '2026-06-18T10:00:00Z',
+    updatedAt: '2026-06-18T10:03:00Z',
+    completedAt: '2026-06-18T10:03:00Z',
+    exportEnvelope: buildFlowExplorerExportEnvelope(job, '2026-06-18T10:03:00Z'),
+    continuationEnabled: true
   };
 }
 
