@@ -36,6 +36,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabMcpTools;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -122,9 +123,9 @@ class CopilotIncidentInitialPreparationServiceTest {
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
             assertEquals(8, prepared.session().sessionConfig().getTools().size());
-            assertEquals(
-                    CopilotIncidentRuntimeSkillNames.allSkillNames(),
-                    skillDirectoryNames(prepared.session().sessionConfig().getSkillDirectories())
+            assertSelectedSkillRoot(
+                    prepared.session().sessionConfig().getSkillDirectories(),
+                    CopilotIncidentRuntimeSkillNames.allSkillNames()
             );
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.session().sessionConfig().getOnPermissionRequest());
             assertEquals(List.of(), prepared.session().sessionConfig().getDisabledSkills());
@@ -490,9 +491,9 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
             assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());
-            assertEquals(
-                    CopilotIncidentRuntimeSkillNames.allSkillNames(),
-                    skillDirectoryNames(prepared.session().sessionConfig().getSkillDirectories())
+            assertSelectedSkillRoot(
+                    prepared.session().sessionConfig().getSkillDirectories(),
+                    CopilotIncidentRuntimeSkillNames.allSkillNames()
             );
         }
     }
@@ -576,12 +577,16 @@ class CopilotIncidentInitialPreparationServiceTest {
         );
     }
 
-    private List<String> skillDirectoryNames(List<String> skillDirectories) {
-        return skillDirectories.stream()
-                .map(Path::of)
-                .map(Path::getFileName)
-                .map(Path::toString)
-                .toList();
+    private void assertSelectedSkillRoot(List<String> skillDirectories, List<String> expectedSkillNames) {
+        assertEquals(1, skillDirectories.size());
+        var selectedRoot = Path.of(skillDirectories.get(0));
+        assertTrue(Files.isDirectory(selectedRoot));
+        for (var expectedSkillName : expectedSkillNames) {
+            assertTrue(
+                    Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")),
+                    () -> "Missing selected skill in root: " + expectedSkillName
+            );
+        }
     }
 
     private CopilotSdkProperties baseProperties() {

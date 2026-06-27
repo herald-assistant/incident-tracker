@@ -10,8 +10,12 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Slf4j
@@ -40,6 +44,27 @@ public class CopilotSkillRuntimeLoader {
         }
     }
 
+    public List<String> resolveSelectedSkillRootDirectories(List<String> skillNames) {
+        var normalizedSkillNames = normalizeSkillNames(skillNames);
+        if (normalizedSkillNames.isEmpty()) {
+            return List.of();
+        }
+
+        var resolvedRoots = resolveSkillDirectories();
+        var selectedSkillDirectories = normalizedSkillNames.stream()
+                .map(skillName -> resolveRequiredSkillDirectory(skillName, resolvedRoots))
+                .toList();
+        var selectedRoot = selectedSkillRoot(normalizedSkillNames, selectedSkillDirectories);
+
+        synchronized (this) {
+            if (!containsAllSelectedSkills(selectedRoot, normalizedSkillNames)) {
+                copySelectedSkills(selectedSkillDirectories, selectedRoot);
+            }
+        }
+
+        return List.of(selectedRoot.toString());
+    }
+
     private List<String> loadSkillDirectories() {
         var resolvedDirectories = new ArrayList<String>();
 
@@ -52,6 +77,107 @@ public class CopilotSkillRuntimeLoader {
 
         resolvedDirectories.addAll(safeList(properties.getSkillDirectories()));
         return resolvedDirectories;
+    }
+
+    private Path resolveRequiredSkillDirectory(String skillName, List<String> resolvedRoots) {
+        for (var rootValue : safeList(resolvedRoots)) {
+            if (rootValue == null || rootValue.isBlank()) {
+                continue;
+            }
+
+            var root = Path.of(rootValue);
+            var nestedSkillDirectory = root.resolve(skillName);
+            if (hasSkillDefinition(nestedSkillDirectory)) {
+                return nestedSkillDirectory;
+            }
+            if (skillName.equals(root.getFileName() != null ? root.getFileName().toString() : null)
+                    && hasSkillDefinition(root)) {
+                return root;
+            }
+        }
+
+        throw new IllegalStateException(
+                "Missing Copilot runtime skill directory '%s' under resolved skill roots: %s"
+                        .formatted(skillName, safeList(resolvedRoots))
+        );
+    }
+
+    private Path selectedSkillRoot(List<String> skillNames, List<Path> selectedSkillDirectories) {
+        return Path.of(properties.getSkillRuntimeDirectory())
+                .resolve("selected-skills-" + selectedSkillFingerprint(skillNames, selectedSkillDirectories));
+    }
+
+    private String selectedSkillFingerprint(List<String> skillNames, List<Path> selectedSkillDirectories) {
+        try {
+            var digest = MessageDigest.getInstance("SHA-256");
+            for (var skillName : skillNames) {
+                updateDigest(digest, "skill:" + skillName);
+            }
+            for (var skillDirectory : selectedSkillDirectories) {
+                updateDigest(digest, "directory:" + skillDirectory.toAbsolutePath().normalize());
+                try (var paths = Files.walk(skillDirectory)) {
+                    var files = paths
+                            .filter(Files::isRegularFile)
+                            .sorted(Comparator.comparing(path -> skillDirectory.relativize(path).toString()))
+                            .toList();
+                    for (var file : files) {
+                        updateDigest(digest, skillDirectory.relativize(file).toString());
+                        updateDigest(digest, Long.toString(Files.size(file)));
+                        updateDigest(digest, Long.toString(Files.getLastModifiedTime(file).toMillis()));
+                    }
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest()).substring(0, 16);
+        }
+        catch (IOException exception) {
+            throw new IllegalStateException("Failed to fingerprint selected Copilot skill directories.", exception);
+        }
+        catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 digest is unavailable.", exception);
+        }
+    }
+
+    private void updateDigest(MessageDigest digest, String value) {
+        digest.update(value.getBytes(StandardCharsets.UTF_8));
+        digest.update((byte) 0);
+    }
+
+    private boolean containsAllSelectedSkills(Path selectedRoot, List<String> skillNames) {
+        if (!Files.isDirectory(selectedRoot)) {
+            return false;
+        }
+        for (var skillName : skillNames) {
+            if (!hasSkillDefinition(selectedRoot.resolve(skillName))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void copySelectedSkills(List<Path> selectedSkillDirectories, Path selectedRoot) {
+        try {
+            Files.createDirectories(selectedRoot);
+            for (var skillDirectory : selectedSkillDirectories) {
+                copyDirectory(skillDirectory, selectedRoot.resolve(skillDirectory.getFileName().toString()));
+            }
+        }
+        catch (IOException exception) {
+            throw new IllegalStateException("Failed to prepare selected Copilot skill root: " + selectedRoot, exception);
+        }
+    }
+
+    private void copyDirectory(Path sourceDirectory, Path targetDirectory) throws IOException {
+        try (var paths = Files.walk(sourceDirectory)) {
+            var files = paths
+                    .filter(Files::isRegularFile)
+                    .sorted(Comparator.comparing(path -> sourceDirectory.relativize(path).toString()))
+                    .toList();
+            for (var sourceFile : files) {
+                var targetFile = targetDirectory.resolve(sourceDirectory.relativize(sourceFile).toString());
+                Files.createDirectories(targetFile.getParent());
+                Files.copy(sourceFile, targetFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
     }
 
     private Path extractSkillResourceRoot(String resourceRoot) {
@@ -131,6 +257,10 @@ public class CopilotSkillRuntimeLoader {
         }
     }
 
+    private boolean hasSkillDefinition(Path directory) {
+        return Files.isDirectory(directory) && Files.isRegularFile(directory.resolve("SKILL.md"));
+    }
+
     private void clearDirectory(Path directory) throws IOException {
         if (!Files.exists(directory)) {
             return;
@@ -161,6 +291,20 @@ public class CopilotSkillRuntimeLoader {
         }
 
         return normalized;
+    }
+
+    private List<String> normalizeSkillNames(List<String> skillNames) {
+        if (skillNames == null || skillNames.isEmpty()) {
+            return List.of();
+        }
+
+        var normalized = new LinkedHashSet<String>();
+        for (var skillName : skillNames) {
+            if (skillName != null && !skillName.isBlank()) {
+                normalized.add(skillName.trim());
+            }
+        }
+        return List.copyOf(normalized);
     }
 
     private String relativePath(String resourceUrl, String normalizedRoot) {

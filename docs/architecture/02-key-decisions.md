@@ -664,3 +664,32 @@ Konsekwencja dla obecnego kodu: historyczne `analysis.options` jest zamkniete.
 Neutralne `AnalysisAiOptions` mieszka w `shared.ai`, HTTP fasada
 `GET /analysis/ai/options` w `api.aioptions`, a katalog modeli Copilota zostaje
 w `aiplatform.copilot.runtime.options`.
+
+## 24. Local workspace jest stanem kontynuowalnym, export jest read-only
+
+Aplikacja uruchamiana jako lokalny JAR uzywa prywatnego katalogu workspace'u
+przekazanego przez `tdw.workspace.directory`. Domyslny launcher ustawia
+`tdw-data` obok skryptu/JAR-a.
+
+Decyzje MVP:
+
+- `index.json` jest lekkim read modelem dla ekranu `Analysis History`; lista
+  historii nie laduje wszystkich `run.json`,
+- pelny lokalny rekord jest w `runs/<analysisId>/run.json` i jest ladowany
+  dopiero przy otwarciu, eksporcie albo kontynuacji konkretnego runu,
+- `tokens.json` lezy obok `index.json`, przechowuje lokalne access tokeny
+  zapisane z UI i nie jest czescia exportu,
+- stan Copilota jest pod `${tdw.workspace.directory}/copilot`, zeby
+  `resumeSession` moglo korzystac z tego samego lokalnego workspace'u,
+- historia lokalnych runow jest shared/operator API pod `/analysis/runs`, a
+  live polling joba zostaje przy `GET /analysis/jobs/{analysisId}`,
+- export lokalnego runu zwraca tylko sanitizowany `exportEnvelope`; import
+  exportu jest read-only i nie tworzy kontynuowalnego runu,
+- w V1 nie ma osobnego diagnostic exportu; ewentualny tryb diagnostyczny musi
+  miec osobny kontrakt,
+- w V1 retencja jest reczna: uzytkownik usuwa run w UI albo caly katalog
+  `tdw-data`; automatyczna retencja nie jest czescia MVP.
+
+Pelny backup kontynuowalnego workspace'u oznacza skopiowanie calego katalogu
+`tdw-data`, najlepiej przy zatrzymanej aplikacji. Zwykly export JSON nie jest
+backupem sesji ani tokenow.

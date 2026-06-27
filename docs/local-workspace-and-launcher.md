@@ -112,6 +112,17 @@ Pelny backup robi sie przez skopiowanie calego katalogu `tdw-data`, najlepiej
 przy zatrzymanej aplikacji. Zwykly export JSON nie jest backupem kontynuowalnej
 sesji.
 
+## Decyzje MVP
+
+`Analysis History` korzysta z `/analysis/runs` i lokalnego `index.json`.
+Polling live joba pozostaje przy `GET /analysis/jobs/{analysisId}`.
+
+W V1 export ma jeden tryb: sanitizowany read-only JSON do podgladu albo
+dzielenia sie wynikiem. Osobny diagnostic export wymaga osobnego kontraktu.
+
+W V1 nie ma automatycznej retencji. Uzytkownik usuwa pojedynczy run w UI albo
+caly katalog `tdw-data`.
+
 ## Usuwanie Danych
 
 Usuniecie `tdw-data` usuwa:

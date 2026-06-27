@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CopilotNamedSkillDirectoryResolverTest {
@@ -30,10 +32,11 @@ class CopilotNamedSkillDirectoryResolverTest {
                 "flow-explorer-result-contract"
         ));
 
-        assertEquals(List.of(
-                tempDirectory.resolve("skills").resolve("flow-explorer-orchestrator").toString(),
-                tempDirectory.resolve("skills").resolve("flow-explorer-result-contract").toString()
-        ), directories);
+        assertSelectedSkillRoot(
+                directories,
+                List.of("flow-explorer-orchestrator", "flow-explorer-result-contract"),
+                List.of("incident-analysis-orchestrator")
+        );
     }
 
     @Test
@@ -47,7 +50,7 @@ class CopilotNamedSkillDirectoryResolverTest {
 
         var directories = resolver.resolveSkillDirectories(List.of("flow-explorer-orchestrator"));
 
-        assertEquals(List.of(skillDirectory.toString()), directories);
+        assertSelectedSkillRoot(directories, List.of("flow-explorer-orchestrator"), List.of());
     }
 
     @Test
@@ -66,5 +69,27 @@ class CopilotNamedSkillDirectoryResolverTest {
     private static void createSkill(Path directory) throws Exception {
         Files.createDirectories(directory);
         Files.writeString(directory.resolve("SKILL.md"), "---\nname: " + directory.getFileName() + "\n---\n");
+    }
+
+    private static void assertSelectedSkillRoot(
+            List<String> directories,
+            List<String> expectedSkillNames,
+            List<String> unexpectedSkillNames
+    ) {
+        assertEquals(1, directories.size());
+        var selectedRoot = Path.of(directories.get(0));
+        assertTrue(Files.isDirectory(selectedRoot));
+        for (var expectedSkillName : expectedSkillNames) {
+            assertTrue(
+                    Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")),
+                    () -> "Missing selected skill in root: " + expectedSkillName
+            );
+        }
+        for (var unexpectedSkillName : unexpectedSkillNames) {
+            assertFalse(
+                    Files.exists(selectedRoot.resolve(unexpectedSkillName)),
+                    () -> "Unexpected skill in selected root: " + unexpectedSkillName
+            );
+        }
     }
 }

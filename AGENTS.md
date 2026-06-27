@@ -152,6 +152,13 @@ Zasady granic:
   sesji albo domyslne wartosci, bywa lepiej opisana w dokumentacji Node/CLI
   niz w klasach Javy. Nie zgaduj defaultow ani zakresow parametrow bez takiej
   weryfikacji.
+- `SessionConfig.skillDirectories` musi dostawac katalogi-rooty zawierajace
+  podkatalogi skilli z `SKILL.md`, a nie bezposrednie katalogi pojedynczych
+  skilli. Gdy feature wybiera podzbior runtime skilli, platforma ma zbudowac
+  techniczny selected root z tylko tymi skillami i przekazac ten root do SDK;
+  nie wracaj do przekazywania listy bezposrednich katalogow skilli, bo
+  wbudowany tool `skill` moze wtedy nie widziec siblingow i zwracac
+  `Skill not found`.
 - Docelowa platforma Copilot ma byc parametryzowana przez feature. Aktualnym
   pierwszym inputem runtime jest `CopilotRunRequest`; prompt, skille,
   available tools, hidden context, evidence sink i response parser maja

@@ -8,11 +8,13 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotIncidentSessionConfigRequestFactoryTest {
 
@@ -45,7 +47,7 @@ class CopilotIncidentSessionConfigRequestFactoryTest {
         assertEquals("analysis-123", request.sessionId());
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of("gitlab_find_flow_context"), request.availableToolNames());
-        assertEquals(CopilotIncidentRuntimeSkillNames.allSkillNames(), skillDirectoryNames(request.skillDirectories()));
+        assertSelectedSkillRoot(request.skillDirectories(), CopilotIncidentRuntimeSkillNames.allSkillNames());
         assertEquals("gpt-5.4", request.modelSelection().model());
         assertEquals("high", request.modelSelection().reasoningEffort());
         assertEquals(
@@ -54,12 +56,16 @@ class CopilotIncidentSessionConfigRequestFactoryTest {
         );
     }
 
-    private List<String> skillDirectoryNames(List<String> skillDirectories) {
-        return skillDirectories.stream()
-                .map(Path::of)
-                .map(Path::getFileName)
-                .map(Path::toString)
-                .toList();
+    private void assertSelectedSkillRoot(List<String> skillDirectories, List<String> expectedSkillNames) {
+        assertEquals(1, skillDirectories.size());
+        var selectedRoot = Path.of(skillDirectories.get(0));
+        assertTrue(Files.isDirectory(selectedRoot));
+        for (var expectedSkillName : expectedSkillNames) {
+            assertTrue(
+                    Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")),
+                    () -> "Missing selected skill in root: " + expectedSkillName
+            );
+        }
     }
 
     private ToolDefinition tool(String name) {

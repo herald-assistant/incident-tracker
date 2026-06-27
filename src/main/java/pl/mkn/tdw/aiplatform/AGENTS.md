@@ -66,6 +66,11 @@ Nie obejmuje:
   SDK/technicznych.
 - Feature ma dostarczac prompt, skill resources, available tools, hidden
   context, evidence sink i response handling jako parametry uruchomienia.
+- `SessionConfig.skillDirectories` przekazuj jako katalog-root, pod ktorym sa
+  katalogi skilli z `SKILL.md`. Jesli feature wybiera konkretne nazwy skilli,
+  runtime powinien stworzyc selected root zawierajacy tylko te podkatalogi i
+  przekazac go do SDK. Nie przekazuj bezposrednich katalogow pojedynczych
+  skilli jako listy, bo wbudowany tool `skill` moze nie zindeksowac siblingow.
 - Platforma nie utrzymuje obecnie niewidocznej dla uzytkownika telemetryki
   sesji. Zdarzenia SDK usage sa agregowane tylko do `AnalysisAiUsage`, ktore
   trafia do job state/UI. Nowa telemetryka moze wrocic dopiero jako jawny,

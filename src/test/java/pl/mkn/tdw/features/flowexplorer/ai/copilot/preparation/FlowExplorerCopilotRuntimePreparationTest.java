@@ -27,6 +27,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -164,12 +165,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 request.skillDirectories(),
                 FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.TEST_SCENARIOS)
         );
-        assertTrue(request.skillDirectories()
-                .stream()
-                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME)));
-        assertFalse(request.skillDirectories()
-                .stream()
-                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME)));
+        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
+        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
     }
 
     @Test
@@ -189,15 +186,9 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 request.skillDirectories(),
                 FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.RISK_DETECTION)
         );
-        assertTrue(request.skillDirectories()
-                .stream()
-                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME)));
-        assertFalse(request.skillDirectories()
-                .stream()
-                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME)));
-        assertFalse(request.skillDirectories()
-                .stream()
-                .anyMatch(directory -> directory.endsWith(FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME)));
+        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME);
+        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
+        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
     }
 
     @Test
@@ -216,7 +207,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
         assertSkillDirectories(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
-        assertFalse(request.skillDirectories().stream().anyMatch(directory -> directory.endsWith("flow-explorer-result-contract")));
+        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-result-contract");
     }
 
     @Test
@@ -313,10 +304,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 runRequest.sessionConfigRequest().skillDirectories(),
                 FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
         );
-        assertFalse(runRequest.sessionConfigRequest()
-                .skillDirectories()
-                .stream()
-                .anyMatch(directory -> directory.endsWith("flow-explorer-result-contract")));
+        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-result-contract");
 
         verify(toolFactory).createToolDefinitions(
                 assembly.toolSessionContext(),
@@ -335,16 +323,26 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     private static void assertSkillDirectories(List<String> skillDirectories, List<String> expectedSkillNames) {
-        assertEquals(expectedSkillNames.size(), skillDirectories.size());
+        assertEquals(1, skillDirectories.size());
+        var selectedRoot = Path.of(skillDirectories.get(0));
+        assertTrue(Files.isDirectory(selectedRoot));
+        for (var expectedSkillName : expectedSkillNames) {
+            assertTrue(
+                    Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")),
+                    () -> "Missing selected skill in root: " + expectedSkillName
+            );
+        }
+        assertFalse(Files.exists(selectedRoot.resolve("incident-analysis-orchestrator")));
+    }
 
-        var skillDirectoryNames = skillDirectories.stream()
-                .map(Path::of)
-                .map(Path::getFileName)
-                .map(Path::toString)
-                .toList();
+    private static void assertSelectedSkillIncluded(List<String> skillDirectories, String skillName) {
+        assertEquals(1, skillDirectories.size());
+        assertTrue(Files.isRegularFile(Path.of(skillDirectories.get(0)).resolve(skillName).resolve("SKILL.md")));
+    }
 
-        assertEquals(expectedSkillNames, skillDirectoryNames);
-        assertFalse(skillDirectoryNames.stream().anyMatch(name -> name.startsWith("incident-")));
+    private static void assertSelectedSkillMissing(List<String> skillDirectories, String skillName) {
+        assertEquals(1, skillDirectories.size());
+        assertFalse(Files.exists(Path.of(skillDirectories.get(0)).resolve(skillName)));
     }
 
     private static FlowExplorerJobStartRequest request() {

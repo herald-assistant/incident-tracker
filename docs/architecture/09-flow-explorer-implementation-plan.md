@@ -1218,10 +1218,12 @@ kodu. Result contract skill wymusza JSON-only i audience analityk/tester.
 Boundary finding: globalny `CopilotSkillRuntimeLoader` zwraca root
 `copilot/skills`, wiec po dodaniu drugiego feature'u jeden root moglby
 przypadkowo wystawic skille wielu feature'ow w jednej sesji. Dodany zostal
-neutralny `CopilotNamedSkillDirectoryResolver`, ktory wybiera konkretne
-katalogi po nazwie skilla. Flow Explorer session config dostaje tylko
-`flow-explorer-*`, a incident session config zostal doprecyzowany do swoich
-`incident-*` skilli.
+neutralny `CopilotNamedSkillDirectoryResolver`, ktory wybiera skille po nazwie
+i buduje session-specific root zawierajacy tylko wybrane katalogi skilli.
+Flow Explorer session config dostaje root z `flow-explorer-*`, a incident
+session config root ze swoimi `incident-*` skillami. Nie przekazujemy SDK listy
+bezposrednich katalogow pojedynczych skilli, bo built-in `skill` tool moze
+zaindeksowac wtedy tylko czesc z nich.
 
 Powod: skills sa czescia kontraktu konkretnego feature'u. Platforma moze
 przygotowac runtime directories, ale wybor konkretnych skilli musi pozostac
