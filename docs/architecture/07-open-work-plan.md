@@ -3,17 +3,6 @@
 Ten dokument jest jedynym aktywnym backlogiem planistycznym projektu.
 Zastapil stare, robocze plany:
 
-- `07-universal-analysis-event-model-migration-plan.md`
-- `09-flow-explorer-implementation-plan.md`
-- `09-operational-context-read-model-optimization-plan.md`
-- `10-gitlab-endpoint-use-case-context-plan.md`
-- `11-flow-explorer-analysis-quality-improvement-plan.md`
-- `12-flow-explorer-goal-based-result-contract-plan.md`
-
-Zawiera tylko prace otwarte albo decyzje do podjecia. Wykonane kroki i
-decision logi zostaly przeniesione do stabilnych dokumentow architektury albo
-usuniete z planu.
-
 ## Zasady pracy z planem
 
 - Przed implementacja kolejnego punktu opisujemy zakres i czekamy na
