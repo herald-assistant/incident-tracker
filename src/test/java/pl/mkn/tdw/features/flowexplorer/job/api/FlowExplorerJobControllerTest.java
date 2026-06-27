@@ -231,7 +231,7 @@ class FlowExplorerJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
-                        "Flow Explorer follow-up prompt"
+                        "Gdzie jest walidacja?"
                 )
         ));
     }

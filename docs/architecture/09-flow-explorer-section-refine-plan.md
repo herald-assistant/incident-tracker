@@ -38,6 +38,9 @@ Overview moze byc osobna decyzja produktowa pozniej.
   `FLOW_EXPLORER_CHAT_IN_PROGRESS` albo jego refine odpowiednik.
 - Canonical source of truth po udanym refine to `FlowExplorerResultResponse` w
   job state. Chat jest historia pracy nad tym stanem.
+- Zwykly follow-up chat jest minimalny: wznawia istniejaca sesje Copilota i
+  przekazuje tylko biezaca wiadomosc uzytkownika, bez ponownego osadzania
+  initial resultu, historii chatu albo artefaktow initial runu.
 
 ## UX
 
@@ -145,23 +148,20 @@ follow-up chat, ale ma osobny prompt preparation. Prompt powinien zawierac:
   `sourceRefs`, `visibilityLimits`, `openQuestions`,
 - aktualne `globalVisibilityLimits`, `globalOpenQuestions`,
   `sourceReferences` i `followUpPrompts`,
-- poprzednie tool evidence z initial runu i chat/refine,
-- chat history jako historia rozmowy, ale z jasna zasada, ze aktualny
-  `FlowExplorerResultResponse` jest canonical state,
-- artefakty Flow Explorera: `canonical-tool-inputs.md`,
-  `compact-flow-manifest.md`, `snippet-cards.md`,
-  `openapi-endpoint-contract.md` jezeli istnieje,
-- instrukcje uzycia tools analogiczne do follow-up promptu,
+- poprzednie tool evidence summary z initial runu i chat/refine,
+- ewentualne male scope hints, np. repo/branch/filePath z canonical tool
+  inputs, tylko jezeli backend nie moze polegac na pamieci wznowionej sesji,
+- instrukcje uzycia tools ograniczone do tego, ze sesja jest wznowiona i tools
+  maja byc uzyte tylko dla konkretnego braku z prosby uzytkownika,
 - jawna instrukcje: wynik sekcji musi pozostac zgodny ze skillem
   `flow-explorer-result-contract` i trybem `compact`/`deep` z target section.
 
 Wazna regula dla kompatybilnosci sesji:
 
 ```text
-W historii sesji moga istniec starsze wersje tej sekcji. Aktualny canonical
-stan sekcji jest w bloku "Current target section" i to on ma pierwszenstwo.
-Po refine zwroc nowy stan tej sekcji; nie traktuj starszego markdowna z chatu
-jako rownorzednego zrodla prawdy.
+Nie uzywaj historii chatu jako wejscia refine. Aktualny canonical stan sekcji
+jest w bloku "Current target section" i to on ma pierwszenstwo nad pamiecia
+wznowionej sesji. Po refine zwroc nowy stan tej sekcji.
 ```
 
 ## Response Contract Refine

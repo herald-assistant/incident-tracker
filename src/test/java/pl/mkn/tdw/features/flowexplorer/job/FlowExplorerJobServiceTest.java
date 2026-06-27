@@ -15,11 +15,9 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
-import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunAssembly;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotToolAccessPolicy;
-import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextCoverage;
@@ -68,8 +66,6 @@ class FlowExplorerJobServiceTest {
     private final FlowExplorerContextService contextService = mock(FlowExplorerContextService.class);
     private final FlowExplorerPromptPreparationService promptPreparationService =
             mock(FlowExplorerPromptPreparationService.class);
-    private final FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService =
-            mock(FlowExplorerFollowUpPromptPreparationService.class);
     private final FlowExplorerCopilotRunRequestAssembler runRequestAssembler =
             mock(FlowExplorerCopilotRunRequestAssembler.class);
     private final CopilotRunPreparationService runPreparationService = mock(CopilotRunPreparationService.class);
@@ -79,7 +75,6 @@ class FlowExplorerJobServiceTest {
     private final FlowExplorerJobService flowExplorerJobService = new FlowExplorerJobService(
             contextService,
             promptPreparationService,
-            followUpPromptPreparationService,
             runRequestAssembler,
             runPreparationService,
             executionGateway,
@@ -232,7 +227,6 @@ class FlowExplorerJobServiceTest {
         var service = new FlowExplorerJobService(
                 contextService,
                 promptPreparationService,
-                followUpPromptPreparationService,
                 runRequestAssembler,
                 runPreparationService,
                 executionGateway,
@@ -332,7 +326,6 @@ class FlowExplorerJobServiceTest {
         var service = new FlowExplorerJobService(
                 contextService,
                 promptPreparationService,
-                followUpPromptPreparationService,
                 runRequestAssembler,
                 runPreparationService,
                 executionGateway,
@@ -412,14 +405,6 @@ class FlowExplorerJobServiceTest {
         );
     }
 
-    private static FlowExplorerPromptPreparation followUpPromptPreparation() {
-        return new FlowExplorerPromptPreparation(
-                "Flow Explorer follow-up prompt",
-                List.of(),
-                Map.of("flow-explorer/initial-result.md", "initial result")
-        );
-    }
-
     private static CopilotRunRequest runRequest() {
         return new CopilotRunRequest(
                 "job-123",
@@ -440,7 +425,7 @@ class FlowExplorerJobServiceTest {
     private static CopilotRunRequest followUpRunRequest() {
         return new CopilotRunRequest(
                 "follow-up-123",
-                "Flow Explorer follow-up prompt",
+                "Gdzie jest walidacja?",
                 new CopilotSessionConfigRequest(
                         "flow-explorer-follow-up-123",
                         List.of(),
@@ -449,7 +434,7 @@ class FlowExplorerJobServiceTest {
                         null,
                         "Denied"
                 ),
-                Map.of("flow-explorer/initial-result.md", "initial result"),
+                Map.of(),
                 null
         );
     }

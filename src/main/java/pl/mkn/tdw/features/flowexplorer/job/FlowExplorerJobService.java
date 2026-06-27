@@ -12,7 +12,6 @@ import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import org.springframework.stereotype.Service;
-import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextRequest;
@@ -38,7 +37,6 @@ public class FlowExplorerJobService {
     private final Map<String, FlowExplorerJobState> jobs = new ConcurrentHashMap<>();
     private final FlowExplorerContextService flowExplorerContextService;
     private final FlowExplorerPromptPreparationService promptPreparationService;
-    private final FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService;
     private final FlowExplorerCopilotRunRequestAssembler runRequestAssembler;
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
@@ -52,7 +50,6 @@ public class FlowExplorerJobService {
     public FlowExplorerJobService(
             FlowExplorerContextService flowExplorerContextService,
             FlowExplorerPromptPreparationService promptPreparationService,
-            FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService,
             FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
@@ -62,7 +59,6 @@ public class FlowExplorerJobService {
         this(
                 flowExplorerContextService,
                 promptPreparationService,
-                followUpPromptPreparationService,
                 runRequestAssembler,
                 runPreparationService,
                 executionGateway,
@@ -83,7 +79,6 @@ public class FlowExplorerJobService {
     public FlowExplorerJobService(
             FlowExplorerContextService flowExplorerContextService,
             FlowExplorerPromptPreparationService promptPreparationService,
-            FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService,
             FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
@@ -96,7 +91,6 @@ public class FlowExplorerJobService {
         this(
                 flowExplorerContextService,
                 promptPreparationService,
-                followUpPromptPreparationService,
                 runRequestAssembler,
                 runPreparationService,
                 executionGateway,
@@ -113,7 +107,6 @@ public class FlowExplorerJobService {
     public FlowExplorerJobService(
             FlowExplorerContextService flowExplorerContextService,
             FlowExplorerPromptPreparationService promptPreparationService,
-            FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService,
             FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
@@ -126,7 +119,6 @@ public class FlowExplorerJobService {
     ) {
         this.flowExplorerContextService = flowExplorerContextService;
         this.promptPreparationService = promptPreparationService;
-        this.followUpPromptPreparationService = followUpPromptPreparationService;
         this.runRequestAssembler = runRequestAssembler;
         this.runPreparationService = runPreparationService;
         this.executionGateway = executionGateway;
