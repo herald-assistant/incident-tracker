@@ -1,8 +1,10 @@
 package pl.mkn.incidenttracker.api.analysisruns;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
+import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunStore;
@@ -10,10 +12,23 @@ import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunStore;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AnalysisRunHistoryService {
 
     private final LocalAnalysisRunStore localAnalysisRunStore;
+    private final List<LocalAnalysisRunChatHandler> chatHandlers;
+
+    @Autowired
+    public AnalysisRunHistoryService(
+            LocalAnalysisRunStore localAnalysisRunStore,
+            List<LocalAnalysisRunChatHandler> chatHandlers
+    ) {
+        this.localAnalysisRunStore = localAnalysisRunStore;
+        this.chatHandlers = chatHandlers != null ? List.copyOf(chatHandlers) : List.of();
+    }
+
+    AnalysisRunHistoryService(LocalAnalysisRunStore localAnalysisRunStore) {
+        this(localAnalysisRunStore, List.of());
+    }
 
     public LocalAnalysisRunListResponse listRuns() {
         return new LocalAnalysisRunListResponse(
@@ -35,6 +50,29 @@ public class AnalysisRunHistoryService {
         return getRun(indexEntry.analysisId());
     }
 
+    public LocalAnalysisRunDetailResponse sendChatMessage(
+            String analysisId,
+            LocalAnalysisRunChatMessageRequest request
+    ) {
+        var indexEntry = indexEntryOrThrow(analysisId);
+        var record = recordOrThrow(indexEntry.analysisId());
+        if (record.continuation() == null || !record.continuation().enabled()) {
+            throw new LocalAnalysisRunContinuationUnavailableException(
+                    "Local run cannot be continued because continuation metadata is disabled."
+            );
+        }
+
+        var handler = chatHandler(indexEntry.feature());
+        try {
+            var result = handler.continueRun(indexEntry, record, request.message());
+            var updatedEntry = indexEntry.withUpdatedAt(result.updatedAt());
+            localAnalysisRunStore.save(updatedEntry, result.record());
+            return toDetail(updatedEntry, result.record());
+        } catch (LocalAnalysisRunContinuationException exception) {
+            throw mapContinuationException(indexEntry.analysisId(), exception);
+        }
+    }
+
     public void deleteRun(String analysisId) {
         var indexEntry = indexEntryOrThrow(analysisId);
         localAnalysisRunStore.delete(indexEntry.analysisId());
@@ -52,6 +90,34 @@ public class AnalysisRunHistoryService {
         var normalizedAnalysisId = requireAnalysisId(analysisId);
         return localAnalysisRunStore.findById(normalizedAnalysisId)
                 .orElseThrow(() -> new LocalAnalysisRunCorruptedException(normalizedAnalysisId));
+    }
+
+    private LocalAnalysisRunChatHandler chatHandler(String feature) {
+        return chatHandlers.stream()
+                .filter(handler -> handler.feature().equals(feature))
+                .findFirst()
+                .orElseThrow(() -> new LocalAnalysisRunContinuationUnavailableException(
+                        "Local run feature does not support continuation yet: " + feature
+                ));
+    }
+
+    private RuntimeException mapContinuationException(
+            String analysisId,
+            LocalAnalysisRunContinuationException exception
+    ) {
+        return switch (exception.reason()) {
+            case CORRUPTED -> new LocalAnalysisRunCorruptedException(analysisId);
+            case CHAT_FAILED -> new LocalAnalysisRunChatFailedException(
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Local follow-up chat failed."
+            );
+            case UNAVAILABLE -> new LocalAnalysisRunContinuationUnavailableException(
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Local run cannot be continued."
+            );
+        };
     }
 
     private LocalAnalysisRunListItemResponse toListItem(LocalAnalysisRunIndexEntry entry) {

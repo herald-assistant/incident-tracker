@@ -220,10 +220,11 @@ export class AnalysisConsoleComponent {
   readonly analysisActionsHint = computed(() => buildAnalysisActionsHint(this.exportState()));
   readonly canUseChat = computed(() => {
     const currentJob = this.job();
-    const origin = this.exportState()?.origin;
+    const exportState = this.exportState();
+    const origin = exportState?.origin;
     return (
       currentJob?.status === 'COMPLETED' &&
-      origin === 'live' &&
+      (origin === 'live' || (origin === 'local' && Boolean(exportState?.continuationEnabled))) &&
       !hasInProgressChat(currentJob)
     );
   });
@@ -238,7 +239,7 @@ export class AnalysisConsoleComponent {
     }
     if (exportState?.origin === 'local') {
       return exportState.continuationEnabled
-        ? 'Lokalny run został otwarty z historii. Wysyłanie follow-up dla lokalnych runów zostanie podłączone przez API kontynuacji.'
+        ? 'Lokalny run został otwarty z historii. Możesz kontynuować pracę na zapisanym snapshotcie.'
         : 'Ten lokalny run nie ma włączonych metadanych kontynuacji.';
     }
     if (currentJob.status !== 'COMPLETED') {
@@ -453,7 +454,8 @@ export class AnalysisConsoleComponent {
 
   submitChat(message: string): void {
     const currentJob = this.job();
-    const analysisId = this.activeAnalysisId || currentJob?.analysisId || '';
+    const exportState = this.exportState();
+    const analysisId = this.activeAnalysisId || exportState?.localRunId || currentJob?.analysisId || '';
     const trimmedMessage = message.trim();
 
     if (!trimmedMessage) {
@@ -462,12 +464,22 @@ export class AnalysisConsoleComponent {
     }
 
     if (!currentJob || currentJob.status !== 'COMPLETED' || !analysisId) {
-      this.chatError.set('Chat jest dostępny dopiero dla zakończonej analizy uruchomionej w backendzie.');
+      this.chatError.set('Chat jest dostępny dopiero dla zakończonej analizy.');
+      return;
+    }
+
+    if (exportState?.origin === 'imported') {
+      this.chatError.set('Importowany zapis jest tylko do odczytu.');
       return;
     }
 
     if (hasInProgressChat(currentJob)) {
       this.chatError.set('Poczekaj na zakończenie poprzedniej odpowiedzi AI.');
+      return;
+    }
+
+    if (exportState?.origin === 'local') {
+      this.submitLocalChat(analysisId, trimmedMessage);
       return;
     }
 
@@ -497,6 +509,36 @@ export class AnalysisConsoleComponent {
           const transportError = this.toTransportError(
             error,
             'Nie udało się wysłać wiadomości do backendu.'
+          );
+          this.applyGithubAuthError(transportError.code);
+          this.chatError.set(transportError.message);
+          this.chatNeedsGithubAuth.set(this.isGithubAuthError(transportError.code));
+        }
+      });
+  }
+
+  private submitLocalChat(analysisId: string, message: string): void {
+    const exportState = this.exportState();
+    if (!exportState?.continuationEnabled) {
+      this.chatError.set('Ten lokalny run nie ma włączonych metadanych kontynuacji.');
+      return;
+    }
+
+    this.chatError.set('');
+    this.isChatSubmitting.set(true);
+
+    this.historyApi
+      .sendChatMessage(analysisId, { message })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isChatSubmitting.set(false))
+      )
+      .subscribe({
+        next: (detail) => this.applyLocalAnalysisRun(detail),
+        error: (error) => {
+          const transportError = this.toTransportError(
+            error,
+            'Nie udało się wysłać wiadomości do lokalnego runu.'
           );
           this.applyGithubAuthError(transportError.code);
           this.chatError.set(transportError.message);

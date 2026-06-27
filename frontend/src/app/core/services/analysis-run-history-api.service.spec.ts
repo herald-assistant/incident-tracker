@@ -57,6 +57,15 @@ describe('AnalysisRunHistoryApiService', () => {
     request.flush({ analysisId: 'analysis/1', name: 'Nowa nazwa' });
   });
 
+  it('should send a follow-up message to a local run', () => {
+    service.sendChatMessage('analysis/1', { message: 'Dopytaj o repo.' }).subscribe();
+
+    const request = http.expectOne('/analysis/runs/analysis%2F1/chat/messages');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ message: 'Dopytaj o repo.' });
+    request.flush({ analysisId: 'analysis/1' });
+  });
+
   it('should delete a local run', () => {
     service.deleteRun('analysis/1').subscribe();
 

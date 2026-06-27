@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,6 +35,14 @@ public class AnalysisRunHistoryController {
             @Valid @RequestBody RenameLocalAnalysisRunRequest request
     ) {
         return analysisRunHistoryService.renameRun(analysisId, request.name());
+    }
+
+    @PostMapping("/{analysisId}/chat/messages")
+    public LocalAnalysisRunDetailResponse sendChatMessage(
+            @PathVariable String analysisId,
+            @Valid @RequestBody LocalAnalysisRunChatMessageRequest request
+    ) {
+        return analysisRunHistoryService.sendChatMessage(analysisId, request);
     }
 
     @DeleteMapping("/{analysisId}")

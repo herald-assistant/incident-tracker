@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  AnalysisChatMessageRequest,
   LocalAnalysisRunDetailResponse,
   LocalAnalysisRunListResponse,
   RenameLocalAnalysisRunRequest
@@ -30,6 +31,16 @@ export class AnalysisRunHistoryApiService {
   ): Observable<LocalAnalysisRunDetailResponse> {
     return this.http.patch<LocalAnalysisRunDetailResponse>(
       `/analysis/runs/${encodeURIComponent(analysisId)}/name`,
+      request
+    );
+  }
+
+  sendChatMessage(
+    analysisId: string,
+    request: AnalysisChatMessageRequest
+  ): Observable<LocalAnalysisRunDetailResponse> {
+    return this.http.post<LocalAnalysisRunDetailResponse>(
+      `/analysis/runs/${encodeURIComponent(analysisId)}/chat/messages`,
       request
     );
   }

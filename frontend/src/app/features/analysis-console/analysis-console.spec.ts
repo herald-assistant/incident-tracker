@@ -183,6 +183,37 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).toContain('Lokalny run został otwarty z historii.');
   });
 
+  it('should continue a local run through the analysis history API', async () => {
+    const updatedDetail = localRunDetail(completedJobWithChat());
+    const { fixture, analysisApi, historyApi } = await createComponent(
+      connectedStatus(),
+      of(modelOptions()),
+      {
+        localRunId: 'analysis-1',
+        localRunDetail: localRunDetail(),
+        localChatResponse: updatedDetail
+      }
+    );
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.submitChat('Kontynuuj lokalnie.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(historyApi.sendChatMessage).toHaveBeenCalledWith('analysis-1', {
+      message: 'Kontynuuj lokalnie.'
+    });
+    expect(analysisApi.sendChatMessage).not.toHaveBeenCalled();
+    expect(component.job()?.chatMessages).toHaveLength(2);
+    expect(component.job()?.chatMessages[1]?.content).toContain('timeout na downstream');
+    expect(component.exportState()?.sourceEnvelope).toBe(updatedDetail.exportEnvelope);
+  });
+
   it('should expose detailed usage cost breakdown on the compact run context item', async () => {
     const { fixture } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
@@ -351,6 +382,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     routeOptions: {
       localRunId?: string;
       localRunDetail?: LocalAnalysisRunDetailResponse;
+      localChatResponse?: LocalAnalysisRunDetailResponse;
     } = {}
   ) {
     const analysisApi = {
@@ -360,7 +392,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
       sendChatMessage: vi.fn(() => of(queuedJob()))
     };
     const historyApi = {
-      getRun: vi.fn(() => of(routeOptions.localRunDetail ?? localRunDetail()))
+      getRun: vi.fn(() => of(routeOptions.localRunDetail ?? localRunDetail())),
+      sendChatMessage: vi.fn(() => of(routeOptions.localChatResponse ?? localRunDetail(completedJobWithChat())))
     };
     const githubAuth = {
       getStatus: vi.fn(() => of(status)),
@@ -500,7 +533,7 @@ function completedJob(): AnalysisJobStateSnapshot {
   };
 }
 
-function localRunDetail(): LocalAnalysisRunDetailResponse {
+function localRunDetail(job: AnalysisJobStateSnapshot = completedJob()): LocalAnalysisRunDetailResponse {
   return {
     analysisId: 'analysis-1',
     feature: 'incident-analysis',
@@ -508,7 +541,7 @@ function localRunDetail(): LocalAnalysisRunDetailResponse {
     createdAt: '2026-05-02T10:00:00Z',
     updatedAt: '2026-05-02T10:05:00Z',
     completedAt: '2026-05-02T10:05:00Z',
-    exportEnvelope: buildExportEnvelope(completedJob(), '2026-05-02T10:05:00Z'),
+    exportEnvelope: buildExportEnvelope(job, '2026-05-02T10:05:00Z'),
     continuationEnabled: true
   };
 }

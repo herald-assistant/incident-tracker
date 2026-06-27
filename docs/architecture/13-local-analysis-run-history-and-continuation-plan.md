@@ -447,7 +447,7 @@ Wykonane:
 - Spring fallback serwuje SPA dla `/analysis-history`,
 - dodano testy frontendowe i backendowy test routingu.
 
-### [ ] 006. Kontynuacja lokalnego runu bez `resumeSession`
+### [x] 006. Kontynuacja lokalnego runu bez `resumeSession`
 
 Cel:
 
@@ -462,17 +462,33 @@ Zakres:
   odpowiedzi assistant,
 - UI polling albo odswiezanie odpowiedzi follow-up dla local runu.
 
-Do zatwierdzenia:
+Zatwierdzone decyzje:
 
-- czy local follow-up tworzy background task jak live job,
-- jak UI pokazuje blad kontynuacji,
-- jak odroznic prompt-rehydrate od resume w activity/metadata.
+- V1 local follow-up jest synchroniczny: request czeka na pelna odpowiedz AI,
+- V1 obsluguje `incident-analysis`; Flow Explorer zostaje pod ten sam model UI,
+  ale wymaga osobnego persistowania flow runow w local store,
+- przy bledzie follow-up UI pokazuje blad i `run.json` zostaje bez zmian; nie
+  zapisujemy wiadomosci `FAILED` do lokalnego snapshotu w V1,
+- prompt-rehydrate jest jawna sciezka V1; `resumeSession` pojawi sie dopiero w
+  kolejnych krokach.
 
 Kryteria akceptacji:
 
 - zakonczony run po restarcie moze dostac follow-up,
 - follow-up uzywa zapisanego evidence, result, historii i tool evidence,
 - tool evidence z follow-up zapisuje sie przy konkretnej odpowiedzi assistant.
+
+Wykonane:
+
+- dodano neutralny handler local run chat w `localworkspace.analysisruns`,
+- dodano `POST /analysis/runs/{analysisId}/chat/messages` w shared/operator
+  API historii,
+- dodano incidentowy handler odtwarzajacy `AnalysisAiChatRequest` z lokalnego
+  `exportEnvelope.payload.job` oraz `continuation`,
+- odpowiedz follow-up jest zapisywana do `run.json` dopiero po pelnym sukcesie,
+- bledy follow-up nie nadpisuja lokalnego rekordu,
+- UI Incident Analysis kontynuuje `origin=local` przez API historii, a
+  `origin=imported` pozostaje read-only.
 
 ### [ ] 007. Zapis `copilotSessionId` i metadanych SDK
 

@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,6 +111,64 @@ class AnalysisRunHistoryControllerTest {
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("name"));
 
         verifyNoInteractions(analysisRunHistoryService);
+    }
+
+    @Test
+    void shouldSendChatMessageToLocalRun() throws Exception {
+        when(analysisRunHistoryService.sendChatMessage(
+                "analysis-1",
+                new LocalAnalysisRunChatMessageRequest("Dopytaj o repo.")
+        )).thenReturn(detail("analysis-1", "corr-123", true));
+
+        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": " Dopytaj o repo. "
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisId").value("analysis-1"))
+                .andExpect(jsonPath("$.continuationEnabled").value(true));
+
+        verify(analysisRunHistoryService).sendChatMessage(
+                "analysis-1",
+                new LocalAnalysisRunChatMessageRequest("Dopytaj o repo.")
+        );
+    }
+
+    @Test
+    void shouldRejectBlankChatMessage() throws Exception {
+        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": " "
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("message"));
+
+        verifyNoInteractions(analysisRunHistoryService);
+    }
+
+    @Test
+    void shouldMapLocalChatFailureToServiceUnavailable() throws Exception {
+        when(analysisRunHistoryService.sendChatMessage(
+                "analysis-1",
+                new LocalAnalysisRunChatMessageRequest("Dopytaj")
+        )).thenThrow(new LocalAnalysisRunChatFailedException("Copilot unavailable."));
+
+        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": "Dopytaj"
+                                }
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("LOCAL_ANALYSIS_RUN_CHAT_FAILED"));
     }
 
     @Test

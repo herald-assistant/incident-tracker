@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunContinuation;
+import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
+import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunChatResult;
+import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.incidenttracker.localworkspace.analysisruns.LocalAnalysisRunStore;
@@ -29,6 +32,7 @@ class AnalysisRunHistoryServiceTest {
     private static final Instant UPDATED_AT = Instant.parse("2026-06-20T10:05:00Z");
     private static final Instant RENAMED_AT = Instant.parse("2026-06-21T08:30:00Z");
     private static final Instant COMPLETED_AT = Instant.parse("2026-06-20T10:06:00Z");
+    private static final Instant CHAT_UPDATED_AT = Instant.parse("2026-06-20T10:10:00Z");
 
     private final ObjectMapper objectMapper = JsonMapper.builder()
             .addModule(new JavaTimeModule())
@@ -99,6 +103,70 @@ class AnalysisRunHistoryServiceTest {
     }
 
     @Test
+    void shouldSendChatMessageThroughFeatureHandlerAndSaveUpdatedRun() {
+        var store = new CapturingLocalAnalysisRunStore();
+        var originalRecord = record("analysis-1", true);
+        var updatedRecord = recordWithPrompt("analysis-1", "Updated prompt after chat");
+        store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), originalRecord);
+        var handler = new CapturingChatHandler("incident-analysis", updatedRecord);
+        var service = new AnalysisRunHistoryService(store, List.of(handler));
+
+        var response = service.sendChatMessage(
+                " analysis-1 ",
+                new LocalAnalysisRunChatMessageRequest(" Dopytaj o repo. ")
+        );
+
+        assertEquals("analysis-1", handler.indexEntry.analysisId());
+        assertEquals(originalRecord, handler.record);
+        assertEquals("Dopytaj o repo.", handler.message);
+        assertEquals(updatedRecord, store.records.get("analysis-1"));
+        assertEquals(CHAT_UPDATED_AT, store.entries.get("analysis-1").updatedAt());
+        assertEquals(CHAT_UPDATED_AT, response.updatedAt());
+        assertEquals("Updated prompt after chat", response.exportEnvelope().at("/payload/job/preparedPrompt").asText());
+    }
+
+    @Test
+    void shouldRejectChatWhenContinuationIsDisabled() {
+        var store = new CapturingLocalAnalysisRunStore();
+        store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", false));
+        var handler = new CapturingChatHandler("incident-analysis", record("analysis-1", true));
+        var service = new AnalysisRunHistoryService(store, List.of(handler));
+
+        assertThrows(LocalAnalysisRunContinuationUnavailableException.class,
+                () -> service.sendChatMessage("analysis-1", new LocalAnalysisRunChatMessageRequest("Dopytaj")));
+
+        assertNull(handler.message);
+    }
+
+    @Test
+    void shouldRejectChatWhenFeatureHasNoHandler() {
+        var store = new CapturingLocalAnalysisRunStore();
+        store.addRun(entry("flow-1", "flow-explorer", "GET /customers"), record("flow-1", true));
+        var service = new AnalysisRunHistoryService(store, List.of());
+
+        assertThrows(LocalAnalysisRunContinuationUnavailableException.class,
+                () -> service.sendChatMessage("flow-1", new LocalAnalysisRunChatMessageRequest("Dopytaj")));
+    }
+
+    @Test
+    void shouldMapHandlerChatFailureAndKeepRecordUnchanged() {
+        var store = new CapturingLocalAnalysisRunStore();
+        var originalRecord = record("analysis-1", true);
+        store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), originalRecord);
+        var handler = new CapturingChatHandler(
+                "incident-analysis",
+                LocalAnalysisRunContinuationException.chatFailed("Copilot unavailable.", null)
+        );
+        var service = new AnalysisRunHistoryService(store, List.of(handler));
+
+        assertThrows(LocalAnalysisRunChatFailedException.class,
+                () -> service.sendChatMessage("analysis-1", new LocalAnalysisRunChatMessageRequest("Dopytaj")));
+
+        assertEquals(originalRecord, store.records.get("analysis-1"));
+        assertEquals(UPDATED_AT, store.entries.get("analysis-1").updatedAt());
+    }
+
+    @Test
     void shouldRejectRenameForMissingRun() {
         var store = new CapturingLocalAnalysisRunStore();
         var service = new AnalysisRunHistoryService(store);
@@ -147,6 +215,18 @@ class AnalysisRunHistoryServiceTest {
     }
 
     private LocalAnalysisRunRecord record(String analysisId, boolean continuationEnabled) {
+        return recordWithPrompt(analysisId, "Prepared prompt", continuationEnabled);
+    }
+
+    private LocalAnalysisRunRecord recordWithPrompt(String analysisId, String preparedPrompt) {
+        return recordWithPrompt(analysisId, preparedPrompt, true);
+    }
+
+    private LocalAnalysisRunRecord recordWithPrompt(
+            String analysisId,
+            String preparedPrompt,
+            boolean continuationEnabled
+    ) {
         var envelope = objectMapper.createObjectNode();
         envelope.put("schema", "tdw.analysis-export");
         envelope.put("version", 6);
@@ -157,7 +237,7 @@ class AnalysisRunHistoryServiceTest {
         job.put("analysisId", analysisId);
         job.put("correlationId", "corr-123");
         job.put("status", "COMPLETED");
-        job.put("preparedPrompt", "Prepared prompt");
+        job.put("preparedPrompt", preparedPrompt);
 
         return LocalAnalysisRunRecord.v1(
                 envelope,
@@ -211,6 +291,48 @@ class AnalysisRunHistoryServiceTest {
             deletedAnalysisId = analysisId;
             entries.remove(analysisId);
             records.remove(analysisId);
+        }
+    }
+
+    private static final class CapturingChatHandler implements LocalAnalysisRunChatHandler {
+
+        private final String feature;
+        private final LocalAnalysisRunRecord updatedRecord;
+        private final LocalAnalysisRunContinuationException exception;
+        private LocalAnalysisRunIndexEntry indexEntry;
+        private LocalAnalysisRunRecord record;
+        private String message;
+
+        private CapturingChatHandler(String feature, LocalAnalysisRunRecord updatedRecord) {
+            this.feature = feature;
+            this.updatedRecord = updatedRecord;
+            this.exception = null;
+        }
+
+        private CapturingChatHandler(String feature, LocalAnalysisRunContinuationException exception) {
+            this.feature = feature;
+            this.updatedRecord = null;
+            this.exception = exception;
+        }
+
+        @Override
+        public String feature() {
+            return feature;
+        }
+
+        @Override
+        public LocalAnalysisRunChatResult continueRun(
+                LocalAnalysisRunIndexEntry indexEntry,
+                LocalAnalysisRunRecord record,
+                String message
+        ) {
+            this.indexEntry = indexEntry;
+            this.record = record;
+            this.message = message;
+            if (exception != null) {
+                throw exception;
+            }
+            return new LocalAnalysisRunChatResult(updatedRecord, CHAT_UPDATED_AT);
         }
     }
 }

@@ -52,6 +52,20 @@ public record LocalAnalysisRunIndexEntry(
         );
     }
 
+    public LocalAnalysisRunIndexEntry withUpdatedAt(Instant updatedAt) {
+        return new LocalAnalysisRunIndexEntry(
+                analysisId,
+                schema,
+                version,
+                runPath,
+                feature,
+                name,
+                createdAt,
+                updatedAt,
+                completedAt
+        );
+    }
+
     private static String required(String fieldName, String value) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " is required");
