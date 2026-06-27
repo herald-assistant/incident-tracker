@@ -60,6 +60,7 @@ public final class AnalysisJobState {
     private String errorCode;
     private String errorMessage;
     private String preparedPrompt;
+    private String latestCopilotSessionId;
     private Instant updatedAt;
     private Instant completedAt;
     private AnalysisResultResponse result;
@@ -157,6 +158,9 @@ public final class AnalysisJobState {
 
     public synchronized void markCompleted(AnalysisExecution execution) {
         this.completedAiRequest = execution.aiRequest();
+        this.latestCopilotSessionId = execution.aiResponse() != null
+                ? execution.aiResponse().copilotSessionId()
+                : null;
         markCompleted(execution.result());
     }
 
@@ -194,6 +198,12 @@ public final class AnalysisJobState {
                     "A follow-up response is already in progress for this analysis."
             );
         }
+        if (!StringUtils.hasText(latestCopilotSessionId)) {
+            throw new AnalysisJobChatUnavailableException(
+                    "ANALYSIS_CHAT_NOT_CONTINUABLE",
+                    "Follow-up chat requires a Copilot session id from the completed analysis."
+            );
+        }
 
         var history = chatHistory();
         var toolSections = continuationToolEvidenceSections();
@@ -221,6 +231,7 @@ public final class AnalysisJobState {
                 analysisSnapshot(),
                 history,
                 message,
+                latestCopilotSessionId,
                 completedAiRequest.options(),
                 completedAiRequest.authRef()
         );
@@ -255,7 +266,15 @@ public final class AnalysisJobState {
         touch();
     }
 
-    public synchronized void markChatCompleted(String assistantMessageId, String content, String prompt) {
+    public synchronized void markChatCompleted(
+            String assistantMessageId,
+            String content,
+            String prompt,
+            String copilotSessionId
+    ) {
+        if (StringUtils.hasText(copilotSessionId)) {
+            latestCopilotSessionId = copilotSessionId;
+        }
         assistantMessage(assistantMessageId).markCompleted(content, prompt);
         touch();
     }

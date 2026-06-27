@@ -39,6 +39,7 @@ class CopilotSessionConfigFactoryTest {
                 "Use only the enabled test tools."
         );
         var sessionConfig = factory.sessionConfig(sessionConfigRequest);
+        var resumeSessionConfig = factory.resumeSessionConfig(sessionConfigRequest);
 
         assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfigRequest.effectiveAvailableToolNames());
         assertEquals(true, sessionConfigRequest.skillToolAvailable());
@@ -59,6 +60,17 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("medium", sessionConfig.getReasoningEffort());
         assertEquals(PermissionHandler.APPROVE_ALL, sessionConfig.getOnPermissionRequest());
         assertNotNull(sessionConfig.getHooks());
+        assertEquals("incidenttracker-test", resumeSessionConfig.getClientName());
+        assertEquals("C:\\workspace", resumeSessionConfig.getWorkingDirectory());
+        assertFalse(resumeSessionConfig.isStreaming());
+        assertEquals(tools, resumeSessionConfig.getTools());
+        assertEquals(List.of("gitlab_find_flow_context", "skill"), resumeSessionConfig.getAvailableTools());
+        assertEquals(List.of("C:\\runtime\\copilot_skills"), resumeSessionConfig.getSkillDirectories());
+        assertEquals(List.of("incident-analysis-gitlab-tools"), resumeSessionConfig.getDisabledSkills());
+        assertEquals("gpt-5.4", resumeSessionConfig.getModel());
+        assertEquals("medium", resumeSessionConfig.getReasoningEffort());
+        assertEquals(PermissionHandler.APPROVE_ALL, resumeSessionConfig.getOnPermissionRequest());
+        assertNotNull(resumeSessionConfig.getHooks());
 
         var allowedToolDecision = sessionConfig.getHooks().getOnPreToolUse()
                 .handle(new PreToolUseHookInput().setToolName("gitlab_find_flow_context"), null)
@@ -69,10 +81,14 @@ class CopilotSessionConfigFactoryTest {
         var skillToolDecision = sessionConfig.getHooks().getOnPreToolUse()
                 .handle(new PreToolUseHookInput().setToolName("skill"), null)
                 .join();
+        var resumeDeniedToolDecision = resumeSessionConfig.getHooks().getOnPreToolUse()
+                .handle(new PreToolUseHookInput().setToolName("read_file"), null)
+                .join();
 
         assertEquals("allow", allowedToolDecision.permissionDecision());
         assertEquals("deny", deniedToolDecision.permissionDecision());
         assertEquals("allow", skillToolDecision.permissionDecision());
+        assertEquals("deny", resumeDeniedToolDecision.permissionDecision());
     }
 
     @Test

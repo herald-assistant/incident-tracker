@@ -798,7 +798,9 @@ Status: wykonane w Step 11D, po dzialajacym UI end-to-end.
 - [x] Chat dziala dopiero po `COMPLETED`.
 - [x] Chat reuse'uje context snapshot, result, previous tool evidence,
   history i hidden scope.
-- [x] Kazda wiadomosc uruchamia nowa sesje Copilota.
+- [x] Obecna implementacja Flow Explorer chatu uruchamia osobna sesje
+  Copilota; po platformowym kroku 009 docelowym wzorcem dla nowych follow-upow
+  jest resume przez `sessionTarget=EXISTING(copilotSessionId)`, bez fallbacku.
 - [x] Tool evidence z chatu jest przypisane do konkretnej odpowiedzi.
 - [x] Dodac testy chatu.
 
@@ -875,7 +877,7 @@ Approval gate:
 - [x] `mvn -q "-Dtest=*FlowExplorer*,PackageDependencyGuardTest" test`
 - [x] `mvn -q "-Dtest=FrontendPageTest,FlowExplorerCopilotRuntimePreparationTest,CopilotIncidentSessionConfigRequestFactoryTest" test`
 - [x] `mvn -q "-Dtest=FlowExplorerConfigControllerTest,FlowExplorerSystemControllerTest,FlowExplorerEndpointInventoryControllerTest,FrontendPageTest" test`
-- [x] `mvn -q "-Dtest=CopilotIncidentPromptRendererTest,CopilotIncidentFollowUpPromptRendererTest,CopilotIncidentToolSessionContextFactoryTest,CopilotIncidentToolAccessPolicyCoverageTest,CopilotIncidentEvidenceCoverageEvaluatorTest,CopilotIncidentRuntimeSkillsContractTest,CopilotIncidentToolDescriptionCustomizerTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest" test`
+- [x] `mvn -q "-Dtest=CopilotIncidentPromptRendererTest,CopilotIncidentToolSessionContextFactoryTest,CopilotIncidentToolAccessPolicyCoverageTest,CopilotIncidentEvidenceCoverageEvaluatorTest,CopilotIncidentRuntimeSkillsContractTest,CopilotIncidentToolDescriptionCustomizerTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest" test`
 - [x] `mvn -q -DskipTests compile`
 - [x] `mvn -q test`
 - [x] `cd frontend && npm test -- --watch=false`
@@ -1885,7 +1887,7 @@ backendu/configu.
 
 Weryfikacja:
 
-- [x] `mvn -q "-Dtest=CopilotIncidentPromptRendererTest,CopilotIncidentFollowUpPromptRendererTest,CopilotIncidentToolSessionContextFactoryTest,CopilotIncidentToolAccessPolicyCoverageTest,CopilotIncidentEvidenceCoverageEvaluatorTest,CopilotIncidentRuntimeSkillsContractTest,CopilotIncidentToolDescriptionCustomizerTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest" test`
+- [x] `mvn -q "-Dtest=CopilotIncidentPromptRendererTest,CopilotIncidentToolSessionContextFactoryTest,CopilotIncidentToolAccessPolicyCoverageTest,CopilotIncidentEvidenceCoverageEvaluatorTest,CopilotIncidentRuntimeSkillsContractTest,CopilotIncidentToolDescriptionCustomizerTest,CopilotIncidentInitialPreparationServiceTest,CopilotIncidentInitialPreparationServiceCoveragePromptTest" test`
 - [x] `mvn -q "-Dtest=CopilotSdkToolFactoryDescriptionTest" test`
 - [x] `mvn -q test`
 

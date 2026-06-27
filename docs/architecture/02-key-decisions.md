@@ -376,14 +376,15 @@ Incident preparation sklada tez `CopilotToolSessionContext`: tworzy
 incydentu.
 Initial i follow-up tool policy powstaja przez `CopilotIncidentToolAccessPolicyFactory`,
 zeby decyzje o dostepnych capability byly lokalne dla incident preparation.
-Follow-up artifact request powstaje przez `CopilotFollowUpArtifactRequestFactory`,
-zeby laczenie deterministic evidence i tool evidence nie bylo odpowiedzialnoscia
-assemblera runtime requestu.
+Follow-up nie buduje juz requestu artefaktow ani pelnego promptu
+kontynuacyjnego; `CopilotIncidentFollowUpRunAssembler` wymaga
+`copilotSessionId`, wybiera `sessionTarget=EXISTING` i wysyla sama wiadomosc
+operatora.
 `CopilotIncidentRunRequestFactory` sklada finalny `CopilotRunRequest`, zeby
 mapowanie artifact contents na platformowy input runtime bylo w jednym miejscu.
 `CopilotSessionConfigFactory` jest juz tylko runtime factory, ktora zamienia
-ten request na konfiguracje klienta SDK, `SessionConfig`, hooks, permission
-handler i disabled skills.
+ten request na konfiguracje klienta SDK, `SessionConfig`,
+`ResumeSessionConfig`, hooks, permission handler i disabled skills.
 
 ## 15. Tool descriptions moga byc dekorowane dla Copilota
 
@@ -556,10 +557,13 @@ Decyzje:
 
 - wiadomosc chatu jest asynchroniczna i pollowana przez ten sam
   `GET /analysis/jobs/{analysisId}`,
-- kazda odpowiedz chatu uruchamia nowa sesje AI, zamiast trzymac otwarta sesje
-  SDK po finalnej analizie,
-- follow-up prompt dostaje evidence, wynik koncowy, historie rozmowy i
-  poprzednie tool evidence,
+- initial analysis uruchamia `sessionTarget=NEW`, a follow-up kontynuuje
+  zapisana sesje SDK przez `sessionTarget=EXISTING(copilotSessionId)`,
+- follow-up wysyla do SDK tylko tresc wiadomosci operatora; kontekst rozmowy,
+  evidence i poprzednie tool evidence pochodza z historii sesji Copilota, a
+  nie z ponownie renderowanego promptu,
+- przy resume backend ponownie przekazuje aktualne tools, skille, hidden
+  context, hooks, permission handler, model i `reasoningEffort`,
 - GitLab i Database tools nadal sa session-bound przez hidden `ToolContext`;
   Elasticsearch korzysta z zakonczonej analizy jako scope'u sesji, ale ma
   jeszcze zastany jawny `correlationId` w schema toola,
@@ -572,7 +576,10 @@ Decyzje:
 Konsekwencje:
 
 - importowany zapis analizy jest read-only dla UI chatu, bo backend nie ma
-  pamieci tego joba,
+  lokalnego uchwytu sesji SDK,
+- lokalny zapis runu moze byc kontynuowany tylko wtedy, gdy ma
+  `copilotSessionId`; brak tego id jest bledem kontynuacji, bez fallbacku do
+  nowej sesji,
 - chat moze prosic AI o weryfikacje w repo, DB albo wygenerowanie raportu, ale
   model nie powinien wymyslac scope'u ani obchodzic blokady lokalnego workspace.
 

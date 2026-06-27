@@ -7,6 +7,7 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotArtifactContentM
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiAuthRef;
 
@@ -30,9 +31,28 @@ public class CopilotIncidentRunRequestFactory {
             CopilotSessionConfigRequest sessionConfigRequest,
             List<CopilotRenderedArtifact> renderedArtifacts
     ) {
+        return create(
+                runReference,
+                authRef,
+                CopilotSessionTarget.newSession(),
+                prompt,
+                sessionConfigRequest,
+                renderedArtifacts
+        );
+    }
+
+    public CopilotRunRequest create(
+            String runReference,
+            AnalysisAiAuthRef authRef,
+            CopilotSessionTarget sessionTarget,
+            String prompt,
+            CopilotSessionConfigRequest sessionConfigRequest,
+            List<CopilotRenderedArtifact> renderedArtifacts
+    ) {
         return new CopilotRunRequest(
                 runReference,
                 runAuthMapper.toRunAuth(authRef),
+                sessionTarget,
                 prompt,
                 sessionConfigRequest,
                 artifactContentMapper.toArtifactContentMap(renderedArtifacts),

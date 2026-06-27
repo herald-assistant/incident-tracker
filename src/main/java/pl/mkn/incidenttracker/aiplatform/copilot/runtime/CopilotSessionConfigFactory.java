@@ -5,6 +5,7 @@ import com.github.copilot.rpc.PermissionHandler;
 import com.github.copilot.rpc.PermissionRequestResult;
 import com.github.copilot.rpc.PermissionRequestResultKind;
 import com.github.copilot.rpc.PreToolUseHookOutput;
+import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import com.github.copilot.rpc.SessionHooks;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +92,32 @@ public class CopilotSessionConfigFactory {
         }
 
         return sessionConfig;
+    }
+
+    public ResumeSessionConfig resumeSessionConfig(CopilotSessionConfigRequest request) {
+        var availableToolNames = request.effectiveAvailableToolNames();
+        var resumeSessionConfig = new ResumeSessionConfig()
+                .setClientName(properties.getClientName())
+                .setWorkingDirectory(properties.getWorkingDirectory())
+                .setStreaming(false)
+                .setTools(request.tools())
+                .setAvailableTools(availableToolNames)
+                .setSkillDirectories(request.skillDirectories())
+                .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
+                .setOnPermissionRequest(permissionHandler())
+                .setDisabledSkills(safeList(properties.getDisabledSkills()));
+
+        var model = selectedModel(request.modelSelection());
+        if (StringUtils.hasText(model)) {
+            resumeSessionConfig.setModel(model);
+        }
+
+        var reasoningEffort = selectedReasoningEffort(request.modelSelection());
+        if (StringUtils.hasText(reasoningEffort)) {
+            resumeSessionConfig.setReasoningEffort(reasoningEffort);
+        }
+
+        return resumeSessionConfig;
     }
 
     private String selectedModel(CopilotModelSelection modelSelection) {

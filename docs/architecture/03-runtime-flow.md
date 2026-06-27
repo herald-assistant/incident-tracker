@@ -144,10 +144,10 @@ renderingu i konfiguracji SDK:
 
 - `CopilotIncidentToolAccessPolicyFactory` buduje initial coverage-aware policy oraz
   follow-up policy ze scope'u zakonczonej analizy,
-- `CopilotIncidentPromptRenderer` i `CopilotIncidentFollowUpPromptRenderer`
-  renderuja incident prompt initial/follow-up, JSON-only response contract dla
-  initial, available capability groups, centralna instrukcje uzycia feedbacku
-  tooli, gdy `record_tool_feedback` jest dostepny, i embedded artifacts,
+- `CopilotIncidentPromptRenderer` renderuje incident prompt initial, JSON-only
+  response contract, available capability groups, centralna instrukcje uzycia
+  feedbacku tooli, gdy `record_tool_feedback` jest dostepny, i embedded
+  artifacts,
 - `CopilotIncidentToolSessionContextFactory` tworzy incidentowy
   `CopilotToolSessionContext`: run id, session id i hidden tool context dla
   initial/follow-up,
@@ -157,20 +157,20 @@ renderingu i konfiguracji SDK:
 - `CopilotSessionConfigRequest` wylicza effective available tools; gdy
   skonfigurowano skill directories, dodaje built-in tool `skill`, zeby model
   mogl ladowac runtime skille przez mechanike Copilot SDK,
-- `CopilotFollowUpArtifactRequestFactory` mapuje follow-up snapshot na request
-  artefaktow: deterministic evidence plus tool evidence z poprzednich sesji,
 - `CopilotIncidentRunRequestFactory` tworzy neutralny `CopilotRunRequest` z
-  run reference, promptu, session config request i artifact contents,
+  run reference, `sessionTarget`, promptu, session config request i artifact
+  contents,
 - `CopilotIncidentInitialRunAssembler` sklada
   `CopilotIncidentInitialRunAssembly`, ktory niesie neutralny
   `CopilotRunRequest` oraz osobny snapshot metryk preparation,
-- `CopilotIncidentFollowUpRunAssembler` zwraca juz bezposrednio neutralny
-  `CopilotRunRequest`,
+- `CopilotIncidentFollowUpRunAssembler` wymaga `copilotSessionId`, wybiera
+  `sessionTarget=EXISTING` i zwraca neutralny `CopilotRunRequest` z sama
+  trescia wiadomosci operatora jako promptem,
 - `CopilotRunPreparationService` jest neutralnym wejsciem runtime:
   `CopilotRunRequest -> CopilotPreparedSession`,
 - `CopilotPreparedSessionFactory` mapuje request na techniczna sesje, a
-  `CopilotSessionConfigFactory` buduje client options, session config,
-  permission handler, hooks i disabled skills.
+  `CopilotSessionConfigFactory` buduje client options, `SessionConfig`,
+  `ResumeSessionConfig`, permission handler, hooks i disabled skills.
 
 `CopilotSessionConfigFactory` rozwiązuje access token przez
 `aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver` dopiero podczas
@@ -198,25 +198,28 @@ W tle uruchamiany jest osobny task, ktory wywoluje `AnalysisAiChatProvider`.
 
 Follow-up runtime:
 
-1. bierze `InitialAnalysisRequest` zapisany z poczatkowej analizy,
-2. dolacza deterministyczne evidence, finalny wynik, historie chatu i tool
-   evidence z wczesniejszych sesji,
-3. buduje nowy prompt kontynuacyjny,
-4. tworzy nowa sesje Copilota z tym samym hidden scope,
-5. wystawia tylko session-bound tools sensowne dla rozwiazanego scope'u:
+1. bierze `InitialAnalysisRequest` zapisany z poczatkowej analizy oraz ostatni
+   zakonczony `copilotSessionId`,
+2. odtwarza aktualny hidden scope, tools policy, available tools, skille,
+   hooks, permission handler, model i `reasoningEffort`,
+3. buduje neutralny `CopilotRunRequest` z
+   `sessionTarget=EXISTING(copilotSessionId)`,
+4. wysyla do wznowionej sesji Copilota tylko tresc wiadomosci operatora,
+5. wystawia session-bound tools sensowne dla rozwiazanego scope'u:
    - Elasticsearch po aktualnym `correlationId`,
    - GitLab gdy jest `gitLabGroup` i `gitLabBranch`,
    - Database gdy jest resolved `environment`,
    - Operational Context zawsze, jesli capability jest zarejestrowana,
    - Tool quality feedback zawsze, jesli platformowy callback jest
      zarejestrowany,
-6. publikuje GitLab/DB tool evidence i tool feedback do aktualnej odpowiedzi
+6. publikuje GitLab/DB tool evidence, activity trace i tool feedback do aktualnej odpowiedzi
    chatu,
 7. zapisuje odpowiedz albo blad w `chatMessages` joba.
 
 Chat nie dodaje nowego providerowego kroku evidence i nie uruchamia ponownie
-deterministycznego collectora. To jest warstwa operatorskiej kontynuacji nad
-zakonczonym snapshotem analizy.
+deterministycznego collectora. Nie ma fallbacku do nowej sesji ani ponownego
+skladania pelnego promptu; gdy resume/send sie nie uda, odpowiedz chatu konczy
+sie bledem, a zapis lokalny nie jest nadpisywany.
 
 ## 5. Artefakty incydentu
 

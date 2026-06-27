@@ -173,7 +173,12 @@ public class AnalysisJobService {
                     section -> job.markChatToolEvidenceUpdated(assistantMessageId, section),
                     event -> job.markChatAiActivity(assistantMessageId, event)
             );
-            job.markChatCompleted(assistantMessageId, response.content(), response.prompt());
+            job.markChatCompleted(
+                    assistantMessageId,
+                    response.content(),
+                    response.prompt(),
+                    response.copilotSessionId()
+            );
         } catch (RuntimeException exception) {
             log.error(
                     "Analysis chat failed correlationId={} errorCode=ANALYSIS_CHAT_FAILED message={}",

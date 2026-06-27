@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 public record CopilotRunRequest(
         String runReference,
         CopilotRunAuth auth,
+        CopilotSessionTarget sessionTarget,
         String prompt,
         CopilotSessionConfigRequest sessionConfigRequest,
         Map<String, String> artifactContents,
@@ -27,6 +28,7 @@ public record CopilotRunRequest(
 
     public CopilotRunRequest {
         auth = auth != null ? auth : CopilotRunAuth.localToken();
+        sessionTarget = sessionTarget != null ? sessionTarget : CopilotSessionTarget.newSession();
         sessionConfigRequest = Objects.requireNonNull(sessionConfigRequest, "sessionConfigRequest must not be null");
         artifactContents = artifactContents != null
                 ? Collections.unmodifiableMap(new LinkedHashMap<>(artifactContents))
@@ -46,6 +48,27 @@ public record CopilotRunRequest(
         this(
                 runReference,
                 auth,
+                CopilotSessionTarget.newSession(),
+                prompt,
+                sessionConfigRequest,
+                artifactContents,
+                evidenceSink
+        );
+    }
+
+    public CopilotRunRequest(
+            String runReference,
+            CopilotRunAuth auth,
+            CopilotSessionTarget sessionTarget,
+            String prompt,
+            CopilotSessionConfigRequest sessionConfigRequest,
+            Map<String, String> artifactContents,
+            Consumer<AnalysisEvidenceSection> evidenceSink
+    ) {
+        this(
+                runReference,
+                auth,
+                sessionTarget,
                 prompt,
                 sessionConfigRequest,
                 artifactContents,
@@ -75,6 +98,7 @@ public record CopilotRunRequest(
         this(
                 runReference,
                 CopilotRunAuth.localToken(),
+                CopilotSessionTarget.newSession(),
                 prompt,
                 sessionConfigRequest,
                 artifactContents,

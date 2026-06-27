@@ -2,6 +2,7 @@ package pl.mkn.incidenttracker.aiplatform.copilot.runtime;
 
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
+import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.incidenttracker.shared.evidence.AnalysisEvidenceSection;
@@ -13,8 +14,10 @@ import java.util.function.Consumer;
 
 public record CopilotPreparedSession(
         String runReference,
+        CopilotSessionTarget sessionTarget,
         CopilotClientOptions clientOptions,
         SessionConfig sessionConfig,
+        ResumeSessionConfig resumeSessionConfig,
         MessageOptions messageOptions,
         String prompt,
         Map<String, String> artifactContents,
@@ -37,8 +40,10 @@ public record CopilotPreparedSession(
     ) {
         this(
                 runReference,
+                CopilotSessionTarget.newSession(),
                 clientOptions,
                 sessionConfig,
+                null,
                 messageOptions,
                 prompt,
                 artifactContents,
@@ -47,7 +52,32 @@ public record CopilotPreparedSession(
         );
     }
 
+    public CopilotPreparedSession(
+            String runReference,
+            CopilotClientOptions clientOptions,
+            SessionConfig sessionConfig,
+            MessageOptions messageOptions,
+            String prompt,
+            Map<String, String> artifactContents,
+            Consumer<AnalysisEvidenceSection> evidenceSink,
+            Consumer<AnalysisAiActivityEvent> activitySink
+    ) {
+        this(
+                runReference,
+                CopilotSessionTarget.newSession(),
+                clientOptions,
+                sessionConfig,
+                null,
+                messageOptions,
+                prompt,
+                artifactContents,
+                evidenceSink,
+                activitySink
+        );
+    }
+
     public CopilotPreparedSession {
+        sessionTarget = sessionTarget != null ? sessionTarget : CopilotSessionTarget.newSession();
         artifactContents = artifactContents != null
                 ? Collections.unmodifiableMap(new LinkedHashMap<>(artifactContents))
                 : Map.of();
@@ -62,8 +92,10 @@ public record CopilotPreparedSession(
     public CopilotPreparedSession withEvidenceSink(Consumer<AnalysisEvidenceSection> evidenceSink) {
         return new CopilotPreparedSession(
                 runReference,
+                sessionTarget,
                 clientOptions,
                 sessionConfig,
+                resumeSessionConfig,
                 messageOptions,
                 prompt,
                 artifactContents,
@@ -75,8 +107,10 @@ public record CopilotPreparedSession(
     public CopilotPreparedSession withActivitySink(Consumer<AnalysisAiActivityEvent> activitySink) {
         return new CopilotPreparedSession(
                 runReference,
+                sessionTarget,
                 clientOptions,
                 sessionConfig,
+                resumeSessionConfig,
                 messageOptions,
                 prompt,
                 artifactContents,

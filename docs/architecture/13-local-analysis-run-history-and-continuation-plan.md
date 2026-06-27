@@ -27,8 +27,8 @@ komputerze operatora:
 1. aplikacja zapisuje lokalne runy analiz w katalogu danych,
 2. uzytkownik widzi poprzednie sesje w ekranie historii,
 3. lokalny run moze byc kontynuowany przez follow-up chat,
-4. follow-up moze uzyc poprzedniej sesji Copilot SDK przez `resumeSession`,
-   ale ma fallback do odtworzenia kontekstu z zapisanego snapshotu,
+4. follow-up ma jedna sciezke wykonania: kontynuuje techniczna sesje Copilot
+   SDK przez zapisany `copilotSessionId`,
 5. export/import pozostaje read-only mechanizmem dzielenia sie wynikiem i nie
    przenosi metadanych kontynuacji.
 
@@ -54,9 +54,85 @@ komputerze operatora:
 - Tokeny dostepowe wpisane przez uzytkownika w UI moga byc zapisane lokalnie w
   katalogu workspace'u, zeby aplikacja po restarcie mogla kontynuowac prace bez
   ponownego wpisywania tokenow.
-- `resumeSession` Copilot SDK jest optymalizacja kontynuacji, nie jedyny
-  mechanizm poprawnosci. Fallbackiem jest nowa sesja z promptem zbudowanym z
-  lokalnego snapshotu.
+- Copilot SDK jest podstawowym mechanizmem dlugiej rozmowy: daje identyfikator
+  sesji, utrzymanie historii konwersacji po stronie runtime, `resumeSession`,
+  `infiniteSessions`/background compaction oraz eventy usage, truncation,
+  compaction i resume.
+- `copilotSessionId` zapisany w lokalnym runie jest lokalnym uchwytem do
+  kontynuacji tej samej technicznej sesji SDK. Nie trafia do exportu i nie jest
+  identyfikatorem biznesowym analizy.
+- Follow-up nie ma fallbacku. Jesli jego wybrana sciezka wykonania nie dziala,
+  odpowiedz follow-up konczy sie bledem, a uzytkownik moze recznie uruchomic
+  nowa initial analysis.
+- Uzytkownik nie ma myslec o oknie kontekstu, kompaktowaniu ani limitach
+  follow-upu. Dlugie konwersacje i wielomilionowe przebiegi tokenow sa
+  oczekiwane, szczegolnie dla ciezkich analiz typu flow explorer.
+- Platforma ma automatycznie zarzadzac kontekstem przede wszystkim przez
+  mechanizmy SDK dla dlugiej pojedynczej sesji. Lokalny `run.json` jest
+  zrodlem prawdy dla UI/audytu i uchwytem do sesji, a nie materialem do
+  recznego replayu calej rozmowy przy kazdym follow-upie.
+- Kazdy turn AI, zarowno initial analysis jak i follow-up chat, powinien miec
+  spojna prezentacje wykonania w UI: koszt/usage, model, reasoning effort,
+  eventy sesji, tool calls, dociagniete evidence/materialy oraz ograniczenia
+  widocznosci.
+
+## Decyzje Copilot SDK i AI Gateway
+
+Copilot SDK daje nam mechanike, ktorej nie powinnismy duplikowac w aplikacji:
+
+- tworzenie i wznawianie sesji przez `createSession` / `resumeSession`,
+- utrzymanie historii i kontekstu rozmowy w jednej sesji,
+- `InfiniteSessionConfig` dla automatycznego zarzadzania bardzo dlugim
+  kontekstem,
+- eventy pozwalajace pokazac w UI usage, truncation, compaction i resume,
+- runtime tools, hooks i permission callbacks podpinane do sesji.
+
+SDK nie zwalnia aplikacji z przekazywania aktualnej konfiguracji runtime przy
+utworzeniu albo wznowieniu sesji. Callbacki Javy, allowlista tools, hidden tool
+context, hooks, skille, permission handler, model i reasoning effort sa
+konfiguracja naszego procesu oraz feature'a. Dlatego na kazdym `createSession`
+i `resumeSession` platforma musi zbindowac pelny aktualny runtime config.
+
+AI platform gateway ma miec jedno neutralne publiczne API wykonania turnu w
+sesji, zamiast osobnych metod `initial` i `follow-up`. Roboczy kontrakt:
+
+```text
+CopilotTurnRequest
+- sessionTarget: NEW | EXISTING(copilotSessionId)
+- prompt: string
+- runtimeConfig: tools, tool policy, hidden context, skills, model,
+  reasoning effort, hooks, evidence/activity sinks
+
+CopilotTurnResult
+- assistantText
+- sessionId
+- usage/cost
+- activity/events
+- user-facing tool evidence
+```
+
+Semantyka `initial` oraz `follow-up` zostaje w feature'ze:
+
+- incident initial analysis buduje pelny prompt z deterministic evidence,
+- flow explorer initial analysis zbuduje prompt z endpointu, celu i evidence,
+- follow-up dla lokalnego runu wybiera `EXISTING(copilotSessionId)` i przekazuje
+  tylko tresc wiadomosci uzytkownika,
+- feature decyduje o kontrakcie odpowiedzi i parserze wyniku.
+
+Dlaczego tak:
+
+- platforma AI pozostaje reusable dla incident analysis, flow explorer i
+  kolejnych feature'ow,
+- nie duplikujemy sciezek `initial/follow-up` w gatewayu,
+- dluga rozmowa korzysta z tego, co SDK juz utrzymuje w sesji,
+- feature nadal kontroluje prompt, polityke tools, hidden context i kontrakt
+  odpowiedzi,
+- UI moze pokazac ten sam model pracy AI dla initial i follow-up: co kosztowalo
+  dany turn, jakie narzedzia zostaly wywolane, co zostalo dociagniete i na
+  jakim reasoning effort/modelu pracowal runtime,
+- brak fallbacku jest jawny: jesli `EXISTING(copilotSessionId)` nie moze byc
+  wykonany albo wznowiony, follow-up konczy sie bledem zamiast po cichu
+  startowac inna sesje lub odtwarzac prompt z lokalnego snapshotu.
 
 ## Granice i Niezmienniki
 
@@ -73,9 +149,14 @@ komputerze operatora:
   kontynuacji, a nie publiczne pole exportu.
 - Follow-up publiczny nie przyjmuje recznego `environment`, branch,
   `gitLabGroup`, DB scope ani nowego `correlationId`.
-- Hidden tool context nadal ma sens jako walidacja integralnosci runu. Przy
-  `resumeSession` `copilotSessionId` w hidden context musi odpowiadac
-  rzeczywistej wznawianej sesji SDK.
+- Hidden tool context nadal ma sens jako walidacja integralnosci runu i
+  scope'u tools. Dla `sessionTarget=EXISTING` `copilotSessionId` w hidden
+  context musi odpowiadac rzeczywistej wznawianej sesji SDK, a scope
+  GitLab/DB/operational context dalej pochodzi z konfiguracji aplikacji,
+  evidence i lokalnych metadanych, nigdy z model-facing inputu.
+- UI moze pokazywac reasoning effort, model, usage, koszt, eventy i publiczne
+  activity/tool evidence. Nie pokazujemy ukrytego toku rozumowania modelu jako
+  reasoning content.
 
 ## Docelowy Model Danych
 
@@ -107,11 +188,17 @@ continuation
 - gitLabGroup
 - authMode
 - authPrincipalRef
+- copilotSessionId
+- copilotRuntime
 ```
 
 `authPrincipalRef` wskazuje wpis w lokalnym `tokens.json`, jesli uzytkownik
 zdecydowal sie zapamietac tokeny w UI. Sam token nie jest polem runu ani
 exportu.
+
+`copilotSessionId` wskazuje ostatnia zakonczona techniczna sesje SDK dla
+danego lokalnego runu. `copilotRuntime` pozwala jawnie odroznic runtime, np.
+`github-copilot-sdk`, bez ujawniania tego w exporcie.
 
 Na start nie dodajemy `runtime`, `storage`, `displaySnapshot`,
 `title/searchText`, `analysisId`, `status`, `createdAt` ani innych pol
@@ -230,6 +317,12 @@ wynika ze zrodla:
 - `live`: polling joba,
 - `local`: odczyt z lokalnego store i mozliwy follow-up,
 - `imported`: tylko podglad w UI.
+
+Docelowo follow-up chat nie jest tylko lista wiadomosci. Kazda odpowiedz
+assistant powinna miec taki sam zwijalny execution trace jak initial analysis:
+usage/koszt, model, reasoning effort, activity events, tool evidence,
+dociagniete materialy i ograniczenia widocznosci. Dzieki temu operator widzi
+koszt oraz podstawe kazdego turnu bez uczenia sie osobnego UI dla follow-upu.
 
 ## Plan Realizacji
 
@@ -447,12 +540,12 @@ Wykonane:
 - Spring fallback serwuje SPA dla `/analysis-history`,
 - dodano testy frontendowe i backendowy test routingu.
 
-### [x] 006. Kontynuacja lokalnego runu bez `resumeSession`
+### [x] 006. Kontynuacja lokalnego runu przez API historii
 
 Cel:
 
-- umożliwic follow-up dla lokalnego runu po restarcie aplikacji, uzywajac
-  dzisiejszego prompt-rehydrate.
+- umożliwic follow-up dla lokalnego runu po restarcie aplikacji, bez
+  traktowania importowanego exportu jako kontynuowalnego stanu.
 
 Zakres:
 
@@ -468,14 +561,14 @@ Zatwierdzone decyzje:
 - V1 obsluguje `incident-analysis`; Flow Explorer zostaje pod ten sam model UI,
   ale wymaga osobnego persistowania flow runow w local store,
 - przy bledzie follow-up UI pokazuje blad i `run.json` zostaje bez zmian; nie
-  zapisujemy wiadomosci `FAILED` do lokalnego snapshotu w V1,
-- prompt-rehydrate jest jawna sciezka V1; `resumeSession` pojawi sie dopiero w
-  kolejnych krokach.
+  zapisujemy wiadomosci `FAILED` do lokalnego snapshotu w V1.
 
 Kryteria akceptacji:
 
-- zakonczony run po restarcie moze dostac follow-up,
-- follow-up uzywa zapisanego evidence, result, historii i tool evidence,
+- zakonczony run po restarcie moze dostac follow-up, jesli ma zapisany
+  `copilotSessionId`,
+- follow-up uzywa zapisanego session id oraz aktualnie odtworzonego runtime
+  configu,
 - tool evidence z follow-up zapisuje sie przy konkretnej odpowiedzi assistant.
 
 Wykonane:
@@ -514,8 +607,8 @@ Uzgodnione:
   `copilotSessionId` do warstwy feature'a,
 - `analysisId` pozostaje identyfikatorem lokalnego runu/UI,
   `copilotSessionId` jest wylacznie identyfikatorem sesji SDK,
-- `continuationMode=prompt-rehydrate` opisuje obecne zachowanie; prawdziwe
-  SDK resume nie jest jeszcze wlaczone.
+- `continuationMode=copilot-session` jest lekkim lokalnym opisem sposobu
+  kontynuacji; technicznym uchwytem pozostaje `copilotSessionId`.
 
 Kryteria akceptacji:
 
@@ -529,65 +622,189 @@ Wykonane:
   `CopilotExecutionResult`,
 - local `run.json` zapisuje `continuation.copilotSessionId`,
   `continuation.copilotRuntime=github-copilot-sdk` i
-  `continuation.continuationMode=prompt-rehydrate`,
+  `continuation.continuationMode=copilot-session`,
 - local follow-up aktualizuje `continuation.copilotSessionId` po pelnym sukcesie
   odpowiedzi,
 - testy pokrywaja zapis session id poza exportem oraz przekazanie session id z
   SDK do lokalnej persystencji.
 
-### [ ] 008. `resumeSession` dla follow-up
+### [x] 008. Decyzja: neutralny AI gateway i follow-up bez fallbacku
 
 Cel:
 
-- uzyc poprzedniej sesji Copilot SDK przy follow-up lokalnego runu.
+- utrzymac jedna sciezke wykonania follow-upu, ale oprzec ja na tej samej
+  technicznej sesji Copilot SDK,
+- nie wprowadzac do `aiplatform` pojec `initial analysis` i `follow-up chat`.
 
 Zakres:
 
-- nowa sciezka gatewaya `resumeSession(sessionId, ResumeSessionConfig)`,
-- mapowanie `CopilotSessionConfigRequest` na `ResumeSessionConfig`,
-- rejestracja aktualnych tools, hooks, evidence sink i budget dla wznawianej
-  sesji,
-- fallback do prompt-rehydrate przy bledzie resume.
+- AI platform gateway dostaje jedno neutralne API wykonania turnu w sesji,
+  parametryzowane przez `sessionTarget=NEW` albo
+  `sessionTarget=EXISTING(copilotSessionId)`,
+- platforma mapuje neutralny request na `SessionConfig` albo
+  `ResumeSessionConfig` i za kazdym razem rejestruje aktualne tools, skille,
+  hooks, permission handler, hidden context, model i reasoning effort,
+- feature decyduje, czy turn jest initial, czy follow-up:
+  - initial przekazuje pelny prompt z deterministic evidence,
+  - follow-up przekazuje tylko tresc wiadomosci uzytkownika do istniejacej
+    sesji,
+- brak automatycznego fallbacku follow-upu do innej sesji, innego promptu albo
+  nowej initial analysis,
+- przy bledzie follow-upu lokalny run nie jest nadpisywany, a uzytkownik moze
+  recznie zaczac nowa initial analysis, gdy chce pracowac na swiezszym kodzie.
 
-Do zatwierdzenia:
+Uzgodnione:
 
-- czy resume jest domyslne, czy feature-flagowane w V1,
-- ktore bledy resume sa ciche i ida fallbackiem,
-- co pokazac operatorowi w UI, gdy fallback zostal uzyty.
+- czeste startowanie od zera jest akceptowalne i produktowo zdrowe,
+- lokalna kontynuacja sluzy wygodnemu dopytywaniu w ramach tej samej sesji SDK,
+- `copilotSessionId` jest technicznym uchwytem kontynuacji, ale nie trafia do
+  exportu i nie staje sie identyfikatorem biznesowym,
+- Copilot SDK ma utrzymywac kontekst rozmowy; aplikacja nie powinna doklejac
+  calego zapisanego runu do kazdego follow-up promptu,
+- callbacki, tools i hidden context nie sa trwale "zapamietane" przez nasz
+  proces po restarcie, dlatego musza byc podawane przy wznowieniu sesji,
+- brak fallbacku jest celowa cecha follow-upu, nie brakujacy mechanizm.
 
 Kryteria akceptacji:
 
-- follow-up probuje resume tylko dla lokalnych runow z session id,
-- nieudane resume nie blokuje kontynuacji,
-- usage/activity rozroznia `RESUMED_SESSION` i `PROMPT_REHYDRATED_SESSION`.
+- `aiplatform` nie ma osobnych publicznych metod `initial` i `follow-up`,
+- gateway przyjmuje neutralny request turnu oraz `sessionTarget`,
+- lokalny follow-up uzywa `sessionTarget=EXISTING(copilotSessionId)` i wysyla
+  jako prompt/tresc tylko wiadomosc uzytkownika,
+- `createSession` i `resumeSession` dostaja pelny aktualny runtime config,
+- blad follow-upu nie uruchamia alternatywnej sciezki wykonania ani nowej
+  initial analysis,
+- plan nie przedstawia ponownego skladania pelnego promptu jako awaryjnego
+  fallbacku po resume.
 
-### [ ] 009. Kompaktowanie i kontrola rozmiaru kontekstu
+### [x] 009. Neutralny AI Gateway i wznawianie sesji SDK
 
 Cel:
 
-- uniknac degradacji po wielu follow-upach albo po dlugiej sesji.
+- zastapic rozdzielone sciezki platformowe neutralnym wykonaniem turnu w sesji,
+  tak zeby `aiplatform` nie wiedziala, czy feature realizuje initial analysis,
+  follow-up chat, flow explorer czy inny przyszly use case.
 
 Zakres:
 
-- pomiar `session.usage_info`,
-- decyzja kiedy wywolac `compact()`,
-- zapis wynikow compaction/truncation w activity,
-- fallback do nowej sesji, jesli kontekst jest zbyt duzy albo resume staje sie
-  niestabilne.
+- przeksztalcic istniejacy kontrakt gatewaya bez wymuszania rename'u klas:
+  `CopilotRunRequest` / `CopilotExecutionResult` pozostaja neutralnym
+  kontraktem turnu,
+- dodac `sessionTarget=NEW | EXISTING(copilotSessionId)` jako techniczny wybor
+  utworzenia albo wznowienia sesji,
+- mapowac `sessionTarget=NEW` na `SessionConfig` i `createSession`,
+- mapowac `sessionTarget=EXISTING` na `ResumeSessionConfig` i `resumeSession`,
+- przeniesc wspolne budowanie konfiguracji sesji do jednego miejsca, zeby
+  create i resume dostawaly ten sam runtime config: tools, available tools,
+  hidden context, skille, hooks, permission handler, model, reasoning effort,
+  event handlers i evidence/activity sinks,
+- `CopilotExecutionResult` ma przenosic dane potrzebne do per-turn UI:
+  `sessionId`, tekst odpowiedzi, usage/koszt, model/reasoning metadata,
+  activity/events oraz user-facing tool evidence,
+- zmienic incident initial analysis tak, zeby wysylala pelny prompt przez
+  `sessionTarget=NEW`,
+- zmienic incident local follow-up tak, zeby wysylal sama wiadomosc uzytkownika
+  przez `sessionTarget=EXISTING(copilotSessionId)`,
+- usunac docelowe zalezenie follow-upu od ponownego skladania pelnego promptu,
+- zachowac brak fallbacku: blad create/resume/send nie uruchamia alternatywnej
+  sciezki.
 
-Do zatwierdzenia:
+Rozstrzygniete:
 
-- progi tokenow/messages,
-- czy compaction uruchamiac po initial czy dopiero przed follow-up,
-- czy operator widzi ostrzezenie o kompaktowaniu.
+- nie robimy wymuszonego rename'u na `CopilotTurnRequest`, bo obecny
+  `CopilotRunRequest` jest juz neutralny i nie zawiera semantyki feature'a,
+- gateway zwraca surowa odpowiedz plus `sessionId` i usage; parsing wyniku
+  pozostaje w feature/providerze,
+- wspolny trace per turn idzie przez istniejace
+  `AnalysisAiUsage`, `AnalysisAiActivityEvent` i user-facing tool evidence,
+- `copilotSessionId` jest wymagany dla kazdego lokalnego follow-upu; jego brak
+  oznacza blad "run nie jest kontynuowalny", bez startowania nowej sesji.
 
 Kryteria akceptacji:
 
-- UI pokazuje context usage,
-- follow-up nie rosnie bez kontroli,
-- po compaction dalej dziala tool evidence i hidden scope.
+- `aiplatform` nie importuje feature'ow i nie ma productowych flag
+  `initial/followUp`,
+- initial i follow-up uzywaja tego samego gatewaya,
+- follow-up po restarcie aplikacji probuje wznowic zapisana sesje SDK,
+- do wznowionej sesji sa ponownie podpinane tools, hooks, hidden context,
+  permission handler i skille,
+- initial i follow-up zwracaja porownywalny execution trace per turn:
+  usage/koszt, model, reasoning effort, activity/events i tool evidence,
+- lokalny `run.json` nadal jest aktualizowany dopiero po pelnym sukcesie
+  odpowiedzi assistant,
+- export pozostaje bez session id i bez metadanych kontynuacji.
 
-### [ ] 010. Sanitized export z lokalnego runu
+Wykonane:
+
+- dodano `CopilotSessionTarget` z trybami `NEW` i `EXISTING(sessionId)`,
+- `CopilotRunRequest` i `CopilotPreparedSession` przenosza `sessionTarget`,
+  `SessionConfig` i `ResumeSessionConfig`,
+- `CopilotSessionConfigFactory` buduje konfiguracje create/resume z tym samym
+  zestawem tools, available tools, skill directories, hooks, permission
+  handler, disabled skills, modelem i `reasoningEffort`,
+- `CopilotSdkExecutionGateway` wybiera `createSession` albo `resumeSession`
+  wedlug `sessionTarget`, rejestruje evidence/budget store pod realnym
+  session id i nie odpala zadnego fallbacku,
+- incident initial wysyla pelny prompt przez `sessionTarget=NEW`,
+- incident follow-up wymaga `copilotSessionId`, wysyla tylko tresc wiadomosci
+  operatora przez `sessionTarget=EXISTING` i nie renderuje juz promptu
+  kontynuacyjnego z lokalnego runu,
+- job state i lokalny handler kontynuacji przekazuja ostatni zakonczony
+  `copilotSessionId`,
+- testy pokrywaja `resumeSession`, konfiguracje resume, przygotowanie
+  existing session target, assembler follow-upu, lokalny zapis/kontynuacje,
+  job chat i guard architektury.
+
+### [ ] 010. Automatyczne zarzadzanie dlugim kontekstem
+
+Cel:
+
+- pozwolic na dlugie rozmowy i bardzo kosztowne analizy bez wymagania od
+  operatora decyzji o kompaktowaniu, czyszczeniu historii albo restartowaniu
+  konwersacji.
+
+Zakres:
+
+- wlaczyc i sparametryzowac `SessionConfig.infiniteSessions` w platformie
+  Copilot, jesli SDK/CLI wspiera background compaction dla dlugich sesji,
+- dopiac te same ustawienia dla `ResumeSessionConfig`, zeby wznowiona sesja
+  miala identyczna polityke dlugiego kontekstu jak nowa sesja,
+- zachowac obserwacje `session.usage_info`, `session.truncation`,
+  `session.compaction_start` i `session.compaction_complete` jako activity/usage,
+- local run zapisuje pelna historie, wyniki, usage i tool evidence na potrzeby
+  UI/audytu, ale normalny follow-up nie buduje promptu przez replay tych danych,
+- eventy compaction/truncation/usage sa przypinane do konkretnego turnu, zeby
+  UI moglo pokazac koszt i przebieg pracy kazdej odpowiedzi follow-up,
+- pelna historia i pelne rezultaty pozostaja zapisane w lokalnym `run.json`;
+  sa zrodlem prezentacji i backupu lokalnego workspace'u, a nie zamiennikiem
+  sesji SDK,
+- brak automatycznego fallbacku: jezeli automatyczne zarzadzanie kontekstem
+  zawiedzie, follow-up konczy sie bledem i nie uruchamia innej sciezki.
+
+Do zatwierdzenia:
+
+- domyslne progi `backgroundCompactionThreshold` i `bufferExhaustionThreshold`,
+- czy wlaczyc `infiniteSessions` domyslnie dla wszystkich feature'ow, czy
+  pozwolic feature'owi nadpisac polityke,
+- jak prezentowac w UI eventy compaction/truncation, zeby byly informacyjne,
+  ale nie wymagaly decyzji operatora,
+- czy po bledzie `resumeSession` komunikat UI ma sugerowac reczny start nowej
+  analizy.
+
+Kryteria akceptacji:
+
+- operator moze kontynuowac dluga rozmowe bez recznego czyszczenia kontekstu,
+- SDK infinite/background compaction jest wlaczone tam, gdzie tworzymy sesje
+  Copilota oraz tam, gdzie je wznawiamy,
+- local follow-up wysyla do istniejacej sesji tylko kolejna wiadomosc
+  uzytkownika,
+- UI moze pokazywac usage/compaction jako informacyjny przebieg pracy, ale nie
+  wymaga od uzytkownika decyzji,
+- per-turn execution trace pozostaje spojny dla initial i follow-up,
+- po automatycznym zarzadzaniu kontekstem nadal dziala tool evidence i hidden
+  scope.
+
+### [ ] 011. Sanitized export z lokalnego runu
 
 Cel:
 
@@ -614,7 +831,7 @@ Kryteria akceptacji:
 - lokalny run po eksporcie nadal pozostaje kontynuowalny tylko u wlasciciela
   katalogu danych.
 
-### [ ] 011. Dokumentacja i launcher
+### [ ] 012. Dokumentacja i launcher
 
 Cel:
 
@@ -644,7 +861,8 @@ Kryteria akceptacji:
 ## Ryzyka
 
 - `resumeSession` moze zalezec od lokalnego session store Copilot CLI i wersji
-  SDK/CLI. Dlatego fallback prompt-rehydrate jest wymagany.
+  SDK/CLI. Trzeba obsluzyc blad wznowienia jako jawny blad follow-upu bez
+  fallbacku, z czytelnym komunikatem i bez nadpisywania lokalnego runu.
 - Lokalny katalog danych moze zawierac wrazliwe informacje operacyjne. Trzeba
   opisac to w dokumentacji i nie eksportowac pol kontynuacyjnych.
 - Jesli V1 zapisuje tokeny w pliku lokalnym, trzeba jawnie opisac konsekwencje
@@ -661,5 +879,3 @@ Kryteria akceptacji:
   zakonczeniu joba, czy dopiero ekran historii?
 - Czy export ma miec dwa tryby: share/read-only oraz diagnostic?
 - Czy lokalny store ma miec retencje albo tylko reczne usuwanie?
-- Czy `resumeSession` wlaczamy dopiero po ekranie historii i prompt-rehydrate
-  continuation?

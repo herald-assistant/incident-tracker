@@ -302,8 +302,8 @@ Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
 tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.
 Follow-up odpowiedz assistant moze miec wlasne `toolFeedback`, pokazywane
 kompaktowo przy tej wiadomosci.
-Follow-up chat dziala tylko dla live joba w pamieci backendu; importowany
-zapis JSON pozostaje read-only.
+Follow-up chat dziala dla live joba oraz lokalnego runu z zapisanym
+`copilotSessionId`; importowany zapis JSON pozostaje read-only.
 Frontend pozwala tez zaimportowac i wyeksportowac zakonczona analize jako JSON,
 wlacznie z `toolFeedback`; starsze eksporty bez tego pola sa normalizowane do
 pustych list.
@@ -330,8 +330,10 @@ Nie doklejaj tresci rozmowy ani dodatkowego scope'u do startu joba. Chat ma
 reuse'owac scope zakonczonego joba oraz hidden `ToolContext` dla GitLaba,
 Elastica i Database. Operational Context tools nie potrzebuja incident scope'u
 w inputach; follow-up wystawia je zawsze, jesli capability jest zarejestrowana.
-Kazda wiadomosc tworzy nowa sesje Copilota, zeby nie utrzymywac sesji SDK po
-zakonczeniu poczatkowej analizy.
+Initial analysis tworzy nowa sesje Copilota, a follow-up kontynuuje zapisana
+sesje przez `copilotSessionId`. Przy resume aplikacja ponownie przekazuje
+aktualne tools, skille, hidden context, hooks, permission handler, model i
+`reasoningEffort`; sama wiadomosc operatora jest jedynym nowym promptem.
 
 Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
 chatu, a nie mieszane z deterministycznym pipeline evidence.

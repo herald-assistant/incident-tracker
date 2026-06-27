@@ -59,7 +59,7 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals("operator-session-1", store.savedRecord.continuation().authPrincipalRef());
         assertEquals("copilot-session-1", store.savedRecord.continuation().copilotSessionId());
         assertEquals("github-copilot-sdk", store.savedRecord.continuation().copilotRuntime());
-        assertEquals("prompt-rehydrate", store.savedRecord.continuation().continuationMode());
+        assertEquals("copilot-session", store.savedRecord.continuation().continuationMode());
 
         var exportEnvelope = store.savedRecord.exportEnvelope();
         assertEquals("tdw.analysis-export", exportEnvelope.path("schema").asText());

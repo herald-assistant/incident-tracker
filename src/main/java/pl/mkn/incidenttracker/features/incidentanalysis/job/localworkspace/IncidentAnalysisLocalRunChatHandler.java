@@ -149,6 +149,11 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                     "Follow-up chat is available only for completed local incident analysis runs."
             );
         }
+        if (!StringUtils.hasText(continuation.copilotSessionId())) {
+            throw LocalAnalysisRunContinuationException.unavailable(
+                    "Local incident analysis run does not have a Copilot session id for continuation."
+            );
+        }
         if (hasActiveAssistantMessage(snapshot)) {
             throw LocalAnalysisRunContinuationException.unavailable(
                     "A follow-up response is already in progress for this local incident analysis run."
@@ -195,6 +200,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 analysisSnapshot(snapshot.result()),
                 chatHistory(snapshot),
                 message,
+                continuation.copilotSessionId(),
                 new AnalysisAiOptions(snapshot.aiModel(), snapshot.reasoningEffort()),
                 authRef
         );

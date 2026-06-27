@@ -10,7 +10,7 @@ public record LocalAnalysisRunContinuation(
         String continuationMode
 ) {
     public static final String COPILOT_RUNTIME_GITHUB_COPILOT_SDK = "github-copilot-sdk";
-    public static final String CONTINUATION_MODE_PROMPT_REHYDRATE = "prompt-rehydrate";
+    public static final String CONTINUATION_MODE_COPILOT_SESSION = "copilot-session";
 
     public LocalAnalysisRunContinuation(
             boolean enabled,
@@ -33,7 +33,7 @@ public record LocalAnalysisRunContinuation(
                 authPrincipalRef,
                 latestCopilotSessionId.trim(),
                 hasText(copilotRuntime) ? copilotRuntime : COPILOT_RUNTIME_GITHUB_COPILOT_SDK,
-                hasText(continuationMode) ? continuationMode : CONTINUATION_MODE_PROMPT_REHYDRATE
+                CONTINUATION_MODE_COPILOT_SESSION
         );
     }
 

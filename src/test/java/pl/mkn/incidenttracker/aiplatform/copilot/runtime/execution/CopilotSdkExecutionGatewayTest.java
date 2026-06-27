@@ -11,11 +11,13 @@ import com.github.copilot.generated.AssistantUsageEvent;
 import com.github.copilot.generated.SessionUsageInfoEvent;
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
+import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
 
 import java.io.Closeable;
@@ -146,6 +148,52 @@ class CopilotSdkExecutionGatewayTest {
                     .thenReturn(CompletableFuture.completedFuture(assistantMessage("Structured answer")));
         })) {
             assertEquals("Structured answer", gateway.execute(preparedRequest).content());
+        }
+    }
+
+    @Test
+    void shouldResumeExistingCopilotSessionWhenSessionTargetIsExisting() {
+        var properties = new CopilotSdkProperties();
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
+        var resumeSessionConfig = new ResumeSessionConfig();
+        var preparedRequest = new CopilotPreparedSession(
+                "corr-follow-up",
+                CopilotSessionTarget.existing("session-resume-1"),
+                new CopilotClientOptions(),
+                new SessionConfig(),
+                resumeSessionConfig,
+                new MessageOptions().setPrompt("Czyli co dalej?"),
+                "Czyli co dalej?",
+                Map.of(),
+                section -> {
+                },
+                event -> {
+                }
+        );
+        var sessionRef = new AtomicReference<CopilotSession>();
+
+        try (MockedConstruction<CopilotClient> mockedClients = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+            sessionRef.set(session);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.resumeSession(eq("session-resume-1"), same(resumeSessionConfig)))
+                    .thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("session-resume-1");
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenReturn(CompletableFuture.completedFuture(assistantMessage("Follow-up answer")));
+        })) {
+            var response = gateway.execute(preparedRequest);
+
+            assertEquals("Follow-up answer", response.content());
+            assertEquals("session-resume-1", response.sessionId());
+            verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L));
+            verify(mockedClients.constructed().get(0), never()).createSession(any(SessionConfig.class));
         }
     }
 

@@ -66,6 +66,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         assertEquals("main", provider.request.gitLabBranch());
         assertEquals("CRM/runtime", provider.request.gitLabGroup());
         assertEquals("Dopytaj o repo.", provider.request.message());
+        assertEquals("initial-session-1", provider.request.copilotSessionId());
         assertEquals("gpt-5-mini", provider.request.options().model());
         assertEquals("medium", provider.request.options().reasoningEffort());
         assertEquals("LOCAL_TOKEN", provider.request.authRef().mode());
@@ -91,7 +92,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         assertEquals(1, updatedJob.chatMessages().get(3).aiActivityEvents().size());
         assertEquals("follow-up-session-1", result.record().continuation().copilotSessionId());
         assertEquals("github-copilot-sdk", result.record().continuation().copilotRuntime());
-        assertEquals("prompt-rehydrate", result.record().continuation().continuationMode());
+        assertEquals("copilot-session", result.record().continuation().continuationMode());
     }
 
     @Test
@@ -132,7 +133,15 @@ class IncidentAnalysisLocalRunChatHandlerTest {
     private LocalAnalysisRunRecord record(AnalysisJobStateSnapshot snapshot) {
         return LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(IncidentAnalysisExportEnvelope.from(snapshot, COMPLETED_AT)),
-                new LocalAnalysisRunContinuation(true, "CRM/runtime", "LOCAL_TOKEN", "local-token")
+                new LocalAnalysisRunContinuation(
+                        true,
+                        "CRM/runtime",
+                        "LOCAL_TOKEN",
+                        "local-token",
+                        "initial-session-1",
+                        "github-copilot-sdk",
+                        "copilot-session"
+                )
         );
     }
 

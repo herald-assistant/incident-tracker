@@ -77,8 +77,8 @@ Na dzisiaj projekt ma:
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
 - follow-up chat dla zakonczonego joba przez
-  `POST /analysis/jobs/{analysisId}/chat/messages`, ktory uruchamia nowa
-  sesje AI z kontekstem tej samej analizy,
+  `POST /analysis/jobs/{analysisId}/chat/messages`, ktory kontynuuje zapisana
+  sesje Copilota i wysyla do niej tresc wiadomosci operatora,
 - endpoint shared/operator API `GET /analysis/ai/options`, ktory zwraca
   katalog modeli i dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby
   frontend nie trzymal lokalnej listy modeli,
@@ -422,9 +422,10 @@ Znaczenie grup UI:
   modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,
   srodowiska ani GitLab group.
 - Follow-up chat jest kontynuacja zakonczonego joba, a nie nowym publicznym
-  requestem analizy. Kazda wiadomosc uruchamia osobna sesje AI, osadza
-  evidence i finalny wynik w promptcie oraz wystawia session-bound tools tylko
-  w zakresie rozwiazanym przez pierwotna analize.
+  requestem analizy. Initial analysis tworzy sesje AI, a follow-up wznawia ja
+  po zapisanym `copilotSessionId`, przekazuje jako prompt tylko tresc
+  wiadomosci operatora oraz ponownie podpina session-bound tools w zakresie
+  rozwiazanym przez pierwotna analize.
 - Lista modeli i dostepnych `reasoningEffort` dla UI pochodzi z platformowego
   provider'a opcji Copilota przez backendowy shared/operator endpoint opcji AI.
   Frontend nie jest source of truth dla mozliwosci modeli.

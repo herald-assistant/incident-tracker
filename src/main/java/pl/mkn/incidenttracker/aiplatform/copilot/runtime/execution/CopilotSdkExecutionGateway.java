@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.incidenttracker.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.incidenttracker.shared.ai.AnalysisAiActivityEvent;
@@ -57,10 +58,11 @@ public class CopilotSdkExecutionGateway {
                 logDuration("client-start", runReference, nanosToMillis(clientStart));
 
                 try {
-                    var createSessionStart = System.nanoTime();
+                    var openSessionStart = System.nanoTime();
+                    var sessionOperation = sessionOperation(preparedSession);
 
-                    try (var session = client.createSession(preparedSession.sessionConfig()).join()) {
-                        logDuration("create-session", runReference, nanosToMillis(createSessionStart));
+                    try (var session = openSession(client, preparedSession)) {
+                        logDuration(sessionOperation, runReference, nanosToMillis(openSessionStart));
                         var sessionSummary = newSessionLogSummary(runReference);
                         var sessionId = resolvedSessionId(session, preparedSession);
 
@@ -140,7 +142,33 @@ public class CopilotSdkExecutionGateway {
             return sessionId;
         }
 
+        if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
+            return preparedSession.sessionTarget().sessionId();
+        }
+
         return preparedSession.sessionConfig() != null ? preparedSession.sessionConfig().getSessionId() : null;
+    }
+
+    private CopilotSession openSession(CopilotClient client, CopilotPreparedSession preparedSession) {
+        if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
+            var sessionId = preparedSession.sessionTarget().sessionId();
+            if (!StringUtils.hasText(sessionId)) {
+                throw new CopilotSdkInvocationException("Copilot SDK resumeSession requires sessionId.");
+            }
+            if (preparedSession.resumeSessionConfig() == null) {
+                throw new CopilotSdkInvocationException("Copilot SDK resumeSession requires ResumeSessionConfig.");
+            }
+            return client.resumeSession(sessionId, preparedSession.resumeSessionConfig()).join();
+        }
+
+        return client.createSession(preparedSession.sessionConfig()).join();
+    }
+
+    private String sessionOperation(CopilotPreparedSession preparedSession) {
+        return preparedSession.sessionTarget() != null
+                && preparedSession.sessionTarget().type() == CopilotSessionTarget.Type.EXISTING
+                ? "resume-session"
+                : "create-session";
     }
 
     private Throwable unwrapCompletionException(Throwable throwable) {

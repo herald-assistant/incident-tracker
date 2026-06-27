@@ -45,6 +45,7 @@ import pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operat
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStartRequest;
+import pl.mkn.incidenttracker.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.incidenttracker.features.incidentanalysis.testsupport.TestInitialAnalysisProvider;
 
@@ -378,6 +379,30 @@ class AnalysisJobServiceTest {
         assertEquals("Synthetic follow-up prompt for timeout-123", assistantMessage.prompt());
         assertEquals(1, assistantMessage.toolEvidenceSections().size());
         assertEquals("gitlab", assistantMessage.toolEvidenceSections().get(0).provider());
+    }
+
+    @Test
+    void shouldRejectFollowUpChatWhenCompletedAnalysisHasNoCopilotSessionId() {
+        var chatTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobService(
+                new CapturingOptionsInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                chatTaskExecutor
+        );
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        chatTaskExecutor.runNext();
+
+        var exception = assertThrows(
+                AnalysisJobChatUnavailableException.class,
+                () -> service.startChatMessage(
+                        started.analysisId(),
+                        new AnalysisChatMessageRequest("Potwierdz w repo gdzie ustawiany jest timeout.")
+                )
+        );
+
+        assertEquals("ANALYSIS_CHAT_NOT_CONTINUABLE", exception.code());
+        assertTrue(chatTaskExecutor.isEmpty());
     }
 
     @Test

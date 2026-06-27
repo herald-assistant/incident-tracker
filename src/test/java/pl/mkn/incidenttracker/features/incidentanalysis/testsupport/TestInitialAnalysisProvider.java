@@ -34,7 +34,9 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
                     "Analiza techniczna: sprawdz timeout klienta katalogu, latency downstream i konfiguracje retry w sciezce outbound lookup.",
                     "medium",
                     List.of("Test provider korzysta z syntetycznych evidence."),
-                    syntheticPrompt(request)
+                    syntheticPrompt(request),
+                    null,
+                    syntheticSessionId(request)
             );
         }
 
@@ -49,7 +51,9 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
                     "Analiza techniczna: sprawdz zakres transakcji, blokady sesji i ostatnie zmiany w warstwie persistence.",
                     "medium",
                     List.of("Test provider korzysta z syntetycznych evidence."),
-                    syntheticPrompt(request)
+                    syntheticPrompt(request),
+                    null,
+                    syntheticSessionId(request)
             );
         }
 
@@ -63,7 +67,9 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
                 "Analiza techniczna: zbierz dodatkowe logi, runtime signals i kontekst kodu przed wskazaniem poprawki.",
                 "low",
                 List.of("Brak mocnego wzorca w danych testowych."),
-                syntheticPrompt(request)
+                syntheticPrompt(request),
+                null,
+                syntheticSessionId(request)
         );
     }
 
@@ -82,6 +88,10 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
     private String syntheticPrompt(InitialAnalysisRequest request) {
         return "Synthetic AI prompt for correlationId=%s, environment=%s, gitLabBranch=%s"
                 .formatted(request.correlationId(), request.environment(), request.gitLabBranch());
+    }
+
+    private String syntheticSessionId(InitialAnalysisRequest request) {
+        return "test-copilot-session-" + request.correlationId();
     }
 
     private boolean hasTimeoutEvidence(InitialAnalysisRequest request) {
