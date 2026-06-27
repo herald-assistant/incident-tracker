@@ -24,12 +24,16 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 5. `architecture/04-codex-continuation-guide.md`
 6. `architecture/05-package-dependencies.md`
 7. `architecture/06-modular-architecture-roadmap.md`
-8. `architecture/08-operational-context-model-tools-and-usage.md`
+8. `architecture/07-open-work-plan.md`
+9. `architecture/08-operational-context-model-tools-and-usage.md`
 
 ## Co jest gdzie
 
 - `architecture/`
   source of truth dla architektury i zasad dalszego rozwoju.
+- `architecture/07-open-work-plan.md`
+  jedyny aktywny backlog planistyczny; stare plany robocze zostaly do niego
+  scalone i oczyszczone z wykonanych zadan.
 - `../operational-context-maintenance`
   prompty i procedury utrzymania katalogu operational context.
 - `../frontend`
@@ -58,3 +62,5 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 - `architecture/` odpowiada na pytanie: "jakie sa stale decyzje i granice odpowiedzialnosci?"
 - `architecture/08-operational-context-model-tools-and-usage.md` odpowiada na
   pytanie: "jak utrzymywac katalog operacyjny uzywany przez analizy i tools?"
+- `architecture/07-open-work-plan.md` odpowiada na pytanie: "co zostalo do
+  zrobienia i jakie decyzje czekaja na pozniejsze rozstrzygniecie?"
