@@ -7,6 +7,7 @@ import com.github.copilot.rpc.PreToolUseHookInput;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -14,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class CopilotSessionConfigFactoryTest {
 
@@ -21,6 +23,7 @@ class CopilotSessionConfigFactoryTest {
     void shouldBuildClientOptionsAndSessionConfig() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
+        properties.setCopilotHome("C:\\tdw-data\\copilot");
         properties.setCliPath("C:\\tools\\copilot.exe");
         properties.setClientName("incidenttracker-test");
         properties.setModel("gpt-5.4");
@@ -46,6 +49,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(true, sessionConfigRequest.skillDirectoriesConfigured());
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
+        assertEquals(normalized("C:\\tdw-data\\copilot"), clientOptions.getCopilotHome());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
         assertEquals("test-token", clientOptions.getGithubToken());
         assertEquals("analysis-123", sessionConfig.getSessionId());
@@ -58,6 +62,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(List.of("incident-analysis-gitlab-tools"), sessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", sessionConfig.getModel());
         assertEquals("medium", sessionConfig.getReasoningEffort());
+        assertNull(sessionConfig.getInfiniteSessions());
         assertEquals(PermissionHandler.APPROVE_ALL, sessionConfig.getOnPermissionRequest());
         assertNotNull(sessionConfig.getHooks());
         assertEquals("incidenttracker-test", resumeSessionConfig.getClientName());
@@ -69,6 +74,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(List.of("incident-analysis-gitlab-tools"), resumeSessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", resumeSessionConfig.getModel());
         assertEquals("medium", resumeSessionConfig.getReasoningEffort());
+        assertNull(resumeSessionConfig.getInfiniteSessions());
         assertEquals(PermissionHandler.APPROVE_ALL, resumeSessionConfig.getOnPermissionRequest());
         assertNotNull(resumeSessionConfig.getHooks());
 
@@ -89,6 +95,18 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("deny", deniedToolDecision.permissionDecision());
         assertEquals("allow", skillToolDecision.permissionDecision());
         assertEquals("deny", resumeDeniedToolDecision.permissionDecision());
+    }
+
+    @Test
+    void shouldKeepCopilotHomeUnsetWhenDisabledByBlankConfiguration() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.setCopilotHome(" ");
+        var factory = new CopilotSessionConfigFactory(properties);
+
+        var clientOptions = factory.clientOptions();
+
+        assertNull(clientOptions.getCopilotHome());
     }
 
     @Test
@@ -162,5 +180,9 @@ class CopilotSessionConfigFactoryTest {
                 Map.of("type", "object", "properties", Map.of()),
                 invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
         )).toList();
+    }
+
+    private String normalized(String value) {
+        return Path.of(value).toAbsolutePath().normalize().toString();
     }
 }

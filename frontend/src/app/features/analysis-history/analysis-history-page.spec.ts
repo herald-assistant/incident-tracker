@@ -29,6 +29,7 @@ describe('AnalysisHistoryPageComponent', () => {
 
     expect(historyApi.listRuns).toHaveBeenCalledTimes(1);
     expect(historyApi.getRun).not.toHaveBeenCalled();
+    expect(historyApi.exportRun).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Billing corr-123');
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
   });
@@ -87,6 +88,7 @@ describe('AnalysisHistoryPageComponent', () => {
     const { fixture, historyApi } = await createComponent();
     const run = listRuns()[0]!;
     const detail = detailForRun(run);
+    const exportEnvelope = detail.exportEnvelope;
     const createObjectUrlSpy = vi.fn((_: Blob | MediaSource) => 'blob:analysis-export');
     const revokeObjectUrlSpy = vi.fn((_: string) => undefined);
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -100,15 +102,16 @@ describe('AnalysisHistoryPageComponent', () => {
       value: revokeObjectUrlSpy
     });
 
-    historyApi.getRun.mockReturnValueOnce(of(detail));
+    historyApi.exportRun.mockReturnValueOnce(of(exportEnvelope));
     fixture.componentInstance.exportRun(run);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
+    expect(historyApi.exportRun).toHaveBeenCalledWith('analysis-1');
+    expect(historyApi.getRun).not.toHaveBeenCalled();
     expect(createObjectUrlSpy).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(stringifySpy).toHaveBeenCalledWith(detail.exportEnvelope, null, 2);
+    expect(stringifySpy).toHaveBeenCalledWith(exportEnvelope, null, 2);
   });
 
   it('should rename a run and update the index row', async () => {
@@ -155,6 +158,9 @@ describe('AnalysisHistoryPageComponent', () => {
       ),
       getRun: vi.fn<(analysisId: string) => Observable<LocalAnalysisRunDetailResponse>>(
         (analysisId) => of(detailForRun(listRuns().find((run) => run.analysisId === analysisId)!))
+      ),
+      exportRun: vi.fn<(analysisId: string) => Observable<unknown>>((analysisId) =>
+        of(detailForRun(listRuns().find((run) => run.analysisId === analysisId)!).exportEnvelope)
       ),
       renameRun:
         vi.fn<

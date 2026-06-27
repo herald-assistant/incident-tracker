@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.api.analysisruns;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -42,6 +43,12 @@ public class AnalysisRunHistoryService {
         var indexEntry = indexEntryOrThrow(analysisId);
         var record = recordOrThrow(indexEntry.analysisId());
         return toDetail(indexEntry, record);
+    }
+
+    public JsonNode exportRun(String analysisId) {
+        var indexEntry = indexEntryOrThrow(analysisId);
+        var record = recordOrThrow(indexEntry.analysisId());
+        return record.exportEnvelope();
     }
 
     public LocalAnalysisRunDetailResponse renameRun(String analysisId, String name) {

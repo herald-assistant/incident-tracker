@@ -130,13 +130,13 @@ export class AnalysisHistoryPageComponent {
     this.exportError.set('');
 
     this.historyApi
-      .getRun(run.analysisId)
+      .exportRun(run.analysisId)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.exportingAnalysisId.set(''))
       )
       .subscribe({
-        next: (detail) => this.downloadRunExport(detail),
+        next: (exportEnvelope) => this.downloadRunExport(run, exportEnvelope),
         error: (error) => {
           this.exportError.set(
             toErrorMessage(error, 'Nie udało się przygotować eksportu lokalnego runu.')
@@ -263,9 +263,9 @@ export class AnalysisHistoryPageComponent {
     );
   }
 
-  private downloadRunExport(detail: LocalAnalysisRunDetailResponse): void {
-    const exportedAt = exportedAtFromEnvelope(detail.exportEnvelope) || new Date().toISOString();
-    downloadJsonFile(buildLocalRunExportFileName(detail, exportedAt), detail.exportEnvelope);
+  private downloadRunExport(run: LocalAnalysisRunListItemResponse, exportEnvelope: unknown): void {
+    const exportedAt = exportedAtFromEnvelope(exportEnvelope) || new Date().toISOString();
+    downloadJsonFile(buildLocalRunExportFileName(run, exportedAt), exportEnvelope);
   }
 }
 
@@ -307,7 +307,7 @@ function routeForFeature(feature: string): string | null {
 }
 
 function buildLocalRunExportFileName(
-  detail: LocalAnalysisRunDetailResponse,
+  detail: LocalAnalysisRunListItemResponse,
   exportedAt: string
 ): string {
   const feature = sanitizeFileNamePart(detail.feature || 'analysis');

@@ -8,6 +8,7 @@ import com.github.copilot.generated.AssistantMessageEvent;
 import com.github.copilot.generated.AssistantMessageToolRequest;
 import com.github.copilot.generated.AssistantReasoningEvent;
 import com.github.copilot.generated.AssistantUsageEvent;
+import com.github.copilot.generated.SessionCompactionStartEvent;
 import com.github.copilot.generated.SessionUsageInfoEvent;
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
@@ -338,6 +339,63 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
+    void shouldPublishCompactionStartActivityEvent() {
+        var properties = new CopilotSdkProperties();
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var preparedRequest = new CopilotPreparedSession(
+                "corr-compaction",
+                new CopilotClientOptions(),
+                new SessionConfig().setSessionId("analysis-compaction"),
+                new MessageOptions().setPrompt("Diagnose incident"),
+                "Diagnose incident",
+                Map.of()
+        ).withActivitySink(activities::add);
+        var eventHandler = new AtomicReference<Consumer<SessionEvent>>();
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(any(SessionConfig.class))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("analysis-compaction");
+            when(session.on(isA(Consumer.class))).thenAnswer(invocation -> {
+                @SuppressWarnings("unchecked")
+                var handler = (Consumer<SessionEvent>) invocation.getArgument(0);
+                eventHandler.set(handler);
+                return (Closeable) () -> {
+                };
+            });
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenAnswer(invocation -> {
+                        eventHandler.get().accept(compactionStart(1200L, 56000L, 8000L));
+                        return CompletableFuture.completedFuture(assistantMessage("Structured answer"));
+                    });
+        })) {
+            var response = gateway.execute(preparedRequest);
+
+            assertEquals("Structured answer", response.content());
+            var compactionActivity = activities.stream()
+                    .filter(activity -> "session.compaction_start".equals(activity.type()))
+                    .findFirst()
+                    .orElseThrow();
+
+            assertEquals("CONTEXT", compactionActivity.category());
+            assertEquals("STARTED", compactionActivity.status());
+            assertEquals("Kompakcja kontekstu", compactionActivity.title());
+            assertEquals("Copilot rozpoczął kompaktowanie kontekstu sesji.", compactionActivity.summary());
+            assertEquals(1200L, compactionActivity.details().get("systemTokens"));
+            assertEquals(56000L, compactionActivity.details().get("conversationTokens"));
+            assertEquals(8000L, compactionActivity.details().get("toolDefinitionsTokens"));
+        }
+    }
+
+    @Test
     void shouldNotClosePreparedRequestAfterExecution() {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
@@ -476,6 +534,20 @@ class CopilotSdkExecutionGatewayTest {
                 null,
                 null,
                 null
+        ));
+        return event;
+    }
+
+    private SessionCompactionStartEvent compactionStart(
+            Long systemTokens,
+            Long conversationTokens,
+            Long toolDefinitionsTokens
+    ) {
+        var event = new SessionCompactionStartEvent();
+        event.setData(new SessionCompactionStartEvent.SessionCompactionStartEventData(
+                systemTokens,
+                conversationTokens,
+                toolDefinitionsTokens
         ));
         return event;
     }

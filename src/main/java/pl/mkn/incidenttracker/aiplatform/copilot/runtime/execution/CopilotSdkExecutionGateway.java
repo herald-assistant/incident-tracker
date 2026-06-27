@@ -534,6 +534,27 @@ public class CopilotSdkExecutionGateway {
             );
         }
 
+        if (event instanceof SessionCompactionStartEvent sessionCompactionStartEvent) {
+            var data = sessionCompactionStartEvent.getData();
+            if (data != null) {
+                put(details, "systemTokens", data.systemTokens());
+                put(details, "conversationTokens", data.conversationTokens());
+                put(details, "toolDefinitionsTokens", data.toolDefinitionsTokens());
+            }
+            return activity(
+                    event,
+                    "CONTEXT",
+                    "STARTED",
+                    "Kompakcja kontekstu",
+                    "Copilot rozpoczął kompaktowanie kontekstu sesji.",
+                    null,
+                    null,
+                    null,
+                    null,
+                    details
+            );
+        }
+
         if (event instanceof SessionCompactionCompleteEvent sessionCompactionCompleteEvent) {
             var data = sessionCompactionCompleteEvent.getData();
             if (data == null) {

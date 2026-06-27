@@ -79,6 +79,25 @@ class AnalysisRunHistoryControllerTest {
     }
 
     @Test
+    void shouldExportRunEnvelopeOnly() throws Exception {
+        when(analysisRunHistoryService.exportRun("analysis-1")).thenReturn(exportEnvelope("analysis-1"));
+
+        mockMvc.perform(get("/analysis/runs/analysis-1/export"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schema").value("tdw.analysis-export"))
+                .andExpect(jsonPath("$.version").value(6))
+                .andExpect(jsonPath("$.payload.job.analysisId").value("analysis-1"))
+                .andExpect(jsonPath("$.exportEnvelope").doesNotExist())
+                .andExpect(jsonPath("$.continuation").doesNotExist())
+                .andExpect(jsonPath("$.continuationEnabled").doesNotExist())
+                .andExpect(jsonPath("$.copilotSessionId").doesNotExist())
+                .andExpect(jsonPath("$.authMode").doesNotExist())
+                .andExpect(jsonPath("$.authPrincipalRef").doesNotExist());
+
+        verify(analysisRunHistoryService).exportRun("analysis-1");
+    }
+
+    @Test
     void shouldRenameRun() throws Exception {
         when(analysisRunHistoryService.renameRun("analysis-1", " Awaria koszyka w dev3 "))
                 .thenReturn(detail("analysis-1", "Awaria koszyka w dev3", true));

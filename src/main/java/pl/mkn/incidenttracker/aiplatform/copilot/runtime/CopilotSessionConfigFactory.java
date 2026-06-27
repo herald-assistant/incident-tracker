@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -56,11 +57,19 @@ public class CopilotSessionConfigFactory {
                 .setGitHubToken(accessToken.value())
                 .setCwd(properties.getWorkingDirectory());
 
+        if (StringUtils.hasText(properties.getCopilotHome())) {
+            clientOptions.setCopilotHome(normalizedPath(properties.getCopilotHome()));
+        }
+
         if (properties.getCliPath() != null && !properties.getCliPath().isBlank()) {
             clientOptions.setCliPath(properties.getCliPath());
         }
 
         return clientOptions;
+    }
+
+    private String normalizedPath(String value) {
+        return Path.of(value.trim()).toAbsolutePath().normalize().toString();
     }
 
     public CopilotClientOptions clientOptions() {

@@ -1,5 +1,6 @@
 package pl.mkn.incidenttracker.api.analysisruns;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,11 @@ public class AnalysisRunHistoryController {
     @GetMapping("/{analysisId}")
     public LocalAnalysisRunDetailResponse getRun(@PathVariable String analysisId) {
         return analysisRunHistoryService.getRun(analysisId);
+    }
+
+    @GetMapping("/{analysisId}/export")
+    public JsonNode exportRun(@PathVariable String analysisId) {
+        return analysisRunHistoryService.exportRun(analysisId);
     }
 
     @PatchMapping("/{analysisId}/name")

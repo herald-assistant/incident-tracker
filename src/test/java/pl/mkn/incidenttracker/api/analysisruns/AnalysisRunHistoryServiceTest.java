@@ -89,6 +89,43 @@ class AnalysisRunHistoryServiceTest {
     }
 
     @Test
+    void shouldExportStoredEnvelopeWithoutContinuationMetadata() throws Exception {
+        var store = new CapturingLocalAnalysisRunStore();
+        var continuation = new LocalAnalysisRunContinuation(
+                true,
+                "CRM/runtime",
+                "LOCAL_TOKEN",
+                "local-token"
+        ).withLatestCopilotSession("copilot-session-123");
+        store.addRun(
+                entry("analysis-1", "incident-analysis", "corr-123"),
+                recordWithPrompt("analysis-1", "Prepared prompt", continuation)
+        );
+        var service = new AnalysisRunHistoryService(store);
+
+        var exported = service.exportRun(" analysis-1 ");
+
+        assertEquals("tdw.analysis-export", exported.path("schema").asText());
+        assertEquals(6, exported.path("version").asInt());
+        assertEquals("analysis-1", exported.at("/payload/job/analysisId").asText());
+        assertEquals("Prepared prompt", exported.at("/payload/job/preparedPrompt").asText());
+        assertEquals(1, store.findByIdCalls);
+
+        var serialized = objectMapper.writeValueAsString(exported);
+        assertTrue(serialized.contains("Prepared prompt"));
+        assertFalse(serialized.contains("continuation"));
+        assertFalse(serialized.contains("copilotSessionId"));
+        assertFalse(serialized.contains("copilot-session-123"));
+        assertFalse(serialized.contains("github-copilot-sdk"));
+        assertFalse(serialized.contains("copilot-session"));
+        assertFalse(serialized.contains("CRM/runtime"));
+        assertFalse(serialized.contains("LOCAL_TOKEN"));
+        assertFalse(serialized.contains("local-token"));
+        assertFalse(serialized.contains("runPath"));
+        assertFalse(serialized.contains("tokens.json"));
+    }
+
+    @Test
     void shouldRenameExistingRunAndReturnUpdatedDetail() {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", true));
@@ -227,6 +264,18 @@ class AnalysisRunHistoryServiceTest {
             String preparedPrompt,
             boolean continuationEnabled
     ) {
+        return recordWithPrompt(
+                analysisId,
+                preparedPrompt,
+                new LocalAnalysisRunContinuation(continuationEnabled, "CRM/runtime", "LOCAL_TOKEN", "local-token")
+        );
+    }
+
+    private LocalAnalysisRunRecord recordWithPrompt(
+            String analysisId,
+            String preparedPrompt,
+            LocalAnalysisRunContinuation continuation
+    ) {
         var envelope = objectMapper.createObjectNode();
         envelope.put("schema", "tdw.analysis-export");
         envelope.put("version", 6);
@@ -241,7 +290,7 @@ class AnalysisRunHistoryServiceTest {
 
         return LocalAnalysisRunRecord.v1(
                 envelope,
-                new LocalAnalysisRunContinuation(continuationEnabled, "CRM/runtime", "LOCAL_TOKEN", "local-token")
+                continuation
         );
     }
 

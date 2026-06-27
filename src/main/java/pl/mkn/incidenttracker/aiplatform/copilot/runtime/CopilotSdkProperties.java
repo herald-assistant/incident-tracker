@@ -22,6 +22,7 @@ public class CopilotSdkProperties {
 
     private String cliPath = "copilot";
     private String workingDirectory;
+    private String copilotHome = "tdw-data/copilot";
     private String model;
     private String reasoningEffort;
     private String clientName = "incidenttracker";

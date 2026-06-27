@@ -286,6 +286,7 @@ Shared/operator API historii powinno byc neutralne wzgledem feature'a:
 ```http
 GET /analysis/runs
 GET /analysis/runs/{analysisId}
+GET /analysis/runs/{analysisId}/export
 PATCH /analysis/runs/{analysisId}/name
 POST /analysis/runs/{analysisId}/chat/messages
 DELETE /analysis/runs/{analysisId}
@@ -294,6 +295,9 @@ DELETE /analysis/runs/{analysisId}
 Uwagi:
 
 - `GET /analysis/jobs/{analysisId}` moze zostac dla live pollingu.
+- `GET /analysis/runs/{analysisId}/export` zwraca tylko zapisany
+  `exportEnvelope`, bez lokalnego `continuation`, bez `index.json` metadata i
+  bez technicznych uchwytow kontynuacji.
 - Docelowo live job po utworzeniu powinien miec odpowiadajacy rekord lokalny,
   zeby historia i polling nie byly dwoma swiatami.
 - `POST /analysis/runs/{analysisId}/chat/messages` kontynuuje tylko lokalne
@@ -549,7 +553,9 @@ Wykonane:
   w sekcji `Platform`,
 - dodano lekki klient `AnalysisRunHistoryApiService`,
 - ekran startowo pobiera tylko `GET /analysis/runs`, a pelny run doczytuje
-  dopiero ekran feature'a po `localRunId` albo akcja exportu,
+  dopiero ekran feature'a po `localRunId`,
+- akcja exportu uzywa dedykowanego `GET /analysis/runs/{analysisId}/export`,
+  a nie detailu lokalnego runu,
 - historia jest lista belek/launcherem bez uniwersalnego detailu,
 - ekrany Incident Analysis i Flow Explorer umieja przyjac `localRunId` jako
   wejscie origin `local`,
@@ -772,7 +778,7 @@ Wykonane:
   existing session target, assembler follow-upu, lokalny zapis/kontynuacje,
   job chat i guard architektury.
 
-### [ ] 010. Automatyczne zarzadzanie dlugim kontekstem
+### [x] 010. Automatyczne zarzadzanie dlugim kontekstem
 
 Cel:
 
@@ -780,12 +786,25 @@ Cel:
   operatora decyzji o kompaktowaniu, czyszczeniu historii albo restartowaniu
   konwersacji.
 
+Decyzja MVP:
+
+- nie ustawiamy explicit `InfiniteSessionConfig` w `SessionConfig` ani
+  `ResumeSessionConfig`, bo upstream Node/CLI docs potwierdzaja, ze
+  `infiniteSessions` jest domyslnie wlaczone,
+- nie kodujemy progow `backgroundCompactionThreshold=0.8` ani
+  `bufferExhaustionThreshold=0.95`; zostaja defaultem SDK, zeby aplikacja nie
+  zamrazala wartosci, ktore SDK moze poprawiac,
+- tuning progow wraca dopiero wtedy, gdy realne pomiary albo smoke testy pokaza
+  problem z defaultami.
+
 Zakres:
 
-- wlaczyc i sparametryzowac `SessionConfig.infiniteSessions` w platformie
-  Copilot, jesli SDK/CLI wspiera background compaction dla dlugich sesji,
-- dopiac te same ustawienia dla `ResumeSessionConfig`, zeby wznowiona sesja
-  miala identyczna polityke dlugiego kontekstu jak nowa sesja,
+- ustawic `CopilotClientOptions.copilotHome` na katalog kontrolowany przez
+  lokalny workspace aplikacji, domyslnie
+  `analysis.ai.copilot.copilot-home=${tdw.workspace.directory}/copilot`,
+- nie ustawic `SessionConfig.infiniteSessions` i
+  `ResumeSessionConfig.infiniteSessions`, zeby create/resume korzystaly z
+  domyslnej polityki SDK/CLI,
 - zachowac obserwacje `session.usage_info`, `session.truncation`,
   `session.compaction_start` i `session.compaction_complete` jako activity/usage,
 - local run zapisuje pelna historie, wyniki, usage i tool evidence na potrzeby
@@ -798,21 +817,21 @@ Zakres:
 - brak automatycznego fallbacku: jezeli automatyczne zarzadzanie kontekstem
   zawiedzie, follow-up konczy sie bledem i nie uruchamia innej sciezki.
 
-Do zatwierdzenia:
+Do zatwierdzenia po MVP:
 
-- domyslne progi `backgroundCompactionThreshold` i `bufferExhaustionThreshold`,
-- czy wlaczyc `infiniteSessions` domyslnie dla wszystkich feature'ow, czy
-  pozwolic feature'owi nadpisac polityke,
-- jak prezentowac w UI eventy compaction/truncation, zeby byly informacyjne,
-  ale nie wymagaly decyzji operatora,
+- czy kiedykolwiek wystawiamy tuning progow `InfiniteSessionConfig`, czy
+  zostawiamy go wylacznie jako internal override na potrzeby diagnostyki,
 - czy po bledzie `resumeSession` komunikat UI ma sugerowac reczny start nowej
   analizy.
 
 Kryteria akceptacji:
 
 - operator moze kontynuowac dluga rozmowe bez recznego czyszczenia kontekstu,
-- SDK infinite/background compaction jest wlaczone tam, gdzie tworzymy sesje
-  Copilota oraz tam, gdzie je wznawiamy,
+- SDK infinite/background compaction pozostaje wlaczone przez domyslna
+  polityke SDK/CLI tam, gdzie tworzymy sesje Copilota oraz tam, gdzie je
+  wznawiamy,
+- stan techniczny sesji Copilota trafia do lokalnego workspace'u aplikacji, a
+  nie do przypadkowego domyslnego katalogu uzytkownika,
 - local follow-up wysyla do istniejacej sesji tylko kolejna wiadomosc
   uzytkownika,
 - UI moze pokazywac usage/compaction jako informacyjny przebieg pracy, ale nie
@@ -821,7 +840,7 @@ Kryteria akceptacji:
 - po automatycznym zarzadzaniu kontekstem nadal dziala tool evidence i hidden
   scope.
 
-### [ ] 011. Sanitized export z lokalnego runu
+### [x] 011. Sanitized export z lokalnego runu
 
 Cel:
 
@@ -834,11 +853,18 @@ Zakres:
 - brak kompatybilnosci wstecznej importu/exportu: tylko aktualny schema i
   version envelope.
 
-Do zatwierdzenia:
+Zatwierdzone i zaimplementowane:
 
-- czy export ma dalej zawierac `preparedPrompt`,
-- czy potrzebny jest osobny tryb "diagnostic export" vs "share export",
-- czy export ostrzega, ze nie jest backupem kontynuowalnego workspace'u.
+- dodano `GET /analysis/runs/{analysisId}/export`, ktory zwraca bezposrednio
+  `exportEnvelope` zapisany w lokalnym `run.json`,
+- frontend historii uzywa tego endpointu przy akcji exportu zamiast
+  `GET /analysis/runs/{analysisId}`,
+- export nadal zawiera to, co zawiera aktualny `tdw.analysis-export` V6,
+  wlacznie z `preparedPrompt`, bo w MVP jest 1:1 projekcja obecnego wyniku,
+- nie dodano osobnego trybu diagnostic/share; rozdzielenie trybow zostaje
+  osobna decyzja produktowa po MVP,
+- informacja, ze export nie jest backupem kontynuowalnego workspace'u, zostaje
+  do dopisania w kroku 012 razem z dokumentacja lokalnego katalogu danych.
 
 Kryteria akceptacji:
 
@@ -847,6 +873,15 @@ Kryteria akceptacji:
 - import pozostaje read-only i odrzuca stare schematy oraz stare wersje,
 - lokalny run po eksporcie nadal pozostaje kontynuowalny tylko u wlasciciela
   katalogu danych.
+
+Wykonane:
+
+- serwis historii zwraca w eksporcie wylacznie `record.exportEnvelope()`,
+- kontroler wystawia envelope bez opakowania detailem lokalnego runu,
+- testy backendu pilnuja, ze export nie zawiera `continuation`,
+  `copilotSessionId`, auth markerow, lokalnych sciezek ani runtime metadata,
+- testy frontendowe pilnuja, ze przycisk Export korzysta z endpointu exportu i
+  nie laduje lokalnego detailu.
 
 ### [ ] 012. Dokumentacja i launcher
 

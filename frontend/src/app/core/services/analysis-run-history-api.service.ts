@@ -25,6 +25,10 @@ export class AnalysisRunHistoryApiService {
     );
   }
 
+  exportRun(analysisId: string): Observable<unknown> {
+    return this.http.get<unknown>(`/analysis/runs/${encodeURIComponent(analysisId)}/export`);
+  }
+
   renameRun(
     analysisId: string,
     request: RenameLocalAnalysisRunRequest

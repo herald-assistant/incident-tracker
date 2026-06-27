@@ -48,6 +48,16 @@ describe('AnalysisRunHistoryApiService', () => {
     request.flush({ analysisId: 'analysis/1' });
   });
 
+  it('should export a local run envelope without loading detail metadata', () => {
+    service.exportRun('analysis/1').subscribe((response) =>
+      expect((response as { schema: string }).schema).toBe('tdw.analysis-export')
+    );
+
+    const request = http.expectOne('/analysis/runs/analysis%2F1/export');
+    expect(request.request.method).toBe('GET');
+    request.flush({ schema: 'tdw.analysis-export', version: 6 });
+  });
+
   it('should rename a local run', () => {
     service.renameRun('analysis/1', { name: 'Nowa nazwa' }).subscribe();
 
