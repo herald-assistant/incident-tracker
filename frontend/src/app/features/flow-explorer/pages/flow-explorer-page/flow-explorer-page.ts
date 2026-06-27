@@ -22,6 +22,7 @@ import {
   FlowExplorerFocusArea,
   FlowExplorerJobStartRequest,
   FlowExplorerJobStateSnapshot,
+  FlowExplorerResultSection,
   FlowExplorerResultSectionId,
   FlowExplorerSectionMode,
   FlowExplorerSectionModeRequest,
@@ -200,6 +201,10 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly isSubmitting = signal(false);
   readonly chatError = signal('');
   readonly isSendingChat = signal(false);
+  readonly refineDialogSection = signal<FlowExplorerResultSection | null>(null);
+  readonly refineMessage = signal('');
+  readonly refineError = signal('');
+  readonly isSendingRefine = signal(false);
   readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelOptionsError = signal('');
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
@@ -254,6 +259,23 @@ export class FlowExplorerPageComponent implements OnInit {
         (exportState?.origin === 'local' && Boolean(exportState.continuationEnabled)))
     );
   });
+  readonly isRefineAvailable = computed(() => {
+    const job = this.job();
+    return (
+      Boolean(job?.result?.aiResponse && job.status === 'COMPLETED') &&
+      this.exportState()?.origin === 'live' &&
+      !this.hasActiveChat(job) &&
+      !this.isSendingChat() &&
+      !this.isSendingRefine()
+    );
+  });
+  readonly isRefineSubmitDisabled = computed(
+    () =>
+      !this.refineDialogSection() ||
+      !this.refineMessage().trim() ||
+      !this.isRefineAvailable() ||
+      this.isSendingRefine()
+  );
   readonly chatHint = computed(() => {
     const job = this.job();
     if (!job?.result) {
@@ -486,6 +508,11 @@ export class FlowExplorerPageComponent implements OnInit {
     this.reasoningEffortSelectOpen.set(false);
   }
 
+  @HostListener('document:keydown.escape')
+  protected closeRefineDialogFromKeyboard(): void {
+    this.closeRefineDialog();
+  }
+
   protected loadSystems(): void {
     this.catalogState.set('loading');
     this.catalogError.set('');
@@ -714,10 +741,104 @@ export class FlowExplorerPageComponent implements OnInit {
     this.chatError.set('');
   }
 
+  protected openRefineDialog(section: FlowExplorerResultSection, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!this.canRefineSection(section)) {
+      return;
+    }
+
+    this.refineDialogSection.set(section);
+    this.refineMessage.set('');
+    this.refineError.set('');
+  }
+
+  protected closeRefineDialog(): void {
+    if (this.isSendingRefine()) {
+      return;
+    }
+
+    this.refineDialogSection.set(null);
+    this.refineMessage.set('');
+    this.refineError.set('');
+  }
+
+  protected onRefineMessageChanged(value: string): void {
+    this.refineMessage.set(value);
+    this.refineError.set('');
+  }
+
+  protected canRefineSection(section: FlowExplorerResultSection): boolean {
+    return Boolean(section?.id) && normalizeSearch(section.mode) !== 'off' && this.isRefineAvailable();
+  }
+
+  protected refineButtonTitle(section: FlowExplorerResultSection): string {
+    if (this.canRefineSection(section)) {
+      return `Refine ${section.title}`;
+    }
+    if (this.exportState()?.origin === 'imported') {
+      return 'Refine is unavailable for imported results.';
+    }
+    if (this.exportState()?.origin === 'local') {
+      return 'Refine is available only for live Flow Explorer jobs.';
+    }
+    if (this.hasActiveChat(this.job()) || this.isSendingChat() || this.isSendingRefine()) {
+      return 'Wait for the current AI response to finish.';
+    }
+    return 'Refine is available after a completed live Flow Explorer job.';
+  }
+
+  protected submitSectionRefine(event: Event): void {
+    event.preventDefault();
+
+    const section = this.refineDialogSection();
+    const job = this.job();
+    const message = this.refineMessage().trim();
+    if (!section || !job || !message || !this.canRefineSection(section)) {
+      this.refineError.set('Refine is available only for a completed live Flow Explorer result.');
+      return;
+    }
+
+    this.isSendingRefine.set(true);
+    this.refineError.set('');
+    this.chatError.set('');
+
+    this.flowExplorerApi
+      .refineSection(job.jobId, section.id, { message })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (snapshot) => {
+          this.isSendingRefine.set(false);
+          this.refineDialogSection.set(null);
+          this.refineMessage.set('');
+          this.refineError.set('');
+          this.applyJobSnapshot(snapshot, {
+            origin: 'live',
+            exportedAt: '',
+            fileName: ''
+          });
+          if (this.hasActiveChat(snapshot)) {
+            this.startPolling(snapshot.jobId);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.isSendingRefine.set(false);
+          this.refineError.set(this.errorMessage(error, 'Nie udalo sie wyslac refine sekcji.'));
+        }
+      });
+  }
+
   protected sendChatMessage(message: string): void {
     const job = this.job();
     const trimmedMessage = message.trim();
-    if (!job || !trimmedMessage || !this.isChatAvailable() || this.isSendingChat() || this.hasActiveChatMessage()) {
+    if (
+      !job ||
+      !trimmedMessage ||
+      !this.isChatAvailable() ||
+      this.isSendingChat() ||
+      this.isSendingRefine() ||
+      this.hasActiveChatMessage()
+    ) {
       return;
     }
 
@@ -827,6 +948,10 @@ export class FlowExplorerPageComponent implements OnInit {
       this.stopPolling();
       this.isSubmitting.set(false);
       this.isSendingChat.set(false);
+      this.isSendingRefine.set(false);
+      this.refineDialogSection.set(null);
+      this.refineMessage.set('');
+      this.refineError.set('');
       this.chatError.set('');
       this.jobError.set('');
       this.applyJobSnapshot(imported.job, {
@@ -1209,6 +1334,10 @@ export class FlowExplorerPageComponent implements OnInit {
     this.isSubmitting.set(false);
     this.chatError.set('');
     this.isSendingChat.set(false);
+    this.isSendingRefine.set(false);
+    this.refineDialogSection.set(null);
+    this.refineMessage.set('');
+    this.refineError.set('');
   }
 
   private isTerminalJobStatus(status: string): boolean {

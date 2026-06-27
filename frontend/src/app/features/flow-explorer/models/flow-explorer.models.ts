@@ -174,6 +174,10 @@ export interface FlowExplorerChatMessageRequest {
   message: string;
 }
 
+export interface FlowExplorerSectionRefineRequest {
+  message: string;
+}
+
 export interface FlowExplorerJobStateSnapshot {
   jobId: string;
   systemId: string;

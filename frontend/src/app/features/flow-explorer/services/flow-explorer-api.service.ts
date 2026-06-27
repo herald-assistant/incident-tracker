@@ -9,6 +9,8 @@ import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStartRequest,
   FlowExplorerJobStateSnapshot,
+  FlowExplorerResultSectionId,
+  FlowExplorerSectionRefineRequest,
   FlowExplorerSystemOption
 } from '../models/flow-explorer.models';
 
@@ -61,6 +63,17 @@ export class FlowExplorerApiService {
   ): Observable<FlowExplorerJobStateSnapshot> {
     return this.http.post<FlowExplorerJobStateSnapshot>(
       `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/chat/messages`,
+      request
+    );
+  }
+
+  refineSection(
+    jobId: string,
+    sectionId: FlowExplorerResultSectionId,
+    request: FlowExplorerSectionRefineRequest
+  ): Observable<FlowExplorerJobStateSnapshot> {
+    return this.http.post<FlowExplorerJobStateSnapshot>(
+      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/sections/${encodeURIComponent(sectionId)}/refine`,
       request
     );
   }
