@@ -38,4 +38,14 @@ public class FlowExplorerJobController {
     ) {
         return flowExplorerJobService.startChatMessage(jobId, request);
     }
+
+    @PostMapping("/{jobId}/sections/{sectionId}/refine")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public FlowExplorerJobStateSnapshot refineSection(
+            @PathVariable String jobId,
+            @PathVariable FlowExplorerResultSectionId sectionId,
+            @Valid @RequestBody FlowExplorerSectionRefineRequest request
+    ) {
+        return flowExplorerJobService.startSectionRefine(jobId, sectionId, request);
+    }
 }

@@ -10,6 +10,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerSectionRefineAiRequest;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerSectionRefineAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
@@ -19,6 +21,8 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextService;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerSectionRefineRequest;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
 import pl.mkn.tdw.features.flowexplorer.job.localworkspace.FlowExplorerLocalRunPersistence;
 import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerJobState;
@@ -41,6 +45,7 @@ public class FlowExplorerJobService {
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final FlowExplorerAiResponseParser responseParser;
+    private final FlowExplorerSectionRefineAiResponseParser sectionRefineResponseParser;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final CopilotRunAuthMapper runAuthMapper;
@@ -54,6 +59,7 @@ public class FlowExplorerJobService {
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
             FlowExplorerAiResponseParser responseParser,
+            FlowExplorerSectionRefineAiResponseParser sectionRefineResponseParser,
             TaskExecutor applicationTaskExecutor
     ) {
         this(
@@ -63,6 +69,7 @@ public class FlowExplorerJobService {
                 runPreparationService,
                 executionGateway,
                 responseParser,
+                sectionRefineResponseParser,
                 applicationTaskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),
                 new CopilotRunAuthMapper(),
@@ -83,6 +90,7 @@ public class FlowExplorerJobService {
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
             FlowExplorerAiResponseParser responseParser,
+            FlowExplorerSectionRefineAiResponseParser sectionRefineResponseParser,
             TaskExecutor applicationTaskExecutor,
             AnalysisAiAuthRefResolver authRefResolver,
             CopilotRunAuthMapper runAuthMapper,
@@ -95,6 +103,7 @@ public class FlowExplorerJobService {
                 runPreparationService,
                 executionGateway,
                 responseParser,
+                sectionRefineResponseParser,
                 applicationTaskExecutor,
                 authRefResolver,
                 runAuthMapper,
@@ -111,6 +120,7 @@ public class FlowExplorerJobService {
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
             FlowExplorerAiResponseParser responseParser,
+            FlowExplorerSectionRefineAiResponseParser sectionRefineResponseParser,
             TaskExecutor applicationTaskExecutor,
             AnalysisAiAuthRefResolver authRefResolver,
             CopilotRunAuthMapper runAuthMapper,
@@ -123,6 +133,7 @@ public class FlowExplorerJobService {
         this.runPreparationService = runPreparationService;
         this.executionGateway = executionGateway;
         this.responseParser = responseParser;
+        this.sectionRefineResponseParser = sectionRefineResponseParser;
         this.applicationTaskExecutor = applicationTaskExecutor;
         this.authRefResolver = authRefResolver;
         this.runAuthMapper = runAuthMapper;
@@ -214,6 +225,27 @@ public class FlowExplorerJobService {
         return job.snapshot();
     }
 
+    public FlowExplorerJobStateSnapshot startSectionRefine(
+            String jobId,
+            FlowExplorerResultSectionId sectionId,
+            FlowExplorerSectionRefineRequest request
+    ) {
+        var job = jobOrThrow(jobId);
+        accessTokenResolver.resolve(runAuthMapper.toRunAuth(job.authRefForChat()));
+        var userMessageId = UUID.randomUUID().toString();
+        var assistantMessageId = UUID.randomUUID().toString();
+        var refineRequest = job.startSectionRefine(
+                userMessageId,
+                assistantMessageId,
+                sectionId,
+                request.message()
+        );
+
+        applicationTaskExecutor.execute(() -> runSectionRefine(job, assistantMessageId, refineRequest));
+
+        return job.snapshot();
+    }
+
     private void runChat(
             FlowExplorerJobState job,
             String assistantMessageId,
@@ -259,6 +291,121 @@ public class FlowExplorerJobService {
                             : "Unexpected Flow Explorer follow-up chat failure."
             );
         }
+    }
+
+    private void runSectionRefine(
+            FlowExplorerJobState job,
+            String assistantMessageId,
+            FlowExplorerSectionRefineAiRequest refineRequest
+    ) {
+        try {
+            var promptPreparation = sectionRefinePromptPreparation(refineRequest);
+            var runAssembly = runRequestAssembler.assembleFollowUp(
+                    "flow-explorer-section-refine-" + assistantMessageId,
+                    refineRequest.initialRequest(),
+                    refineRequest.contextSnapshot(),
+                    promptPreparation,
+                    refineRequest.copilotSessionId(),
+                    refineRequest.authRef()
+            );
+            var preparedSession = runPreparationService.prepare(runAssembly.runRequest())
+                    .withEvidenceSink(section -> job.markChatToolEvidenceUpdated(assistantMessageId, section))
+                    .withActivitySink(event -> job.markChatAiActivity(assistantMessageId, event));
+            var executionResult = executionGateway.execute(preparedSession);
+            var refineResponse = sectionRefineResponseParser.parse(
+                    executionResult.content(),
+                    refineRequest.targetSection().id(),
+                    refineRequest.targetSection().mode()
+            );
+            job.markSectionRefineCompleted(
+                    assistantMessageId,
+                    refineResponse,
+                    promptPreparation.prompt(),
+                    executionResult.sessionId()
+            );
+        } catch (RuntimeException exception) {
+            log.error(
+                    "Flow Explorer section refine failed systemId={} endpointId={} sectionId={} message={}",
+                    refineRequest.initialRequest().systemId(),
+                    refineRequest.initialRequest().endpointId(),
+                    refineRequest.targetSection().id(),
+                    exception.getMessage(),
+                    exception
+            );
+            job.markChatFailed(
+                    assistantMessageId,
+                    "FLOW_EXPLORER_REFINE_FAILED",
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Unexpected Flow Explorer section refine failure."
+            );
+        }
+    }
+
+    private FlowExplorerPromptPreparation sectionRefinePromptPreparation(
+            FlowExplorerSectionRefineAiRequest request
+    ) {
+        var target = request.targetSection();
+        var aiResponse = request.result().aiResponse();
+        var prompt = String.join("\n", List.of(
+                "# Flow Explorer section refine prompt",
+                "",
+                "Kontynuujesz istniejaca sesje Flow Explorera. Nie odtwarzaj initial analysis i nie streszczaj historii rozmowy.",
+                "Zadanie UI: zaktualizuj tylko wskazana sekcje wyniku, zgodnie z prosba uzytkownika.",
+                "",
+                "## Target section",
+                "- id: " + target.id(),
+                "- title: " + target.title(),
+                "- mode: " + target.mode(),
+                "",
+                "## User refine request",
+                safeText(request.message()),
+                "",
+                "## Current target markdown",
+                safeText(target.markdown()),
+                "",
+                "## Current target lists",
+                "- sourceRefs: " + target.sourceRefs(),
+                "- visibilityLimits: " + target.visibilityLimits(),
+                "- openQuestions: " + target.openQuestions(),
+                "",
+                "## Current global fields to merge",
+                "- globalVisibilityLimits: " + aiResponse.globalVisibilityLimits(),
+                "- globalOpenQuestions: " + aiResponse.globalOpenQuestions(),
+                "- sourceReferences: " + aiResponse.sourceReferences(),
+                "- followUpPrompts: " + aiResponse.followUpPrompts(),
+                "- confidence: " + aiResponse.confidence(),
+                "",
+                "## Required response",
+                "Odpowiedz wylacznie poprawnym JSON-em zgodnym z kontraktem:",
+                """
+                {
+                  "section": {
+                    "id": "%s",
+                    "title": "%s",
+                    "mode": "%s",
+                    "markdown": "updated markdown",
+                    "sourceRefs": ["merged section refs"],
+                    "visibilityLimits": ["merged section limits"],
+                    "openQuestions": ["merged section questions"]
+                  },
+                  "globalVisibilityLimits": ["merged global limits"],
+                  "globalOpenQuestions": ["merged global questions"],
+                  "sourceReferences": ["merged global source refs"],
+                  "followUpPrompts": ["updated prompts"],
+                  "confidence": "high|medium|low",
+                  "changeSummary": ["what changed for the operator"]
+                }
+                """.formatted(target.id(), target.title(), target.mode().name().toLowerCase()),
+                "Nie zwracaj overview ani innych sekcji. Zachowaj id i mode target section.",
+                "Uwzglednij runtime skill flow-explorer-result-contract: sekcja ma pozostac zgodna z trybem compact/deep.",
+                "Jesli korzystasz z tools, rob to tylko po to, zeby odpowiedziec na prosbe uzytkownika i dopisz ograniczenia widocznosci, gdy nie da sie czegos potwierdzic."
+        ));
+        return new FlowExplorerPromptPreparation(prompt, List.of(), Map.of());
+    }
+
+    private String safeText(String value) {
+        return StringUtils.hasText(value) ? value.trim() : "(empty)";
     }
 
     private void persistCompletedInitialRun(
