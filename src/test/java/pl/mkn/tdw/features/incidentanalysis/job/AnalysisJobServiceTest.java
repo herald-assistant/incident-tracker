@@ -103,11 +103,11 @@ class AnalysisJobServiceTest {
         assertNotNull(completed.result());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
         assertEquals(
-                "Analiza funkcjonalna: incydent dotyka procesu billingowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
+                "Analiza funkcjonalna: incydent dotyka procesu katalogowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
                 completed.result().functionalAnalysis()
         );
-        assertEquals("Billing customer-profile lookup", completed.result().affectedProcess());
-        assertEquals("Billing Context", completed.result().affectedBoundedContext());
+        assertEquals("Catalog profile lookup", completed.result().affectedProcess());
+        assertEquals("Catalog Context", completed.result().affectedBoundedContext());
         assertEquals("Core Integration Team", completed.result().affectedTeam());
         assertEquals("COMPLETED", completed.steps().get(5).status());
     }
@@ -599,10 +599,10 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "session-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing customer-profile lookup",
-                    "Billing Context",
+                    "Catalog profile lookup",
+                    "Catalog Context",
                     "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
                     "Analiza techniczna: session id Copilota zostal przekazany do lokalnej persystencji.",
                     "medium",
                     List.of(),
@@ -671,10 +671,10 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "usage-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing customer-profile lookup",
-                    "Billing Context",
+                    "Catalog profile lookup",
+                    "Catalog Context",
                     "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
                     "Analiza techniczna: sprawdz konfiguracje klienta HTTP i latency downstream.",
                     "medium",
                     List.of(),
@@ -787,10 +787,10 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "blocking-tool-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing customer-profile lookup",
-                    "Billing Context",
+                    "Catalog profile lookup",
+                    "Catalog Context",
                     "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
                     "Analiza techniczna: plik pobrany przez GitLab potwierdza konfiguracje timeoutu klienta.",
                     "medium",
                     List.of(),
@@ -852,10 +852,10 @@ class AnalysisJobServiceTest {
             return new InitialAnalysisResponse(
                     "feedback-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing customer-profile lookup",
-                    "Billing Context",
+                    "Catalog profile lookup",
+                    "Catalog Context",
                     "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
                     "Analiza techniczna: feedback toola jest zapisany osobno od deterministic evidence.",
                     "medium",
                     List.of(),

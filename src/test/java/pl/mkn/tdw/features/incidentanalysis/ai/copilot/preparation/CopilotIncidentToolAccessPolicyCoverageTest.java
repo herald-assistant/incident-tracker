@@ -193,9 +193,9 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "logs",
                         List.of(item(
                                 "truncated log",
-                                attr("serviceName", "crm-billing-service"),
-                                attr("className", "com.example.CustomerBillingService"),
-                                attr("message", "Failed to settle invoice"),
+                                attr("serviceName", "crm-catalog-service"),
+                                attr("className", "com.example.CustomerCatalogService"),
+                                attr("message", "Failed to resolve catalog item"),
                                 attr("messageTruncated", "true")
                         ))
                 ))),
@@ -447,12 +447,12 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "error log",
-                        attr("serviceName", "crm-billing-service"),
-                        attr("className", "com.example.CustomerBillingService"),
-                        attr("message", "Failed to settle invoice"),
+                        attr("serviceName", "crm-catalog-service"),
+                        attr("className", "com.example.CustomerCatalogService"),
+                        attr("message", "Failed to resolve catalog item"),
                         attr("exception", """
                                 java.lang.IllegalStateException: failed
-                                \tat com.example.CustomerBillingService.settle(CustomerBillingService.java:42)
+                                \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
                                 """)
                 ))
         );
@@ -464,7 +464,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "repository error",
-                        attr("serviceName", "crm-billing-service"),
+                        attr("serviceName", "crm-catalog-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
                 ))
         );
@@ -475,9 +475,9 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "operational-context",
                 "matched-context",
                 List.of(item(
-                        "Payments system",
-                        attr("systemId", "payments"),
-                        attr("name", "Payments")
+                        "Notifications system",
+                        attr("systemId", "notifications"),
+                        attr("name", "Notifications")
                 ))
         );
     }

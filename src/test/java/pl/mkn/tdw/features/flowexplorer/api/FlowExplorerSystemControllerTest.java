@@ -28,29 +28,29 @@ class FlowExplorerSystemControllerTest {
     @Test
     void shouldReturnFlowExplorerSystemOptions() throws Exception {
         when(flowExplorerSystemSelectionService.systems()).thenReturn(List.of(new FlowExplorerSystemOptionResponse(
-                "billing-core",
-                "Billing Core",
-                "Billing",
+                "catalog-core",
+                "Catalog Core",
+                "Catalog",
                 "internal-application",
                 "active",
                 "healthy",
                 "high",
-                "Handles billing operations.",
-                List.of("billing"),
+                "Handles catalog operations.",
+                List.of("catalog"),
                 2,
                 1,
-                List.of("billing-team")
+                List.of("catalog-team")
         )));
 
         mockMvc.perform(get("/api/flow-explorer/systems"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].systemId").value("billing-core"))
-                .andExpect(jsonPath("$[0].name").value("Billing Core"))
+                .andExpect(jsonPath("$[0].systemId").value("catalog-core"))
+                .andExpect(jsonPath("$[0].name").value("Catalog Core"))
                 .andExpect(jsonPath("$[0].kind").value("internal-application"))
                 .andExpect(jsonPath("$[0].repositoryCount").value(2))
                 .andExpect(jsonPath("$[0].codeSearchScopeCount").value(1))
-                .andExpect(jsonPath("$[0].ownerTeamIds[0]").value("billing-team"));
+                .andExpect(jsonPath("$[0].ownerTeamIds[0]").value("catalog-team"));
 
         verify(flowExplorerSystemSelectionService).systems();
     }

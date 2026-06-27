@@ -38,7 +38,7 @@ class DatabaseSqlGuardTest {
         var guard = guard(true);
 
         var exception = assertThrows(IllegalArgumentException.class, () ->
-                guard.normalizeTableRef(scope(), new DbTableRef("CRM_PAYMENTS_APP", "CUSTOMER_INTERACTION"))
+                guard.normalizeTableRef(scope(), new DbTableRef("CRM_NOTIFICATIONS_APP", "CUSTOMER_INTERACTION"))
         );
 
         assertTrue(exception.getMessage().contains("outside the configured allowlist"));

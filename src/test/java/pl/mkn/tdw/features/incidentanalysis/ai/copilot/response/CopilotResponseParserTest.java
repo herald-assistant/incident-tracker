@@ -68,7 +68,7 @@ class CopilotResponseParserTest {
 
                 {
                   "detectedProblem": "CLASS_CAST_EXCEPTION",
-                  "affectedProcess": "credit-decision-process",
+                  "affectedProcess": "case-review-process",
                   "affectedBoundedContext": "product-configuration",
                   "affectedTeam": "nieustalone",
                   "functionalAnalysis": "Blad mapowania daty dotyka pobierania produktow klienta.",

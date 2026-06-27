@@ -35,7 +35,7 @@ describe('FlowExplorerPageComponent', () => {
     };
     flowExplorerApi = {
       getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
-      getSystems: vi.fn(() => of([systemOption('crm-service'), systemOption('billing-core')])),
+      getSystems: vi.fn(() => of([systemOption('crm-service'), systemOption('catalog-core')])),
       getEndpointInventory: vi.fn(() => of(endpointInventory())),
       startJob: vi.fn(() => of(jobSnapshot({ status: 'COLLECTING_CONTEXT' }))),
       sendChatMessage: vi.fn(() =>
@@ -116,7 +116,7 @@ describe('FlowExplorerPageComponent', () => {
     expect(controls[5]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(3);
 
-    systems.next([systemOption('crm-service'), systemOption('billing-core')]);
+    systems.next([systemOption('crm-service'), systemOption('catalog-core')]);
     systems.complete();
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
@@ -147,12 +147,12 @@ describe('FlowExplorerPageComponent', () => {
     setInputValue(
       fixture.nativeElement,
       '.flow-explorer-select__search input[type="search"]',
-      'billing'
+      'catalog'
     );
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Billing Core');
+    expect(compiled.textContent).toContain('Catalog Core');
     expect(compiled.textContent).not.toContain('CRM Service');
   });
 
@@ -914,17 +914,17 @@ function systemOption(systemId: string): FlowExplorerSystemOption {
   const crm = systemId === 'crm-service';
   return {
     systemId,
-    name: crm ? 'CRM Service' : 'Billing Core',
-    shortName: crm ? 'CRM' : 'Billing',
+    name: crm ? 'CRM Service' : 'Catalog Core',
+    shortName: crm ? 'CRM' : 'Catalog',
     kind: 'internal-application',
     lifecycleStatus: 'active',
     operationalStatus: 'healthy',
     criticality: crm ? 'high' : 'medium',
-    summary: crm ? 'Customer relationship core API.' : 'Billing operations API.',
-    aliases: crm ? ['crm'] : ['billing'],
+    summary: crm ? 'Customer relationship core API.' : 'Catalog operations API.',
+    aliases: crm ? ['crm'] : ['catalog'],
     repositoryCount: crm ? 2 : 1,
     codeSearchScopeCount: 1,
-    ownerTeamIds: crm ? ['team-crm'] : ['team-billing']
+    ownerTeamIds: crm ? ['team-crm'] : ['team-catalog']
   };
 }
 

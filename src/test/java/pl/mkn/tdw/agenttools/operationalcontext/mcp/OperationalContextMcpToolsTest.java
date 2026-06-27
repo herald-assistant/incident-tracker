@@ -59,26 +59,26 @@ class OperationalContextMcpToolsTest {
         assertEquals("default", firstPage.affordances().profile());
         assertTrue(firstPage.affordances().links().stream()
                 .anyMatch(link -> link.rel().equals("first-entity") && link.tool().equals("opctx_get_entity")));
-        assertEquals("billing", firstPage.items().get(0).id());
+        assertEquals("catalog", firstPage.items().get(0).id());
 
         var filtered = tools.listEntities(
                 "system",
                 1,
                 20,
-                "payments-api",
+                "notifications-api",
                 "Filtruje system po nazwie serwisu.",
                 null
         );
 
         assertEquals(1, filtered.totalItems());
-        assertEquals("payments", filtered.items().get(0).id());
-        assertTrue(filtered.items().get(0).facets().get("repositoryIds").contains("payments-service"));
+        assertEquals("notifications", filtered.items().get(0).id());
+        assertTrue(filtered.items().get(0).facets().get("repositoryIds").contains("notifications-service"));
     }
 
     @Test
     void shouldSearchRankExactIdentityAndReturnMatchExplanation() {
         var result = tools.search(
-                "payments-api",
+                "notifications-api",
                 List.of("system", "boundedContext"),
                 8,
                 "Dopasowuje sygnal z logow do katalogu.",
@@ -86,12 +86,12 @@ class OperationalContextMcpToolsTest {
         );
 
         assertFalse(result.truncated());
-        assertEquals("payments", result.results().get(0).id());
+        assertEquals("notifications", result.results().get(0).id());
         assertEquals("system", result.results().get(0).type());
         assertTrue(result.results().get(0).confidence() >= 0.9);
         assertTrue(result.results().get(0).matchedFields().contains("identity"));
-        assertTrue(result.results().get(0).matchedSignals().contains("payments-api"));
-        assertTrue(result.results().get(0).why().contains("system:payments"));
+        assertTrue(result.results().get(0).matchedSignals().contains("notifications-api"));
+        assertTrue(result.results().get(0).why().contains("system:notifications"));
         assertEquals("default", result.affordances().profile());
         assertTrue(result.affordances().links().stream()
                 .anyMatch(link -> link.rel().equals("top-result") && link.tool().equals("opctx_get_entity")));
@@ -101,13 +101,13 @@ class OperationalContextMcpToolsTest {
     void shouldReturnSystemDetailWithRelationsSignalsCodeSearchHandoffAndOpenQuestions() {
         var result = tools.getEntity(
                 "system",
-                "payments",
+                "notifications",
                 List.of("overview", "relations", "signals", "codeSearch", "handoff", "sourceCoverage", "openQuestions"),
                 "Pobieram szczegoly systemu.",
                 null
         );
 
-        assertEquals("Payments", result.label());
+        assertEquals("Notifications", result.label());
         assertEquals("default", result.affordances().profile());
         assertTrue(result.affordances().availableExpansions().contains("include=codeSearch"));
         assertTrue(result.affordances().suggestedNextReads().stream()
@@ -116,12 +116,12 @@ class OperationalContextMcpToolsTest {
         assertTrue(result.relations().containsKey("references"));
         assertTrue(result.signals().containsKey("deployment"));
         assertFalse(result.signals().toString().contains("endpointPrefixes"));
-        assertFalse(result.signals().toString().contains("/payments"));
+        assertFalse(result.signals().toString().contains("/notifications"));
         assertTrue(result.codeSearch().containsKey("codeSearchScopes"));
         assertFalse(result.codeSearch().containsKey("localCodeSearchScope"));
         assertTrue(result.handoff().containsKey("requiredEvidence"));
         assertEquals(1, result.openQuestions().size());
-        assertTrue(result.sourceRefs().contains("systems.yml#payments"));
+        assertTrue(result.sourceRefs().contains("systems.yml#notifications"));
         assertFalse(result.overview().containsKey("payload"));
         assertFalse(result.relations().containsKey("rawSourcePreview"));
         assertFalse(result.toString().contains("rawSourcePreview"));
@@ -131,7 +131,7 @@ class OperationalContextMcpToolsTest {
     void shouldCompactDefaultEntityToolPayloadAndExposeTruncation() {
         var result = tools.getEntity(
                 "repository",
-                "payments-service",
+                "notifications-service",
                 null,
                 "Pobieram domyslny kompaktowy opis repozytorium.",
                 null
@@ -175,12 +175,12 @@ class OperationalContextMcpToolsTest {
     void shouldReturnDetailsForBoundedContextGlossaryTermAndCodeSearchScope() {
         var boundedContext = tools.getEntity(
                 "boundedContext",
-                "payments",
+                "notifications",
                 List.of("overview", "relations", "signals"),
                 "Sprawdzam bounded context.",
                 null
         );
-        assertEquals("Payments context", boundedContext.label());
+        assertEquals("Notifications context", boundedContext.label());
         assertTrue(boundedContext.relations().containsKey("references"));
         assertTrue(boundedContext.signals().containsKey("operationalSignals"));
 
@@ -192,17 +192,17 @@ class OperationalContextMcpToolsTest {
                 null
         );
         assertEquals("Authorization", glossaryTerm.label());
-        assertTrue(glossaryTerm.overview().get("definition").toString().contains("payment approval"));
+        assertTrue(glossaryTerm.overview().get("definition").toString().contains("notification delivery"));
         assertTrue(glossaryTerm.signals().containsKey("synonyms"));
 
         var codeSearchScope = tools.getEntity(
                 "codeSearchScope",
-                "payments-runtime",
+                "notifications-runtime",
                 List.of("relations", "codeSearch", "sourceCoverage"),
                 "Sprawdzam zakres szukania kodu.",
                 null
         );
-        assertEquals("Payments runtime code scope", codeSearchScope.label());
+        assertEquals("Notifications runtime code scope", codeSearchScope.label());
         assertTrue(codeSearchScope.relations().containsKey("repositories"));
         assertTrue(codeSearchScope.codeSearch().containsKey("database"));
         assertTrue(codeSearchScope.sourceCoverage().containsKey("limitations"));
@@ -210,7 +210,7 @@ class OperationalContextMcpToolsTest {
 
         var integration = tools.getEntity(
                 "integration",
-                "payment-provider-api",
+                "notification-gateway-api",
                 List.of("relations"),
                 "Sprawdzam role uczestnikow integracji.",
                 null
@@ -234,7 +234,7 @@ class OperationalContextMcpToolsTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(team()),
                 List.of(process()),
-                List.of(system("billing", "Billing", "billing-api"), system("payments", "Payments", "payments-api")),
+                List.of(system("catalog", "Catalog", "catalog-api"), system("notifications", "Notifications", "notifications-api")),
                 List.of(integration()),
                 List.of(repository()),
                 List.of(codeSearchScope()),
@@ -248,10 +248,10 @@ class OperationalContextMcpToolsTest {
 
     private Map<String, Object> team() {
         return map(
-                "id", "payments-team",
-                "name", "Payments Team",
-                "summary", "Owns the payments capability.",
-                "references", map("systems", List.of("payments"))
+                "id", "notifications-team",
+                "name", "Notifications Team",
+                "summary", "Owns the notifications capability.",
+                "references", map("systems", List.of("notifications"))
         );
     }
 
@@ -261,14 +261,14 @@ class OperationalContextMcpToolsTest {
                 "name", "Checkout",
                 "summary", "Customer checkout process.",
                 "participants", map(
-                        "primarySystems", List.of("payments"),
-                        "externalSystems", List.of("payment-provider")
+                        "primarySystems", List.of("notifications"),
+                        "externalSystems", List.of("notification-gateway")
                 ),
                 "references", map(
-                        "systems", List.of("payments"),
-                        "boundedContexts", List.of("payments")
+                        "systems", List.of("notifications"),
+                        "boundedContexts", List.of("notifications")
                 ),
-                "failureModes", List.of("Payment authorization timeout")
+                "failureModes", List.of("Notification delivery timeout")
         );
     }
 
@@ -276,35 +276,35 @@ class OperationalContextMcpToolsTest {
         return map(
                 "id", id,
                 "name", name,
-                "criticality", id.equals("payments") ? "high" : "medium",
+                "criticality", id.equals("notifications") ? "high" : "medium",
                 "summary", name + " system.",
                 "aliases", List.of(serviceName),
                 "references", map(
-                        "repositories", id.equals("payments") ? List.of("payments-service") : List.of(),
-                        "processes", id.equals("payments") ? List.of("checkout") : List.of(),
-                        "boundedContexts", id.equals("payments") ? List.of("payments") : List.of(),
-                        "teams", id.equals("payments") ? List.of("payments-team") : List.of()
+                        "repositories", id.equals("notifications") ? List.of("notifications-service") : List.of(),
+                        "processes", id.equals("notifications") ? List.of("checkout") : List.of(),
+                        "boundedContexts", id.equals("notifications") ? List.of("notifications") : List.of(),
+                        "teams", id.equals("notifications") ? List.of("notifications-team") : List.of()
                 ),
-                "responsibilities", id.equals("payments")
-                        ? List.of(map("teamId", "payments-team", "role", "owner"))
+                "responsibilities", id.equals("notifications")
+                        ? List.of(map("teamId", "notifications-team", "role", "owner"))
                         : List.of(),
                 "matchSignals", map(
                         "strong", map(
                                 "serviceNames", List.of(serviceName),
-                                "endpointPrefixes", id.equals("payments") ? List.of("/payments") : List.of("/billing")
+                                "endpointPrefixes", id.equals("notifications") ? List.of("/notifications") : List.of("/catalog")
                         )
                 ),
                 "deployment", map("serviceNames", List.of(serviceName)),
-                "codeSearchScope", id.equals("payments")
+                "codeSearchScope", id.equals("notifications")
                         ? map(
-                        "repositories", List.of("payments-service"),
-                        "packagePrefixes", List.of("pl.example.payments"),
-                        "classHints", List.of("PaymentController")
+                        "repositories", List.of("notifications-service"),
+                        "packagePrefixes", List.of("pl.example.notifications"),
+                        "classHints", List.of("NotificationController")
                 )
                         : map(),
-                "handoffHints", id.equals("payments")
+                "handoffHints", id.equals("notifications")
                         ? map(
-                        "defaultRoute", "Payments Team",
+                        "defaultRoute", "Notifications Team",
                         "requiredEvidence", List.of("correlationId", "provider response code")
                 )
                         : map()
@@ -313,52 +313,52 @@ class OperationalContextMcpToolsTest {
 
     private Map<String, Object> integration() {
         return map(
-                "id", "payment-provider-api",
-                "name", "Payment Provider API",
-                "summary", "External payment authorization provider.",
+                "id", "notification-gateway-api",
+                "name", "Notification Gateway API",
+                "summary", "External notification delivery gateway.",
                 "participants", map(
-                        "source", map("system", "payments"),
-                        "targets", List.of(map("system", "payment-provider", "externalOwner", "Provider")),
-                        "finalTargets", List.of(map("system", "payment-provider", "role", "server"))
+                        "source", map("system", "notifications"),
+                        "targets", List.of(map("system", "notification-gateway", "externalOwner", "Provider")),
+                        "finalTargets", List.of(map("system", "notification-gateway", "role", "server"))
                 ),
                 "transport", map("http", map("endpointPrefixes", List.of("/authorize"))),
-                "implementation", map("classHints", List.of("PaymentProviderClient"))
+                "implementation", map("classHints", List.of("NotificationGatewayClient"))
         );
     }
 
     private Map<String, Object> repository() {
         return map(
-                "id", "payments-service",
-                "name", "Payments Service",
+                "id", "notifications-service",
+                "name", "Notifications Service",
                 "repositoryType", "service",
-                "summary", "Runtime implementation of payments.",
+                "summary", "Runtime implementation of notifications.",
                 "git", map(
                         "provider", "gitlab",
                         "group", "platform",
-                        "project", "payments-service",
-                        "projectPath", "platform/payments-service",
-                        "aliases", List.of("payments-api")
+                        "project", "notifications-service",
+                        "projectPath", "platform/notifications-service",
+                        "aliases", List.of("notifications-api")
                 ),
                 "references", map(
-                        "systems", List.of("payments"),
-                        "boundedContexts", List.of("payments"),
+                        "systems", List.of("notifications"),
+                        "boundedContexts", List.of("notifications"),
                         "processes", List.of("checkout"),
-                        "integrations", List.of("payment-provider-api")
+                        "integrations", List.of("notification-gateway-api")
                 ),
                 "matchSignals", map(
                         "strong", map(
-                                "packagePrefixes", List.of("pl.example.payments"),
+                                "packagePrefixes", List.of("pl.example.notifications"),
                                 "classHints", List.of(
-                                        "PaymentController",
-                                        "PaymentService",
-                                        "PaymentRepository",
-                                        "PaymentProviderClient",
-                                        "PaymentEventPublisher",
-                                        "PaymentConfiguration",
-                                        "PaymentScheduler",
-                                        "PaymentEntity",
-                                        "PaymentCommandHandler",
-                                        "PaymentQueryHandler"
+                                        "NotificationController",
+                                        "NotificationService",
+                                        "NotificationRepository",
+                                        "NotificationGatewayClient",
+                                        "NotificationEventPublisher",
+                                        "NotificationConfiguration",
+                                        "NotificationScheduler",
+                                        "NotificationEntity",
+                                        "NotificationCommandHandler",
+                                        "NotificationQueryHandler"
                                 )
                         )
                 )
@@ -367,24 +367,24 @@ class OperationalContextMcpToolsTest {
 
     private Map<String, Object> codeSearchScope() {
         return map(
-                "id", "payments-runtime",
-                "name", "Payments runtime code scope",
+                "id", "notifications-runtime",
+                "name", "Notifications runtime code scope",
                 "scopeType", "system",
                 "lifecycleStatus", "active",
-                "target", map("type", "system", "id", "payments"),
+                "target", map("type", "system", "id", "notifications"),
                 "useFor", List.of("incident-analysis", "code-search"),
                 "repositories", List.of(map(
-                        "repoId", "payments-service",
+                        "repoId", "notifications-service",
                         "role", "primary-implementation",
                         "priority", 1,
                         "moduleIds", List.of("app"),
                         "reason", "Primary implementation."
                 )),
                 "hints", map(
-                        "packagePrefixes", List.of("pl.example.payments"),
-                        "classHints", List.of("PaymentController"),
-                        "endpointHints", List.of("/payments"),
-                        "database", map("schemas", List.of("PAYMENTS_APP"), "entities", List.of("PaymentEntity"))
+                        "packagePrefixes", List.of("pl.example.notifications"),
+                        "classHints", List.of("NotificationController"),
+                        "endpointHints", List.of("/notifications"),
+                        "database", map("schemas", List.of("NOTIFICATIONS_APP"), "entities", List.of("NotificationEntity"))
                 ),
                 "limitations", List.of("Generated clients are partial.")
         );
@@ -392,18 +392,18 @@ class OperationalContextMcpToolsTest {
 
     private Map<String, Object> boundedContext() {
         return map(
-                "id", "payments",
-                "name", "Payments context",
-                "summary", "Payment authorization and settlement context.",
+                "id", "notifications",
+                "name", "Notifications context",
+                "summary", "Notification delivery context.",
                 "references", map(
-                        "systems", List.of("payments"),
-                        "repositories", List.of("payments-service"),
+                        "systems", List.of("notifications"),
+                        "repositories", List.of("notifications-service"),
                         "terms", List.of("authorization")
                 ),
                 "operationalSignals", map(
-                        "serviceNames", List.of("payments-api"),
-                        "endpointPrefixes", List.of("/payments"),
-                        "packagePrefixes", List.of("pl.example.payments")
+                        "serviceNames", List.of("notifications-api"),
+                        "endpointPrefixes", List.of("/notifications"),
+                        "packagePrefixes", List.of("pl.example.notifications")
                 )
         );
     }
@@ -412,12 +412,12 @@ class OperationalContextMcpToolsTest {
         return new OperationalContextGlossaryTerm(
                 "authorization",
                 "Authorization",
-                "payments",
-                "External payment approval before settlement.",
+                "notifications",
+                "External notification delivery before acknowledgement.",
                 List.of("checkout"),
                 List.of("authentication"),
-                List.of("authorization", "payment approval"),
-                List.of("payments"),
+                List.of("authorization", "notification delivery"),
+                List.of("notifications"),
                 List.of("authz"),
                 List.of()
         );
@@ -425,10 +425,10 @@ class OperationalContextMcpToolsTest {
 
     private OperationalContextHandoffRule handoffRule() {
         return new OperationalContextHandoffRule(
-                "payment-provider-timeout",
-                "Payment provider timeout",
-                "payments-team",
-                List.of("Timeout from payment provider"),
+                "notification-gateway-timeout",
+                "Notification gateway timeout",
+                "notifications-team",
+                List.of("Timeout from notification gateway"),
                 List.of("Local validation failure"),
                 List.of("correlationId"),
                 List.of("Check provider status."),
@@ -439,10 +439,10 @@ class OperationalContextMcpToolsTest {
 
     private OperationalContextOpenQuestion openQuestion() {
         return new OperationalContextOpenQuestion(
-                "open-question-payments-owner",
+                "open-question-notifications-owner",
                 "systems.yml",
                 "system",
-                "payments",
+                "notifications",
                 "Confirm fallback owner for provider outages.",
                 "warning",
                 "open"

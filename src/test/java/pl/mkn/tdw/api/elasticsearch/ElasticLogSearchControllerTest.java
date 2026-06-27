@@ -53,7 +53,7 @@ class ElasticLogSearchControllerTest {
                                 "ERROR",
                                 "case-evaluation-service",
                                 "c.e.synthetic.workflow.WorkflowApiExceptionHandler",
-                                "Loan processing exception",
+                                "Case intake exception",
                                 "EntityNotFoundException",
                                 "https-jsse-nio-8443-exec-10",
                                 "a8cdba8fe9a5ec96",

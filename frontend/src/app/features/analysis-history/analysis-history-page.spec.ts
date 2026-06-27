@@ -30,7 +30,7 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(historyApi.listRuns).toHaveBeenCalledTimes(1);
     expect(historyApi.getRun).not.toHaveBeenCalled();
     expect(historyApi.exportRun).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Billing corr-123');
+    expect(fixture.nativeElement.textContent).toContain('Catalog corr-123');
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
   });
 
@@ -43,13 +43,13 @@ describe('AnalysisHistoryPageComponent', () => {
     fixture.componentInstance.filterControl.setValue('flow');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Billing corr-123');
+    expect(fixture.nativeElement.textContent).not.toContain('Catalog corr-123');
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
 
-    fixture.componentInstance.filterControl.setValue('billing');
+    fixture.componentInstance.filterControl.setValue('catalog');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Billing corr-123');
+    expect(fixture.nativeElement.textContent).toContain('Catalog corr-123');
     expect(fixture.nativeElement.textContent).not.toContain('Flow /customers goal');
   });
 
@@ -67,7 +67,7 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/incident-analysis'], {
       queryParams: { localRunId: 'analysis-1' }
     });
-    expect(fixture.nativeElement.textContent).not.toContain('Analiza funkcjonalna procesu billingowego.');
+    expect(fixture.nativeElement.textContent).not.toContain('Analiza funkcjonalna procesu katalogowego.');
   });
 
   it('should route a flow run to the Flow Explorer feature screen', async () => {
@@ -119,20 +119,20 @@ describe('AnalysisHistoryPageComponent', () => {
     const run = listRuns()[0]!;
     const renamedDetail = {
       ...detailForRun(run),
-      name: 'Nowa nazwa billing'
+      name: 'Nowa nazwa catalog'
     };
     historyApi.renameRun.mockReturnValueOnce(of(renamedDetail));
 
     fixture.componentInstance.startRename(run);
-    fixture.componentInstance.renameControl.setValue('Nowa nazwa billing');
+    fixture.componentInstance.renameControl.setValue('Nowa nazwa catalog');
     fixture.componentInstance.saveRename(new Event('submit'), run);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(historyApi.renameRun).toHaveBeenCalledWith('analysis-1', { name: 'Nowa nazwa billing' });
-    expect(fixture.nativeElement.textContent).toContain('Nowa nazwa billing');
-    expect(fixture.nativeElement.textContent).not.toContain('Billing corr-123');
+    expect(historyApi.renameRun).toHaveBeenCalledWith('analysis-1', { name: 'Nowa nazwa catalog' });
+    expect(fixture.nativeElement.textContent).toContain('Nowa nazwa catalog');
+    expect(fixture.nativeElement.textContent).not.toContain('Catalog corr-123');
   });
 
   it('should delete a confirmed local run from the list', async () => {
@@ -147,7 +147,7 @@ describe('AnalysisHistoryPageComponent', () => {
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(historyApi.deleteRun).toHaveBeenCalledWith('analysis-1');
-    expect(fixture.nativeElement.textContent).not.toContain('Billing corr-123');
+    expect(fixture.nativeElement.textContent).not.toContain('Catalog corr-123');
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
   });
 
@@ -199,7 +199,7 @@ function listRuns(): LocalAnalysisRunListItemResponse[] {
     {
       analysisId: 'analysis-1',
       feature: 'incident-analysis',
-      name: 'Billing corr-123',
+      name: 'Catalog corr-123',
       createdAt: '2026-05-02T10:00:00Z',
       updatedAt: '2026-05-02T10:04:00Z',
       completedAt: '2026-05-02T10:04:00Z'
@@ -301,10 +301,10 @@ function completedJob(analysisId: string): AnalysisJobStateSnapshot {
       environment: 'dev3',
       gitLabBranch: 'main',
       detectedProblem: 'DOWNSTREAM_TIMEOUT',
-      affectedProcess: 'Billing',
-      affectedBoundedContext: 'Billing Context',
-      affectedTeam: 'Billing Team',
-      functionalAnalysis: 'Analiza funkcjonalna procesu billingowego.',
+      affectedProcess: 'Catalog',
+      affectedBoundedContext: 'Catalog Context',
+      affectedTeam: 'Catalog Team',
+      functionalAnalysis: 'Analiza funkcjonalna procesu katalogowego.',
       technicalAnalysis: 'Analiza techniczna timeoutu w kliencie katalogu.',
       confidence: 'medium',
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],

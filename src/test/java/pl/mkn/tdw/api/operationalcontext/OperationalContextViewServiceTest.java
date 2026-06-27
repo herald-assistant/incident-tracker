@@ -216,8 +216,8 @@ class OperationalContextViewServiceTest {
                                 "matchSignals", map("exact", map("serviceNames", List.of("shared-service"), "endpointPrefixes", List.of("/api/shared")))
                         ),
                         map(
-                                "id", "billing-core",
-                                "name", "Billing Core",
+                                "id", "catalog-core",
+                                "name", "Catalog Core",
                                 "kind", "internal-application",
                                 "matchSignals", map("exact", map("serviceNames", List.of("shared-service"), "endpointPrefixes", List.of("/api/shared")))
                         )

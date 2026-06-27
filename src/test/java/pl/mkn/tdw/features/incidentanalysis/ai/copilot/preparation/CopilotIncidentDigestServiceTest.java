@@ -30,21 +30,21 @@ class CopilotIncidentDigestServiceTest {
         assertTrue(digest.contains("- GitLab: `DIRECT_COLLABORATOR_ATTACHED`"));
         assertTrue(digest.contains("## Strongest log signals"));
         assertTrue(digest.contains("- exception: `java.lang.IllegalStateException: failed`"));
-        assertTrue(digest.contains("- className: `com.example.CustomerBillingService`"));
+        assertTrue(digest.contains("- className: `com.example.CustomerCatalogService`"));
         assertTrue(digest.contains("## Deployment facts"));
-        assertTrue(digest.contains("- projectNameHint: `crm-billing-service`"));
+        assertTrue(digest.contains("- projectNameHint: `crm-catalog-service`"));
         assertTrue(digest.contains("- commitSha: `abc123`"));
         assertTrue(digest.contains("## Operational code search scope"));
-        assertTrue(digest.contains("- code search scopes: `billing-code-search`"));
-        assertTrue(digest.contains("- GitLab projects to search as one semantic implementation scope: `crm-billing-service`, `libs/billing-shared`"));
-        assertTrue(digest.contains("- code search repository roles: `billing-code-search:crm-billing-service-repo:primary-implementation:priority=1`, `billing-code-search:billing-shared-repo:supporting-library:priority=2`"));
-        assertTrue(digest.contains("- package roots: `com.example.billing.shared`"));
-        assertTrue(digest.contains("- class hints: `BillingRules`"));
+        assertTrue(digest.contains("- code search scopes: `catalog-code-search`"));
+        assertTrue(digest.contains("- GitLab projects to search as one semantic implementation scope: `crm-catalog-service`, `libs/catalog-shared`"));
+        assertTrue(digest.contains("- code search repository roles: `catalog-code-search:crm-catalog-service-repo:primary-implementation:priority=1`, `catalog-code-search:catalog-shared-repo:supporting-library:priority=2`"));
+        assertTrue(digest.contains("- package roots: `com.example.catalog.shared`"));
+        assertTrue(digest.contains("- class hints: `CatalogRules`"));
         assertTrue(digest.contains("## Runtime signals"));
         assertTrue(digest.contains("- Dynatrace collection status: `COLLECTED`"));
-        assertTrue(digest.contains("- matched services: `crm-billing-service`"));
+        assertTrue(digest.contains("- matched services: `crm-catalog-service`"));
         assertTrue(digest.contains("## Code evidence"));
-        assertTrue(digest.contains("- project: `crm-billing-service`"));
+        assertTrue(digest.contains("- project: `crm-catalog-service`"));
         assertTrue(digest.contains("- coverage: `DIRECT_COLLABORATOR_ATTACHED`"));
         assertTrue(digest.contains("## Known evidence gaps"));
         assertTrue(digest.contains("`MISSING_FLOW_CONTEXT`"));
@@ -74,13 +74,13 @@ class CopilotIncidentDigestServiceTest {
                                 "elasticsearch",
                                 "logs",
                                 List.of(item(
-                                        "crm-billing-service log entry",
-                                        attr("serviceName", "crm-billing-service"),
-                                        attr("className", "com.example.CustomerBillingService"),
-                                        attr("message", "Failed to settle invoice"),
+                                        "crm-catalog-service log entry",
+                                        attr("serviceName", "crm-catalog-service"),
+                                        attr("className", "com.example.CustomerCatalogService"),
+                                        attr("message", "Failed to resolve catalog item"),
                                         attr("exception", """
                                                 java.lang.IllegalStateException: failed
-                                                \tat com.example.CustomerBillingService.settle(CustomerBillingService.java:42)
+                                                \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
                                                 """)
                                 ))
                         ),
@@ -89,9 +89,9 @@ class CopilotIncidentDigestServiceTest {
                                 "resolved-deployment",
                                 List.of(item(
                                         "deployment",
-                                        attr("projectNameHint", "crm-billing-service"),
-                                        attr("containerName", "billing"),
-                                        attr("containerImage", "registry/billing:abc123"),
+                                        attr("projectNameHint", "crm-catalog-service"),
+                                        attr("containerName", "catalog"),
+                                        attr("containerImage", "registry/catalog:abc123"),
                                         attr("commitSha", "abc123")
                                 ))
                         ),
@@ -108,7 +108,7 @@ class CopilotIncidentDigestServiceTest {
                                         item(
                                                 "Dynatrace component",
                                                 attr("dynatraceItemType", "component-status"),
-                                                attr("componentName", "crm-billing-service"),
+                                                attr("componentName", "crm-catalog-service"),
                                                 attr("correlationStatus", "MATCHED"),
                                                 attr("componentSignalStatus", "SIGNALS_PRESENT"),
                                                 attr("problemDisplayId", "P-123"),
@@ -120,15 +120,15 @@ class CopilotIncidentDigestServiceTest {
                                 "gitlab",
                                 "resolved-code",
                                 List.of(item(
-                                        "CustomerBillingService and repository collaborator",
-                                        attr("projectName", "crm-billing-service"),
-                                        attr("filePath", "src/main/java/com/example/CustomerBillingService.java"),
-                                        attr("symbol", "com.example.CustomerBillingService"),
+                                        "CustomerCatalogService and repository collaborator",
+                                        attr("projectName", "crm-catalog-service"),
+                                        attr("filePath", "src/main/java/com/example/CustomerCatalogService.java"),
+                                        attr("symbol", "com.example.CustomerCatalogService"),
                                         attr("lineNumber", "42"),
                                         attr("content", """
-                                                class CustomerBillingService {
-                                                    Invoice settle(String invoiceId) {
-                                                        return billingRepository.find(invoiceId);
+                                                class CustomerCatalogService {
+                                                    CatalogItem resolve(String itemId) {
+                                                        return catalogRepository.find(itemId);
                                                     }
                                                 }
                                                 """),
@@ -140,24 +140,24 @@ class CopilotIncidentDigestServiceTest {
                                 "matched-context",
                                 List.of(
                                         item(
-                                                "Operational system billing",
-                                                attr("systemId", "billing"),
-                                                attr("name", "Billing"),
-                                                attr("repositoryIds", "crm-billing-service-repo; billing-shared-repo"),
-                                                attr("codeSearchScopeIds", "billing-code-search"),
-                                                attr("codeSearchRepositoryIds", "crm-billing-service-repo; billing-shared-repo"),
-                                                attr("codeSearchProjects", "crm-billing-service; libs/billing-shared"),
-                                                attr("codeSearchRepositoryRoles", "billing-code-search:crm-billing-service-repo:primary-implementation:priority=1; billing-code-search:billing-shared-repo:supporting-library:priority=2"),
-                                                attr("sourcePackages", "com.example.billing.shared"),
-                                                attr("classHints", "BillingRules")
+                                                "Operational system catalog",
+                                                attr("systemId", "catalog"),
+                                                attr("name", "Catalog"),
+                                                attr("repositoryIds", "crm-catalog-service-repo; catalog-shared-repo"),
+                                                attr("codeSearchScopeIds", "catalog-code-search"),
+                                                attr("codeSearchRepositoryIds", "crm-catalog-service-repo; catalog-shared-repo"),
+                                                attr("codeSearchProjects", "crm-catalog-service; libs/catalog-shared"),
+                                                attr("codeSearchRepositoryRoles", "catalog-code-search:crm-catalog-service-repo:primary-implementation:priority=1; catalog-code-search:catalog-shared-repo:supporting-library:priority=2"),
+                                                attr("sourcePackages", "com.example.catalog.shared"),
+                                                attr("classHints", "CatalogRules")
                                         ),
                                         item(
-                                                "Operational repository billing-shared-repo",
-                                                attr("repositoryId", "billing-shared-repo"),
-                                                attr("projectPath", "libs/billing-shared"),
-                                                attr("systemIds", "billing"),
-                                                attr("sourcePackages", "com.example.billing.shared"),
-                                                attr("classHints", "BillingRules")
+                                                "Operational repository catalog-shared-repo",
+                                                attr("repositoryId", "catalog-shared-repo"),
+                                                attr("projectPath", "libs/catalog-shared"),
+                                                attr("systemIds", "catalog"),
+                                                attr("sourcePackages", "com.example.catalog.shared"),
+                                                attr("classHints", "CatalogRules")
                                         )
                                 )
                         )

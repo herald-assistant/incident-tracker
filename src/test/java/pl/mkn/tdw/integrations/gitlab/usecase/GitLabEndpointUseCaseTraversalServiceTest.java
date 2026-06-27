@@ -119,11 +119,11 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.DOMAIN_METHOD_CALL
                         && relation.to().contains("Customer#update")));
         assertFalse(byPath.containsKey(path("domain/DecisionChangeEvent.java")), byPath.keySet().toString());
-        assertFalse(byPath.containsKey(path("domain/CreditCaseUpdatedEvent.java")), byPath.keySet().toString());
+        assertFalse(byPath.containsKey(path("domain/CaseProfileUpdatedEvent.java")), byPath.keySet().toString());
         assertFalse(result.relations().stream()
                 .anyMatch(relation -> relation.to().contains("DecisionChangeEvent#")));
         assertFalse(result.relations().stream()
-                .anyMatch(relation -> relation.to().contains("CreditCaseUpdatedEvent#")));
+                .anyMatch(relation -> relation.to().contains("CaseProfileUpdatedEvent#")));
     }
 
     @Test
@@ -778,7 +778,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
         sources.put(path("application/UpdateCustomerService.java"), """
                 package com.example.crm.customer.application;
 
-                import com.example.crm.customer.domain.CreditCaseUpdatedEvent;
+                import com.example.crm.customer.domain.CaseProfileUpdatedEvent;
                 import com.example.crm.customer.domain.DecisionChangeEvent;
                 import com.example.crm.customer.domain.Customer;
                 import com.example.crm.customer.domain.CustomerRepositoryPort;
@@ -804,8 +804,8 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                     }
 
                     @EventListener
-                    void update(CreditCaseUpdatedEvent event) {
-                        event.refreshCreditCase();
+                    void update(CaseProfileUpdatedEvent event) {
+                        event.refreshCaseProfile();
                     }
                 }
                 """);
@@ -958,11 +958,11 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                     }
                 }
                 """);
-        sources.put(path("domain/CreditCaseUpdatedEvent.java"), """
+        sources.put(path("domain/CaseProfileUpdatedEvent.java"), """
                 package com.example.crm.customer.domain;
 
-                public class CreditCaseUpdatedEvent {
-                    public void refreshCreditCase() {
+                public class CaseProfileUpdatedEvent {
+                    public void refreshCaseProfile() {
                     }
                 }
                 """);

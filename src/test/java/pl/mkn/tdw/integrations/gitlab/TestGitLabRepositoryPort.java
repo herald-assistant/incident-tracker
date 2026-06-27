@@ -131,7 +131,7 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
         var projectNames = new LinkedHashSet<>(query.projectNames());
         var keywords = query.keywords();
 
-        if (projectNames.contains("crm-billing-service")
+        if (projectNames.contains("crm-catalog-service")
                 || projectNames.contains("crm-customer-profile-service")
                 || projectNames.contains("crm-customer-client-service")
                 || keywords.contains("timeout")) {

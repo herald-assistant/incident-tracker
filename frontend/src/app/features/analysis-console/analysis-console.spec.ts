@@ -179,7 +179,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
-    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu billingowego.');
+    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu katalogowego.');
     expect(fixture.nativeElement.textContent).toContain('Lokalny run został otwarty z historii.');
   });
 
@@ -520,10 +520,10 @@ function completedJob(): AnalysisJobStateSnapshot {
       environment: 'dev3',
       gitLabBranch: 'main',
       detectedProblem: 'DOWNSTREAM_TIMEOUT',
-      affectedProcess: 'Billing',
-      affectedBoundedContext: 'Billing Context',
-      affectedTeam: 'Billing Team',
-      functionalAnalysis: 'Analiza funkcjonalna procesu billingowego.',
+      affectedProcess: 'Catalog',
+      affectedBoundedContext: 'Catalog Context',
+      affectedTeam: 'Catalog Team',
+      functionalAnalysis: 'Analiza funkcjonalna procesu katalogowego.',
       technicalAnalysis: 'Analiza techniczna timeoutu w kliencie katalogu.',
       confidence: 'medium',
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
@@ -537,7 +537,7 @@ function localRunDetail(job: AnalysisJobStateSnapshot = completedJob()): LocalAn
   return {
     analysisId: 'analysis-1',
     feature: 'incident-analysis',
-    name: 'Billing corr-123',
+    name: 'Catalog corr-123',
     createdAt: '2026-05-02T10:00:00Z',
     updatedAt: '2026-05-02T10:05:00Z',
     completedAt: '2026-05-02T10:05:00Z',

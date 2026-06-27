@@ -367,7 +367,7 @@ describe('AnalysisStepsPanelComponent', () => {
           toolName: 'gitlab_read_java_method_slice',
           arguments: {
             reason: 'Potrzebuje szczegolow glownej metody dla walidacji.',
-            filePath: 'src/main/java/com/example/crm/customer/LaunchCollateralsRequest.java'
+            filePath: 'src/main/java/com/example/crm/customer/LaunchSegmentsRequest.java'
           }
         }
       },
@@ -403,7 +403,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(toolItem?.querySelector('.ai-work-item__text')?.textContent).toContain(
       'Potrzebuje szczegolow glownej metody dla walidacji.'
     );
-    expect(detailsTitle).toContain('LaunchCollateralsRequest.java');
+    expect(detailsTitle).toContain('LaunchSegmentsRequest.java');
     expect(detailsTitle).not.toContain('gitlab_read_java_method_slice');
   });
 
@@ -694,21 +694,21 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
     category: 'runtime-signals',
     items: [
       {
-        title: 'Dynatrace matched service BANKING @ backend-zt002',
+        title: 'Dynatrace matched service CATALOG @ backend-zt002',
         attributes: [
           {
             name: 'displayName',
             value:
-              'BANKING @ backend-zt002 || SpringBoot loan-origination-service app || loan-origination-service'
+              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || case-intake-service'
           },
           { name: 'entityId', value: 'SERVICE-ABC123' },
           { name: 'matchScore', value: '315' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'banking-main-zt002' },
+          { name: 'matchedNamespaces', value: 'catalog-main-zt002' },
           { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
-          { name: 'matchedServiceNames', value: 'loan-origination-service' }
+          { name: 'matchedServiceNames', value: 'case-intake-service' }
         ]
       },
       {
@@ -717,16 +717,16 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'displayName',
             value:
-              'BANKING @ backend-zt002 || SpringBoot loan-origination-service app || CustomerController'
+              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'matchScore', value: '280' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'banking-main-zt002' },
+          { name: 'matchedNamespaces', value: 'catalog-main-zt002' },
           { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
-          { name: 'matchedServiceNames', value: 'loan-origination-service' }
+          { name: 'matchedServiceNames', value: 'case-intake-service' }
         ]
       },
       {
@@ -735,16 +735,16 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'displayName',
             value:
-              'BANKING @ backend-zt002 || SpringBoot loan-origination-service app || ProductController'
+              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || ProductController'
           },
           { name: 'entityId', value: 'SERVICE-ABC125' },
           { name: 'matchScore', value: '240' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'banking-main-zt002' },
+          { name: 'matchedNamespaces', value: 'catalog-main-zt002' },
           { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
-          { name: 'matchedServiceNames', value: 'loan-origination-service' }
+          { name: 'matchedServiceNames', value: 'case-intake-service' }
         ]
       },
       {
@@ -764,8 +764,8 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
             value:
               'Failed database connects [DATABASE_CONNECTION_FAILURE] (root cause) || Service unavailable [AVAILABILITY_EVIDENCE] || RabbitMQ Queue Listener lag [QUEUE_BACKLOG]'
           },
-          { name: 'affectedEntities', value: 'backend-zt002, payment-service' },
-          { name: 'impactedEntities', value: 'payment-api' },
+          { name: 'affectedEntities', value: 'backend-zt002, notification-service' },
+          { name: 'impactedEntities', value: 'notification-api' },
           {
             name: 'evidenceSummary',
             value:
@@ -774,9 +774,9 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
         ]
       },
       {
-        title: 'Dynatrace metric service.response.time.p95 for loan-origination-service',
+        title: 'Dynatrace metric service.response.time.p95 for case-intake-service',
         attributes: [
-          { name: 'entityDisplayName', value: 'loan-origination-service' },
+          { name: 'entityDisplayName', value: 'case-intake-service' },
           { name: 'entityId', value: 'SERVICE-ABC123' },
           { name: 'metricId', value: 'builtin:service.response.time' },
           { name: 'metricLabel', value: 'service.response.time.p95' },
@@ -797,7 +797,7 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'entityDisplayName',
             value:
-              'BANKING @ backend-zt002 || SpringBoot loan-origination-service app || CustomerController'
+              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'metricId', value: 'builtin:service.response.time' },
@@ -819,7 +819,7 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'entityDisplayName',
             value:
-              'BANKING @ backend-zt002 || SpringBoot loan-origination-service app || CustomerController'
+              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'metricId', value: 'builtin:service.errors.total.count' },
@@ -1255,7 +1255,7 @@ function buildAnalysisResult() {
     affectedProcess: 'Obsługa klienta',
     affectedBoundedContext: 'Customer Context',
     affectedTeam: 'Customer Team',
-    functionalAnalysis: 'Backend zwraca timeout przy obsłudze żądania kredytowego w procesie obsługi klienta.',
+    functionalAnalysis: 'Backend zwraca timeout przy obsłudze żądania katalogowego w procesie obsługi klienta.',
     technicalAnalysis: 'Sprawdź połączenia backendu z bazą danych oraz timeouty w `CustomerController`.',
     confidence: 'medium',
     visibilityLimits: ['Brak potwierdzenia po stronie bazy danych.'],

@@ -36,9 +36,9 @@ class SyntheticAdaptersTest {
                 "timeout-123",
                 "CRM/runtime",
                 "main",
-                List.of("crm-billing-service", "crm-customer-profile-service"),
-                List.of("GET /crm/customers", "POST /crm/payments"),
-                List.of("timeout", "customer-profile", "payment")
+                List.of("crm-catalog-service", "crm-customer-profile-service"),
+                List.of("GET /crm/customers", "POST /crm/notifications"),
+                List.of("timeout", "customer-profile", "notification")
         ));
 
         assertEquals(2, logEntries.size());

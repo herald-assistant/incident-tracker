@@ -71,7 +71,7 @@ class ElasticRestLogAdapterTest {
                                     "class": "c.e.synthetic.workflow.WorkflowApiExceptionHandler",
                                     "correlationId": "69dab5bdc21dbf9099025d075e682e8a",
                                     "exception": "com.example.synthetic.workflowstate.services.common.exception.EntityNotFoundException: ActiveCaseRecord with caseId 7001234567 not found",
-                                    "message": "Loan processing exception",
+                                    "message": "Case intake exception",
                                     "microservice": "case-evaluation-service",
                                     "spanId": "a8cdba8fe9a5ec96",
                                     "thread": "https-jsse-nio-8443-exec-10",

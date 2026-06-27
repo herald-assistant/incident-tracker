@@ -34,30 +34,30 @@ class FlowExplorerEndpointInventoryControllerTest {
     @Test
     void shouldReturnEndpointInventoryForSystem() throws Exception {
         when(flowExplorerEndpointInventoryService.endpoints(
-                "billing-core",
+                "catalog-core",
                 "feature/FLOW-42",
                 "/api",
                 "get"
         )).thenReturn(inventory());
 
-        mockMvc.perform(get("/api/flow-explorer/systems/billing-core/endpoints")
+        mockMvc.perform(get("/api/flow-explorer/systems/catalog-core/endpoints")
                         .param("branch", "feature/FLOW-42")
                         .param("endpointPathPrefix", "/api")
                         .param("httpMethod", "get"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.systemId").value("billing-core"))
+                .andExpect(jsonPath("$.systemId").value("catalog-core"))
                 .andExpect(jsonPath("$.requestedBranch").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.resolvedRef").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.gitLabGroup").value("platform/backend"))
                 .andExpect(jsonPath("$.repositories", hasSize(1)))
                 .andExpect(jsonPath("$.endpoints", hasSize(1)))
                 .andExpect(jsonPath("$.endpoints[0].method").value("GET"))
-                .andExpect(jsonPath("$.endpoints[0].path").value("/api/billing/{id}"))
+                .andExpect(jsonPath("$.endpoints[0].path").value("/api/catalog/{id}"))
                 .andExpect(jsonPath("$.endpoints[0].tooltipDetails.parameters[0].description")
-                        .value("customer billing id"));
+                        .value("catalog item id"));
 
         verify(flowExplorerEndpointInventoryService).endpoints(
-                "billing-core",
+                "catalog-core",
                 "feature/FLOW-42",
                 "/api",
                 "get"
@@ -84,10 +84,10 @@ class FlowExplorerEndpointInventoryControllerTest {
                 "path",
                 true,
                 "string",
-                "customer billing id"
+                "catalog item id"
         );
         return new FlowExplorerEndpointInventoryResponse(
-                "billing-core",
+                "catalog-core",
                 "feature/FLOW-42",
                 "feature/FLOW-42",
                 "platform/backend",
@@ -100,9 +100,9 @@ class FlowExplorerEndpointInventoryControllerTest {
                 2,
                 false,
                 List.of(new RepositoryInventoryResponse(
-                        "billing-api",
-                        "billing-api",
-                        "platform/backend/billing-api",
+                        "catalog-api",
+                        "catalog-api",
+                        "platform/backend/catalog-api",
                         "feature/FLOW-42",
                         3,
                         2,
@@ -111,41 +111,41 @@ class FlowExplorerEndpointInventoryControllerTest {
                         List.of()
                 )),
                 List.of(new EndpointOptionResponse(
-                        "billing-api:GET /api/billing/{id}",
+                        "catalog-api:GET /api/catalog/{id}",
                         "GET",
                         List.of("GET"),
-                        "/api/billing/{id}",
-                        "/api/billing/{id}",
-                        "Billing lookup",
-                        "Returns billing details.",
-                        "getBilling",
-                        List.of("billing"),
-                        "BillingController",
-                        "getBilling",
+                        "/api/catalog/{id}",
+                        "/api/catalog/{id}",
+                        "Catalog lookup",
+                        "Returns catalog details.",
+                        "getCatalog",
+                        List.of("catalog"),
+                        "CatalogController",
+                        "getCatalog",
                         new EndpointSourceResponse(
-                                "billing-api",
-                                "billing-api",
-                                "platform/backend/billing-api",
-                                "src/main/java/com/example/billing/BillingController.java",
+                                "catalog-api",
+                                "catalog-api",
+                                "platform/backend/catalog-api",
+                                "src/main/java/com/example/catalog/CatalogController.java",
                                 12,
                                 24
                         ),
                         List.of(parameter),
                         "high",
                         List.of(),
-                        List.of("billing-api:src/main/java/com/example/billing/BillingController.java"),
+                        List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java"),
                         new EndpointTooltipDetailsResponse(
                                 "OPENAPI_YAML",
-                                "Billing lookup",
-                                "Returns billing details.",
-                                "getBilling",
-                                List.of("billing"),
+                                "Catalog lookup",
+                                "Returns catalog details.",
+                                "getCatalog",
+                                List.of("catalog"),
                                 List.of(parameter),
                                 List.of("@PathVariable String id"),
-                                List.of("BillingResponse"),
+                                List.of("CatalogResponse"),
                                 List.of("RestController", "GetMapping"),
                                 List.of(),
-                                List.of("billing-api:src/main/java/com/example/billing/BillingController.java")
+                                List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java")
                         )
                 )),
                 List.of()

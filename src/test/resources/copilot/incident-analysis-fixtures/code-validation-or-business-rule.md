@@ -22,16 +22,16 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-rule-001`
-- trigger: command `ApprovePayment`
+- trigger: command `PublishNotification`
 - failure point: status transition validation
-- log: `BusinessRuleViolationException: payment cannot move from CANCELLED to APPROVED`
-- code hint: `PaymentStatusTransitionValidator.validate(from, to)`
-- object: payment `PAY-42`
+- log: `BusinessRuleViolationException: notification cannot move from CANCELLED to PUBLISHED`
+- code hint: `NotificationStatusTransitionValidator.validate(from, to)`
+- object: notification `NOTIF-42`
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `command -> payment load -> transition decision -> validation rejection`.
+   `command -> notification load -> transition decision -> validation rejection`.
 2. Zaladuj `incident-analysis-gitlab-tools`.
 3. Przeczytaj walidator, service decision albo rule table w kodzie.
 4. Oddziel poprawne odrzucenie biznesowe od blednej implementacji reguly.

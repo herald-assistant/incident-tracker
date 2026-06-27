@@ -141,7 +141,7 @@ class AnalysisJobControllerTest {
                                 "dev/atlas",
                                 "DOWNSTREAM_TIMEOUT",
                                 "Rozliczenie klienta",
-                                "Billing Context",
+                                "Catalog Context",
                                 "Core Integration Team",
                                 "Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych.",
                                 "Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke.",
@@ -158,7 +158,7 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.preparedPrompt").value("Prompt body for timeout-123"))
                 .andExpect(jsonPath("$.result.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
                 .andExpect(jsonPath("$.result.affectedProcess").value("Rozliczenie klienta"))
-                .andExpect(jsonPath("$.result.affectedBoundedContext").value("Billing Context"))
+                .andExpect(jsonPath("$.result.affectedBoundedContext").value("Catalog Context"))
                 .andExpect(jsonPath("$.result.affectedTeam").value("Core Integration Team"))
                 .andExpect(jsonPath("$.result.functionalAnalysis").value("Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych."))
                 .andExpect(jsonPath("$.result.technicalAnalysis").value("Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke."))

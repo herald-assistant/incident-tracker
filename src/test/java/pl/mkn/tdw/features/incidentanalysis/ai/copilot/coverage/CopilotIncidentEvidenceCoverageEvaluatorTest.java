@@ -84,12 +84,12 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "logs",
                 List.of(item(
                         "error log",
-                        attr("serviceName", "crm-billing-service"),
-                        attr("className", "com.example.CustomerBillingService"),
-                        attr("message", "Failed to settle invoice INV-1"),
+                        attr("serviceName", "crm-catalog-service"),
+                        attr("className", "com.example.CustomerCatalogService"),
+                        attr("message", "Failed to resolve catalog item ITEM-1"),
                         attr("exception", """
                                 java.lang.IllegalStateException: failed
-                                \tat com.example.CustomerBillingService.settle(CustomerBillingService.java:42)
+                                \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
                                 """)
                 ))
         ))));
@@ -104,7 +104,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "logs",
                 List.of(item(
                         "repository error",
-                        attr("serviceName", "crm-billing-service"),
+                        attr("serviceName", "crm-catalog-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
                 ))
         ))));

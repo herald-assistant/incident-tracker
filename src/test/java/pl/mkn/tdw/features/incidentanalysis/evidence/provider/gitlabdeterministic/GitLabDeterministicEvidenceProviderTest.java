@@ -476,7 +476,7 @@ class GitLabDeterministicEvidenceProviderTest {
                         "ERROR",
                         "case-evaluation-service",
                         "c.e.synthetic.workflow.WorkflowApiExceptionHandler",
-                        "Loan processing exception",
+                        "Case intake exception",
                         """
                                 com.example.synthetic.workflowstate.services.common.exception.EntityNotFoundException: ActiveCaseRecord with caseId 7001234567 not found
                                 \tat com.example.synthetic.workflowstate.domain.core.ActiveCaseRecordDomainRepository.getLatestActiveCaseRecordByCaseIdAndStatuses(ActiveCaseRecordDomainRepository.java:74)
@@ -533,7 +533,7 @@ class GitLabDeterministicEvidenceProviderTest {
                         "ERROR",
                         "case-evaluation-service",
                         "c.e.synthetic.workflow.WorkflowApiExceptionHandler",
-                        "Loan processing exception",
+                        "Case intake exception",
                         """
                                 com.example.synthetic.workflowstate.services.common.exception.EntityNotFoundException: ActiveCaseRecord with caseId 7007654321 not found
                                 \tat com.example.synthetic.workflowstate.domain.core.ActiveCaseRecordDomainRepository.getLatestActiveCaseRecordByCaseIdAndStatuses(ActiveCaseRecordDomainRepository.java:74)

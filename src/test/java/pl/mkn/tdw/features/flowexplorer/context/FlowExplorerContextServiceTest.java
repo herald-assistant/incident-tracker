@@ -44,7 +44,7 @@ class FlowExplorerContextServiceTest {
 
     @Test
     void shouldBuildCompactFlowManifestForResolvedEndpoint() {
-        when(repositoryScopeService.resolve("billing-core", "feature/FLOW-42"))
+        when(repositoryScopeService.resolve("catalog-core", "feature/FLOW-42"))
                 .thenReturn(scope());
         when(gitLabEndpointUseCaseContextService.buildContext(
                 org.mockito.ArgumentMatchers.eq("platform/backend"),
@@ -76,8 +76,8 @@ class FlowExplorerContextServiceTest {
         ));
 
         var snapshot = service.buildContext(new FlowExplorerContextRequest(
-                "billing-core",
-                "billing-api:GET /api/billing/{id}",
+                "catalog-core",
+                "catalog-api:GET /api/catalog/{id}",
                 null,
                 null,
                 "feature/FLOW-42",
@@ -85,27 +85,27 @@ class FlowExplorerContextServiceTest {
                 List.of(pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE)
         ));
 
-        assertEquals("billing-core", snapshot.systemId());
+        assertEquals("catalog-core", snapshot.systemId());
         assertEquals("feature/FLOW-42", snapshot.resolvedRef());
         assertTrue(snapshot.coverage().endpointResolved());
         assertEquals(1, snapshot.coverage().attemptedRepositoryCount());
         assertEquals(2, snapshot.coverage().flowNodeCount());
         assertEquals(2, snapshot.coverage().methodCount());
-        assertEquals("BillingController", snapshot.endpoint().controllerClass());
-        assertEquals("billing-api", snapshot.repositories().get(0).projectName());
+        assertEquals("CatalogController", snapshot.endpoint().controllerClass());
+        assertEquals("catalog-api", snapshot.repositories().get(0).projectName());
         assertTrue(snapshot.repositories().get(0).selected());
 
         var controllerNode = snapshot.flowNodes().get(0);
         assertEquals("CONTROLLER", controllerNode.role());
-        assertEquals("src/main/java/com/example/billing/BillingController.java", controllerNode.filePath());
-        assertEquals("getBilling", controllerNode.methods().get(0).methodName());
+        assertEquals("src/main/java/com/example/catalog/CatalogController.java", controllerNode.filePath());
+        assertEquals("getCatalog", controllerNode.methods().get(0).methodName());
         assertEquals(12, controllerNode.methods().get(0).lineStart());
         assertEquals(24, controllerNode.methods().get(0).lineEnd());
         assertEquals("Endpoint handler and local controller flow.", controllerNode.reason());
         assertEquals(1, snapshot.relations().size());
         assertEquals("ENDPOINT_HANDLER", snapshot.relations().get(0).kind());
         assertEquals(1, snapshot.snippetCards().size());
-        assertEquals("src/main/java/com/example/billing/BillingController.java", snapshot.snippetCards().get(0).filePath());
+        assertEquals("src/main/java/com/example/catalog/CatalogController.java", snapshot.snippetCards().get(0).filePath());
         assertEquals(1, snapshot.coverage().snippetCardCount());
         assertTrue(snapshot.coverage().snippetBudgetReached());
         assertTrue(snapshot.openApiEndpointContracts().isEmpty());
@@ -117,14 +117,14 @@ class FlowExplorerContextServiceTest {
                 org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
                 requestCaptor.capture()
         );
-        assertEquals("billing-api", requestCaptor.getValue().projectName());
-        assertEquals("GET /api/billing/{id}", requestCaptor.getValue().endpointId());
+        assertEquals("catalog-api", requestCaptor.getValue().projectName());
+        assertEquals("GET /api/catalog/{id}", requestCaptor.getValue().endpointId());
         assertEquals(GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, requestCaptor.getValue().maxFiles());
     }
 
     @Test
     void shouldReturnUnresolvedCoverageWithoutFlowNodes() {
-        when(repositoryScopeService.resolve("billing-core", null)).thenReturn(scope());
+        when(repositoryScopeService.resolve("catalog-core", null)).thenReturn(scope());
         when(gitLabEndpointUseCaseContextService.buildContext(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
@@ -132,7 +132,7 @@ class FlowExplorerContextServiceTest {
         )).thenReturn(unresolvedUseCaseContext());
 
         var snapshot = service.buildContext(new FlowExplorerContextRequest(
-                "billing-core",
+                "catalog-core",
                 null,
                 "GET",
                 "/missing",
@@ -158,7 +158,7 @@ class FlowExplorerContextServiceTest {
                 FlowExplorerSystemNotFoundException.class,
                 () -> service.buildContext(new FlowExplorerContextRequest(
                         "missing-system",
-                        "GET /api/billing/{id}",
+                        "GET /api/catalog/{id}",
                         null,
                         null,
                         null,
@@ -177,9 +177,9 @@ class FlowExplorerContextServiceTest {
                 "platform/backend",
                 1,
                 List.of(new FlowExplorerRepositoryScopeRepository(
-                        "billing-api",
-                        "billing-api",
-                        "platform/backend/billing-api",
+                        "catalog-api",
+                        "catalog-api",
+                        "platform/backend/catalog-api",
                         null,
                         "system.references.repositories",
                         catalog.repositories().get(0)
@@ -192,17 +192,17 @@ class FlowExplorerContextServiceTest {
         return new GitLabEndpointUseCaseContextResult(
                 null,
                 new GitLabEndpointUseCaseEndpointContext(
-                        "GET /api/billing/{id}",
+                        "GET /api/catalog/{id}",
                         List.of("GET"),
-                        "/api/billing/{id}",
-                        "/api/billing/{id}",
-                        "BillingController",
-                        "getBilling",
-                        "src/main/java/com/example/billing/BillingController.java",
+                        "/api/catalog/{id}",
+                        "/api/catalog/{id}",
+                        "CatalogController",
+                        "getCatalog",
+                        "src/main/java/com/example/catalog/CatalogController.java",
                         12,
                         24,
                         List.of(),
-                        List.of("BillingResponse"),
+                        List.of("CatalogResponse"),
                         List.of("RestController", "GetMapping"),
                         GitLabEndpointUseCaseConfidence.HIGH,
                         List.of(),
@@ -210,36 +210,36 @@ class FlowExplorerContextServiceTest {
                 ),
                 List.of(
                         file(
-                                "src/main/java/com/example/billing/BillingController.java",
+                                "src/main/java/com/example/catalog/CatalogController.java",
                                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                                 1,
-                                "BillingController",
-                                "getBilling",
+                                "CatalogController",
+                                "getCatalog",
                                 12,
                                 24,
                                 "Endpoint handler and local controller flow."
                         ),
                         file(
-                                "src/main/java/com/example/billing/BillingService.java",
+                                "src/main/java/com/example/catalog/CatalogService.java",
                                 GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
                                 2,
-                                "BillingService",
-                                "getBilling",
+                                "CatalogService",
+                                "getCatalog",
                                 42,
                                 55,
                                 "Injected service method called by controller."
                         )
                 ),
                 List.of(new GitLabEndpointUseCaseRelation(
-                        "GET /api/billing/{id}",
-                        "BillingController#getBilling",
+                        "GET /api/catalog/{id}",
+                        "CatalogController#getCatalog",
                         GitLabEndpointUseCaseRelationKind.ENDPOINT_HANDLER,
                         GitLabEndpointUseCaseConfidence.HIGH,
                         "Endpoint inventory resolved this handler method."
                 )),
                 List.of(),
                 List.of(),
-                List.of("billing-api:src/main/java/com/example/billing/BillingController.java"),
+                List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java"),
                 GitLabEndpointUseCaseLimits.defaults(),
                 GitLabEndpointUseCaseConfidence.HIGH
         );
@@ -267,11 +267,11 @@ class FlowExplorerContextServiceTest {
 
     private static FlowExplorerSnippetCard snippetCard() {
         return new FlowExplorerSnippetCard(
-                "billing-api:src/main/java/com/example/billing/BillingController.java:L9-L27",
-                "billing-api",
-                "src/main/java/com/example/billing/BillingController.java",
+                "catalog-api:src/main/java/com/example/catalog/CatalogController.java:L9-L27",
+                "catalog-api",
+                "src/main/java/com/example/catalog/CatalogController.java",
                 "CONTROLLER",
-                List.of(new FlowExplorerFlowMethod("getBilling", 12, 24)),
+                List.of(new FlowExplorerFlowMethod("getCatalog", 12, 24)),
                 9,
                 27,
                 9,
@@ -279,7 +279,7 @@ class FlowExplorerContextServiceTest {
                 120,
                 false,
                 "Endpoint handler and local controller flow.",
-                "// file: src/main/java/com/example/billing/BillingController.java\npublic BillingResponse getBilling() {}",
+                "// file: src/main/java/com/example/catalog/CatalogController.java\npublic CatalogResponse getCatalog() {}",
                 0,
                 List.of()
         );
@@ -304,7 +304,7 @@ class FlowExplorerContextServiceTest {
                         path,
                         typeName,
                         typeName,
-                        "com.example.billing." + typeName,
+                        "com.example.catalog." + typeName,
                         GitLabJavaTypeKind.CLASS,
                         methodName,
                         null,
@@ -313,7 +313,7 @@ class FlowExplorerContextServiceTest {
                         0,
                         List.of(),
                         List.of(),
-                        "BillingResponse",
+                        "CatalogResponse",
                         List.of("public"),
                         role,
                         priority,
@@ -331,19 +331,19 @@ class FlowExplorerContextServiceTest {
                 List.of(),
                 List.of(),
                 List.of(map(
-                        "id", "billing-core",
-                        "name", "Billing Core",
+                        "id", "catalog-core",
+                        "name", "Catalog Core",
                         "kind", "internal-application",
-                        "references", map("repositories", List.of("billing-api"))
+                        "references", map("repositories", List.of("catalog-api"))
                 )),
                 List.of(),
                 List.of(map(
-                        "id", "billing-api",
-                        "name", "Billing API",
+                        "id", "catalog-api",
+                        "name", "Catalog API",
                         "git", map(
                                 "provider", "gitlab",
                                 "group", "platform/backend",
-                                "projectPath", "platform/backend/billing-api"
+                                "projectPath", "platform/backend/catalog-api"
                         )
                 )),
                 List.of(),

@@ -43,7 +43,7 @@ class CopilotInitialAnalysisProviderTest {
                                 "elasticsearch",
                                 "logs",
                                 List.of(new AnalysisEvidenceItem(
-                                        "crm-billing-service log entry",
+                                        "crm-catalog-service log entry",
                                         List.of(
                                                 new AnalysisEvidenceAttribute("level", "ERROR"),
                                                 new AnalysisEvidenceAttribute("message", "Read timed out while calling crm-customer-profile-service")
@@ -82,7 +82,7 @@ class CopilotInitialAnalysisProviderTest {
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "affectedProcess": "Rozliczenie klienta",
-                  "affectedBoundedContext": "Billing Context",
+                  "affectedBoundedContext": "Catalog Context",
                   "affectedTeam": "Core Integration Team",
                   "functionalAnalysis": "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu customer-profile.",
                   "technicalAnalysis": "Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.",
@@ -107,7 +107,7 @@ class CopilotInitialAnalysisProviderTest {
                 response.technicalAnalysis()
         );
         assertEquals("Rozliczenie klienta", response.affectedProcess());
-        assertEquals("Billing Context", response.affectedBoundedContext());
+        assertEquals("Catalog Context", response.affectedBoundedContext());
         assertEquals("Core Integration Team", response.affectedTeam());
         assertEquals("high", response.confidence());
         assertEquals("Prepared prompt for timeout-123", response.prompt());

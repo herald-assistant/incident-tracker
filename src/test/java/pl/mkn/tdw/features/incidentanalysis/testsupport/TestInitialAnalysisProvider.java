@@ -27,10 +27,10 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
             return new InitialAnalysisResponse(
                     "test-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Billing customer-profile lookup",
-                    "Billing Context",
+                    "Catalog profile lookup",
+                    "Catalog Context",
                     "Core Integration Team",
-                    "Analiza funkcjonalna: incydent dotyka procesu billingowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
+                    "Analiza funkcjonalna: incydent dotyka procesu katalogowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
                     "Analiza techniczna: sprawdz timeout klienta katalogu, latency downstream i konfiguracje retry w sciezce outbound lookup.",
                     "medium",
                     List.of("Test provider korzysta z syntetycznych evidence."),

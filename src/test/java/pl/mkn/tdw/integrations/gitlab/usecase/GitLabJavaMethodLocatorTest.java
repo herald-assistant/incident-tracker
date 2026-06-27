@@ -128,7 +128,7 @@ class GitLabJavaMethodLocatorTest {
                     }
 
                     @EventListener
-                    void update(CreditCaseUpdatedEvent event) {
+                    void update(CaseProfileUpdatedEvent event) {
                     }
                 }
                 """);

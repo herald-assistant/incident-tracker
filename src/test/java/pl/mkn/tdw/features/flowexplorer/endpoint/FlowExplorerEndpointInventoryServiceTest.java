@@ -34,16 +34,16 @@ class FlowExplorerEndpointInventoryServiceTest {
     void shouldBuildEndpointInventoryForSystemUsingConfiguredDefaultBranch() {
         var endpointService = mock(GitLabRepositoryEndpointService.class);
         when(endpointService.listEndpoints(argThat(request -> request != null
-                && "billing-api".equals(request.projectName()))))
-                .thenReturn(endpointList("billing-api", List.of(endpoint()), List.of()));
+                && "catalog-api".equals(request.projectName()))))
+                .thenReturn(endpointList("catalog-api", List.of(endpoint()), List.of()));
         when(endpointService.listEndpoints(argThat(request -> request != null
-                && "domains/billing-domain".equals(request.projectName()))))
-                .thenReturn(endpointList("domains/billing-domain", List.of(), List.of("No controllers found.")));
+                && "domains/catalog-domain".equals(request.projectName()))))
+                .thenReturn(endpointList("domains/catalog-domain", List.of(), List.of("No controllers found.")));
         var service = service(endpointService, "platform/backend", "release-candidate");
 
-        var response = service.endpoints("billing-core", null, "/api", "get");
+        var response = service.endpoints("catalog-core", null, "/api", "get");
 
-        assertEquals("billing-core", response.systemId());
+        assertEquals("catalog-core", response.systemId());
         assertEquals("release-candidate", response.resolvedRef());
         assertEquals("platform/backend", response.gitLabGroup());
         assertEquals("/api", response.endpointPathPrefix());
@@ -54,19 +54,19 @@ class FlowExplorerEndpointInventoryServiceTest {
         assertEquals(6, response.candidateFileCount());
         assertEquals(4, response.scannedFileCount());
         assertTrue(response.limitations().contains("Operational context references unknown repository: missing-repo"));
-        assertTrue(response.limitations().contains("billing-domain: No controllers found."));
+        assertTrue(response.limitations().contains("catalog-domain: No controllers found."));
 
         var endpoint = response.endpoints().get(0);
-        assertEquals("billing-api:GET /api/billing/{id}", endpoint.endpointId());
+        assertEquals("catalog-api:GET /api/catalog/{id}", endpoint.endpointId());
         assertEquals("GET", endpoint.method());
-        assertEquals("/api/billing/{id}", endpoint.path());
-        assertEquals("Returns billing details.", endpoint.description());
-        assertEquals("getBilling", endpoint.operationId());
-        assertEquals("BillingController", endpoint.controllerClass());
-        assertEquals("billing-api", endpoint.source().repositoryId());
-        assertEquals("src/main/java/com/example/billing/BillingController.java", endpoint.source().filePath());
+        assertEquals("/api/catalog/{id}", endpoint.path());
+        assertEquals("Returns catalog details.", endpoint.description());
+        assertEquals("getCatalog", endpoint.operationId());
+        assertEquals("CatalogController", endpoint.controllerClass());
+        assertEquals("catalog-api", endpoint.source().repositoryId());
+        assertEquals("src/main/java/com/example/catalog/CatalogController.java", endpoint.source().filePath());
         assertEquals("id", endpoint.parameters().get(0).name());
-        assertEquals("customer billing id", endpoint.tooltipDetails().parameters().get(0).description());
+        assertEquals("catalog item id", endpoint.tooltipDetails().parameters().get(0).description());
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
         verify(endpointService, times(2)).listEndpoints(requestCaptor.capture());
@@ -86,7 +86,7 @@ class FlowExplorerEndpointInventoryServiceTest {
         when(endpointService.listEndpoints(any())).thenReturn(endpointList("any", List.of(), List.of()));
         var service = service(endpointService, "platform/backend", "release-candidate");
 
-        var response = service.endpoints("billing-core", "feature/FLOW-42", null, null);
+        var response = service.endpoints("catalog-core", "feature/FLOW-42", null, null);
 
         assertEquals("feature/FLOW-42", response.requestedBranch());
         assertEquals("feature/FLOW-42", response.resolvedRef());
@@ -136,7 +136,7 @@ class FlowExplorerEndpointInventoryServiceTest {
 
         assertThrows(
                 FlowExplorerGitLabConfigurationException.class,
-                () -> service.endpoints("billing-core", null, null, null)
+                () -> service.endpoints("catalog-core", null, null, null)
         );
     }
 
@@ -190,35 +190,35 @@ class FlowExplorerEndpointInventoryServiceTest {
 
     private static GitLabRepositoryEndpoint endpoint() {
         return new GitLabRepositoryEndpoint(
-                "GET /api/billing/{id}",
+                "GET /api/catalog/{id}",
                 List.of("GET"),
-                "/api/billing/{id}",
-                "/api/billing/{id}",
-                "BillingController",
-                "getBilling",
-                "src/main/java/com/example/billing/BillingController.java",
+                "/api/catalog/{id}",
+                "/api/catalog/{id}",
+                "CatalogController",
+                "getCatalog",
+                "src/main/java/com/example/catalog/CatalogController.java",
                 12,
                 24,
                 List.of("@PathVariable String id"),
-                List.of("BillingResponse"),
+                List.of("CatalogResponse"),
                 List.of("RestController", "GetMapping"),
                 new GitLabRepositoryEndpointDocumentation(
                         "OPENAPI_YAML",
-                        "Billing lookup",
-                        "Returns billing details.",
-                        "getBilling",
-                        List.of("billing"),
+                        "Catalog lookup",
+                        "Returns catalog details.",
+                        "getCatalog",
+                        List.of("catalog"),
                         List.of(new GitLabRepositoryEndpointParameterDocumentation(
                                 "id",
                                 "path",
                                 true,
                                 "string",
-                                "customer billing id"
+                                "catalog item id"
                         ))
                 ),
                 "high",
                 List.of(),
-                List.of("billing-api:src/main/java/com/example/billing/BillingController.java")
+                List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java")
         );
     }
 
@@ -227,39 +227,39 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(),
                 List.of(),
                 List.of(map(
-                        "id", "billing-core",
-                        "name", "Billing Core",
+                        "id", "catalog-core",
+                        "name", "Catalog Core",
                         "kind", "internal-application",
-                        "references", map("repositories", List.of("billing-api"))
+                        "references", map("repositories", List.of("catalog-api"))
                 )),
                 List.of(),
                 List.of(
                         map(
-                                "id", "billing-api",
-                                "name", "Billing API",
+                                "id", "catalog-api",
+                                "name", "Catalog API",
                                 "git", map(
                                         "provider", "gitlab",
                                         "group", "platform/backend",
-                                        "projectPath", "platform/backend/billing-api"
+                                        "projectPath", "platform/backend/catalog-api"
                                 )
                         ),
                         map(
-                                "id", "billing-domain",
-                                "name", "Billing Domain",
+                                "id", "catalog-domain",
+                                "name", "Catalog Domain",
                                 "git", map(
                                         "provider", "gitlab",
                                         "group", "platform/backend",
-                                        "projectPath", "platform/backend/domains/billing-domain"
+                                        "projectPath", "platform/backend/domains/catalog-domain"
                                 )
                         )
                 ),
                 List.of(map(
-                        "id", "billing-scope",
-                        "name", "Billing scope",
-                        "target", map("type", "system", "id", "billing-core"),
+                        "id", "catalog-scope",
+                        "name", "Catalog scope",
+                        "target", map("type", "system", "id", "catalog-core"),
                         "repositories", List.of(
                                 map("repoId", "missing-repo", "priority", 1),
-                                map("repoId", "billing-domain", "priority", 2)
+                                map("repoId", "catalog-domain", "priority", 2)
                         )
                 )),
                 List.of(),

@@ -262,7 +262,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             var logsContent = prepared.session().artifactContents().get("02-elasticsearch-logs.md");
             assertTrue(logsContent.contains("Elasticsearch log evidence"));
             assertTrue(logsContent.contains("## itemId: elastic-logs-001"));
-            assertTrue(logsContent.contains("Log entry `1` `ERROR` `crm-billing-service`"));
+            assertTrue(logsContent.contains("Log entry `1` `ERROR` `crm-catalog-service`"));
             assertTrue(logsContent.contains("- message:"));
             assertTrue(logsContent.contains("Read timed out while calling crm-customer-profile-service"));
             assertFalse(logsContent.contains("\"provider\""));
@@ -606,12 +606,12 @@ class CopilotIncidentInitialPreparationServiceTest {
                         "elasticsearch",
                         "logs",
                         List.of(new AnalysisEvidenceItem(
-                                "crm-billing-service log entry",
+                                "crm-catalog-service log entry",
                                 List.of(
                                         new AnalysisEvidenceAttribute("timestamp", "2026-04-11T20:57:33.285Z"),
                                         new AnalysisEvidenceAttribute("level", "ERROR"),
-                                        new AnalysisEvidenceAttribute("serviceName", "crm-billing-service"),
-                                        new AnalysisEvidenceAttribute("className", "com.example.synthetic.CustomerBillingService"),
+                                        new AnalysisEvidenceAttribute("serviceName", "crm-catalog-service"),
+                                        new AnalysisEvidenceAttribute("className", "com.example.synthetic.CustomerCatalogService"),
                                         new AnalysisEvidenceAttribute("message", "Read timed out while calling crm-customer-profile-service")
                                 )
                         ))

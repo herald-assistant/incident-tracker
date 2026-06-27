@@ -22,16 +22,16 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-run-001`
-- trigger: HTTP request `POST /payments`
+- trigger: HTTP request `POST /notifications`
 - failure point: request lost during pod restart
 - runtime evidence: `container restart count increased`, `OOMKilled`
-- log: `Request aborted while processing payment PAY-123`
-- deployment: `payment-api`
+- log: `Request aborted while processing notification NOTIF-123`
+- deployment: `notification-api`
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `HTTP request -> payment service -> runtime termination`.
+   `HTTP request -> notification service -> runtime termination`.
 2. Odczytaj runtime/Dynatrace evidence literalnie.
 3. Jezeli component status pokazuje abnormal runtime signal zgodny z czasem
    incydentu, utrzymaj `runtime_or_platform`.
