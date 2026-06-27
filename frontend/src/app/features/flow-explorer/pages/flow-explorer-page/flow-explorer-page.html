@@ -933,21 +933,7 @@
                       <span class="field-label">{{ section.id }}</span>
                       <h3>{{ section.title }}</h3>
                     </div>
-                    <div class="flow-explorer-result-block__actions">
-                      <span [class]="sectionModePillClass(section.mode)">{{ sectionModeLabel(section.mode) }}</span>
-                      <button
-                        class="secondary-button flow-explorer-refine-button"
-                        type="button"
-                        data-clipboard-exclude
-                        [disabled]="!canRefineSection(section)"
-                        [attr.aria-label]="'Refine ' + section.title"
-                        [title]="refineButtonTitle(section)"
-                        (click)="openRefineDialog(section, $event)"
-                      >
-                        <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-                        <span>Refine</span>
-                      </button>
-                    </div>
+                    <span [class]="sectionModePillClass(section.mode)">{{ sectionModeLabel(section.mode) }}</span>
                   </div>
                   <app-markdown-content
                     class="flow-explorer-markdown"
@@ -1126,8 +1112,8 @@
             [messages]="chatMessages()"
             [hint]="chatHint()"
             [error]="chatError()"
-            [canUseChat]="isChatAvailable() && !isSendingRefine()"
-            [isSubmitting]="isSendingChat() || isSendingRefine()"
+            [canUseChat]="isChatAvailable()"
+            [isSubmitting]="isSendingChat()"
             [openByDefault]="!isImportedResult() && !isHistoryResult()"
             eyebrow="Follow-up chat"
             title="Ask about this endpoint"
@@ -1141,70 +1127,6 @@
             (sendMessage)="sendChatMessage($event)"
             (clearError)="clearChatError()"
           ></app-analysis-follow-up-chat>
-        }
-
-        @if (refineDialogSection(); as refineSection) {
-          <div class="flow-explorer-refine-backdrop" role="presentation" (click)="closeRefineDialog()">
-            <section
-              class="flow-explorer-refine-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="flowExplorerRefineTitle"
-              (click)="$event.stopPropagation()"
-            >
-              <header class="flow-explorer-refine-dialog__header">
-                <div>
-                  <p class="section-eyebrow">Refine</p>
-                  <h3 id="flowExplorerRefineTitle">{{ refineSection.title }}</h3>
-                </div>
-                <button
-                  class="flow-explorer-refine-dialog__close"
-                  type="button"
-                  aria-label="Close refine dialog"
-                  title="Close"
-                  [disabled]="isSendingRefine()"
-                  (click)="closeRefineDialog()"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                </button>
-              </header>
-              <form class="flow-explorer-refine-dialog__body" novalidate (submit)="submitSectionRefine($event)">
-                <label class="field-label" for="flowExplorerRefineMessage">Refine request</label>
-                <textarea
-                  id="flowExplorerRefineMessage"
-                  class="text-input flow-explorer-refine-dialog__textarea"
-                  rows="6"
-                  [value]="refineMessage()"
-                  [disabled]="isSendingRefine()"
-                  placeholder="Np. doprecyzuj mapping tabel i klas dla tej sekcji."
-                  (input)="onRefineMessageChanged($any($event.target).value)"
-                ></textarea>
-                @if (refineError()) {
-                  <p class="form-error">{{ refineError() }}</p>
-                }
-                <div class="flow-explorer-refine-dialog__actions">
-                  <button
-                    class="secondary-button"
-                    type="button"
-                    [disabled]="isSendingRefine()"
-                    (click)="closeRefineDialog()"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    class="primary-button"
-                    type="submit"
-                    [disabled]="isRefineSubmitDisabled()"
-                    [class.is-loading]="isSendingRefine()"
-                    [attr.aria-busy]="isSendingRefine()"
-                  >
-                    <span class="button-label">{{ isSendingRefine() ? 'Refining...' : 'Refine' }}</span>
-                    <span class="button-spinner" aria-hidden="true"></span>
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
         }
 
         @if (job(); as snapshot) {

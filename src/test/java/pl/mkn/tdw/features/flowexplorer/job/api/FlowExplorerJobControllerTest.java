@@ -186,34 +186,6 @@ class FlowExplorerJobControllerTest {
     }
 
     @Test
-    void shouldStartFlowExplorerSectionRefine() throws Exception {
-        when(flowExplorerJobService.startSectionRefine(
-                any(String.class),
-                any(FlowExplorerResultSectionId.class),
-                any(FlowExplorerSectionRefineRequest.class)
-        )).thenReturn(snapshotWithRefine("job-123"));
-
-        mockMvc.perform(post("/api/flow-explorer/jobs/job-123/sections/PERSISTENCE/refine")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "message": "Doprecyzuj mapping persistence."
-                                }
-                                """))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.jobId").value("job-123"))
-                .andExpect(jsonPath("$.chatMessages", hasSize(2)))
-                .andExpect(jsonPath("$.chatMessages[0].content").value("Refine PERSISTENCE:\nDoprecyzuj mapping persistence."))
-                .andExpect(jsonPath("$.chatMessages[1].content").value("Refined PERSISTENCE."));
-
-        verify(flowExplorerJobService).startSectionRefine(
-                "job-123",
-                FlowExplorerResultSectionId.PERSISTENCE,
-                new FlowExplorerSectionRefineRequest("Doprecyzuj mapping persistence.")
-        );
-    }
-
-    @Test
     void shouldReturnNotFoundWhenJobIsMissing() throws Exception {
         when(flowExplorerJobService.getJob("missing-job"))
                 .thenThrow(new FlowExplorerJobNotFoundException("missing-job"));
@@ -260,42 +232,6 @@ class FlowExplorerJobControllerTest {
                         List.of(),
                         List.of(),
                         "Gdzie jest walidacja?"
-                )
-        ));
-    }
-
-    private static FlowExplorerJobStateSnapshot snapshotWithRefine(String jobId) {
-        var instant = Instant.parse("2026-04-12T18:00:00Z");
-        return snapshot(jobId, List.of(
-                new AnalysisChatMessageResponse(
-                        "message-1",
-                        "USER",
-                        "COMPLETED",
-                        "Refine PERSISTENCE:\nDoprecyzuj mapping persistence.",
-                        null,
-                        null,
-                        instant,
-                        instant,
-                        instant,
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        null
-                ),
-                new AnalysisChatMessageResponse(
-                        "message-2",
-                        "ASSISTANT",
-                        "COMPLETED",
-                        "Refined PERSISTENCE.",
-                        null,
-                        null,
-                        instant,
-                        instant,
-                        instant,
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        "# Flow Explorer section refine prompt"
                 )
         ));
     }

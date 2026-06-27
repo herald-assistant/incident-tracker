@@ -15,7 +15,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
-import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerSectionRefineAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunAssembly;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotToolAccessPolicy;
@@ -36,7 +35,6 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerSectionRefineRequest;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
@@ -73,8 +71,6 @@ class FlowExplorerJobServiceTest {
     private final CopilotRunPreparationService runPreparationService = mock(CopilotRunPreparationService.class);
     private final CopilotSdkExecutionGateway executionGateway = mock(CopilotSdkExecutionGateway.class);
     private final FlowExplorerAiResponseParser responseParser = new FlowExplorerAiResponseParser(new ObjectMapper());
-    private final FlowExplorerSectionRefineAiResponseParser sectionRefineResponseParser =
-            new FlowExplorerSectionRefineAiResponseParser(new ObjectMapper());
     private final TaskExecutor directExecutor = Runnable::run;
     private final FlowExplorerJobService flowExplorerJobService = new FlowExplorerJobService(
             contextService,
@@ -83,7 +79,6 @@ class FlowExplorerJobServiceTest {
             runPreparationService,
             executionGateway,
             responseParser,
-            sectionRefineResponseParser,
             directExecutor
     );
 
@@ -236,7 +231,6 @@ class FlowExplorerJobServiceTest {
                 runPreparationService,
                 executionGateway,
                 responseParser,
-                sectionRefineResponseParser,
                 queuedTask::set
         );
 
@@ -327,74 +321,6 @@ class FlowExplorerJobServiceTest {
     }
 
     @Test
-    void shouldRefineCompletedSectionAndUpdateResult() {
-        var request = request();
-        var contextSnapshot = contextSnapshot();
-        var promptPreparation = promptPreparation();
-        var runRequest = runRequest();
-        var preparedSession = preparedSession(runRequest);
-        var refineRunRequest = sectionRefineRunRequest();
-        var refinePreparedSession = preparedSession(refineRunRequest);
-        givenContextPromptAndRun(request, contextSnapshot, promptPreparation, runRequest, preparedSession);
-        when(runRequestAssembler.assembleFollowUp(
-                any(String.class),
-                same(request),
-                same(contextSnapshot),
-                any(FlowExplorerPromptPreparation.class),
-                eq("initial-session-1"),
-                any(AnalysisAiAuthRef.class)
-        )).thenReturn(new FlowExplorerCopilotRunAssembly(
-                refineRunRequest,
-                new CopilotToolSessionContext("refine-123", "initial-session-1", Map.of()),
-                FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
-        ));
-        when(runPreparationService.prepare(refineRunRequest)).thenReturn(refinePreparedSession);
-        when(executionGateway.execute(any(CopilotPreparedSession.class)))
-                .thenReturn(new CopilotExecutionResult(aiJson(), usage(), "initial-session-1"))
-                .thenReturn(new CopilotExecutionResult(refinePersistenceJson(), null, "refine-session-1"));
-
-        var started = flowExplorerJobService.startJob(request);
-        var refined = flowExplorerJobService.startSectionRefine(
-                started.jobId(),
-                FlowExplorerResultSectionId.PERSISTENCE,
-                new FlowExplorerSectionRefineRequest("Doprecyzuj mapping persistence.")
-        );
-
-        assertEquals("COMPLETED", refined.status());
-        assertEquals(2, refined.chatMessages().size());
-        assertEquals("Refine PERSISTENCE:\nDoprecyzuj mapping persistence.", refined.chatMessages().get(0).content());
-        assertEquals("ASSISTANT", refined.chatMessages().get(1).role());
-        assertEquals("COMPLETED", refined.chatMessages().get(1).status());
-        assertTrue(refined.chatMessages().get(1).content().contains("Refined PERSISTENCE."));
-        assertTrue(refined.chatMessages().get(1).content().contains("Dodano mapowanie tabeli CUSTOMER."));
-
-        var sections = refined.result().aiResponse().sections();
-        assertEquals(functionalFlowMarkdown(), sections.get(0).markdown());
-        assertEquals("id jest wymagane.", sections.get(1).markdown());
-        assertEquals("Tabela CUSTOMER jest czytana po CUSTOMER_ID i mapowana do profilu klienta.", sections.get(2).markdown());
-        assertEquals("Brak potwierdzonych integracji downstream.", sections.get(3).markdown());
-        assertEquals("Tester chce poznac GET /api/customers/{id}.", refined.result().aiResponse().overview().markdown());
-        assertEquals(List.of("Nie potwierdzono triggerow DB."), refined.result().aiResponse().globalVisibilityLimits());
-        assertEquals(List.of("crm-service:CustomerRepository.java:L10-L22"), refined.result().aiResponse().sourceReferences());
-        assertEquals("medium", refined.result().aiResponse().confidence());
-
-        var promptCaptor = ArgumentCaptor.forClass(FlowExplorerPromptPreparation.class);
-        verify(runRequestAssembler).assembleFollowUp(
-                any(String.class),
-                same(request),
-                same(contextSnapshot),
-                promptCaptor.capture(),
-                eq("initial-session-1"),
-                any(AnalysisAiAuthRef.class)
-        );
-        assertTrue(promptCaptor.getValue().prompt().contains("# Flow Explorer section refine prompt"));
-        assertTrue(promptCaptor.getValue().prompt().contains("## Current target markdown"));
-        assertTrue(promptCaptor.getValue().prompt().contains("Repository pobiera klienta po id."));
-        assertFalse(promptCaptor.getValue().prompt().contains("Chat history"));
-        assertTrue(promptCaptor.getValue().artifactContents().isEmpty());
-    }
-
-    @Test
     void shouldRejectFollowUpChatBeforeJobIsCompleted() {
         var queuedTask = new java.util.concurrent.atomic.AtomicReference<Runnable>();
         var service = new FlowExplorerJobService(
@@ -404,7 +330,6 @@ class FlowExplorerJobServiceTest {
                 runPreparationService,
                 executionGateway,
                 responseParser,
-                sectionRefineResponseParser,
                 queuedTask::set
         );
         var started = service.startJob(request());
@@ -514,23 +439,6 @@ class FlowExplorerJobServiceTest {
         );
     }
 
-    private static CopilotRunRequest sectionRefineRunRequest() {
-        return new CopilotRunRequest(
-                "refine-123",
-                "# Flow Explorer section refine prompt",
-                new CopilotSessionConfigRequest(
-                        "flow-explorer-refine-123",
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        null,
-                        "Denied"
-                ),
-                Map.of(),
-                null
-        );
-    }
-
     private static CopilotPreparedSession preparedSession(CopilotRunRequest runRequest) {
         return new CopilotPreparedSession(
                 runRequest.runReference(),
@@ -613,28 +521,6 @@ class FlowExplorerJobServiceTest {
                   "confidence": "high"
                 }
                 """.formatted(functionalFlowMarkdownJson());
-    }
-
-    private static String refinePersistenceJson() {
-        return """
-                {
-                  "section": {
-                    "id": "PERSISTENCE",
-                    "title": "Persistence",
-                    "mode": "compact",
-                    "markdown": "Tabela CUSTOMER jest czytana po CUSTOMER_ID i mapowana do profilu klienta.",
-                    "sourceRefs": ["crm-service:CustomerRepository.java:L10-L22"],
-                    "visibilityLimits": ["Nie potwierdzono triggerow DB."],
-                    "openQuestions": ["Czy CUSTOMER_STATUS jest aktualizowany poza endpointem?"]
-                  },
-                  "globalVisibilityLimits": ["Nie potwierdzono triggerow DB."],
-                  "globalOpenQuestions": ["Czy CUSTOMER_STATUS jest aktualizowany poza endpointem?"],
-                  "sourceReferences": ["crm-service:CustomerRepository.java:L10-L22"],
-                  "followUpPrompts": ["Sprawdz regule statusu klienta."],
-                  "confidence": "medium",
-                  "changeSummary": ["Dodano mapowanie tabeli CUSTOMER."]
-                }
-                """;
     }
 
     private static String functionalFlowMarkdownJson() {

@@ -50,18 +50,6 @@ describe('FlowExplorerPageComponent', () => {
           })
         )
       ),
-      refineSection: vi.fn(() =>
-        of(
-          jobSnapshot({
-            status: 'COMPLETED',
-            currentStepCode: 'COMPLETED',
-            currentStepLabel: 'AI result ready',
-            preparedPrompt: 'canonical prompt',
-            result: refinedFlowExplorerResult(),
-            chatMessages: completedRefineMessages()
-          })
-        )
-      ),
       getJob: vi.fn(() =>
         of(
           jobSnapshot({
@@ -395,7 +383,6 @@ describe('FlowExplorerPageComponent', () => {
       expect(copiedText).toContain('The endpoint reads the requested customer');
       expect(copiedText).toContain('Functional flow');
       expect(copiedText).not.toContain('Copy result');
-      expect(copiedText).not.toContain('Refine');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
     } finally {
       clipboard.restore();
@@ -657,49 +644,6 @@ describe('FlowExplorerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Walidacja jest w CustomerService.validate.');
   });
 
-  it('should refine a completed live Flow Explorer result section', () => {
-    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
-
-    fixture.detectChanges();
-    selectSystem(fixture, 'CRM Service');
-    selectEndpoint(fixture, '/api/customers/{id}');
-
-    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    const refineButton = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>('.flow-explorer-refine-button')
-    ).find((button) => button.getAttribute('aria-label') === 'Refine Persistence');
-    expect(refineButton?.disabled).toBe(false);
-
-    refineButton?.click();
-    fixture.detectChanges();
-
-    const refineTextarea = compiled.querySelector<HTMLTextAreaElement>(
-      '#flowExplorerRefineMessage'
-    );
-    const submitButton = compiled.querySelector<HTMLButtonElement>(
-      '.flow-explorer-refine-dialog .primary-button'
-    );
-    expect(refineTextarea).not.toBeNull();
-    expect(submitButton?.disabled).toBe(true);
-
-    refineTextarea!.value = 'Doprecyzuj persistence.';
-    refineTextarea!.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    submitButton?.click();
-    fixture.detectChanges();
-
-    expect(flowExplorerApi.refineSection).toHaveBeenCalledWith('flow-job-1', 'PERSISTENCE', {
-      message: 'Doprecyzuj persistence.'
-    });
-    expect(compiled.querySelector('.flow-explorer-refine-dialog')).toBeNull();
-    expect(compiled.textContent).toContain('Persistence now includes the CustomerEntity table mapping.');
-    expect(compiled.textContent).toContain('Refine PERSISTENCE');
-  });
-
   it('should continue a local Flow Explorer run through analysis history API', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -735,13 +679,7 @@ describe('FlowExplorerPageComponent', () => {
 
 type FlowExplorerApiServiceMock = Pick<
   FlowExplorerApiService,
-  | 'getConfig'
-  | 'getSystems'
-  | 'getEndpointInventory'
-  | 'startJob'
-  | 'sendChatMessage'
-  | 'refineSection'
-  | 'getJob'
+  'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
 >;
 type AnalysisApiServiceMock = Pick<AnalysisApiService, 'getAiModelOptions'>;
 type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun' | 'sendChatMessage'>;
@@ -1282,63 +1220,6 @@ function completedChatMessages(): FlowExplorerJobStateSnapshot['chatMessages'] {
       prompt: 'follow-up prompt'
     }
   ];
-}
-
-function completedRefineMessages(): FlowExplorerJobStateSnapshot['chatMessages'] {
-  return [
-    {
-      id: 'refine-1',
-      role: 'USER',
-      status: 'COMPLETED',
-      content: 'Refine PERSISTENCE: Doprecyzuj persistence.',
-      errorCode: '',
-      errorMessage: '',
-      createdAt: '2026-06-18T10:00:07Z',
-      updatedAt: '2026-06-18T10:00:07Z',
-      completedAt: '2026-06-18T10:00:07Z',
-      toolEvidenceSections: [],
-      aiActivityEvents: [],
-      toolFeedback: [],
-      prompt: ''
-    },
-    {
-      id: 'refine-2',
-      role: 'ASSISTANT',
-      status: 'COMPLETED',
-      content: 'Zaktualizowalem sekcje Persistence.',
-      errorCode: '',
-      errorMessage: '',
-      createdAt: '2026-06-18T10:00:08Z',
-      updatedAt: '2026-06-18T10:00:09Z',
-      completedAt: '2026-06-18T10:00:09Z',
-      toolEvidenceSections: [],
-      aiActivityEvents: [],
-      toolFeedback: [],
-      prompt: 'section refine prompt'
-    }
-  ];
-}
-
-function refinedFlowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result']> {
-  const result = flowExplorerResult();
-  const aiResponse = result.aiResponse as NonNullable<typeof result.aiResponse>;
-  return {
-    ...result,
-    aiResponse: {
-      ...aiResponse,
-      sections: aiResponse.sections.map((section) =>
-        section.id === 'PERSISTENCE'
-          ? {
-              ...section,
-              markdown: 'Persistence now includes the CustomerEntity table mapping.',
-              sourceRefs: ['CustomerEntity table mapping L14-L35'],
-              visibilityLimits: ['Runtime database data was not queried during refine.'],
-              openQuestions: []
-            }
-          : section
-      )
-    }
-  };
 }
 
 function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result']> {

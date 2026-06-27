@@ -7,15 +7,11 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponse;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
-import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerSectionRefineAiRequest;
-import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerSectionRefineAiResponse;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultOverview;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultResponse;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSection;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
@@ -302,64 +298,6 @@ public final class FlowExplorerJobState {
         );
     }
 
-    public synchronized FlowExplorerSectionRefineAiRequest startSectionRefine(
-            String userMessageId,
-            String assistantMessageId,
-            FlowExplorerResultSectionId sectionId,
-            String message
-    ) {
-        if (!STATUS_COMPLETED.equals(status) || result == null || result.aiResponse() == null) {
-            throw new FlowExplorerJobChatUnavailableException(
-                    "FLOW_EXPLORER_REFINE_NOT_READY",
-                    "Section refine is available only after a completed Flow Explorer job."
-            );
-        }
-        if (!StringUtils.hasText(copilotSessionId)) {
-            throw new FlowExplorerJobChatUnavailableException(
-                    "FLOW_EXPLORER_REFINE_SESSION_MISSING",
-                    "Section refine requires a Copilot session id from the completed Flow Explorer job."
-            );
-        }
-        if (hasActiveAssistantMessage()) {
-            throw new FlowExplorerJobChatUnavailableException(
-                    "FLOW_EXPLORER_CHAT_IN_PROGRESS",
-                    "A follow-up or refine response is already in progress for this Flow Explorer job."
-            );
-        }
-
-        var targetSection = targetSection(sectionId);
-        if (targetSection.mode() == FlowExplorerResultSectionMode.OFF) {
-            throw new FlowExplorerJobChatUnavailableException(
-                    "FLOW_EXPLORER_REFINE_SECTION_OFF",
-                    "Section refine is available only for active Flow Explorer result sections."
-            );
-        }
-
-        var now = Instant.now();
-        chatMessages.add(ChatMessageState.completed(
-                userMessageId,
-                FlowExplorerChatMessageRole.USER,
-                sectionRefineUserMessage(targetSection, message),
-                now
-        ));
-        chatMessages.add(ChatMessageState.inProgress(
-                assistantMessageId,
-                FlowExplorerChatMessageRole.ASSISTANT,
-                now
-        ));
-        touch();
-
-        return new FlowExplorerSectionRefineAiRequest(
-                request,
-                contextSnapshot,
-                result,
-                targetSection,
-                message,
-                copilotSessionId,
-                authRef
-        );
-    }
-
     public synchronized void markChatToolEvidenceUpdated(String assistantMessageId, AnalysisEvidenceSection section) {
         if (section == null || !section.hasItems()) {
             return;
@@ -390,22 +328,6 @@ public final class FlowExplorerJobState {
     ) {
         rememberCopilotSession(copilotSessionId);
         assistantMessage(assistantMessageId).markCompleted(content, prompt);
-        touch();
-    }
-
-    public synchronized void markSectionRefineCompleted(
-            String assistantMessageId,
-            FlowExplorerSectionRefineAiResponse refineResponse,
-            String prompt,
-            String copilotSessionId
-    ) {
-        if (refineResponse == null || refineResponse.section() == null) {
-            throw new IllegalArgumentException("Flow Explorer section refine response is required.");
-        }
-
-        rememberCopilotSession(copilotSessionId);
-        result = resultWithRefinedSection(refineResponse);
-        assistantMessage(assistantMessageId).markCompleted(sectionRefineAssistantMessage(refineResponse), prompt);
         touch();
     }
 
@@ -504,77 +426,6 @@ public final class FlowExplorerJobState {
                 List.of(),
                 confidence
         );
-    }
-
-    private FlowExplorerResultSection targetSection(FlowExplorerResultSectionId sectionId) {
-        if (sectionId == null) {
-            throw new FlowExplorerJobChatUnavailableException(
-                    "FLOW_EXPLORER_REFINE_SECTION_REQUIRED",
-                    "Section refine requires a target section id."
-            );
-        }
-        return result.aiResponse().sections().stream()
-                .filter(section -> section != null && section.id() == sectionId)
-                .findFirst()
-                .orElseThrow(() -> new FlowExplorerJobChatUnavailableException(
-                        "FLOW_EXPLORER_REFINE_SECTION_NOT_AVAILABLE",
-                        "Section refine is available only for sections present in the current Flow Explorer result."
-                ));
-    }
-
-    private FlowExplorerResultResponse resultWithRefinedSection(FlowExplorerSectionRefineAiResponse refineResponse) {
-        var current = result;
-        var currentAi = current.aiResponse();
-        var refinedSection = refineResponse.section();
-        var sections = currentAi.sections().stream()
-                .map(section -> section != null && section.id() == refinedSection.id() ? refinedSection : section)
-                .toList();
-        var nextAi = new FlowExplorerAiResponse(
-                currentAi.goal(),
-                currentAi.audience(),
-                currentAi.overview(),
-                sections,
-                refineResponse.globalVisibilityLimits(),
-                refineResponse.globalOpenQuestions(),
-                refineResponse.sourceReferences(),
-                refineResponse.confidence(),
-                refineResponse.followUpPrompts()
-        ).withRequestContext(request.goal(), request.resolvedSectionModes());
-
-        return new FlowExplorerResultResponse(
-                current.status(),
-                current.systemId(),
-                current.endpointId(),
-                current.httpMethod(),
-                current.endpointPath(),
-                current.branch(),
-                current.goal(),
-                current.prompt(),
-                nextAi,
-                current.usage()
-        );
-    }
-
-    private String sectionRefineUserMessage(FlowExplorerResultSection targetSection, String message) {
-        var userMessage = StringUtils.hasText(message) ? message.trim() : "";
-        return "Refine %s:\n%s".formatted(targetSection.id().name(), userMessage);
-    }
-
-    private String sectionRefineAssistantMessage(FlowExplorerSectionRefineAiResponse refineResponse) {
-        var section = refineResponse.section();
-        if (refineResponse.changeSummary().isEmpty()) {
-            return "Refined %s.".formatted(section.id().name());
-        }
-
-        return String.join("\n", List.of(
-                "Refined %s.".formatted(section.id().name()),
-                "",
-                "Change summary:",
-                refineResponse.changeSummary().stream()
-                        .map(change -> "- " + change)
-                        .reduce((left, right) -> left + "\n" + right)
-                        .orElse("")
-        )).trim();
     }
 
     private String endpointId() {

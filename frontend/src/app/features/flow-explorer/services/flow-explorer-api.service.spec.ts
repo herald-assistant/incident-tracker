@@ -79,17 +79,4 @@ describe('FlowExplorerApiService', () => {
     expect(request.request.body).toEqual({ message: 'Gdzie jest walidacja?' });
     request.flush({ jobId: 'job/123', chatMessages: [] });
   });
-
-  it('should refine a Flow Explorer result section', () => {
-    service
-      .refineSection('job/123', 'PERSISTENCE', { message: 'Doprecyzuj persistence.' })
-      .subscribe();
-
-    const request = http.expectOne(
-      '/api/flow-explorer/jobs/job%2F123/sections/PERSISTENCE/refine'
-    );
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ message: 'Doprecyzuj persistence.' });
-    request.flush({ jobId: 'job/123', chatMessages: [] });
-  });
 });
