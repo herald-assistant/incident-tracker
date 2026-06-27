@@ -40,7 +40,7 @@ class IncidentAnalysisLocalRunPersisterTest {
         var store = new CapturingLocalAnalysisRunStore();
         var persister = new IncidentAnalysisLocalRunPersister(objectMapper, store);
 
-        persister.persistCompletedInitialRun(completedSnapshot("COMPLETED"), aiRequest());
+        persister.persistCompletedInitialRun(completedSnapshot("COMPLETED"), aiRequest(), "copilot-session-1");
 
         assertNotNull(store.savedEntry);
         assertNotNull(store.savedRecord);
@@ -57,6 +57,9 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals("CRM/runtime", store.savedRecord.continuation().gitLabGroup());
         assertEquals("GITHUB_APP", store.savedRecord.continuation().authMode());
         assertEquals("operator-session-1", store.savedRecord.continuation().authPrincipalRef());
+        assertEquals("copilot-session-1", store.savedRecord.continuation().copilotSessionId());
+        assertEquals("github-copilot-sdk", store.savedRecord.continuation().copilotRuntime());
+        assertEquals("prompt-rehydrate", store.savedRecord.continuation().continuationMode());
 
         var exportEnvelope = store.savedRecord.exportEnvelope();
         assertEquals("tdw.analysis-export", exportEnvelope.path("schema").asText());
@@ -67,6 +70,7 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals("corr-123", exportEnvelope.at("/payload/job/correlationId").asText());
         assertEquals("Prepared prompt", exportEnvelope.at("/payload/job/preparedPrompt").asText());
         assertFalse(exportEnvelope.toString().contains("operator-session-1"));
+        assertFalse(exportEnvelope.toString().contains("copilot-session-1"));
     }
 
     @Test

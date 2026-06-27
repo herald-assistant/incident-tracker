@@ -6,11 +6,19 @@ import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobState
 @FunctionalInterface
 public interface IncidentAnalysisLocalRunPersistence {
 
-    IncidentAnalysisLocalRunPersistence NO_OP = (snapshot, aiRequest) -> {
+    IncidentAnalysisLocalRunPersistence NO_OP = (snapshot, aiRequest, copilotSessionId) -> {
     };
 
     void persistCompletedInitialRun(
             AnalysisJobStateSnapshot snapshot,
-            InitialAnalysisRequest aiRequest
+            InitialAnalysisRequest aiRequest,
+            String copilotSessionId
     );
+
+    default void persistCompletedInitialRun(
+            AnalysisJobStateSnapshot snapshot,
+            InitialAnalysisRequest aiRequest
+    ) {
+        persistCompletedInitialRun(snapshot, aiRequest, null);
+    }
 }

@@ -22,7 +22,7 @@ public record LocalAnalysisRunRecord(
             throw new IllegalArgumentException("exportEnvelope is required");
         }
         if (continuation == null) {
-            continuation = new LocalAnalysisRunContinuation(false, null, null, null);
+            continuation = new LocalAnalysisRunContinuation(false, null, null, null, null, null, null);
         }
     }
 

@@ -70,7 +70,8 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         var response = toAiResponse(
                 parseResult.response(),
                 preparedSession.prompt(),
-                executionResult.usage()
+                executionResult.usage(),
+                executionResult.sessionId()
         );
 
         log.info(
@@ -110,7 +111,8 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
     private InitialAnalysisResponse toAiResponse(
             StructuredAnalysisResponse structuredResponse,
             String prompt,
-            AnalysisAiUsage usage
+            AnalysisAiUsage usage,
+            String copilotSessionId
     ) {
         return new InitialAnalysisResponse(
                 "copilot-sdk",
@@ -123,7 +125,8 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
                 structuredResponse.confidence(),
                 structuredResponse.visibilityLimits(),
                 prompt,
-                usage
+                usage,
+                copilotSessionId
         );
     }
 }

@@ -89,6 +89,9 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         assertEquals("Odpowiedz lokalna.", updatedJob.chatMessages().get(3).content());
         assertEquals(1, updatedJob.chatMessages().get(3).toolEvidenceSections().size());
         assertEquals(1, updatedJob.chatMessages().get(3).aiActivityEvents().size());
+        assertEquals("follow-up-session-1", result.record().continuation().copilotSessionId());
+        assertEquals("github-copilot-sdk", result.record().continuation().copilotRuntime());
+        assertEquals("prompt-rehydrate", result.record().continuation().continuationMode());
     }
 
     @Test
@@ -280,7 +283,12 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                     Instant.parse("2026-06-20T10:06:00Z"),
                     Map.of("projectName", "billing-service")
             ));
-            return new AnalysisAiChatResponse("test-provider", "Odpowiedz lokalna.", "Follow-up prompt");
+            return new AnalysisAiChatResponse(
+                    "test-provider",
+                    "Odpowiedz lokalna.",
+                    "Follow-up prompt",
+                    "follow-up-session-1"
+            );
         }
     }
 

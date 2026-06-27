@@ -40,7 +40,8 @@ public class CopilotSdkAnalysisChatProvider implements AnalysisAiChatProvider {
             return new AnalysisAiChatResponse(
                     "copilot-sdk",
                     executionResult.content() != null ? executionResult.content().trim() : "",
-                    preparedSession.prompt()
+                    preparedSession.prompt(),
+                    executionResult.sessionId()
             );
         }
     }

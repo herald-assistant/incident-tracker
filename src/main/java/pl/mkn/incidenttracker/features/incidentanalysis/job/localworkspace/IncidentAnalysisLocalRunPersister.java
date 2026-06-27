@@ -26,7 +26,8 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
     @Override
     public void persistCompletedInitialRun(
             AnalysisJobStateSnapshot snapshot,
-            InitialAnalysisRequest aiRequest
+            InitialAnalysisRequest aiRequest,
+            String copilotSessionId
     ) {
         if (snapshot == null || !COMPLETED.equals(snapshot.status())) {
             return;
@@ -35,7 +36,7 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
         var exportEnvelope = IncidentAnalysisExportEnvelope.from(snapshot, snapshot.completedAt());
         var record = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(exportEnvelope),
-                continuation(aiRequest)
+                continuation(aiRequest, copilotSessionId)
         );
         localAnalysisRunStore.save(indexEntry(snapshot), record);
     }
@@ -60,13 +61,16 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
                 : snapshot.analysisId();
     }
 
-    private LocalAnalysisRunContinuation continuation(InitialAnalysisRequest aiRequest) {
+    private LocalAnalysisRunContinuation continuation(
+            InitialAnalysisRequest aiRequest,
+            String copilotSessionId
+    ) {
         var authRef = aiRequest != null ? aiRequest.authRef() : AnalysisAiAuthRef.localToken(null);
         return new LocalAnalysisRunContinuation(
                 true,
                 aiRequest != null ? aiRequest.gitLabGroup() : null,
                 authRef != null ? authRef.mode() : null,
                 authRef != null ? authRef.principalId() : null
-        );
+        ).withLatestCopilotSession(copilotSessionId);
     }
 }

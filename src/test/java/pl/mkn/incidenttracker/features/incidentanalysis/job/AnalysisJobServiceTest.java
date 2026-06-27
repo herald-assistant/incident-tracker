@@ -116,7 +116,7 @@ class AnalysisJobServiceTest {
         var persistence = new CapturingLocalRunPersistence();
         var persistenceTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(
-                new TestInitialAnalysisProvider(),
+                new SessionAwareInitialAnalysisProvider("copilot-session-1"),
                 new TestAnalysisChatProvider(),
                 persistenceTaskExecutor,
                 persistence
@@ -130,6 +130,7 @@ class AnalysisJobServiceTest {
         assertEquals("COMPLETED", persistence.snapshots.get(0).status());
         assertEquals("timeout-123", persistence.requests.get(0).correlationId());
         assertEquals("CRM/runtime", persistence.requests.get(0).gitLabGroup());
+        assertEquals("copilot-session-1", persistence.copilotSessionIds.get(0));
     }
 
     @Test
@@ -532,14 +533,58 @@ class AnalysisJobServiceTest {
         private final List<pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot> snapshots =
                 new java.util.ArrayList<>();
         private final List<InitialAnalysisRequest> requests = new java.util.ArrayList<>();
+        private final List<String> copilotSessionIds = new java.util.ArrayList<>();
 
         @Override
         public void persistCompletedInitialRun(
                 pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot snapshot,
-                InitialAnalysisRequest aiRequest
+                InitialAnalysisRequest aiRequest,
+                String copilotSessionId
         ) {
             snapshots.add(snapshot);
             requests.add(aiRequest);
+            copilotSessionIds.add(copilotSessionId);
+        }
+    }
+
+    private static final class SessionAwareInitialAnalysisProvider implements InitialAnalysisProvider {
+
+        private final String copilotSessionId;
+
+        private SessionAwareInitialAnalysisProvider(String copilotSessionId) {
+            this.copilotSessionId = copilotSessionId;
+        }
+
+        @Override
+        public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
+            return new TestPreparedAnalysis(
+                    "session-aware-ai-provider",
+                    request.correlationId(),
+                    "Prepared prompt for session capture correlationId=%s".formatted(request.correlationId()),
+                    request
+            );
+        }
+
+        @Override
+        public InitialAnalysisResponse analyze(
+                InitialAnalysisPreparation preparedAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            var prepared = testPreparedAnalysis(preparedAnalysis);
+            return new InitialAnalysisResponse(
+                    "session-aware-ai-provider",
+                    "DOWNSTREAM_TIMEOUT",
+                    "Billing customer-profile lookup",
+                    "Billing Context",
+                    "Core Integration Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie billingowym.",
+                    "Analiza techniczna: session id Copilota zostal przekazany do lokalnej persystencji.",
+                    "medium",
+                    List.of(),
+                    prepared.prompt(),
+                    null,
+                    copilotSessionId
+            );
         }
     }
 

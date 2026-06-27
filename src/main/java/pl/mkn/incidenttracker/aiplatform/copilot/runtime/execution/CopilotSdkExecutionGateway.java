@@ -62,12 +62,13 @@ public class CopilotSdkExecutionGateway {
                     try (var session = client.createSession(preparedSession.sessionConfig()).join()) {
                         logDuration("create-session", runReference, nanosToMillis(createSessionStart));
                         var sessionSummary = newSessionLogSummary(runReference);
+                        var sessionId = resolvedSessionId(session, preparedSession);
 
                         toolEvidenceSessionStore.registerSession(
-                                session.getSessionId(),
+                                sessionId,
                                 preparedSession.evidenceSink()
                         );
-                        toolBudgetRegistry.registerSession(session.getSessionId());
+                        toolBudgetRegistry.registerSession(sessionId);
 
                         session.on(event -> handleSessionEvent(
                                 event,
@@ -93,11 +94,11 @@ public class CopilotSdkExecutionGateway {
                                 throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
                             }
 
-                            logSessionSummary(session.getSessionId(), sessionSummary, nanosToMillis(overallStart));
-                            return new CopilotExecutionResult(content, usageAccumulator.snapshot());
+                            logSessionSummary(sessionId, sessionSummary, nanosToMillis(overallStart));
+                            return new CopilotExecutionResult(content, usageAccumulator.snapshot(), sessionId);
                         } finally {
-                            toolEvidenceSessionStore.unregisterSession(session.getSessionId());
-                            toolBudgetRegistry.unregisterSession(session.getSessionId()).ifPresent(snapshot -> log.info(
+                            toolEvidenceSessionStore.unregisterSession(sessionId);
+                            toolBudgetRegistry.unregisterSession(sessionId).ifPresent(snapshot -> log.info(
                                     "Copilot tool budget summary sessionId={} totalCalls={} softLimitExceeded={} deniedToolCalls={} rawSqlAttempts={}",
                                     snapshot.sessionId(),
                                     snapshot.totalCalls(),
@@ -131,6 +132,15 @@ public class CopilotSdkExecutionGateway {
             );
             throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception);
         }
+    }
+
+    private String resolvedSessionId(CopilotSession session, CopilotPreparedSession preparedSession) {
+        var sessionId = session.getSessionId();
+        if (StringUtils.hasText(sessionId)) {
+            return sessionId;
+        }
+
+        return preparedSession.sessionConfig() != null ? preparedSession.sessionConfig().getSessionId() : null;
     }
 
     private Throwable unwrapCompletionException(Throwable throwable) {

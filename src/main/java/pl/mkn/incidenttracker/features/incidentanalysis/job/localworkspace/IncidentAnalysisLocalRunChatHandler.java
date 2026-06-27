@@ -90,9 +90,20 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
         var updatedEnvelope = IncidentAnalysisExportEnvelope.from(updatedSnapshot, completedAt);
         var updatedRecord = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(updatedEnvelope),
-                record.continuation()
+                continuationAfterChat(record.continuation(), response)
         );
         return new LocalAnalysisRunChatResult(updatedRecord, completedAt);
+    }
+
+    private LocalAnalysisRunContinuation continuationAfterChat(
+            LocalAnalysisRunContinuation continuation,
+            AnalysisAiChatResponse response
+    ) {
+        if (continuation == null) {
+            return null;
+        }
+
+        return continuation.withLatestCopilotSession(response != null ? response.copilotSessionId() : null);
     }
 
     private IncidentAnalysisExportEnvelope exportEnvelope(LocalAnalysisRunRecord record) {

@@ -75,6 +75,7 @@ class CopilotSdkExecutionGatewayTest {
             var response = gateway.execute(preparedRequest);
 
             assertEquals("Structured answer", response.content());
+            assertEquals("session-123", response.sessionId());
             verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L));
         }
     }

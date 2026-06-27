@@ -10,8 +10,8 @@ import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotAccessToken
 import pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.incidenttracker.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
-import pl.mkn.incidenttracker.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisDataNotFoundException;
+import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisExecution;
 import pl.mkn.incidenttracker.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
 import pl.mkn.incidenttracker.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
@@ -125,7 +125,7 @@ public class AnalysisJobService {
                     new AnalysisJobStateListener(job)
             );
             job.markCompleted(execution);
-            persistCompletedInitialRun(job, execution.aiRequest());
+            persistCompletedInitialRun(job, execution);
         } catch (AnalysisDataNotFoundException exception) {
             job.markNotFound("ANALYSIS_DATA_NOT_FOUND", exception.getMessage());
         } catch (RuntimeException exception) {
@@ -144,10 +144,14 @@ public class AnalysisJobService {
         }
     }
 
-    private void persistCompletedInitialRun(AnalysisJobState job, InitialAnalysisRequest aiRequest) {
+    private void persistCompletedInitialRun(AnalysisJobState job, AnalysisExecution execution) {
         var snapshot = job.snapshot();
         try {
-            localRunPersistence.persistCompletedInitialRun(snapshot, aiRequest);
+            localRunPersistence.persistCompletedInitialRun(
+                    snapshot,
+                    execution.aiRequest(),
+                    execution.aiResponse() != null ? execution.aiResponse().copilotSessionId() : null
+            );
         } catch (RuntimeException exception) {
             log.warn(
                     "Failed to persist completed local analysis run analysisId={} correlationId={} reason={}",

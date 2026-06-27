@@ -490,7 +490,7 @@ Wykonane:
 - UI Incident Analysis kontynuuje `origin=local` przez API historii, a
   `origin=imported` pozostaje read-only.
 
-### [ ] 007. Zapis `copilotSessionId` i metadanych SDK
+### [x] 007. Zapis `copilotSessionId` i metadanych SDK
 
 Cel:
 
@@ -500,19 +500,40 @@ Zakres:
 
 - execution gateway zwraca albo publikuje rzeczywisty `session.getSessionId()`,
 - initial run zapisuje ten id w `continuation.copilotSessionId`,
-- runtime zapisuje model, reasoning, SDK/CLI metadata, context usage.
+- lokalny follow-up po sukcesie przesuwa `continuation.copilotSessionId` na
+  ostatnia zakonczona sesje Copilota,
+- `continuation` zapisuje tylko lekkie metadata runtime:
+  `copilotSessionId`, `copilotRuntime`, `continuationMode`,
+- model, reasoning i context usage pozostaja w istniejacym export-envelope /
+  `usage` i nie sa dublowane w `continuation`.
 
-Do zatwierdzenia:
+Uzgodnione:
 
-- czy `CopilotExecutionResult` dostaje `sessionId`,
-- czy `AnalysisAiActivityEvent` wystarczy jako zrodlo context usage,
-- jak nazwac `analysisRunId` vs `copilotSessionId`.
+- `CopilotExecutionResult` dostaje `sessionId`,
+- `InitialAnalysisResponse` i `AnalysisAiChatResponse` przenosza
+  `copilotSessionId` do warstwy feature'a,
+- `analysisId` pozostaje identyfikatorem lokalnego runu/UI,
+  `copilotSessionId` jest wylacznie identyfikatorem sesji SDK,
+- `continuationMode=prompt-rehydrate` opisuje obecne zachowanie; prawdziwe
+  SDK resume nie jest jeszcze wlaczone.
 
 Kryteria akceptacji:
 
 - lokalny run ma session id zgodny z SDK,
 - export nie zawiera session id,
 - walidacja hidden tool context nadal chroni tool invocation.
+
+Wykonane:
+
+- `CopilotSdkExecutionGateway` zwraca rzeczywisty `sessionId` w
+  `CopilotExecutionResult`,
+- local `run.json` zapisuje `continuation.copilotSessionId`,
+  `continuation.copilotRuntime=github-copilot-sdk` i
+  `continuation.continuationMode=prompt-rehydrate`,
+- local follow-up aktualizuje `continuation.copilotSessionId` po pelnym sukcesie
+  odpowiedzi,
+- testy pokrywaja zapis session id poza exportem oraz przekazanie session id z
+  SDK do lokalnej persystencji.
 
 ### [ ] 008. `resumeSession` dla follow-up
 

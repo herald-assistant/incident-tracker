@@ -68,6 +68,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
 
         assertEquals("PREPARED_RESPONSE", response.detectedProblem());
         assertEquals("Prepared prompt body", response.prompt());
+        assertEquals("sdk-session-test", response.copilotSessionId());
         verifyNoInteractions(preparationService);
         verify(executionGateway).execute(same(preparedSession));
     }
@@ -144,7 +145,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
     }
 
     private CopilotExecutionResult executionResult(String content) {
-        return new CopilotExecutionResult(content, null);
+        return new CopilotExecutionResult(content, null, "sdk-session-test");
     }
 
     private String structuredResponse(String detectedProblem) {
