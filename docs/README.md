@@ -36,6 +36,9 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
   zrodlowy workspace Angular dla ekranu operacyjnego.
 - `../src/main/resources/static`
   wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
+- `local-workspace-and-launcher.md`
+  instrukcja lokalnego uruchamiania JAR-a, katalogu `tdw-data`, backupu i
+  roznicy miedzy local workspace a exportem.
 
 ## Frontend workflow
 

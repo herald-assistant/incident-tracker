@@ -919,7 +919,7 @@ Wykonane:
 - nie zmieniano `artifactId`, endpointow HTTP, schema JSON, nazw tooli,
   kontraktow exportu ani zachowania runtime.
 
-### [ ] 012. Dokumentacja i launcher
+### [x] 012. Dokumentacja i launcher
 
 Cel:
 
@@ -945,6 +945,26 @@ Kryteria akceptacji:
 - uzytkownik rozumie, gdzie sa dane,
 - usuniecie katalogu ma jasne konsekwencje,
 - export nie jest przedstawiany jako pelny backup.
+
+Wykonane:
+
+- dodano `run-tdw.ps1`, ktory szuka JAR-a obok skryptu, pomocniczo sprawdza
+  `target/` przy uruchomieniu z repo, tworzy katalog `tdw-data` i przekazuje
+  backendowi `--tdw.workspace.directory`,
+- dodano klikany wrapper `run-tdw.cmd`, ktory uruchamia `run-tdw.ps1`
+  PowerShellem i zostawia okno otwarte przy bledzie,
+- launcher ma tryb `-DryRun`, ktory pokazuje wybrany JAR, katalog danych i
+  argumenty uruchomienia bez startowania aplikacji,
+- dodano jawne properties `tdw.workspace.enabled` i
+  `tdw.workspace.directory=${TDW_WORKSPACE_DIRECTORY:tdw-data}` w
+  `application.properties`,
+- `analysis.ai.copilot.copilot-home` pozostaje podpiety pod
+  `${tdw.workspace.directory}/copilot`, wiec stan sesji Copilota jest czescia
+  lokalnego workspace'u,
+- dodano `docs/local-workspace-and-launcher.md` z opisem uruchomienia,
+  struktury `tdw-data`, roznicy local workspace vs export, backupu i skutkow
+  usuniecia katalogu,
+- dodano `tdw-data/` do `.gitignore`.
 
 ## Ryzyka
 
