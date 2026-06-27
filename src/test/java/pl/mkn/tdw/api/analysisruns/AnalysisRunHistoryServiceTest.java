@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatResult;
@@ -229,6 +232,69 @@ class AnalysisRunHistoryServiceTest {
     }
 
     @Test
+    void shouldDeleteCopilotSessionWhenDeletingContinuableRun() {
+        var store = new CapturingLocalAnalysisRunStore();
+        var continuation = new LocalAnalysisRunContinuation(
+                true,
+                "CRM/runtime",
+                "GITHUB_APP",
+                "operator-session-1"
+        ).withLatestCopilotSession("copilot-session-123");
+        store.addRun(
+                entry("analysis-1", "incident-analysis", "corr-123"),
+                recordWithPrompt("analysis-1", "Prepared prompt", continuation)
+        );
+        var cleanup = new CapturingCopilotSessionCleanup();
+        var service = new AnalysisRunHistoryService(store, List.of(), cleanup);
+
+        service.deleteRun("analysis-1");
+
+        assertEquals("copilot-session-123", cleanup.sessionId);
+        assertEquals(CopilotAuthMode.GITHUB_APP, cleanup.auth.mode());
+        assertEquals("operator-session-1", cleanup.auth.principalId());
+        assertTrue(cleanup.auth.userBilling());
+        assertEquals("analysis-1", store.deletedAnalysisId);
+    }
+
+    @Test
+    void shouldKeepDeletingRunWhenCopilotCleanupFails() {
+        var store = new CapturingLocalAnalysisRunStore();
+        var continuation = new LocalAnalysisRunContinuation(
+                true,
+                "CRM/runtime",
+                "LOCAL_TOKEN",
+                "local-token"
+        ).withLatestCopilotSession("copilot-session-123");
+        store.addRun(
+                entry("analysis-1", "incident-analysis", "corr-123"),
+                recordWithPrompt("analysis-1", "Prepared prompt", continuation)
+        );
+        var cleanup = new FailingCopilotSessionCleanup();
+        var service = new AnalysisRunHistoryService(store, List.of(), cleanup);
+
+        service.deleteRun("analysis-1");
+
+        assertEquals("copilot-session-123", cleanup.sessionId);
+        assertEquals("analysis-1", store.deletedAnalysisId);
+        assertTrue(store.entries.isEmpty());
+        assertTrue(store.records.isEmpty());
+    }
+
+    @Test
+    void shouldDeleteCorruptedRunWithoutCopilotCleanup() {
+        var store = new CapturingLocalAnalysisRunStore();
+        store.addIndexOnly(entry("analysis-1", "incident-analysis", "corr-123"));
+        var cleanup = new CapturingCopilotSessionCleanup();
+        var service = new AnalysisRunHistoryService(store, List.of(), cleanup);
+
+        service.deleteRun("analysis-1");
+
+        assertNull(cleanup.sessionId);
+        assertEquals("analysis-1", store.deletedAnalysisId);
+        assertTrue(store.entries.isEmpty());
+    }
+
+    @Test
     void shouldReportCorruptedRunWhenIndexExistsButRecordIsMissing() {
         var store = new CapturingLocalAnalysisRunStore();
         store.addIndexOnly(entry("analysis-1", "incident-analysis", "corr-123"));
@@ -382,6 +448,36 @@ class AnalysisRunHistoryServiceTest {
                 throw exception;
             }
             return new LocalAnalysisRunChatResult(updatedRecord, CHAT_UPDATED_AT);
+        }
+    }
+
+    private static final class CapturingCopilotSessionCleanup implements CopilotSessionCleanup {
+
+        private String sessionId;
+        private CopilotRunAuth auth;
+
+        @Override
+        public void deleteSession(String sessionId, CopilotRunAuth auth) {
+            this.sessionId = sessionId;
+            this.auth = auth;
+        }
+    }
+
+    private static final class FailingCopilotSessionCleanup implements CopilotSessionCleanup {
+
+        private String sessionId;
+
+        @Override
+        public void deleteSession(String sessionId, CopilotRunAuth auth) {
+            this.sessionId = sessionId;
+            throw new QuietRuntimeException("Copilot state locked.");
+        }
+    }
+
+    private static final class QuietRuntimeException extends RuntimeException {
+
+        private QuietRuntimeException(String message) {
+            super(message, null, false, false);
         }
     }
 }

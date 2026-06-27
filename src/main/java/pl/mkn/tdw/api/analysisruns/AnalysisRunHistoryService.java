@@ -1,10 +1,15 @@
 package pl.mkn.tdw.api.analysisruns;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
@@ -13,18 +18,31 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import java.util.List;
 
 @Service
+@Slf4j
 public class AnalysisRunHistoryService {
 
     private final LocalAnalysisRunStore localAnalysisRunStore;
     private final List<LocalAnalysisRunChatHandler> chatHandlers;
+    private final CopilotSessionCleanup copilotSessionCleanup;
 
     @Autowired
     public AnalysisRunHistoryService(
             LocalAnalysisRunStore localAnalysisRunStore,
-            List<LocalAnalysisRunChatHandler> chatHandlers
+            List<LocalAnalysisRunChatHandler> chatHandlers,
+            CopilotSessionCleanup copilotSessionCleanup
     ) {
         this.localAnalysisRunStore = localAnalysisRunStore;
         this.chatHandlers = chatHandlers != null ? List.copyOf(chatHandlers) : List.of();
+        this.copilotSessionCleanup = copilotSessionCleanup != null
+                ? copilotSessionCleanup
+                : CopilotSessionCleanup.NO_OP;
+    }
+
+    AnalysisRunHistoryService(
+            LocalAnalysisRunStore localAnalysisRunStore,
+            List<LocalAnalysisRunChatHandler> chatHandlers
+    ) {
+        this(localAnalysisRunStore, chatHandlers, CopilotSessionCleanup.NO_OP);
     }
 
     AnalysisRunHistoryService(LocalAnalysisRunStore localAnalysisRunStore) {
@@ -82,7 +100,43 @@ public class AnalysisRunHistoryService {
 
     public void deleteRun(String analysisId) {
         var indexEntry = indexEntryOrThrow(analysisId);
+        cleanupCopilotSession(indexEntry.analysisId());
         localAnalysisRunStore.delete(indexEntry.analysisId());
+    }
+
+    private void cleanupCopilotSession(String analysisId) {
+        var continuation = localAnalysisRunStore.findById(analysisId)
+                .map(LocalAnalysisRunRecord::continuation)
+                .orElse(null);
+        if (continuation == null || !StringUtils.hasText(continuation.copilotSessionId())) {
+            return;
+        }
+        if (StringUtils.hasText(continuation.copilotRuntime())
+                && !LocalAnalysisRunContinuation.COPILOT_RUNTIME_GITHUB_COPILOT_SDK.equals(continuation.copilotRuntime())) {
+            return;
+        }
+
+        try {
+            copilotSessionCleanup.deleteSession(continuation.copilotSessionId(), copilotAuth(continuation));
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to cleanup Copilot session while deleting local run analysisId={} sessionId={} reason={}",
+                    analysisId,
+                    continuation.copilotSessionId(),
+                    exception.getMessage(),
+                    exception
+            );
+        }
+    }
+
+    private CopilotRunAuth copilotAuth(LocalAnalysisRunContinuation continuation) {
+        var mode = CopilotAuthMode.from(continuation.authMode());
+        return new CopilotRunAuth(
+                mode,
+                continuation.authPrincipalRef(),
+                null,
+                mode == CopilotAuthMode.GITHUB_APP
+        );
     }
 
     private LocalAnalysisRunIndexEntry indexEntryOrThrow(String analysisId) {

@@ -125,6 +125,14 @@ caly katalog `tdw-data`.
 
 ## Usuwanie Danych
 
+Usuniecie pojedynczego runu w `Analysis History` usuwa jego wpis z
+`index.json`, katalog `runs/<analysisId>/` oraz, jezeli lokalny rekord ma
+`copilotSessionId`, probuje od razu usunac odpowiadajaca mu sesje przez
+GitHub Copilot SDK. Dodatkowo backend sprzata lokalny katalog
+`copilot/session-state/<copilotSessionId>`, jezeli taki katalog istnieje pod
+skonfigurowanym `analysis.ai.copilot.copilot-home`. Brak albo awaria cleanupu
+Copilota nie blokuje usuniecia wpisu historii.
+
 Usuniecie `tdw-data` usuwa:
 
 - liste historii analiz,

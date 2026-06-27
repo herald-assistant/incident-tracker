@@ -688,7 +688,11 @@ Decyzje MVP:
 - w V1 nie ma osobnego diagnostic exportu; ewentualny tryb diagnostyczny musi
   miec osobny kontrakt,
 - w V1 retencja jest reczna: uzytkownik usuwa run w UI albo caly katalog
-  `tdw-data`; automatyczna retencja nie jest czescia MVP.
+  `tdw-data`; automatyczna retencja nie jest czescia MVP,
+- usuniecie pojedynczego runu probuje best-effort usunac powiazana sesje
+  Copilota przez SDK `deleteSession` i lokalny katalog
+  `copilot/session-state/<copilotSessionId>`, gdy rekord kontynuacji zawiera
+  `copilotSessionId`; awaria cleanupu Copilota nie blokuje usuniecia historii.
 
 Pelny backup kontynuowalnego workspace'u oznacza skopiowanie calego katalogu
 `tdw-data`, najlepiej przy zatrzymanej aplikacji. Zwykly export JSON nie jest
