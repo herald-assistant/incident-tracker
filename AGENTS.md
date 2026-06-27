@@ -144,6 +144,14 @@ Zasady granic:
   providera AI tylko `InitialAnalysisRequest` oraz
   `shared.evidence.AnalysisEvidenceSection`;
   nie wciskaj klas adapter-specific do prompt buildera ani kontraktu AI.
+- Gdy kod Java SDK, bytecode albo lokalny artefakt `copilot-sdk-java` nie
+  wyjasnia semantyki opcji Copilota, obowiazkowo sprawdz upstream
+  `github/copilot-sdk`, szczegolnie `nodejs/README.md` oraz schemat/protokol
+  pakietu npm `@github/copilot`. Java SDK jest wrapperem nad Copilot CLI i
+  czesc zachowan, np. `infiniteSessions`, progi kompaktowania, workspace
+  sesji albo domyslne wartosci, bywa lepiej opisana w dokumentacji Node/CLI
+  niz w klasach Javy. Nie zgaduj defaultow ani zakresow parametrow bez takiej
+  weryfikacji.
 - Docelowa platforma Copilot ma byc parametryzowana przez feature. Aktualnym
   pierwszym inputem runtime jest `CopilotRunRequest`; prompt, skille,
   available tools, hidden context, evidence sink i response parser maja

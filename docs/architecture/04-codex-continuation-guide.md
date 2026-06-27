@@ -103,6 +103,23 @@ Przy nowej sesji najlepiej zaczac od:
 - `CopilotArtifactContentMapper`
 - `CopilotIncidentFollowUpPreparationService`
 
+Jesli Java SDK albo lokalny artefakt `copilot-sdk-java` pokazuje tylko ksztalt
+API, ale nie tlumaczy semantyki, defaultow albo bezpiecznego sposobu uzycia,
+obowiazkowo sprawdz upstream GitHub Copilot SDK:
+
+- `https://github.com/github/copilot-sdk`
+- `https://github.com/github/copilot-sdk/blob/main/nodejs/README.md`
+- schemat/protokol z pakietu npm `@github/copilot`, z ktorego generowane sa
+  kontrakty SDK.
+
+To jest praktyczne zrodlo wiedzy o zachowaniu Copilot CLI/Node runtime. Tak
+zostaly zweryfikowane m.in. `infiniteSessions`, domyslne progi
+`backgroundCompactionThreshold=0.8`, `bufferExhaustionThreshold=0.95`,
+workspace `~/.copilot/session-state/{sessionId}` oraz eventy compaction.
+Projektujac uzycie SDK, nie zgaduj znaczenia parametrow z samych nazw metod w
+Javie; potwierdz je w upstream docs/protocol i dopiero potem mapuj na
+`aiplatform.copilot`.
+
 ### Za Copilot auth odpowiadaja glownie
 
 - `api.githubauth`

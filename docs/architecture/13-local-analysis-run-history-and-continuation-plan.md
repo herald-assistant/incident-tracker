@@ -78,6 +78,23 @@ komputerze operatora:
 
 ## Decyzje Copilot SDK i AI Gateway
 
+Jesli lokalny kod Java SDK, bytecode albo publiczne API nie wyjasnia dokladnie
+semantyki opcji, nie projektujemy zachowania na podstawie samych nazw metod.
+Obowiazkowo trzeba sprawdzic upstream GitHub Copilot SDK, szczegolnie:
+
+- `https://github.com/github/copilot-sdk`
+- `https://github.com/github/copilot-sdk/blob/main/nodejs/README.md`
+- schemat/protokol pakietu npm `@github/copilot`, z ktorego generowane sa
+  kontrakty runtime.
+
+Java SDK jest wrapperem nad Copilot CLI, dlatego czesc praktycznych informacji
+o efektywnym i bezpiecznym uzyciu SDK moze byc opisana lepiej w dokumentacji
+Node/CLI niz w klasach Javy. Dla `infiniteSessions` wlasnie tam potwierdzono,
+ze mechanizm jest domyslnie wlaczony, uzywa workspace
+`~/.copilot/session-state/{sessionId}`, startuje background compaction przy
+`backgroundCompactionThreshold=0.8` i blokuje na domkniecie kompaktowania przy
+`bufferExhaustionThreshold=0.95`.
+
 Copilot SDK daje nam mechanike, ktorej nie powinnismy duplikowac w aplikacji:
 
 - tworzenie i wznawianie sesji przez `createSession` / `resumeSession`,

@@ -600,6 +600,14 @@ Kolejnosc prac:
 Dopiero po tych warstwach warto dodawac wieksze zmiany, np. soft repair,
 multi-stage flow, routing modeli albo alternatywne delivery mode artefaktow.
 
+Przy projektowaniu uzycia Copilot SDK nie wolno opierac decyzji tylko na
+publicznych metodach Javy, jesli Java SDK albo bytecode nie wyjasnia semantyki
+opcji. Wtedy obowiazkowo sprawdzamy upstream `github/copilot-sdk`, szczegolnie
+`nodejs/README.md` oraz schemat/protokol pakietu npm `@github/copilot`, z
+ktorego generowane sa kontrakty runtime. To tam trzeba potwierdzac domyslne
+wartosci, progi, workspace sesji, eventy i bezpieczny sposob uzycia mechanizmow
+SDK, tak jak przy weryfikacji `infiniteSessions`.
+
 ## 22. Docelowo Copilot jest parametryzowana platforma runtime
 
 Docelowy `aiplatform.copilot` nie jest wlascicielem analizy incydentu. To
