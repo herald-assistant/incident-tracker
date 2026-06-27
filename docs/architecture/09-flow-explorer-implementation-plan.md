@@ -796,11 +796,12 @@ Status: wykonane w Step 11D, po dzialajacym UI end-to-end.
 
 - [x] Dodac chat request/response DTO.
 - [x] Chat dziala dopiero po `COMPLETED`.
-- [x] Chat reuse'uje context snapshot, result, previous tool evidence,
-  history i hidden scope.
-- [x] Obecna implementacja Flow Explorer chatu uruchamia osobna sesje
-  Copilota; po platformowym kroku 009 docelowym wzorcem dla nowych follow-upow
-  jest resume przez `sessionTarget=EXISTING(copilotSessionId)`, bez fallbacku.
+- [x] Live i lokalny chat wznawia ta sama sesje Copilota przez
+  `sessionTarget=EXISTING(copilotSessionId)`, bez fallbacku na nowa analize.
+- [x] Follow-up wysyla do SDK sama wiadomosc operatora; kontekst initial runu,
+  historia i kompaktowanie sa odpowiedzialnoscia wznawianej sesji Copilota.
+- [x] Lokalny run z historii uzywa `/analysis/runs/{id}/chat/messages`,
+  aktualizuje zapisany envelope i odswieza `continuation.copilotSessionId`.
 - [x] Tool evidence z chatu jest przypisane do konkretnej odpowiedzi.
 - [x] Dodac testy chatu.
 
@@ -1949,7 +1950,7 @@ miala juz taki UX, ale implementacja laczyla w komponencie czytanie pliku,
 parsowanie JSON-a i pobieranie pliku.
 
 Decyzja: Flow Explorer dostaje wlasny format eksportu
-`incident-tracker.flow-explorer-export` w wersji `1`. Nie utrzymujemy
+`tdw.flow-explorer-export` w wersji `2`. Nie utrzymujemy
 kompatybilnosci wstecznej ani nie importujemy surowych legacy snapshotow bez
 envelope. Wspoldzielone zostaly tylko neutralne frontendowe helpery JSON/file:
 

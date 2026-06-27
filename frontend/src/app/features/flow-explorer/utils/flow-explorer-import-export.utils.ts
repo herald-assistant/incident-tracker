@@ -24,7 +24,7 @@ import {
   FlowExplorerSectionModeAssignment
 } from '../models/flow-explorer.models';
 
-export const FLOW_EXPLORER_EXPORT_SCHEMA = 'incident-tracker.flow-explorer-export';
+export const FLOW_EXPLORER_EXPORT_SCHEMA = 'tdw.flow-explorer-export';
 export const FLOW_EXPLORER_EXPORT_VERSION = 2;
 export const FLOW_EXPLORER_EXPORT_PAYLOAD_TYPE = 'flow-explorer-analysis';
 export const FLOW_EXPLORER_RESULT_CONTRACT = 'flow-explorer-goal-result-v1';

@@ -14,7 +14,7 @@ describe('flow-explorer-import-export utils', () => {
 
     const imported = parseImportedFlowExplorerAnalysis(envelope);
 
-    expect(envelope.schema).toBe('incident-tracker.flow-explorer-export');
+    expect(envelope.schema).toBe('tdw.flow-explorer-export');
     expect(envelope.version).toBe(2);
     expect(envelope.payload.type).toBe('flow-explorer-analysis');
     expect(envelope.payload.resultContract).toBe(FLOW_EXPLORER_RESULT_CONTRACT);
@@ -63,7 +63,7 @@ describe('flow-explorer-import-export utils', () => {
 
   it('should reject imported files without the v2 diagnostics contract', () => {
     const envelope = {
-      schema: 'incident-tracker.flow-explorer-export',
+      schema: 'tdw.flow-explorer-export',
       version: 1,
       exportedAt: '2026-06-18T10:00:00Z',
       payload: {

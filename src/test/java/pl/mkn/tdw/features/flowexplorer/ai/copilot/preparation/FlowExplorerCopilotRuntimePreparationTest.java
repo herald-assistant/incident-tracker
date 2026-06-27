@@ -11,6 +11,7 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
@@ -26,6 +27,7 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -289,12 +291,17 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "follow-up-123",
                 request(),
                 contextSnapshot(),
-                preparation()
+                preparation(),
+                "initial-copilot-session-123",
+                AnalysisAiAuthRef.localToken(null)
         );
         var runRequest = assembly.runRequest();
         var hiddenContext = assembly.toolSessionContext().hiddenContext();
 
         assertEquals("follow-up-123", runRequest.runReference());
+        assertEquals(CopilotSessionTarget.Type.EXISTING, runRequest.sessionTarget().type());
+        assertEquals("initial-copilot-session-123", runRequest.sessionTarget().sessionId());
+        assertEquals("initial-copilot-session-123", assembly.toolSessionContext().copilotSessionId());
         assertEquals("Flow Explorer canonical prompt", runRequest.prompt());
         assertEquals(
                 FlowExplorerCopilotToolContextKeys.RUN_KIND_FOLLOW_UP,

@@ -246,11 +246,14 @@ export class FlowExplorerPageComponent implements OnInit {
       !this.isJobActive()
   );
   readonly chatMessages = computed(() => this.job()?.chatMessages ?? []);
-  readonly isChatAvailable = computed(
-    () =>
+  readonly isChatAvailable = computed(() => {
+    const exportState = this.exportState();
+    return (
       Boolean(this.job()?.result && this.job()?.status === 'COMPLETED') &&
-      this.exportState()?.origin === 'live'
-  );
+      (exportState?.origin === 'live' ||
+        (exportState?.origin === 'local' && Boolean(exportState.continuationEnabled)))
+    );
+  });
   readonly chatHint = computed(() => {
     const job = this.job();
     if (!job?.result) {
@@ -261,7 +264,7 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     if (this.exportState()?.origin === 'local') {
       return this.exportState()?.continuationEnabled
-        ? 'Lokalny run zostal otwarty z historii. Wysylanie follow-up dla lokalnych runow zostanie podlaczone przez API kontynuacji.'
+        ? 'Lokalny run zostal otwarty z historii. Follow-up kontynuuje zapisana sesje AI.'
         : 'Ten lokalny run nie ma wlaczonych metadanych kontynuacji.';
     }
     if (job.status !== 'COMPLETED') {
@@ -720,6 +723,31 @@ export class FlowExplorerPageComponent implements OnInit {
 
     this.isSendingChat.set(true);
     this.chatError.set('');
+
+    const exportState = this.exportState();
+    if (exportState?.origin === 'local') {
+      const localRunId = exportState.localRunId;
+      if (!localRunId) {
+        this.isSendingChat.set(false);
+        this.chatError.set('Nie mozna kontynuowac lokalnego runu bez identyfikatora historii.');
+        return;
+      }
+
+      this.historyApi
+        .sendChatMessage(localRunId, { message: trimmedMessage })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (detail) => {
+            this.isSendingChat.set(false);
+            this.applyLocalFlowExplorerRun(detail);
+          },
+          error: (error: HttpErrorResponse) => {
+            this.isSendingChat.set(false);
+            this.chatError.set(this.errorMessage(error, 'Nie udalo sie wyslac lokalnego pytania follow-up.'));
+          }
+        });
+      return;
+    }
 
     this.flowExplorerApi
       .sendChatMessage(job.jobId, { message: trimmedMessage })

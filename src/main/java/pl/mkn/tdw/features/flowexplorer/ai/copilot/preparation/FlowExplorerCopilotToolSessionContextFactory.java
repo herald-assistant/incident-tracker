@@ -33,11 +33,22 @@ public class FlowExplorerCopilotToolSessionContextFactory {
             FlowExplorerPromptPreparation preparation,
             boolean followUp
     ) {
+        return create(runReference, null, request, contextSnapshot, preparation, followUp);
+    }
+
+    public CopilotToolSessionContext create(
+            String runReference,
+            String copilotSessionId,
+            FlowExplorerJobStartRequest request,
+            FlowExplorerContextSnapshot contextSnapshot,
+            FlowExplorerPromptPreparation preparation,
+            boolean followUp
+    ) {
         var normalizedRunReference = normalizeRunReference(runReference);
 
         return new CopilotToolSessionContext(
                 normalizedRunReference,
-                SESSION_ID_PREFIX + normalizedRunReference,
+                normalizeCopilotSessionId(copilotSessionId, normalizedRunReference),
                 hiddenContext(contextSnapshot, followUp)
         );
     }
@@ -80,5 +91,11 @@ public class FlowExplorerCopilotToolSessionContextFactory {
             return UUID.randomUUID().toString();
         }
         return runReference.trim();
+    }
+
+    private static String normalizeCopilotSessionId(String copilotSessionId, String normalizedRunReference) {
+        return StringUtils.hasText(copilotSessionId)
+                ? copilotSessionId.trim()
+                : SESSION_ID_PREFIX + normalizedRunReference;
     }
 }

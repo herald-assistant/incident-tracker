@@ -40,6 +40,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
@@ -56,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -124,7 +126,13 @@ class FlowExplorerJobServiceTest {
         assertEquals("COMPLETED", fetched.status());
         verify(contextService).buildContext(expectedContextRequest());
         verify(promptPreparationService).prepare(request, contextSnapshot);
-        verify(runRequestAssembler).assemble(started.jobId(), request, contextSnapshot, promptPreparation);
+        verify(runRequestAssembler).assemble(
+                eq(started.jobId()),
+                same(request),
+                same(contextSnapshot),
+                same(promptPreparation),
+                any(AnalysisAiAuthRef.class)
+        );
         verify(runPreparationService).prepare(runRequest);
     }
 
@@ -254,7 +262,6 @@ class FlowExplorerJobServiceTest {
         var promptPreparation = promptPreparation();
         var runRequest = runRequest();
         var preparedSession = preparedSession(runRequest);
-        var followUpPromptPreparation = followUpPromptPreparation();
         var followUpRunRequest = followUpRunRequest();
         var followUpPreparedSession = preparedSession(followUpRunRequest);
         var evidence = new AnalysisEvidenceSection(
@@ -266,26 +273,26 @@ class FlowExplorerJobServiceTest {
                 ))
         );
         givenContextPromptAndRun(request, contextSnapshot, promptPreparation, runRequest, preparedSession);
-        when(followUpPromptPreparationService.prepare(any(FlowExplorerFollowUpChatRequest.class)))
-                .thenReturn(followUpPromptPreparation);
         when(runRequestAssembler.assembleFollowUp(
                 any(String.class),
                 same(request),
                 same(contextSnapshot),
-                same(followUpPromptPreparation)
+                any(FlowExplorerPromptPreparation.class),
+                eq("initial-session-1"),
+                any(AnalysisAiAuthRef.class)
         )).thenReturn(new FlowExplorerCopilotRunAssembly(
                 followUpRunRequest,
-                new CopilotToolSessionContext("follow-up-123", "flow-explorer-follow-up-123", Map.of()),
+                new CopilotToolSessionContext("follow-up-123", "initial-session-1", Map.of()),
                 FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
         ));
         when(runPreparationService.prepare(followUpRunRequest)).thenReturn(followUpPreparedSession);
         when(executionGateway.execute(any(CopilotPreparedSession.class))).thenAnswer(invocation -> {
             var session = (CopilotPreparedSession) invocation.getArgument(0);
             if ("Flow Explorer canonical prompt".equals(session.prompt())) {
-                return new CopilotExecutionResult(aiJson(), usage());
+                return new CopilotExecutionResult(aiJson(), usage(), "initial-session-1");
             }
             session.evidenceSink().accept(evidence);
-            return new CopilotExecutionResult("Walidacja jest w CustomerService.validate.", null);
+            return new CopilotExecutionResult("Walidacja jest w CustomerService.validate.", null, "follow-up-session-1");
         });
 
         var started = flowExplorerJobService.startJob(request);
@@ -301,28 +308,22 @@ class FlowExplorerJobServiceTest {
         assertEquals("ASSISTANT", afterChatStart.chatMessages().get(1).role());
         assertEquals("COMPLETED", afterChatStart.chatMessages().get(1).status());
         assertEquals("Walidacja jest w CustomerService.validate.", afterChatStart.chatMessages().get(1).content());
-        assertEquals("Flow Explorer follow-up prompt", afterChatStart.chatMessages().get(1).prompt());
+        assertEquals("Gdzie jest walidacja?", afterChatStart.chatMessages().get(1).prompt());
         assertEquals(1, afterChatStart.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals("gitlab", afterChatStart.chatMessages().get(1).toolEvidenceSections().get(0).provider());
 
-        var chatRequestCaptor = ArgumentCaptor.forClass(FlowExplorerFollowUpChatRequest.class);
-        verify(followUpPromptPreparationService).prepare(chatRequestCaptor.capture());
-        var capturedChatRequest = chatRequestCaptor.getValue();
-        assertSame(request, capturedChatRequest.initialRequest());
-        assertSame(contextSnapshot, capturedChatRequest.contextSnapshot());
-        assertEquals("Gdzie jest walidacja?", capturedChatRequest.message());
-        assertEquals(0, capturedChatRequest.history().size());
-        assertNotNull(capturedChatRequest.result());
-        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, capturedChatRequest.result().goal());
-        assertEquals(4, capturedChatRequest.result().aiResponse().sections().size());
-        assertEquals(FlowExplorerResultSectionMode.DEEP,
-                capturedChatRequest.result().aiResponse().sections().get(0).mode());
+        var promptCaptor = ArgumentCaptor.forClass(FlowExplorerPromptPreparation.class);
         verify(runRequestAssembler).assembleFollowUp(
                 any(String.class),
                 same(request),
                 same(contextSnapshot),
-                same(followUpPromptPreparation)
+                promptCaptor.capture(),
+                eq("initial-session-1"),
+                any(AnalysisAiAuthRef.class)
         );
+        assertEquals("Gdzie jest walidacja?", promptCaptor.getValue().prompt());
+        assertTrue(promptCaptor.getValue().artifacts().isEmpty());
+        assertTrue(promptCaptor.getValue().artifactContents().isEmpty());
     }
 
     @Test
@@ -360,7 +361,13 @@ class FlowExplorerJobServiceTest {
     ) {
         when(contextService.buildContext(expectedContextRequest())).thenReturn(contextSnapshot);
         when(promptPreparationService.prepare(request, contextSnapshot)).thenReturn(promptPreparation);
-        when(runRequestAssembler.assemble(any(String.class), same(request), same(contextSnapshot), same(promptPreparation)))
+        when(runRequestAssembler.assemble(
+                any(String.class),
+                same(request),
+                same(contextSnapshot),
+                same(promptPreparation),
+                any(AnalysisAiAuthRef.class)
+        ))
                 .thenReturn(new FlowExplorerCopilotRunAssembly(
                         runRequest,
                         new CopilotToolSessionContext("job-123", "flow-explorer-job-123", Map.of()),

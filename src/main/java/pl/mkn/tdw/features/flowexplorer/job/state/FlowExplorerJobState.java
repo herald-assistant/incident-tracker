@@ -16,6 +16,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSection;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
@@ -48,6 +49,7 @@ public final class FlowExplorerJobState {
 
     private final String jobId;
     private final FlowExplorerJobStartRequest request;
+    private final AnalysisAiAuthRef authRef;
     private final Instant createdAt;
     private final List<AnalysisJobStepResponse> steps;
     private final List<AnalysisEvidenceSection> contextSections;
@@ -64,12 +66,22 @@ public final class FlowExplorerJobState {
     private Instant updatedAt;
     private Instant completedAt;
     private String preparedPrompt;
+    private String copilotSessionId;
     private FlowExplorerContextSnapshot contextSnapshot;
     private FlowExplorerResultResponse result;
 
     public FlowExplorerJobState(String jobId, FlowExplorerJobStartRequest request) {
+        this(jobId, request, AnalysisAiAuthRef.localToken(null));
+    }
+
+    public FlowExplorerJobState(
+            String jobId,
+            FlowExplorerJobStartRequest request,
+            AnalysisAiAuthRef authRef
+    ) {
         this.jobId = jobId;
         this.request = request;
+        this.authRef = authRef != null ? authRef : AnalysisAiAuthRef.localToken(null);
         this.createdAt = Instant.now();
         this.updatedAt = createdAt;
         this.steps = new ArrayList<>();
@@ -152,6 +164,15 @@ public final class FlowExplorerJobState {
     }
 
     public synchronized void markAiCompleted(FlowExplorerAiResponse aiResponse, AnalysisAiUsage usage, String prompt) {
+        markAiCompleted(aiResponse, usage, prompt, null);
+    }
+
+    public synchronized void markAiCompleted(
+            FlowExplorerAiResponse aiResponse,
+            AnalysisAiUsage usage,
+            String prompt,
+            String copilotSessionId
+    ) {
         var now = Instant.now();
         status = STATUS_COMPLETED;
         currentStepCode = null;
@@ -159,6 +180,7 @@ public final class FlowExplorerJobState {
         updatedAt = now;
         completedAt = now;
         preparedPrompt = prompt;
+        rememberCopilotSession(copilotSessionId);
         completeStep(
                 STEP_AI_ANALYSIS,
                 STEP_AI_ANALYSIS_LABEL,
@@ -241,6 +263,12 @@ public final class FlowExplorerJobState {
                     "Follow-up chat is available only after a completed Flow Explorer job."
             );
         }
+        if (!StringUtils.hasText(copilotSessionId)) {
+            throw new FlowExplorerJobChatUnavailableException(
+                    "FLOW_EXPLORER_CHAT_SESSION_MISSING",
+                    "Follow-up chat requires a Copilot session id from the completed Flow Explorer job."
+            );
+        }
         if (hasActiveAssistantMessage()) {
             throw new FlowExplorerJobChatUnavailableException(
                     "FLOW_EXPLORER_CHAT_IN_PROGRESS",
@@ -270,7 +298,9 @@ public final class FlowExplorerJobState {
                 result,
                 toolSections,
                 history,
-                message
+                message,
+                copilotSessionId,
+                authRef
         );
     }
 
@@ -293,6 +323,16 @@ public final class FlowExplorerJobState {
     }
 
     public synchronized void markChatCompleted(String assistantMessageId, String content, String prompt) {
+        markChatCompleted(assistantMessageId, content, prompt, null);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId,
+            String content,
+            String prompt,
+            String copilotSessionId
+    ) {
+        rememberCopilotSession(copilotSessionId);
         assistantMessage(assistantMessageId).markCompleted(content, prompt);
         touch();
     }
@@ -333,6 +373,10 @@ public final class FlowExplorerJobState {
                 preparedPrompt,
                 result
         );
+    }
+
+    public AnalysisAiAuthRef authRefForChat() {
+        return authRef;
     }
 
     private FlowExplorerResultResponse resultFromAi(
@@ -410,6 +454,12 @@ public final class FlowExplorerJobState {
 
     private void touch() {
         updatedAt = Instant.now();
+    }
+
+    private void rememberCopilotSession(String latestCopilotSessionId) {
+        if (StringUtils.hasText(latestCopilotSessionId)) {
+            copilotSessionId = latestCopilotSessionId.trim();
+        }
     }
 
     private void completeStep(String code, String label, String phase, String message, Integer itemCount) {

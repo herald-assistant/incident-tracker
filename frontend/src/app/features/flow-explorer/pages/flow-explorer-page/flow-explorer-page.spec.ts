@@ -28,7 +28,10 @@ describe('FlowExplorerPageComponent', () => {
       getAiModelOptions: vi.fn(() => of(aiModelOptions()))
     };
     historyApi = {
-      getRun: vi.fn(() => of(localFlowExplorerRunDetail()))
+      getRun: vi.fn(() => of(localFlowExplorerRunDetail())),
+      sendChatMessage: vi.fn(() =>
+        of(localFlowExplorerRunDetail({ chatMessages: completedChatMessages() }))
+      )
     };
     flowExplorerApi = {
       getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
@@ -641,6 +644,27 @@ describe('FlowExplorerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Walidacja jest w CustomerService.validate.');
   });
 
+  it('should continue a local Flow Explorer run through analysis history API', () => {
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as {
+      loadLocalFlowExplorerRun(analysisId: string): void;
+    }).loadLocalFlowExplorerRun('flow-job-1');
+    fixture.detectChanges();
+    setChatTextareaValue(fixture.nativeElement, 'Gdzie jest walidacja?');
+    fixture.detectChanges();
+
+    clickButtonContaining(fixture.nativeElement, 'Send');
+    fixture.detectChanges();
+
+    expect(historyApi.sendChatMessage).toHaveBeenCalledWith('flow-job-1', {
+      message: 'Gdzie jest walidacja?'
+    });
+    expect(flowExplorerApi.sendChatMessage).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Walidacja jest w CustomerService.validate.');
+  });
+
   it('should keep run action disabled until endpoint is selected', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -658,7 +682,7 @@ type FlowExplorerApiServiceMock = Pick<
   'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
 >;
 type AnalysisApiServiceMock = Pick<AnalysisApiService, 'getAiModelOptions'>;
-type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun'>;
+type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun' | 'sendChatMessage'>;
 
 function setInputValue(nativeElement: HTMLElement, selector: string, value: string): void {
   const input = nativeElement.querySelector(selector) as HTMLInputElement;
@@ -1042,13 +1066,16 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
   };
 }
 
-function localFlowExplorerRunDetail(): LocalAnalysisRunDetailResponse {
+function localFlowExplorerRunDetail(
+  jobOverrides: Partial<FlowExplorerJobStateSnapshot> = {}
+): LocalAnalysisRunDetailResponse {
   const job = jobSnapshot({
     status: 'COMPLETED',
     currentStepCode: 'COMPLETED',
     currentStepLabel: 'AI result ready',
     preparedPrompt: 'local canonical prompt',
-    result: flowExplorerResult()
+    result: flowExplorerResult(),
+    ...jobOverrides
   });
 
   return {
