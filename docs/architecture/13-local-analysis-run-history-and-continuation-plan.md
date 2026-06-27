@@ -399,7 +399,7 @@ Zakres:
 
 Zatwierdzone decyzje:
 
-- package docelowy: neutralny root `pl.mkn.incidenttracker.localworkspace`, np.
+- package docelowy: neutralny root `pl.mkn.tdw.localworkspace`, np.
   `localworkspace.analysisruns` i `localworkspace.tokens`; endpointy REST
   dopiero pozniej w `api.analysisruns`,
 - `index.json` jest lekkim read modelem listy historii i moze zawierac tylko
@@ -474,7 +474,7 @@ Zatwierdzone decyzje:
   `GET /analysis/runs/{analysisId}`,
   `PATCH /analysis/runs/{analysisId}/name`,
   `DELETE /analysis/runs/{analysisId}`,
-- package docelowy: `pl.mkn.incidenttracker.api.analysisruns`,
+- package docelowy: `pl.mkn.tdw.api.analysisruns`,
 - lista zwraca tylko lekki read model z `index.json`: `analysisId`,
   `feature`, `name`, `createdAt`, `updatedAt`, `completedAt`; nie zwraca
   `runPath`, promptu, evidence ani innych ciezkich danych,
@@ -882,6 +882,42 @@ Wykonane:
   `copilotSessionId`, auth markerow, lokalnych sciezek ani runtime metadata,
 - testy frontendowe pilnuja, ze przycisk Export korzysta z endpointu exportu i
   nie laduje lokalnego detailu.
+
+### [x] 011a. Rename bazowego pakietu Java na `pl.mkn.tdw`
+
+Cel:
+
+- dopasowac techniczny root pakietow Javy do product-facing kierunku
+  `Team Delivery Workspace`, zamiast historycznego `incidenttracker`.
+
+Zakres:
+
+- przeniesc produkcyjny i testowy root Javy z dotychczasowego rootu do
+  `src/main/java/pl/mkn/tdw` oraz `src/test/java/pl/mkn/tdw`,
+- zmienic deklaracje `package` i importy na `pl.mkn.tdw.*`,
+- zaktualizowac `pom.xml` groupId do `pl.mkn.tdw`,
+- zaktualizowac `PackageDependencyGuardTest`, `AGENTS.md` i dokumentacje
+  architektury z nowym rootem,
+- nie zmieniac endpointow HTTP, schema JSON, nazw tooli, nazw feature'ow,
+  kontraktow exportu ani zachowania runtime.
+
+Kryteria akceptacji:
+
+- backend kompiluje sie po rename,
+- guard architektoniczny nadal blokuje te same kierunki zaleznosci pod nowym
+  rootem,
+- nie ma pozostalych deklaracji/importow Javy pod historycznym rootem,
+- dokumentacja pokazuje `pl.mkn.tdw` jako aktualny root pakietow.
+
+Wykonane:
+
+- przeniesiono produkcyjne i testowe drzewo Javy do `pl/mkn/tdw`,
+- zaktualizowano deklaracje pakietow, importy, `pom.xml` groupId,
+  `PackageDependencyGuardTest`, `AGENTS.md` i dokumentacje architektury,
+- potwierdzono brak pozostalych referencji do historycznego pelnego rootu
+  pakietu w `src`, `docs`, `AGENTS.md` i `pom.xml`,
+- nie zmieniano `artifactId`, endpointow HTTP, schema JSON, nazw tooli,
+  kontraktow exportu ani zachowania runtime.
 
 ### [ ] 012. Dokumentacja i launcher
 

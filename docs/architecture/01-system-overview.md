@@ -187,168 +187,168 @@ Na dzisiaj projekt ma:
 Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 `05-package-dependencies.md`.
 
-- `pl.mkn.incidenttracker`
+- `pl.mkn.tdw`
   Glowna aplikacja Spring Boot.
-- `pl.mkn.incidenttracker.agenttools`
+- `pl.mkn.tdw.agenttools`
   Reusable tools/capability uzywane przez MCP wrappers i platforme AI, np.
   hidden tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
   integracjami. Adaptery nie powinny importowac `agenttools`.
-- `pl.mkn.incidenttracker.common`
+- `pl.mkn.tdw.common`
   Male helpery wspolne dla calej aplikacji, np. `JsonPayloadReader`.
-- `pl.mkn.incidenttracker.features.incidentanalysis.flow`
+- `pl.mkn.tdw.features.incidentanalysis.flow`
   Orkiestracja runtime analizy incydentu, response i listenery postepu flow.
-- `pl.mkn.incidenttracker.features.incidentanalysis.job`
+- `pl.mkn.tdw.features.incidentanalysis.job`
   Asynchroniczny feature `POST /analysis/jobs`,
   `GET /analysis/jobs/{analysisId}` i
   `POST /analysis/jobs/{analysisId}/chat/messages`.
-- `pl.mkn.incidenttracker.features.incidentanalysis.job.api`
+- `pl.mkn.tdw.features.incidentanalysis.job.api`
   Kontroler job API oraz request/response DTO dla UI.
-- `pl.mkn.incidenttracker.features.incidentanalysis.job.state`
+- `pl.mkn.tdw.features.incidentanalysis.job.state`
   In-memory projekcja joba: statusy, kroki, chat messages, snapshot i listener
   mapujacy zdarzenia orkiestratora na stan joba.
-- `pl.mkn.incidenttracker.features.incidentanalysis.job.error`
+- `pl.mkn.tdw.features.incidentanalysis.job.error`
   Wyjatki job API mapowane przez globalny handler bledow.
-- `pl.mkn.incidenttracker.api.aioptions`
+- `pl.mkn.tdw.api.aioptions`
   Shared/operator API dla katalogu modeli i endpointu
   `GET /analysis/ai/options`. Implementacja endpointu mapuje platformowy
   katalog modeli Copilota na obecne DTO aplikacji.
-- `pl.mkn.incidenttracker.api.uiconfig`
+- `pl.mkn.tdw.api.uiconfig`
   Shared/operator API runtime konfiguracji brandu UI dla Angulara. Nie jest
   czescia incident job flow.
-- `pl.mkn.incidenttracker.api.githubauth`
+- `pl.mkn.tdw.api.githubauth`
   Shared/operator API autoryzacji GitHub dla UI oraz backendowa operator
   session cookie. Ten pakiet zna request HTTP, ale nie przechowuje tokenow w
   frontendzie ani publicznych requestach joba.
-- `pl.mkn.incidenttracker.features.incidentanalysis.evidence`
+- `pl.mkn.tdw.features.incidentanalysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
-- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.deployment`
+- `pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment`
   Wyprowadzanie deployment context z logs jako osobny krok przed Dynatrace i GitLabem.
-- `pl.mkn.incidenttracker.features.incidentanalysis.ai.initial`
+- `pl.mkn.tdw.features.incidentanalysis.ai.initial`
   Poczatkowa analiza incydentu: provider, request, preparation i JSON-only
   response z rozdzielonym `functionalAnalysis` oraz `technicalAnalysis`.
-- `pl.mkn.incidenttracker.features.incidentanalysis.ai.chat`
+- `pl.mkn.tdw.features.incidentanalysis.ai.chat`
   Follow-up chat po zakonczonej analizie incydentu.
-- `pl.mkn.incidenttracker.shared.ai`
+- `pl.mkn.tdw.shared.ai`
   Neutralne preferencje wykonania AI, non-secret `AnalysisAiAuthRef` oraz
   kontrakty token/cost/usage i visible activity trace dla flow, job UI i
   feature'ow.
-- `pl.mkn.incidenttracker.shared.evidence`
+- `pl.mkn.tdw.shared.evidence`
   Neutralny model evidence przekazywany miedzy evidence pipeline, flow, job UI
   i AI: `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,
   `AnalysisEvidenceAttribute`; zawiera tez neutralny listener aktualizacji tool
   evidence przekazywany miedzy providerem AI, jobem i feature'em.
-- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.operationalcontext`
+- `pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
-- `pl.mkn.incidenttracker.integrations.operationalcontext`
+- `pl.mkn.tdw.integrations.operationalcontext`
   Query-based adapter curated operational context catalog i filtrowania go do
   reuse'u przez evidence i kolejne capability.
-- `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot`
+- `pl.mkn.tdw.features.incidentanalysis.ai.copilot`
   Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
   skill selection, tool policy, response parser i initial/follow-up run assembly.
   Ten pakiet sklada parametry dla platformowego runtime Copilota.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime`
+- `pl.mkn.tdw.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
   `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
   promptu ani incident policy.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.auth`
+- `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
   `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i
   ustawia `useLoggedInUser=false`.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.options`
+- `pl.mkn.tdw.aiplatform.copilot.runtime.options`
   Platformowy provider katalogu modeli Copilota i neutralne DTO opcji modeli.
   `api.aioptions` jest fasada mapujaca ten katalog na endpoint
   `GET /analysis/ai/options`.
-- `pl.mkn.incidenttracker.aiplatform.copilot.runtime.execution`
+- `pl.mkn.tdw.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz
   `CopilotExecutionResult` z trescia odpowiedzi i user-visible
   `AnalysisAiUsage`; session events SDK sa mapowane na neutralny
   `AnalysisAiActivityEvent`, bez wystawiania typow SDK do UI.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.context`
+- `pl.mkn.tdw.aiplatform.copilot.tools.context`
   Budowanie hidden `ToolContext` i session-bound scope dla Spring tools jako
   neutralna mechanika platformy.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools`
+- `pl.mkn.tdw.aiplatform.copilot.tools`
   `CopilotToolInvocationHandler`, czyli neutralna granica wykonania Spring
   `ToolCallback`: policies, hidden context, eventy invocation, kontrolowany
   rejection i parsing wyniku dla SDK.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.events`
+- `pl.mkn.tdw.aiplatform.copilot.tools.events`
   Wewnetrzne eventy tool invocation: `Started` oraz terminalny `Finished` z
   outcome `COMPLETED`, `REJECTED` albo `FAILED`.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.policy`
+- `pl.mkn.tdw.aiplatform.copilot.tools.policy`
   Neutralne kontrakty policy invocation, kontrolowany rejection oraz session
   validation.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.policy.budget`
+- `pl.mkn.tdw.aiplatform.copilot.tools.policy.budget`
   Platformowa budget policy, state, registry, properties oraz neutralny
   kontrakt decyzji.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.logging`
+- `pl.mkn.tdw.aiplatform.copilot.tools.logging`
   Subskrypcja eventow invocation do operacyjnego logowania request/result.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.description`
+- `pl.mkn.tdw.aiplatform.copilot.tools.description`
   Neutralny kontrakt customizacji opisow tools, wykonywany przez runtime
   factory bez wiedzy o semantyce konkretnego feature'a.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.CopilotSdkToolFactory`
+- `pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory`
   Platformowa rejestracja Spring tools jako definicji Copilota.
-- `pl.mkn.incidenttracker.aiplatform.copilot.tools.evidence`
+- `pl.mkn.tdw.aiplatform.copilot.tools.evidence`
   Session-bound store publikujacy neutralne `AnalysisEvidenceSection` z wynikow
   tool invocation przez sink przekazany przez feature.
-- `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools`
+- `pl.mkn.tdw.features.incidentanalysis.ai.copilot.tools`
   Incident-specific subskrypcje eventow GitLab/Database tools i mapowanie
   wynikow do user-facing evidence.
-- `pl.mkn.incidenttracker.features.incidentanalysis.ai.copilot.tools.description`
+- `pl.mkn.tdw.features.incidentanalysis.ai.copilot.tools.description`
   Incident-specific guidance doklejane do opisow GitLab/Database tools dla
   Copilota.
-- `pl.mkn.incidenttracker.integrations.elasticsearch`
+- `pl.mkn.tdw.integrations.elasticsearch`
   Properties, porty, adapter REST, modele logow oraz service search dla
   Elasticsearch/Kibana.
-- `pl.mkn.incidenttracker.api.elasticsearch`
+- `pl.mkn.tdw.api.elasticsearch`
   Shared/operator endpoint testowy `POST /api/elasticsearch/logs/search`
   delegujacy do integracji Elasticsearch.
-- `pl.mkn.incidenttracker.agenttools.elasticsearch.mcp`
+- `pl.mkn.tdw.agenttools.elasticsearch.mcp`
   MCP tools Elastica delegujace do `integrations.elasticsearch`.
-- `pl.mkn.incidenttracker.integrations.database`
+- `pl.mkn.tdw.integrations.database`
   Routing polaczen, metadata Oracle, readonly query execution i SQL guard DB
   capability.
-- `pl.mkn.incidenttracker.agenttools.database.mcp`
+- `pl.mkn.tdw.agenttools.database.mcp`
   Session-bound MCP tools diagnostyki danych delegujace do
-  `pl.mkn.incidenttracker.integrations.database`. Kontrakty
+  `pl.mkn.tdw.integrations.database`. Kontrakty
   request/result/scope i operatory DB mieszkaja przy integracji DB.
-- `pl.mkn.incidenttracker.integrations.dynatrace`
+- `pl.mkn.tdw.integrations.dynatrace`
   Modele i adapter REST dla runtime signals Dynatrace
   (`entities`, `problems`, `metrics`).
-- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.dynatrace`
+- `pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace`
   Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
-- `pl.mkn.incidenttracker.integrations.gitlab`
+- `pl.mkn.tdw.integrations.gitlab`
   Konfiguracja, porty, adapter REST oraz modele/search service GitLaba.
-- `pl.mkn.incidenttracker.integrations.github.auth`
+- `pl.mkn.tdw.integrations.github.auth`
   Integracja GitHub App OAuth: properties, klient exchange/refresh, profil
   uzytkownika, state store, zaszyfrowany authorization store i AES-GCM cipher.
-- `pl.mkn.incidenttracker.api.gitlab`
+- `pl.mkn.tdw.api.gitlab`
   Shared/operator endpoint repository search GitLaba delegujacy do integracji.
-- `pl.mkn.incidenttracker.api.gitlab.source`
+- `pl.mkn.tdw.api.gitlab.source`
   Shared/operator endpointy source resolve GitLaba:
   `POST /api/gitlab/source/resolve` i wariant preview.
-- `pl.mkn.incidenttracker.api.database`
+- `pl.mkn.tdw.api.database`
   Shared/operator endpointy testowe nad `integrations.database.DatabaseToolService`.
   Controller buduje manualny `DbCapabilityScope` z operatorskiego
   `environment` i deleguje do typed DB capability.
-- `pl.mkn.incidenttracker.api.operationalcontext`
+- `pl.mkn.tdw.api.operationalcontext`
   Shared/operator endpointy i view service dla katalogu operational context.
   Pakiet mapuje reusable `integrations.operationalcontext` na DTO dla UI
   `/operational-context`, bez importowania incident flow.
-- `pl.mkn.incidenttracker.features.incidentanalysis.evidence.provider.gitlabdeterministic`
+- `pl.mkn.tdw.features.incidentanalysis.evidence.provider.gitlabdeterministic`
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
-- `pl.mkn.incidenttracker.agenttools.gitlab.mcp`
+- `pl.mkn.tdw.agenttools.gitlab.mcp`
   MCP tools GitLaba delegujace do `integrations.gitlab`.
-- `pl.mkn.incidenttracker.integrations.gitlab.source`
+- `pl.mkn.tdw.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
-- `pl.mkn.incidenttracker.api`
+- `pl.mkn.tdw.api`
   Obsluga bledow API, wspolny kontrakt walidacji i shared/operator API dla
   endpointow FE niezaleznych od jednego feature'a, np. fasady nad platforma
   albo integracjami. Endpointy konkretnego use case'u zostaja przy
   `features.<feature>.api`.
-- `pl.mkn.incidenttracker.ui`
+- `pl.mkn.tdw.ui`
   Cienki routing Spring MVC dla route'ow Angulara, np. `/elastic`, `/gitlab`
   i `/operational-context`.
-- Zamkniety root `pl.mkn.incidenttracker.analysis`
+- Zamkniety root `pl.mkn.tdw.analysis`
   Produkcyjny i testowy root `analysis.*` jest zamkniety. Publiczne URL-e
   moga nadal zawierac slowo `analysis`, ale nowe klasy Javy trafiaja do
   aktualnych wlascicieli: `features`, `api`, `integrations`, `agenttools`,

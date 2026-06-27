@@ -1,0 +1,14 @@
+package pl.mkn.tdw;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+
+@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+public class IncidentTrackerApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(IncidentTrackerApplication.class, args);
+    }
+
+}

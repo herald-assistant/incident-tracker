@@ -185,7 +185,7 @@ Zasady granic:
   description customization contract, session-bound tool evidence store,
   budget policy i budget state mieszkaja w platformie.
   Generyczne helpery aplikacyjne, np. `JsonPayloadReader`, trzymaj poza
-  Copilotem w `pl.mkn.incidenttracker.common`. Incident-specific GitLab/DB
+  Copilotem w `pl.mkn.tdw.common`. Incident-specific GitLab/DB
   evidence mapping i Copilot-facing guidance opisow tools mieszkaja w
   `features.incidentanalysis.ai.copilot.tools`; podczas dalszej ekstrakcji do
   `aiplatform.copilot` zostawiaj w runtime tylko mechanike invocation.
@@ -201,37 +201,37 @@ Zasady granic:
 
 ## Gdzie czego szukac
 
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/job`
   Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
   follow-up chat.
-- `src/main/java/pl/mkn/incidenttracker/api/aioptions`
+- `src/main/java/pl/mkn/tdw/api/aioptions`
   Shared/operator API dla katalogu modeli i endpointu
   `GET /analysis/ai/options`, mapujace platformowy katalog Copilota na kontrakt
   HTTP dla UI.
-- `src/main/java/pl/mkn/incidenttracker/api/operationalcontext`
+- `src/main/java/pl/mkn/tdw/api/operationalcontext`
   Shared/operator API dla katalogu operational context uzywanego przez UI,
   tools, GitLab repository discovery i feature'y.
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/evidence`
   Deterministyczne zbieranie evidence, `AnalysisContext` i jawny collector
   krokow, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/provider`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/evidence/provider`
   Konkretne kroki pipeline evidence oparte o adaptery i wczesniej zebrany
   `AnalysisContext`.
-- `src/main/java/pl/mkn/incidenttracker/integrations`
+- `src/main/java/pl/mkn/tdw/integrations`
   Docelowa reusable warstwa capability adapters. Dynatrace, Elasticsearch,
   GitLab, operational context i Database mieszkaja juz w `integrations`.
-- `src/main/java/pl/mkn/incidenttracker/agenttools`
+- `src/main/java/pl/mkn/tdw/agenttools`
   Reusable tools/capability wspolne dla MCP wrappers i platform AI, np. hidden
   tool context keys, nazwy tools oraz przenoszone wrappery MCP nad
   integracjami. Operational context tools mieszkaja tu jako neutralne
   `agenttools.operationalcontext` / `agenttools.operationalcontext.mcp`.
   Adaptery nie powinny importowac `agenttools`.
-- `src/main/java/pl/mkn/incidenttracker/aiplatform`
+- `src/main/java/pl/mkn/tdw/aiplatform`
   Neutralna platforma uruchamiania AI. Pierwsze wydzielone slice'y to
   `aiplatform.copilot.runtime` oraz `aiplatform.copilot.tools` z
   handler/context/events/policy/logging/evidence; nie moze importowac incident
   analysis.
-- `src/main/java/pl/mkn/incidenttracker/features`
+- `src/main/java/pl/mkn/tdw/features`
   Dedykowane feature'y analityczne. `features.incidentanalysis.ai.initial` i
   `chat` zawieraja kontrakty AI incident flow,
   `features.incidentanalysis.flow` zawiera orkiestracje runtime analizy,
@@ -239,18 +239,18 @@ Zasady granic:
   `features.incidentanalysis.ai.copilot` zawiera incident prompt/artifacts/tool
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
-- `src/main/java/pl/mkn/incidenttracker/shared/evidence`
+- `src/main/java/pl/mkn/tdw/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`
   oraz listener aktualizacji tool evidence.
-- `src/main/java/pl/mkn/incidenttracker/shared/ai`
+- `src/main/java/pl/mkn/tdw/shared/ai`
   Neutralne DTO preferencji wykonania AI, usage/token/cost oraz wspolne
   kontrakty zasilajace UI przebiegu pracy i follow-up chatu dla feature'ow.
-- `src/main/java/pl/mkn/incidenttracker/api`
+- `src/main/java/pl/mkn/tdw/api`
   Globalny kontrakt bledow HTTP i docelowe miejsce na shared/operator API
   niezalezne od jednego feature'a. Nie przenos tu orchestration feature'a,
   promptow, evidence pipeline ani job state.
-- `src/main/java/pl/mkn/incidenttracker/common`
+- `src/main/java/pl/mkn/tdw/common`
   Male helpery wspolne dla calej aplikacji.
 - `frontend`
   Zrodlowy workspace Angular dla operatora: glowny incident analysis console
@@ -331,14 +331,14 @@ Podstawowe komendy:
 Utrzymujemy lokalne instrukcje na poziomie bezposrednich podkatalogow, zeby
 granice modulow byly czytelne i stabilne po refaktorach.
 
-- `src/main/java/pl/mkn/incidenttracker/integrations/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/evidence/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/job/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/agenttools/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/aiplatform/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/api/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/features/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/ai/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/features/incidentanalysis/flow/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/shared/AGENTS.md`
-- `src/main/java/pl/mkn/incidenttracker/shared/ai/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/integrations/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/evidence/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/job/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/agenttools/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/aiplatform/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/api/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/ai/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/incidentanalysis/flow/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/shared/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/shared/ai/AGENTS.md`

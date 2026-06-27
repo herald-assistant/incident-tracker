@@ -154,7 +154,7 @@ pretekstem do duzego refaktoru bez potrzeby.
 - [x] Sidebar jest w `frontend/src/app/components/app-shell/app-shell.ts`;
   Flow Explorer istnieje tam jako disabled nav item.
 - [x] Spring forward route dla znanych Angular paths jest w
-  `src/main/java/pl/mkn/incidenttracker/ui/FrontendRouteController.java`.
+  `src/main/java/pl/mkn/tdw/ui/FrontendRouteController.java`.
 - [x] GitLab workbench ma juz UI do endpoint inventory i endpoint use-case
   context; jest to material do reuse'u koncepcyjnego, nie docelowy ekran
   feature'u.

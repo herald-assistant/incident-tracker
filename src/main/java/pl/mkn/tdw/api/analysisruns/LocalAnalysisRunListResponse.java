@@ -1,0 +1,11 @@
+package pl.mkn.tdw.api.analysisruns;
+
+import java.util.List;
+
+public record LocalAnalysisRunListResponse(
+        List<LocalAnalysisRunListItemResponse> runs
+) {
+    public LocalAnalysisRunListResponse {
+        runs = runs != null ? List.copyOf(runs) : List.of();
+    }
+}

@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>pl.mkn.incidenttracker</groupId>
+    <groupId>pl.mkn.tdw</groupId>
     <artifactId>incident-tracker</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Incident Tracker</name>

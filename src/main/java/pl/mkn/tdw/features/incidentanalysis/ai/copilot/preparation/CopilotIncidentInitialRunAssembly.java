@@ -1,0 +1,13 @@
+package pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation;
+
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
+import java.util.Objects;
+
+public record CopilotIncidentInitialRunAssembly(
+        CopilotRunRequest runRequest
+) {
+
+    public CopilotIncidentInitialRunAssembly {
+        Objects.requireNonNull(runRequest, "runRequest must not be null");
+    }
+}

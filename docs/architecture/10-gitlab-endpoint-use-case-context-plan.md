@@ -42,7 +42,7 @@ Jesli cos jest nierozstrzygalne szybko i lokalnie, wynik ma zwrocic
 Implementacja logiki mieszka w:
 
 ```text
-src/main/java/pl/mkn/incidenttracker/integrations/gitlab/usecase
+src/main/java/pl/mkn/tdw/integrations/gitlab/usecase
 ```
 
 Ten pakiet pozostaje neutralna capability integracji. Nie importuje:
@@ -56,7 +56,7 @@ Ten pakiet pozostaje neutralna capability integracji. Nie importuje:
 Ekspozycja toola mieszka w:
 
 ```text
-src/main/java/pl/mkn/incidenttracker/agenttools/gitlab/mcp
+src/main/java/pl/mkn/tdw/agenttools/gitlab/mcp
 ```
 
 Shared/operator REST endpoint dla recznego testowania moze byc dodany pozniej
@@ -704,7 +704,7 @@ MVP, bo nie sa synchronicznym flow endpointu.
 Dodac pakiet:
 
 ```text
-src/main/java/pl/mkn/incidenttracker/integrations/gitlab/usecase
+src/main/java/pl/mkn/tdw/integrations/gitlab/usecase
 ```
 
 Dodac rekordy:

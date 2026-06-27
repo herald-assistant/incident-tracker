@@ -1,0 +1,41 @@
+package pl.mkn.tdw.agenttools.gitlab.mcp;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@SpringBootTest
+class GitLabMcpToolsContextTest {
+
+    @Autowired
+    private ToolCallbackProvider[] toolCallbackProviders;
+
+    @Test
+    void shouldRegisterGitLabMcpToolsInSpringAi() {
+        var toolNames = Arrays.stream(toolCallbackProviders)
+                .flatMap(provider -> Arrays.stream(provider.getToolCallbacks()))
+                .map(tool -> tool.getToolDefinition().name())
+                .collect(Collectors.toSet());
+
+        assertTrue(toolNames.contains("gitlab_search_repository_candidates"));
+        assertTrue(toolNames.contains("gitlab_list_available_repositories"));
+        assertTrue(toolNames.contains("gitlab_list_repository_endpoints"));
+        assertTrue(toolNames.contains("gitlab_build_endpoint_use_case_context"));
+        assertTrue(toolNames.contains("gitlab_find_class_references"));
+        assertTrue(toolNames.contains("gitlab_read_repository_file"));
+        assertTrue(toolNames.contains("gitlab_read_repository_files_by_path"));
+        assertTrue(toolNames.contains("gitlab_read_repository_file_chunk"));
+        assertTrue(toolNames.contains("gitlab_find_flow_context"));
+        assertTrue(toolNames.contains("gitlab_read_repository_file_outline"));
+        assertTrue(toolNames.contains("gitlab_read_repository_file_chunks"));
+        assertTrue(toolNames.contains("gitlab_read_java_method_slice"));
+        assertTrue(toolNames.contains("gitlab_read_openapi_endpoint_slice"));
+    }
+
+}

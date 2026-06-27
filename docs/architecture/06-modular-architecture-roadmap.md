@@ -97,14 +97,14 @@ feature'a, a nie tylko inna etykiete tego samego workflow.
 Nazwy pakietow nie moga miec myslnikow, wiec praktyczny target w Javie:
 
 ```text
-pl.mkn.incidenttracker.integrations.*
-pl.mkn.incidenttracker.agenttools.*
-pl.mkn.incidenttracker.aiplatform.copilot.*
-pl.mkn.incidenttracker.api.*
-pl.mkn.incidenttracker.features.incidentanalysis.*
-pl.mkn.incidenttracker.features.<futurefeature>.*
-pl.mkn.incidenttracker.common.*
-pl.mkn.incidenttracker.shared.*
+pl.mkn.tdw.integrations.*
+pl.mkn.tdw.agenttools.*
+pl.mkn.tdw.aiplatform.copilot.*
+pl.mkn.tdw.api.*
+pl.mkn.tdw.features.incidentanalysis.*
+pl.mkn.tdw.features.<futurefeature>.*
+pl.mkn.tdw.common.*
+pl.mkn.tdw.shared.*
 ```
 
 `common` moze pozostac miejscem na male helpery techniczne. `shared` warto

@@ -1,0 +1,15 @@
+package pl.mkn.tdw.api.analysisruns;
+
+import pl.mkn.tdw.shared.error.UserFacingApplicationException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
+
+public class LocalAnalysisRunNotFoundException extends UserFacingApplicationException {
+
+    public LocalAnalysisRunNotFoundException(String analysisId) {
+        super(
+                "LOCAL_ANALYSIS_RUN_NOT_FOUND",
+                UserFacingErrorType.NOT_FOUND,
+                "Local analysis run not found: " + analysisId
+        );
+    }
+}

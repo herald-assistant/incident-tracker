@@ -1,0 +1,87 @@
+package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
+import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
+import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
+import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisStepPhase;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace.DynatraceRuntimeEvidenceView;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.gitlabdeterministic.GitLabResolvedCodeEvidenceView;
+
+import java.util.List;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvider {
+
+    private final OperationalContextProperties properties;
+    private final OperationalContextPort operationalContextPort;
+    private final OperationalContextCatalogMatcher catalogMatcher;
+    private final OperationalContextEvidenceMapper evidenceMapper;
+
+    @Override
+    public AnalysisEvidenceSection collect(AnalysisContext context) {
+        if (!properties.isEnabled()) {
+            return evidenceMapper.emptySection();
+        }
+
+        try {
+            var catalog = operationalContextPort.loadContext(OperationalContextQuery.all());
+            var signals = OperationalContextIncidentSignals.from(context);
+            if (signals.isEmpty()) {
+                return evidenceMapper.emptySection();
+            }
+
+            var matches = catalogMatcher.match(catalog, signals);
+            return evidenceMapper.toEvidenceSection(matches, catalog);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Operational context enrichment skipped correlationId={} reason={}",
+                    context.correlationId(),
+                    exception.getMessage()
+            );
+            log.debug("Operational context enrichment failure correlationId={}", context.correlationId(), exception);
+            return evidenceMapper.emptySection();
+        }
+    }
+
+    @Override
+    public AnalysisEvidenceReference producedEvidence() {
+        return OperationalContextEvidenceView.EVIDENCE_REFERENCE;
+    }
+
+    @Override
+    public List<AnalysisEvidenceReference> consumedEvidence() {
+        return List.of(
+                ElasticLogEvidenceView.EVIDENCE_REFERENCE,
+                DeploymentContextEvidenceView.EVIDENCE_REFERENCE,
+                DynatraceRuntimeEvidenceView.EVIDENCE_REFERENCE,
+                GitLabResolvedCodeEvidenceView.EVIDENCE_REFERENCE
+        );
+    }
+
+    @Override
+    public AnalysisStepPhase stepPhase() {
+        return AnalysisStepPhase.ENRICHMENT;
+    }
+
+    @Override
+    public String stepCode() {
+        return "OPERATIONAL_CONTEXT";
+    }
+
+    @Override
+    public String stepLabel() {
+        return "Dopasowanie kontekstu operacyjnego";
+    }
+
+}

@@ -76,7 +76,7 @@ Przy nowej sesji najlepiej zaczac od:
 - `src/main/resources/copilot/skills`
 - `src/main/resources/operational-context`
 - `src/main/resources/static`
-- produkcyjny i testowy root `pl.mkn.incidenttracker.analysis` sa zamkniete;
+- produkcyjny i testowy root `pl.mkn.tdw.analysis` sa zamkniete;
   nie wznawiac tam klas ani testow
 
 ### Za GitHub Copilot SDK odpowiadaja glownie
@@ -397,7 +397,7 @@ Operational Context tools sa katalogowym browse/search/detail nad
 MCP mapperze.
 
 Generyczne helpery JSON nie naleza do root `tools`. Wspolny reader payloadow to
-`pl.mkn.incidenttracker.common.JsonPayloadReader`.
+`pl.mkn.tdw.common.JsonPayloadReader`.
 
 ### Elastic helper flow
 

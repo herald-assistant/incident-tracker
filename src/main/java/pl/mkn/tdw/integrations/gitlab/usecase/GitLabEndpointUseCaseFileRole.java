@@ -1,0 +1,19 @@
+package pl.mkn.tdw.integrations.gitlab.usecase;
+
+public enum GitLabEndpointUseCaseFileRole {
+    CONTROLLER,
+    OPENAPI_CONTRACT,
+    API_INTERFACE,
+    USE_CASE_PORT,
+    USE_CASE_SERVICE,
+    REPOSITORY_PORT,
+    REPOSITORY_IMPLEMENTATION,
+    SPRING_DATA_REPOSITORY,
+    MAPPER,
+    DOMAIN_MODEL,
+    WEB_MODEL,
+    PROJECTION,
+    CONFIGURATION,
+    EXTERNAL_CLIENT,
+    UNKNOWN
+}
