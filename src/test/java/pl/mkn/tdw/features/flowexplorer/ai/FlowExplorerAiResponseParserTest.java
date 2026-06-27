@@ -360,7 +360,7 @@ class FlowExplorerAiResponseParserTest {
     }
 
     @Test
-    void shouldReturnFallbackWhenFunctionalFlowMarkdownDoesNotUseRequiredStructure() {
+    void shouldReturnStructuredResponseWithMediumConfidenceWhenFunctionalFlowMarkdownUsesLooseStructure() {
         var response = parser.parse(responseJsonWithModes(
                         "DEEP_DISCOVERY",
                         "deep",
@@ -370,7 +370,12 @@ class FlowExplorerAiResponseParserTest {
                 )
                 .replace(functionalFlowMarkdownJson(), "Controller przyjmuje request."));
 
-        assertFallback(response, "FUNCTIONAL_FLOW markdown must use the required bullet structure");
+        assertEquals("Overview dla CRM customer lookup.", response.overview().markdown());
+        assertEquals("medium", response.overview().confidence());
+        assertEquals("medium", response.confidence());
+        assertEquals("Controller przyjmuje request.", response.sections().get(0).markdown());
+        assertTrue(response.globalVisibilityLimits().stream()
+                .anyMatch(limit -> limit.contains("FUNCTIONAL_FLOW markdown does not use the recommended bullet structure")));
     }
 
     @Test

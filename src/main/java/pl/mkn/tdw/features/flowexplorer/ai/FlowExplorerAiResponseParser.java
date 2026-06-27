@@ -45,6 +45,8 @@ public class FlowExplorerAiResponseParser {
             "**Handoffy i efekty uboczne:**",
             "**Akcent goal:**"
     );
+    private static final String FUNCTIONAL_FLOW_MARKDOWN_STRUCTURE_WARNING =
+            "AI response quality warning: FUNCTIONAL_FLOW markdown does not use the recommended bullet structure.";
 
     private final ObjectMapper objectMapper;
 
@@ -87,15 +89,16 @@ public class FlowExplorerAiResponseParser {
             return FlowExplorerAiResponse.parseFallback(validationError);
         }
 
+        var qualityWarnings = qualityWarnings(node);
         return new FlowExplorerAiResponse(
                 goal(text(node, "goal")),
                 text(node, "audience"),
-                overview(node.get("overview")),
+                overview(node.get("overview"), qualityWarnings),
                 sections(node.get("sections")),
-                textList(node.get("globalVisibilityLimits")),
+                listWithQualityWarnings(textList(node.get("globalVisibilityLimits")), qualityWarnings),
                 textList(node.get("globalOpenQuestions")),
                 textList(node.get("sourceReferences")),
-                confidence(text(node, "confidence")),
+                confidenceWithQualityWarnings(text(node, "confidence"), qualityWarnings),
                 textList(node.get("followUpPrompts"))
         );
     }
@@ -196,7 +199,7 @@ public class FlowExplorerAiResponseParser {
             if (!StringUtils.hasText(markdown)) {
                 return "AI response contract violation: section.markdown is required for " + sectionId.name() + ".";
             }
-            var markdownError = validateSectionMarkdown(sectionId, markdown);
+            var markdownError = validateSectionMarkdownContract(sectionId, markdown);
             if (markdownError != null) {
                 return markdownError;
             }
@@ -214,22 +217,64 @@ public class FlowExplorerAiResponseParser {
         return null;
     }
 
-    private String validateSectionMarkdown(FlowExplorerResultSectionId sectionId, String markdown) {
+    private String validateSectionMarkdownContract(FlowExplorerResultSectionId sectionId, String markdown) {
         if (sectionId != FlowExplorerResultSectionId.FUNCTIONAL_FLOW) {
             return null;
         }
         if (markdown.contains("**Evidence") || markdown.contains("**Ograniczenia")) {
             return "AI response contract violation: FUNCTIONAL_FLOW markdown must keep evidence and limits in sourceRefs, visibilityLimits or openQuestions.";
         }
+        return null;
+    }
+
+    private List<String> qualityWarnings(JsonNode node) {
+        var sections = node.get("sections");
+        if (sections == null || !sections.isArray()) {
+            return List.of();
+        }
+        for (var section : sections) {
+            if (!section.isObject()) {
+                continue;
+            }
+            var sectionId = sectionIdStrict(text(section, "id"));
+            if (sectionId == FlowExplorerResultSectionId.FUNCTIONAL_FLOW
+                    && !usesRecommendedFunctionalFlowMarkdownStructure(text(section, "markdown"))) {
+                return List.of(FUNCTIONAL_FLOW_MARKDOWN_STRUCTURE_WARNING);
+            }
+        }
+        return List.of();
+    }
+
+    private boolean usesRecommendedFunctionalFlowMarkdownStructure(String markdown) {
+        if (!StringUtils.hasText(markdown)) {
+            return true;
+        }
         var previousIndex = -1;
         for (var label : FUNCTIONAL_FLOW_MARKDOWN_LABELS) {
             var index = markdown.indexOf(label);
             if (index <= previousIndex) {
-                return "AI response contract violation: FUNCTIONAL_FLOW markdown must use the required bullet structure.";
+                return false;
             }
             previousIndex = index;
         }
-        return null;
+        return true;
+    }
+
+    private List<String> listWithQualityWarnings(List<String> values, List<String> qualityWarnings) {
+        if (qualityWarnings.isEmpty()) {
+            return values;
+        }
+        var merged = new ArrayList<String>(values);
+        merged.addAll(qualityWarnings);
+        return List.copyOf(merged);
+    }
+
+    private String confidenceWithQualityWarnings(String value, List<String> qualityWarnings) {
+        var normalized = confidence(value);
+        if (qualityWarnings.isEmpty() || !"high".equals(normalized)) {
+            return normalized;
+        }
+        return "medium";
     }
 
     private String validateListField(JsonNode objectNode, String owner, String fieldName) {
@@ -254,13 +299,13 @@ public class FlowExplorerAiResponseParser {
         return null;
     }
 
-    private FlowExplorerResultOverview overview(JsonNode node) {
+    private FlowExplorerResultOverview overview(JsonNode node, List<String> qualityWarnings) {
         if (node == null || !node.isObject()) {
             return null;
         }
         return new FlowExplorerResultOverview(
                 text(node, "markdown"),
-                confidence(text(node, "confidence")),
+                confidenceWithQualityWarnings(text(node, "confidence"), qualityWarnings),
                 textList(node.get("sourceRefs"))
         );
     }
