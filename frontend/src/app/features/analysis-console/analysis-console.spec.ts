@@ -351,7 +351,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Feedback jakości tooli');
+    expect(fixture.nativeElement.textContent).toContain('Feedback jakości');
     expect(fixture.nativeElement.textContent).toContain('db_find_tables (db-call-1)');
     expect(fixture.nativeElement.textContent).toContain('Tool nie zwrócił tabel pasujących do pytania.');
   });

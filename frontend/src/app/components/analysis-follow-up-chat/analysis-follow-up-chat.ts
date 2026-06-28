@@ -6,9 +6,7 @@ import {
   AnalysisEvidenceSection
 } from '../../core/models/analysis.models';
 import {
-  formatDateTime,
-  formatEvidenceSectionTitle,
-  formatStatus
+  formatEvidenceSectionTitle
 } from '../../core/utils/analysis-display.utils';
 import { copyElementToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
@@ -60,12 +58,6 @@ export class AnalysisFollowUpChatComponent {
       !this.hasActiveAssistantMessage() &&
       this.messageText().trim().length > 0
   );
-  readonly statusLabel = computed(() =>
-    this.isSubmitting() || this.hasActiveAssistantMessage()
-      ? 'AI odpowiada'
-      : `${this.messages().length} ${this.messages().length === 1 ? 'wiadomość' : 'wiadomości'}`
-  );
-
   private copyFeedbackHandle: number | null = null;
 
   constructor() {
@@ -119,12 +111,6 @@ export class AnalysisFollowUpChatComponent {
       return 'AI zakończyło odpowiedź błędem';
     }
     return 'AI';
-  }
-
-  protected chatMessageMeta(message: AnalysisChatMessageResponse): string {
-    const status = message.role === 'ASSISTANT' ? formatStatus(message.status) : '';
-    const timestamp = formatDateTime(message.completedAt || message.updatedAt || message.createdAt);
-    return [status, timestamp].filter(Boolean).join(' · ');
   }
 
   protected canCopyChatMessage(message: AnalysisChatMessageResponse): boolean {

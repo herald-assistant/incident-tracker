@@ -4,42 +4,23 @@
 
 .analysis-chat {
   border-style: dashed;
+  padding: 14px 16px;
 }
 
 .analysis-chat .collapsible-panel__summary.panel-card__header {
-  grid-template-columns: minmax(220px, max-content) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.analysis-chat.collapsible-panel[open] > .collapsible-panel__summary.panel-card__header--compact {
+  margin-bottom: 10px;
 }
 
 .analysis-chat__summary-main {
   min-width: 0;
 }
 
-.analysis-chat__summary-actions {
-  display: inline-flex;
-  align-items: center;
-  justify-self: end;
-  grid-column: 3;
-  gap: 12px;
-  min-width: max-content;
-}
-
-.analysis-chat__summary-actions .panel-chip,
-.analysis-chat__summary-actions .status-pill {
-  align-self: center;
-  white-space: nowrap;
-}
-
-.analysis-chat__summary-actions .collapsible-panel__icon {
-  margin-left: 0;
-}
-
 @media (max-width: 860px) {
   .analysis-chat .collapsible-panel__summary.panel-card__header {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .analysis-chat__summary-actions {
-    grid-column: 2;
-    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -14,18 +14,6 @@
       <p class="section-eyebrow">{{ eyebrow() }}</p>
       <h3>{{ title() }}</h3>
     </div>
-    <div class="analysis-chat__summary-actions">
-      <span
-        [class]="isSubmitting() || hasActiveAssistantMessage() ? 'status-pill status-pill--running' : 'panel-chip'"
-      >
-        {{ statusLabel() }}
-      </span>
-      @if (!staticPanel()) {
-        <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-          expand_more
-        </span>
-      }
-    </div>
   </summary>
 
   <div class="analysis-chat__body collapsible-panel__body">
@@ -43,35 +31,7 @@
             [class.chat-message--assistant]="message.role === 'ASSISTANT'"
             [class.chat-message--failed]="message.status === 'FAILED'"
           >
-            <div class="chat-message__header">
-              <div class="chat-message__identity">
-                <strong>{{ chatMessageTitle(message) }}</strong>
-                <span>{{ chatMessageMeta(message) }}</span>
-              </div>
-              @if (canCopyChatMessage(message)) {
-                <button
-                  class="chat-message__copy-button"
-                  type="button"
-                  data-clipboard-exclude
-                  [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
-                  [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
-                  (click)="copyChatMessage(chatMessageElement, message)"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">
-                    {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
-                  </span>
-                </button>
-              } @else if (isLastPendingAssistantMessage(message, messages())) {
-                <span
-                  class="chat-message__copy-loader"
-                  data-clipboard-exclude
-                  aria-label="AI przygotowuje odpowiedź"
-                  title="AI przygotowuje odpowiedź"
-                ></span>
-              }
-            </div>
-
-            <div class="chat-message__body">
+            <div class="chat-message__content">
               @if (message.status === 'IN_PROGRESS') {
                 <p class="chat-message__pending">
                   {{ pendingText() }}
@@ -87,52 +47,83 @@
               }
             </div>
 
-            @if (message.toolEvidenceSections.length > 0) {
-              <details class="chat-message__evidence">
-                <summary>Dane pobrane w tej odpowiedzi</summary>
-                <div class="chat-message__evidence-sections">
-                  @for (section of message.toolEvidenceSections; track section.provider + section.category) {
-                    <section class="chat-evidence-section">
-                      <h4>{{ evidenceSectionTitle(section) }}</h4>
-                      @for (item of section.items; track item.title + $index) {
-                        <details class="chat-evidence-item">
-                          <summary>{{ item.title }}</summary>
-                          <div class="attribute-list">
-                            @for (attribute of item.attributes; track attribute.name + $index) {
-                              <div class="attribute-row attribute-row--block">
-                                <span class="attribute-name">{{ attribute.name | attributeName }}</span>
-                                <pre class="attribute-block">{{ attribute.value }}</pre>
-                              </div>
-                            }
-                          </div>
-                        </details>
-                      }
-                    </section>
-                  }
-                </div>
-              </details>
-            }
+            @if (
+              canCopyChatMessage(message) ||
+              isLastPendingAssistantMessage(message, messages()) ||
+              message.toolEvidenceSections.length > 0 ||
+              message.toolFeedback.length > 0
+            ) {
+              <div class="chat-message__actions">
+                @if (canCopyChatMessage(message)) {
+                  <button
+                    class="chat-message__copy-button"
+                    type="button"
+                    data-clipboard-exclude
+                    [attr.aria-label]="'Kopiuj wiadomość: ' + chatMessageTitle(message)"
+                    [title]="copiedChatMessageId() === message.id ? 'Skopiowano' : 'Kopiuj wiadomość'"
+                    (click)="copyChatMessage(chatMessageElement, message)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                } @else if (isLastPendingAssistantMessage(message, messages())) {
+                  <span
+                    class="chat-message__copy-loader"
+                    data-clipboard-exclude
+                    aria-label="AI przygotowuje odpowiedź"
+                    title="AI przygotowuje odpowiedź"
+                  ></span>
+                }
 
-            @if (message.toolFeedback.length > 0) {
-              <details class="chat-message__tool-feedback">
-                <summary>Feedback jakości tooli</summary>
-                <div class="chat-tool-feedback-list">
-                  @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
-                    <article class="chat-tool-feedback">
-                      <div class="chat-tool-feedback__header">
-                        <strong>{{ toolFeedbackTarget(feedback) }}</strong>
-                        <span>{{ toolFeedbackMeta(feedback) }}</span>
-                      </div>
-                      <p>{{ feedback.summaryForOperator }}</p>
-                      @if (feedback.suggestedImprovement) {
-                        <p class="chat-tool-feedback__suggestion">
-                          {{ feedback.suggestedImprovement }}
-                        </p>
+                @if (message.toolEvidenceSections.length > 0) {
+                  <details class="chat-message__evidence">
+                    <summary>References</summary>
+                    <div class="chat-message__evidence-sections">
+                      @for (section of message.toolEvidenceSections; track section.provider + section.category) {
+                        <section class="chat-evidence-section">
+                          <h4>{{ evidenceSectionTitle(section) }}</h4>
+                          @for (item of section.items; track item.title + $index) {
+                            <details class="chat-evidence-item">
+                              <summary>{{ item.title }}</summary>
+                              <div class="attribute-list">
+                                @for (attribute of item.attributes; track attribute.name + $index) {
+                                  <div class="attribute-row attribute-row--block">
+                                    <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+                                    <pre class="attribute-block">{{ attribute.value }}</pre>
+                                  </div>
+                                }
+                              </div>
+                            </details>
+                          }
+                        </section>
                       }
-                    </article>
-                  }
-                </div>
-              </details>
+                    </div>
+                  </details>
+                }
+
+                @if (message.toolFeedback.length > 0) {
+                  <details class="chat-message__tool-feedback">
+                    <summary>Feedback jakości</summary>
+                    <div class="chat-tool-feedback-list">
+                      @for (feedback of message.toolFeedback; track feedback.feedbackId + $index) {
+                        <article class="chat-tool-feedback">
+                          <div class="chat-tool-feedback__header">
+                            <strong>{{ toolFeedbackTarget(feedback) }}</strong>
+                            <span>{{ toolFeedbackMeta(feedback) }}</span>
+                          </div>
+                          <p>{{ feedback.summaryForOperator }}</p>
+                          @if (feedback.suggestedImprovement) {
+                            <p class="chat-tool-feedback__suggestion">
+                              {{ feedback.suggestedImprovement }}
+                            </p>
+                          }
+                        </article>
+                      }
+                    </div>
+                  </details>
+                }
+              </div>
             }
           </article>
         }
