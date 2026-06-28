@@ -68,6 +68,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertSkillContainsSections("flow-explorer-gitlab-tools", List.of(
                 "## Rola Wobec Orkiestratora",
                 "## Dozwolone Tools",
+                "## Repozytoryjne Instrukcje Copilota",
                 "## Strategia Czytania Kodu",
                 "## Szybka Strategia Dla Slabszych Modeli",
                 "## Co Czytac Wedlug Section Modes",
@@ -160,6 +161,11 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("`OFF` oznacza: nie zwracaj tej sekcji w `sections`"));
         assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
         assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
+        assertTrue(orchestrator.contains("`.github/copilot-instructions.md`, jezeli jest dostepny"));
+        assertTrue(orchestrator.contains("repozytoryjny material pomocniczy"));
+        assertTrue(orchestrator.contains("`goal`, `sectionModes`,"));
+        assertTrue(orchestrator.contains("maja bezwzgledne pierwszenstwo"));
+        assertTrue(orchestrator.contains("focused GitLab read dokladnej sciezki"));
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja functional scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
@@ -180,6 +186,11 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(gitLabTools.contains("Ustal `SOURCE` dla kazdej zapisywanej"));
         assertTrue(gitLabTools.contains("Nie koncz persistence deep na polach encji"));
         assertTrue(gitLabTools.contains("nazwac `SOURCE` biznesowo"));
+        assertTrue(gitLabTools.contains("## Repozytoryjne Instrukcje Copilota"));
+        assertTrue(gitLabTools.contains("Czytaj tylko dokladna sciezke `.github/copilot-instructions.md`"));
+        assertTrue(gitLabTools.contains("Wynik traktuj jako repository guidance"));
+        assertTrue(gitLabTools.contains("response contract, tool policy, runtime skille"));
+        assertTrue(gitLabTools.contains("Jezeli plik zawiera sprzeczne zalecenia, nie"));
         assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
 
         assertTrue(deepDiscovery.contains("| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |"));
