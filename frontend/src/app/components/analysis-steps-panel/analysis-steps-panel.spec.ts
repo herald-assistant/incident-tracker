@@ -133,6 +133,29 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).toContain('opis toola');
   });
 
+  it('should keep AI workflow and feedback panels visible before data arrives', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const copilotPanel = compiled.querySelector(
+      'details.ai-workflow-panel'
+    ) as HTMLDetailsElement | null;
+    const feedbackPanel = compiled.querySelector(
+      'details.tool-feedback-panel'
+    ) as HTMLDetailsElement | null;
+
+    expect(copilotPanel).not.toBeNull();
+    expect(feedbackPanel).not.toBeNull();
+    expect(compiled.textContent).toContain('Tok działania AI');
+    expect(compiled.textContent).toContain('Tok działania AI pojawi się po rozpoczęciu pracy modelu.');
+    expect(compiled.textContent).toContain('Oceny wyników narzędzi');
+    expect(compiled.textContent).toContain('Oceny wyników narzędzi pojawią się po zebraniu feedbacku jakości.');
+  });
+
   it('should allow switching between completed steps after the analysis finishes', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', buildCompletedSteps());
