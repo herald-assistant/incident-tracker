@@ -173,6 +173,51 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     }
 
     @Test
+    void shouldTraverseStrategyRegistryImplementationsBestEffort() {
+        var sources = strategyRegistrySources();
+        stubRepository(sources);
+        var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository);
+
+        var result = traversalService.traverse(
+                session,
+                new GitLabEndpointUseCaseEndpointContext(
+                        "POST /api/customer-cases -> CustomerCaseController#submitCase",
+                        List.of("POST"),
+                        "/api/customer-cases",
+                        null,
+                        "com.example.crm.customer.api.CustomerCaseController",
+                        "submitCase",
+                        path("api/CustomerCaseController.java"),
+                        1,
+                        20,
+                        List.of("CustomerCaseForm caseForm"),
+                        List.of("IdDto"),
+                        List.of(),
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of(),
+                        List.of()
+                ),
+                new GitLabEndpointUseCaseLimits(8, 40, 100, false, false, 0, false)
+        );
+
+        var byPath = filesByPath(result);
+        assertTrue(byPath.containsKey(path("application/CustomerCaseHandler.java")), byPath.keySet().toString());
+        assertTrue(byPath.containsKey(path("application/ComplaintCaseHandler.java")), byPath.keySet().toString());
+        assertTrue(byPath.containsKey(path("application/DefaultCustomerCaseHandler.java")), byPath.keySet().toString());
+        assertTrue(byPath.containsKey(path("domain/CustomerCaseRepositoryPort.java")), byPath.keySet().toString());
+        assertTrue(byPath.containsKey(path("adapter/out/DefaultCustomerCaseRepository.java")), byPath.keySet().toString());
+        assertTrue(byPath.containsKey(path("application/InquiryCaseHandler.java")), byPath.keySet().toString());
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
+                        && relation.to().contains("ComplaintCaseHandler#submitCase")));
+        assertTrue(result.relations().stream()
+                .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION
+                        && relation.to().contains("InquiryCaseHandler#submitCase")));
+        assertFalse(result.unresolved().stream()
+                .anyMatch(reference -> String.valueOf(reference.symbol()).contains("caseHandler")));
+    }
+
+    @Test
     void shouldMapGeneratedOpenApiWebModelToYamlContractInsteadOfJavaSource() {
         var sources = generatedOpenApiModelSources();
         stubRepository(sources);
@@ -1189,6 +1234,195 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                   schemas:
                     CustomerWebModel:
                       type: object
+                """);
+        return sources;
+    }
+
+    private Map<String, String> strategyRegistrySources() {
+        var sources = new LinkedHashMap<String, String>();
+        sources.put(path("api/CustomerCaseController.java"), """
+                package com.example.crm.customer.api;
+
+                import com.example.crm.customer.application.CustomerCaseHandlerService;
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.IdDto;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.web.bind.annotation.RestController;
+
+                @RestController
+                @RequiredArgsConstructor
+                class CustomerCaseController {
+                    private final CustomerCaseHandlerService customerCaseHandlerService;
+
+                    IdDto submitCase(CustomerCaseForm caseForm) {
+                        return customerCaseHandlerService.submitCase(caseForm);
+                    }
+                }
+                """);
+        sources.put(path("application/CustomerCaseHandlerService.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.CustomerCaseType;
+                import com.example.crm.customer.domain.IdDto;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Service;
+                import jakarta.annotation.PostConstruct;
+                import java.util.HashMap;
+                import java.util.List;
+                import java.util.Map;
+                import java.util.function.Function;
+                import java.util.stream.Collectors;
+
+                import static java.util.Optional.ofNullable;
+
+                @Service
+                @RequiredArgsConstructor
+                class CustomerCaseHandlerService {
+                    private final List<CustomerCaseHandler> caseHandlers;
+                    private final Map<String, CustomerCaseHandler> handlersByCaseType = new HashMap<>();
+
+                    @PostConstruct
+                    void setup() {
+                        caseHandlers.forEach(handler -> handlersByCaseType.putAll(
+                                handler.getCaseTypes().stream().collect(
+                                        Collectors.toMap(Function.identity(), t -> handler)
+                                )
+                        ));
+                    }
+
+                    IdDto submitCase(CustomerCaseForm caseForm) {
+                        return getCaseHandler(caseForm.getType())
+                                .map(caseHandler -> caseHandler.submitCase(caseForm))
+                                .orElseThrow();
+                    }
+
+                    private java.util.Optional<CustomerCaseHandler> getCaseHandler(final CustomerCaseType caseType) {
+                        return ofNullable(caseType)
+                                .map(Enum::name)
+                                .map(handlersByCaseType::get);
+                    }
+                }
+                """);
+        sources.put(path("application/CustomerCaseHandler.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.IdDto;
+                import java.util.List;
+
+                interface CustomerCaseHandler {
+                    List<String> getCaseTypes();
+                    IdDto submitCase(CustomerCaseForm caseForm);
+                }
+                """);
+        sources.put(path("application/ComplaintCaseHandler.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.CustomerCaseType;
+                import com.example.crm.customer.domain.IdDto;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Component;
+                import java.util.List;
+
+                @Component
+                @RequiredArgsConstructor
+                class ComplaintCaseHandler implements CustomerCaseHandler {
+                    private final DefaultCustomerCaseHandler defaultCustomerCaseHandler;
+
+                    public List<String> getCaseTypes() {
+                        return List.of(CustomerCaseType.COMPLAINT.name());
+                    }
+
+                    public IdDto submitCase(CustomerCaseForm caseForm) {
+                        return defaultCustomerCaseHandler.submitCase(caseForm);
+                    }
+                }
+                """);
+        sources.put(path("application/InquiryCaseHandler.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.CustomerCaseType;
+                import com.example.crm.customer.domain.IdDto;
+                import org.springframework.stereotype.Component;
+                import java.util.List;
+
+                @Component
+                class InquiryCaseHandler implements CustomerCaseHandler {
+                    public List<String> getCaseTypes() {
+                        return List.of(CustomerCaseType.INQUIRY.name());
+                    }
+
+                    public IdDto submitCase(CustomerCaseForm caseForm) {
+                        return new IdDto(2L);
+                    }
+                }
+                """);
+        sources.put(path("application/DefaultCustomerCaseHandler.java"), """
+                package com.example.crm.customer.application;
+
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.CustomerCaseRepositoryPort;
+                import com.example.crm.customer.domain.IdDto;
+                import lombok.RequiredArgsConstructor;
+                import org.springframework.stereotype.Component;
+
+                @Component
+                @RequiredArgsConstructor
+                class DefaultCustomerCaseHandler {
+                    private final CustomerCaseRepositoryPort customerCaseRepository;
+
+                    IdDto submitCase(CustomerCaseForm caseForm) {
+                        Long id = customerCaseRepository.save(caseForm);
+                        return new IdDto(id);
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerCaseRepositoryPort.java"), """
+                package com.example.crm.customer.domain;
+
+                public interface CustomerCaseRepositoryPort {
+                    Long save(CustomerCaseForm form);
+                }
+                """);
+        sources.put(path("adapter/out/DefaultCustomerCaseRepository.java"), """
+                package com.example.crm.customer.adapter.out;
+
+                import com.example.crm.customer.domain.CustomerCaseForm;
+                import com.example.crm.customer.domain.CustomerCaseRepositoryPort;
+                import org.springframework.stereotype.Repository;
+
+                @Repository
+                class DefaultCustomerCaseRepository implements CustomerCaseRepositoryPort {
+                    public Long save(CustomerCaseForm form) {
+                        return 1L;
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerCaseForm.java"), """
+                package com.example.crm.customer.domain;
+
+                public class CustomerCaseForm {
+                    public CustomerCaseType getType() {
+                        return CustomerCaseType.COMPLAINT;
+                    }
+                }
+                """);
+        sources.put(path("domain/CustomerCaseType.java"), """
+                package com.example.crm.customer.domain;
+
+                public enum CustomerCaseType {
+                    COMPLAINT,
+                    INQUIRY
+                }
+                """);
+        sources.put(path("domain/IdDto.java"), """
+                package com.example.crm.customer.domain;
+
+                public record IdDto(Long id) {
+                }
                 """);
         return sources;
     }

@@ -47,6 +47,7 @@ public class GitLabEndpointUseCaseTraversalService {
     private final GitLabJavaMethodLocator methodLocator;
     private final GitLabJavaDependencyModelBuilder dependencyModelBuilder;
     private final GitLabJavaInterfaceImplementorResolver implementorResolver;
+    private final GitLabJavaStrategyRegistryResolver strategyRegistryResolver;
     private final GitLabJavaSpringDataRepositoryDetector springDataRepositoryDetector;
     private final GitLabJavaMapStructResolver mapStructResolver;
     private final GitLabEndpointUseCaseResultCompressor resultCompressor;
@@ -56,6 +57,7 @@ public class GitLabEndpointUseCaseTraversalService {
             GitLabJavaMethodLocator methodLocator,
             GitLabJavaDependencyModelBuilder dependencyModelBuilder,
             GitLabJavaInterfaceImplementorResolver implementorResolver,
+            GitLabJavaStrategyRegistryResolver strategyRegistryResolver,
             GitLabJavaSpringDataRepositoryDetector springDataRepositoryDetector,
             GitLabJavaMapStructResolver mapStructResolver,
             GitLabEndpointUseCaseResultCompressor resultCompressor
@@ -64,9 +66,31 @@ public class GitLabEndpointUseCaseTraversalService {
         this.methodLocator = methodLocator;
         this.dependencyModelBuilder = dependencyModelBuilder;
         this.implementorResolver = implementorResolver;
+        this.strategyRegistryResolver = strategyRegistryResolver;
         this.springDataRepositoryDetector = springDataRepositoryDetector;
         this.mapStructResolver = mapStructResolver;
         this.resultCompressor = resultCompressor;
+    }
+
+    GitLabEndpointUseCaseTraversalService(
+            GitLabJavaSourceResolver sourceResolver,
+            GitLabJavaMethodLocator methodLocator,
+            GitLabJavaDependencyModelBuilder dependencyModelBuilder,
+            GitLabJavaInterfaceImplementorResolver implementorResolver,
+            GitLabJavaSpringDataRepositoryDetector springDataRepositoryDetector,
+            GitLabJavaMapStructResolver mapStructResolver,
+            GitLabEndpointUseCaseResultCompressor resultCompressor
+    ) {
+        this(
+                sourceResolver,
+                methodLocator,
+                dependencyModelBuilder,
+                implementorResolver,
+                new GitLabJavaStrategyRegistryResolver(sourceResolver, methodLocator, implementorResolver),
+                springDataRepositoryDetector,
+                mapStructResolver,
+                resultCompressor
+        );
     }
 
     GitLabEndpointUseCaseTraversalService() {
@@ -75,6 +99,7 @@ public class GitLabEndpointUseCaseTraversalService {
                 new GitLabJavaMethodLocator(),
                 new GitLabJavaDependencyModelBuilder(),
                 new GitLabJavaInterfaceImplementorResolver(),
+                new GitLabJavaStrategyRegistryResolver(),
                 new GitLabJavaSpringDataRepositoryDetector(),
                 new GitLabJavaMapStructResolver(),
                 new GitLabEndpointUseCaseResultCompressor()
@@ -235,6 +260,9 @@ public class GitLabEndpointUseCaseTraversalService {
                 continue;
             }
             if (processInjectedDependencyCall(session, state, astFile, node, currentSymbol, dependenciesByName, methodCall)) {
+                continue;
+            }
+            if (processStrategyRegistryCall(session, state, astFile, node, match, currentSymbol, methodCall)) {
                 continue;
             }
             if (processVariableDomainCall(session, state, astFile, node, currentSymbol, localTypes, methodCall)) {
@@ -498,6 +526,106 @@ public class GitLabEndpointUseCaseTraversalService {
         ));
         if (resolved.type() != null && resolved.type().kind() == GitLabJavaTypeKind.INTERFACE) {
             addDomainInterfaceImplementations(session, state, node, currentSymbol, resolved, methodCall);
+        }
+        return true;
+    }
+
+    private boolean processStrategyRegistryCall(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabEndpointUseCaseTraversalState state,
+            GitLabJavaAstFile astFile,
+            GitLabEndpointUseCaseTraversalNode node,
+            GitLabJavaMethodMatch currentMethod,
+            String currentSymbol,
+            MethodCallExpr methodCall
+    ) {
+        var resolution = strategyRegistryResolver.resolve(session, astFile, currentMethod, methodCall);
+        if (!resolution.resolved()) {
+            return false;
+        }
+
+        state.addLimitations(resolution.limitations());
+        var strategyType = resolution.strategyType();
+        var strategyTypeName = strategyType.qualifiedName() != null
+                ? strategyType.qualifiedName()
+                : strategyType.requestedName();
+        var strategySymbol = symbol(strategyTypeName, methodCall.getNameAsString());
+        state.addFile(
+                strategyType.filePath(),
+                roleForTypeName(strategyTypeName, strategyType.filePath()),
+                methodCall.getNameAsString(),
+                "Strategy interface reached through a local registry backed by "
+                        + String.join(", ", resolution.pattern().collectionFields()) + ".",
+                strategyType.confidence()
+        );
+        state.addRelation(
+                currentSymbol,
+                strategySymbol,
+                GitLabEndpointUseCaseRelationKind.DOMAIN_METHOD_CALL,
+                GitLabEndpointUseCaseConfidence.MEDIUM,
+                "Method call on strategy resolved from a local registry."
+        );
+
+        var implementors = resolution.implementors();
+        if (resolution.candidates().isEmpty()) {
+            state.addUnresolved(
+                    strategyTypeName,
+                    strategyType.filePath(),
+                    "No implementation was resolved for strategy registry interface.",
+                    implementors != null ? implementors.searchKeywords() : List.of(strategyTypeName),
+                    List.of()
+            );
+            return true;
+        }
+
+        var interfaceParameterTypes = interfaceMethodParameterTypes(session, strategyType, methodCall);
+        for (var strategyCandidate : resolution.candidates()) {
+            var candidate = strategyCandidate.implementor();
+            var role = roleForTypeName(candidate.implementationQualifiedName(), candidate.filePath());
+            state.addFile(
+                    candidate.filePath(),
+                    role,
+                    methodCall.getNameAsString(),
+                    "Strategy implementation candidate from registry.",
+                    candidate.confidence()
+            );
+            state.addRelation(
+                    strategySymbol,
+                    symbol(candidate.implementationQualifiedName(), methodCall.getNameAsString()),
+                    GitLabEndpointUseCaseRelationKind.INTERFACE_IMPLEMENTATION,
+                    candidate.confidence(),
+                    "Implementation selected for strategy registry method call."
+            );
+            var implementationAstFile = sourceResolver.astFile(session, candidate.filePath());
+            var implementationType = new GitLabJavaResolvedType(
+                    candidate.implementationQualifiedName(),
+                    GitLabJavaTypeResolutionKind.TREE_LOOKUP,
+                    candidate.confidence(),
+                    null,
+                    candidate.filePath(),
+                    candidate.implementationQualifiedName(),
+                    List.of(candidate.filePath()),
+                    List.of()
+            );
+            if (addSpringDataBoundary(session, state, implementationType, methodCall.getNameAsString(), currentSymbol)) {
+                continue;
+            }
+            if (implementationAstFile.parsed()
+                    && springDataRepositoryDetector.detect(implementationAstFile, candidate.implementationQualifiedName()).status()
+                    == GitLabJavaSpringDataRepositoryStatus.DETECTED) {
+                continue;
+            }
+            state.enqueue(new GitLabEndpointUseCaseTraversalNode(
+                    candidate.filePath(),
+                    candidate.implementationQualifiedName(),
+                    methodCall.getNameAsString(),
+                    methodCall.getArguments().size(),
+                    interfaceParameterTypes,
+                    node.depth() + 1,
+                    role,
+                    candidate.confidence(),
+                    "Strategy registry implementation method called from traversed flow."
+            ));
         }
         return true;
     }

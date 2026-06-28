@@ -258,6 +258,9 @@ final class GitLabEndpointUseCaseTraversalState {
         if (reason.contains("domain interface implementation method")) {
             return 18;
         }
+        if (reason.contains("strategy registry implementation method")) {
+            return 18;
+        }
         if (reason.contains("domain method called")) {
             return 25;
         }
