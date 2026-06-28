@@ -488,12 +488,14 @@ describe('FlowExplorerPageComponent', () => {
     );
     expect(compiled.textContent).toContain('Wczytany plik: flow-explorer-export.json');
     expect(compiled.textContent).toContain('AI result');
-    expect(compiled.textContent).toContain('Importowany zapis jest tylko do odczytu');
     expect(sectionByEyebrow.get('Flow Explorer')?.open).toBe(false);
     expect(sectionByEyebrow.get('Job state')?.open).toBe(false);
     expect(sectionByEyebrow.get('AI result')?.open).toBe(true);
-    expect(compiled.querySelector<HTMLDetailsElement>('details.analysis-chat')?.open).toBe(false);
-    expect(compiled.querySelector<HTMLDetailsElement>('details.panel-card--progress')?.open).toBe(false);
+    expect(compiled.querySelector<HTMLDetailsElement>('details.analysis-chat')?.open).toBe(true);
+    expect(compiled.querySelector<HTMLDetailsElement>('details.panel-card--progress')?.open).toBe(true);
+    expect(
+      compiled.querySelector<HTMLDetailsElement>('details.panel-card--progress summary')?.textContent
+    ).not.toContain('expand_more');
     expect(chatInput.disabled).toBe(true);
   });
 

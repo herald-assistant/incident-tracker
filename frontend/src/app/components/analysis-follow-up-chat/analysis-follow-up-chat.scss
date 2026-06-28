@@ -14,16 +14,11 @@
   min-width: 0;
 }
 
-.analysis-chat__hint {
-  justify-self: end;
-  max-width: min(52ch, 100%);
-  text-align: right;
-}
-
 .analysis-chat__summary-actions {
   display: inline-flex;
   align-items: center;
   justify-self: end;
+  grid-column: 3;
   gap: 12px;
   min-width: max-content;
 }
@@ -41,13 +36,6 @@
 @media (max-width: 860px) {
   .analysis-chat .collapsible-panel__summary.panel-card__header {
     grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .analysis-chat__hint {
-    grid-column: 1 / -1;
-    justify-self: start;
-    max-width: none;
-    text-align: left;
   }
 
   .analysis-chat__summary-actions {

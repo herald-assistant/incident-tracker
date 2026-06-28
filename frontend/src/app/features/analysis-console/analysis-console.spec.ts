@@ -180,7 +180,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
     expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
     expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu katalogowego.');
-    expect(fixture.nativeElement.textContent).toContain('Lokalny run został otwarty z historii.');
+    expect(fixture.nativeElement.textContent).not.toContain('Lokalny run został otwarty z historii.');
   });
 
   it('should continue a local run through the analysis history API', async () => {
@@ -313,8 +313,9 @@ describe('AnalysisConsoleComponent auth flow', () => {
     ) as HTMLDetailsElement | null;
 
     expect(chatPanel).not.toBeNull();
-    expect(chatPanel?.open).toBe(false);
+    expect(chatPanel?.open).toBe(true);
     expect(chatPanel?.querySelector('summary')?.textContent).toContain('Kontynuacja analizy');
+    expect(chatPanel?.querySelector('summary')?.textContent).not.toContain('expand_more');
     expect(copyButtons).toHaveLength(2);
     expect(copyButtons[0].textContent).toContain('content_copy');
     expect(copyButtons[1].textContent).toContain('content_copy');

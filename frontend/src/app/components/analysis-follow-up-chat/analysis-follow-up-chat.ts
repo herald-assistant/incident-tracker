@@ -24,13 +24,13 @@ export class AnalysisFollowUpChatComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly messages = input<AnalysisChatMessageResponse[]>([]);
-  readonly hint = input('');
   readonly error = input('');
   readonly canUseChat = input(false);
   readonly isSubmitting = input(false);
   readonly needsAuth = input(false);
   readonly authActionLabel = input('Połącz GitHub');
   readonly openByDefault = input(false);
+  readonly staticPanel = input(false);
   readonly eyebrow = input('Follow-up');
   readonly title = input('Kontynuacja analizy');
   readonly emptyText = input('Po zakończeniu analizy możesz dopytać AI o wynik albo zlecić dodatkową weryfikację.');
@@ -77,6 +77,12 @@ export class AnalysisFollowUpChatComponent {
     this.localError.set('');
     if (this.error()) {
       this.clearError.emit();
+    }
+  }
+
+  protected preventStaticPanelToggle(event: Event): void {
+    if (this.staticPanel()) {
+      event.preventDefault();
     }
   }
 

@@ -1,0 +1,193 @@
+:host {
+  --analysis-feature-aside-rail-width: 48px;
+
+  display: block;
+  position: fixed;
+  top: 64px;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  width: 70vw;
+  min-width: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.analysis-feature-aside {
+  display: grid;
+  grid-template-columns: var(--analysis-feature-aside-rail-width) minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  height: 100%;
+  min-width: 0;
+  pointer-events: none;
+  transform: translateX(calc(100% - var(--analysis-feature-aside-rail-width)));
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
+  will-change: transform;
+}
+
+.analysis-feature-aside--open {
+  transform: translateX(0);
+}
+
+.analysis-feature-aside__rail {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  align-self: start;
+  margin: 12px 0 0;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  background: var(--surface);
+  box-shadow: -10px 0 26px rgba(9, 30, 66, 0.1);
+  pointer-events: auto;
+}
+
+.analysis-feature-aside--open .analysis-feature-aside__rail {
+  background: var(--surface);
+  box-shadow: -12px 0 28px rgba(9, 30, 66, 0.08);
+}
+
+.analysis-feature-aside__tab {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.analysis-feature-aside__tab:hover,
+.analysis-feature-aside__tab:focus-visible,
+.analysis-feature-aside__tab--active {
+  border-color: rgba(12, 102, 228, 0.28);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.analysis-feature-aside__tab .material-symbols-outlined {
+  font-size: 21px;
+  line-height: 1;
+}
+
+.analysis-feature-aside__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.analysis-feature-aside__badge--loading::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px solid rgba(12, 102, 228, 0.18);
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: analysis-feature-aside-spin 0.85s linear infinite;
+}
+
+.analysis-feature-aside__badge-spinner {
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 999px;
+  animation: analysis-feature-aside-spin 0.85s linear infinite;
+}
+
+.analysis-feature-aside__panel {
+  min-width: 0;
+  height: 100%;
+  padding: 12px 12px 18px;
+  border-left: 0;
+  background: var(--surface);
+  box-shadow: -18px 0 36px rgba(9, 30, 66, 0.1);
+  overflow: auto;
+  pointer-events: auto;
+}
+
+.analysis-feature-aside__panel-slot {
+  min-width: 0;
+}
+
+.analysis-feature-aside__panel-slot[hidden] {
+  display: none !important;
+}
+
+@keyframes analysis-feature-aside-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1180px) {
+  :host {
+    width: min(70vw, 100vw);
+  }
+
+  .analysis-feature-aside__rail {
+    display: grid;
+    width: auto;
+    max-width: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  :host {
+    top: 0;
+    width: 100vw;
+  }
+
+  .analysis-feature-aside {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    transform: translateX(calc(100% - var(--analysis-feature-aside-rail-width)));
+  }
+
+  .analysis-feature-aside--open {
+    transform: translateX(0);
+  }
+
+  .analysis-feature-aside__rail {
+    display: flex;
+    margin: 8px;
+    border-right: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+
+  .analysis-feature-aside--open .analysis-feature-aside__rail {
+    height: auto;
+    margin: 8px;
+    padding: 6px;
+  }
+
+  .analysis-feature-aside__panel {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}

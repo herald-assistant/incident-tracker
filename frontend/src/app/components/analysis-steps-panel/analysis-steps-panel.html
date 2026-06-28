@@ -175,34 +175,41 @@
     }
   </ng-template>
 
-<details
-  class="panel-card panel-card--progress collapsible-panel"
-  [open]="progressPanelOpen()"
-  (toggle)="onProgressPanelToggle($event)"
->
-  <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
-    <div>
-      <p class="section-eyebrow">Przebieg</p>
-      <h3>Przebieg analizy</h3>
-    </div>
-    <p class="analysis-stepper-card__hint collapsible-panel__hint">
-      Kliknij zakończony krok, aby podejrzeć dane z etapu i input, który zasilił analizę AI.
-    </p>
-    <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-      expand_more
-    </span>
-  </summary>
+@if (showProgress()) {
+  <details
+    class="panel-card panel-card--progress collapsible-panel"
+    [open]="staticPanels() || progressPanelOpen()"
+    (toggle)="onProgressPanelToggle($event)"
+  >
+    <summary
+      class="panel-card__header panel-card__header--compact collapsible-panel__summary"
+      [class.collapsible-panel__summary--static]="staticPanels()"
+      (click)="preventStaticPanelToggle($event)"
+      (keydown.enter)="preventStaticPanelToggle($event)"
+      (keydown.space)="preventStaticPanelToggle($event)"
+    >
+      <div>
+        <p class="section-eyebrow">Przebieg</p>
+        <h3>Przebieg analizy</h3>
+      </div>
+      @if (!staticPanels()) {
+        <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+          expand_more
+        </span>
+      }
+    </summary>
 
-  <div class="collapsible-panel__body">
-    @if (preparedSteps().length === 0) {
-      <div class="empty-state">Lista kroków pojawi się po rozpoczęciu analizy.</div>
-    } @else {
-      <mat-stepper
-        class="analysis-stepper"
-        linear
-        [selectedIndex]="selectedIndex()"
-        (selectedIndexChange)="onSelectedIndexChange($event)"
-      >
+    <div class="collapsible-panel__body">
+      @if (preparedSteps().length === 0) {
+        <div class="empty-state">Lista kroków pojawi się po rozpoczęciu analizy.</div>
+      } @else {
+        <mat-stepper
+          class="analysis-stepper"
+          linear
+          [style.--analysis-stepper-columns]="stepperColumnCount()"
+          [selectedIndex]="selectedIndex()"
+          (selectedIndexChange)="onSelectedIndexChange($event)"
+        >
       <ng-template matStepperIcon="number" let-index="index">
         <span class="analysis-stepper__icon">
           {{ index + 1 }}
@@ -1405,28 +1412,34 @@
           </div>
         </mat-step>
       }
-      </mat-stepper>
-    }
-  </div>
-</details>
+        </mat-stepper>
+      }
+    </div>
+  </details>
+}
 
-@if (copilotWorkItems().length > 0) {
+@if (showAiWorkflow() && copilotWorkItems().length > 0) {
   <details
     class="panel-card ai-workflow-panel collapsible-panel"
-    [open]="aiWorkflowPanelOpen()"
+    [open]="staticPanels() || aiWorkflowPanelOpen()"
     (toggle)="onAiWorkflowPanelToggle($event)"
   >
-    <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
+    <summary
+      class="panel-card__header panel-card__header--compact collapsible-panel__summary"
+      [class.collapsible-panel__summary--static]="staticPanels()"
+      (click)="preventStaticPanelToggle($event)"
+      (keydown.enter)="preventStaticPanelToggle($event)"
+      (keydown.space)="preventStaticPanelToggle($event)"
+    >
       <div>
         <p class="section-eyebrow">Przebieg pracy Copilota</p>
         <h3>Tok działania AI</h3>
       </div>
-      <p class="ai-workflow__hint collapsible-panel__hint">
-        Chronologicznie: reasoning, usage i uzasadnione wywołania tools.
-      </p>
-      <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-        expand_more
-      </span>
+      @if (!staticPanels()) {
+        <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+          expand_more
+        </span>
+      }
     </summary>
 
     <div class="ai-workflow collapsible-panel__body">
@@ -1552,19 +1565,24 @@
   </details>
 }
 
-@if (toolFeedbackItems().length > 0) {
+@if (showToolFeedback() && toolFeedbackItems().length > 0) {
   <details class="panel-card tool-feedback-panel collapsible-panel" open>
-    <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
+    <summary
+      class="panel-card__header panel-card__header--compact collapsible-panel__summary"
+      [class.collapsible-panel__summary--static]="staticPanels()"
+      (click)="preventStaticPanelToggle($event)"
+      (keydown.enter)="preventStaticPanelToggle($event)"
+      (keydown.space)="preventStaticPanelToggle($event)"
+    >
       <div>
         <p class="section-eyebrow">Feedback jakości tooli</p>
         <h3>Oceny wyników narzędzi</h3>
       </div>
-      <p class="tool-feedback-panel__hint collapsible-panel__hint">
-        Sygnały diagnostyczne zapisane przez AI po istotnych wynikach tooli.
-      </p>
-      <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-        expand_more
-      </span>
+      @if (!staticPanels()) {
+        <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+          expand_more
+        </span>
+      }
     </summary>
 
     <div class="tool-feedback-list collapsible-panel__body">

@@ -251,7 +251,18 @@
               </section>
             }
 
-            <section class="analysis-trace-section" aria-label="Evidence, timeline and AI activity">
+          </div>
+
+          <app-analysis-feature-aside
+            ariaLabel="Panel pracy Incident Analysis"
+            [progressActive]="workflowIsRunning()"
+            [aiActive]="aiWorkflowIsRunning()"
+            [chatActive]="chatIsWaiting()"
+            [aiCount]="aiWorkflowItemCount()"
+            [chatCount]="chatMessageCount()"
+            [feedbackCount]="toolFeedbackCount()"
+          >
+            <div progressPanel>
               <app-analysis-steps-panel
                 [steps]="currentJob.steps"
                 [evidenceSections]="currentJob.evidenceSections"
@@ -260,23 +271,58 @@
                 [toolFeedback]="currentJob.toolFeedback"
                 [preparedPrompt]="currentJob.preparedPrompt"
                 [result]="currentJob.result"
+                [showAiWorkflow]="false"
+                [showToolFeedback]="false"
+                [staticPanels]="true"
               ></app-analysis-steps-panel>
-            </section>
+            </div>
 
-            <app-analysis-follow-up-chat
-              [messages]="currentJob.chatMessages"
-              [hint]="chatHint()"
-              [error]="chatError()"
-              [canUseChat]="canUseChat()"
-              [isSubmitting]="isChatSubmitting()"
-              [needsAuth]="chatNeedsGithubAuth()"
-              [authActionLabel]="authActionLabel()"
-              placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
-              (sendMessage)="submitChat($event)"
-              (clearError)="clearChatError()"
-              (connectAuth)="connectGithub()"
-            ></app-analysis-follow-up-chat>
-          </div>
+            <div aiPanel>
+              <app-analysis-steps-panel
+                [steps]="currentJob.steps"
+                [evidenceSections]="currentJob.evidenceSections"
+                [toolEvidenceSections]="currentJob.toolEvidenceSections"
+                [aiActivityEvents]="currentJob.aiActivityEvents"
+                [toolFeedback]="currentJob.toolFeedback"
+                [preparedPrompt]="currentJob.preparedPrompt"
+                [result]="currentJob.result"
+                [showProgress]="false"
+                [showToolFeedback]="false"
+                [staticPanels]="true"
+              ></app-analysis-steps-panel>
+            </div>
+
+            <div chatPanel>
+              <app-analysis-follow-up-chat
+                [messages]="currentJob.chatMessages"
+                [error]="chatError()"
+                [canUseChat]="canUseChat()"
+                [isSubmitting]="isChatSubmitting()"
+                [needsAuth]="chatNeedsGithubAuth()"
+                [authActionLabel]="authActionLabel()"
+                [staticPanel]="true"
+                placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
+                (sendMessage)="submitChat($event)"
+                (clearError)="clearChatError()"
+                (connectAuth)="connectGithub()"
+              ></app-analysis-follow-up-chat>
+            </div>
+
+            <div feedbackPanel>
+              <app-analysis-steps-panel
+                [steps]="currentJob.steps"
+                [evidenceSections]="currentJob.evidenceSections"
+                [toolEvidenceSections]="currentJob.toolEvidenceSections"
+                [aiActivityEvents]="currentJob.aiActivityEvents"
+                [toolFeedback]="currentJob.toolFeedback"
+                [preparedPrompt]="currentJob.preparedPrompt"
+                [result]="currentJob.result"
+                [showProgress]="false"
+                [showAiWorkflow]="false"
+                [staticPanels]="true"
+              ></app-analysis-steps-panel>
+            </div>
+          </app-analysis-feature-aside>
         </div>
       }
     </section>

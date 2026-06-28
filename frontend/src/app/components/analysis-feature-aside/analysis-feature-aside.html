@@ -1,0 +1,58 @@
+<aside
+  class="analysis-feature-aside"
+  [class.analysis-feature-aside--open]="activePanel() !== null"
+  [attr.aria-label]="ariaLabel()"
+>
+  <nav class="analysis-feature-aside__rail" aria-label="Sekcje analizy" role="tablist">
+    @for (tab of tabs; track tab.id) {
+      <button
+        class="analysis-feature-aside__tab"
+        type="button"
+        role="tab"
+        [class.analysis-feature-aside__tab--active]="activePanel() === tab.id"
+        [attr.aria-selected]="activePanel() === tab.id"
+        [attr.aria-label]="tab.label"
+        [matTooltip]="tab.tooltip"
+        matTooltipPosition="left"
+        [matTooltipShowDelay]="120"
+        (click)="selectPanel(tab.id)"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">{{ tab.icon }}</span>
+
+        @if (isLoading(tab.id) || badgeCount(tab.id) > 0) {
+          <span
+            class="analysis-feature-aside__badge"
+            [class.analysis-feature-aside__badge--loading]="isLoading(tab.id)"
+            [attr.aria-label]="badgeAriaLabel(tab.id)"
+          >
+            @if (badgeCount(tab.id) > 0) {
+              {{ badgeLabel(badgeCount(tab.id)) }}
+            } @else {
+              <span class="analysis-feature-aside__badge-spinner" aria-hidden="true"></span>
+            }
+          </span>
+        }
+      </button>
+    }
+  </nav>
+
+  <section
+    class="analysis-feature-aside__panel"
+    [attr.aria-hidden]="activePanel() === null"
+    [attr.aria-label]="ariaLabel()"
+    role="tabpanel"
+  >
+    <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'progress'">
+      <ng-content select="[progressPanel]"></ng-content>
+    </div>
+    <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'ai'">
+      <ng-content select="[aiPanel]"></ng-content>
+    </div>
+    <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'chat'">
+      <ng-content select="[chatPanel]"></ng-content>
+    </div>
+    <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'feedback'">
+      <ng-content select="[feedbackPanel]"></ng-content>
+    </div>
+  </section>
+</aside>

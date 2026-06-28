@@ -36,6 +36,7 @@ import {
   normalizeFlowExplorerJob,
   parseImportedFlowExplorerAnalysis
 } from '../../utils/flow-explorer-import-export.utils';
+import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
@@ -150,6 +151,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
   selector: 'app-flow-explorer-page',
   imports: [
     MatTooltipModule,
+    AnalysisFeatureAsideComponent,
     AnalysisFollowUpChatComponent,
     AnalysisStepsPanelComponent,
     MarkdownContentComponent
@@ -246,6 +248,28 @@ export class FlowExplorerPageComponent implements OnInit {
       !this.isJobActive()
   );
   readonly chatMessages = computed(() => this.job()?.chatMessages ?? []);
+  readonly workflowIsRunning = computed(() => {
+    const job = this.job();
+    return Boolean(job && !this.isTerminalJobStatus(job.status));
+  });
+  readonly aiWorkflowIsRunning = computed(() => {
+    const job = this.job();
+    return Boolean(job?.steps.some((step) => step.code === 'AI_ANALYSIS' && step.status === 'IN_PROGRESS'));
+  });
+  readonly chatIsWaiting = computed(() => this.isSendingChat() || this.hasActiveChat(this.job()));
+  readonly chatMessageCount = computed(() => this.chatMessages().length);
+  readonly aiWorkflowItemCount = computed(() => {
+    const job = this.job();
+    if (!job) {
+      return 0;
+    }
+
+    return (
+      job.aiActivityEvents.length +
+      job.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0)
+    );
+  });
+  readonly toolFeedbackCount = computed(() => this.job()?.toolFeedback.length ?? 0);
   readonly isChatAvailable = computed(() => {
     const exportState = this.exportState();
     return (
@@ -253,27 +277,6 @@ export class FlowExplorerPageComponent implements OnInit {
       (exportState?.origin === 'live' ||
         (exportState?.origin === 'local' && Boolean(exportState.continuationEnabled)))
     );
-  });
-  readonly chatHint = computed(() => {
-    const job = this.job();
-    if (!job?.result) {
-      return 'Chat bedzie dostepny po zakonczeniu analizy.';
-    }
-    if (this.exportState()?.origin === 'imported') {
-      return 'Importowany zapis jest tylko do odczytu. Chat dziala dla analiz zywych w backendzie.';
-    }
-    if (this.exportState()?.origin === 'local') {
-      return this.exportState()?.continuationEnabled
-        ? 'Lokalny run zostal otwarty z historii. Follow-up kontynuuje zapisana sesje AI.'
-        : 'Ten lokalny run nie ma wlaczonych metadanych kontynuacji.';
-    }
-    if (job.status !== 'COMPLETED') {
-      return 'Chat bedzie dostepny po zakonczeniu analizy.';
-    }
-    if (this.hasActiveChat(job)) {
-      return 'AI przygotowuje odpowiedz na poprzednie pytanie.';
-    }
-    return 'Pytania korzystaja z wyniku, deterministic contextu i dozwolonych tools dla Flow Explorera.';
   });
   readonly focusAreas = computed<FlowExplorerFocusArea[]>(() =>
     this.sectionModes()

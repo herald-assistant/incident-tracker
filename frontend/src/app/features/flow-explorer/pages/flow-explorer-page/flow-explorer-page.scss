@@ -23,6 +23,20 @@
   align-items: start;
 }
 
+.flow-explorer-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.flow-explorer-analysis-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
 .flow-explorer-collapsible {
   display: grid;
   min-width: 0;

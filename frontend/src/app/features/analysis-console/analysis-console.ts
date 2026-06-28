@@ -50,6 +50,7 @@ import {
   estimateAnalysisAiCost,
   GITHUB_AI_CREDIT_USD
 } from '../../core/utils/analysis-ai-usage-cost.utils';
+import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
@@ -87,6 +88,7 @@ type ExportMetadata = Pick<
   imports: [
     ReactiveFormsModule,
     MatTooltipModule,
+    AnalysisFeatureAsideComponent,
     AnalysisFinalResultComponent,
     AnalysisFollowUpChatComponent,
     AnalysisStepsPanelComponent
@@ -228,28 +230,30 @@ export class AnalysisConsoleComponent {
       !hasInProgressChat(currentJob)
     );
   });
-  readonly chatHint = computed(() => {
+  readonly workflowIsRunning = computed(() => {
     const currentJob = this.job();
-    const exportState = this.exportState();
-    if (!currentJob) {
-      return 'Chat będzie dostępny po zakończeniu analizy.';
-    }
-    if (exportState?.origin === 'imported') {
-      return 'Importowany zapis jest tylko do odczytu. Chat działa dla analiz żywych w backendzie.';
-    }
-    if (exportState?.origin === 'local') {
-      return exportState.continuationEnabled
-        ? 'Lokalny run został otwarty z historii. Możesz kontynuować pracę na zapisanym snapshotcie.'
-        : 'Ten lokalny run nie ma włączonych metadanych kontynuacji.';
-    }
-    if (currentJob.status !== 'COMPLETED') {
-      return 'Chat będzie dostępny po zakończeniu analizy.';
-    }
-    if (hasInProgressChat(currentJob)) {
-      return 'AI przygotowuje odpowiedź na poprzednie polecenie.';
-    }
-    return 'Możesz dopytać o wynik, poprosić o weryfikację w repo lub DB albo wygenerować raport.';
+    return Boolean(currentJob && !isTerminalStatus(currentJob.status));
   });
+  readonly aiWorkflowIsRunning = computed(() => {
+    const currentJob = this.job();
+    return Boolean(
+      currentJob?.steps.some((step) => step.code === 'AI_ANALYSIS' && step.status === 'IN_PROGRESS')
+    );
+  });
+  readonly chatIsWaiting = computed(() => this.isChatSubmitting() || hasInProgressChat(this.job()));
+  readonly chatMessageCount = computed(() => this.job()?.chatMessages.length ?? 0);
+  readonly aiWorkflowItemCount = computed(() => {
+    const currentJob = this.job();
+    if (!currentJob) {
+      return 0;
+    }
+
+    return (
+      currentJob.aiActivityEvents.length +
+      currentJob.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0)
+    );
+  });
+  readonly toolFeedbackCount = computed(() => this.job()?.toolFeedback.length ?? 0);
   readonly placeholderTitle = computed(() =>
     this.placeholderMode() === 'loading'
       ? 'Uruchamiamy analizę...'

@@ -855,7 +855,10 @@
           </section>
         }
 
-        @if (job()?.result; as result) {
+        @if (job(); as snapshot) {
+          <div class="flow-explorer-analysis-grid">
+            <div class="flow-explorer-analysis-main">
+        @if (snapshot.result; as result) {
           <section
             class="analysis-card flow-explorer-result"
             aria-label="Flow Explorer result"
@@ -1107,41 +1110,88 @@
           </section>
         }
 
-        @if (job()?.result || chatMessages().length > 0) {
-          <app-analysis-follow-up-chat
-            [messages]="chatMessages()"
-            [hint]="chatHint()"
-            [error]="chatError()"
-            [canUseChat]="isChatAvailable()"
-            [isSubmitting]="isSendingChat()"
-            [openByDefault]="!isImportedResult() && !isHistoryResult()"
-            eyebrow="Follow-up chat"
-            title="Ask about this endpoint"
-            emptyText="Brak pytan follow-up dla tej analizy."
-            inputLabel="Pytanie follow-up"
-            placeholder="Np. ktore walidacje warto pokryc testami regresji?"
-            pendingText="AI przygotowuje odpowiedz i w razie potrzeby korzysta z dozwolonych tools Flow Explorera."
-            submitLabel="Send"
-            submittingLabel="Sending..."
-            ariaLabel="Flow Explorer follow-up chat"
-            (sendMessage)="sendChatMessage($event)"
-            (clearError)="clearChatError()"
-          ></app-analysis-follow-up-chat>
-        }
+            </div>
 
-        @if (job(); as snapshot) {
-          <section class="flow-explorer-shared-trace" aria-label="Przebieg pracy Copilota">
-            <app-analysis-steps-panel
-              [steps]="snapshot.steps"
-              [evidenceSections]="snapshot.contextSections"
-              [toolEvidenceSections]="snapshot.toolEvidenceSections"
-              [aiActivityEvents]="snapshot.aiActivityEvents"
-              [toolFeedback]="snapshot.toolFeedback"
-              [preparedPrompt]="snapshot.preparedPrompt"
-              [result]="null"
-              [finalResultAvailable]="!!snapshot.result"
-            ></app-analysis-steps-panel>
-          </section>
+            <app-analysis-feature-aside
+              ariaLabel="Panel pracy Flow Explorer"
+              [progressActive]="workflowIsRunning()"
+              [aiActive]="aiWorkflowIsRunning()"
+              [chatActive]="chatIsWaiting()"
+              [aiCount]="aiWorkflowItemCount()"
+              [chatCount]="chatMessageCount()"
+              [feedbackCount]="toolFeedbackCount()"
+            >
+              <div progressPanel>
+                <app-analysis-steps-panel
+                  [steps]="snapshot.steps"
+                  [evidenceSections]="snapshot.contextSections"
+                  [toolEvidenceSections]="snapshot.toolEvidenceSections"
+                  [aiActivityEvents]="snapshot.aiActivityEvents"
+                  [toolFeedback]="snapshot.toolFeedback"
+                  [preparedPrompt]="snapshot.preparedPrompt"
+                  [result]="null"
+                  [finalResultAvailable]="!!snapshot.result"
+                  [showAiWorkflow]="false"
+                  [showToolFeedback]="false"
+                  [staticPanels]="true"
+                ></app-analysis-steps-panel>
+              </div>
+
+              <div aiPanel>
+                <app-analysis-steps-panel
+                  [steps]="snapshot.steps"
+                  [evidenceSections]="snapshot.contextSections"
+                  [toolEvidenceSections]="snapshot.toolEvidenceSections"
+                  [aiActivityEvents]="snapshot.aiActivityEvents"
+                  [toolFeedback]="snapshot.toolFeedback"
+                  [preparedPrompt]="snapshot.preparedPrompt"
+                  [result]="null"
+                  [finalResultAvailable]="!!snapshot.result"
+                  [showProgress]="false"
+                  [showToolFeedback]="false"
+                  [staticPanels]="true"
+                ></app-analysis-steps-panel>
+              </div>
+
+              <div chatPanel>
+                <app-analysis-follow-up-chat
+                  [messages]="chatMessages()"
+                  [error]="chatError()"
+                  [canUseChat]="isChatAvailable()"
+                  [isSubmitting]="isSendingChat()"
+                  [openByDefault]="!isImportedResult() && !isHistoryResult()"
+                  [staticPanel]="true"
+                  eyebrow="Follow-up chat"
+                  title="Ask about this endpoint"
+                  emptyText="Brak pytan follow-up dla tej analizy."
+                  inputLabel="Pytanie follow-up"
+                  placeholder="Np. ktore walidacje warto pokryc testami regresji?"
+                  pendingText="AI przygotowuje odpowiedz i w razie potrzeby korzysta z dozwolonych tools Flow Explorera."
+                  submitLabel="Send"
+                  submittingLabel="Sending..."
+                  ariaLabel="Flow Explorer follow-up chat"
+                  (sendMessage)="sendChatMessage($event)"
+                  (clearError)="clearChatError()"
+                ></app-analysis-follow-up-chat>
+              </div>
+
+              <div feedbackPanel>
+                <app-analysis-steps-panel
+                  [steps]="snapshot.steps"
+                  [evidenceSections]="snapshot.contextSections"
+                  [toolEvidenceSections]="snapshot.toolEvidenceSections"
+                  [aiActivityEvents]="snapshot.aiActivityEvents"
+                  [toolFeedback]="snapshot.toolFeedback"
+                  [preparedPrompt]="snapshot.preparedPrompt"
+                  [result]="null"
+                  [finalResultAvailable]="!!snapshot.result"
+                  [showProgress]="false"
+                  [showAiWorkflow]="false"
+                  [staticPanels]="true"
+                ></app-analysis-steps-panel>
+              </div>
+            </app-analysis-feature-aside>
+          </div>
         }
       </section>
     </section>

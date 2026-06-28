@@ -1103,6 +1103,10 @@ body .flow-tree-node__badges .confidence-pill,
   cursor: pointer;
 }
 
+.collapsible-panel__summary--static {
+  cursor: default;
+}
+
 .collapsible-panel__summary.panel-card__header {
   display: grid;
   grid-template-columns: minmax(220px, max-content) minmax(0, 1fr) 28px;
@@ -1877,8 +1881,8 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .analysis-stepper .mat-step-icon {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
 }
 
 .analysis-stepper .mat-step-icon-content {
@@ -1889,7 +1893,7 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .analysis-stepper .mat-horizontal-stepper-header .mat-step-icon {
-  margin-right: 10px;
+  margin-right: 12px;
 }
 
 .analysis-stepper__step-content {
@@ -1917,7 +1921,7 @@ body .flow-tree-node__badges .confidence-pill,
   border: 1px solid rgba(12, 102, 228, 0.18);
   background: #fff;
   color: var(--text-main);
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 

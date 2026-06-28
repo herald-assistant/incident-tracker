@@ -209,12 +209,12 @@
 
 .analysis-workspace-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 
-.analysis-workspace-main,
-.analysis-trace-section {
+.analysis-workspace-main {
   display: grid;
   gap: 14px;
   min-width: 0;

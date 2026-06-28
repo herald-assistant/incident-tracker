@@ -536,6 +536,10 @@ export class AnalysisStepsPanelComponent {
   readonly preparedPrompt = input<string>('');
   readonly result = input<AnalysisResultResponse | null>(null);
   readonly finalResultAvailable = input(false);
+  readonly showProgress = input(true);
+  readonly showAiWorkflow = input(true);
+  readonly showToolFeedback = input(true);
+  readonly staticPanels = input(false);
 
   private readonly selectedStepKey = signal<string | null>(null);
   private readonly copiedLogRowKey = signal<string | null>(null);
@@ -610,6 +614,9 @@ export class AnalysisStepsPanelComponent {
         )
       };
     })
+  );
+  protected readonly stepperColumnCount = computed(() =>
+    Math.min(6, Math.max(1, this.preparedSteps().length))
   );
 
   protected readonly selectedIndex = computed(() => {
@@ -693,11 +700,25 @@ export class AnalysisStepsPanelComponent {
   }
 
   protected onProgressPanelToggle(event: Event): void {
+    if (this.staticPanels()) {
+      (event.target as HTMLDetailsElement).open = true;
+      return;
+    }
     this.progressPanelOpen.set((event.target as HTMLDetailsElement).open);
   }
 
   protected onAiWorkflowPanelToggle(event: Event): void {
+    if (this.staticPanels()) {
+      (event.target as HTMLDetailsElement).open = true;
+      return;
+    }
     this.aiWorkflowPanelOpen.set((event.target as HTMLDetailsElement).open);
+  }
+
+  protected preventStaticPanelToggle(event: Event): void {
+    if (this.staticPanels()) {
+      event.preventDefault();
+    }
   }
 
   protected async copyLogDetails(row: ElasticsearchLogRowView): Promise<void> {

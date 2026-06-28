@@ -1,19 +1,30 @@
-<details class="analysis-chat panel-card collapsible-panel" [open]="openByDefault()" [attr.aria-label]="ariaLabel()">
-  <summary class="panel-card__header panel-card__header--compact collapsible-panel__summary">
+<details
+  class="analysis-chat panel-card collapsible-panel"
+  [open]="staticPanel() || openByDefault()"
+  [attr.aria-label]="ariaLabel()"
+>
+  <summary
+    class="panel-card__header panel-card__header--compact collapsible-panel__summary"
+    [class.collapsible-panel__summary--static]="staticPanel()"
+    (click)="preventStaticPanelToggle($event)"
+    (keydown.enter)="preventStaticPanelToggle($event)"
+    (keydown.space)="preventStaticPanelToggle($event)"
+  >
     <div class="analysis-chat__summary-main">
       <p class="section-eyebrow">{{ eyebrow() }}</p>
       <h3>{{ title() }}</h3>
     </div>
-    <p class="analysis-chat__hint collapsible-panel__hint">{{ hint() }}</p>
     <div class="analysis-chat__summary-actions">
       <span
         [class]="isSubmitting() || hasActiveAssistantMessage() ? 'status-pill status-pill--running' : 'panel-chip'"
       >
         {{ statusLabel() }}
       </span>
-      <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
-        expand_more
-      </span>
+      @if (!staticPanel()) {
+        <span class="material-symbols-outlined collapsible-panel__icon" aria-hidden="true">
+          expand_more
+        </span>
+      }
     </div>
   </summary>
 
