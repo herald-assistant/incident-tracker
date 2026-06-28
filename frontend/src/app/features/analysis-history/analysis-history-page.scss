@@ -254,6 +254,17 @@
   font-size: 34px;
 }
 
+.analysis-history-empty__action {
+  width: fit-content;
+  max-width: 100%;
+  text-decoration: none;
+}
+
+.analysis-history-empty__action .material-symbols-outlined {
+  color: #fff;
+  font-size: 18px;
+}
+
 .analysis-history-spinner {
   width: 22px;
   height: 22px;
