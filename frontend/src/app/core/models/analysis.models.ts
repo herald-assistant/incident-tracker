@@ -189,6 +189,7 @@ export interface AnalysisChatMessageResponse {
   aiActivityEvents: AnalysisAiActivityEvent[];
   toolFeedback: AnalysisAiToolFeedback[];
   prompt: string;
+  resultUpdate?: unknown | null;
 }
 
 export interface AnalysisJobStateSnapshot {
@@ -265,4 +266,8 @@ export interface LocalAnalysisRunDetailResponse extends LocalAnalysisRunListItem
 
 export interface RenameLocalAnalysisRunRequest {
   name: string;
+}
+
+export interface LocalAnalysisRunResultUpdateDecisionRequest {
+  aiResponse: unknown;
 }

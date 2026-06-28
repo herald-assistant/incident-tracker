@@ -221,6 +221,76 @@ deterministycznego collectora. Nie ma fallbacku do nowej sesji ani ponownego
 skladania pelnego promptu; gdy resume/send sie nie uda, odpowiedz chatu konczy
 sie bledem, a zapis lokalny nie jest nadpisywany.
 
+## 4b. Follow-up result update proposals
+
+Follow-up chat moze byc uzyty nie tylko do odpowiedzi tekstowej, ale tez do
+kontrolowanej propozycji zmiany wyniku analizy. Shared model chatu zna tylko
+opcjonalne pole `chatMessages[].resultUpdate`; jego semantyka i walidacja
+naleza do feature'a.
+
+Domyslny tryb pozostaje message-only. Incident Analysis nie wlacza result
+update proposals. Flow Explorer jest pierwszym feature'em, ktory korzysta z
+tego wzorca.
+
+Flow Explorer follow-up runtime:
+
+1. operator wysyla zwykla wiadomosc chatu,
+2. backend wznawia te sama sesje Copilota tak jak przy zwyklym follow-up,
+3. AI ma zwrocic JSON-only `{ "message": "...", "resultUpdate": { ... } }`
+   albo samo `{ "message": "..." }`,
+4. `message` staje sie widoczna trescia odpowiedzi assistant,
+5. jezeli `resultUpdate` istnieje, feature-local parser waliduje go jako
+   partial kontraktu `FlowExplorerAiResponse`,
+6. `FlowExplorerResultUpdateApplicator` naklada partial na aktualny
+   `FlowExplorerAiResponse`,
+7. przy wiadomosci assistant zapisywany jest pelny proponowany wynik jako
+   `resultUpdate`,
+8. aktualny `job.result` albo local `run.result` nie zmienia sie automatycznie.
+
+MVP nie ma osobnego pobierania danych review. UI ma wszystko w snapshotcie:
+aktualny `result` jest stanem `Before`, a `message.resultUpdate` jest stanem
+`After`. Wspolny panel chatu pokazuje `Review changes` tylko dla zakonczonej
+wiadomosci assistant z niepustym `resultUpdate` oraz tylko wtedy, gdy dana
+feature page wlacza review.
+
+Akcje live Flow Explorera:
+
+```http
+POST /api/flow-explorer/jobs/{jobId}/chat/messages/{messageId}/result-update/apply
+POST /api/flow-explorer/jobs/{jobId}/chat/messages/{messageId}/result-update/reject
+```
+
+Akcje kontynuowalnego local runu:
+
+```http
+POST /analysis/runs/{analysisId}/chat/messages/{messageId}/result-update/apply
+POST /analysis/runs/{analysisId}/chat/messages/{messageId}/result-update/reject
+```
+
+Request decyzji niesie aktualny authoritative `aiResponse` z UI. Przy
+`Apply` jest to stan `After`, przy `Reject` stan `Before`. Backend blokuje
+decyzje, gdy trwa inny follow-up chat albo wskazana wiadomosc nie ma aktywnego
+`resultUpdate`.
+
+Po decyzji backend:
+
+1. zapisuje przeslany `aiResponse` jako aktualny wynik feature'a,
+2. usuwa aktywne `resultUpdate` z wiadomosci assistant w snapshotcie,
+3. wysyla do tej samej sesji Copilota techniczna, niewidoczna dla operatora
+   wiadomosc synchronizacyjna,
+4. oczekuje odpowiedzi dokladnie `OK`,
+5. zwraca zaktualizowany snapshot.
+
+Synchronizacja sesji mowi modelowi, czy operator zaakceptowal albo odrzucil
+propozycje, oraz przekazuje aktualny authoritative result. Aplikacyjny stan
+joba/runu nadal jest zrodlem prawdy; synchronizacja pomaga tylko nastepnym
+turnom Copilota nie rekonstruowac decyzji z historii.
+
+Importowany export JSON pozostaje read-only. Moze pokazac historyczny modal
+Before/After dla aktywnego `resultUpdate`, ale nie pokazuje `Apply` ani
+`Reject`, bo import nie tworzy kontynuowalnego backendowego runu ani sesji
+Copilota.
+
 ## 5. Artefakty incydentu
 
 Kolejnosc artefaktow:
@@ -676,6 +746,13 @@ Job response zawiera tez `chatMessages`. UI pokazuje chat dopiero po
 `COMPLETED`; dla wiadomosci chatu z `IN_PROGRESS` polluje ten sam endpoint
 `GET /analysis/jobs/{analysisId}`. Importowany eksport analizy jest read-only,
 bo lokalny backend nie ma odpowiadajacego mu stanu joba.
+
+Wiadomosc assistant moze miec opcjonalne `resultUpdate`. Shared chat component
+nie interpretuje tego JSON-u; gdy feature wlacza review, pokazuje tylko
+`Review changes` i emituje zdarzenie do feature page. Flow Explorer page
+renderuje wtedy pelny wynik w zakladkach `Before` i `After`, a `Apply`/`Reject`
+wykonuje przez live job API albo history API dla kontynuowalnego local runu.
+Incident Analysis nie wlacza review dla follow-up chatu.
 
 Job state przechowuje `InitialAnalysisRequest` z zakonczonej analizy, zeby
 follow-up chat reuse'owal resolved scope i evidence bez publicznego requestu

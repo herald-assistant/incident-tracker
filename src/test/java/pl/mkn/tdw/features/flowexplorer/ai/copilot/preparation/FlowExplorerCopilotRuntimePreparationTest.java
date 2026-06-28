@@ -194,7 +194,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldBuildFollowUpSessionConfigWithoutResultContractSkill() {
+    void shouldBuildFollowUpSessionConfigWithResultContractAndGoalSkill() {
         var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
         var factory = sessionConfigRequestFactory();
@@ -202,14 +202,20 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var request = factory.createForFollowUp(
                 "flow-explorer-follow-up-123",
                 policy,
-                request().aiOptions()
+                testScenariosRequest().aiOptions(),
+                testScenariosRequest().goal()
         );
 
         assertEquals("flow-explorer-follow-up-123", request.sessionId());
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
-        assertSkillDirectories(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
-        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-result-contract");
+        assertSkillDirectories(
+                request.skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(FlowExplorerAnalysisGoal.TEST_SCENARIOS)
+        );
+        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.RESULT_CONTRACT_SKILL_NAME);
+        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
+        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
     }
 
     @Test
@@ -267,7 +273,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldAssembleFollowUpCopilotRunRequestWithoutResultContractSkill() {
+    void shouldAssembleFollowUpCopilotRunRequestWithResultContractAndGoalSkill() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var toolSessionContextFactory = new FlowExplorerCopilotToolSessionContextFactory();
         var toolAccessPolicyFactory = new FlowExplorerCopilotToolAccessPolicyFactory();
@@ -309,9 +315,20 @@ class FlowExplorerCopilotRuntimePreparationTest {
         );
         assertSkillDirectories(
                 runRequest.sessionConfigRequest().skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
+                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY)
         );
-        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-result-contract");
+        assertSelectedSkillIncluded(
+                runRequest.sessionConfigRequest().skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.RESULT_CONTRACT_SKILL_NAME
+        );
+        assertSelectedSkillIncluded(
+                runRequest.sessionConfigRequest().skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME
+        );
+        assertSelectedSkillMissing(
+                runRequest.sessionConfigRequest().skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME
+        );
 
         verify(toolFactory).createToolDefinitions(
                 assembly.toolSessionContext(),

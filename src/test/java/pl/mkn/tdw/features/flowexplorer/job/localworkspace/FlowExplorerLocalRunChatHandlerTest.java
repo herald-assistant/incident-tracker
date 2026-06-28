@@ -21,10 +21,14 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponse;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatResponseParser;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerResultUpdateApplicator;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunAssembly;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotToolAccessPolicy;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerArtifactService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -43,6 +47,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -52,7 +57,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -82,7 +89,10 @@ class FlowExplorerLocalRunChatHandlerTest {
                 preparationService,
                 executionGateway,
                 new CopilotRunAuthMapper(),
-                tokenResolver
+                tokenResolver,
+                new FlowExplorerFollowUpChatResponseParser(objectMapper),
+                new FlowExplorerResultUpdateApplicator(),
+                promptPreparationService()
         );
         var runRequest = runRequest();
         var preparedSession = preparedSession(runRequest);
@@ -119,7 +129,11 @@ class FlowExplorerLocalRunChatHandlerTest {
                     Instant.parse("2026-06-20T10:06:00Z"),
                     Map.of("projectName", "crm-service")
             ));
-            return new CopilotExecutionResult("Odpowiedz lokalna.", null, "follow-up-session-1");
+            return new CopilotExecutionResult("""
+                    {
+                      "message": "Odpowiedz lokalna."
+                    }
+                    """, null, "follow-up-session-1");
         });
 
         var result = handler.continueRun(
@@ -129,7 +143,9 @@ class FlowExplorerLocalRunChatHandlerTest {
         );
 
         assertEquals("LOCAL_TOKEN", tokenResolver.auth.mode().name());
-        assertEquals("Gdzie jest walidacja?", promptCaptor.getValue().prompt());
+        assertTrue(promptCaptor.getValue().prompt().contains("# Flow Explorer follow-up prompt"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Gdzie jest walidacja?"));
+        assertTrue(promptCaptor.getValue().prompt().contains("resultUpdate"));
         assertEquals("crm-service", requestCaptor.getValue().systemId());
         assertEquals("GET", requestCaptor.getValue().httpMethod());
         assertEquals("/api/customers/{id}", requestCaptor.getValue().endpointPath());
@@ -154,6 +170,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         assertEquals("ASSISTANT", updatedJob.chatMessages().get(1).role());
         assertEquals("Odpowiedz lokalna.", updatedJob.chatMessages().get(1).content());
         assertEquals("Gdzie jest walidacja?", updatedJob.chatMessages().get(1).prompt());
+        assertNull(updatedJob.chatMessages().get(1).resultUpdate());
         assertEquals(1, updatedJob.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals(1, updatedJob.chatMessages().get(1).aiActivityEvents().size());
         assertEquals("follow-up-session-1", result.record().continuation().copilotSessionId());
@@ -169,7 +186,10 @@ class FlowExplorerLocalRunChatHandlerTest {
                 mock(CopilotRunPreparationService.class),
                 mock(CopilotSdkExecutionGateway.class),
                 new CopilotRunAuthMapper(),
-                auth -> new CopilotAccessToken("token", null, null, false)
+                auth -> new CopilotAccessToken("token", null, null, false),
+                new FlowExplorerFollowUpChatResponseParser(objectMapper),
+                new FlowExplorerResultUpdateApplicator(),
+                promptPreparationService()
         );
 
         var exception = assertThrows(
@@ -178,6 +198,143 @@ class FlowExplorerLocalRunChatHandlerTest {
         );
 
         assertEquals(LocalAnalysisRunContinuationException.Reason.CORRUPTED, exception.reason());
+    }
+
+    @Test
+    void shouldStoreFullResultUpdateProposalFromLocalFollowUp() throws Exception {
+        var assembler = mock(FlowExplorerCopilotRunRequestAssembler.class);
+        var preparationService = mock(CopilotRunPreparationService.class);
+        var executionGateway = mock(CopilotSdkExecutionGateway.class);
+        var handler = handler(assembler, preparationService, executionGateway, auth -> new CopilotAccessToken(
+                "token",
+                null,
+                null,
+                false
+        ));
+        var runRequest = runRequest();
+        when(assembler.assembleFollowUp(
+                any(String.class),
+                any(FlowExplorerJobStartRequest.class),
+                any(),
+                any(FlowExplorerPromptPreparation.class),
+                eq("initial-session-1"),
+                any(AnalysisAiAuthRef.class)
+        )).thenReturn(new FlowExplorerCopilotRunAssembly(
+                runRequest,
+                new CopilotToolSessionContext("follow-up-1", "initial-session-1", Map.of()),
+                FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
+        ));
+        when(preparationService.prepare(runRequest)).thenReturn(preparedSession(runRequest));
+        when(executionGateway.execute(any(CopilotPreparedSession.class))).thenReturn(new CopilotExecutionResult("""
+                {
+                  "message": "Dopisalem szczegoly walidacji.",
+                  "resultUpdate": {
+                    "sections": [
+                      {
+                        "id": "VALIDATIONS",
+                        "markdown": "Deep validation details"
+                      }
+                    ]
+                  }
+                }
+                """, null, "follow-up-session-1"));
+
+        var result = handler.continueRun(indexEntry(), record(snapshot()), "Dopisz walidacje.");
+
+        var updatedEnvelope = objectMapper.treeToValue(
+                result.record().exportEnvelope(),
+                FlowExplorerExportEnvelope.class
+        );
+        var assistantMessage = updatedEnvelope.payload().job().chatMessages().get(1);
+        assertEquals("Dopisalem szczegoly walidacji.", assistantMessage.content());
+        assertEquals(
+                "Deep validation details",
+                assistantMessage.resultUpdate()
+                        .path("sections")
+                        .get(1)
+                        .path("markdown")
+                        .asText()
+        );
+        assertEquals(
+                "Section Validations",
+                updatedEnvelope.payload()
+                        .job()
+                        .result()
+                        .aiResponse()
+                        .sections()
+                        .get(1)
+                        .markdown()
+        );
+    }
+
+    @Test
+    void shouldApplyLocalResultUpdateAfterSessionSyncOk() throws Exception {
+        var assembler = mock(FlowExplorerCopilotRunRequestAssembler.class);
+        var preparationService = mock(CopilotRunPreparationService.class);
+        var executionGateway = mock(CopilotSdkExecutionGateway.class);
+        var tokenResolver = new CapturingAccessTokenResolver();
+        var handler = handler(assembler, preparationService, executionGateway, tokenResolver);
+        var runRequest = runRequest();
+        var promptCaptor = ArgumentCaptor.forClass(FlowExplorerPromptPreparation.class);
+        when(assembler.assembleFollowUp(
+                any(String.class),
+                any(FlowExplorerJobStartRequest.class),
+                any(),
+                promptCaptor.capture(),
+                eq("initial-session-1"),
+                any(AnalysisAiAuthRef.class)
+        )).thenReturn(new FlowExplorerCopilotRunAssembly(
+                runRequest,
+                new CopilotToolSessionContext("result-update-1", "initial-session-1", Map.of()),
+                FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
+        ));
+        when(preparationService.prepare(runRequest)).thenReturn(preparedSession(runRequest));
+        when(executionGateway.execute(any(CopilotPreparedSession.class)))
+                .thenReturn(new CopilotExecutionResult("OK", null, "sync-session-1"));
+        var proposedResult = aiResponse("Detailed overview");
+
+        var result = handler.applyResultUpdate(
+                indexEntry(),
+                record(snapshotWithProposal(proposedResult)),
+                "assistant-1",
+                objectMapper.valueToTree(proposedResult)
+        );
+
+        assertEquals("LOCAL_TOKEN", tokenResolver.auth.mode().name());
+        assertEquals(true, promptCaptor.getValue().prompt().contains("operator zaakceptowal resultUpdate"));
+        assertEquals(true, promptCaptor.getValue().prompt().contains("Detailed overview"));
+
+        var updatedEnvelope = objectMapper.treeToValue(
+                result.record().exportEnvelope(),
+                FlowExplorerExportEnvelope.class
+        );
+        var updatedJob = updatedEnvelope.payload().job();
+        assertNull(updatedJob.chatMessages().get(0).resultUpdate());
+        assertEquals("Detailed overview", updatedJob.result().aiResponse().overview().markdown());
+        assertEquals("sync-session-1", result.record().continuation().copilotSessionId());
+    }
+
+    private FlowExplorerLocalRunChatHandler handler(
+            FlowExplorerCopilotRunRequestAssembler assembler,
+            CopilotRunPreparationService preparationService,
+            CopilotSdkExecutionGateway executionGateway,
+            CopilotAccessTokenResolver accessTokenResolver
+    ) {
+        return new FlowExplorerLocalRunChatHandler(
+                objectMapper,
+                assembler,
+                preparationService,
+                executionGateway,
+                new CopilotRunAuthMapper(),
+                accessTokenResolver,
+                new FlowExplorerFollowUpChatResponseParser(objectMapper),
+                new FlowExplorerResultUpdateApplicator(),
+                promptPreparationService()
+        );
+    }
+
+    private FlowExplorerPromptPreparationService promptPreparationService() {
+        return new FlowExplorerPromptPreparationService(new FlowExplorerArtifactService(objectMapper));
     }
 
     private LocalAnalysisRunRecord record(FlowExplorerJobStateSnapshot snapshot) {
@@ -214,6 +371,35 @@ class FlowExplorerLocalRunChatHandlerTest {
     }
 
     private FlowExplorerJobStateSnapshot snapshot() {
+        return snapshot(List.of(), aiResponse());
+    }
+
+    private FlowExplorerJobStateSnapshot snapshotWithProposal(FlowExplorerAiResponse proposedResult) {
+        return snapshot(
+                List.of(new AnalysisChatMessageResponse(
+                        "assistant-1",
+                        "ASSISTANT",
+                        "COMPLETED",
+                        "Dopisalem overview.",
+                        null,
+                        null,
+                        COMPLETED_AT,
+                        COMPLETED_AT,
+                        COMPLETED_AT,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        "Dopisz overview.",
+                        objectMapper.valueToTree(proposedResult)
+                )),
+                aiResponse()
+        );
+    }
+
+    private FlowExplorerJobStateSnapshot snapshot(
+            List<AnalysisChatMessageResponse> chatMessages,
+            FlowExplorerAiResponse aiResponse
+    ) {
         return new FlowExplorerJobStateSnapshot(
                 "flow-job-1",
                 "crm-service",
@@ -240,7 +426,7 @@ class FlowExplorerLocalRunChatHandlerTest {
                 List.of(section("gitlab", "initial-tool", "Initial tool evidence")),
                 List.of(),
                 List.of(),
-                List.of(),
+                chatMessages,
                 "Prepared prompt",
                 new FlowExplorerResultResponse(
                         "COMPLETED",
@@ -251,7 +437,7 @@ class FlowExplorerLocalRunChatHandlerTest {
                         "main",
                         FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                         "Prepared prompt",
-                        aiResponse(),
+                        aiResponse,
                         new AnalysisAiUsage(10, 5, 0, 0, 15, 0.01, 1000, 1, "gpt-5.4", null, null, null)
                 )
         );
@@ -283,10 +469,14 @@ class FlowExplorerLocalRunChatHandlerTest {
     }
 
     private FlowExplorerAiResponse aiResponse() {
+        return aiResponse("Overview");
+    }
+
+    private FlowExplorerAiResponse aiResponse(String overviewMarkdown) {
         return new FlowExplorerAiResponse(
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 "business_or_system_analyst_tester",
-                new FlowExplorerResultOverview("Overview", "high", List.of()),
+                new FlowExplorerResultOverview(overviewMarkdown, "high", List.of()),
                 sectionModes().stream()
                         .map(sectionMode -> new FlowExplorerResultSection(
                                 sectionMode.id(),

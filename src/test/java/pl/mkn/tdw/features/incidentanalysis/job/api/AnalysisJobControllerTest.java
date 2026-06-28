@@ -204,6 +204,7 @@ class AnalysisJobControllerTest {
                                 List.of(),
                                 List.of(),
                                 List.of(),
+                                null,
                                 null
                         )),
                         "Prompt body for timeout-123",

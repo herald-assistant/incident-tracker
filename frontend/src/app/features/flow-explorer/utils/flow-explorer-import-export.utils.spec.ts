@@ -52,6 +52,40 @@ describe('flow-explorer-import-export utils', () => {
     expect(diagnostics.resultMarkdown).toContain('CustomerRepository.findById loads the aggregate.');
   });
 
+  it('should preserve active chat result update proposals on import', () => {
+    const resultUpdate = {
+      ...flowExplorerResultUpdate(),
+      confidence: 'medium'
+    };
+    const job = flowExplorerJob({
+      chatMessages: [
+        {
+          id: 'chat-1',
+          role: 'ASSISTANT',
+          status: 'COMPLETED',
+          content: 'Rozbudowałem wynik Flow Explorera.',
+          errorCode: '',
+          errorMessage: '',
+          createdAt: '2026-06-18T10:04:00Z',
+          updatedAt: '2026-06-18T10:04:02Z',
+          completedAt: '2026-06-18T10:04:02Z',
+          toolEvidenceSections: [],
+          aiActivityEvents: [],
+          toolFeedback: [],
+          prompt: 'follow-up prompt',
+          resultUpdate
+        }
+      ]
+    });
+    const envelope = buildFlowExplorerExportEnvelope(job, '2026-06-18T10:05:00Z');
+
+    const imported = parseImportedFlowExplorerAnalysis(envelope);
+
+    expect(envelope.payload.job.chatMessages[0]?.resultUpdate).toEqual(resultUpdate);
+    expect(envelope.payload.diagnostics.workflow.chatMessageCount).toBe(1);
+    expect(imported.job.chatMessages[0]?.resultUpdate).toEqual(resultUpdate);
+  });
+
   it('should reject non-completed Flow Explorer exports before building a file', () => {
     expect(() =>
       buildFlowExplorerExportEnvelope(
@@ -373,4 +407,10 @@ function flowExplorerJob(
     },
     ...overrides
   };
+}
+
+function flowExplorerResultUpdate(): NonNullable<
+  NonNullable<FlowExplorerJobStateSnapshot['result']>['aiResponse']
+> {
+  return flowExplorerJob().result!.aiResponse!;
 }

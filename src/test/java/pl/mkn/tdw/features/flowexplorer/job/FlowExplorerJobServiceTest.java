@@ -14,6 +14,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponse;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunAssembly;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
@@ -33,6 +34,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultUpdateDecisionRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
@@ -51,6 +53,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,13 +67,14 @@ import static org.mockito.Mockito.when;
 class FlowExplorerJobServiceTest {
 
     private final FlowExplorerContextService contextService = mock(FlowExplorerContextService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final FlowExplorerPromptPreparationService promptPreparationService =
             mock(FlowExplorerPromptPreparationService.class);
     private final FlowExplorerCopilotRunRequestAssembler runRequestAssembler =
             mock(FlowExplorerCopilotRunRequestAssembler.class);
     private final CopilotRunPreparationService runPreparationService = mock(CopilotRunPreparationService.class);
     private final CopilotSdkExecutionGateway executionGateway = mock(CopilotSdkExecutionGateway.class);
-    private final FlowExplorerAiResponseParser responseParser = new FlowExplorerAiResponseParser(new ObjectMapper());
+    private final FlowExplorerAiResponseParser responseParser = new FlowExplorerAiResponseParser(objectMapper);
     private final TaskExecutor directExecutor = Runnable::run;
     private final FlowExplorerJobService flowExplorerJobService = new FlowExplorerJobService(
             contextService,
@@ -267,6 +271,7 @@ class FlowExplorerJobServiceTest {
                 ))
         );
         givenContextPromptAndRun(request, contextSnapshot, promptPreparation, runRequest, preparedSession);
+        givenFollowUpPrompt(request, "Gdzie jest walidacja?");
         when(runRequestAssembler.assembleFollowUp(
                 any(String.class),
                 same(request),
@@ -286,7 +291,11 @@ class FlowExplorerJobServiceTest {
                 return new CopilotExecutionResult(aiJson(), usage(), "initial-session-1");
             }
             session.evidenceSink().accept(evidence);
-            return new CopilotExecutionResult("Walidacja jest w CustomerService.validate.", null, "follow-up-session-1");
+            return new CopilotExecutionResult("""
+                    {
+                      "message": "Walidacja jest w CustomerService.validate."
+                    }
+                    """, null, "follow-up-session-1");
         });
 
         var started = flowExplorerJobService.startJob(request);
@@ -315,9 +324,155 @@ class FlowExplorerJobServiceTest {
                 eq("initial-session-1"),
                 any(AnalysisAiAuthRef.class)
         );
-        assertEquals("Gdzie jest walidacja?", promptCaptor.getValue().prompt());
+        assertTrue(promptCaptor.getValue().prompt().contains("# Flow Explorer follow-up prompt"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Gdzie jest walidacja?"));
+        assertTrue(promptCaptor.getValue().prompt().contains("resultUpdate"));
         assertTrue(promptCaptor.getValue().artifacts().isEmpty());
         assertTrue(promptCaptor.getValue().artifactContents().isEmpty());
+    }
+
+    @Test
+    void shouldStoreFollowUpResultUpdateProposalWithoutChangingCurrentResult() {
+        var request = request();
+        var contextSnapshot = contextSnapshot();
+        var promptPreparation = promptPreparation();
+        var runRequest = runRequest();
+        var preparedSession = preparedSession(runRequest);
+        var followUpRunRequest = followUpRunRequest();
+        var followUpPreparedSession = preparedSession(followUpRunRequest);
+        givenContextPromptAndRun(request, contextSnapshot, promptPreparation, runRequest, preparedSession);
+        givenFollowUpPrompt(request, "Pogleb Flow.");
+        when(runRequestAssembler.assembleFollowUp(
+                any(String.class),
+                same(request),
+                same(contextSnapshot),
+                any(FlowExplorerPromptPreparation.class),
+                eq("initial-session-1"),
+                any(AnalysisAiAuthRef.class)
+        )).thenReturn(new FlowExplorerCopilotRunAssembly(
+                followUpRunRequest,
+                new CopilotToolSessionContext("follow-up-123", "initial-session-1", Map.of()),
+                FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
+        ));
+        when(runPreparationService.prepare(followUpRunRequest)).thenReturn(followUpPreparedSession);
+        when(executionGateway.execute(any(CopilotPreparedSession.class))).thenAnswer(invocation -> {
+            var session = (CopilotPreparedSession) invocation.getArgument(0);
+            if ("Flow Explorer canonical prompt".equals(session.prompt())) {
+                return new CopilotExecutionResult(aiJson(), usage(), "initial-session-1");
+            }
+            return new CopilotExecutionResult("""
+                    {
+                      "message": "Zaproponowalem aktualizacje Flow.",
+                      "resultUpdate": {
+                        "sections": [
+                          {
+                            "id": "FUNCTIONAL_FLOW",
+                            "markdown": "Flow poglebiony."
+                          }
+                        ]
+                      }
+                    }
+                    """, null, "follow-up-session-1");
+        });
+
+        var started = flowExplorerJobService.startJob(request);
+        var afterChat = flowExplorerJobService.startChatMessage(
+                started.jobId(),
+                new FlowExplorerChatMessageRequest("Pogleb Flow.")
+        );
+
+        assertEquals(functionalFlowMarkdown(), afterChat.result().aiResponse().sections().get(0).markdown());
+        var assistantMessage = afterChat.chatMessages().get(1);
+        assertEquals("Zaproponowalem aktualizacje Flow.", assistantMessage.content());
+        assertNotNull(assistantMessage.resultUpdate());
+        assertEquals("Flow poglebiony.", assistantMessage.resultUpdate().get("sections").get(0).get("markdown").asText());
+        assertEquals("id jest wymagane.", assistantMessage.resultUpdate().get("sections").get(1).get("markdown").asText());
+    }
+
+    @Test
+    void shouldApplyResultUpdateAfterSessionSyncOk() throws Exception {
+        var request = request();
+        var contextSnapshot = contextSnapshot();
+        var promptPreparation = promptPreparation();
+        var runRequest = runRequest();
+        var preparedSession = preparedSession(runRequest);
+        givenContextPromptAndRun(request, contextSnapshot, promptPreparation, runRequest, preparedSession);
+        givenFollowUpPrompt(request, "Pogleb Flow.");
+        when(runRequestAssembler.assembleFollowUp(
+                any(String.class),
+                same(request),
+                same(contextSnapshot),
+                any(FlowExplorerPromptPreparation.class),
+                any(String.class),
+                any(AnalysisAiAuthRef.class)
+        )).thenAnswer(invocation -> {
+            var runReference = (String) invocation.getArgument(0);
+            var preparation = (FlowExplorerPromptPreparation) invocation.getArgument(3);
+            var sessionId = (String) invocation.getArgument(4);
+            var dynamicRunRequest = new CopilotRunRequest(
+                    runReference,
+                    preparation.prompt(),
+                    new CopilotSessionConfigRequest(
+                            runReference,
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            null,
+                            "Denied"
+                    ),
+                    Map.of(),
+                    null
+            );
+            return new FlowExplorerCopilotRunAssembly(
+                    dynamicRunRequest,
+                    new CopilotToolSessionContext(runReference, sessionId, Map.of()),
+                    FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
+            );
+        });
+        when(runPreparationService.prepare(any(CopilotRunRequest.class))).thenAnswer(invocation ->
+                preparedSession(invocation.getArgument(0))
+        );
+        when(executionGateway.execute(any(CopilotPreparedSession.class))).thenAnswer(invocation -> {
+            var session = (CopilotPreparedSession) invocation.getArgument(0);
+            if ("Flow Explorer canonical prompt".equals(session.prompt())) {
+                return new CopilotExecutionResult(aiJson(), usage(), "initial-session-1");
+            }
+            if (session.prompt().contains("Techniczna wiadomosc synchronizacyjna Flow Explorer")) {
+                return new CopilotExecutionResult("OK", null, "follow-up-session-1");
+            }
+            return new CopilotExecutionResult("""
+                    {
+                      "message": "Zaproponowalem aktualizacje Flow.",
+                      "resultUpdate": {
+                        "sections": [
+                          {
+                            "id": "FUNCTIONAL_FLOW",
+                            "markdown": "Flow poglebiony."
+                          }
+                        ]
+                      }
+                    }
+                    """, null, "follow-up-session-1");
+        });
+
+        var started = flowExplorerJobService.startJob(request);
+        var afterChat = flowExplorerJobService.startChatMessage(
+                started.jobId(),
+                new FlowExplorerChatMessageRequest("Pogleb Flow.")
+        );
+        var assistantMessage = afterChat.chatMessages().get(1);
+        var proposedResult = objectMapper.treeToValue(assistantMessage.resultUpdate(), FlowExplorerAiResponse.class);
+
+        var afterApply = flowExplorerJobService.applyResultUpdate(
+                started.jobId(),
+                assistantMessage.id(),
+                new FlowExplorerResultUpdateDecisionRequest(proposedResult)
+        );
+
+        assertEquals("Flow poglebiony.", afterApply.result().aiResponse().sections().get(0).markdown());
+        assertEquals(2, afterApply.chatMessages().size());
+        assertEquals("Zaproponowalem aktualizacje Flow.", afterApply.chatMessages().get(1).content());
+        assertNull(afterApply.chatMessages().get(1).resultUpdate());
     }
 
     @Test
@@ -367,6 +522,23 @@ class FlowExplorerJobServiceTest {
                         FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of())
                 ));
         when(runPreparationService.prepare(runRequest)).thenReturn(preparedSession);
+    }
+
+    private FlowExplorerPromptPreparation givenFollowUpPrompt(
+            FlowExplorerJobStartRequest request,
+            String message
+    ) {
+        var promptPreparation = followUpPromptPreparation(message);
+        when(promptPreparationService.prepareFollowUp(same(request), eq(message))).thenReturn(promptPreparation);
+        return promptPreparation;
+    }
+
+    private static FlowExplorerPromptPreparation followUpPromptPreparation(String message) {
+        return new FlowExplorerPromptPreparation(
+                "# Flow Explorer follow-up prompt\nresultUpdate\n" + message,
+                List.of(),
+                Map.of()
+        );
     }
 
     private static FlowExplorerContextRequest expectedContextRequest() {

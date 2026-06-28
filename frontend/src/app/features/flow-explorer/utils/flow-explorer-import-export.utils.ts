@@ -343,7 +343,8 @@ function normalizeChatMessage(message: unknown): AnalysisChatMessageResponse {
     toolFeedback: Array.isArray(messageObject?.['toolFeedback'])
       ? messageObject['toolFeedback'].map(normalizeToolFeedback)
       : [],
-    prompt: normalizeString(messageObject?.['prompt'])
+    prompt: normalizeString(messageObject?.['prompt']),
+    resultUpdate: normalizeOptionalJson(messageObject?.['resultUpdate'])
   };
 }
 
@@ -836,6 +837,10 @@ function normalizeNumber(value: unknown): number {
 
 function normalizeNullableNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function normalizeOptionalJson(value: unknown): unknown | null {
+  return value === undefined || value === null ? null : value;
 }
 
 function asObject(value: unknown): Record<string, unknown> | null {

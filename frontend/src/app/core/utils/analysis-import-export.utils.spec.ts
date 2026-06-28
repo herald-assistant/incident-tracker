@@ -25,6 +25,38 @@ describe('analysis import/export utils', () => {
     expect(imported.job.result?.detectedProblem).toBe('DOWNSTREAM_TIMEOUT');
   });
 
+  it('should preserve chat result update proposals on import', () => {
+    const resultUpdate = {
+      detectedProblem: 'UPDATED_TIMEOUT',
+      confidence: 'high'
+    };
+    const job = completedJob();
+    job.chatMessages = [
+      {
+        id: 'chat-1',
+        role: 'ASSISTANT',
+        status: 'COMPLETED',
+        content: 'Zaproponowałem aktualizację wyniku.',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-05-02T10:06:00Z',
+        updatedAt: '2026-05-02T10:06:01Z',
+        completedAt: '2026-05-02T10:06:01Z',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        toolFeedback: [],
+        prompt: 'follow-up prompt',
+        resultUpdate
+      }
+    ];
+
+    const imported = parseImportedAnalysis(
+      buildExportEnvelope(job, '2026-05-02T10:07:00Z')
+    );
+
+    expect(imported.job.chatMessages[0]?.resultUpdate).toEqual(resultUpdate);
+  });
+
   it('should reject legacy incident tracker export envelopes', () => {
     expect(() =>
       parseImportedAnalysis({

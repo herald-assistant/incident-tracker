@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.job.state;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerFlowMethod;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerFlowNode;
@@ -14,6 +15,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultResponse;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSection;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
+import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobResultUpdateUnavailableException;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
@@ -68,6 +70,8 @@ public final class FlowExplorerJobState {
     private String copilotSessionId;
     private FlowExplorerContextSnapshot contextSnapshot;
     private FlowExplorerResultResponse result;
+    private boolean resultUpdateDecisionInProgress;
+    private String resultUpdateDecisionMessageId;
 
     public FlowExplorerJobState(String jobId, FlowExplorerJobStartRequest request) {
         this(jobId, request, AnalysisAiAuthRef.localToken(null));
@@ -268,10 +272,10 @@ public final class FlowExplorerJobState {
                     "Follow-up chat requires a Copilot session id from the completed Flow Explorer job."
             );
         }
-        if (hasActiveAssistantMessage()) {
+        if (hasActiveAssistantMessage() || resultUpdateDecisionInProgress) {
             throw new FlowExplorerJobChatUnavailableException(
                     "FLOW_EXPLORER_CHAT_IN_PROGRESS",
-                    "A follow-up response is already in progress for this Flow Explorer job."
+                    "A follow-up response or result update decision is already in progress for this Flow Explorer job."
             );
         }
 
@@ -326,14 +330,106 @@ public final class FlowExplorerJobState {
             String prompt,
             String copilotSessionId
     ) {
+        markChatCompleted(assistantMessageId, content, prompt, copilotSessionId, null);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId,
+            String content,
+            String prompt,
+            String copilotSessionId,
+            JsonNode resultUpdate
+    ) {
         rememberCopilotSession(copilotSessionId);
-        assistantMessage(assistantMessageId).markCompleted(content, prompt);
+        assistantMessage(assistantMessageId).markCompleted(content, prompt, resultUpdate);
         touch();
     }
 
     public synchronized void markChatFailed(String assistantMessageId, String code, String message) {
         assistantMessage(assistantMessageId).markFailed(code, message);
         touch();
+    }
+
+    public synchronized FlowExplorerAiResponse currentAiResponse() {
+        return result != null ? result.aiResponse() : null;
+    }
+
+    public synchronized FlowExplorerResultUpdateDecisionContext startResultUpdateDecision(
+            String assistantMessageId,
+            FlowExplorerResultUpdateDecision decision,
+            FlowExplorerAiResponse authoritativeResult
+    ) {
+        if (!STATUS_COMPLETED.equals(status) || result == null) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_RESULT_UPDATE_NOT_READY",
+                    "Result update decisions are available only after a completed Flow Explorer job."
+            );
+        }
+        if (hasActiveAssistantMessage()) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_CHAT_IN_PROGRESS",
+                    "Cannot apply or reject result update while a follow-up response is in progress."
+            );
+        }
+        if (resultUpdateDecisionInProgress) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_RESULT_UPDATE_IN_PROGRESS",
+                    "A result update decision is already in progress for this Flow Explorer job."
+            );
+        }
+        if (!StringUtils.hasText(copilotSessionId)) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_RESULT_UPDATE_SESSION_MISSING",
+                    "Result update decisions require a Copilot session id."
+            );
+        }
+        if (authoritativeResult == null) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_RESULT_UPDATE_RESULT_REQUIRED",
+                    "Result update decision requires an authoritative Flow Explorer result."
+            );
+        }
+
+        var message = activeResultUpdateMessage(assistantMessageId);
+        resultUpdateDecisionInProgress = true;
+        resultUpdateDecisionMessageId = assistantMessageId;
+        touch();
+        return new FlowExplorerResultUpdateDecisionContext(
+                message.id,
+                decision,
+                authoritativeResult.withRequestContext(request.goal(), request.resolvedSectionModes()),
+                request,
+                contextSnapshot,
+                copilotSessionId,
+                authRef
+        );
+    }
+
+    public synchronized void markResultUpdateDecisionCompleted(
+            String assistantMessageId,
+            FlowExplorerAiResponse authoritativeResult,
+            String latestCopilotSessionId
+    ) {
+        if (!resultUpdateDecisionInProgress || !assistantMessageId.equals(resultUpdateDecisionMessageId)) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_RESULT_UPDATE_NOT_IN_PROGRESS",
+                    "No matching result update decision is in progress."
+            );
+        }
+        activeResultUpdateMessage(assistantMessageId).clearResultUpdate();
+        result = resultWithAiResponse(authoritativeResult);
+        rememberCopilotSession(latestCopilotSessionId);
+        resultUpdateDecisionInProgress = false;
+        resultUpdateDecisionMessageId = null;
+        touch();
+    }
+
+    public synchronized void markResultUpdateDecisionFailed(String assistantMessageId) {
+        if (resultUpdateDecisionInProgress && assistantMessageId.equals(resultUpdateDecisionMessageId)) {
+            resultUpdateDecisionInProgress = false;
+            resultUpdateDecisionMessageId = null;
+            touch();
+        }
     }
 
     public synchronized FlowExplorerJobStateSnapshot snapshot() {
@@ -393,6 +489,26 @@ public final class FlowExplorerJobState {
                 prompt,
                 response,
                 usage
+        );
+    }
+
+    private FlowExplorerResultResponse resultWithAiResponse(FlowExplorerAiResponse aiResponse) {
+        var current = result;
+        var response = (aiResponse != null
+                ? aiResponse
+                : FlowExplorerAiResponse.parseFallback("Flow Explorer result update was not available."))
+                .withRequestContext(request.goal(), request.resolvedSectionModes());
+        return new FlowExplorerResultResponse(
+                current != null ? current.status() : STATUS_COMPLETED,
+                current != null ? current.systemId() : request.systemId(),
+                current != null ? current.endpointId() : endpointId(),
+                current != null ? current.httpMethod() : httpMethod(),
+                current != null ? current.endpointPath() : endpointPath(),
+                current != null ? current.branch() : (contextSnapshot != null ? contextSnapshot.resolvedRef() : request.branch()),
+                request.goal(),
+                current != null ? current.prompt() : preparedPrompt,
+                response,
+                current != null ? current.usage() : null
         );
     }
 
@@ -719,6 +835,17 @@ public final class FlowExplorerJobState {
                         + assistantMessageId));
     }
 
+    private ChatMessageState activeResultUpdateMessage(String assistantMessageId) {
+        var message = assistantMessage(assistantMessageId);
+        if (message.status != FlowExplorerChatMessageStatus.COMPLETED || message.resultUpdate == null) {
+            throw new FlowExplorerJobResultUpdateUnavailableException(
+                    "FLOW_EXPLORER_RESULT_UPDATE_NOT_FOUND",
+                    "Active result update proposal not found for assistant message: " + assistantMessageId
+            );
+        }
+        return message;
+    }
+
     private boolean sameSection(AnalysisEvidenceSection left, AnalysisEvidenceSection right) {
         return left != null
                 && right != null
@@ -739,6 +866,7 @@ public final class FlowExplorerJobState {
         private String errorCode;
         private String errorMessage;
         private String prompt;
+        private JsonNode resultUpdate;
         private Instant updatedAt;
         private Instant completedAt;
 
@@ -793,12 +921,18 @@ public final class FlowExplorerJobState {
             updatedAt = Instant.now();
         }
 
-        private void markCompleted(String content, String prompt) {
+        private void markCompleted(String content, String prompt, JsonNode resultUpdate) {
             this.status = FlowExplorerChatMessageStatus.COMPLETED;
             this.content = StringUtils.hasText(content) ? content.trim() : "";
             this.prompt = StringUtils.hasText(prompt) ? prompt.trim() : null;
+            this.resultUpdate = resultUpdate != null && !resultUpdate.isNull() ? resultUpdate.deepCopy() : null;
             this.completedAt = Instant.now();
             this.updatedAt = completedAt;
+        }
+
+        private void clearResultUpdate() {
+            this.resultUpdate = null;
+            this.updatedAt = Instant.now();
         }
 
         private void markFailed(String code, String message) {
@@ -823,7 +957,8 @@ public final class FlowExplorerJobState {
                     List.copyOf(toolEvidenceSections),
                     List.copyOf(aiActivityEvents),
                     List.copyOf(toolFeedback),
-                    prompt
+                    prompt,
+                    resultUpdate != null ? resultUpdate.deepCopy() : null
             );
         }
 

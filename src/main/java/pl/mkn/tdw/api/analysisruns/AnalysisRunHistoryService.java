@@ -13,6 +13,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunResultUpdateHandler;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 
 import java.util.List;
@@ -23,16 +24,19 @@ public class AnalysisRunHistoryService {
 
     private final LocalAnalysisRunStore localAnalysisRunStore;
     private final List<LocalAnalysisRunChatHandler> chatHandlers;
+    private final List<LocalAnalysisRunResultUpdateHandler> resultUpdateHandlers;
     private final CopilotSessionCleanup copilotSessionCleanup;
 
     @Autowired
     public AnalysisRunHistoryService(
             LocalAnalysisRunStore localAnalysisRunStore,
             List<LocalAnalysisRunChatHandler> chatHandlers,
+            List<LocalAnalysisRunResultUpdateHandler> resultUpdateHandlers,
             CopilotSessionCleanup copilotSessionCleanup
     ) {
         this.localAnalysisRunStore = localAnalysisRunStore;
         this.chatHandlers = chatHandlers != null ? List.copyOf(chatHandlers) : List.of();
+        this.resultUpdateHandlers = resultUpdateHandlers != null ? List.copyOf(resultUpdateHandlers) : List.of();
         this.copilotSessionCleanup = copilotSessionCleanup != null
                 ? copilotSessionCleanup
                 : CopilotSessionCleanup.NO_OP;
@@ -42,7 +46,23 @@ public class AnalysisRunHistoryService {
             LocalAnalysisRunStore localAnalysisRunStore,
             List<LocalAnalysisRunChatHandler> chatHandlers
     ) {
-        this(localAnalysisRunStore, chatHandlers, CopilotSessionCleanup.NO_OP);
+        this(localAnalysisRunStore, chatHandlers, List.of(), CopilotSessionCleanup.NO_OP);
+    }
+
+    AnalysisRunHistoryService(
+            LocalAnalysisRunStore localAnalysisRunStore,
+            List<LocalAnalysisRunChatHandler> chatHandlers,
+            List<LocalAnalysisRunResultUpdateHandler> resultUpdateHandlers
+    ) {
+        this(localAnalysisRunStore, chatHandlers, resultUpdateHandlers, CopilotSessionCleanup.NO_OP);
+    }
+
+    AnalysisRunHistoryService(
+            LocalAnalysisRunStore localAnalysisRunStore,
+            List<LocalAnalysisRunChatHandler> chatHandlers,
+            CopilotSessionCleanup copilotSessionCleanup
+    ) {
+        this(localAnalysisRunStore, chatHandlers, List.of(), copilotSessionCleanup);
     }
 
     AnalysisRunHistoryService(LocalAnalysisRunStore localAnalysisRunStore) {
@@ -90,6 +110,51 @@ public class AnalysisRunHistoryService {
         var handler = chatHandler(indexEntry.feature());
         try {
             var result = handler.continueRun(indexEntry, record, request.message());
+            var updatedEntry = indexEntry.withUpdatedAt(result.updatedAt());
+            localAnalysisRunStore.save(updatedEntry, result.record());
+            return toDetail(updatedEntry, result.record());
+        } catch (LocalAnalysisRunContinuationException exception) {
+            throw mapContinuationException(indexEntry.analysisId(), exception);
+        }
+    }
+
+    public LocalAnalysisRunDetailResponse applyResultUpdate(
+            String analysisId,
+            String messageId,
+            LocalAnalysisRunResultUpdateDecisionRequest request
+    ) {
+        return decideResultUpdate(analysisId, messageId, request, true);
+    }
+
+    public LocalAnalysisRunDetailResponse rejectResultUpdate(
+            String analysisId,
+            String messageId,
+            LocalAnalysisRunResultUpdateDecisionRequest request
+    ) {
+        return decideResultUpdate(analysisId, messageId, request, false);
+    }
+
+    private LocalAnalysisRunDetailResponse decideResultUpdate(
+            String analysisId,
+            String messageId,
+            LocalAnalysisRunResultUpdateDecisionRequest request,
+            boolean apply
+    ) {
+        var indexEntry = indexEntryOrThrow(analysisId);
+        var record = recordOrThrow(indexEntry.analysisId());
+        if (record.continuation() == null || !record.continuation().enabled()) {
+            throw new LocalAnalysisRunContinuationUnavailableException(
+                    "Local run cannot be continued because continuation metadata is disabled."
+            );
+        }
+
+        var handler = resultUpdateHandler(indexEntry.feature());
+        try {
+            var normalizedMessageId = requireMessageId(messageId);
+            var aiResponse = request != null ? request.aiResponse() : null;
+            var result = apply
+                    ? handler.applyResultUpdate(indexEntry, record, normalizedMessageId, aiResponse)
+                    : handler.rejectResultUpdate(indexEntry, record, normalizedMessageId, aiResponse);
             var updatedEntry = indexEntry.withUpdatedAt(result.updatedAt());
             localAnalysisRunStore.save(updatedEntry, result.record());
             return toDetail(updatedEntry, result.record());
@@ -162,6 +227,15 @@ public class AnalysisRunHistoryService {
                 ));
     }
 
+    private LocalAnalysisRunResultUpdateHandler resultUpdateHandler(String feature) {
+        return resultUpdateHandlers.stream()
+                .filter(handler -> handler.feature().equals(feature))
+                .findFirst()
+                .orElseThrow(() -> new LocalAnalysisRunContinuationUnavailableException(
+                        "Local run feature does not support result update decisions yet: " + feature
+                ));
+    }
+
     private RuntimeException mapContinuationException(
             String analysisId,
             LocalAnalysisRunContinuationException exception
@@ -213,5 +287,12 @@ public class AnalysisRunHistoryService {
             throw new LocalAnalysisRunNotFoundException(analysisId);
         }
         return analysisId.trim();
+    }
+
+    private String requireMessageId(String messageId) {
+        if (!StringUtils.hasText(messageId)) {
+            throw new LocalAnalysisRunContinuationUnavailableException("Chat message id is required.");
+        }
+        return messageId.trim();
     }
 }

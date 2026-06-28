@@ -157,6 +157,58 @@ class AnalysisRunHistoryControllerTest {
     }
 
     @Test
+    void shouldApplyLocalRunResultUpdate() throws Exception {
+        var request = new LocalAnalysisRunResultUpdateDecisionRequest(objectMapper.readTree("""
+                {
+                  "confidence": "high"
+                }
+                """));
+        when(analysisRunHistoryService.applyResultUpdate("analysis-1", "assistant-1", request))
+                .thenReturn(detail("analysis-1", "corr-123", true));
+
+        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages/assistant-1/result-update/apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "aiResponse": {
+                                    "confidence": "high"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisId").value("analysis-1"))
+                .andExpect(jsonPath("$.continuationEnabled").value(true));
+
+        verify(analysisRunHistoryService).applyResultUpdate("analysis-1", "assistant-1", request);
+    }
+
+    @Test
+    void shouldRejectLocalRunResultUpdate() throws Exception {
+        var request = new LocalAnalysisRunResultUpdateDecisionRequest(objectMapper.readTree("""
+                {
+                  "confidence": "medium"
+                }
+                """));
+        when(analysisRunHistoryService.rejectResultUpdate("analysis-1", "assistant-1", request))
+                .thenReturn(detail("analysis-1", "corr-123", true));
+
+        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages/assistant-1/result-update/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "aiResponse": {
+                                    "confidence": "medium"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisId").value("analysis-1"))
+                .andExpect(jsonPath("$.continuationEnabled").value(true));
+
+        verify(analysisRunHistoryService).rejectResultUpdate("analysis-1", "assistant-1", request);
+    }
+
+    @Test
     void shouldRejectBlankChatMessage() throws Exception {
         mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
                         .contentType(MediaType.APPLICATION_JSON)

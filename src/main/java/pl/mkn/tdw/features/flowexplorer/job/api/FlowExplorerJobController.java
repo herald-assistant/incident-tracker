@@ -39,4 +39,22 @@ public class FlowExplorerJobController {
         return flowExplorerJobService.startChatMessage(jobId, request);
     }
 
+    @PostMapping("/{jobId}/chat/messages/{messageId}/result-update/apply")
+    public FlowExplorerJobStateSnapshot applyResultUpdate(
+            @PathVariable String jobId,
+            @PathVariable String messageId,
+            @Valid @RequestBody FlowExplorerResultUpdateDecisionRequest request
+    ) {
+        return flowExplorerJobService.applyResultUpdate(jobId, messageId, request);
+    }
+
+    @PostMapping("/{jobId}/chat/messages/{messageId}/result-update/reject")
+    public FlowExplorerJobStateSnapshot rejectResultUpdate(
+            @PathVariable String jobId,
+            @PathVariable String messageId,
+            @Valid @RequestBody FlowExplorerResultUpdateDecisionRequest request
+    ) {
+        return flowExplorerJobService.rejectResultUpdate(jobId, messageId, request);
+    }
+
 }

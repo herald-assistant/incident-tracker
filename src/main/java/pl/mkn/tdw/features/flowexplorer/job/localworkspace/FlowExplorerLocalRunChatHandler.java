@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.flowexplorer.job.localworkspace;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,10 +14,16 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredExcep
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponse;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatResponse;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatResponseParser;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerResultUpdateApplicator;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultResponse;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerSectionModeRequest;
 import pl.mkn.tdw.features.flowexplorer.job.export.FlowExplorerExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
@@ -25,6 +32,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunResultUpdateHandler;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
@@ -35,11 +43,12 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandler {
+public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandler, LocalAnalysisRunResultUpdateHandler {
 
     static final String FEATURE = "flow-explorer";
 
@@ -54,6 +63,9 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
+    private final FlowExplorerFollowUpChatResponseParser followUpResponseParser;
+    private final FlowExplorerResultUpdateApplicator resultUpdateApplicator;
+    private final FlowExplorerPromptPreparationService promptPreparationService;
 
     @Override
     public String feature() {
@@ -76,7 +88,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var startedAt = Instant.now();
-        var promptPreparation = new FlowExplorerPromptPreparation(userMessage, List.of(), java.util.Map.of());
+        var promptPreparation = promptPreparationService.prepareFollowUp(startRequest(snapshot), userMessage);
         var captured = new CapturedAssistantState();
         var response = executeChat(
                 snapshot,
@@ -86,13 +98,15 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 assistantMessageId,
                 captured
         );
+        var parsedResponse = parseFollowUpResponse(response);
         var completedAt = Instant.now();
         var updatedSnapshot = appendCompletedChat(
                 snapshot,
                 userMessageId,
                 assistantMessageId,
                 userMessage,
-                response,
+                parsedResponse.message(),
+                resultUpdateForResponse(snapshot, parsedResponse),
                 captured,
                 startedAt,
                 completedAt
@@ -101,6 +115,64 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
         var updatedRecord = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(updatedEnvelope),
                 continuationAfterChat(record.continuation(), response)
+        );
+        return new LocalAnalysisRunChatResult(updatedRecord, completedAt);
+    }
+
+    @Override
+    public LocalAnalysisRunChatResult applyResultUpdate(
+            LocalAnalysisRunIndexEntry indexEntry,
+            LocalAnalysisRunRecord record,
+            String messageId,
+            JsonNode aiResponse
+    ) {
+        return decideResultUpdate(indexEntry, record, messageId, aiResponse, ResultUpdateDecision.APPLY);
+    }
+
+    @Override
+    public LocalAnalysisRunChatResult rejectResultUpdate(
+            LocalAnalysisRunIndexEntry indexEntry,
+            LocalAnalysisRunRecord record,
+            String messageId,
+            JsonNode aiResponse
+    ) {
+        return decideResultUpdate(indexEntry, record, messageId, aiResponse, ResultUpdateDecision.REJECT);
+    }
+
+    private LocalAnalysisRunChatResult decideResultUpdate(
+            LocalAnalysisRunIndexEntry indexEntry,
+            LocalAnalysisRunRecord record,
+            String messageId,
+            JsonNode aiResponse,
+            ResultUpdateDecision decision
+    ) {
+        var envelope = exportEnvelope(record);
+        var snapshot = validatedSnapshot(indexEntry, record.continuation(), envelope);
+        var assistantMessage = resultUpdateMessage(snapshot, messageId);
+        var authoritativeResult = authoritativeResult(snapshot, aiResponse);
+        var authRef = authRef(record.continuation());
+
+        accessTokenResolver.resolve(runAuthMapper.toRunAuth(authRef));
+
+        var syncResult = executeResultUpdateSync(
+                snapshot,
+                record.continuation(),
+                authRef,
+                decision,
+                assistantMessage.id(),
+                authoritativeResult
+        );
+        var completedAt = Instant.now();
+        var updatedSnapshot = snapshotAfterResultUpdateDecision(
+                snapshot,
+                assistantMessage.id(),
+                authoritativeResult,
+                completedAt
+        );
+        var updatedEnvelope = FlowExplorerExportEnvelope.from(updatedSnapshot, completedAt);
+        var updatedRecord = LocalAnalysisRunRecord.v1(
+                objectMapper.valueToTree(updatedEnvelope),
+                continuationAfterChat(record.continuation(), syncResult)
         );
         return new LocalAnalysisRunChatResult(updatedRecord, completedAt);
     }
@@ -151,12 +223,171 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
         }
     }
 
+    private CopilotExecutionResult executeResultUpdateSync(
+            FlowExplorerJobStateSnapshot snapshot,
+            LocalAnalysisRunContinuation continuation,
+            AnalysisAiAuthRef authRef,
+            ResultUpdateDecision decision,
+            String assistantMessageId,
+            FlowExplorerAiResponse authoritativeResult
+    ) {
+        try {
+            var promptPreparation = new FlowExplorerPromptPreparation(
+                    resultUpdateSyncPrompt(decision, assistantMessageId, authoritativeResult),
+                    List.of(),
+                    Map.of()
+            );
+            var runAssembly = runRequestAssembler.assembleFollowUp(
+                    "flow-explorer-result-update-" + decision.name().toLowerCase() + "-" + assistantMessageId,
+                    startRequest(snapshot),
+                    snapshot.contextSnapshot(),
+                    promptPreparation,
+                    continuation.copilotSessionId(),
+                    authRef
+            );
+            var preparedSession = runPreparationService.prepare(runAssembly.runRequest());
+            var executionResult = executionGateway.execute(preparedSession);
+            if (!"OK".equalsIgnoreCase(executionResult.content() != null ? executionResult.content().trim() : "")) {
+                throw new IllegalStateException("Flow Explorer result update session sync did not return OK.");
+            }
+            return executionResult;
+        } catch (CopilotLocalTokenMissingException
+                 | GitHubCopilotAuthRequiredException
+                 | GitHubCopilotReauthRequiredException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw LocalAnalysisRunContinuationException.chatFailed(
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Local Flow Explorer result update session sync failed.",
+                    exception
+            );
+        }
+    }
+
+    private String resultUpdateSyncPrompt(
+            ResultUpdateDecision decision,
+            String assistantMessageId,
+            FlowExplorerAiResponse authoritativeResult
+    ) {
+        var decisionText = switch (decision) {
+            case APPLY -> "operator zaakceptowal resultUpdate";
+            case REJECT -> "operator odrzucil resultUpdate";
+        };
+        return """
+                Techniczna wiadomosc synchronizacyjna Flow Explorer. Nie pokazuj jej uzytkownikowi jako tresci merytorycznej.
+
+                Decyzja operatora: %s z assistant message id `%s`.
+                Ponizszy `FlowExplorerAiResponse` jest teraz authoritative state aplikacji.
+
+                Authoritative result JSON:
+                %s
+
+                Odpowiedz dokladnie jednym slowem:
+                OK
+                """.formatted(
+                decisionText,
+                assistantMessageId,
+                resultUpdateJson(authoritativeResult)
+        );
+    }
+
+    private String resultUpdateJson(FlowExplorerAiResponse authoritativeResult) {
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(authoritativeResult);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Flow Explorer result update cannot be serialized.", exception);
+        }
+    }
+
+    private FlowExplorerFollowUpChatResponse parseFollowUpResponse(CopilotExecutionResult response) {
+        try {
+            return followUpResponseParser.parse(response != null ? response.content() : null);
+        } catch (RuntimeException exception) {
+            throw LocalAnalysisRunContinuationException.chatFailed(
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Local Flow Explorer follow-up response could not be parsed.",
+                    exception
+            );
+        }
+    }
+
+    private JsonNode resultUpdateForResponse(
+            FlowExplorerJobStateSnapshot snapshot,
+            FlowExplorerFollowUpChatResponse parsedResponse
+    ) {
+        if (parsedResponse == null || !parsedResponse.hasResultUpdate()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.valueToTree(resultUpdateApplicator.apply(
+                    snapshot.result().aiResponse(),
+                    parsedResponse.resultUpdate()
+            ));
+        } catch (RuntimeException exception) {
+            throw LocalAnalysisRunContinuationException.chatFailed(
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Local Flow Explorer result update could not be prepared.",
+                    exception
+            );
+        }
+    }
+
     private FlowExplorerExportEnvelope exportEnvelope(LocalAnalysisRunRecord record) {
         try {
             return objectMapper.treeToValue(record.exportEnvelope(), FlowExplorerExportEnvelope.class);
         } catch (JsonProcessingException | IllegalArgumentException exception) {
             throw LocalAnalysisRunContinuationException.corrupted(
                     "Local Flow Explorer run export envelope cannot be read.",
+                    exception
+            );
+        }
+    }
+
+    private AnalysisChatMessageResponse resultUpdateMessage(
+            FlowExplorerJobStateSnapshot snapshot,
+            String messageId
+    ) {
+        var normalizedMessageId = requireMessageId(messageId);
+        return safeList(snapshot.chatMessages()).stream()
+                .filter(message -> normalizedMessageId.equals(message.id()))
+                .filter(message -> ASSISTANT.equals(message.role()))
+                .filter(message -> COMPLETED.equals(message.status()))
+                .filter(message -> message.resultUpdate() != null && !message.resultUpdate().isNull())
+                .findFirst()
+                .orElseThrow(() -> LocalAnalysisRunContinuationException.unavailable(
+                        "Local Flow Explorer result update is not available for this chat message."
+                ));
+    }
+
+    private String requireMessageId(String messageId) {
+        if (!StringUtils.hasText(messageId)) {
+            throw LocalAnalysisRunContinuationException.unavailable(
+                    "Local Flow Explorer result update message id is required."
+            );
+        }
+        return messageId.trim();
+    }
+
+    private FlowExplorerAiResponse authoritativeResult(
+            FlowExplorerJobStateSnapshot snapshot,
+            JsonNode aiResponse
+    ) {
+        if (aiResponse == null || aiResponse.isNull()) {
+            throw LocalAnalysisRunContinuationException.unavailable(
+                    "Local Flow Explorer result update decision requires aiResponse."
+            );
+        }
+
+        try {
+            return objectMapper.treeToValue(aiResponse, FlowExplorerAiResponse.class)
+                    .withRequestContext(snapshot.goal(), snapshot.sectionModes());
+        } catch (JsonProcessingException | IllegalArgumentException exception) {
+            throw LocalAnalysisRunContinuationException.corrupted(
+                    "Local Flow Explorer result update aiResponse cannot be read.",
                     exception
             );
         }
@@ -253,7 +484,8 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
             String userMessageId,
             String assistantMessageId,
             String message,
-            CopilotExecutionResult response,
+            String assistantContent,
+            JsonNode resultUpdate,
             CapturedAssistantState captured,
             Instant startedAt,
             Instant completedAt
@@ -272,13 +504,14 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 List.of(),
                 List.of(),
                 List.of(),
+                null,
                 null
         ));
         chatMessages.add(new AnalysisChatMessageResponse(
                 assistantMessageId,
                 ASSISTANT,
                 COMPLETED,
-                response != null ? response.content() : "",
+                assistantContent,
                 null,
                 null,
                 startedAt,
@@ -287,7 +520,8 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 captured.toolEvidenceSections(),
                 captured.aiActivityEvents(),
                 captured.toolFeedback(),
-                message
+                message,
+                resultUpdate
         ));
 
         return new FlowExplorerJobStateSnapshot(
@@ -322,6 +556,84 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
         );
     }
 
+    private FlowExplorerJobStateSnapshot snapshotAfterResultUpdateDecision(
+            FlowExplorerJobStateSnapshot snapshot,
+            String assistantMessageId,
+            FlowExplorerAiResponse authoritativeResult,
+            Instant updatedAt
+    ) {
+        var chatMessages = safeList(snapshot.chatMessages()).stream()
+                .map(message -> assistantMessageId.equals(message.id()) ? clearResultUpdate(message) : message)
+                .toList();
+        return new FlowExplorerJobStateSnapshot(
+                snapshot.jobId(),
+                snapshot.systemId(),
+                snapshot.endpointId(),
+                snapshot.httpMethod(),
+                snapshot.endpointPath(),
+                snapshot.branch(),
+                snapshot.goal(),
+                safeList(snapshot.focusAreas()),
+                safeList(snapshot.sectionModes()),
+                snapshot.aiModel(),
+                snapshot.reasoningEffort(),
+                snapshot.status(),
+                snapshot.currentStepCode(),
+                snapshot.currentStepLabel(),
+                snapshot.errorCode(),
+                snapshot.errorMessage(),
+                snapshot.createdAt(),
+                updatedAt,
+                snapshot.completedAt(),
+                safeList(snapshot.steps()),
+                snapshot.contextSnapshot(),
+                safeList(snapshot.contextSections()),
+                safeList(snapshot.toolEvidenceSections()),
+                safeList(snapshot.aiActivityEvents()),
+                safeList(snapshot.toolFeedback()),
+                chatMessages,
+                snapshot.preparedPrompt(),
+                resultWithAiResponse(snapshot.result(), authoritativeResult)
+        );
+    }
+
+    private AnalysisChatMessageResponse clearResultUpdate(AnalysisChatMessageResponse message) {
+        return new AnalysisChatMessageResponse(
+                message.id(),
+                message.role(),
+                message.status(),
+                message.content(),
+                message.errorCode(),
+                message.errorMessage(),
+                message.createdAt(),
+                message.updatedAt(),
+                message.completedAt(),
+                message.toolEvidenceSections(),
+                message.aiActivityEvents(),
+                message.toolFeedback(),
+                message.prompt(),
+                null
+        );
+    }
+
+    private FlowExplorerResultResponse resultWithAiResponse(
+            FlowExplorerResultResponse current,
+            FlowExplorerAiResponse aiResponse
+    ) {
+        return new FlowExplorerResultResponse(
+                current.status(),
+                current.systemId(),
+                current.endpointId(),
+                current.httpMethod(),
+                current.endpointPath(),
+                current.branch(),
+                current.goal(),
+                current.prompt(),
+                aiResponse,
+                current.usage()
+        );
+    }
+
     private boolean hasActiveAssistantMessage(FlowExplorerJobStateSnapshot snapshot) {
         return safeList(snapshot.chatMessages()).stream()
                 .anyMatch(message -> ASSISTANT.equals(message.role())
@@ -330,6 +642,11 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
 
     private static <T> List<T> safeList(List<T> values) {
         return values != null ? values : List.of();
+    }
+
+    private enum ResultUpdateDecision {
+        APPLY,
+        REJECT
     }
 
     private static final class CapturedAssistantState {

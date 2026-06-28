@@ -31,7 +31,9 @@ describe('FlowExplorerPageComponent', () => {
       getRun: vi.fn(() => of(localFlowExplorerRunDetail())),
       sendChatMessage: vi.fn(() =>
         of(localFlowExplorerRunDetail({ chatMessages: completedChatMessages() }))
-      )
+      ),
+      applyResultUpdate: vi.fn(() => of(localFlowExplorerRunDetail())),
+      rejectResultUpdate: vi.fn(() => of(localFlowExplorerRunDetail()))
     };
     flowExplorerApi = {
       getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
@@ -39,6 +41,30 @@ describe('FlowExplorerPageComponent', () => {
       getEndpointInventory: vi.fn(() => of(endpointInventory())),
       startJob: vi.fn(() => of(jobSnapshot({ status: 'COLLECTING_CONTEXT' }))),
       sendChatMessage: vi.fn(() =>
+        of(
+          jobSnapshot({
+            status: 'COMPLETED',
+            currentStepCode: 'COMPLETED',
+            currentStepLabel: 'AI result ready',
+            preparedPrompt: 'canonical prompt',
+            result: flowExplorerResult(),
+            chatMessages: completedChatMessages()
+          })
+        )
+      ),
+      applyResultUpdate: vi.fn(() =>
+        of(
+          jobSnapshot({
+            status: 'COMPLETED',
+            currentStepCode: 'COMPLETED',
+            currentStepLabel: 'AI result ready',
+            preparedPrompt: 'canonical prompt',
+            result: flowExplorerResult(),
+            chatMessages: completedChatMessages()
+          })
+        )
+      ),
+      rejectResultUpdate: vi.fn(() =>
         of(
           jobSnapshot({
             status: 'COMPLETED',
@@ -644,6 +670,195 @@ describe('FlowExplorerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Walidacja jest w CustomerService.validate.');
   });
 
+  it('should open a Before/After review modal for Flow Explorer follow-up result updates', () => {
+    const resultUpdate = updatedFlowExplorerAiResponse();
+    vi.mocked(flowExplorerApi.getJob).mockReturnValue(
+      of(
+        jobSnapshot({
+          status: 'COMPLETED',
+          currentStepCode: 'COMPLETED',
+          currentStepLabel: 'AI result ready',
+          preparedPrompt: 'canonical prompt',
+          result: flowExplorerResult(),
+          chatMessages: completedChatMessages(resultUpdate)
+        })
+      )
+    );
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+    fixture.detectChanges();
+
+    const reviewButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '.chat-message__review-button'
+    );
+    reviewButton?.click();
+    fixture.detectChanges();
+
+    const modal = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.flow-explorer-review-dialog'
+    );
+    expect(modal?.textContent).toContain('Review result changes');
+    expect(modal?.textContent).toContain('The endpoint reads the requested customer');
+    expect(modal?.textContent).not.toContain('Updated overview after review.');
+    buttonContaining(modal!, 'After')?.click();
+    fixture.detectChanges();
+
+    expect(reviewButton?.textContent).toContain('Review changes');
+    expect(modal?.textContent).toContain('Updated overview after review.');
+    expect(fixture.componentInstance.pendingResultUpdateReview()).toEqual({
+      messageId: 'chat-2',
+      resultUpdate
+    });
+  });
+
+  it('should apply a reviewed Flow Explorer result update for a live job', () => {
+    const resultUpdate = updatedFlowExplorerAiResponse();
+    vi.mocked(flowExplorerApi.getJob).mockReturnValue(
+      of(
+        jobSnapshot({
+          status: 'COMPLETED',
+          currentStepCode: 'COMPLETED',
+          currentStepLabel: 'AI result ready',
+          preparedPrompt: 'canonical prompt',
+          result: flowExplorerResult(),
+          chatMessages: completedChatMessages(resultUpdate)
+        })
+      )
+    );
+    vi.mocked(flowExplorerApi.applyResultUpdate).mockReturnValue(
+      of(
+        jobSnapshot({
+          status: 'COMPLETED',
+          currentStepCode: 'COMPLETED',
+          currentStepLabel: 'AI result ready',
+          preparedPrompt: 'canonical prompt',
+          result: {
+            ...flowExplorerResult(),
+            aiResponse: resultUpdate
+          },
+          chatMessages: completedChatMessages()
+        })
+      )
+    );
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+    fixture.detectChanges();
+    clickButtonContaining(fixture.nativeElement, 'Review changes');
+    fixture.detectChanges();
+    const modal = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.flow-explorer-review-dialog'
+    );
+    buttonContaining(modal!, 'Apply')?.click();
+    fixture.detectChanges();
+
+    expect(flowExplorerApi.applyResultUpdate).toHaveBeenCalledWith('flow-job-1', 'chat-2', {
+      aiResponse: resultUpdate
+    });
+    expect((fixture.nativeElement as HTMLElement).querySelector('.flow-explorer-review-dialog')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Updated overview after review.');
+  });
+
+  it('should keep imported result update reviews read-only', async () => {
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+    const resultUpdate = updatedFlowExplorerAiResponse();
+    const exportedJob = jobSnapshot({
+      status: 'COMPLETED',
+      currentStepCode: 'COMPLETED',
+      currentStepLabel: 'AI result ready',
+      preparedPrompt: 'imported canonical prompt',
+      result: flowExplorerResult(),
+      chatMessages: completedChatMessages(resultUpdate)
+    });
+    const fileContent = JSON.stringify(
+      buildFlowExplorerExportEnvelope(exportedJob, '2026-06-18T10:00:00Z')
+    );
+    const file = new File([fileContent], 'flow-explorer-export.json', { type: 'application/json' });
+    Object.defineProperty(file, 'text', {
+      configurable: true,
+      value: () => Promise.resolve(fileContent)
+    });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+
+    fixture.detectChanges();
+    await fixture.componentInstance.importFlowExplorerAnalysis({ target: input } as unknown as Event);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Review changes');
+    clickButtonContaining(fixture.nativeElement, 'Review changes');
+    fixture.detectChanges();
+
+    const modal = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.flow-explorer-review-dialog'
+    );
+    expect(modal?.textContent).toContain('Imported result is read-only');
+    expect(modal?.textContent).toContain('The endpoint reads the requested customer');
+    expect(modal?.textContent).not.toContain('Updated overview after review.');
+    buttonContaining(modal!, 'After')?.click();
+    fixture.detectChanges();
+    expect(modal?.textContent).toContain('Updated overview after review.');
+    expect(buttonContaining(modal!, 'Apply')).toBeUndefined();
+    expect(buttonContaining(modal!, 'Reject')).toBeUndefined();
+  });
+
+  it('should apply reviewed result updates for local Flow Explorer runs through history API', () => {
+    const resultUpdate = updatedFlowExplorerAiResponse();
+    vi.mocked(historyApi.getRun).mockReturnValue(
+      of(localFlowExplorerRunDetail({ chatMessages: completedChatMessages(resultUpdate) }))
+    );
+    vi.mocked(historyApi.applyResultUpdate).mockReturnValue(
+      of(
+        localFlowExplorerRunDetail({
+          result: {
+            ...flowExplorerResult(),
+            aiResponse: resultUpdate
+          },
+          chatMessages: completedChatMessages()
+        })
+      )
+    );
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as {
+      loadLocalFlowExplorerRun(analysisId: string): void;
+    }).loadLocalFlowExplorerRun('flow-job-1');
+    fixture.detectChanges();
+    clickButtonContaining(fixture.nativeElement, 'Review changes');
+    fixture.detectChanges();
+    const modal = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.flow-explorer-review-dialog'
+    );
+    buttonContaining(modal!, 'Apply')?.click();
+    fixture.detectChanges();
+
+    expect(historyApi.applyResultUpdate).toHaveBeenCalledWith('flow-job-1', 'chat-2', {
+      aiResponse: resultUpdate
+    });
+    expect(flowExplorerApi.applyResultUpdate).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Updated overview after review.');
+    const sourceEnvelope = fixture.componentInstance.exportState()?.sourceEnvelope as
+      | { payload?: { job?: FlowExplorerJobStateSnapshot } }
+      | undefined;
+    expect(sourceEnvelope?.payload?.job?.result?.aiResponse?.overview.markdown).toBe(
+      'Updated overview after review.'
+    );
+    expect(sourceEnvelope?.payload?.job?.chatMessages.map((message) => message.resultUpdate ?? null)).toEqual([
+      null,
+      null
+    ]);
+  });
+
   it('should continue a local Flow Explorer run through analysis history API', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -679,10 +894,20 @@ describe('FlowExplorerPageComponent', () => {
 
 type FlowExplorerApiServiceMock = Pick<
   FlowExplorerApiService,
-  'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
+  | 'getConfig'
+  | 'getSystems'
+  | 'getEndpointInventory'
+  | 'startJob'
+  | 'sendChatMessage'
+  | 'applyResultUpdate'
+  | 'rejectResultUpdate'
+  | 'getJob'
 >;
 type AnalysisApiServiceMock = Pick<AnalysisApiService, 'getAiModelOptions'>;
-type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun' | 'sendChatMessage'>;
+type AnalysisRunHistoryApiServiceMock = Pick<
+  AnalysisRunHistoryApiService,
+  'getRun' | 'sendChatMessage' | 'applyResultUpdate' | 'rejectResultUpdate'
+>;
 
 function setInputValue(nativeElement: HTMLElement, selector: string, value: string): void {
   const input = nativeElement.querySelector(selector) as HTMLInputElement;
@@ -1176,7 +1401,7 @@ function defaultContextSections(): FlowExplorerJobStateSnapshot['contextSections
   ];
 }
 
-function completedChatMessages(): FlowExplorerJobStateSnapshot['chatMessages'] {
+function completedChatMessages(resultUpdate?: unknown): FlowExplorerJobStateSnapshot['chatMessages'] {
   return [
     {
       id: 'chat-1',
@@ -1217,7 +1442,8 @@ function completedChatMessages(): FlowExplorerJobStateSnapshot['chatMessages'] {
       ],
       aiActivityEvents: [],
       toolFeedback: [],
-      prompt: 'follow-up prompt'
+      prompt: 'follow-up prompt',
+      ...(resultUpdate === undefined ? {} : { resultUpdate })
     }
   ];
 }
@@ -1298,5 +1524,30 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       confidence: 'high',
       followUpPrompts: ['Sprawdz, czy nieaktywny klient powinien blokowac ten flow.']
     }
+  };
+}
+
+function updatedFlowExplorerAiResponse(): NonNullable<
+  NonNullable<FlowExplorerJobStateSnapshot['result']>['aiResponse']
+> {
+  const current = flowExplorerResult().aiResponse!;
+  return {
+    ...current,
+    overview: {
+      ...current.overview,
+      markdown: 'Updated overview after review.',
+      confidence: 'medium'
+    },
+    sections: current.sections.map((section) =>
+      section.id === 'PERSISTENCE'
+        ? {
+            ...section,
+            markdown: 'Updated persistence details after review.',
+            sourceRefs: ['CustomerRepository.findById L50-L72']
+          }
+        : section
+    ),
+    confidence: 'medium',
+    sourceReferences: ['CustomerRepository.findById L50-L72']
   };
 }

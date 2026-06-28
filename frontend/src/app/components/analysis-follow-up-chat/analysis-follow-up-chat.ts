@@ -14,6 +14,11 @@ import { copyElementToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
+export interface AnalysisResultUpdateReviewRequest {
+  messageId: string;
+  resultUpdate: unknown;
+}
+
 @Component({
   selector: 'app-analysis-follow-up-chat',
   imports: [MarkdownContentComponent, AttributeNamePipe],
@@ -40,10 +45,13 @@ export class AnalysisFollowUpChatComponent {
   readonly submitLabel = input('Wyślij');
   readonly submittingLabel = input('Wysyłanie');
   readonly ariaLabel = input('Follow-up chat');
+  readonly canReviewResultUpdates = input(false);
+  readonly reviewChangesLabel = input('Review changes');
 
   readonly sendMessage = output<string>();
   readonly clearError = output<void>();
   readonly connectAuth = output<void>();
+  readonly reviewResultUpdate = output<AnalysisResultUpdateReviewRequest>();
 
   readonly messageText = signal('');
   readonly localError = signal('');
@@ -123,6 +131,28 @@ export class AnalysisFollowUpChatComponent {
 
   protected canCopyChatMessage(message: AnalysisChatMessageResponse): boolean {
     return message.status !== 'IN_PROGRESS';
+  }
+
+  protected canReviewResultUpdate(message: AnalysisChatMessageResponse): boolean {
+    return (
+      this.canReviewResultUpdates() &&
+      message.role === 'ASSISTANT' &&
+      message.status === 'COMPLETED' &&
+      message.resultUpdate !== undefined &&
+      message.resultUpdate !== null
+    );
+  }
+
+  protected reviewChatMessageResultUpdate(message: AnalysisChatMessageResponse): void {
+    const resultUpdate = message.resultUpdate;
+    if (!this.canReviewResultUpdate(message) || resultUpdate === undefined || resultUpdate === null) {
+      return;
+    }
+
+    this.reviewResultUpdate.emit({
+      messageId: message.id,
+      resultUpdate
+    });
   }
 
   protected isLastPendingAssistantMessage(

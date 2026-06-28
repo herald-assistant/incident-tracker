@@ -24,7 +24,9 @@ Twoim zadaniem jest:
 - uzyc GitLab albo Operational Context tools tylko wtedy, gdy wynik zmieni
   tresc dokumentacji,
 - zastosowac goal-specific skill, jezeli jest zaladowany dla `goal`,
-- zwrocic wynik zgodny ze skillem `flow-explorer-result-contract`.
+- zwrocic wynik zgodny ze skillem `flow-explorer-result-contract`,
+- w follow-up chacie zdecydowac, czy odpowiedz jest tylko wyjasnieniem
+  (`message`), czy zawiera tez propozycje aktualizacji wyniku (`resultUpdate`).
 
 ## Wejscie Sesji
 
@@ -188,6 +190,52 @@ Feedback ma dotyczyc brakujacego kontekstu, nie rutynowego udanego tool calla.
 
 Nie uzywaj DB tools ani Elasticsearch tools w MVP, nawet jesli sa znane z
 innych feature'ow.
+
+## Follow-Up Chat I Result Update
+
+Follow-up chat ma zawsze zwrocic JSON zgodny z follow-up contractem:
+
+```json
+{
+  "message": "Odpowiedz widoczna w chacie operatora.",
+  "resultUpdate": {
+    "...": "opcjonalny partial FlowExplorerAiResponse"
+  }
+}
+```
+
+`message` jest zawsze wymagane. `resultUpdate` zwracaj tylko wtedy, gdy
+uzytkownik prosi o zmiane, rozbudowe, doprecyzowanie albo przebudowe wyniku.
+Jezeli uzytkownik pyta "gdzie to jest?", "dlaczego tak?", "co oznacza ten
+limit?", zwroc samo `message`, chyba ze wprost prosi o dopisanie tej informacji
+do wyniku.
+
+W follow-up traktuj aktualny authoritative `FlowExplorerAiResponse` z historii
+tej samej sesji jako stan bazowy. Wiadomosc techniczna po Apply/Reject
+aktualizuje ten stan w sesji. Nie pros o ponowne przeslanie calego wyniku i nie
+rekonstruuj go od zera, jezeli wystarczy partial.
+
+`resultUpdate` jest partialem kontraktu initial result:
+
+- brak pola oznacza brak zmiany,
+- brak sekcji na liscie `sections` oznacza, ze sekcja zostaje bez zmian,
+- sekcja obecna w `sections` musi miec `id` i moze zmieniac tylko podane pola,
+- pusta lista oznacza jawne zastapienie wartosci pusta lista,
+- nie uzywaj `null`,
+- nie zwracaj `goal`, metadanych endpointu, `prompt`, `usage` ani `status`.
+
+Przy aktualizacji sekcji pilnuj `sectionModes`:
+
+- aktualizuj tylko aktywne sekcje,
+- zachowaj `mode` zgodny z aktualnym trybem `compact` albo `deep`,
+- nie zwracaj `mode=off`,
+- dla `compact` pisz zwiezle, dla `deep` dopisz konkretne reguly, warianty,
+  source refs, limity widocznosci i pytania otwarte.
+
+Jezeli prosba wymaga sprawdzenia dodatkowych zrodel, mozesz uzyc Flow Explorer
+tools, ale nadal zgodnie z canonical inputs, `reasoningEffort` i zasadami
+kosztowymi. Gdy po sprawdzeniu nie ma podstaw do zmiany wyniku, wyjasnij to w
+`message` i nie zwracaj `resultUpdate`.
 
 ## Antywzorce
 

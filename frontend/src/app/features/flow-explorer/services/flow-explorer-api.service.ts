@@ -9,6 +9,7 @@ import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStartRequest,
   FlowExplorerJobStateSnapshot,
+  FlowExplorerResultUpdateDecisionRequest,
   FlowExplorerSystemOption
 } from '../models/flow-explorer.models';
 
@@ -61,6 +62,28 @@ export class FlowExplorerApiService {
   ): Observable<FlowExplorerJobStateSnapshot> {
     return this.http.post<FlowExplorerJobStateSnapshot>(
       `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/chat/messages`,
+      request
+    );
+  }
+
+  applyResultUpdate(
+    jobId: string,
+    messageId: string,
+    request: FlowExplorerResultUpdateDecisionRequest
+  ): Observable<FlowExplorerJobStateSnapshot> {
+    return this.http.post<FlowExplorerJobStateSnapshot>(
+      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/chat/messages/${encodeURIComponent(messageId)}/result-update/apply`,
+      request
+    );
+  }
+
+  rejectResultUpdate(
+    jobId: string,
+    messageId: string,
+    request: FlowExplorerResultUpdateDecisionRequest
+  ): Observable<FlowExplorerJobStateSnapshot> {
+    return this.http.post<FlowExplorerJobStateSnapshot>(
+      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/chat/messages/${encodeURIComponent(messageId)}/result-update/reject`,
       request
     );
   }

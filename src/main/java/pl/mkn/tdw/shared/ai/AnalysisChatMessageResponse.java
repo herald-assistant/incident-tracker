@@ -1,5 +1,6 @@
 package pl.mkn.tdw.shared.ai;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -18,12 +19,16 @@ public record AnalysisChatMessageResponse(
         List<AnalysisEvidenceSection> toolEvidenceSections,
         List<AnalysisAiActivityEvent> aiActivityEvents,
         List<AnalysisAiToolFeedback> toolFeedback,
-        String prompt
+        String prompt,
+        JsonNode resultUpdate
 ) {
 
     public AnalysisChatMessageResponse {
         toolEvidenceSections = toolEvidenceSections != null ? List.copyOf(toolEvidenceSections) : List.of();
         aiActivityEvents = aiActivityEvents != null ? List.copyOf(aiActivityEvents) : List.of();
         toolFeedback = toolFeedback != null ? List.copyOf(toolFeedback) : List.of();
+        resultUpdate = resultUpdate != null && !resultUpdate.isNull()
+                ? resultUpdate.deepCopy()
+                : null;
     }
 }

@@ -50,6 +50,65 @@ Nie dodawaj top-level pol spoza kontraktu. Informacje dla innych perspektyw
 umieszczaj w aktywnych sekcjach z `sectionModes`, a nie w osobnych polach
 na poziomie calej odpowiedzi.
 
+## Follow-Up Response Contract
+
+W follow-up chacie nie zwracaj pelnego initial result jako top-level odpowiedzi.
+Follow-up ma oddzielny, waski JSON contract:
+
+```json
+{
+  "message": "string",
+  "resultUpdate": {
+    "overview": {
+      "markdown": "string",
+      "confidence": "high|medium|low",
+      "sourceRefs": ["string"]
+    },
+    "sections": [
+      {
+        "id": "FUNCTIONAL_FLOW|VALIDATIONS|PERSISTENCE|INTEGRATIONS",
+        "title": "string",
+        "mode": "compact|deep",
+        "markdown": "string",
+        "sourceRefs": ["string"],
+        "visibilityLimits": ["string"],
+        "openQuestions": ["string"]
+      }
+    ],
+    "globalVisibilityLimits": ["string"],
+    "globalOpenQuestions": ["string"],
+    "sourceReferences": ["string"],
+    "confidence": "high|medium|low",
+    "followUpPrompts": ["string"]
+  }
+}
+```
+
+`message` jest wymagane zawsze. `resultUpdate` jest opcjonalny i jest partialem
+`FlowExplorerAiResponse`, ktory backend nalozy na aktualny authoritative result.
+
+Zasady:
+
+- zwroc samo `message`, gdy uzytkownik chce wyjasnienia bez zmiany wyniku,
+- dodaj `resultUpdate`, gdy uzytkownik prosi o dopisanie, poglebienie,
+  poprawienie, przeformulowanie albo aktualizacje wyniku,
+- nie zwracaj `resultUpdate` jako pustego obiektu,
+- brak pola w `resultUpdate` oznacza brak zmiany,
+- brak sekcji w `sections` oznacza, ze ta sekcja zostaje bez zmian,
+- sekcja obecna w `sections` musi miec `id`,
+- pusta lista oznacza jawne zastapienie wartosci pusta lista,
+- nie uzywaj `null`,
+- nie zwracaj w `resultUpdate` pol `goal`, `systemId`, `endpointId`,
+  `httpMethod`, `endpointPath`, `branch`, `prompt`, `usage`, `status`.
+
+Przy aktualizacji sekcji nadal obowiazuje `sectionModes`. Nie dodawaj sekcji
+`OFF`, nie tworz nowych sekcji i nie zmieniaj `mode` na wartosc sprzeczna z
+trybem aktualnego wyniku. Jezeli aktualizujesz `markdown`, zachowaj poziom
+szczegolow: `compact` ma byc zwarte, `deep` ma byc szczegolowe.
+
+`resultUpdate` powinien zawierac tylko pola, ktore faktycznie proponujesz
+zmienic. Nie przepisuj calego wyniku tylko po to, zeby pokazac brak zmiany.
+
 ## Follow-Up Prompts
 
 `followUpPrompts` to gotowe, proste prompty do follow-up chatu. Maja pomoc
