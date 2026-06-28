@@ -1,5 +1,4 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -16,7 +15,6 @@ import { AnalysisApiService } from '../../../../core/services/analysis-api.servi
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import {
   FlowExplorerAnalysisGoal,
-  FlowExplorerAiResponse,
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerEndpointOption,
   FlowExplorerEndpointParameter,
@@ -24,10 +22,7 @@ import {
   FlowExplorerFocusArea,
   FlowExplorerJobStartRequest,
   FlowExplorerJobStateSnapshot,
-  FlowExplorerResultOverview,
   FlowExplorerResultSectionId,
-  FlowExplorerResultSection,
-  FlowExplorerResultSectionMode,
   FlowExplorerSectionMode,
   FlowExplorerSectionModeRequest,
   FlowExplorerSystemOption
@@ -41,10 +36,7 @@ import {
   normalizeFlowExplorerJob,
   parseImportedFlowExplorerAnalysis
 } from '../../utils/flow-explorer-import-export.utils';
-import {
-  AnalysisFollowUpChatComponent,
-  AnalysisResultUpdateReviewRequest
-} from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
+import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
 import { copyElementToClipboard, copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
@@ -56,8 +48,6 @@ import {
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
-type FlowExplorerResultUpdateReviewTab = 'before' | 'after';
-type FlowExplorerResultUpdateDecisionAction = 'apply' | 'reject';
 
 interface FlowExplorerChoice<T extends string> {
   value: T;
@@ -69,13 +59,6 @@ interface FlowExplorerChoice<T extends string> {
 interface FlowExplorerUsageStat {
   label: string;
   value: string;
-}
-
-interface FlowExplorerResultUpdateReviewModel {
-  messageId: string;
-  before: FlowExplorerAiResponse;
-  after: FlowExplorerAiResponse | null;
-  targetLabel: string;
 }
 
 type FlowExplorerExportMetadata = Pick<
@@ -166,7 +149,6 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
 @Component({
   selector: 'app-flow-explorer-page',
   imports: [
-    NgTemplateOutlet,
     MatTooltipModule,
     AnalysisFollowUpChatComponent,
     AnalysisStepsPanelComponent,
@@ -223,10 +205,6 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
   readonly resultCopied = signal(false);
   readonly copiedFollowUpPromptIndex = signal<number | null>(null);
-  readonly pendingResultUpdateReview = signal<AnalysisResultUpdateReviewRequest | null>(null);
-  readonly resultUpdateReviewTab = signal<FlowExplorerResultUpdateReviewTab>('before');
-  readonly resultUpdateDecisionAction = signal<FlowExplorerResultUpdateDecisionAction | null>(null);
-  readonly resultUpdateDecisionError = signal('');
 
   readonly filteredSystems = computed(() => {
     const query = normalizeSearch(this.systemSearch());
@@ -476,54 +454,6 @@ export class FlowExplorerPageComponent implements OnInit {
       (section) => normalizeSearch(section.mode) !== 'off'
     );
   });
-  readonly resultUpdateReview = computed<FlowExplorerResultUpdateReviewModel | null>(() => {
-    const request = this.pendingResultUpdateReview();
-    const job = this.job();
-    const before = job?.result?.aiResponse ?? null;
-    if (!request || !job?.result || !before) {
-      return null;
-    }
-
-    const targetLabel = `${job.result.httpMethod || job.httpMethod} ${
-      job.result.endpointPath || job.endpointPath
-    }`.trim();
-
-    return {
-      messageId: request.messageId,
-      before,
-      after: normalizeReviewAiResponse(request.resultUpdate, before.goal || job.goal),
-      targetLabel
-    };
-  });
-  readonly isDecidingResultUpdate = computed(() => this.resultUpdateDecisionAction() !== null);
-  readonly resultUpdateReviewReadOnlyReason = computed(() => {
-    if (!this.resultUpdateReview()) {
-      return '';
-    }
-    if (this.isImportedResult()) {
-      return 'Imported result is read-only. You can review the proposal, but cannot apply it.';
-    }
-    const exportState = this.exportState();
-    if (exportState?.origin === 'local' && !exportState.continuationEnabled) {
-      return 'This local run does not have continuation metadata, so the proposal is read-only.';
-    }
-    if (exportState?.origin === 'local' && !exportState.localRunId) {
-      return 'This local run cannot be updated because its history id is missing.';
-    }
-    if (this.hasActiveChatMessage() || this.isSendingChat()) {
-      return 'Wait for the current AI response before applying or rejecting this proposal.';
-    }
-    return '';
-  });
-  readonly canApplyResultUpdate = computed(
-    () =>
-      Boolean(this.resultUpdateReview()?.after) &&
-      !this.resultUpdateReviewReadOnlyReason() &&
-      !this.isDecidingResultUpdate()
-  );
-  readonly canRejectResultUpdate = computed(
-    () => Boolean(this.resultUpdateReview()) && !this.resultUpdateReviewReadOnlyReason() && !this.isDecidingResultUpdate()
-  );
   constructor() {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -784,42 +714,6 @@ export class FlowExplorerPageComponent implements OnInit {
     this.chatError.set('');
   }
 
-  protected reviewResultUpdate(event: AnalysisResultUpdateReviewRequest): void {
-    this.pendingResultUpdateReview.set(event);
-    this.resultUpdateReviewTab.set('before');
-    this.resultUpdateDecisionError.set('');
-  }
-
-  protected selectResultUpdateReviewTab(tab: FlowExplorerResultUpdateReviewTab): void {
-    this.resultUpdateReviewTab.set(tab);
-  }
-
-  protected closeResultUpdateReview(): void {
-    if (this.isDecidingResultUpdate()) {
-      return;
-    }
-    this.pendingResultUpdateReview.set(null);
-    this.resultUpdateReviewTab.set('before');
-    this.resultUpdateDecisionError.set('');
-  }
-
-  protected applyReviewedResultUpdate(): void {
-    const review = this.resultUpdateReview();
-    if (!review?.after) {
-      this.resultUpdateDecisionError.set('Nie mozna zaakceptowac propozycji bez poprawnego stanu After.');
-      return;
-    }
-    this.decideReviewedResultUpdate('apply', review.after);
-  }
-
-  protected rejectReviewedResultUpdate(): void {
-    const review = this.resultUpdateReview();
-    if (!review) {
-      return;
-    }
-    this.decideReviewedResultUpdate('reject', review.before);
-  }
-
   protected sendChatMessage(message: string): void {
     const job = this.job();
     const trimmedMessage = message.trim();
@@ -890,7 +784,6 @@ export class FlowExplorerPageComponent implements OnInit {
     this.jobError.set('');
     this.job.set(null);
     this.exportState.set(null);
-    this.pendingResultUpdateReview.set(null);
 
     this.flowExplorerApi
       .startJob(this.jobStartRequest(selectedSystem, selectedEndpoint))
@@ -936,7 +829,6 @@ export class FlowExplorerPageComponent implements OnInit {
       this.isSendingChat.set(false);
       this.chatError.set('');
       this.jobError.set('');
-      this.pendingResultUpdateReview.set(null);
       this.applyJobSnapshot(imported.job, {
         origin: 'imported',
         exportedAt: imported.exportedAt,
@@ -1139,10 +1031,6 @@ export class FlowExplorerPageComponent implements OnInit {
     return Boolean(items?.length);
   }
 
-  protected visibleResultSections(aiResponse: FlowExplorerAiResponse): FlowExplorerResultSection[] {
-    return aiResponse.sections.filter((section) => normalizeSearch(section.mode) !== 'off');
-  }
-
   protected confidencePillClass(confidence: string): string {
     switch (normalizeSearch(confidence)) {
       case 'high':
@@ -1321,10 +1209,6 @@ export class FlowExplorerPageComponent implements OnInit {
     this.isSubmitting.set(false);
     this.chatError.set('');
     this.isSendingChat.set(false);
-    this.pendingResultUpdateReview.set(null);
-    this.resultUpdateReviewTab.set('before');
-    this.resultUpdateDecisionAction.set(null);
-    this.resultUpdateDecisionError.set('');
   }
 
   private isTerminalJobStatus(status: string): boolean {
@@ -1342,87 +1226,6 @@ export class FlowExplorerPageComponent implements OnInit {
     const normalizedJob = normalizeFlowExplorerJob(job);
     this.job.set(normalizedJob);
     this.syncExportableState(normalizedJob, metadata);
-  }
-
-  private decideReviewedResultUpdate(
-    action: FlowExplorerResultUpdateDecisionAction,
-    aiResponse: FlowExplorerAiResponse
-  ): void {
-    const review = this.resultUpdateReview();
-    const job = this.job();
-    if (
-      !review ||
-      !job ||
-      (action === 'apply' && !this.canApplyResultUpdate()) ||
-      (action === 'reject' && !this.canRejectResultUpdate())
-    ) {
-      return;
-    }
-
-    this.resultUpdateDecisionAction.set(action);
-    this.resultUpdateDecisionError.set('');
-    const request = { aiResponse };
-    const fallback =
-      action === 'apply'
-        ? 'Nie udalo sie zaakceptowac propozycji aktualizacji wyniku.'
-        : 'Nie udalo sie odrzucic propozycji aktualizacji wyniku.';
-    const exportState = this.exportState();
-
-    if (exportState?.origin === 'local') {
-      const localRunId = exportState.localRunId;
-      if (!localRunId) {
-        this.resultUpdateDecisionAction.set(null);
-        this.resultUpdateDecisionError.set('Nie mozna zaktualizowac lokalnego runu bez identyfikatora historii.');
-        return;
-      }
-
-      const request$ =
-        action === 'apply'
-          ? this.historyApi.applyResultUpdate(localRunId, review.messageId, request)
-          : this.historyApi.rejectResultUpdate(localRunId, review.messageId, request);
-
-      request$
-        .pipe(
-          takeUntilDestroyed(this.destroyRef),
-          finalize(() => this.resultUpdateDecisionAction.set(null))
-        )
-        .subscribe({
-          next: (detail) => {
-            this.pendingResultUpdateReview.set(null);
-            this.resultUpdateReviewTab.set('before');
-            this.applyLocalFlowExplorerRun(detail);
-          },
-          error: (error: HttpErrorResponse) => {
-            this.resultUpdateDecisionError.set(this.errorMessage(error, fallback));
-          }
-        });
-      return;
-    }
-
-    const request$ =
-      action === 'apply'
-        ? this.flowExplorerApi.applyResultUpdate(job.jobId, review.messageId, request)
-        : this.flowExplorerApi.rejectResultUpdate(job.jobId, review.messageId, request);
-
-    request$
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.resultUpdateDecisionAction.set(null))
-      )
-      .subscribe({
-        next: (snapshot) => {
-          this.pendingResultUpdateReview.set(null);
-          this.resultUpdateReviewTab.set('before');
-          this.applyJobSnapshot(snapshot, {
-            origin: 'live',
-            exportedAt: '',
-            fileName: ''
-          });
-        },
-        error: (error: HttpErrorResponse) => {
-          this.resultUpdateDecisionError.set(this.errorMessage(error, fallback));
-        }
-      });
   }
 
   private syncExportableState(
@@ -1851,102 +1654,8 @@ function normalizeSectionModes(
   }));
 }
 
-function normalizeReviewAiResponse(
-  value: unknown,
-  fallbackGoal: FlowExplorerAnalysisGoal
-): FlowExplorerAiResponse | null {
-  const response = asObject(value);
-  const overview = normalizeReviewOverview(response?.['overview']);
-  if (!response || !overview || !Array.isArray(response['sections'])) {
-    return null;
-  }
-
-  const sections = response['sections'].map(normalizeReviewSection);
-  if (sections.some((section) => section === null)) {
-    return null;
-  }
-
-  return {
-    goal: isAnalysisGoal(response['goal']) ? response['goal'] : fallbackGoal,
-    audience: normalizeReviewString(response['audience']) || 'business_or_system_analyst_tester',
-    overview,
-    sections: sections as FlowExplorerResultSection[],
-    globalVisibilityLimits: normalizeReviewStringArray(response['globalVisibilityLimits']),
-    globalOpenQuestions: normalizeReviewStringArray(response['globalOpenQuestions']),
-    sourceReferences: normalizeReviewStringArray(response['sourceReferences']),
-    confidence: normalizeReviewString(response['confidence']),
-    followUpPrompts: normalizeReviewStringArray(response['followUpPrompts'])
-  };
-}
-
-function normalizeReviewOverview(value: unknown): FlowExplorerResultOverview | null {
-  const overview = asObject(value);
-  if (!overview) {
-    return null;
-  }
-
-  return {
-    markdown: normalizeReviewString(overview['markdown']),
-    confidence: normalizeReviewString(overview['confidence']),
-    sourceRefs: normalizeReviewStringArray(overview['sourceRefs'])
-  };
-}
-
-function normalizeReviewSection(value: unknown): FlowExplorerResultSection | null {
-  const section = asObject(value);
-  const id = normalizeReviewString(section?.['id']);
-  if (!section || !isSectionId(id)) {
-    return null;
-  }
-
-  return {
-    id,
-    title: normalizeReviewString(section['title']) || sectionTitle(id),
-    mode: normalizeReviewResultSectionMode(section['mode']),
-    markdown: normalizeReviewString(section['markdown']),
-    sourceRefs: normalizeReviewStringArray(section['sourceRefs']),
-    visibilityLimits: normalizeReviewStringArray(section['visibilityLimits']),
-    openQuestions: normalizeReviewStringArray(section['openQuestions'])
-  };
-}
-
-function normalizeReviewResultSectionMode(value: unknown): FlowExplorerResultSectionMode {
-  const normalized = normalizeReviewString(value).toLowerCase();
-  if (normalized === 'deep' || normalized === 'off' || normalized === 'compact') {
-    return normalized;
-  }
-
-  const requested = normalizeReviewString(value).toUpperCase();
-  if (requested === 'DEEP') {
-    return 'deep';
-  }
-  if (requested === 'OFF') {
-    return 'off';
-  }
-  return 'compact';
-}
-
-function normalizeReviewString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
-function normalizeReviewStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-}
-
-function asObject(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  return value as Record<string, unknown>;
-}
-
 function sectionTitle(sectionId: FlowExplorerResultSectionId): string {
   return FOCUS_AREA_OPTIONS.find((option) => option.value === sectionId)?.label ?? sectionId;
-}
-
-function isAnalysisGoal(value: unknown): value is FlowExplorerAnalysisGoal {
-  return value === 'DEEP_DISCOVERY' || value === 'TEST_SCENARIOS' || value === 'RISK_DETECTION';
 }
 
 function isSectionId(value: unknown): value is FlowExplorerResultSectionId {

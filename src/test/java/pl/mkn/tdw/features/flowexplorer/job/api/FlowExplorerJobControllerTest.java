@@ -32,7 +32,6 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -187,50 +186,6 @@ class FlowExplorerJobControllerTest {
     }
 
     @Test
-    void shouldApplyFlowExplorerResultUpdate() throws Exception {
-        when(flowExplorerJobService.applyResultUpdate(
-                any(String.class),
-                any(String.class),
-                any(FlowExplorerResultUpdateDecisionRequest.class)
-        )).thenReturn(snapshot("job-123"));
-
-        mockMvc.perform(post("/api/flow-explorer/jobs/job-123/chat/messages/message-2/result-update/apply")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(resultUpdateDecisionJson()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.jobId").value("job-123"))
-                .andExpect(jsonPath("$.result.aiResponse.overview.markdown").value("Context ready."));
-
-        verify(flowExplorerJobService).applyResultUpdate(
-                eq("job-123"),
-                eq("message-2"),
-                any(FlowExplorerResultUpdateDecisionRequest.class)
-        );
-    }
-
-    @Test
-    void shouldRejectFlowExplorerResultUpdate() throws Exception {
-        when(flowExplorerJobService.rejectResultUpdate(
-                any(String.class),
-                any(String.class),
-                any(FlowExplorerResultUpdateDecisionRequest.class)
-        )).thenReturn(snapshot("job-123"));
-
-        mockMvc.perform(post("/api/flow-explorer/jobs/job-123/chat/messages/message-2/result-update/reject")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(resultUpdateDecisionJson()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.jobId").value("job-123"))
-                .andExpect(jsonPath("$.result.aiResponse.overview.markdown").value("Context ready."));
-
-        verify(flowExplorerJobService).rejectResultUpdate(
-                eq("job-123"),
-                eq("message-2"),
-                any(FlowExplorerResultUpdateDecisionRequest.class)
-        );
-    }
-
-    @Test
     void shouldReturnNotFoundWhenJobIsMissing() throws Exception {
         when(flowExplorerJobService.getJob("missing-job"))
                 .thenThrow(new FlowExplorerJobNotFoundException("missing-job"));
@@ -261,7 +216,6 @@ class FlowExplorerJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
-                        null,
                         null
                 ),
                 new AnalysisChatMessageResponse(
@@ -277,8 +231,7 @@ class FlowExplorerJobControllerTest {
                         List.of(),
                         List.of(),
                         List.of(),
-                        "Gdzie jest walidacja?",
-                        null
+                        "Gdzie jest walidacja?"
                 )
         ));
     }
@@ -344,38 +297,6 @@ class FlowExplorerJobControllerTest {
                         null
                 )
         );
-    }
-
-    private static String resultUpdateDecisionJson() {
-        return """
-                {
-                  "aiResponse": {
-                    "goal": "DEEP_DISCOVERY",
-                    "audience": "business_or_system_analyst_tester",
-                    "overview": {
-                      "markdown": "Context ready.",
-                      "confidence": "high",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
-                    },
-                    "sections": [
-                      {
-                        "id": "FUNCTIONAL_FLOW",
-                        "title": "Functional flow",
-                        "mode": "DEEP",
-                        "markdown": "Controller przyjmuje request.",
-                        "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
-                        "visibilityLimits": [],
-                        "openQuestions": []
-                      }
-                    ],
-                    "globalVisibilityLimits": [],
-                    "globalOpenQuestions": [],
-                    "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
-                    "confidence": "high",
-                    "followUpPrompts": []
-                  }
-                }
-                """;
     }
 
     private static FlowExplorerAiResponse aiResponse() {

@@ -254,7 +254,6 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 List.of(),
                 List.of(),
                 List.of(),
-                null,
                 null
         ));
         chatMessages.add(new AnalysisChatMessageResponse(
@@ -270,8 +269,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 captured.toolEvidenceSections(),
                 captured.aiActivityEvents(),
                 captured.toolFeedback(),
-                response != null ? response.prompt() : null,
-                null
+                response != null ? response.prompt() : null
         ));
 
         return new AnalysisJobStateSnapshot(

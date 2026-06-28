@@ -884,10 +884,6 @@ article.flow-explorer-select-option {
   background: #fff;
 }
 
-.flow-explorer-follow-up-prompt--static {
-  grid-template-columns: 32px minmax(0, 1fr);
-}
-
 .flow-explorer-follow-up-prompt__index {
   display: inline-grid;
   place-items: center;
@@ -1269,153 +1265,6 @@ article.flow-explorer-select-option {
   gap: 4px;
 }
 
-.flow-explorer-review-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(9, 30, 66, 0.42);
-}
-
-.flow-explorer-review-dialog {
-  position: relative;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  width: min(1180px, 100%);
-  max-height: min(92vh, 980px);
-  min-height: min(720px, 92vh);
-  overflow: hidden;
-  border: 1px solid rgba(184, 198, 216, 0.95);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 24px 80px rgba(9, 30, 66, 0.26);
-}
-
-.flow-explorer-review-dialog__header,
-.flow-explorer-review-dialog__footer {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-  padding: 16px 18px;
-  background: var(--surface);
-}
-
-.flow-explorer-review-dialog__header {
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-}
-
-.flow-explorer-review-dialog__header > div {
-  min-width: 0;
-}
-
-.flow-explorer-review-dialog__header h2 {
-  margin: 0;
-  color: var(--text-main);
-  font-size: 1.18rem;
-  line-height: 1.25;
-}
-
-.flow-explorer-review-dialog__close {
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.flow-explorer-review-dialog__close:hover,
-.flow-explorer-review-dialog__close:focus-visible {
-  border-color: rgba(12, 102, 228, 0.24);
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-  outline: none;
-}
-
-.flow-explorer-review-dialog__close:disabled {
-  cursor: wait;
-  opacity: 0.62;
-}
-
-.flow-explorer-review-dialog__tabs {
-  display: inline-flex;
-  gap: 6px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-alt);
-}
-
-.flow-explorer-review-dialog__tabs button {
-  min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.flow-explorer-review-dialog__tabs button:hover,
-.flow-explorer-review-dialog__tabs button:focus-visible,
-.flow-explorer-review-dialog__tabs button.is-active {
-  border-color: rgba(12, 102, 228, 0.24);
-  background: #fff;
-  color: var(--primary-dark);
-  outline: none;
-}
-
-.flow-explorer-review-dialog__tabs button:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-}
-
-.flow-explorer-review-dialog__body {
-  display: grid;
-  align-content: start;
-  gap: 24px;
-  min-width: 0;
-  overflow: auto;
-  padding: 18px;
-  background: var(--surface);
-}
-
-.flow-explorer-review-dialog__footer {
-  justify-content: space-between;
-  border-top: 1px solid var(--border);
-}
-
-.flow-explorer-review-dialog__status {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.flow-explorer-review-dialog__actions {
-  display: inline-flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.flow-explorer-review-dialog__actions .secondary-button.is-loading .button-spinner {
-  display: inline-flex;
-  border-color: rgba(12, 102, 228, 0.22);
-  border-top-color: var(--primary);
-}
-
 .flow-explorer-warning {
   color: var(--warning-text);
 }
@@ -1531,31 +1380,5 @@ article.flow-explorer-select-option {
     left: 16px;
     width: auto;
     max-height: 60vh;
-  }
-
-  .flow-explorer-review-modal {
-    padding: 12px;
-  }
-
-  .flow-explorer-review-dialog {
-    min-height: 88vh;
-  }
-
-  .flow-explorer-review-dialog__header,
-  .flow-explorer-review-dialog__footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .flow-explorer-review-dialog__close {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-  }
-
-  .flow-explorer-review-dialog__actions,
-  .flow-explorer-review-dialog__actions .primary-button,
-  .flow-explorer-review-dialog__actions .secondary-button {
-    width: 100%;
   }
 }

@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import {
   AnalysisChatMessageRequest,
-  LocalAnalysisRunResultUpdateDecisionRequest,
   LocalAnalysisRunDetailResponse,
   LocalAnalysisRunListResponse,
   RenameLocalAnalysisRunRequest
@@ -46,28 +45,6 @@ export class AnalysisRunHistoryApiService {
   ): Observable<LocalAnalysisRunDetailResponse> {
     return this.http.post<LocalAnalysisRunDetailResponse>(
       `/analysis/runs/${encodeURIComponent(analysisId)}/chat/messages`,
-      request
-    );
-  }
-
-  applyResultUpdate(
-    analysisId: string,
-    messageId: string,
-    request: LocalAnalysisRunResultUpdateDecisionRequest
-  ): Observable<LocalAnalysisRunDetailResponse> {
-    return this.http.post<LocalAnalysisRunDetailResponse>(
-      `/analysis/runs/${encodeURIComponent(analysisId)}/chat/messages/${encodeURIComponent(messageId)}/result-update/apply`,
-      request
-    );
-  }
-
-  rejectResultUpdate(
-    analysisId: string,
-    messageId: string,
-    request: LocalAnalysisRunResultUpdateDecisionRequest
-  ): Observable<LocalAnalysisRunDetailResponse> {
-    return this.http.post<LocalAnalysisRunDetailResponse>(
-      `/analysis/runs/${encodeURIComponent(analysisId)}/chat/messages/${encodeURIComponent(messageId)}/result-update/reject`,
       request
     );
   }

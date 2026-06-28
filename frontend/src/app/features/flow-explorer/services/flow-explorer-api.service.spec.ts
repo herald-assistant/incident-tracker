@@ -3,7 +3,6 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { FlowExplorerApiService } from './flow-explorer-api.service';
-import { flowExplorerAiResponseFixture } from '../utils/flow-explorer-test-fixtures';
 
 describe('FlowExplorerApiService', () => {
   let service: FlowExplorerApiService;
@@ -79,25 +78,5 @@ describe('FlowExplorerApiService', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ message: 'Gdzie jest walidacja?' });
     request.flush({ jobId: 'job/123', chatMessages: [] });
-  });
-
-  it('should apply and reject result update proposals for a job', () => {
-    const aiResponse = flowExplorerAiResponseFixture();
-
-    service.applyResultUpdate('job/123', 'message/1', { aiResponse }).subscribe();
-    const applyRequest = http.expectOne(
-      '/api/flow-explorer/jobs/job%2F123/chat/messages/message%2F1/result-update/apply'
-    );
-    expect(applyRequest.request.method).toBe('POST');
-    expect(applyRequest.request.body).toEqual({ aiResponse });
-    applyRequest.flush({ jobId: 'job/123' });
-
-    service.rejectResultUpdate('job/123', 'message/1', { aiResponse }).subscribe();
-    const rejectRequest = http.expectOne(
-      '/api/flow-explorer/jobs/job%2F123/chat/messages/message%2F1/result-update/reject'
-    );
-    expect(rejectRequest.request.method).toBe('POST');
-    expect(rejectRequest.request.body).toEqual({ aiResponse });
-    rejectRequest.flush({ jobId: 'job/123' });
   });
 });

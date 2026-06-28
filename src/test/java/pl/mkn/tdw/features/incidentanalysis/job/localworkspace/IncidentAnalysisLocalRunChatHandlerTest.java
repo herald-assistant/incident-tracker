@@ -229,7 +229,6 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                 toolEvidenceSections,
                 List.of(),
                 List.of(),
-                null,
                 null
         );
     }

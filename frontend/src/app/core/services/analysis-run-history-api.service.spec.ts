@@ -76,26 +76,6 @@ describe('AnalysisRunHistoryApiService', () => {
     request.flush({ analysisId: 'analysis/1' });
   });
 
-  it('should apply and reject result update proposals for a local run', () => {
-    const aiResponse = { overview: { markdown: 'Updated result.' } };
-
-    service.applyResultUpdate('analysis/1', 'message/1', { aiResponse }).subscribe();
-    const applyRequest = http.expectOne(
-      '/analysis/runs/analysis%2F1/chat/messages/message%2F1/result-update/apply'
-    );
-    expect(applyRequest.request.method).toBe('POST');
-    expect(applyRequest.request.body).toEqual({ aiResponse });
-    applyRequest.flush({ analysisId: 'analysis/1' });
-
-    service.rejectResultUpdate('analysis/1', 'message/1', { aiResponse }).subscribe();
-    const rejectRequest = http.expectOne(
-      '/analysis/runs/analysis%2F1/chat/messages/message%2F1/result-update/reject'
-    );
-    expect(rejectRequest.request.method).toBe('POST');
-    expect(rejectRequest.request.body).toEqual({ aiResponse });
-    rejectRequest.flush({ analysisId: 'analysis/1' });
-  });
-
   it('should delete a local run', () => {
     service.deleteRun('analysis/1').subscribe();
 

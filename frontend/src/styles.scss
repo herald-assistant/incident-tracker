@@ -1234,40 +1234,6 @@ body .flow-tree-node__badges .confidence-pill,
   color: var(--text-main);
 }
 
-.chat-message__actions {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.chat-message__review-button {
-  display: inline-flex;
-  flex: 0 1 auto;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 32px;
-  max-width: 100%;
-  padding: 0 10px;
-  border: 1px solid rgba(12, 102, 228, 0.22);
-  border-radius: 8px;
-  background: rgba(222, 235, 255, 0.72);
-  color: var(--primary-dark);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    transform 140ms ease;
-}
-
 .chat-message__copy-button {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1290,21 +1256,18 @@ body .flow-tree-node__badges .confidence-pill,
     transform 140ms ease;
 }
 
-.chat-message__copy-button:hover,
-.chat-message__review-button:hover {
+.chat-message__copy-button:hover {
   transform: translateY(-1px);
   border-color: rgba(12, 102, 228, 0.42);
   background: #fff;
 }
 
-.chat-message__copy-button:focus-visible,
-.chat-message__review-button:focus-visible {
+.chat-message__copy-button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.14);
 }
 
-.chat-message__copy-button .material-symbols-outlined,
-.chat-message__review-button .material-symbols-outlined {
+.chat-message__copy-button .material-symbols-outlined {
   font-size: 18px;
   line-height: 1;
 }

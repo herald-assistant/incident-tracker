@@ -174,10 +174,6 @@ export interface FlowExplorerChatMessageRequest {
   message: string;
 }
 
-export interface FlowExplorerResultUpdateDecisionRequest {
-  aiResponse: FlowExplorerAiResponse;
-}
-
 export interface FlowExplorerJobStateSnapshot {
   jobId: string;
   systemId: string;

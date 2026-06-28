@@ -128,30 +128,6 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Szukaj pelnego functional flow"));
     }
 
-    @Test
-    void shouldRenderFollowUpPromptWithJsonOnlyResultUpdateContract() {
-        var preparation = service.prepareFollowUp(request(), "Dopisz szczegoly walidacji.");
-        var prompt = preparation.prompt();
-
-        assertTrue(prompt.contains("# Flow Explorer follow-up prompt"));
-        assertTrue(prompt.contains("Zwroc wylacznie poprawny JSON"));
-        assertTrue(prompt.contains("`message` jest wymagane"));
-        assertTrue(prompt.contains("`resultUpdate` jest opcjonalne"));
-        assertTrue(prompt.contains("partialem `FlowExplorerAiResponse`"));
-        assertTrue(prompt.contains("brak pola oznacza brak zmiany"));
-        assertTrue(prompt.contains("pusta lista oznacza jawne zastapienie wartosci pusta lista"));
-        assertTrue(prompt.contains("nie uzywaj `null`"));
-        assertTrue(prompt.contains("Aktualne `sectionModes` sa zrodlem prawdy"));
-        assertTrue(prompt.contains("activeSectionIds"));
-        assertTrue(prompt.contains("goal: TEST_SCENARIOS"));
-        assertTrue(prompt.contains("reasoningEffort: high"));
-        assertTrue(prompt.contains("Dopisz szczegoly walidacji."));
-        assertTrue(prompt.contains("\"message\": \"Wyjasnienie dla operatora.\""));
-        assertTrue(prompt.contains("\"resultUpdate\""));
-        assertTrue(preparation.artifacts().isEmpty());
-        assertTrue(preparation.artifactContents().isEmpty());
-    }
-
     private static FlowExplorerContextSnapshot contextSnapshot() {
         return contextSnapshot(false, false, false);
     }

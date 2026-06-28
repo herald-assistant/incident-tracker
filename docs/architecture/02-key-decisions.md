@@ -572,38 +572,14 @@ Decyzje:
 - raw SQL pozostaje wylaczony domyslnie; chat preferuje typed DB tools,
 - tool evidence pobrane w follow-up jest przypisane do odpowiedzi chatu, a nie
   do deterministycznego pipeline evidence.
-- shared `AnalysisChatMessageResponse` moze niesc opcjonalne `resultUpdate`;
-  shared warstwa przenosi je jako feature-owned JSON i go nie interpretuje,
-- brak `resultUpdate` oznacza zwykla odpowiedz chatu, bez side effectu na
-  wynik analizy,
-- feature musi jawnie wlaczyc result update proposals; Incident Analysis
-  zostaje message-only, a Flow Explorer jest pierwszym feature'em opt-in,
-- dla Flow Explorera AI zwraca JSON-only `{ message, resultUpdate? }`, gdzie
-  `resultUpdate` jest partialem kontraktu `FlowExplorerAiResponse`; backend
-  feature'a waliduje go, naklada na aktualny wynik i zapisuje przy wiadomosci
-  assistant pelny proponowany wynik,
-- `Before` nie jest polem odpowiedzi chatu: UI bierze go z aktualnego
-  `result`, a `message.resultUpdate` jest stanem `After`,
-- nie dodajemy w MVP `proposalId`, `status`, `beforeResult`, `afterResult`,
-  osobnego `summary` ani `resultType`; jedna wiadomosc assistant moze miec
-  najwyzej jedna aktywna propozycje,
-- `Apply` i `Reject` zapisuje aktualny authoritative result przeslany z UI,
-  czysci aktywna propozycje z wiadomosci i wysyla do tej samej sesji Copilota
-  ukryta wiadomosc synchronizacyjna z prosba o odpowiedz `OK`; ta odpowiedz
-  nie trafia do widocznej historii chatu.
 
 Konsekwencje:
 
 - importowany zapis analizy jest read-only dla UI chatu, bo backend nie ma
   lokalnego uchwytu sesji SDK,
-- importowany export moze pokazac historyczne `Review changes`, jezeli plik
-  zawiera aktywne `resultUpdate`, ale nie pokazuje akcji `Apply`/`Reject`,
 - lokalny zapis runu moze byc kontynuowany tylko wtedy, gdy ma
   `copilotSessionId`; brak tego id jest bledem kontynuacji, bez fallbacku do
   nowej sesji,
-- kontynuowalny local run moze obsluzyc result update decision przez
-  shared/operator history API, ale samo zastosowanie zmiany deleguje do
-  feature-owned handlera,
 - chat moze prosic AI o weryfikacje w repo, DB albo wygenerowanie raportu, ale
   model nie powinien wymyslac scope'u ani obchodzic blokady lokalnego workspace.
 

@@ -51,24 +51,6 @@ public class AnalysisRunHistoryController {
         return analysisRunHistoryService.sendChatMessage(analysisId, request);
     }
 
-    @PostMapping("/{analysisId}/chat/messages/{messageId}/result-update/apply")
-    public LocalAnalysisRunDetailResponse applyResultUpdate(
-            @PathVariable String analysisId,
-            @PathVariable String messageId,
-            @Valid @RequestBody LocalAnalysisRunResultUpdateDecisionRequest request
-    ) {
-        return analysisRunHistoryService.applyResultUpdate(analysisId, messageId, request);
-    }
-
-    @PostMapping("/{analysisId}/chat/messages/{messageId}/result-update/reject")
-    public LocalAnalysisRunDetailResponse rejectResultUpdate(
-            @PathVariable String analysisId,
-            @PathVariable String messageId,
-            @Valid @RequestBody LocalAnalysisRunResultUpdateDecisionRequest request
-    ) {
-        return analysisRunHistoryService.rejectResultUpdate(analysisId, messageId, request);
-    }
-
     @DeleteMapping("/{analysisId}")
     public ResponseEntity<Void> deleteRun(@PathVariable String analysisId) {
         analysisRunHistoryService.deleteRun(analysisId);

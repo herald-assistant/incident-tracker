@@ -609,8 +609,7 @@ public final class AnalysisJobState {
                     List.copyOf(toolEvidenceSections),
                     List.copyOf(aiActivityEvents),
                     List.copyOf(toolFeedback),
-                    prompt,
-                    null
+                    prompt
             );
         }
 

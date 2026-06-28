@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
@@ -15,7 +14,6 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatResult;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunResultUpdateHandler;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 
 import java.time.Instant;
@@ -165,72 +163,6 @@ class AnalysisRunHistoryServiceTest {
         assertEquals(CHAT_UPDATED_AT, store.entries.get("analysis-1").updatedAt());
         assertEquals(CHAT_UPDATED_AT, response.updatedAt());
         assertEquals("Updated prompt after chat", response.exportEnvelope().at("/payload/job/preparedPrompt").asText());
-    }
-
-    @Test
-    void shouldApplyResultUpdateThroughFeatureHandlerAndSaveUpdatedRun() {
-        var store = new CapturingLocalAnalysisRunStore();
-        var originalRecord = record("flow-1", true);
-        var updatedRecord = recordWithPrompt("flow-1", "Updated prompt after apply");
-        store.addRun(entry("flow-1", "flow-explorer", "GET /customers"), originalRecord);
-        var handler = new CapturingResultUpdateHandler("flow-explorer", updatedRecord);
-        var service = new AnalysisRunHistoryService(store, List.of(), List.of(handler));
-        var aiResponse = objectMapper.createObjectNode().put("confidence", "high");
-
-        var response = service.applyResultUpdate(
-                " flow-1 ",
-                " assistant-1 ",
-                new LocalAnalysisRunResultUpdateDecisionRequest(aiResponse)
-        );
-
-        assertEquals("flow-1", handler.indexEntry.analysisId());
-        assertEquals(originalRecord, handler.record);
-        assertEquals("assistant-1", handler.messageId);
-        assertEquals(aiResponse, handler.aiResponse);
-        assertEquals(updatedRecord, store.records.get("flow-1"));
-        assertEquals(CHAT_UPDATED_AT, store.entries.get("flow-1").updatedAt());
-        assertEquals(CHAT_UPDATED_AT, response.updatedAt());
-        assertEquals("Updated prompt after apply", response.exportEnvelope().at("/payload/job/preparedPrompt").asText());
-        assertEquals("APPLY", handler.decision);
-    }
-
-    @Test
-    void shouldRejectResultUpdateThroughFeatureHandlerAndSaveUpdatedRun() {
-        var store = new CapturingLocalAnalysisRunStore();
-        var originalRecord = record("flow-1", true);
-        var updatedRecord = recordWithPrompt("flow-1", "Updated prompt after reject");
-        store.addRun(entry("flow-1", "flow-explorer", "GET /customers"), originalRecord);
-        var handler = new CapturingResultUpdateHandler("flow-explorer", updatedRecord);
-        var service = new AnalysisRunHistoryService(store, List.of(), List.of(handler));
-        var aiResponse = objectMapper.createObjectNode().put("confidence", "medium");
-
-        var response = service.rejectResultUpdate(
-                "flow-1",
-                "assistant-1",
-                new LocalAnalysisRunResultUpdateDecisionRequest(aiResponse)
-        );
-
-        assertEquals("flow-1", handler.indexEntry.analysisId());
-        assertEquals(originalRecord, handler.record);
-        assertEquals("assistant-1", handler.messageId);
-        assertEquals(aiResponse, handler.aiResponse);
-        assertEquals(updatedRecord, store.records.get("flow-1"));
-        assertEquals(CHAT_UPDATED_AT, response.updatedAt());
-        assertEquals("REJECT", handler.decision);
-    }
-
-    @Test
-    void shouldRejectResultUpdateWhenFeatureHasNoHandler() {
-        var store = new CapturingLocalAnalysisRunStore();
-        store.addRun(entry("flow-1", "flow-explorer", "GET /customers"), record("flow-1", true));
-        var service = new AnalysisRunHistoryService(store, List.of(), List.of());
-
-        assertThrows(LocalAnalysisRunContinuationUnavailableException.class,
-                () -> service.applyResultUpdate(
-                        "flow-1",
-                        "assistant-1",
-                        new LocalAnalysisRunResultUpdateDecisionRequest(objectMapper.createObjectNode())
-                ));
     }
 
     @Test
@@ -516,63 +448,6 @@ class AnalysisRunHistoryServiceTest {
                 throw exception;
             }
             return new LocalAnalysisRunChatResult(updatedRecord, CHAT_UPDATED_AT);
-        }
-    }
-
-    private static final class CapturingResultUpdateHandler implements LocalAnalysisRunResultUpdateHandler {
-
-        private final String feature;
-        private final LocalAnalysisRunRecord updatedRecord;
-        private LocalAnalysisRunIndexEntry indexEntry;
-        private LocalAnalysisRunRecord record;
-        private String messageId;
-        private JsonNode aiResponse;
-        private String decision;
-
-        private CapturingResultUpdateHandler(String feature, LocalAnalysisRunRecord updatedRecord) {
-            this.feature = feature;
-            this.updatedRecord = updatedRecord;
-        }
-
-        @Override
-        public String feature() {
-            return feature;
-        }
-
-        @Override
-        public LocalAnalysisRunChatResult applyResultUpdate(
-                LocalAnalysisRunIndexEntry indexEntry,
-                LocalAnalysisRunRecord record,
-                String messageId,
-                JsonNode aiResponse
-        ) {
-            capture(indexEntry, record, messageId, aiResponse, "APPLY");
-            return new LocalAnalysisRunChatResult(updatedRecord, CHAT_UPDATED_AT);
-        }
-
-        @Override
-        public LocalAnalysisRunChatResult rejectResultUpdate(
-                LocalAnalysisRunIndexEntry indexEntry,
-                LocalAnalysisRunRecord record,
-                String messageId,
-                JsonNode aiResponse
-        ) {
-            capture(indexEntry, record, messageId, aiResponse, "REJECT");
-            return new LocalAnalysisRunChatResult(updatedRecord, CHAT_UPDATED_AT);
-        }
-
-        private void capture(
-                LocalAnalysisRunIndexEntry indexEntry,
-                LocalAnalysisRunRecord record,
-                String messageId,
-                JsonNode aiResponse,
-                String decision
-        ) {
-            this.indexEntry = indexEntry;
-            this.record = record;
-            this.messageId = messageId;
-            this.aiResponse = aiResponse;
-            this.decision = decision;
         }
     }
 

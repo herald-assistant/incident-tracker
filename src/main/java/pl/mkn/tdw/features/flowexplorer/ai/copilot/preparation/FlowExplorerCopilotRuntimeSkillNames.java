@@ -46,26 +46,11 @@ final class FlowExplorerCopilotRuntimeSkillNames {
     }
 
     static List<String> followUpSkillNames() {
-        return followUpSkillNames(null);
-    }
-
-    static List<String> followUpSkillNames(FlowExplorerAnalysisGoal goal) {
-        var skillNames = new java.util.ArrayList<>(List.of(
+        return List.of(
                 STARTER_SKILL_NAME,
                 GITLAB_TOOLS_SKILL_NAME,
-                OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME,
-                RESULT_CONTRACT_SKILL_NAME
-        ));
-        if (goal == FlowExplorerAnalysisGoal.DEEP_DISCOVERY) {
-            skillNames.add(DEEP_DISCOVERY_SKILL_NAME);
-        }
-        if (goal == FlowExplorerAnalysisGoal.TEST_SCENARIOS) {
-            skillNames.add(TEST_SCENARIOS_SKILL_NAME);
-        }
-        if (goal == FlowExplorerAnalysisGoal.RISK_DETECTION) {
-            skillNames.add(RISK_DETECTION_SKILL_NAME);
-        }
-        return List.copyOf(skillNames);
+                OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME
+        );
     }
 
     private FlowExplorerCopilotRuntimeSkillNames() {

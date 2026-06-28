@@ -1,22 +1,15 @@
 package pl.mkn.tdw.features.flowexplorer.job;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
-import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
-import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerResultUpdateApplicator;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
@@ -26,16 +19,11 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextService;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultUpdateDecisionRequest;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
-import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobResultUpdateUnavailableException;
 import pl.mkn.tdw.features.flowexplorer.job.localworkspace.FlowExplorerLocalRunPersistence;
 import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerJobState;
-import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerResultUpdateDecision;
-import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerResultUpdateDecisionContext;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
-import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 
 import java.util.List;
 import java.util.Map;
@@ -53,9 +41,6 @@ public class FlowExplorerJobService {
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final FlowExplorerAiResponseParser responseParser;
-    private final FlowExplorerFollowUpChatResponseParser followUpResponseParser;
-    private final FlowExplorerResultUpdateApplicator resultUpdateApplicator;
-    private final ObjectMapper objectMapper;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final CopilotRunAuthMapper runAuthMapper;
@@ -78,9 +63,6 @@ public class FlowExplorerJobService {
                 runPreparationService,
                 executionGateway,
                 responseParser,
-                new FlowExplorerFollowUpChatResponseParser(new ObjectMapper()),
-                new FlowExplorerResultUpdateApplicator(),
-                new ObjectMapper(),
                 applicationTaskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),
                 new CopilotRunAuthMapper(),
@@ -113,9 +95,6 @@ public class FlowExplorerJobService {
                 runPreparationService,
                 executionGateway,
                 responseParser,
-                new FlowExplorerFollowUpChatResponseParser(new ObjectMapper()),
-                new FlowExplorerResultUpdateApplicator(),
-                new ObjectMapper(),
                 applicationTaskExecutor,
                 authRefResolver,
                 runAuthMapper,
@@ -132,9 +111,6 @@ public class FlowExplorerJobService {
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
             FlowExplorerAiResponseParser responseParser,
-            FlowExplorerFollowUpChatResponseParser followUpResponseParser,
-            FlowExplorerResultUpdateApplicator resultUpdateApplicator,
-            ObjectMapper objectMapper,
             TaskExecutor applicationTaskExecutor,
             AnalysisAiAuthRefResolver authRefResolver,
             CopilotRunAuthMapper runAuthMapper,
@@ -147,9 +123,6 @@ public class FlowExplorerJobService {
         this.runPreparationService = runPreparationService;
         this.executionGateway = executionGateway;
         this.responseParser = responseParser;
-        this.followUpResponseParser = followUpResponseParser;
-        this.resultUpdateApplicator = resultUpdateApplicator;
-        this.objectMapper = objectMapper;
         this.applicationTaskExecutor = applicationTaskExecutor;
         this.authRefResolver = authRefResolver;
         this.runAuthMapper = runAuthMapper;
@@ -247,10 +220,10 @@ public class FlowExplorerJobService {
             FlowExplorerFollowUpChatRequest chatRequest
     ) {
         try {
-            var visiblePrompt = chatRequest.message() != null ? chatRequest.message().trim() : "";
-            var promptPreparation = promptPreparationService.prepareFollowUp(
-                    chatRequest.initialRequest(),
-                    visiblePrompt
+            var promptPreparation = new FlowExplorerPromptPreparation(
+                    chatRequest.message() != null ? chatRequest.message().trim() : "",
+                    List.of(),
+                    Map.of()
             );
             var runAssembly = runRequestAssembler.assembleFollowUp(
                     "flow-explorer-follow-up-" + assistantMessageId,
@@ -264,19 +237,11 @@ public class FlowExplorerJobService {
                     .withEvidenceSink(section -> job.markChatToolEvidenceUpdated(assistantMessageId, section))
                     .withActivitySink(event -> job.markChatAiActivity(assistantMessageId, event));
             var executionResult = executionGateway.execute(preparedSession);
-            var parsedResponse = followUpResponseParser.parse(executionResult.content());
-            var resultUpdate = parsedResponse.hasResultUpdate()
-                    ? objectMapper.valueToTree(resultUpdateApplicator.apply(
-                            job.currentAiResponse(),
-                            parsedResponse.resultUpdate()
-                    ))
-                    : null;
             job.markChatCompleted(
                     assistantMessageId,
-                    parsedResponse.message(),
-                    visiblePrompt,
-                    executionResult.sessionId(),
-                    resultUpdate
+                    executionResult.content(),
+                    promptPreparation.prompt(),
+                    executionResult.sessionId()
             );
         } catch (RuntimeException exception) {
             log.error(
@@ -293,114 +258,6 @@ public class FlowExplorerJobService {
                             ? exception.getMessage()
                             : "Unexpected Flow Explorer follow-up chat failure."
             );
-        }
-    }
-
-    public FlowExplorerJobStateSnapshot applyResultUpdate(
-            String jobId,
-            String messageId,
-            FlowExplorerResultUpdateDecisionRequest request
-    ) {
-        return decideResultUpdate(jobId, messageId, request, FlowExplorerResultUpdateDecision.APPLY);
-    }
-
-    public FlowExplorerJobStateSnapshot rejectResultUpdate(
-            String jobId,
-            String messageId,
-            FlowExplorerResultUpdateDecisionRequest request
-    ) {
-        return decideResultUpdate(jobId, messageId, request, FlowExplorerResultUpdateDecision.REJECT);
-    }
-
-    private FlowExplorerJobStateSnapshot decideResultUpdate(
-            String jobId,
-            String messageId,
-            FlowExplorerResultUpdateDecisionRequest request,
-            FlowExplorerResultUpdateDecision decision
-    ) {
-        var job = jobOrThrow(jobId);
-        var aiResponse = request != null ? request.aiResponse() : null;
-        var decisionContext = job.startResultUpdateDecision(messageId, decision, aiResponse);
-        try {
-            accessTokenResolver.resolve(runAuthMapper.toRunAuth(decisionContext.authRef()));
-            var syncResult = executeResultUpdateSync(decisionContext);
-            job.markResultUpdateDecisionCompleted(
-                    messageId,
-                    decisionContext.authoritativeResult(),
-                    syncResult.sessionId()
-            );
-            return job.snapshot();
-        } catch (CopilotLocalTokenMissingException
-                 | GitHubCopilotAuthRequiredException
-                 | GitHubCopilotReauthRequiredException
-                 | UserFacingApplicationException exception) {
-            job.markResultUpdateDecisionFailed(messageId);
-            throw exception;
-        } catch (RuntimeException exception) {
-            job.markResultUpdateDecisionFailed(messageId);
-            throw new FlowExplorerJobResultUpdateUnavailableException(
-                    "FLOW_EXPLORER_RESULT_UPDATE_SYNC_FAILED",
-                    StringUtils.hasText(exception.getMessage())
-                            ? exception.getMessage()
-                            : "Flow Explorer result update session sync failed."
-            );
-        }
-    }
-
-    private pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult executeResultUpdateSync(
-            FlowExplorerResultUpdateDecisionContext decisionContext
-    ) {
-        var promptPreparation = new FlowExplorerPromptPreparation(
-                resultUpdateSyncPrompt(decisionContext),
-                List.of(),
-                Map.of()
-        );
-        var runAssembly = runRequestAssembler.assembleFollowUp(
-                "flow-explorer-result-update-" + decisionContext.decision().name().toLowerCase() + "-"
-                        + decisionContext.assistantMessageId(),
-                decisionContext.initialRequest(),
-                decisionContext.contextSnapshot(),
-                promptPreparation,
-                decisionContext.copilotSessionId(),
-                decisionContext.authRef()
-        );
-        var preparedSession = runPreparationService.prepare(runAssembly.runRequest());
-        var executionResult = executionGateway.execute(preparedSession);
-        if (!"OK".equalsIgnoreCase(executionResult.content() != null ? executionResult.content().trim() : "")) {
-            throw new IllegalStateException("Flow Explorer result update session sync did not return OK.");
-        }
-        return executionResult;
-    }
-
-    private String resultUpdateSyncPrompt(FlowExplorerResultUpdateDecisionContext decisionContext) {
-        var decisionText = switch (decisionContext.decision()) {
-            case APPLY -> "operator zaakceptowal resultUpdate";
-            case REJECT -> "operator odrzucil resultUpdate";
-        };
-        return """
-                Techniczna wiadomosc synchronizacyjna Flow Explorer. Nie pokazuj jej uzytkownikowi jako tresci merytorycznej.
-
-                Decyzja operatora: %s z assistant message id `%s`.
-                Ponizszy `FlowExplorerAiResponse` jest teraz authoritative state aplikacji.
-
-                Authoritative result JSON:
-                %s
-
-                Odpowiedz dokladnie jednym slowem:
-                OK
-                """.formatted(
-                decisionText,
-                decisionContext.assistantMessageId(),
-                resultUpdateJson(decisionContext)
-        );
-    }
-
-    private String resultUpdateJson(FlowExplorerResultUpdateDecisionContext decisionContext) {
-        try {
-            return objectMapper.writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(decisionContext.authoritativeResult());
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Flow Explorer result update cannot be serialized.", exception);
         }
     }
 

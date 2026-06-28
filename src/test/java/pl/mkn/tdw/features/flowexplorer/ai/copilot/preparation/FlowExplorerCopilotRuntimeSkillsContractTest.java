@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,16 +50,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
                 "flow-explorer-gitlab-tools",
-                "flow-explorer-operational-context-tools",
-                "flow-explorer-result-contract"
+                "flow-explorer-operational-context-tools"
         ), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
-        assertEquals(List.of(
-                "flow-explorer-orchestrator",
-                "flow-explorer-gitlab-tools",
-                "flow-explorer-operational-context-tools",
-                "flow-explorer-result-contract",
-                "flow-explorer-goal-risk-detection"
-        ), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(FlowExplorerAnalysisGoal.RISK_DETECTION));
     }
 
     @Test
@@ -72,7 +63,6 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Algorytm Pracy",
                 "## Zasady Kosztowe",
                 "## Kiedy Uzyc Tools",
-                "## Follow-Up Chat I Result Update",
                 "## Antywzorce"
         ));
         assertSkillContainsSections("flow-explorer-gitlab-tools", List.of(
@@ -94,7 +84,6 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertSkillContainsSections("flow-explorer-result-contract", List.of(
                 "## Rola",
                 "## Wymagany JSON Contract",
-                "## Follow-Up Response Contract",
                 "## Follow-Up Prompts",
                 "## Sekcje I Kolejnosc",
                 "## Functional Flow Contract",
@@ -171,9 +160,6 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("`OFF` oznacza: nie zwracaj tej sekcji w `sections`"));
         assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
         assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
-        assertTrue(orchestrator.contains("`resultUpdate` jest partialem kontraktu initial result"));
-        assertTrue(orchestrator.contains("Wiadomosc techniczna po Apply/Reject"));
-        assertTrue(orchestrator.contains("nie zwracaj `goal`, metadanych endpointu, `prompt`, `usage` ani `status`"));
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja functional scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
@@ -206,11 +192,6 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(deepDiscovery.contains("szczegoly implementacyjne nie sa trescia tabeli wynikowej"));
 
         assertTrue(resultContract.contains("## Persistence Deep Contract"));
-        assertTrue(resultContract.contains("## Follow-Up Response Contract"));
-        assertTrue(resultContract.contains("`resultUpdate` jest opcjonalny i jest partialem"));
-        assertTrue(resultContract.contains("brak pola w `resultUpdate` oznacza brak zmiany"));
-        assertTrue(resultContract.contains("nie zwracaj w `resultUpdate` pol `goal`, `systemId`, `endpointId`"));
-        assertTrue(resultContract.contains("Nie przepisuj calego wyniku tylko po to, zeby pokazac brak zmiany"));
         assertTrue(resultContract.contains("`FUNCTIONAL_FLOW` ma tytul `Functional flow`"));
         assertTrue(resultContract.contains("**Cel funkcjonalny:**"));
         assertTrue(resultContract.contains("**Flow krok po kroku:**"));

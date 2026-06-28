@@ -47,20 +47,11 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
             AnalysisAiOptions options
     ) {
-        return createForFollowUp(copilotSessionId, toolAccessPolicy, options, null);
-    }
-
-    public CopilotSessionConfigRequest createForFollowUp(
-            String copilotSessionId,
-            FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
-            AnalysisAiOptions options,
-            FlowExplorerAnalysisGoal goal
-    ) {
         return create(
                 copilotSessionId,
                 toolAccessPolicy,
                 options,
-                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(goal)
+                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
         );
     }
 

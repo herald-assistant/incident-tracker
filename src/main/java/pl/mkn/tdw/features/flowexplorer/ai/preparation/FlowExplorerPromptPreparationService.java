@@ -11,7 +11,6 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAss
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class FlowExplorerPromptPreparationService {
@@ -193,108 +192,6 @@ public class FlowExplorerPromptPreparationService {
                 )
         ).trim();
         return new FlowExplorerPromptPreparation(prompt, artifacts, artifactContents);
-    }
-
-    public FlowExplorerPromptPreparation prepareFollowUp(FlowExplorerJobStartRequest request, String message) {
-        var sectionModes = request != null ? request.resolvedSectionModes() : List.<FlowExplorerResultSectionModeAssignment>of();
-        var prompt = """
-                # Flow Explorer follow-up prompt
-
-                ## Non-negotiable response contract
-                - Zwroc wylacznie poprawny JSON. Bez Markdown poza stringami JSON, bez komentarzy i bez tekstu poza JSON.
-                - Odpowiedz musi byc obiektem `{ "message": "...", "resultUpdate": { ... } }`.
-                - `message` jest wymagane i trafia do widocznej historii chatu operatora.
-                - `resultUpdate` jest opcjonalne. Dodaj je tylko wtedy, gdy uzytkownik prosi o zmiane, rozbudowe, doprecyzowanie, przepisanie albo aktualizacje wyniku Flow Explorera.
-                - Jezeli uzytkownik zadaje pytanie wyjasniajace albo prosi o interpretacje bez zmiany wyniku, zwroc samo `message`.
-                - Jezeli nie mozesz przygotowac sensownej aktualizacji wyniku, wyjasnij to w `message` i nie zwracaj `resultUpdate`.
-                - Nie zwracaj `resultUpdate` jako pustego obiektu.
-
-                ## Result update partial contract
-                `resultUpdate` jest partialem `FlowExplorerAiResponse`, a nie pelnym wynikiem. Backend nalozy go na aktualny authoritative result.
-
-                Dozwolone pola `resultUpdate`:
-                - `audience`
-                - `overview`
-                - `sections`
-                - `globalVisibilityLimits`
-                - `globalOpenQuestions`
-                - `sourceReferences`
-                - `confidence`
-                - `followUpPrompts`
-
-                Nie zwracaj w `resultUpdate` pol: `goal`, `systemId`, `endpointId`, `httpMethod`, `endpointPath`, `branch`, `prompt`, `usage`, `status`.
-
-                Semantyka merge:
-                - brak pola oznacza brak zmiany,
-                - brak sekcji na liscie `sections` oznacza, ze sekcja zostaje bez zmian,
-                - sekcja obecna w `sections` musi miec `id` i aktualizuje tylko podane pola tej sekcji,
-                - pusta lista oznacza jawne zastapienie wartosci pusta lista,
-                - nie uzywaj `null`; jezeli wartosc jest nieznana, pomin pole albo wpisz limit widocznosci/pytanie otwarte.
-
-                ## Sections and mode discipline
-                - Aktualne `sectionModes` sa zrodlem prawdy.
-                - Aktualizuj tylko sekcje aktywne w `activeSectionIds`.
-                - Nie dodawaj sekcji, ktorej nie ma w aktualnym wyniku.
-                - Jezeli zwracasz `mode`, musi byc zgodny z aktualnym `sectionModes` i miec wartosc `compact` albo `deep`; nigdy `off`.
-                - Jezeli aktualizujesz `markdown` sekcji, poziom szczegolow musi odpowiadac jej trybowi: `compact` = zwiezle, `deep` = szczegolowo.
-                - Zachowaj zasady skilla `flow-explorer-result-contract`; gdy wynik zalezy od celu, zastosuj goal-specific skill dla aktualnego `goal`.
-
-                ## Session state
-                - Aktualny authoritative `FlowExplorerAiResponse` jest w historii tej samej sesji Copilota.
-                - Wiadomosci techniczne po Apply/Reject aktualizuja authoritative result w historii sesji. Traktuj najnowszy taki stan jako zrodlo prawdy.
-                - Nie pros backendu ani uzytkownika o ponowne przeslanie calego wyniku tylko po to, zeby odpowiedziec.
-                - Mozesz uzyc dostepnych Flow Explorer tools, jezeli prosba uzytkownika wymaga sprawdzenia dodatkowych zrodel. Stosuj ograniczenia kosztowe i scope z runtime skilli.
-
-                ## Current analysis scope
-                systemId: %s
-                endpointId: %s
-                httpMethod: %s
-                endpointPath: %s
-                branchRef: %s
-                goal: %s
-                sectionModes: %s
-                activeSectionIds: %s
-                reasoningEffort: %s
-
-                ## User follow-up message
-                %s
-
-                ## Minimal examples
-                Zwykla odpowiedz bez zmiany wyniku:
-                {
-                  "message": "Wyjasnienie dla operatora."
-                }
-
-                Odpowiedz z propozycja aktualizacji:
-                {
-                  "message": "Zaproponowalem aktualizacje sekcji Validations. Persistence zostaje bez zmian.",
-                  "resultUpdate": {
-                    "sections": [
-                      {
-                        "id": "VALIDATIONS",
-                        "markdown": "...",
-                        "sourceRefs": ["..."],
-                        "visibilityLimits": ["..."],
-                        "openQuestions": ["..."]
-                      }
-                    ],
-                    "globalVisibilityLimits": ["..."],
-                    "followUpPrompts": ["..."]
-                  }
-                }
-                """.formatted(
-                request != null ? request.systemId() : "",
-                request != null ? request.endpointId() : "",
-                request != null ? request.httpMethod() : "",
-                request != null ? request.endpointPath() : "",
-                request != null ? request.branch() : "",
-                request != null ? request.goal() : "",
-                renderSectionModes(sectionModes),
-                renderActiveSectionIds(sectionModes),
-                reasoningEffort(request),
-                userInstructions(message)
-        ).trim();
-        return new FlowExplorerPromptPreparation(prompt, List.of(), Map.of());
     }
 
     private String runtimeSkillsUsageContract(FlowExplorerJobStartRequest request) {
