@@ -15,7 +15,7 @@ import java.util.Map;
 public class CopilotIncidentToolGuidanceCatalog {
 
     private static final List<String> DATABASE_REASON_GUIDANCE = List.of(
-            "For JPA, repository or data-access symptoms, first ground the entity/repository/table mapping from deterministic GitLab evidence or an enabled GitLab tool call; use DB discovery as fallback only when code grounding is unavailable.",
+            "For JPA/Hibernate, repository or data-access symptoms, first ground the entity/repository/table mapping from Java annotations, repository methods or queries; use DB discovery as fallback only when code grounding is unavailable.",
             "Use code-derived table, column and relation hints instead of guessing names from the exception label.",
             "Always provide reason as one short Polish sentence for the operator."
     );
@@ -30,6 +30,7 @@ public class CopilotIncidentToolGuidanceCatalog {
     );
 
     private static final List<String> GITLAB_SCOPE_GUIDANCE = List.of(
+            "Follow incident-analysis-gitlab-tools: use GitLab calls only to close a concrete incident evidence gap.",
             "Pass branchRef explicitly from the incident gitLabBranch or a previous GitLab tool result.",
             "Pass known projectName values from deterministic evidence, operational context or previous GitLab tool results.",
             "Do not pass gitLabGroup; the backend resolves GitLab group through operational context or configuration.",
@@ -70,7 +71,10 @@ public class CopilotIncidentToolGuidanceCatalog {
                     GitLabToolNames.READ_REPOSITORY_FILE,
                     List.of(
                             "Expensive. Use only when outline/chunk tools are insufficient.",
-                            "Prefer %s for a known Java method, or %s/%s when method slicing does not fit.".formatted(
+                            "Consider %s when a known Java method needs downstream use-case flow continuation.".formatted(
+                                    GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT
+                            ),
+                            "Prefer %s for method body, predicates, mapper logic, validation or client calls; use %s/%s when method slicing does not fit.".formatted(
                                     GitLabToolNames.READ_JAVA_METHOD_SLICE,
                                     GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                                     GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS
@@ -82,9 +86,19 @@ public class CopilotIncidentToolGuidanceCatalog {
             Map.entry(
                     GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH,
                     List.of(
-                            "Use after a grounded file list, especially from gitlab_build_endpoint_use_case_context.",
+                            "Use after a grounded file list, especially from gitlab_build_endpoint_use_case_context or gitlab_build_java_method_use_case_context.",
                             "Pass only files that are relevant to the current endpoint/use case question.",
                             "Prefer categories or roles from the prior context result instead of reading every returned file.",
+                            "Always provide reason as one short Polish sentence for the operator."
+                    )
+            ),
+            Map.entry(
+                    GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+                    List.of(
+                            "Use when code evidence, endpoint context or flow context identifies a concrete Java class and method but downstream use-case flow, handoff, integration or persistence behavior is still missing.",
+                            "Use this before repeated focused reads when the missing evidence is what happens after a known method.",
+                            "Use filePath, lineNumber, parameterCount or parameterTypes only to disambiguate the entry method.",
+                            "Use maxResults to cap returned context.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
@@ -111,17 +125,19 @@ public class CopilotIncidentToolGuidanceCatalog {
             Map.entry(
                     GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE,
                     List.of(
-                            "Use before full file reads to understand class role and available method signatures.",
-                            "Follow up with gitlab_read_java_method_slice when a specific Java method matters; use focused chunks when slicing does not fit.",
+                            "Use before full file reads to understand class role, annotations, inheritance, fields and available method signatures.",
+                            "For JPA/Hibernate mapping, prefer entity/repository annotations before migration files unless mappings are incomplete or inconsistent.",
+                            "Follow up with gitlab_build_java_method_use_case_context when downstream use-case flow is missing; use gitlab_read_java_method_slice when a specific method body matters.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
             Map.entry(
                     GitLabToolNames.READ_JAVA_METHOD_SLICE,
                     List.of(
-                            "Preferred focused read for a known Java file and method.",
+                            "Focused read for a known Java file and method body.",
                             "Use methodSelectors with methodName first; lineStart is optional and only needed to narrow a specific overload.",
-                            "Use before chunk/full-file reads when the question is about a method, predicate, mapper, validator or client call.",
+                            "Use when the question is about a method body, predicate, mapper, validator, helper or client call.",
+                            "If the missing evidence is downstream use-case flow from this method, use gitlab_build_java_method_use_case_context instead.",
                             "Always provide reason as one short Polish sentence for the operator."
                     )
             ),
@@ -146,6 +162,7 @@ public class CopilotIncidentToolGuidanceCatalog {
                     List.of(
                             "Use when evidence coverage says broader upstream/downstream flow context is missing.",
                             "Use when TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED is listed to identify the smallest executable flow for technicalAnalysis.",
+                            "Expect common Spring integration patterns such as Feign, RestClient, WebClient, RestTemplate, StreamBridge and Consumer/Function/Supplier bindings.",
                             "If operational context points to a codeSearchScope with supporting repositories for the semantic target, include those projects when they may contain the collaborator deciding the flow.",
                             "Use focused keywords grounded in logs, stacktrace, code evidence or current tool results.",
                             "Use recommended next reads rather than launching broad searches.",

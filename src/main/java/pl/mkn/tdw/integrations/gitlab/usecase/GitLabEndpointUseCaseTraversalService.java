@@ -161,6 +161,69 @@ public class GitLabEndpointUseCaseTraversalService {
         return resultCompressor.compress(state.toResult(session));
     }
 
+    public GitLabEndpointUseCaseContextResult traverseFromMethod(
+            GitLabEndpointUseCaseSourceSession session,
+            GitLabJavaMethodUseCaseEntryMethod entryMethod,
+            GitLabJavaMethodUseCaseContextLimits limits
+    ) {
+        Objects.requireNonNull(session, "session must not be null");
+        var effectiveLimits = limits != null ? limits : GitLabJavaMethodUseCaseContextLimits.defaults();
+        var repository = session.repository();
+        var state = new GitLabEndpointUseCaseTraversalState(
+                repository,
+                null,
+                effectiveLimits.maxDepth(),
+                effectiveLimits.maxResults()
+        );
+        if (entryMethod == null || !entryMethod.resolved() || !StringUtils.hasText(entryMethod.filePath())) {
+            state.addLimitation("Resolved Java entry method with source file is required before traversal.");
+            if (entryMethod != null) {
+                state.addLimitations(entryMethod.limitations());
+                state.addUnresolved(
+                        symbol(entryMethod.requestedClassName(), entryMethod.requestedMethodName()),
+                        entryMethod.filePath(),
+                        "Java entry method could not be resolved before use-case traversal: "
+                                + entryMethod.status() + ".",
+                        List.of(entryMethod.requestedClassName(), entryMethod.requestedMethodName()),
+                        entryMethod.candidates().stream()
+                                .map(GitLabJavaMethodUseCaseEntryCandidate::filePath)
+                                .toList()
+                );
+            }
+            return resultCompressor.compress(state.toResult(session));
+        }
+
+        state.addLimitations(entryMethod.limitations());
+        var typeName = entryMethod.declaringTypeQualifiedName() != null
+                ? entryMethod.declaringTypeQualifiedName()
+                : entryMethod.requestedClassName();
+        var role = roleForTypeName(typeName, entryMethod.filePath());
+        state.addFile(
+                entryMethod.filePath(),
+                role,
+                entryMethod.methodName(),
+                "Traversal starts from Java method entry point.",
+                entryMethod.confidence()
+        );
+        state.enqueue(new GitLabEndpointUseCaseTraversalNode(
+                entryMethod.filePath(),
+                typeName,
+                entryMethod.methodName(),
+                entryMethod.parameterCount(),
+                entryMethod.parameterTypes(),
+                0,
+                role,
+                entryMethod.confidence(),
+                "Traversal starts from Java method entry point."
+        ));
+
+        GitLabEndpointUseCaseTraversalNode node;
+        while ((node = state.poll()) != null) {
+            visitNode(session, state, node);
+        }
+        return resultCompressor.compress(state.toResult(session));
+    }
+
     private void visitNode(
             GitLabEndpointUseCaseSourceSession session,
             GitLabEndpointUseCaseTraversalState state,

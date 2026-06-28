@@ -42,8 +42,20 @@ public class GitLabJavaMethodLocator {
             Integer argumentCount,
             List<String> expectedParameterTypes
     ) {
+        return resolveMethodAtLine(astFile, declaringTypeName, methodName, null, argumentCount, expectedParameterTypes);
+    }
+
+    public GitLabJavaMethodResolution resolveMethodAtLine(
+            GitLabJavaAstFile astFile,
+            String declaringTypeName,
+            String methodName,
+            Integer lineNumber,
+            Integer argumentCount,
+            List<String> expectedParameterTypes
+    ) {
         var normalizedMethodName = GitLabEndpointUseCaseModelSupport.trimToNull(methodName);
         var normalizedExpectedParameterTypes = normalizeParameterTypes(expectedParameterTypes);
+        var normalizedLineNumber = normalizeLineNumber(lineNumber);
         if (!StringUtils.hasText(normalizedMethodName)) {
             return new GitLabJavaMethodResolution(
                     GitLabJavaMethodResolutionStatus.INVALID_REQUEST,
@@ -74,17 +86,31 @@ public class GitLabJavaMethodLocator {
             return notFound(normalizedMethodName, declaringTypeName, List.of(), "Method was not found in parsed Java source.");
         }
 
-        var selectedCandidates = argumentCount != null
+        var lineCandidates = normalizedLineNumber != null
                 ? methodCandidates.stream()
-                .filter(method -> method.getParameters().size() == argumentCount)
+                .filter(method -> lineNumberMatches(method, normalizedLineNumber))
                 .toList()
                 : methodCandidates;
+        if (lineCandidates.isEmpty()) {
+            return notFound(
+                    normalizedMethodName,
+                    declaringTypeName,
+                    methodCandidates.stream().map(method -> toMatch(astFile, method, GitLabEndpointUseCaseConfidence.LOW)).toList(),
+                    "No method matched line number " + normalizedLineNumber + "."
+            );
+        }
+
+        var selectedCandidates = argumentCount != null
+                ? lineCandidates.stream()
+                .filter(method -> method.getParameters().size() == argumentCount)
+                .toList()
+                : lineCandidates;
 
         if (selectedCandidates.isEmpty()) {
             return notFound(
                     normalizedMethodName,
                     declaringTypeName,
-                    methodCandidates.stream().map(method -> toMatch(astFile, method, GitLabEndpointUseCaseConfidence.LOW)).toList(),
+                    lineCandidates.stream().map(method -> toMatch(astFile, method, GitLabEndpointUseCaseConfidence.LOW)).toList(),
                     "No overload matched argument count " + argumentCount + "."
             );
         }
@@ -239,6 +265,16 @@ public class GitLabJavaMethodLocator {
     private boolean hasModifier(MethodDeclaration method, Modifier.Keyword keyword) {
         return method.getModifiers().stream()
                 .anyMatch(modifier -> modifier.getKeyword() == keyword);
+    }
+
+    private Integer normalizeLineNumber(Integer lineNumber) {
+        return lineNumber != null && lineNumber > 0 ? lineNumber : null;
+    }
+
+    private boolean lineNumberMatches(MethodDeclaration method, int lineNumber) {
+        var lineStart = method.getBegin().map(position -> position.line).orElse(0);
+        var lineEnd = method.getEnd().map(position -> position.line).orElse(0);
+        return lineStart > 0 && lineEnd >= lineStart && lineNumber >= lineStart && lineNumber <= lineEnd;
     }
 
     private String ambiguousOverloadLimitation(Integer argumentCount, boolean selectedByExpectedTypes) {

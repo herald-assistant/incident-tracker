@@ -20,6 +20,8 @@ import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextResult;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
 
 @RestController
 @RequestMapping("/api/gitlab/repository")
@@ -29,6 +31,7 @@ public class GitLabRepositorySearchController {
     private final GitLabRepositorySearchService gitLabRepositorySearchService;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
+    private final GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService;
     private final GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
     private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
     private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
@@ -50,6 +53,17 @@ public class GitLabRepositorySearchController {
             @Valid @RequestBody GitLabEndpointUseCaseContextApiRequest request
     ) {
         return gitLabEndpointUseCaseContextService.buildContext(
+                request.group(),
+                request.branch(),
+                request.toUseCaseRequest()
+        );
+    }
+
+    @PostMapping("/java-method-use-case-context")
+    public GitLabJavaMethodUseCaseContextResult buildJavaMethodUseCaseContext(
+            @Valid @RequestBody GitLabJavaMethodUseCaseContextApiRequest request
+    ) {
+        return gitLabJavaMethodUseCaseContextService.buildContext(
                 request.group(),
                 request.branch(),
                 request.toUseCaseRequest()

@@ -264,6 +264,20 @@ Gdy manifest zawiera `TECHNICAL_ANALYSIS_GITLAB_RECOMMENDED` albo
 `DB_CODE_GROUNDING_NEEDED`, wykonaj tylko taka eksploracje, ktora zmienia
 diagnoze, DB targeting albo handoff.
 
+Najpierw nazwij typ luki, ktora chcesz domknac:
+
+- jezeli znasz konkretna klase i metode, ale brakuje tego, co dzieje sie dalej
+  w use case, integracji, handoffie albo sciezce persistence, uzyj
+  `gitlab_build_java_method_use_case_context` z `maxResults`,
+- jezeli brakuje tresci konkretnej metody, predykatu, mappera, walidatora,
+  helpera albo client calla, uzyj `gitlab_read_java_method_slice`,
+- jezeli brakuje roli klasy, adnotacji, dziedziczenia, pol albo sygnatur metod,
+  uzyj `gitlab_read_repository_file_outline`,
+- jezeli parser Java albo zakres metody nie pasuje do pytania, dopiero wtedy
+  uzyj focused chunk/chunks,
+- full file zostaw jako ostatni krok dla krotkiego pliku albo przypadku, gdzie
+  poprzednie odczyty nie wystarczaja do handoffu.
+
 Preferowana kolejnosc:
 
 1. deterministic GitLab evidence,
@@ -272,14 +286,16 @@ Preferowana kolejnosc:
 4. `gitlab_find_class_references` dla ugruntowanej klasy, entity, repository,
    DTO, mappera, validatora albo klienta,
 5. `gitlab_find_flow_context` dla direct collaborators i broader flow,
-6. `gitlab_read_java_method_slice` dla znanego pliku Java i metody, bo zwraca
+6. `gitlab_build_java_method_use_case_context` dla znanej klasy/metody, gdy
+   trzeba kontynuowac flow dalej niz lokalne cialo metody,
+7. `gitlab_read_java_method_slice` dla znanego pliku Java i metody, bo zwraca
    wybrane metody z potrzebnymi polami, importami i prywatnymi helperami bez
    dumpu calej klasy,
-7. `gitlab_read_repository_files_by_path` tylko dla ugruntowanej listy sciezek
+8. `gitlab_read_repository_files_by_path` tylko dla ugruntowanej listy sciezek
    plikow, np. po wyniku `gitlab_build_endpoint_use_case_context`,
-8. outline/chunk/chunks przed pojedynczym full file, gdy method slice nie pasuje
+9. outline/chunk/chunks przed pojedynczym full file, gdy method slice nie pasuje
    do pytania albo parser Java nie wystarcza,
-9. pojedynczy full file tylko gdy krotki plik albo chunk nie wystarcza.
+10. pojedynczy full file tylko gdy krotki plik albo chunk nie wystarcza.
 
 Dla `gitlab_read_java_method_slice` zwykle wystarczy `methodSelectors` z
 `methodName`. `lineStart` jest opcjonalne; uzyj go tylko, gdy trzeba zawęzic
@@ -325,6 +341,30 @@ exception/log class -> entity/repository/mapper/service -> annotations/query
 
 Jesli GitLab nie znajduje entity/repository w focused scope, zatrzymaj sie i
 przekaz limitation do DB `reason` zamiast czytac kolejne niepowiazane pliki.
+
+## Heurystyki Java/Spring
+
+Dla ORM i persistence flow najpierw czytaj implementacje Java/Spring:
+
+- entity annotations: `@Entity`, `@Table`, `@Column`, `@JoinColumn`,
+  `@OneToMany`, `@ManyToOne`,
+- repository methods, derived query names, `@Query`, specifications,
+  criteria/query builders,
+- service predicates, mappers i validators, ktore decyduja o filtrach danych.
+
+Liquibase, Flyway albo DDL traktuj jako fallback, gdy adnotacje albo repository
+query sa niepelne, sprzeczne albo incydent dotyczy migracji/schema drift.
+
+Dla integracji spodziewaj sie czestych wzorcow:
+
+- Feign clients, RestClient, WebClient albo RestTemplate,
+- publikacja zdarzen przez `StreamBridge`,
+- konsumpcja przez `Consumer`, `Function` albo `Supplier`,
+- bindingi w `application.yml`, `application.yaml` albo `application.properties`.
+
+YAML/properties czytaj dopiero wtedy, gdy kod pokazuje konkretnego clienta,
+binding, channel, topic, queue albo property prefix. Nie zaczynaj od szerokiego
+przegladania konfiguracji.
 
 ## Flow Do Wyjasnienia
 

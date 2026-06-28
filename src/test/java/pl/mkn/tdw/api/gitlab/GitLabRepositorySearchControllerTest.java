@@ -32,12 +32,20 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelationKind;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRepositoryContext;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextLimits;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextResult;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryCandidate;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryMethod;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryStatus;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaTypeKind;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -59,6 +67,9 @@ class GitLabRepositorySearchControllerTest {
 
     @MockitoBean
     private GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
+
+    @MockitoBean
+    private GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService;
 
     @MockitoBean
     private GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
@@ -257,6 +268,115 @@ class GitLabRepositorySearchControllerTest {
                         && request.endpointPath() == null
                         && request.maxDepth() == 4
                         && request.maxFiles() == 12)
+        );
+    }
+
+    @Test
+    void shouldBuildJavaMethodUseCaseContextForValidRequest() throws Exception {
+        when(gitLabJavaMethodUseCaseContextService.buildContext(
+                eq("CRM"),
+                eq("release-candidate"),
+                any(GitLabJavaMethodUseCaseContextRequest.class)
+        )).thenReturn(new GitLabJavaMethodUseCaseContextResult(
+                new GitLabEndpointUseCaseRepositoryContext("CRM", "crm-customer-service", "release-candidate"),
+                new GitLabJavaMethodUseCaseEntryMethod(
+                        GitLabJavaMethodUseCaseEntryStatus.RESOLVED,
+                        "com.example.crm.customer.application.CustomerCaseService",
+                        "registerCase",
+                        "src/main/java/com/example/crm/customer/application/CustomerCaseService.java",
+                        "CustomerCaseService",
+                        "CustomerCaseService",
+                        "com.example.crm.customer.application.CustomerCaseService",
+                        GitLabJavaTypeKind.CLASS,
+                        "registerCase",
+                        "CustomerCaseResult registerCase(CustomerCaseForm form)",
+                        17,
+                        21,
+                        1,
+                        List.of("CustomerCaseForm"),
+                        List.of("form"),
+                        "CustomerCaseResult",
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        List.of(new GitLabJavaMethodUseCaseEntryCandidate(
+                                "src/main/java/com/example/crm/customer/application/CustomerCaseService.java",
+                                "CustomerCaseService",
+                                "CustomerCaseService",
+                                "com.example.crm.customer.application.CustomerCaseService",
+                                GitLabJavaTypeKind.CLASS,
+                                "registerCase",
+                                "CustomerCaseResult registerCase(CustomerCaseForm form)",
+                                17,
+                                21,
+                                1,
+                                List.of("CustomerCaseForm"),
+                                List.of("form"),
+                                "CustomerCaseResult",
+                                GitLabEndpointUseCaseConfidence.HIGH,
+                                "Resolved entry method."
+                        )),
+                        List.of()
+                ),
+                List.of(new GitLabEndpointUseCaseFileCandidate(
+                        "src/main/java/com/example/crm/customer/application/CustomerCaseService.java",
+                        GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
+                        2,
+                        List.of("registerCase"),
+                        "Traversal starts from Java method entry point.",
+                        GitLabEndpointUseCaseConfidence.HIGH
+                )),
+                List.of(new GitLabEndpointUseCaseRelation(
+                        "com.example.crm.customer.application.CustomerCaseService#registerCase",
+                        "com.example.crm.customer.domain.CustomerCaseRepositoryPort#save",
+                        GitLabEndpointUseCaseRelationKind.INJECTED_PORT_CALL,
+                        GitLabEndpointUseCaseConfidence.HIGH,
+                        "Method call on injected dependency repositoryPort."
+                )),
+                List.of(),
+                List.of(),
+                List.of("crm-customer-service:src/main/java/com/example/crm/customer/application/CustomerCaseService.java via gitlab_read_repository_file_outline"),
+                new GitLabJavaMethodUseCaseContextLimits(5, 20, 60, false, false, 4, false),
+                GitLabEndpointUseCaseConfidence.HIGH
+        ));
+
+        mockMvc.perform(post("/api/gitlab/repository/java-method-use-case-context")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "CRM",
+                                  "projectName": "crm-customer-service",
+                                  "branch": "release-candidate",
+                                  "filePath": "src/main/java/com/example/crm/customer/application/CustomerCaseService.java",
+                                  "className": "com.example.crm.customer.application.CustomerCaseService",
+                                  "methodName": "registerCase",
+                                  "lineNumber": 18,
+                                  "parameterCount": 1,
+                                  "parameterTypes": ["CustomerCaseForm"],
+                                  "maxDepth": 5,
+                                  "maxResults": 20
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.repository.group").value("CRM"))
+                .andExpect(jsonPath("$.entryMethod.status").value("RESOLVED"))
+                .andExpect(jsonPath("$.entryMethod.methodName").value("registerCase"))
+                .andExpect(jsonPath("$.entryMethod.lineStart").value(17))
+                .andExpect(jsonPath("$.files[0].role").value("USE_CASE_SERVICE"))
+                .andExpect(jsonPath("$.relations[0].kind").value("INJECTED_PORT_CALL"))
+                .andExpect(jsonPath("$.limits.maxResults").value(20))
+                .andExpect(jsonPath("$.confidence").value("HIGH"));
+
+        verify(gitLabJavaMethodUseCaseContextService).buildContext(
+                eq("CRM"),
+                eq("release-candidate"),
+                argThat(request -> "crm-customer-service".equals(request.projectName())
+                        && "src/main/java/com/example/crm/customer/application/CustomerCaseService.java".equals(request.filePath())
+                        && "com.example.crm.customer.application.CustomerCaseService".equals(request.className())
+                        && "registerCase".equals(request.methodName())
+                        && request.lineNumber() == 18
+                        && request.parameterCount() == 1
+                        && request.parameterTypes().equals(List.of("CustomerCaseForm"))
+                        && request.maxDepth() == 5
+                        && request.maxResults() == 20)
         );
     }
 
@@ -492,6 +612,30 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"));
 
         verifyNoInteractions(gitLabEndpointUseCaseContextService);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidJavaMethodUseCaseContextRequest() throws Exception {
+        mockMvc.perform(post("/api/gitlab/repository/java-method-use-case-context")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "",
+                                  "projectName": "",
+                                  "branch": "",
+                                  "className": "",
+                                  "methodName": "",
+                                  "lineNumber": 0,
+                                  "parameterCount": -1,
+                                  "maxDepth": 99,
+                                  "maxResults": 999
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"));
+
+        verifyNoInteractions(gitLabJavaMethodUseCaseContextService);
     }
 
     @Test

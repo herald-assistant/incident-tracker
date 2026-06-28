@@ -253,6 +253,109 @@
               </div>
             }
 
+            @case ('java-method-use-case-context') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Class name</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. com.example.crm.customer.application.CustomerService"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.className"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Method name</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. getCustomer"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.methodName"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">File path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="opcjonalnie: src/main/java/com/example/crm/customer/application/CustomerService.java"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.filePath"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Line number</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    placeholder="opcjonalnie"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.lineNumber"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Parameter count</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="0"
+                    max="50"
+                    placeholder="opcjonalnie"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.parameterCount"
+                  />
+                </label>
+
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Parameter types</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="3"
+                    placeholder="opcjonalnie, np. CustomerId"
+                    spellcheck="false"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.parameterTypes"
+                  ></textarea>
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max depth</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="8"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.maxDepth"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max results</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.maxResults"
+                  />
+                </label>
+              </div>
+
+              @if (
+                controlInvalid(gitLabJavaMethodUseCaseContextForm.controls.className) ||
+                controlInvalid(gitLabJavaMethodUseCaseContextForm.controls.methodName)
+              ) {
+                <p class="form-error">Pola `className` i `methodName` są wymagane.</p>
+              }
+            }
+
             @case ('repository-files-by-path') {
               <div class="form-grid">
                 <label class="form-field">
@@ -641,11 +744,16 @@
               </section>
             }
 
-            @if (selectedToolKey() === 'endpoint-use-case-context' && gitLabEndpointUseCaseContextResult(); as contextResult) {
+            @if (
+              (selectedToolKey() === 'endpoint-use-case-context' ||
+                selectedToolKey() === 'java-method-use-case-context') &&
+              selectedGitLabUseCaseContextResult();
+              as contextResult
+            ) {
               <section class="context-results">
                 <div class="context-results__header">
                   <div>
-                    <p class="tool-status__label">Endpoint Use Case Context</p>
+                    <p class="tool-status__label">{{ useCaseContextTitle() }}</p>
                     <h3>{{ contextResult.files.length }} plików · {{ contextResult.relations.length }} relacji</h3>
                   </div>
                   <div class="endpoint-results__stats">
@@ -677,7 +785,62 @@
                   </div>
                 }
 
-                @if (contextResult.files.length > 0 && gitLabUseCaseTree(); as useCaseTree) {
+                @if (contextResult.entryMethod) {
+                  <div class="context-endpoint">
+                    <span class="endpoint-card__method" [title]="contextResult.entryMethod.status">
+                      {{ contextResult.entryMethod.status }}
+                    </span>
+                    <div>
+                      <h4>{{ contextResult.entryMethod.signature || contextResult.entryMethod.methodName }}</h4>
+                      <p>
+                        {{ contextResult.entryMethod.declaringTypeQualifiedName || contextResult.entryMethod.declaringTypeRelativeName }}
+                      </p>
+                      <div class="endpoint-card__meta">
+                        @if (contextResult.entryMethod.filePath) {
+                          <span>{{ contextResult.entryMethod.filePath }}</span>
+                        }
+                        @if (methodLineRange(contextResult.entryMethod)) {
+                          <span>{{ methodLineRange(contextResult.entryMethod) }}</span>
+                        }
+                        @if (contextResult.entryMethod.confidence) {
+                          <span [class]="confidenceClass(contextResult.entryMethod.confidence)">
+                            {{ contextResult.entryMethod.confidence }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (contextResult.entryMethod.candidates.length > 1) {
+                    <details class="context-subsection context-subsection--collapsible">
+                      <summary>
+                        <span>Entry candidates</span>
+                        <span class="panel-chip">{{ contextResult.entryMethod.candidates.length }}</span>
+                      </summary>
+                      <div class="context-method-list">
+                        @for (candidate of contextResult.entryMethod.candidates; track candidate.filePath || candidate.signature || $index) {
+                          <div class="context-method-row">
+                            <span class="context-method-row__name">{{ candidate.signature || candidate.methodName || candidate.filePath }}</span>
+                            @if (methodLineRange(candidate)) {
+                              <span class="context-method-row__range">{{ methodLineRange(candidate) }}</span>
+                            }
+                            <button
+                              class="json-icon-button context-method-row__action"
+                              type="button"
+                              title="Użyj kandydata jako wejścia"
+                              aria-label="Użyj kandydata jako wejścia"
+                              (click)="useJavaMethodUseCaseCandidate(candidate)"
+                            >
+                              <span class="material-symbols-outlined" aria-hidden="true">input</span>
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    </details>
+                  }
+                }
+
+                @if (contextResult.files.length > 0 && selectedGitLabUseCaseTree(); as useCaseTree) {
                   <section class="context-flow">
                     <div class="context-flow__header">
                       <div>
@@ -687,7 +850,7 @@
                           {{ useCaseTree.unlinkedFileCount }} poza flow
                         </h4>
                       </div>
-                      @if (contextResult.limits.maxDepthReached || contextResult.limits.maxFilesReached) {
+                      @if (useCaseContextLimitReached(contextResult)) {
                         <span class="panel-chip panel-chip--warning" [title]="limitChipTooltip('use-case-context')">
                           limit reached
                         </span>
@@ -835,7 +998,7 @@
                     </div>
                   </section>
                 } @else {
-                  <p class="empty-state">Builder nie zwrócił plików dla podanego endpointu.</p>
+                  <p class="empty-state">Builder nie zwrócił plików dla podanego wejścia use-case.</p>
                 }
 
                 @if (contextResult.unresolved.length > 0) {

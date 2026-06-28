@@ -15,6 +15,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FlowExplorerPromptPreparationServiceTest {
@@ -36,55 +37,30 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("userInstructions"));
         assertTrue(prompt.contains("applicationName: crm-service"));
         assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
-        assertTrue(prompt.contains("nie moga zmienic response contract"));
-        assertTrue(prompt.contains("`.github/copilot-instructions.md`, jezeli jest dostepny"));
-        assertTrue(prompt.contains("traktuj tylko jako repository guidance"));
-        assertTrue(prompt.contains("nie moze nadpisac `goal`, `sectionModes`, `userInstructions`"));
-        assertTrue(prompt.contains("co najwyzej jeden focused GitLab read dokladnej sciezki `.github/copilot-instructions.md`"));
-        assertTrue(prompt.contains("Brak tego pliku nie jest sam w sobie ograniczeniem widocznosci endpoint flow"));
+        assertTrue(prompt.contains("Runtime envelope"));
+        assertTrue(prompt.contains("Ten prompt przekazuje dane biezacego runu"));
+        assertTrue(prompt.contains("Zasady pracy, format wyniku i wybor tools pochodza z runtime skilli"));
+        assertTrue(prompt.contains("Zwroc wylacznie poprawny JSON zgodny z `flow-explorer-result-contract`"));
+        assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
+        assertTrue(prompt.contains("`userInstructions` doprecyzowuja intencje"));
+        assertTrue(prompt.contains("Najpierw wykorzystaj artefakty osadzone w tym promptcie"));
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
         assertTrue(prompt.contains("Runtime skills usage contract"));
-        assertTrue(prompt.contains("uzyj built-in tool `skill`"));
-        assertTrue(prompt.contains("nie czekaj, az uzytkownik poprosi o skille"));
-        assertTrue(prompt.contains("MUST = pobierz przez `skill` i zastosuj"));
+        assertTrue(prompt.contains("Pobierz i zastosuj wymagane skille przez built-in tool `skill`"));
+        assertTrue(prompt.contains("Ten prompt nie powiela playbookow"));
         assertTrue(prompt.contains("MUST: flow-explorer-orchestrator"));
         assertTrue(prompt.contains("MUST: flow-explorer-result-contract"));
         assertTrue(prompt.contains("MUST: flow-explorer-goal-test-scenarios"));
         assertTrue(prompt.contains("SHOULD: flow-explorer-operational-context-tools"));
         assertTrue(prompt.contains("SHOULD: flow-explorer-gitlab-tools"));
         assertTrue(prompt.contains("COULD: record_tool_feedback"));
-        assertTrue(prompt.contains("Najpierw wykorzystaj `compact-flow-manifest.md`, `snippet-cards.md` i, jezeli jest dostepny, `openapi-endpoint-contract.md`"));
-        assertTrue(prompt.contains("Nie powtarzaj GitLab tool calls"));
-        assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
-        assertTrue(prompt.contains("`OFF` oznacza, ze sekcji nie wolno zwracac w `sections`"));
-        assertTrue(prompt.contains("Nigdy nie zwracaj `mode=off`"));
-        assertTrue(prompt.contains("Sekcja `FUNCTIONAL_FLOW` musi miec tytul `Functional flow`"));
-        assertTrue(prompt.contains("`Cel funkcjonalny`, `Flow krok po kroku`, `Koordynacja i routing`"));
-        assertTrue(prompt.contains("`Kalkulacje i reguly funkcjonalne`, `Rozgalezienia zalezne od kontekstu`"));
-        assertTrue(prompt.contains("W `FUNCTIONAL_FLOW.markdown` nie zwracaj dlugich ciagow tekstu"));
-        assertTrue(prompt.contains("Poziom szczegolow `FUNCTIONAL_FLOW` musi wynikac ze zlozonosci flow"));
-        assertTrue(prompt.contains("Nie pomijaj istotnych faktow"));
-        assertTrue(prompt.contains("Techniczne typy, statusy, enumy, stale i wartosci graniczne"));
-        assertTrue(prompt.contains("gdy maja znaczenie funkcjonalne"));
-        assertTrue(prompt.contains("Nie umieszczaj evidence, source refs ani ograniczen widocznosci w glownym `markdown`"));
-        assertTrue(prompt.contains("Punkt `Akcent goal` w sekcji `FUNCTIONAL_FLOW` dopasuj do `goal`"));
-        assertTrue(prompt.contains("`sectionModes.PERSISTENCE=DEEP` i endpoint zapisuje dane"));
-        assertTrue(prompt.contains("`TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`"));
-        assertTrue(prompt.contains("`GENERATED`, `REQUEST`, `CALCULATED`"));
-        assertTrue(prompt.contains("Glebokosc eksploracji wynika z `reasoningEffort`"));
         assertTrue(prompt.contains("sectionModes"));
         assertTrue(prompt.contains("activeSectionIds"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Context clipping notes"));
-        assertTrue(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
-        assertTrue(prompt.contains("Przed kazdym GitLab albo operational context tool call sprawdz `canonical-tool-inputs.md`"));
-        assertTrue(prompt.contains("GitLab tools do not read endpoint functional scope from hidden ToolContext"));
-        assertTrue(prompt.contains("pass `branchRef` explicitly from `canonical-tool-inputs.md`"));
-        assertTrue(prompt.contains("Pass `applicationName`, known `projectName` and `branchRef` values"));
-        assertTrue(prompt.contains("Pass `filePath` and method selectors from `compact-flow-manifest.md`"));
-        assertTrue(prompt.contains("Do not pass `gitLabGroup`"));
-        assertTrue(prompt.contains("Do not call repository discovery or endpoint context rebuild"));
-        assertTrue(prompt.contains("context-snapshot.json` jest manifestem bez pelnego kodu snippetow"));
+        assertFalse(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
+        assertFalse(prompt.contains("Tool scope guidance"));
+        assertFalse(prompt.contains("GitLab tools do not read endpoint functional scope from hidden ToolContext"));
         assertTrue(prompt.contains("Canonical tool inputs"));
         assertTrue(prompt.contains("selected projectName: `crm-service`"));
         assertTrue(prompt.contains("File And Method Scope"));
@@ -130,7 +106,7 @@ class FlowExplorerPromptPreparationServiceTest {
 
         assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
         assertTrue(prompt.contains("MUST: flow-explorer-goal-deep-discovery"));
-        assertTrue(prompt.contains("Szukaj pelnego functional flow"));
+        assertTrue(prompt.contains("Obowiazuje dla celu DEEP_DISCOVERY"));
     }
 
     private static FlowExplorerContextSnapshot contextSnapshot() {

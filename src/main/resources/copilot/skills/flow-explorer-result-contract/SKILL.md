@@ -214,6 +214,21 @@ Gdy aktywna sekcja `PERSISTENCE` ma `mode=deep` i endpoint zapisuje dane,
 | TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
 | --- | --- | --- | --- |
 
+Tabela ma obejmowac kolumny widoczne przez mapowanie ORM analizowanego flow, a
+nie tylko pola zadeklarowane bezposrednio w lokalnej klasie encji. Uwzglednij
+kolumny z:
+
+- klas bazowych i `@MappedSuperclass`, itp,
+- `@Embedded`, `@Embeddable` i `@AttributeOverride(s)`,
+- relacji `@JoinColumn`/`@JoinColumns`,
+- metod encji albo obiektow zlozonych uzytych w flow, jezeli metoda odczytuje
+  albo wylicza wartosc z pola mapowanego na kolumne.
+
+Nie pomijaj kolumn parenta ani kompozycji tylko dlatego, ze flow odwoluje sie do
+nich przez metode, getter albo helper. Jezeli nie udalo sie dojsc do typu
+bezposrednio mapowanego na kolumne, wpisz konkretny brak w `visibilityLimits`
+sekcji `PERSISTENCE`.
+
 `SOURCE` jest polem kontrolowanym. Dozwolone wartosci to tylko:
 
 - `GENERATED`,
@@ -236,6 +251,7 @@ Preferuj source refs w formie:
 - `flow-explorer/snippet-cards.md`,
 - `flow-explorer/openapi-endpoint-contract.md`,
 - `projectName:path:Lx-Ly`,
+- `tool:gitlab_build_java_method_use_case_context`,
 - `tool:gitlab_read_java_method_slice`,
 - `tool:gitlab_read_openapi_endpoint_slice`,
 - `tool:opctx_get_entity`.

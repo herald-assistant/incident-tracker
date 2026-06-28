@@ -94,10 +94,22 @@ class CopilotIncidentRuntimeSkillsContractTest {
                 "`applicationName`",
                 "Nie przekazuj `gitLabGroup` do GitLab tools",
                 "Backend rozstrzyga GitLab group",
+                "`gitlab_build_java_method_use_case_context`",
+                "`maxResults`",
                 "`gitlab_read_java_method_slice`"
+        ));
+        assertContainsAll(content, List.of(
+                "JPA/repository/data symptoms",
+                "## Heurystyki Java/Spring",
+                "Liquibase, Flyway albo DDL traktuj jako fallback",
+                "Feign clients, RestClient, WebClient albo RestTemplate",
+                "`StreamBridge`",
+                "`Consumer`, `Function` albo `Supplier`"
         ));
         assertFalse(content.contains("stalej session group"));
         assertFalse(content.contains("hidden ToolContext"));
+        assertFalse(content.contains("focusHints"));
+        assertFalse(content.contains("maxFiles"));
     }
 
     @Test

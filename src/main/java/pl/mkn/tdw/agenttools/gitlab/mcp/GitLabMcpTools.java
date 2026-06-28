@@ -41,11 +41,14 @@ import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
+import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildJavaMethodUseCaseContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkResult;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileContentResult;
@@ -77,6 +80,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
@@ -116,6 +120,7 @@ public class GitLabMcpTools {
     private final OperationalContextPort operationalContextPort;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
+    private final GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService;
     private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
     private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
     private final GitLabToolScopeResolver scopeResolver;
@@ -126,6 +131,7 @@ public class GitLabMcpTools {
             OperationalContextPort operationalContextPort,
             GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
             GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService,
+            GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService,
             GitLabJavaMethodSliceService gitLabJavaMethodSliceService,
             GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService,
             GitLabProperties gitLabProperties
@@ -134,6 +140,7 @@ public class GitLabMcpTools {
         this.operationalContextPort = operationalContextPort;
         this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
         this.gitLabEndpointUseCaseContextService = gitLabEndpointUseCaseContextService;
+        this.gitLabJavaMethodUseCaseContextService = gitLabJavaMethodUseCaseContextService;
         this.gitLabJavaMethodSliceService = gitLabJavaMethodSliceService;
         this.gitLabOpenApiEndpointSliceService = gitLabOpenApiEndpointSliceService;
         this.scopeResolver = new GitLabToolScopeResolver(gitLabProperties, operationalContextPort);
@@ -150,6 +157,7 @@ public class GitLabMcpTools {
                 operationalContextPort,
                 gitLabRepositoryEndpointService,
                 defaultEndpointUseCaseContextService(gitLabRepositoryPort, gitLabRepositoryEndpointService),
+                defaultJavaMethodUseCaseContextService(gitLabRepositoryPort),
                 new GitLabJavaMethodSliceService(gitLabRepositoryPort),
                 new GitLabOpenApiEndpointSliceService(gitLabRepositoryPort, new ObjectMapper()),
                 gitLabProperties
@@ -197,6 +205,12 @@ public class GitLabMcpTools {
             GitLabRepositoryEndpointService gitLabRepositoryEndpointService
     ) {
         return GitLabEndpointUseCaseContextService.createDefault(gitLabRepositoryPort, gitLabRepositoryEndpointService);
+    }
+
+    private static GitLabJavaMethodUseCaseContextService defaultJavaMethodUseCaseContextService(
+            GitLabRepositoryPort gitLabRepositoryPort
+    ) {
+        return GitLabJavaMethodUseCaseContextService.createDefault(gitLabRepositoryPort);
     }
 
     private GitLabToolScope scope(
@@ -444,6 +458,104 @@ public class GitLabMcpTools {
                 scope.applicationName(),
                 response.projectName(),
                 response.endpoint() != null,
+                response.files().size(),
+                response.relations().size(),
+                response.unresolved().size(),
+                response.suggestedNextReads().size(),
+                response.confidence()
+        );
+
+        return response;
+    }
+
+    @Tool(
+            name = BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+            description = """
+                    Builds a compact follow-up use-case context starting from one concrete Java class and method in a GitLab repository.
+                    Use when endpoint context, flow context or a prior code read has already identified the next Java class/method and
+                    the model needs to continue the use case from that known method. Provide className and methodName;
+                    optionally narrow with filePath, lineNumber inside the method body, parameterCount or parameterTypes. The result
+                    returns the resolved entry method, candidate file paths, roles, symbols, direct relations, unresolved references,
+                    limitations and suggested next reads. Prefer maxResults to control returned result count instead of broad file scans.
+                    """
+    )
+    public GitLabBuildJavaMethodUseCaseContextToolResponse buildJavaMethodUseCaseContext(
+            @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
+            String projectName,
+            @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
+            String branchRef,
+            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
+            String applicationName,
+            @ToolParam(required = false, description = "Optional repository Java file path when known.")
+            String filePath,
+            @ToolParam(description = "Fully qualified, relative or simple Java class/type name.")
+            String className,
+            @ToolParam(description = "Java method name to use as the traversal entrypoint.")
+            String methodName,
+            @ToolParam(required = false, description = "Optional line number inside the target method body or declaration to disambiguate overloads.")
+            Integer lineNumber,
+            @ToolParam(required = false, description = "Optional parameter count to disambiguate overloads.")
+            Integer parameterCount,
+            @ToolParam(required = false, description = "Optional parameter type names to disambiguate overloads, for example CustomerId.")
+            List<String> parameterTypes,
+            @ToolParam(required = false, description = "Maximum traversal depth. Defaults to backend limit and is capped by the server.")
+            Integer maxDepth,
+            @ToolParam(required = false, description = "Maximum returned use-case results. Defaults to backend limit and is capped by the server.")
+            Integer maxResults,
+            @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model kontynuuje use-case od tej metody.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = scope(projectName, applicationName, branchRef, toolContext);
+
+        log.info(
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} className={} methodName={} lineNumber={} parameterCount={} parameterTypes={} maxDepth={} maxResults={}",
+                BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+                scope.runReference(),
+                scope.group(),
+                scope.branch(),
+                scope.applicationName(),
+                scope.analysisRunId(),
+                scope.copilotSessionId(),
+                scope.toolCallId(),
+                projectName,
+                filePath,
+                className,
+                methodName,
+                lineNumber,
+                parameterCount,
+                parameterTypes,
+                maxDepth,
+                maxResults
+        );
+
+        var result = gitLabJavaMethodUseCaseContextService.buildContext(
+                scope.group(),
+                scope.branch(),
+                new GitLabJavaMethodUseCaseContextRequest(
+                        projectName,
+                        filePath,
+                        className,
+                        methodName,
+                        lineNumber,
+                        parameterCount,
+                        parameterTypes,
+                        maxDepth,
+                        maxResults
+                )
+        );
+        var response = GitLabBuildJavaMethodUseCaseContextToolResponse.from(result);
+
+        log.info(
+                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} entryStatus={} entryFilePath={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
+                BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+                scope.runReference(),
+                response.group(),
+                response.branch(),
+                scope.applicationName(),
+                response.projectName(),
+                response.entryMethod() != null ? response.entryMethod().status() : null,
+                response.entryMethod() != null ? response.entryMethod().filePath() : null,
                 response.files().size(),
                 response.relations().size(),
                 response.unresolved().size(),

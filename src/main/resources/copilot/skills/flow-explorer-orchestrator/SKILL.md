@@ -183,8 +183,10 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
 - Nie powtarzaj odczytu kodu, ktory jest juz w `snippet-cards.md`.
 - Nie dociagaj DTO/modeli/mapperow, jezeli nie zmieniaja odpowiedzi dla
   wybranego goal/section mode.
-- Gdy potrzebujesz poglbic znana klase/metode, preferuj
-  `gitlab_read_java_method_slice`.
+- Gdy znana klasa/metoda wymaga kontynuacji use case flow, zaleznosci albo
+  downstream path, preferuj `gitlab_build_java_method_use_case_context`.
+- Gdy potrzebujesz przeczytac konkretna tresc znanej metody, warunek, helper
+  albo mapper, uzyj `gitlab_read_java_method_slice`.
 - `gitlab_read_repository_file_chunk`,
   `gitlab_read_repository_file_chunks`, `gitlab_read_repository_file_outline`
   i `gitlab_read_repository_files_by_path` sa fallbackiem, gdy method slice nie

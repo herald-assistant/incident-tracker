@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotIncidentToolDescriptionCustomizerTest {
@@ -23,6 +24,7 @@ class CopilotIncidentToolDescriptionCustomizerTest {
         assertTrue(description.contains("Read repository file."));
         assertTrue(description.contains("Copilot guidance:"));
         assertTrue(description.contains("Expensive. Use only when outline/chunk tools are insufficient."));
+        assertTrue(description.contains("gitlab_build_java_method_use_case_context"));
         assertTrue(description.contains("Prefer gitlab_read_java_method_slice"));
         assertTrue(description.contains("Pass branchRef explicitly"));
         assertTrue(description.contains("Do not pass gitLabGroup"));
@@ -47,10 +49,51 @@ class CopilotIncidentToolDescriptionCustomizerTest {
                 "Reads Java methods."
         );
 
-        assertTrue(description.contains("Preferred focused read for a known Java file and method."));
+        assertTrue(description.contains("Focused read for a known Java file and method body."));
         assertTrue(description.contains("lineStart is optional"));
+        assertTrue(description.contains("method body, predicate, mapper, validator, helper or client call"));
+        assertTrue(description.contains("downstream use-case flow"));
         assertTrue(description.contains("Pass branchRef explicitly"));
         assertTrue(description.contains("Do not pass gitLabGroup"));
+    }
+
+    @Test
+    void shouldAppendGuidanceForGitLabJavaMethodUseCaseContext() {
+        var description = customizer.customize(
+                INCIDENT_CONTEXT,
+                "gitlab_build_java_method_use_case_context",
+                "Builds Java method context."
+        );
+
+        assertTrue(description.contains("concrete Java class and method"));
+        assertTrue(description.contains("downstream use-case flow"));
+        assertTrue(description.contains("what happens after a known method"));
+        assertTrue(description.contains("maxResults"));
+        assertFalse(description.contains("focusHints"));
+        assertFalse(description.contains("maxFiles"));
+        assertFalse(description.contains("class by class"));
+        assertTrue(description.contains("Do not pass gitLabGroup"));
+    }
+
+    @Test
+    void shouldAppendSpringJpaGuidanceForGitLabOutlineAndFlowContext() {
+        var outlineDescription = customizer.customize(
+                INCIDENT_CONTEXT,
+                "gitlab_read_repository_file_outline",
+                "Reads outline."
+        );
+        var flowDescription = customizer.customize(
+                INCIDENT_CONTEXT,
+                "gitlab_find_flow_context",
+                "Finds flow."
+        );
+
+        assertTrue(outlineDescription.contains("class role, annotations, inheritance, fields"));
+        assertTrue(outlineDescription.contains("JPA/Hibernate mapping"));
+        assertTrue(outlineDescription.contains("migration files"));
+        assertTrue(flowDescription.contains("Feign"));
+        assertTrue(flowDescription.contains("StreamBridge"));
+        assertTrue(flowDescription.contains("Consumer/Function/Supplier"));
     }
 
     @Test

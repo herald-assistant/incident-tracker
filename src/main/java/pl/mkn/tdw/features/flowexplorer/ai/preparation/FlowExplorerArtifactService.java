@@ -218,15 +218,12 @@ public class FlowExplorerArtifactService {
             builder.append(System.lineSeparator());
         }
 
-        builder.append("## Preferred GitLab Tool Arguments").append(System.lineSeparator());
-        builder.append("- Always pass `branchRef` exactly as listed above.").append(System.lineSeparator());
-        builder.append("- Use listed `projectName` values and manifest `filePath` values exactly; do not derive them from application labels.")
+        builder.append("## Canonical Scope Values").append(System.lineSeparator());
+        builder.append("- Use these exact values when a runtime skill selects a GitLab tool.")
                 .append(System.lineSeparator());
-        builder.append("- For `gitlab_read_java_method_slice`, prefer `methodSelectors` with only `methodName`; `lineStart` is optional and only narrows overloads.")
+        builder.append("- Do not derive `projectName`, `branchRef` or `filePath` from application labels.")
                 .append(System.lineSeparator());
         builder.append("- Do not pass `gitLabGroup`; backend resolves it from configuration or operational context.")
-                .append(System.lineSeparator());
-        builder.append("- Do not call `gitlab_list_available_repositories` or `gitlab_build_endpoint_use_case_context` just to confirm values listed here.")
                 .append(System.lineSeparator());
         return builder.toString().trim();
     }

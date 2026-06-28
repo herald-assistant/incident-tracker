@@ -63,10 +63,11 @@ class FlowExplorerArtifactServiceTest {
         assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));
         assertTrue(canonicalToolInputs.contains("## File And Method Scope"));
         assertTrue(canonicalToolInputs.contains("compact-flow-manifest.md` as the canonical filePath + methodSelector list"));
-        assertTrue(canonicalToolInputs.contains("manifest `filePath` values"));
+        assertTrue(canonicalToolInputs.contains("Combine manifest `filePath` and methods"));
         assertFalse(canonicalToolInputs.contains("`src/main/java/com/example/CustomerController.java` methods"));
         assertFalse(canonicalToolInputs.contains("already embedded in flow-explorer/snippet-cards.md"));
-        assertTrue(canonicalToolInputs.contains("Do not call `gitlab_list_available_repositories`"));
+        assertTrue(canonicalToolInputs.contains("## Canonical Scope Values"));
+        assertTrue(canonicalToolInputs.contains("Use these exact values when a runtime skill selects a GitLab tool."));
         assertFalse(canonicalToolInputs.contains("gitLabGroup:"));
 
         var manifest = artifactContents.get(FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT);

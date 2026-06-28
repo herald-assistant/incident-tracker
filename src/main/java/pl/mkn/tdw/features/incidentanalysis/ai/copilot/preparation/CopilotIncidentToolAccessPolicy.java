@@ -30,6 +30,7 @@ public record CopilotIncidentToolAccessPolicy(
             GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
             GitLabToolNames.FIND_CLASS_REFERENCES,
             GitLabToolNames.FIND_FLOW_CONTEXT,
+            GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
             GitLabToolNames.READ_JAVA_METHOD_SLICE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS,

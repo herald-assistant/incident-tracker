@@ -61,6 +61,20 @@ export interface GitLabEndpointUseCaseContextPayload {
   maxFiles?: number;
 }
 
+export interface GitLabJavaMethodUseCaseContextPayload {
+  group: string;
+  projectName: string;
+  branch: string;
+  filePath?: string;
+  className: string;
+  methodName: string;
+  lineNumber?: number;
+  parameterCount?: number;
+  parameterTypes?: string[];
+  maxDepth?: number;
+  maxResults?: number;
+}
+
 export interface GitLabRepositoryFilesByPathPayload {
   group: string;
   projectName: string;
@@ -217,6 +231,54 @@ export interface GitLabEndpointUseCaseContextResponse {
   confidence?: string | null;
 }
 
+export interface GitLabJavaMethodUseCaseEntryCandidate {
+  filePath?: string | null;
+  declaringTypeSimpleName?: string | null;
+  declaringTypeRelativeName?: string | null;
+  declaringTypeQualifiedName?: string | null;
+  declaringTypeKind?: string | null;
+  methodName?: string | null;
+  signature?: string | null;
+  lineStart: number;
+  lineEnd: number;
+  parameterCount: number;
+  parameterTypes: string[];
+  parameterNames: string[];
+  returnType?: string | null;
+  confidence?: string | null;
+  reason?: string | null;
+}
+
+export interface GitLabJavaMethodUseCaseEntryMethod extends GitLabJavaMethodUseCaseEntryCandidate {
+  status: string;
+  requestedClassName?: string | null;
+  requestedMethodName?: string | null;
+  candidates: GitLabJavaMethodUseCaseEntryCandidate[];
+  limitations: string[];
+}
+
+export interface GitLabJavaMethodUseCaseContextLimits {
+  maxDepth: number;
+  maxResults: number;
+  maxReadFiles: number;
+  maxDepthReached: boolean;
+  maxResultsReached: boolean;
+  readFileCount: number;
+  readFileLimitReached: boolean;
+}
+
+export interface GitLabJavaMethodUseCaseContextResponse {
+  repository?: GitLabEndpointUseCaseRepositoryContext | null;
+  entryMethod?: GitLabJavaMethodUseCaseEntryMethod | null;
+  files: GitLabEndpointUseCaseFileCandidate[];
+  relations: GitLabEndpointUseCaseRelation[];
+  unresolved: GitLabEndpointUseCaseUnresolvedReference[];
+  limitations: string[];
+  suggestedNextReads: string[];
+  limits: GitLabJavaMethodUseCaseContextLimits;
+  confidence?: string | null;
+}
+
 export interface GitLabRepositoryFileByPathResult {
   group?: string | null;
   projectName?: string | null;
@@ -360,6 +422,15 @@ export class EvidenceApiService {
   ): Observable<GitLabEndpointUseCaseContextResponse> {
     return this.http.post<GitLabEndpointUseCaseContextResponse>(
       '/api/gitlab/repository/endpoint-use-case-context',
+      payload
+    );
+  }
+
+  buildGitLabJavaMethodUseCaseContext(
+    payload: GitLabJavaMethodUseCaseContextPayload
+  ): Observable<GitLabJavaMethodUseCaseContextResponse> {
+    return this.http.post<GitLabJavaMethodUseCaseContextResponse>(
+      '/api/gitlab/repository/java-method-use-case-context',
       payload
     );
   }

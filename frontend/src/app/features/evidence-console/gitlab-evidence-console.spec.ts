@@ -1,10 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
   GitLabEndpointUseCaseContextResponse,
+  GitLabJavaMethodUseCaseContextResponse,
   GitLabJavaMethodSliceResponse,
   GitLabOpenApiEndpointSliceResponse,
   GitLabRepositoryEndpointsResponse,
@@ -88,7 +89,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(7);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(8);
     expect(compiled.querySelector('.workbench-header')).toBeNull();
     expect(compiled.querySelector('.gitlab-result')).toBeFalsy();
     expect(compiled.textContent).not.toContain('Kopiuj JSON');
@@ -145,6 +146,73 @@ describe('GitLabEvidenceConsoleComponent', () => {
     );
     expect(compiled.textContent).toContain('Flow tree');
     expect(compiled.textContent).toContain('CustomerService.java');
+  });
+
+  it('should render Java method use-case context as flow tree', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+
+    fixture.componentInstance.selectedToolKey.set('java-method-use-case-context');
+    fixture.componentInstance.gitLabJavaMethodUseCaseContextState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildJavaMethodUseCaseContextResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Java Method Use Case Context');
+    expect(compiled.textContent).toContain('CustomerService.java');
+    expect(compiled.textContent).toContain('CustomerRepository.java');
+    expect(compiled.textContent).toContain('ENTRY METHOD');
+    expect(compiled.textContent).toContain('REPOSITORY CALL');
+    expect(compiled.textContent).toContain('CustomerModel getCustomer(CustomerId customerId)');
+  });
+
+  it('should submit Java method use-case context payload', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    fixture.componentInstance.selectedToolKey.set('java-method-use-case-context');
+    fixture.componentInstance.scopeForm.patchValue({
+      group: 'CRM',
+      projectName: 'crm-customer-service',
+      branch: 'main'
+    });
+    fixture.componentInstance.gitLabJavaMethodUseCaseContextForm.patchValue({
+      filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+      className: 'com.example.crm.customer.application.CustomerService',
+      methodName: 'getCustomer',
+      lineNumber: '44',
+      parameterCount: '1',
+      parameterTypes: 'CustomerId',
+      maxDepth: '4',
+      maxResults: '12'
+    });
+
+    fixture.componentInstance.submit(new Event('submit'));
+
+    const request = httpTesting.expectOne('/api/gitlab/repository/java-method-use-case-context');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      group: 'CRM',
+      projectName: 'crm-customer-service',
+      branch: 'main',
+      filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+      className: 'com.example.crm.customer.application.CustomerService',
+      methodName: 'getCustomer',
+      lineNumber: 44,
+      parameterCount: 1,
+      parameterTypes: ['CustomerId'],
+      maxDepth: 4,
+      maxResults: 12
+    });
+
+    request.flush(buildJavaMethodUseCaseContextResponse());
+    httpTesting.verify();
+
+    expect(fixture.componentInstance.gitLabJavaMethodUseCaseContextState().status).toBe('success');
   });
 
   it('should render unresolved use-case references as collapsed details', () => {
@@ -548,6 +616,115 @@ function buildUseCaseContextResponse(
       maxDepthReached: false,
       maxFilesReached: false,
       readFileCount: 3,
+      readFileLimitReached: false
+    },
+    confidence: 'HIGH',
+    ...overrides
+  };
+}
+
+function buildJavaMethodUseCaseContextResponse(
+  overrides: Partial<GitLabJavaMethodUseCaseContextResponse> = {}
+): GitLabJavaMethodUseCaseContextResponse {
+  return {
+    repository: {
+      group: 'CRM',
+      projectName: 'crm-customer-service',
+      branch: 'main'
+    },
+    entryMethod: {
+      status: 'RESOLVED',
+      requestedClassName: 'com.example.crm.customer.application.CustomerService',
+      requestedMethodName: 'getCustomer',
+      filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+      declaringTypeSimpleName: 'CustomerService',
+      declaringTypeRelativeName: 'CustomerService',
+      declaringTypeQualifiedName: 'com.example.crm.customer.application.CustomerService',
+      declaringTypeKind: 'CLASS',
+      methodName: 'getCustomer',
+      signature: 'CustomerModel getCustomer(CustomerId customerId)',
+      lineStart: 42,
+      lineEnd: 50,
+      parameterCount: 1,
+      parameterTypes: ['CustomerId'],
+      parameterNames: ['customerId'],
+      returnType: 'CustomerModel',
+      confidence: 'HIGH',
+      candidates: [
+        {
+          filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+          declaringTypeSimpleName: 'CustomerService',
+          declaringTypeRelativeName: 'CustomerService',
+          declaringTypeQualifiedName: 'com.example.crm.customer.application.CustomerService',
+          declaringTypeKind: 'CLASS',
+          methodName: 'getCustomer',
+          signature: 'CustomerModel getCustomer(CustomerId customerId)',
+          lineStart: 42,
+          lineEnd: 50,
+          parameterCount: 1,
+          parameterTypes: ['CustomerId'],
+          parameterNames: ['customerId'],
+          returnType: 'CustomerModel',
+          confidence: 'HIGH',
+          reason: 'Resolved entry method.'
+        }
+      ],
+      limitations: []
+    },
+    files: [
+      {
+        path: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+        role: 'USE_CASE_SERVICE',
+        priority: 1,
+        symbols: ['getCustomer'],
+        methods: [
+          {
+            filePath: 'src/main/java/com/example/crm/customer/application/CustomerService.java',
+            signature: 'CustomerModel getCustomer(CustomerId customerId)',
+            methodName: 'getCustomer',
+            lineStart: 42,
+            lineEnd: 50
+          }
+        ],
+        reason: 'Entry method selected by class and method.',
+        confidence: 'HIGH'
+      },
+      {
+        path: 'src/main/java/com/example/crm/customer/adapter/out/CustomerRepository.java',
+        role: 'REPOSITORY_IMPLEMENTATION',
+        priority: 3,
+        symbols: ['findCustomer'],
+        methods: [
+          {
+            filePath: 'src/main/java/com/example/crm/customer/adapter/out/CustomerRepository.java',
+            methodName: 'findCustomer',
+            lineStart: 18,
+            lineEnd: 26
+          }
+        ],
+        reason: 'Repository dependency used by entry method.',
+        confidence: 'HIGH'
+      }
+    ],
+    relations: [
+      {
+        from: 'com.example.crm.customer.application.CustomerService#getCustomer',
+        to: 'com.example.crm.customer.adapter.out.CustomerRepository#findCustomer',
+        kind: 'REPOSITORY_CALL',
+        confidence: 'HIGH',
+        reason: 'Entry method calls repository dependency.'
+      }
+    ],
+    unresolved: [],
+    limitations: [],
+    suggestedNextReads: [],
+    limits: {
+      maxDepth: 4,
+      maxResults: 12,
+      maxReadFiles: 80,
+      maxDepthReached: false,
+      maxResultsReached: false,
+      readFileCount: 2,
       readFileLimitReached: false
     },
     confidence: 'HIGH',

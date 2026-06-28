@@ -10,6 +10,9 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseFileCandidate
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseUnresolvedReference;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextLimits;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextResult;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryMethod;
 
 import java.util.List;
 import java.util.Map;
@@ -174,6 +177,47 @@ public final class GitLabToolDtos {
                     result != null ? result.limitations() : List.of(),
                     result != null ? result.suggestedNextReads() : List.of(),
                     result != null ? result.limits() : GitLabEndpointUseCaseLimits.defaults(),
+                    result != null ? result.confidence() : GitLabEndpointUseCaseConfidence.LOW
+            );
+        }
+    }
+
+    public record GitLabBuildJavaMethodUseCaseContextToolResponse(
+            String group,
+            String projectName,
+            String branch,
+            GitLabJavaMethodUseCaseEntryMethod entryMethod,
+            List<GitLabEndpointUseCaseFileCandidate> files,
+            List<GitLabEndpointUseCaseRelation> relations,
+            List<GitLabEndpointUseCaseUnresolvedReference> unresolved,
+            List<String> limitations,
+            List<String> suggestedNextReads,
+            GitLabJavaMethodUseCaseContextLimits limits,
+            GitLabEndpointUseCaseConfidence confidence
+    ) {
+        public GitLabBuildJavaMethodUseCaseContextToolResponse {
+            files = files != null ? List.copyOf(files) : List.of();
+            relations = relations != null ? List.copyOf(relations) : List.of();
+            unresolved = unresolved != null ? List.copyOf(unresolved) : List.of();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+            suggestedNextReads = suggestedNextReads != null ? List.copyOf(suggestedNextReads) : List.of();
+            limits = limits != null ? limits : GitLabJavaMethodUseCaseContextLimits.defaults();
+            confidence = confidence != null ? confidence : GitLabEndpointUseCaseConfidence.LOW;
+        }
+
+        public static GitLabBuildJavaMethodUseCaseContextToolResponse from(GitLabJavaMethodUseCaseContextResult result) {
+            var repository = result != null ? result.repository() : null;
+            return new GitLabBuildJavaMethodUseCaseContextToolResponse(
+                    repository != null ? repository.group() : null,
+                    repository != null ? repository.projectName() : null,
+                    repository != null ? repository.branch() : null,
+                    result != null ? result.entryMethod() : null,
+                    result != null ? result.files() : List.of(),
+                    result != null ? result.relations() : List.of(),
+                    result != null ? result.unresolved() : List.of(),
+                    result != null ? result.limitations() : List.of(),
+                    result != null ? result.suggestedNextReads() : List.of(),
+                    result != null ? result.limits() : GitLabJavaMethodUseCaseContextLimits.defaults(),
                     result != null ? result.confidence() : GitLabEndpointUseCaseConfidence.LOW
             );
         }

@@ -51,10 +51,19 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         var normalizedToolName = toolName.trim();
         if (GitLabToolNames.READ_JAVA_METHOD_SLICE.equals(normalizedToolName)) {
             return List.of(
-                    "Use when a concrete Flow Explorer class and method are known and snippet-cards.md is insufficient.",
+                    "Use when a concrete class and method are known and you need the method body, conditions, helper logic or mapper details.",
+                    "If you need to continue the downstream use-case flow from that method, use gitlab_build_java_method_use_case_context instead.",
+                    "Check snippet-cards.md first and do not repeat methods already visible there unless a different overload, helper or related file is needed.",
                     "Use branchRef/projectName from canonical-tool-inputs.md and filePath/methods from compact-flow-manifest.md when available.",
                     "Pass minimal methodSelectors; usually methodName is enough and lineStart is optional.",
-                    "Do not repeat methods already visible in snippet-cards.md unless you need a different overload, helper or related file.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
+        if (GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT.equals(normalizedToolName)) {
+            return List.of(
+                    "Use when compact-flow-manifest.md or a prior tool result identifies a concrete Java class and method and the downstream use-case path is still incomplete.",
+                    "Use this to continue flow from the known method before issuing repeated focused reads.",
+                    "Use maxResults to cap returned context.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }
@@ -69,7 +78,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         }
         if (GitLabToolNames.READ_REPOSITORY_FILE.equals(normalizedToolName)) {
             return List.of(
-                    "Expensive in Flow Explorer. Use only when method slice, outline or focused chunks are insufficient.",
+                    "Expensive in Flow Explorer. Use only when method context, method slice, outline or focused chunks are insufficient.",
                     "maxCharacters returns a prefix of the file; if truncated=true, continue with gitlab_read_repository_file_chunk instead of inferring the rest.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Do not use to browse a full bean when snippet-cards.md already contains the endpoint method.",
@@ -78,19 +87,19 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         }
         if (GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE.equals(normalizedToolName)) {
             return List.of(
-                    "Use when you know a file but need method names before choosing a focused read.",
+                    "Use when you know a file but need class structure, annotations, inheritance, fields or method names before choosing the next focused read.",
                     "Use typeSummaries, constructorSummaries, methodSummaries and fieldSummaries because annotations are attached to the Java element where they appear.",
-                    "For deep persistence analysis, use fieldSummaries and methodSummaries before mapping persisted data and sources.",
-                    "Follow with gitlab_read_java_method_slice for concrete Java methods whenever possible.",
+                    "For JPA/Hibernate persistence, prefer entity/repository annotations before migration files unless mapping is incomplete or inconsistent.",
+                    "Follow with gitlab_build_java_method_use_case_context when continuing flow, or gitlab_read_java_method_slice when method body is needed.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }
         if (GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(normalizedToolName)
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
             return List.of(
-                    "Fallback when Java method slice does not fit, parser context is missing or a line range is the only grounded input.",
+                    "Fallback when method context, method slice or outline does not fit, parser context is missing or a line range is the only grounded input.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
-                    "Keep ranges tight and tied to a specific preset/focus area gap.",
+                    "Keep ranges tight and tied to a specific goal or sectionModes gap.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }
@@ -113,7 +122,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
             return List.of(
                     "Use only to close a concrete gap after checking canonical-tool-inputs.md, compact-flow-manifest.md and snippet-cards.md.",
                     "Use branchRef/projectName from canonical-tool-inputs.md and filePath/methods from compact-flow-manifest.md when available.",
-                    "Prefer focused reads over broad repository discovery.",
+                    "Follow flow-explorer-gitlab-tools for tool selection; prefer focused reads over broad repository discovery.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }

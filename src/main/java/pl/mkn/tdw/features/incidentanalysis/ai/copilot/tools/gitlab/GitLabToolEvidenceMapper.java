@@ -11,6 +11,7 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
+import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildJavaMethodUseCaseContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
@@ -72,6 +74,7 @@ public class GitLabToolEvidenceMapper {
                  LIST_AVAILABLE_REPOSITORIES,
                  LIST_REPOSITORY_ENDPOINTS,
                  BUILD_ENDPOINT_USE_CASE_CONTEXT,
+                 BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
                  SEARCH_REPOSITORY_CANDIDATES,
                  FIND_CLASS_REFERENCES,
                  FIND_FLOW_CONTEXT -> true;
@@ -111,6 +114,12 @@ public class GitLabToolEvidenceMapper {
                     sessionEvidence
             );
             case BUILD_ENDPOINT_USE_CASE_CONTEXT -> captureGitLabEndpointUseCaseContext(
+                    toolCallId,
+                    rawArguments,
+                    rawResult,
+                    sessionEvidence
+            );
+            case BUILD_JAVA_METHOD_USE_CASE_CONTEXT -> captureGitLabJavaMethodUseCaseContext(
                     toolCallId,
                     rawArguments,
                     rawResult,
@@ -529,6 +538,70 @@ public class GitLabToolEvidenceMapper {
         }
     }
 
+    private AnalysisEvidenceSection captureGitLabJavaMethodUseCaseContext(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabBuildJavaMethodUseCaseContextToolResponse.class);
+            var files = safeList(response.files());
+            var relations = safeList(response.relations());
+            var unresolved = safeList(response.unresolved());
+            var limitations = safeList(response.limitations());
+            var suggestedNextReads = safeList(response.suggestedNextReads());
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+                    rawArguments
+            );
+            addAttribute(attributes, "group", response.group());
+            addAttribute(attributes, "projectName", response.projectName());
+            addAttribute(attributes, "branch", response.branch());
+            if (response.entryMethod() != null) {
+                addAttribute(attributes, "entryStatus", response.entryMethod().status().name());
+                addAttribute(attributes, "entryRequestedClassName", response.entryMethod().requestedClassName());
+                addAttribute(attributes, "entryRequestedMethodName", response.entryMethod().requestedMethodName());
+                addAttribute(attributes, "entryFilePath", response.entryMethod().filePath());
+                addAttribute(attributes, "entryDeclaringType", response.entryMethod().declaringTypeQualifiedName());
+                addAttribute(attributes, "entryMethodName", response.entryMethod().methodName());
+                addAttribute(attributes, "entrySignature", response.entryMethod().signature());
+                addAttribute(attributes, "entryLineStart", String.valueOf(response.entryMethod().lineStart()));
+                addAttribute(attributes, "entryLineEnd", String.valueOf(response.entryMethod().lineEnd()));
+                addAttribute(attributes, "entryCandidateCount", String.valueOf(response.entryMethod().candidates().size()));
+            }
+            addAttribute(attributes, "fileCount", String.valueOf(files.size()));
+            addAttribute(attributes, "relationCount", String.valueOf(relations.size()));
+            addAttribute(attributes, "unresolvedCount", String.valueOf(unresolved.size()));
+            addAttribute(attributes, "limitationCount", String.valueOf(limitations.size()));
+            addAttribute(attributes, "suggestedNextReadCount", String.valueOf(suggestedNextReads.size()));
+            addAttribute(attributes, "confidence", response.confidence() != null ? response.confidence().name() : null);
+            addJsonAttribute(attributes, "entryMethod", response.entryMethod());
+            addJsonAttribute(attributes, "files", files);
+            addJsonAttribute(attributes, "relations", relations);
+            addJsonAttribute(attributes, "unresolved", unresolved);
+            addJsonAttribute(attributes, "limitations", limitations);
+            addJsonAttribute(attributes, "suggestedNextReads", suggestedNextReads);
+            addJsonAttribute(attributes, "limits", response.limits());
+
+            return sessionEvidence.appendItem(
+                    GITLAB_PROVIDER,
+                    GITLAB_DISCOVERY_CATEGORY,
+                    discoveryKey(toolCallId, BUILD_JAVA_METHOD_USE_CASE_CONTEXT),
+                    GITLAB_DISCOVERY_ORDER_NAMESPACE,
+                    GITLAB_DISCOVERY_FALLBACK_KEY,
+                    new AnalysisEvidenceItem(
+                            gitLabDiscoveryTitle(BUILD_JAVA_METHOD_USE_CASE_CONTEXT),
+                            List.copyOf(attributes)
+                    )
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab Java method use case context result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
     private AnalysisEvidenceSection captureGitLabClassReferences(
             String toolCallId,
             String rawArguments,
@@ -745,6 +818,7 @@ public class GitLabToolEvidenceMapper {
             case LIST_AVAILABLE_REPOSITORIES -> "GitLab available repositories";
             case LIST_REPOSITORY_ENDPOINTS -> "GitLab repository endpoints";
             case BUILD_ENDPOINT_USE_CASE_CONTEXT -> "GitLab endpoint use case context";
+            case BUILD_JAVA_METHOD_USE_CASE_CONTEXT -> "GitLab Java method use case context";
             case SEARCH_REPOSITORY_CANDIDATES -> "GitLab search candidates";
             case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
             case FIND_CLASS_REFERENCES -> "GitLab class references";

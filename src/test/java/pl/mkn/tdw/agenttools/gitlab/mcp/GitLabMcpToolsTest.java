@@ -24,6 +24,12 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelationKind;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRepositoryContext;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextLimits;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextResult;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryMethod;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryStatus;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaTypeKind;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
@@ -307,6 +313,7 @@ class GitLabMcpToolsTest {
                 ignored -> OperationalContextCatalog.empty(),
                 mock(GitLabRepositoryEndpointService.class),
                 endpointUseCaseContextService,
+                mock(GitLabJavaMethodUseCaseContextService.class),
                 mock(GitLabJavaMethodSliceService.class),
                 new GitLabOpenApiEndpointSliceService(mock(GitLabRepositoryPort.class), new ObjectMapper()),
                 gitLabProperties("CRM/backend")
@@ -389,6 +396,119 @@ class GitLabMcpToolsTest {
         assertEquals(1, response.relations().size());
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, response.confidence());
         assertTrue(response.suggestedNextReads().get(0).contains("gitlab_read_repository_file_outline"));
+    }
+
+    @Test
+    void shouldBuildJavaMethodUseCaseContextUsingSessionBoundScopeAndMaxResults() {
+        var javaMethodUseCaseContextService = mock(GitLabJavaMethodUseCaseContextService.class);
+        var tools = new GitLabMcpTools(
+                mock(GitLabRepositoryPort.class),
+                ignored -> OperationalContextCatalog.empty(),
+                mock(GitLabRepositoryEndpointService.class),
+                mock(GitLabEndpointUseCaseContextService.class),
+                javaMethodUseCaseContextService,
+                mock(GitLabJavaMethodSliceService.class),
+                new GitLabOpenApiEndpointSliceService(mock(GitLabRepositoryPort.class), new ObjectMapper()),
+                gitLabProperties("CRM/backend")
+        );
+        when(javaMethodUseCaseContextService.buildContext(any(), any(), any()))
+                .thenReturn(new GitLabJavaMethodUseCaseContextResult(
+                        new GitLabEndpointUseCaseRepositoryContext(
+                                "CRM/backend",
+                                "crm-customer-api",
+                                "feature/FLOW-1"
+                        ),
+                        new GitLabJavaMethodUseCaseEntryMethod(
+                                GitLabJavaMethodUseCaseEntryStatus.RESOLVED,
+                                "com.example.crm.customer.CustomerService",
+                                "getCustomer",
+                                "src/main/java/com/example/crm/customer/CustomerService.java",
+                                "CustomerService",
+                                "CustomerService",
+                                "com.example.crm.customer.CustomerService",
+                                GitLabJavaTypeKind.CLASS,
+                                "getCustomer",
+                                "CustomerModel getCustomer(CustomerId customerId)",
+                                42,
+                                50,
+                                1,
+                                List.of("CustomerId"),
+                                List.of("customerId"),
+                                "CustomerModel",
+                                GitLabEndpointUseCaseConfidence.HIGH,
+                                List.of(),
+                                List.of()
+                        ),
+                        List.of(new GitLabEndpointUseCaseFileCandidate(
+                                "src/main/java/com/example/crm/customer/CustomerService.java",
+                                GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
+                                1,
+                                List.of("getCustomer"),
+                                "Entry method selected by class and method.",
+                                GitLabEndpointUseCaseConfidence.HIGH
+                        )),
+                        List.of(new GitLabEndpointUseCaseRelation(
+                                "com.example.crm.customer.CustomerService#getCustomer",
+                                "com.example.crm.customer.CustomerRepository#findCustomer",
+                                GitLabEndpointUseCaseRelationKind.REPOSITORY_CALL,
+                                GitLabEndpointUseCaseConfidence.HIGH,
+                                "Entry method calls repository dependency."
+                        )),
+                        List.of(),
+                        List.of(),
+                        List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_java_method_slice"),
+                        new GitLabJavaMethodUseCaseContextLimits(
+                                4,
+                                12,
+                                80,
+                                false,
+                                false,
+                                2,
+                                false
+                        ),
+                        GitLabEndpointUseCaseConfidence.HIGH
+                ));
+
+        var response = tools.buildJavaMethodUseCaseContext(
+                "crm-customer-api",
+                "feature/FLOW-1",
+                DEFAULT_APPLICATION_NAME,
+                "src/main/java/com/example/crm/customer/CustomerService.java",
+                "com.example.crm.customer.CustomerService",
+                "getCustomer",
+                44,
+                1,
+                List.of("CustomerId"),
+                4,
+                12,
+                "Kontynuuje flow CRM od metody serwisu.",
+                gitLabToolContext()
+        );
+
+        verify(javaMethodUseCaseContextService).buildContext(
+                eq("CRM/backend"),
+                eq("feature/FLOW-1"),
+                argThat(request -> "crm-customer-api".equals(request.projectName())
+                        && "src/main/java/com/example/crm/customer/CustomerService.java".equals(request.filePath())
+                        && "com.example.crm.customer.CustomerService".equals(request.className())
+                        && "getCustomer".equals(request.methodName())
+                        && request.lineNumber() == 44
+                        && request.parameterCount() == 1
+                        && request.parameterTypes().equals(List.of("CustomerId"))
+                        && request.maxDepth() == 4
+                        && request.maxResults() == 12)
+        );
+        assertEquals("CRM/backend", response.group());
+        assertEquals("crm-customer-api", response.projectName());
+        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals(GitLabJavaMethodUseCaseEntryStatus.RESOLVED, response.entryMethod().status());
+        assertEquals("getCustomer", response.entryMethod().methodName());
+        assertEquals(1, response.files().size());
+        assertEquals(GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE, response.files().get(0).role());
+        assertEquals(1, response.relations().size());
+        assertEquals(12, response.limits().maxResults());
+        assertEquals(GitLabEndpointUseCaseConfidence.HIGH, response.confidence());
+        assertTrue(response.suggestedNextReads().get(0).contains("gitlab_read_java_method_slice"));
     }
 
     @Test

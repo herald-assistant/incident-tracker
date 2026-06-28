@@ -24,6 +24,7 @@ public record FlowExplorerCopilotToolAccessPolicy(
             GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
             GitLabToolNames.LIST_REPOSITORY_ENDPOINTS,
             GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT,
+            GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,

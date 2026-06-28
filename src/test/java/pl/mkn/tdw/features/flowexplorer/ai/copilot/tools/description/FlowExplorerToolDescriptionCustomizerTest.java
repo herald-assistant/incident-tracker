@@ -6,6 +6,7 @@ import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FlowExplorerToolDescriptionCustomizerTest {
@@ -26,12 +27,31 @@ class FlowExplorerToolDescriptionCustomizerTest {
 
         assertTrue(description.contains("Reads Java method slice."));
         assertTrue(description.contains("Flow Explorer guidance:"));
-        assertTrue(description.contains("snippet-cards.md is insufficient"));
+        assertTrue(description.contains("method body, conditions, helper logic or mapper details"));
+        assertTrue(description.contains("use gitlab_build_java_method_use_case_context instead"));
+        assertTrue(description.contains("Check snippet-cards.md first"));
         assertTrue(description.contains("canonical-tool-inputs.md"));
         assertTrue(description.contains("compact-flow-manifest.md"));
         assertTrue(description.contains("methodSelectors"));
         assertTrue(description.contains("lineStart is optional"));
         assertTrue(description.contains("Always provide reason as one short Polish sentence"));
+    }
+
+    @Test
+    void shouldAppendFlowExplorerGuidanceForJavaMethodUseCaseContext() {
+        var description = customizer.customize(
+                FLOW_EXPLORER_CONTEXT,
+                GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+                "Builds Java method use-case context."
+        );
+
+        assertTrue(description.contains("Builds Java method use-case context."));
+        assertTrue(description.contains("Flow Explorer guidance:"));
+        assertTrue(description.contains("downstream use-case path is still incomplete"));
+        assertTrue(description.contains("continue flow from the known method"));
+        assertTrue(description.contains("maxResults"));
+        assertFalse(description.contains("focusHints"));
+        assertFalse(description.contains("maxFiles"));
     }
 
     @Test
@@ -71,6 +91,7 @@ class FlowExplorerToolDescriptionCustomizerTest {
         assertTrue(description.contains("maxCharacters returns a prefix of the file"));
         assertTrue(description.contains("if truncated=true"));
         assertTrue(description.contains("gitlab_read_repository_file_chunk"));
+        assertTrue(description.contains("method context, method slice, outline or focused chunks"));
     }
 
     @Test
@@ -81,8 +102,11 @@ class FlowExplorerToolDescriptionCustomizerTest {
                 "Reads repository file outline."
         );
 
-        assertTrue(description.contains("method names before choosing a focused read"));
-        assertTrue(description.contains("deep persistence analysis"));
+        assertTrue(description.contains("class structure, annotations, inheritance"));
+        assertTrue(description.contains("JPA/Hibernate persistence"));
+        assertTrue(description.contains("migration files"));
+        assertTrue(description.contains("gitlab_build_java_method_use_case_context"));
+        assertTrue(description.contains("gitlab_read_java_method_slice"));
         assertTrue(description.contains("fieldSummaries"));
         assertTrue(description.contains("typeSummaries"));
         assertTrue(description.contains("constructorSummaries"));

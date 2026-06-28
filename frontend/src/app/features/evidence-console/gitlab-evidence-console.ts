@@ -18,6 +18,10 @@ import {
   GitLabEndpointUseCaseFileCandidate,
   GitLabEndpointUseCaseMethodCandidate,
   GitLabEndpointUseCaseRelation,
+  GitLabJavaMethodUseCaseContextPayload,
+  GitLabJavaMethodUseCaseContextResponse,
+  GitLabJavaMethodUseCaseEntryCandidate,
+  GitLabJavaMethodUseCaseEntryMethod,
   GitLabJavaMethodSlicePayload,
   GitLabJavaMethodSliceMethodSelector,
   GitLabJavaMethodSliceResponse,
@@ -39,6 +43,7 @@ type GitLabJsonResponseKey =
   | 'repository-search'
   | 'endpoint-inventory'
   | 'endpoint-use-case-context'
+  | 'java-method-use-case-context'
   | 'repository-files-by-path'
   | 'java-method-slice'
   | 'openapi-endpoint-slice'
@@ -98,6 +103,14 @@ interface GitLabUseCaseTree {
   unlinkedFileCount: number;
 }
 
+type GitLabUseCaseContextResult = (
+  | GitLabEndpointUseCaseContextResponse
+  | GitLabJavaMethodUseCaseContextResponse
+) & {
+  endpoint?: GitLabEndpointUseCaseContextResponse['endpoint'];
+  entryMethod?: GitLabJavaMethodUseCaseEntryMethod | null;
+};
+
 const GITLAB_TOOLS: GitLabToolDefinition[] = [
   {
     key: 'repository-search',
@@ -122,6 +135,14 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/repository/endpoint-use-case-context',
     summary:
       'Buduje listę plików, relacji i ograniczeń widoczności dla konkretnego endpointu.'
+  },
+  {
+    key: 'java-method-use-case-context',
+    label: 'Java Method Use Case Context',
+    category: 'Repository structure',
+    endpoint: '/api/gitlab/repository/java-method-use-case-context',
+    summary:
+      'Buduje dalszy kontekst use-case od wskazanej klasy i metody Java, z limitem zwróconych rezultatów.'
   },
   {
     key: 'repository-files-by-path',
@@ -254,6 +275,47 @@ export class GitLabEvidenceConsoleComponent {
     })
   });
 
+  readonly gitLabJavaMethodUseCaseContextForm = new FormGroup({
+    group: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    projectName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    branch: new FormControl('HEAD', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    filePath: new FormControl('', { nonNullable: true }),
+    className: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    methodName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    lineNumber: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.min(1)]
+    }),
+    parameterCount: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.min(0), Validators.max(50)]
+    }),
+    parameterTypes: new FormControl('', { nonNullable: true }),
+    maxDepth: new FormControl('5', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(8)]
+    }),
+    maxResults: new FormControl('40', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(100)]
+    })
+  });
+
   readonly gitLabRepositoryFilesByPathForm = new FormGroup({
     group: new FormControl('', {
       nonNullable: true,
@@ -374,6 +436,9 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabEndpointUseCaseContextState = signal<ToolState>(
     this.idleState('Wybierz endpoint z inventory albo uzupełnij selector, aby zbudować listę plików use-case.')
   );
+  readonly gitLabJavaMethodUseCaseContextState = signal<ToolState>(
+    this.idleState('Podaj klasę i metodę Java, aby kontynuować use-case od wskazanego punktu w kodzie.')
+  );
   readonly gitLabRepositoryFilesByPathState = signal<ToolState>(
     this.idleState('Przenieś listę plików z use-case contextu albo wklej pełne path ręcznie.')
   );
@@ -399,6 +464,26 @@ export class GitLabEvidenceConsoleComponent {
     this.buildGitLabUseCaseTree(this.gitLabEndpointUseCaseContextResult())
   );
 
+  readonly gitLabJavaMethodUseCaseContextResult = computed(() =>
+    this.asGitLabJavaMethodUseCaseContextResult(this.gitLabJavaMethodUseCaseContextState().response)
+  );
+
+  readonly gitLabJavaMethodUseCaseTree = computed(() =>
+    this.buildGitLabUseCaseTree(this.gitLabJavaMethodUseCaseContextResult())
+  );
+
+  readonly selectedGitLabUseCaseContextResult = computed<GitLabUseCaseContextResult | null>(() =>
+    this.selectedToolKey() === 'java-method-use-case-context'
+      ? this.gitLabJavaMethodUseCaseContextResult()
+      : this.gitLabEndpointUseCaseContextResult()
+  );
+
+  readonly selectedGitLabUseCaseTree = computed<GitLabUseCaseTree | null>(() =>
+    this.selectedToolKey() === 'java-method-use-case-context'
+      ? this.gitLabJavaMethodUseCaseTree()
+      : this.gitLabUseCaseTree()
+  );
+
   readonly gitLabRepositoryFilesByPathResult = computed(() =>
     this.asGitLabRepositoryFilesByPathResult(this.gitLabRepositoryFilesByPathState().response)
   );
@@ -415,7 +500,7 @@ export class GitLabEvidenceConsoleComponent {
   readonly copiedJsonResponseKey = signal<GitLabJsonResponseKey | null>(null);
 
   readonly selectedGitLabUseCaseTreeNode = computed(() => {
-    const tree = this.gitLabUseCaseTree();
+    const tree = this.selectedGitLabUseCaseTree() ?? this.gitLabUseCaseTree();
     if (!tree || tree.rows.length === 0) {
       return null;
     }
@@ -433,6 +518,9 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'endpoint-use-case-context':
         this.submitGitLabEndpointUseCaseContext();
+        return;
+      case 'java-method-use-case-context':
+        this.submitGitLabJavaMethodUseCaseContext();
         return;
       case 'repository-files-by-path':
         this.submitGitLabRepositoryFilesByPath();
@@ -473,6 +561,18 @@ export class GitLabEvidenceConsoleComponent {
           endpointPath: '',
           maxDepth: '5',
           maxFiles: '60'
+        });
+        return;
+      case 'java-method-use-case-context':
+        this.gitLabJavaMethodUseCaseContextForm.patchValue({
+          filePath: '',
+          className: '',
+          methodName: '',
+          lineNumber: '',
+          parameterCount: '',
+          parameterTypes: '',
+          maxDepth: '5',
+          maxResults: '40'
         });
         return;
       case 'repository-files-by-path':
@@ -692,6 +792,62 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
+  submitGitLabJavaMethodUseCaseContext(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabJavaMethodUseCaseContextForm)) {
+      this.gitLabJavaMethodUseCaseContextState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+
+    if (this.gitLabJavaMethodUseCaseContextForm.invalid) {
+      this.gitLabJavaMethodUseCaseContextForm.markAllAsTouched();
+      this.gitLabJavaMethodUseCaseContextState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij className i methodName dla Java Method Use Case Context.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabJavaMethodUseCaseContextPayload = {
+      group: this.gitLabJavaMethodUseCaseContextForm.controls.group.value.trim(),
+      projectName: this.gitLabJavaMethodUseCaseContextForm.controls.projectName.value.trim(),
+      branch: this.gitLabJavaMethodUseCaseContextForm.controls.branch.value.trim(),
+      filePath: this.optionalValue(this.gitLabJavaMethodUseCaseContextForm.controls.filePath.value),
+      className: this.gitLabJavaMethodUseCaseContextForm.controls.className.value.trim(),
+      methodName: this.gitLabJavaMethodUseCaseContextForm.controls.methodName.value.trim(),
+      lineNumber: this.optionalNumber(
+        this.gitLabJavaMethodUseCaseContextForm.controls.lineNumber.value
+      ),
+      parameterCount: this.optionalNumber(
+        this.gitLabJavaMethodUseCaseContextForm.controls.parameterCount.value
+      ),
+      parameterTypes: this.toList(
+        this.gitLabJavaMethodUseCaseContextForm.controls.parameterTypes.value
+      ),
+      maxDepth: this.optionalNumber(
+        this.gitLabJavaMethodUseCaseContextForm.controls.maxDepth.value
+      ),
+      maxResults: this.optionalNumber(
+        this.gitLabJavaMethodUseCaseContextForm.controls.maxResults.value
+      )
+    };
+
+    this.selectedGitLabUseCaseTreeNodeId.set(null);
+    this.runRequest(
+      this.gitLabJavaMethodUseCaseContextState,
+      this.evidenceApi.buildGitLabJavaMethodUseCaseContext(payload),
+      payload,
+      '/api/gitlab/repository/java-method-use-case-context'
+    );
+  }
+
   submitGitLabRepositoryFilesByPath(event?: Event): void {
     event?.preventDefault();
     if (!this.syncRepositoryScope(this.gitLabRepositoryFilesByPathForm)) {
@@ -849,7 +1005,7 @@ export class GitLabEvidenceConsoleComponent {
   }
 
   useUseCaseFilesForRead(): void {
-    const context = this.gitLabEndpointUseCaseContextResult();
+    const context = this.currentUseCaseContext();
     const filePaths = (context?.files || [])
       .map((file) => this.normalizePath(file.path))
       .filter((path): path is string => !!path);
@@ -900,7 +1056,7 @@ export class GitLabEvidenceConsoleComponent {
     node: GitLabUseCaseTreeNode,
     methodNames: string[]
   ): void {
-    const context = this.gitLabEndpointUseCaseContextResult();
+    const context = this.currentUseCaseContext();
     const filePath = this.normalizePath(node.file?.path) || '';
 
     this.selectedToolKey.set('java-method-slice');
@@ -920,6 +1076,27 @@ export class GitLabEvidenceConsoleComponent {
     });
     this.gitLabJavaMethodSliceState.set(
       this.idleState('Metody zostały przeniesione z use-case contextu. Uruchom slice, aby pobrać kompaktowy kod.')
+    );
+  }
+
+  useJavaMethodUseCaseCandidate(candidate: GitLabJavaMethodUseCaseEntryCandidate): void {
+    this.selectedToolKey.set('java-method-use-case-context');
+    this.syncRepositoryScope(this.gitLabJavaMethodUseCaseContextForm);
+    this.gitLabJavaMethodUseCaseContextForm.patchValue({
+      filePath: candidate.filePath || this.gitLabJavaMethodUseCaseContextForm.controls.filePath.value,
+      className:
+        candidate.declaringTypeQualifiedName ||
+        candidate.declaringTypeRelativeName ||
+        candidate.declaringTypeSimpleName ||
+        this.gitLabJavaMethodUseCaseContextForm.controls.className.value,
+      methodName:
+        candidate.methodName || this.gitLabJavaMethodUseCaseContextForm.controls.methodName.value,
+      lineNumber: candidate.lineStart > 0 ? String(candidate.lineStart) : '',
+      parameterCount: candidate.parameterCount > 0 ? String(candidate.parameterCount) : '',
+      parameterTypes: (candidate.parameterTypes || []).join('\n')
+    });
+    this.gitLabJavaMethodUseCaseContextState.set(
+      this.idleState('Kandydat metody został przeniesiony do formularza. Uruchom context builder ponownie.')
     );
   }
 
@@ -1038,7 +1215,7 @@ export class GitLabEvidenceConsoleComponent {
         responseJson: this.toFormattedJson(response),
         durationMs: null
       });
-      if (key === 'endpoint-use-case-context') {
+      if (key === 'endpoint-use-case-context' || key === 'java-method-use-case-context') {
         this.selectedGitLabUseCaseTreeNodeId.set(null);
       }
     } catch {
@@ -1202,7 +1379,7 @@ export class GitLabEvidenceConsoleComponent {
     const label = this.displayRole(role);
     switch ((role || '').toUpperCase()) {
       case 'ENTRYPOINT':
-        return `${label}: start drzewa dla wybranego endpointu HTTP.`;
+        return `${label}: start drzewa dla wybranego endpointu HTTP albo metody Java.`;
       case 'FILES':
         return `${label}: grupa plików zwróconych przez tool bez jednoznacznej krawędzi w flow.`;
       case 'CONTROLLER':
@@ -1250,6 +1427,8 @@ export class GitLabEvidenceConsoleComponent {
     switch ((kind || '').toUpperCase()) {
       case 'ENDPOINT_HANDLER':
         return `${label}: endpoint inventory wskazało handler HTTP jako początek flow.`;
+      case 'ENTRY_METHOD':
+        return `${label}: wskazana metoda Java jest początkiem dalszego use-case contextu.`;
       case 'LOCAL_METHOD_CALL':
         return `${label}: przejście wynika z lokalnego wywołania metody w tej samej klasie lub bliskim kontekście.`;
       case 'INJECTED_PORT_CALL':
@@ -1303,7 +1482,7 @@ export class GitLabEvidenceConsoleComponent {
       case 'endpoint-scan':
         return 'Tool zatrzymał skanowanie endpointów na skonfigurowanym limicie plików.';
       case 'use-case-context':
-        return 'Context builder osiągnął limit głębokości albo maksymalnej liczby plików.';
+        return 'Context builder osiągnął limit głębokości, plików albo maksymalnej liczby zwróconych rezultatów.';
       case 'repository-files-by-path':
         return 'Batchowy odczyt plików zatrzymał się na limicie liczby plików albo łącznej liczbie znaków.';
       default:
@@ -1329,6 +1508,27 @@ export class GitLabEvidenceConsoleComponent {
     return lineEnd > lineStart ? `L${lineStart}-L${lineEnd}` : `L${lineStart}`;
   }
 
+  useCaseContextTitle(): string {
+    return this.selectedToolKey() === 'java-method-use-case-context'
+      ? 'Java Method Use Case Context'
+      : 'Endpoint Use Case Context';
+  }
+
+  useCaseContextLimitReached(result: GitLabUseCaseContextResult): boolean {
+    const limits = result.limits as Partial<{
+      maxDepthReached: boolean;
+      maxFilesReached: boolean;
+      maxResultsReached: boolean;
+      readFileLimitReached: boolean;
+    }>;
+    return !!(
+      limits.maxDepthReached ||
+      limits.maxFilesReached ||
+      limits.maxResultsReached ||
+      limits.readFileLimitReached
+    );
+  }
+
   displayPathName(path: string | null | undefined): string {
     const normalized = this.normalizePath(path);
     if (!normalized) {
@@ -1340,6 +1540,14 @@ export class GitLabEvidenceConsoleComponent {
 
   treeNodePadding(depth: number): number {
     return 12 + depth * 26;
+  }
+
+  private currentUseCaseContext(): GitLabUseCaseContextResult | null {
+    return (
+      this.selectedGitLabUseCaseContextResult() ||
+      this.gitLabEndpointUseCaseContextResult() ||
+      this.gitLabJavaMethodUseCaseContextResult()
+    );
   }
 
   private runRequest(
@@ -1551,6 +1759,7 @@ export class GitLabEvidenceConsoleComponent {
     return (
       toolKey === 'endpoint-inventory' ||
       toolKey === 'endpoint-use-case-context' ||
+      toolKey === 'java-method-use-case-context' ||
       toolKey === 'repository-files-by-path' ||
       toolKey === 'java-method-slice' ||
       toolKey === 'openapi-endpoint-slice'
@@ -1651,6 +1860,8 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabEndpointState;
       case 'endpoint-use-case-context':
         return this.gitLabEndpointUseCaseContextState;
+      case 'java-method-use-case-context':
+        return this.gitLabJavaMethodUseCaseContextState;
       case 'repository-files-by-path':
         return this.gitLabRepositoryFilesByPathState;
       case 'java-method-slice':
@@ -1698,6 +1909,19 @@ export class GitLabEvidenceConsoleComponent {
     return Array.isArray(record.files) ? (record as GitLabEndpointUseCaseContextResponse) : null;
   }
 
+  private asGitLabJavaMethodUseCaseContextResult(
+    response: unknown
+  ): GitLabJavaMethodUseCaseContextResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabJavaMethodUseCaseContextResponse>;
+    return Array.isArray(record.files) && !!record.entryMethod
+      ? (record as GitLabJavaMethodUseCaseContextResponse)
+      : null;
+  }
+
   private asGitLabRepositoryFilesByPathResult(
     response: unknown
   ): GitLabRepositoryFilesByPathResponse | null {
@@ -1738,7 +1962,7 @@ export class GitLabEvidenceConsoleComponent {
   }
 
   private buildGitLabUseCaseTree(
-    result: GitLabEndpointUseCaseContextResponse | null
+    result: GitLabUseCaseContextResult | null
   ): GitLabUseCaseTree | null {
     if (!result) {
       return null;
@@ -1786,18 +2010,22 @@ export class GitLabEvidenceConsoleComponent {
       this.addTreeRelation(adjacency, fromKey, relation);
     }
 
-    const controllerPath = this.resolveGitLabControllerPath(result, fileByPath);
-    if (controllerPath && !this.hasTreeRelation(adjacency, rootKey, controllerPath, fileByPath, result)) {
+    const entryPath = this.resolveGitLabEntryPath(result, fileByPath);
+    if (entryPath && !this.hasTreeRelation(adjacency, rootKey, entryPath, fileByPath, result)) {
       this.addTreeRelation(adjacency, rootKey, {
         from:
           result.endpoint?.endpointId ||
           result.endpoint?.path ||
           result.endpoint?.pathExpression ||
-          'endpoint',
-        to: this.gitLabEndpointHandlerSymbol(result) || controllerPath,
-        kind: 'ENDPOINT_HANDLER',
-        confidence: result.endpoint?.confidence || result.confidence || null,
-        reason: 'Endpoint handler resolved by endpoint inventory.'
+          this.gitLabUseCaseEntrySymbol(result) ||
+          'entrypoint',
+        to: this.gitLabUseCaseEntrySymbol(result) || entryPath,
+        kind: result.endpoint ? 'ENDPOINT_HANDLER' : 'ENTRY_METHOD',
+        confidence:
+          result.endpoint?.confidence || result.entryMethod?.confidence || result.confidence || null,
+        reason: result.endpoint
+          ? 'Endpoint handler resolved by endpoint inventory.'
+          : 'Entry method resolved by Java method selector.'
       });
     }
 
@@ -1868,7 +2096,7 @@ export class GitLabEvidenceConsoleComponent {
   private buildGitLabFileTreeNode(
     relation: GitLabEndpointUseCaseRelation,
     fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
-    result: GitLabEndpointUseCaseContextResponse,
+    result: GitLabUseCaseContextResult,
     adjacency: Map<string, GitLabEndpointUseCaseRelation[]>,
     visited: Set<string>,
     linkedFiles: Set<string>,
@@ -1945,7 +2173,7 @@ export class GitLabEvidenceConsoleComponent {
     adjacency: Map<string, GitLabEndpointUseCaseRelation[]>,
     key: string,
     fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
-    result: GitLabEndpointUseCaseContextResponse
+    result: GitLabUseCaseContextResult
   ): GitLabEndpointUseCaseRelation[] {
     const seenTargets = new Set<string>();
     return [...(adjacency.get(key) || [])]
@@ -1983,7 +2211,7 @@ export class GitLabEvidenceConsoleComponent {
     fromKey: string,
     targetPath: string,
     fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
-    result: GitLabEndpointUseCaseContextResponse
+    result: GitLabUseCaseContextResult
   ): boolean {
     return (adjacency.get(fromKey) || []).some(
       (relation) => this.resolveGitLabRelationFilePath(relation.to, fileByPath, result) === targetPath
@@ -1993,7 +2221,7 @@ export class GitLabEvidenceConsoleComponent {
   private resolveGitLabRelationSource(
     value: string | null | undefined,
     fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
-    result: GitLabEndpointUseCaseContextResponse,
+    result: GitLabUseCaseContextResult,
     rootKey: string
   ): string | null {
     const normalized = this.normalizeToken(value);
@@ -2016,7 +2244,7 @@ export class GitLabEvidenceConsoleComponent {
   private resolveGitLabRelationFilePath(
     value: string | null | undefined,
     fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>,
-    result: GitLabEndpointUseCaseContextResponse
+    result: GitLabUseCaseContextResult
   ): string | null {
     const normalized = this.normalizePath(value);
     if (!normalized) {
@@ -2036,9 +2264,13 @@ export class GitLabEvidenceConsoleComponent {
 
     const endpoint = result.endpoint;
     const endpointFile = this.normalizePath(endpoint?.filePath);
-    const handlerSymbol = this.normalizeToken(this.gitLabEndpointHandlerSymbol(result));
+    const handlerSymbol = this.normalizeToken(this.gitLabUseCaseEntrySymbol(result));
     if (endpointFile && handlerSymbol && handlerSymbol === this.normalizeToken(value) && fileByPath.has(endpointFile)) {
       return endpointFile;
+    }
+    const entryFile = this.normalizePath(result.entryMethod?.filePath);
+    if (entryFile && handlerSymbol && handlerSymbol === this.normalizeToken(value) && fileByPath.has(entryFile)) {
+      return entryFile;
     }
 
     let bestPath: string | null = null;
@@ -2097,13 +2329,17 @@ export class GitLabEvidenceConsoleComponent {
     return score;
   }
 
-  private resolveGitLabControllerPath(
-    result: GitLabEndpointUseCaseContextResponse,
+  private resolveGitLabEntryPath(
+    result: GitLabUseCaseContextResult,
     fileByPath: Map<string, GitLabEndpointUseCaseFileCandidate>
   ): string | null {
     const endpointPath = this.normalizePath(result.endpoint?.filePath);
     if (endpointPath && fileByPath.has(endpointPath)) {
       return endpointPath;
+    }
+    const entryPath = this.normalizePath(result.entryMethod?.filePath);
+    if (entryPath && fileByPath.has(entryPath)) {
+      return entryPath;
     }
     return (
       [...fileByPath.entries()].find(([, file]) => file.role === 'CONTROLLER')?.[0] ||
@@ -2112,28 +2348,49 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
-  private gitLabEndpointTreeLabel(result: GitLabEndpointUseCaseContextResponse): string {
+  private gitLabEndpointTreeLabel(result: GitLabUseCaseContextResult): string {
     const endpoint = result.endpoint;
+    if (!endpoint && result.entryMethod) {
+      return (
+        result.entryMethod.signature ||
+        this.gitLabUseCaseEntrySymbol(result) ||
+        result.entryMethod.requestedMethodName ||
+        'Entry method'
+      );
+    }
     const method = endpoint?.httpMethods?.length ? endpoint.httpMethods.join(', ') : 'ANY';
     const path = endpoint?.path || endpoint?.pathExpression || endpoint?.endpointId || 'Endpoint';
     return `${method} ${path}`;
   }
 
-  private gitLabEndpointTreeSubtitle(result: GitLabEndpointUseCaseContextResponse): string | null {
+  private gitLabEndpointTreeSubtitle(result: GitLabUseCaseContextResult): string | null {
     const endpoint = result.endpoint;
     const handler = [endpoint?.controllerClass, endpoint?.handlerMethod].filter(Boolean).join('#');
     if (handler) {
       return handler;
     }
+    if (result.entryMethod) {
+      return (
+        result.entryMethod.filePath ||
+        result.entryMethod.declaringTypeQualifiedName ||
+        result.entryMethod.declaringTypeRelativeName ||
+        result.repository?.projectName ||
+        null
+      );
+    }
     return result.repository?.projectName || null;
   }
 
-  private gitLabEndpointHandlerSymbol(result: GitLabEndpointUseCaseContextResponse): string | null {
+  private gitLabUseCaseEntrySymbol(result: GitLabUseCaseContextResult): string | null {
     const endpoint = result.endpoint;
-    if (!endpoint?.controllerClass && !endpoint?.handlerMethod) {
+    if (endpoint?.controllerClass || endpoint?.handlerMethod) {
+      return [endpoint.controllerClass, endpoint.handlerMethod].filter(Boolean).join('#');
+    }
+    const entryMethod = result.entryMethod;
+    if (!entryMethod?.declaringTypeQualifiedName && !entryMethod?.methodName) {
       return null;
     }
-    return [endpoint.controllerClass, endpoint.handlerMethod].filter(Boolean).join('#');
+    return [entryMethod.declaringTypeQualifiedName, entryMethod.methodName].filter(Boolean).join('#');
   }
 
   private flattenGitLabUseCaseTree(root: GitLabUseCaseTreeNode): GitLabUseCaseTreeRow[] {
@@ -2162,6 +2419,7 @@ export class GitLabEvidenceConsoleComponent {
   private relationPriority(kind: string | null | undefined): number {
     switch (kind) {
       case 'ENDPOINT_HANDLER':
+      case 'ENTRY_METHOD':
         return 0;
       case 'INJECTED_PORT_CALL':
         return 10;

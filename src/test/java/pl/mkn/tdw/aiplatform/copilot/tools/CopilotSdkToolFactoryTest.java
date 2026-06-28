@@ -56,6 +56,7 @@ class CopilotSdkToolFactoryTest {
         assertEquals(
                 Set.of(
                         "gitlab_build_endpoint_use_case_context",
+                        "gitlab_build_java_method_use_case_context",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
                         "gitlab_list_available_repositories",

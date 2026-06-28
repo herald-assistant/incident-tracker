@@ -55,6 +55,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     @Test
     void shouldAllowOnlyFlowExplorerGitLabOperationalContextAndFeedbackTools() {
         var gitLabTool = tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK);
+        var javaMethodContextTool = tool(GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT);
         var operationalContextTool = tool(OperationalContextToolNames.SEARCH);
         var databaseTool = tool(DatabaseToolNames.COUNT_ROWS);
         var elasticTool = tool(ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID);
@@ -63,6 +64,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(
                 databaseTool,
                 gitLabTool,
+                javaMethodContextTool,
                 elasticTool,
                 operationalContextTool,
                 feedbackTool
@@ -71,12 +73,13 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals(
                 List.of(
                         GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                        GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
                         OperationalContextToolNames.SEARCH,
                         CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK
                 ),
                 policy.availableToolNames()
         );
-        assertEquals(List.of(gitLabTool, operationalContextTool, feedbackTool), policy.enabledTools());
+        assertEquals(List.of(gitLabTool, javaMethodContextTool, operationalContextTool, feedbackTool), policy.enabledTools());
         assertTrue(policy.localWorkspaceAccessBlocked());
         assertTrue(policy.gitLabToolsRegistered());
         assertTrue(policy.operationalContextToolsRegistered());

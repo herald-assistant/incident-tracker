@@ -66,14 +66,14 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Antywzorce"
         ));
         assertSkillContainsSections("flow-explorer-gitlab-tools", List.of(
-                "## Rola Wobec Orkiestratora",
-                "## Dozwolone Tools",
-                "## Repozytoryjne Instrukcje Copilota",
-                "## Strategia Czytania Kodu",
-                "## Szybka Strategia Dla Slabszych Modeli",
-                "## Co Czytac Wedlug Section Modes",
+                "## Rola",
+                "## Scope Tooli",
+                "## Algorytm",
+                "## Algorytmy Sekcji",
+                "## Heurystyki Java/Spring",
                 "## Zasady Kosztowe",
-                "## Wklad Do Wyniku"
+                "## Wklad Do Wyniku",
+                "## Stop"
         ));
         assertSkillContainsSections("flow-explorer-operational-context-tools", List.of(
                 "## Rola Wobec Orkiestratora",
@@ -166,31 +166,39 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("`goal`, `sectionModes`,"));
         assertTrue(orchestrator.contains("maja bezwzgledne pierwszenstwo"));
         assertTrue(orchestrator.contains("focused GitLab read dokladnej sciezki"));
+        assertTrue(orchestrator.contains("preferuj `gitlab_build_java_method_use_case_context`"));
+        assertTrue(orchestrator.contains("uzyj `gitlab_read_java_method_slice`"));
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja functional scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
-        assertTrue(gitLabTools.contains("`filePath` i `methodSelectors` z `flow-explorer/compact-flow-manifest.md`"));
+        assertTrue(gitLabTools.contains("`filePath` i `methodSelectors`"));
         assertTrue(gitLabTools.contains("Nie zaczynaj od `gitlab_read_repository_file`"));
-        assertTrue(gitLabTools.contains("`truncated=true`, traktuj go jako prefix"));
-        assertTrue(gitLabTools.contains("korzystajac z `totalLines`, `returnedStartLine` i"));
-        assertTrue(gitLabTools.contains("`branchRef`"));
-        assertTrue(gitLabTools.contains("`applicationName`"));
-        assertTrue(gitLabTools.contains("Nie uzywaj `gitlab_list_available_repositories`"));
+        assertTrue(gitLabTools.contains("Po `truncated=true` nie wnioskuj o dalszej czesci pliku"));
+        assertTrue(gitLabTools.contains("`totalLines`, `returnedStartLine` i"));
+        assertTrue(gitLabTools.contains("`branchRef`, `applicationName` i `projectName`"));
+        assertTrue(gitLabTools.contains("`gitlab_build_java_method_use_case_context`"));
+        assertTrue(gitLabTools.contains("z `maxResults`"));
         assertTrue(gitLabTools.contains("Nie przekazuj `gitLabGroup`"));
-        assertTrue(gitLabTools.contains("`sectionModes` wskazuje, ktore obszary maja byc zwrocone"));
-        assertTrue(gitLabTools.contains("`OFF` oznacza, ze nie czytaj dodatkowego kodu tylko dla tej sekcji"));
-        assertTrue(gitLabTools.contains("Glebokoscia nadal steruje"));
-        assertTrue(gitLabTools.contains("`typeSummaries`, `fieldSummaries`"));
-        assertTrue(gitLabTools.contains("Adnotacje sa przypiete do"));
+        assertTrue(gitLabTools.contains("## Algorytm"));
+        assertTrue(gitLabTools.contains("## Algorytmy Sekcji"));
+        assertTrue(gitLabTools.contains("Spring Data/JPA/Hibernate first"));
+        assertTrue(gitLabTools.contains("Liquibase/Flyway/DDL czytaj w sytuacji niespojnosci"));
+        assertTrue(gitLabTools.contains("`@Entity`, `@Table`, `@Column`"));
+        assertTrue(gitLabTools.contains("obowiazkowo uwzglednij kolumny z dziedziczenia"));
+        assertTrue(gitLabTools.contains("`@MappedSuperclass`, `@Embedded`/kompozycji"));
+        assertTrue(gitLabTools.contains("Mapowanie kolumn czytaj gleboko przez `extends`"));
+        assertTrue(gitLabTools.contains("Nie wolno pominac"));
+        assertTrue(gitLabTools.contains("metode obiektu zlozonego"));
+        assertTrue(gitLabTools.contains("typach prostych mapowanych na kolumny"));
+        assertTrue(gitLabTools.contains("`List<Interface>`"));
+        assertTrue(gitLabTools.contains("`@FeignClient`"));
+        assertTrue(gitLabTools.contains("`StreamBridge.send(...)`"));
+        assertTrue(gitLabTools.contains("`@Bean Consumer<T>`"));
+        assertTrue(gitLabTools.contains("`spring.cloud.stream.bindings.<binding>.*`"));
+        assertTrue(gitLabTools.contains("YAML/properties traktuj jako resolver"));
         assertTrue(gitLabTools.contains("`TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`"));
-        assertTrue(gitLabTools.contains("Ustal `SOURCE` dla kazdej zapisywanej"));
-        assertTrue(gitLabTools.contains("Nie koncz persistence deep na polach encji"));
-        assertTrue(gitLabTools.contains("nazwac `SOURCE` biznesowo"));
-        assertTrue(gitLabTools.contains("## Repozytoryjne Instrukcje Copilota"));
-        assertTrue(gitLabTools.contains("Czytaj tylko dokladna sciezke `.github/copilot-instructions.md`"));
-        assertTrue(gitLabTools.contains("Wynik traktuj jako repository guidance"));
-        assertTrue(gitLabTools.contains("response contract, tool policy, runtime skille"));
-        assertTrue(gitLabTools.contains("Jezeli plik zawiera sprzeczne zalecenia, nie"));
+        assertTrue(gitLabTools.contains("`.github/copilot-instructions.md`"));
+        assertTrue(gitLabTools.contains("tylko jako repository guidance"));
         assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
 
         assertTrue(deepDiscovery.contains("| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |"));
@@ -219,6 +227,12 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(resultContract.contains("`SOURCE` jest polem kontrolowanym"));
         assertTrue(resultContract.contains("Dozwolone wartosci to tylko"));
         assertTrue(resultContract.contains("Nie wpisuj w `SOURCE` ani `SOURCE DETAILS` nazw klas"));
+        assertTrue(resultContract.contains("Tabela ma obejmowac kolumny widoczne przez mapowanie ORM"));
+        assertTrue(resultContract.contains("klas bazowych i `@MappedSuperclass`"));
+        assertTrue(resultContract.contains("`@Embedded`, `@Embeddable` i `@AttributeOverride(s)`"));
+        assertTrue(resultContract.contains("Nie pomijaj kolumn parenta ani kompozycji"));
+        assertTrue(resultContract.contains("bezposrednio mapowanego na kolumne"));
+        assertTrue(resultContract.contains("`tool:gitlab_build_java_method_use_case_context`"));
 
         assertTrue(operationalContextTools.contains("### SOURCE Dla Persistence Deep"));
         assertTrue(operationalContextTools.contains("nazwac `SOURCE` biznesowo"));

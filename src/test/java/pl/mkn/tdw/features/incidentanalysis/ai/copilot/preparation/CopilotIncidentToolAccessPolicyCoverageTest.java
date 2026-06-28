@@ -58,6 +58,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "gitlab_list_available_repositories",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
+                        "gitlab_build_java_method_use_case_context",
                         "gitlab_read_java_method_slice",
                         "gitlab_read_repository_file_chunk",
                         "gitlab_read_repository_files_by_path",
@@ -70,6 +71,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("gitlab_list_available_repositories"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_class_references"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("gitlab_build_java_method_use_case_context"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_java_method_slice"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_files_by_path"));
@@ -125,6 +127,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         "gitlab_list_available_repositories",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
+                        "gitlab_build_java_method_use_case_context",
                         "gitlab_read_java_method_slice",
                         "gitlab_read_repository_file_chunk",
                         "gitlab_read_repository_file_chunks",
@@ -137,6 +140,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.evidenceCoverage().hasGap("DB_CODE_GROUNDING_NEEDED"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_class_references"));
         assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("gitlab_build_java_method_use_case_context"));
         assertTrue(policy.availableToolNames().contains("gitlab_list_available_repositories"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_java_method_slice"));
         assertTrue(policy.availableToolNames().contains("gitlab_read_repository_file_chunk"));
